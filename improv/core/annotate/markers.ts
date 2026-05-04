@@ -232,10 +232,16 @@ export class AnnotationMarker {
 
     submitBtn.addEventListener('click', () => {
       const comment = textarea.value.trim();
-      const selectedIntent = popup.querySelector<HTMLButtonElement>('[data-group="intent"][data-selected="true"]')?.dataset.value ?? 'fix';
-      const selectedSeverity = popup.querySelector<HTMLButtonElement>('[data-group="severity"][data-selected="true"]')?.dataset.value ?? 'suggestion';
+      const selectedIntents = Array.from(popup.querySelectorAll<HTMLButtonElement>('[data-group="intent"][data-selected="true"]'))
+        .map((el) => el.dataset.value).filter(Boolean);
+      const selectedSeverities = Array.from(popup.querySelectorAll<HTMLButtonElement>('[data-group="severity"][data-selected="true"]'))
+        .map((el) => el.dataset.value).filter(Boolean);
       this.hidePopup();
-      onSubmit(comment, selectedIntent, selectedSeverity);
+      onSubmit(
+        comment,
+        selectedIntents.join(',') || 'fix',
+        selectedSeverities.join(',') || 'suggestion',
+      );
     });
     actions.appendChild(submitBtn);
 
@@ -344,28 +350,10 @@ export class AnnotationMarker {
       applyStyle(isDefault);
 
       pill.addEventListener('click', () => {
-        // Deselect siblings in this group
-        const siblings = row.parentElement?.querySelectorAll<HTMLButtonElement>(`[data-group="${group}"]`);
-        siblings?.forEach((sib) => {
-          sib.dataset.selected = 'false';
-          const sibColor = colors[sib.dataset.value ?? ''] ?? '#6b7280';
-          sib.style.cssText = [
-            `background:${sibColor}`,
-            'opacity:0.22',
-            'color:#fff',
-            'border:none',
-            'border-radius:20px',
-            'padding:4px 10px',
-            'font-size:11px',
-            'font-weight:600',
-            'cursor:pointer',
-            'font-family:system-ui,sans-serif',
-            'transition:opacity 0.1s',
-            'user-select:none',
-          ].join(';');
-        });
-        pill.dataset.selected = 'true';
-        applyStyle(true);
+        // Toggle this pill on/off (multi-select, not radio)
+        const wasSelected = pill.dataset.selected === 'true';
+        pill.dataset.selected = wasSelected ? 'false' : 'true';
+        applyStyle(!wasSelected);
       });
 
       row.appendChild(pill);
