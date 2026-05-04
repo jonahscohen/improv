@@ -216,6 +216,29 @@ export class Toolbar {
   private port = 3901;
 
   constructor(shadowRoot: ShadowRoot) {
+    // ---- Inject animation keyframes ----
+    const animSheet = new CSSStyleSheet();
+    animSheet.replaceSync(`
+      @keyframes improv-pill-in {
+        from { opacity: 0; transform: translateY(12px) scale(0.92); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes improv-icon-in {
+        from { opacity: 0; transform: scale(0.8); filter: blur(2px); }
+        to { opacity: 1; transform: scale(1); filter: blur(0); }
+      }
+      @keyframes improv-panel-in {
+        from { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(3px); }
+        to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      }
+      @keyframes improv-badge-pop {
+        0% { transform: scale(0.5); }
+        60% { transform: scale(1.15); }
+        100% { transform: scale(1); }
+      }
+    `);
+    shadowRoot.adoptedStyleSheets = [...shadowRoot.adoptedStyleSheets, animSheet];
+
     // ---- Pill bar container ----
     this.el = document.createElement('div');
     applyStyles(this.el, {
@@ -235,6 +258,7 @@ export class Toolbar {
       userSelect: 'none',
       zIndex: '2147483647',
       fontFamily: 'system-ui, -apple-system, sans-serif',
+      animation: 'improv-pill-in 0.35s cubic-bezier(0.23, 1, 0.32, 1) both',
     });
 
     // ---- Badge (change count) ----
@@ -262,12 +286,14 @@ export class Toolbar {
     this.badgeDivider.style.display = 'none';
     this.el.appendChild(this.badgeDivider);
 
-    // ---- Mode buttons ----
+    // ---- Mode buttons (staggered entry) ----
+    let btnDelay = 0;
     for (const mode of MODES) {
       const btn = this.createToolbarButton(
         MODE_ICON_BUILDERS[mode],
         MODE_LABELS[mode],
       );
+      btn.style.animation = `improv-icon-in 0.2s cubic-bezier(0.23, 1, 0.32, 1) ${btnDelay}ms both`;
       btn.addEventListener('click', () => {
         const next = this.activeMode === mode ? null : mode;
         this.setActiveMode(next);
@@ -275,6 +301,7 @@ export class Toolbar {
       });
       this.modeButtons.set(mode, btn);
       this.el.appendChild(btn);
+      btnDelay += 30;
     }
 
     // ---- Divider before actions ----
@@ -405,6 +432,7 @@ export class Toolbar {
       zIndex: '2147483647',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       pointerEvents: 'all',
+      animation: 'improv-panel-in 0.25s cubic-bezier(0.23, 1, 0.32, 1) both',
     });
 
     // Header row with title and close button
@@ -652,10 +680,16 @@ export class Toolbar {
 
   setBadge(count: number): void {
     if (count > 0) {
+      const wasHidden = this.badgeEl.style.display === 'none';
       this.badgeEl.style.display = 'inline-flex';
       this.badgeEl.textContent = String(count);
       this.badgeDivider.style.display = '';
       this.sendBtnWrap.style.display = 'flex';
+      if (wasHidden || this.badgeEl.textContent !== String(count)) {
+        this.badgeEl.style.animation = 'none';
+        void this.badgeEl.offsetWidth;
+        this.badgeEl.style.animation = 'improv-badge-pop 0.3s cubic-bezier(0.23, 1, 0.32, 1)';
+      }
     } else {
       this.badgeEl.style.display = 'none';
       this.badgeEl.textContent = '';

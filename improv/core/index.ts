@@ -68,6 +68,7 @@ export class ImprovCore {
           this.toolbar.onMode((mode) => this.switchMode(mode));
           this.toolbar.onApply(() => this.applyChanges());
           this.toolbar.onSendToClaude(() => this.sendAnnotations());
+          this.toolbar.onClearAll(() => this.clearAll());
           this.toolbar.setBadge(this.changeBuffer?.count() ?? 0);
         }
         return;
@@ -108,6 +109,7 @@ export class ImprovCore {
     this.toolbar.onMode((mode) => this.switchMode(mode));
     this.toolbar.onApply(() => this.applyChanges());
     this.toolbar.onSendToClaude(() => this.sendAnnotations());
+    this.toolbar.onClearAll(() => this.clearAll());
 
     // Keep connected status in sync
     const onDisconnected = () => this.toolbar?.setConnected(false);
@@ -227,6 +229,15 @@ export class ImprovCore {
       const message = err instanceof Error ? err.message : 'Connection error';
       this.applyConfirmation?.showError(message, () => this.sendAnnotations());
     }
+  }
+
+  private clearAll(): void {
+    this.switchMode(null);
+    this.toolbar?.setActiveMode(null);
+    this.changeBuffer?.clear();
+    this.previewEngine?.clearAll();
+    this.toolbar?.setBadge(0);
+    this.transport.request('clear', {}).catch(() => {});
   }
 
   registerAdapter(adapter: ImprovAdapter): void {
