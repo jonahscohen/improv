@@ -1,4 +1,8 @@
 import { WebSocketServer, WebSocket } from 'ws';
+import { createServer, type Server as HttpServer, type IncomingMessage, type ServerResponse } from 'http';
+import { readFileSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { ConnectionManager } from './connection-manager.js';
 import type { JsonRpcRequest, JsonRpcResponse, JsonRpcMessage } from './types.js';
 
@@ -6,9 +10,16 @@ type MessageHandler = (connectionId: string, params: Record<string, unknown> | u
 
 export class WsServer {
   private wss: WebSocketServer | null = null;
+  private httpServer: HttpServer | null = null;
   private manager = new ConnectionManager();
   private handlers = new Map<string, MessageHandler>();
   private port: number | null = null;
+  private distDir: string;
+
+  constructor() {
+    const serverDir = typeof __dirname !== 'undefined' ? __dirname : dirname(fileURLToPath(import.meta.url));
+    this.distDir = join(serverDir, '..');
+  }
 
   async start(preferredPort: number): Promise<number> {
     for (let attempt = 0; attempt < 10; attempt++) {
@@ -26,18 +37,70 @@ export class WsServer {
 
   private tryListen(port: number): Promise<number> {
     return new Promise((resolve, reject) => {
-      const wss = new WebSocketServer({ port });
+      const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
+        this.handleHttpRequest(req, res);
+      });
 
-      wss.once('listening', () => {
+      const wss = new WebSocketServer({ server: httpServer });
+
+      httpServer.once('listening', () => {
+        this.httpServer = httpServer;
         this.wss = wss;
         this.attachConnectionHandler();
         resolve(port);
       });
 
-      wss.once('error', (err) => {
+      httpServer.once('error', (err) => {
         reject(err);
       });
+
+      httpServer.listen(port);
     });
+  }
+
+  private handleHttpRequest(req: IncomingMessage, res: ServerResponse): void {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+
+    if (req.method === 'GET' && req.url === '/improv-core.js') {
+      const filePath = join(this.distDir, 'improv-core.js');
+      if (existsSync(filePath)) {
+        const content = readFileSync(filePath, 'utf-8');
+        res.writeHead(200, { 'Content-Type': 'application/javascript' });
+        res.end(content);
+      } else {
+        res.writeHead(404);
+        res.end('improv-core.js not found');
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && req.url?.startsWith('/improv-') && req.url?.endsWith('.js')) {
+      const fileName = req.url.slice(1);
+      const filePath = join(this.distDir, fileName);
+      if (existsSync(filePath)) {
+        const content = readFileSync(filePath, 'utf-8');
+        res.writeHead(200, { 'Content-Type': 'application/javascript' });
+        res.end(content);
+      } else {
+        res.writeHead(404);
+        res.end(`${fileName} not found`);
+      }
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/status') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        server: 'improv',
+        port: this.port,
+        connections: this.manager.size(),
+      }));
+      return;
+    }
+
+    res.writeHead(404);
+    res.end('Not found');
   }
 
   private attachConnectionHandler(): void {
@@ -169,11 +232,12 @@ export class WsServer {
 
   stop(): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (!this.wss) {
+      if (!this.httpServer) {
         resolve();
         return;
       }
-      this.wss.close((err) => {
+      this.wss?.close();
+      this.httpServer.close((err) => {
         if (err) reject(err);
         else resolve();
       });

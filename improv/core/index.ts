@@ -52,9 +52,9 @@ export class ImprovCore {
       this.toolbar?.setBadge(0);
     });
 
-    // Keyboard shortcut: Cmd+Shift+I (Mac) / Ctrl+Shift+I (Win/Linux)
+    // Keyboard shortcut: Cmd+Shift+. (Mac) / Ctrl+Shift+. (Win/Linux)
     document.addEventListener('keydown', (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'I') {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '.') {
         e.preventDefault();
         if (this.active) {
           this.deactivate();
