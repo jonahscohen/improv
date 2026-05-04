@@ -15,7 +15,7 @@ export interface AdapterEnrichment {
   props?: Record<string, unknown>;
 }
 
-export type ImprovMode = 'manipulate' | 'prompt' | 'annotate-layout';
+export type ImprovMode = 'manipulate' | 'prompt' | 'annotate' | 'layout';
 
 export interface SelectedElement {
   domNode: HTMLElement;

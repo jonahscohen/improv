@@ -53,24 +53,28 @@ export class ImprovCore {
     });
 
     document.addEventListener('keydown', (e: KeyboardEvent) => {
-      // Cmd+Shift+. toggles overlay on/off
+      // Cmd+Shift+. toggles toolbar visibility (connection stays alive)
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '.') {
         e.preventDefault();
-        if (this.active) {
-          this.deactivate();
+        if (this.toolbar) {
+          this.toolbar.destroy();
+          this.toolbar = null;
+          this.switchMode(null);
         } else {
-          this.activate();
+          this.toolbar = new Toolbar(this.overlay.getShadowRoot());
+          this.toolbar.setConnected(this.transport.isConnected());
+          this.toolbar.onMode((mode) => this.switchMode(mode));
+          this.toolbar.onApply(() => this.applyChanges());
+          this.toolbar.setBadge(this.changeBuffer?.count() ?? 0);
         }
         return;
       }
-      // Escape exits current mode (back to toolbar), or deactivates if no mode
+      // Escape exits current mode (back to toolbar with no active mode)
       if (e.key === 'Escape' && this.active) {
         e.preventDefault();
         if (this.currentMode) {
           this.switchMode(null);
           this.toolbar?.setActiveMode(null);
-        } else {
-          this.deactivate();
         }
       }
     });
@@ -80,6 +84,9 @@ export class ImprovCore {
     } catch {
       // Connection failure is non-fatal; reconnect will be attempted automatically
     }
+
+    // Auto-activate on load - toolbar appears immediately on every page
+    this.activate();
   }
 
   activate(): void {
@@ -141,9 +148,12 @@ export class ImprovCore {
     } else if (mode === 'prompt') {
       this.promptMode = new PromptMode(this.overlay, this.transport, this.registry);
       this.promptMode.activate();
-    } else if (mode === 'annotate-layout') {
+    } else if (mode === 'annotate') {
       this.annotateMode = new AnnotateMode(this.overlay, this.transport, this.registry);
       this.annotateMode.activate();
+    } else if (mode === 'layout') {
+      this.layoutMode = new LayoutMode(this.overlay, this.transport);
+      this.layoutMode.activate();
     }
 
     this.toolbar?.setBadge(this.changeBuffer?.count() ?? 0);
