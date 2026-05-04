@@ -6,7 +6,10 @@ export function enableEventIntercept(): void {
   if (enabled) return;
 
   const sheet = new CSSStyleSheet();
-  sheet.replaceSync('html { pointer-events: none !important; }');
+  sheet.replaceSync(
+    'html { pointer-events: none !important; }\n' +
+    '[data-improv] { pointer-events: auto !important; }'
+  );
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
   freezeSheet = sheet;
   enabled = true;

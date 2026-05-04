@@ -52,14 +52,25 @@ export class ImprovCore {
       this.toolbar?.setBadge(0);
     });
 
-    // Keyboard shortcut: Cmd+Shift+. (Mac) / Ctrl+Shift+. (Win/Linux)
     document.addEventListener('keydown', (e: KeyboardEvent) => {
+      // Cmd+Shift+. toggles overlay on/off
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '.') {
         e.preventDefault();
         if (this.active) {
           this.deactivate();
         } else {
           this.activate();
+        }
+        return;
+      }
+      // Escape exits current mode (back to toolbar), or deactivates if no mode
+      if (e.key === 'Escape' && this.active) {
+        e.preventDefault();
+        if (this.currentMode) {
+          this.switchMode(null);
+          this.toolbar?.setActiveMode(null);
+        } else {
+          this.deactivate();
         }
       }
     });

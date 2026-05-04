@@ -7,6 +7,16 @@ import { Transport } from '../transport.js';
 import { detectControls } from './control-detector.js';
 import { PropertyPanel } from './property-panel.js';
 
+function isImprovElement(el: HTMLElement | null): boolean {
+  if (!el) return false;
+  let node: Node | null = el;
+  while (node) {
+    if (node instanceof HTMLElement && node.hasAttribute('data-improv')) return true;
+    node = node.parentNode ?? (node as ShadowRoot).host ?? null;
+  }
+  return false;
+}
+
 export class ManipulateMode {
   private overlay: Overlay;
   private preview: PreviewEngine;
@@ -42,6 +52,7 @@ export class ManipulateMode {
 
     this.onMouseMove = (e: MouseEvent) => {
       if (this.selectedElement) return;
+      if (isImprovElement(e.target as HTMLElement)) return;
       const el = getElementAtPoint(e.clientX, e.clientY);
       if (el && el !== document.documentElement && el !== document.body) {
         this.overlay.showHighlight(el.getBoundingClientRect());
@@ -51,6 +62,7 @@ export class ManipulateMode {
     };
 
     this.onClick = (e: MouseEvent) => {
+      if (isImprovElement(e.target as HTMLElement)) return;
       e.preventDefault();
       e.stopPropagation();
       const el = getElementAtPoint(e.clientX, e.clientY);
