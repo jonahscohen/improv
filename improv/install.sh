@@ -49,23 +49,6 @@ echo "Building server..."
   echo "WARNING: Server build failed. Run manually: cd $IMPROV_DIR && npx tsc -p tsconfig.server.json"
 }
 
-# Generate HTTPS certs for localhost (needed for HTTPS dev servers)
-CERT_DIR="$IMPROV_DIR/certs"
-if [ ! -f "$CERT_DIR/key.pem" ]; then
-  echo "Generating localhost HTTPS certificate..."
-  mkdir -p "$CERT_DIR"
-  if command -v openssl &>/dev/null; then
-    openssl req -x509 -newkey rsa:2048 -keyout "$CERT_DIR/key.pem" -out "$CERT_DIR/cert.pem" \
-      -days 3650 -nodes -subj '/CN=localhost' 2>/dev/null && \
-      echo "HTTPS cert generated. Visit https://localhost:9223 once in Chrome to accept it." || \
-      echo "WARNING: cert generation failed. Improv will use HTTP (won't work on HTTPS sites)."
-  else
-    echo "WARNING: openssl not found. Improv will use HTTP (won't work on HTTPS sites)."
-  fi
-else
-  echo "HTTPS cert already exists"
-fi
-
 # Install CLI tools
 echo "Installing CLI tools..."
 cp "$SCRIPT_DIR/cli/init.sh" "$IMPROV_DIR/init.sh"

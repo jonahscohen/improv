@@ -4,24 +4,30 @@ set -euo pipefail
 PROJECT_ROOT="${1:-.}"
 cd "$PROJECT_ROOT"
 
-# Remove .improv marker
-rm -f .improv
-echo "Removed .improv marker"
+if [ ! -f ".improv" ]; then
+  echo "No .improv marker found in this directory."
+  exit 0
+fi
 
-# Remove Vite plugin file
-if [ -f "improv.dev.js" ]; then
-  rm -f improv.dev.js
-  echo "Removed improv.dev.js (also remove improv() from vite.config plugins)"
+# Read the public dir from marker
+PUBLIC_DIR=$(python3 -c "import json; print(json.load(open('.improv')).get('dir','public'))" 2>/dev/null || echo "public")
+
+# Remove the script
+if [ -f "$PUBLIC_DIR/improv-core.js" ]; then
+  rm "$PUBLIC_DIR/improv-core.js"
+  echo "Removed $PUBLIC_DIR/improv-core.js"
 fi
 
 # Remove Drupal library entry
 for f in *.libraries.yml; do
   if [ -f "$f" ] && grep -q "improv-dev" "$f"; then
-    # Remove the improv-dev block (from comment to the external line)
-    sed -i.bak '/# improv:dev/,/type: external/d' "$f"
+    sed -i.bak '/# improv:dev/,/improv-core\.js/d' "$f"
     rm -f "${f}.bak"
     echo "Removed improv-dev from $f"
   fi
 done
 
+# Remove marker
+rm -f .improv
+echo "Removed .improv marker"
 echo "Improv removed from project."
