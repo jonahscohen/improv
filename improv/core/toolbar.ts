@@ -3,40 +3,194 @@ import type { ImprovMode } from './types';
 type ModeCallback = (mode: ImprovMode | null) => void;
 type ActionCallback = () => void;
 
-// SVG path data sourced verbatim from Heroicons (stroke-based, 24x24 viewBox)
-const MODE_ICONS: Record<string, string> = {
-  // Heroicons: arrows-up-down
-  manipulate:
-    'M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 3L16.5 21m0 0L12 16.5m4.5 4.5V7.5',
-  // Heroicons: chat-bubble-left
-  prompt:
-    'M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 0 1 1.037-.443 48.282 48.282 0 0 0 5.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z',
-  // Heroicons: pencil-square
-  annotate:
-    'M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10',
-  // Heroicons: squares-plus
-  layout:
-    'M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z',
-};
+const MODES: ImprovMode[] = ['manipulate', 'prompt', 'annotate', 'layout'];
 
-// Heroicons: cog-6-tooth (two paths for outline + inner circle)
-const GEAR_ICON_OUTER =
-  'M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z';
-const GEAR_ICON_INNER = 'M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z';
-
-// Heroicons: arrow-left
-const BACK_ARROW_ICON = 'M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18';
-
-const MODE_LABELS: Record<string, string> = {
+const MODE_LABELS: Record<ImprovMode, string> = {
   manipulate: 'Manipulate',
   prompt: 'Prompt',
   annotate: 'Annotate',
   layout: 'Layout',
 };
 
-const MODES: ImprovMode[] = ['manipulate', 'prompt', 'annotate', 'layout'];
-
 const VERBOSITY_OPTIONS = ['compact', 'standard', 'detailed', 'forensic'] as const;
+
+// ---------------------------------------------------------------------------
+// Lucide icon builders (all 24x24 viewBox, stroke-based, no innerHTML)
+// ---------------------------------------------------------------------------
+
+function svgBase(size: number): SVGSVGElement {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', String(size));
+  svg.setAttribute('height', String(size));
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  return svg;
+}
+
+function addPath(svg: SVGSVGElement, d: string): void {
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p.setAttribute('d', d);
+  svg.appendChild(p);
+}
+
+function addLine(svg: SVGSVGElement, x1: string, y1: string, x2: string, y2: string): void {
+  const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  l.setAttribute('x1', x1);
+  l.setAttribute('y1', y1);
+  l.setAttribute('x2', x2);
+  l.setAttribute('y2', y2);
+  svg.appendChild(l);
+}
+
+function addRect(
+  svg: SVGSVGElement,
+  x: string,
+  y: string,
+  w: string,
+  h: string,
+  rx: string,
+): void {
+  const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  r.setAttribute('x', x);
+  r.setAttribute('y', y);
+  r.setAttribute('width', w);
+  r.setAttribute('height', h);
+  r.setAttribute('rx', rx);
+  svg.appendChild(r);
+}
+
+function addCircle(svg: SVGSVGElement, cx: string, cy: string, r: string): void {
+  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('cx', cx);
+  c.setAttribute('cy', cy);
+  c.setAttribute('r', r);
+  c.setAttribute('fill', 'none');
+  c.setAttribute('stroke', 'currentColor');
+  svg.appendChild(c);
+}
+
+// Lucide: sliders-horizontal
+function iconSlidersHorizontal(size: number): SVGSVGElement {
+  const svg = svgBase(size);
+  const lines: [string, string, string, string][] = [
+    ['10', '5', '3', '5'],
+    ['12', '19', '3', '19'],
+    ['21', '12', '12', '12'],
+    ['21', '19', '16', '19'],
+    ['21', '5', '14', '5'],
+    ['8', '12', '3', '12'],
+  ];
+  for (const [x1, y1, x2, y2] of lines) {
+    addLine(svg, x1, y1, x2, y2);
+  }
+  // Vertical slider knobs
+  addLine(svg, '14', '3', '14', '7');
+  addLine(svg, '16', '17', '16', '21');
+  addLine(svg, '8', '10', '8', '14');
+  return svg;
+}
+
+// Lucide: message-square-text
+function iconMessageSquareText(size: number): SVGSVGElement {
+  const svg = svgBase(size);
+  addPath(
+    svg,
+    'M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z',
+  );
+  addLine(svg, '7', '11', '17', '11');
+  addLine(svg, '7', '15', '13', '15');
+  addLine(svg, '7', '7', '15', '7');
+  return svg;
+}
+
+// Lucide: pen-line
+function iconPenLine(size: number): SVGSVGElement {
+  const svg = svgBase(size);
+  addLine(svg, '13', '21', '21', '21');
+  addPath(
+    svg,
+    'M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z',
+  );
+  return svg;
+}
+
+// Lucide: layout-grid
+function iconLayoutGrid(size: number): SVGSVGElement {
+  const svg = svgBase(size);
+  addRect(svg, '3', '3', '7', '7', '1');
+  addRect(svg, '14', '3', '7', '7', '1');
+  addRect(svg, '14', '14', '7', '7', '1');
+  addRect(svg, '3', '14', '7', '7', '1');
+  return svg;
+}
+
+// Lucide: settings
+function iconSettings(size: number): SVGSVGElement {
+  const svg = svgBase(size);
+  addPath(
+    svg,
+    'M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915',
+  );
+  addCircle(svg, '12', '12', '3');
+  return svg;
+}
+
+// Lucide: eraser
+function iconEraser(size: number): SVGSVGElement {
+  const svg = svgBase(size);
+  addPath(
+    svg,
+    'M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21',
+  );
+  addLine(svg, '5.082', '11.09', '13.91', '19.918');
+  return svg;
+}
+
+// Lucide: send
+function iconSend(size: number): SVGSVGElement {
+  const svg = svgBase(size);
+  addPath(
+    svg,
+    'M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z',
+  );
+  addLine(svg, '21.854', '2.147', '10.914', '13.086');
+  return svg;
+}
+
+// Lucide: x (close)
+function iconX(size: number): SVGSVGElement {
+  const svg = svgBase(size);
+  addLine(svg, '18', '6', '6', '18');
+  addLine(svg, '6', '6', '18', '18');
+  return svg;
+}
+
+const MODE_ICON_BUILDERS: Record<ImprovMode, (size: number) => SVGSVGElement> = {
+  manipulate: iconSlidersHorizontal,
+  prompt: iconMessageSquareText,
+  annotate: iconPenLine,
+  layout: iconLayoutGrid,
+};
+
+// ---------------------------------------------------------------------------
+// Style helper
+// ---------------------------------------------------------------------------
+
+function applyStyles(el: HTMLElement | SVGElement, styles: Partial<CSSStyleDeclaration>): void {
+  for (const [key, value] of Object.entries(styles)) {
+    if (value !== undefined) {
+      (el.style as Record<string, string>)[key] = value;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Toolbar
+// ---------------------------------------------------------------------------
 
 export class Toolbar {
   private el: HTMLDivElement;
@@ -49,309 +203,155 @@ export class Toolbar {
   private clearAllCallbacks: ActionCallback[] = [];
 
   // DOM references
-  private statusDot: HTMLDivElement;
-  private badge: HTMLSpanElement;
-  private applyBtn: HTMLButtonElement;
-  private sendBtn: HTMLButtonElement;
   private modeButtons = new Map<ImprovMode, HTMLButtonElement>();
-
-  // Panels
-  private modePanel: HTMLDivElement;
-  private settingsPanel: HTMLDivElement;
+  private badgeEl: HTMLSpanElement;
+  private badgeDivider: HTMLDivElement;
+  private sendBtnWrap: HTMLButtonElement;
+  private actionDivider: HTMLDivElement;
+  private settingsPanel: HTMLDivElement | null = null;
 
   // Settings state
   private verbosity: (typeof VERBOSITY_OPTIONS)[number] = 'standard';
+  private connected = false;
+  private port = 3901;
 
   constructor(shadowRoot: ShadowRoot) {
-    // Root container
+    // ---- Pill bar container ----
     this.el = document.createElement('div');
-    this.applyStyles(this.el, {
+    applyStyles(this.el, {
       position: 'fixed',
       bottom: '20px',
       right: '20px',
-      width: '200px',
+      height: '44px',
       display: 'flex',
-      flexDirection: 'column',
-      background: '#1a1a2e',
-      border: '1px solid #333',
-      borderRadius: '14px',
-      padding: '0',
-      boxShadow: '0 12px 48px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.4)',
-      backdropFilter: 'blur(12px)',
+      alignItems: 'center',
+      background: '#1a1a1a',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: '22px',
+      padding: '6px',
+      gap: '0px',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.08)',
       pointerEvents: 'all',
       userSelect: 'none',
       zIndex: '2147483647',
       fontFamily: 'system-ui, -apple-system, sans-serif',
-      overflow: 'hidden',
     });
 
-    // -- Header --
-    const header = this.buildHeader();
-    this.el.appendChild(header);
-
-    // -- Mode panel (default view) --
-    this.modePanel = this.buildModePanel();
-    this.el.appendChild(this.modePanel);
-
-    // -- Settings panel (hidden by default) --
-    this.settingsPanel = this.buildSettingsPanel();
-    this.settingsPanel.style.display = 'none';
-    this.el.appendChild(this.settingsPanel);
-
-    // -- Divider --
-    this.el.appendChild(this.createDivider());
-
-    // -- Action area --
-    const actionArea = document.createElement('div');
-    this.applyStyles(actionArea, {
-      padding: '8px 10px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '6px',
-    });
-
-    // Apply button
-    this.applyBtn = document.createElement('button');
-    this.applyBtn.textContent = 'Apply';
-    this.applyStyles(this.applyBtn, {
+    // ---- Badge (change count) ----
+    this.badgeEl = document.createElement('span');
+    applyStyles(this.badgeEl, {
       display: 'none',
-      width: '100%',
-      border: 'none',
-      background: '#22c55e',
+      minWidth: '28px',
+      height: '28px',
+      lineHeight: '28px',
+      textAlign: 'center',
+      background: '#0D99FF',
       color: '#fff',
-      fontSize: '12px',
-      fontFamily: 'system-ui, sans-serif',
+      fontSize: '11px',
       fontWeight: '600',
-      borderRadius: '8px',
-      padding: '8px 12px',
-      cursor: 'pointer',
-      transition: 'background 120ms ease, transform 80ms ease',
+      fontVariantNumeric: 'tabular-nums',
+      borderRadius: '10px',
+      padding: '0 8px',
+      boxSizing: 'border-box',
+      flexShrink: '0',
     });
-    this.addButtonInteraction(this.applyBtn, '#22c55e', '#16a34a');
-    this.applyBtn.addEventListener('click', () => {
+    this.el.appendChild(this.badgeEl);
+
+    // Badge divider (only visible when badge is visible)
+    this.badgeDivider = this.createVerticalDivider();
+    this.badgeDivider.style.display = 'none';
+    this.el.appendChild(this.badgeDivider);
+
+    // ---- Mode buttons ----
+    for (const mode of MODES) {
+      const btn = this.createToolbarButton(
+        MODE_ICON_BUILDERS[mode],
+        MODE_LABELS[mode],
+      );
+      btn.addEventListener('click', () => {
+        const next = this.activeMode === mode ? null : mode;
+        this.setActiveMode(next);
+        this.modeCallbacks.forEach((cb) => cb(next));
+      });
+      this.modeButtons.set(mode, btn);
+      this.el.appendChild(btn);
+    }
+
+    // ---- Divider before actions ----
+    this.actionDivider = this.createVerticalDivider();
+    this.el.appendChild(this.actionDivider);
+
+    // ---- Send/Apply button ----
+    this.sendBtnWrap = this.createToolbarButton(iconSend, 'Send');
+    applyStyles(this.sendBtnWrap, { display: 'none' });
+    this.sendBtnWrap.addEventListener('click', () => {
       this.applyCallbacks.forEach((cb) => cb());
-    });
-    actionArea.appendChild(this.applyBtn);
-
-    // Send to Claude button
-    this.sendBtn = document.createElement('button');
-    this.sendBtn.textContent = 'Send to Claude';
-    this.applyStyles(this.sendBtn, {
-      display: 'none',
-      width: '100%',
-      border: 'none',
-      background: '#3b82f6',
-      color: '#fff',
-      fontSize: '12px',
-      fontFamily: 'system-ui, sans-serif',
-      fontWeight: '600',
-      borderRadius: '8px',
-      padding: '8px 12px',
-      cursor: 'pointer',
-      transition: 'background 120ms ease, transform 80ms ease',
-    });
-    this.addButtonInteraction(this.sendBtn, '#3b82f6', '#2563eb');
-    this.sendBtn.addEventListener('click', () => {
       this.sendToClaudeCallbacks.forEach((cb) => cb());
     });
-    actionArea.appendChild(this.sendBtn);
+    this.el.appendChild(this.sendBtnWrap);
 
-    this.el.appendChild(actionArea);
-
-    // -- Footer --
-    const footer = document.createElement('div');
-    this.applyStyles(footer, {
-      padding: '4px 10px 8px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
+    // ---- Clear button ----
+    const clearBtn = this.createToolbarButton(iconEraser, 'Clear');
+    clearBtn.addEventListener('click', () => {
+      this.clearAllCallbacks.forEach((cb) => cb());
     });
+    this.el.appendChild(clearBtn);
 
-    this.badge = document.createElement('span');
-    this.applyStyles(this.badge, {
-      display: 'none',
-      background: 'rgba(59,130,246,0.2)',
-      color: '#93b4f8',
-      fontSize: '10px',
-      fontFamily: 'system-ui, sans-serif',
-      fontWeight: '600',
-      borderRadius: '10px',
-      padding: '2px 8px',
-      lineHeight: '14px',
-      fontVariantNumeric: 'tabular-nums',
+    // ---- Settings button ----
+    const settingsBtn = this.createToolbarButton(iconSettings, 'Settings');
+    settingsBtn.addEventListener('click', () => {
+      this.toggleSettingsPanel();
     });
-    footer.appendChild(this.badge);
+    this.el.appendChild(settingsBtn);
 
-    this.el.appendChild(footer);
-
-    // Drag behavior (header area only)
-    this.initDrag(header);
-
-    // Status dot is created inside buildHeader, referenced there
-    // (it's assigned in buildHeader via this.statusDot)
+    // ---- Drag ----
+    this.initDrag();
 
     shadowRoot.appendChild(this.el);
   }
 
-  // ---- Header ----
+  // ------------------------------------------------------------------
+  // Button factory
+  // ------------------------------------------------------------------
 
-  private buildHeader(): HTMLDivElement {
-    const header = document.createElement('div');
-    this.applyStyles(header, {
-      display: 'flex',
-      alignItems: 'center',
-      padding: '10px 10px 6px',
-      cursor: 'grab',
-      gap: '8px',
-    });
-
-    // Label
-    const label = document.createElement('span');
-    label.textContent = 'IMPROV';
-    this.applyStyles(label, {
-      fontSize: '10px',
-      fontWeight: '700',
-      color: '#666',
-      letterSpacing: '1.2px',
-      textTransform: 'uppercase',
-      fontFamily: 'system-ui, sans-serif',
-      flex: '1',
-    });
-    header.appendChild(label);
-
-    // Status dot
-    this.statusDot = document.createElement('div');
-    this.applyStyles(this.statusDot, {
-      width: '8px',
-      height: '8px',
-      borderRadius: '50%',
-      background: '#ef4444',
-      flexShrink: '0',
-    });
-    header.appendChild(this.statusDot);
-
-    // Gear button
-    const gearBtn = document.createElement('button');
-    this.applyStyles(gearBtn, {
-      width: '24px',
-      height: '24px',
+  private createToolbarButton(
+    iconBuilder: (size: number) => SVGSVGElement,
+    tooltip: string,
+  ): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.title = tooltip;
+    applyStyles(btn, {
+      width: '32px',
+      height: '32px',
       border: 'none',
       background: 'transparent',
-      borderRadius: '6px',
+      borderRadius: '10px',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '0',
-      color: '#666',
-      transition: 'background 120ms ease, color 120ms ease',
+      color: 'rgba(255,255,255,0.65)',
+      transition: 'background 120ms ease, color 120ms ease, transform 80ms ease',
       flexShrink: '0',
     });
-    gearBtn.appendChild(this.createGearIcon());
-    gearBtn.addEventListener('mouseenter', () => {
-      gearBtn.style.background = 'rgba(255,255,255,0.07)';
-      gearBtn.style.color = '#aaa';
-    });
-    gearBtn.addEventListener('mouseleave', () => {
-      gearBtn.style.background = 'transparent';
-      gearBtn.style.color = '#666';
-    });
-    gearBtn.addEventListener('click', () => {
-      this.toggleSettings(true);
-    });
-    header.appendChild(gearBtn);
 
-    return header;
-  }
+    const icon = iconBuilder(18);
+    applyStyles(icon, { flexShrink: '0', pointerEvents: 'none' });
+    btn.appendChild(icon);
 
-  // ---- Mode Panel ----
-
-  private buildModePanel(): HTMLDivElement {
-    const panel = document.createElement('div');
-    this.applyStyles(panel, {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '2px',
-      padding: '0 6px',
-    });
-
-    for (const mode of MODES) {
-      const btn = this.createModeButton(mode);
-      this.modeButtons.set(mode, btn);
-      panel.appendChild(btn);
-    }
-
-    return panel;
-  }
-
-  private createModeButton(mode: ImprovMode): HTMLButtonElement {
-    const btn = document.createElement('button');
-    btn.dataset['mode'] = mode;
-    this.applyStyles(btn, {
-      width: '100%',
-      height: '32px',
-      border: 'none',
-      background: 'transparent',
-      borderRadius: '8px',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '0 10px',
-      transition: 'background 120ms ease, transform 80ms ease',
-      color: '#aaa',
-    });
-
-    // Icon
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('width', '16');
-    svg.setAttribute('height', '16');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '1.5');
-    svg.setAttribute('stroke-linecap', 'round');
-    svg.setAttribute('stroke-linejoin', 'round');
-    svg.style.flexShrink = '0';
-
-    const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    pathEl.setAttribute('d', MODE_ICONS[mode]);
-    svg.appendChild(pathEl);
-    btn.appendChild(svg);
-
-    // Label text
-    const labelSpan = document.createElement('span');
-    labelSpan.textContent = MODE_LABELS[mode];
-    this.applyStyles(labelSpan, {
-      fontSize: '12px',
-      fontWeight: '500',
-      fontFamily: 'system-ui, sans-serif',
-      lineHeight: '1',
-    });
-    btn.appendChild(labelSpan);
-
-    // Click handler
-    btn.addEventListener('click', () => {
-      const next = this.activeMode === mode ? null : mode;
-      this.setActiveMode(next);
-      this.modeCallbacks.forEach((cb) => cb(next));
-    });
-
-    // Hover
     btn.addEventListener('mouseenter', () => {
-      if (this.activeMode !== mode) {
-        btn.style.background = 'rgba(255,255,255,0.05)';
+      if (!btn.dataset['active']) {
+        btn.style.background = 'rgba(255,255,255,0.08)';
       }
     });
     btn.addEventListener('mouseleave', () => {
-      if (this.activeMode !== mode) {
+      if (!btn.dataset['active']) {
         btn.style.background = 'transparent';
       }
     });
-
-    // Press
     btn.addEventListener('mousedown', () => {
-      btn.style.transform = 'scale(0.96)';
+      btn.style.transform = 'scale(0.92)';
     });
     btn.addEventListener('mouseup', () => {
       btn.style.transform = '';
@@ -360,27 +360,72 @@ export class Toolbar {
     return btn;
   }
 
-  // ---- Settings Panel ----
+  // ------------------------------------------------------------------
+  // Vertical divider (between groups)
+  // ------------------------------------------------------------------
 
-  private buildSettingsPanel(): HTMLDivElement {
+  private createVerticalDivider(): HTMLDivElement {
+    const d = document.createElement('div');
+    applyStyles(d, {
+      width: '1px',
+      height: '16px',
+      background: 'rgba(255,255,255,0.12)',
+      flexShrink: '0',
+      margin: '0 3px',
+    });
+    return d;
+  }
+
+  // ------------------------------------------------------------------
+  // Settings panel
+  // ------------------------------------------------------------------
+
+  private toggleSettingsPanel(): void {
+    if (this.settingsPanel) {
+      this.settingsPanel.remove();
+      this.settingsPanel = null;
+      return;
+    }
+
     const panel = document.createElement('div');
-    this.applyStyles(panel, {
+    this.settingsPanel = panel;
+    applyStyles(panel, {
+      position: 'fixed',
+      bottom: '68px',
+      right: '20px',
+      width: '260px',
+      background: '#1a1a1a',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: '16px',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.08)',
+      padding: '16px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '10px',
-      padding: '0 10px 6px',
+      gap: '14px',
+      zIndex: '2147483647',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      pointerEvents: 'all',
     });
 
-    // Back button row
-    const backRow = document.createElement('div');
-    this.applyStyles(backRow, {
+    // Header row with title and close button
+    const headerRow = document.createElement('div');
+    applyStyles(headerRow, {
       display: 'flex',
       alignItems: 'center',
-      gap: '6px',
+      justifyContent: 'space-between',
     });
 
-    const backBtn = document.createElement('button');
-    this.applyStyles(backBtn, {
+    const title = document.createElement('span');
+    title.textContent = 'Settings';
+    applyStyles(title, {
+      fontSize: '13px',
+      fontWeight: '600',
+      color: 'rgba(255,255,255,0.85)',
+    });
+    headerRow.appendChild(title);
+
+    const closeBtn = document.createElement('button');
+    applyStyles(closeBtn, {
       width: '24px',
       height: '24px',
       border: 'none',
@@ -391,333 +436,144 @@ export class Toolbar {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '0',
-      color: '#aaa',
+      color: 'rgba(255,255,255,0.5)',
       transition: 'background 120ms ease',
     });
-    backBtn.appendChild(this.createBackIcon());
-    backBtn.addEventListener('mouseenter', () => {
-      backBtn.style.background = 'rgba(255,255,255,0.07)';
+    closeBtn.appendChild(iconX(14));
+    closeBtn.addEventListener('mouseenter', () => {
+      closeBtn.style.background = 'rgba(255,255,255,0.08)';
     });
-    backBtn.addEventListener('mouseleave', () => {
-      backBtn.style.background = 'transparent';
+    closeBtn.addEventListener('mouseleave', () => {
+      closeBtn.style.background = 'transparent';
     });
-    backBtn.addEventListener('click', () => {
-      this.toggleSettings(false);
+    closeBtn.addEventListener('click', () => {
+      this.toggleSettingsPanel();
     });
-    backRow.appendChild(backBtn);
+    headerRow.appendChild(closeBtn);
+    panel.appendChild(headerRow);
 
-    const backLabel = document.createElement('span');
-    backLabel.textContent = 'Settings';
-    this.applyStyles(backLabel, {
-      fontSize: '11px',
-      fontWeight: '600',
-      color: '#999',
-      fontFamily: 'system-ui, sans-serif',
-    });
-    backRow.appendChild(backLabel);
-
-    panel.appendChild(backRow);
-
-    // Verbosity selector
-    panel.appendChild(this.buildSettingsSection('Verbosity', () => {
-      const select = document.createElement('select');
-      this.applyStyles(select, {
-        width: '100%',
-        background: '#252540',
-        color: '#ccc',
-        border: '1px solid #444',
-        borderRadius: '6px',
-        padding: '4px 6px',
-        fontSize: '11px',
-        fontFamily: 'system-ui, sans-serif',
-        outline: 'none',
-        cursor: 'pointer',
-      });
-
-      for (const opt of VERBOSITY_OPTIONS) {
-        const option = document.createElement('option');
-        option.value = opt;
-        option.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
-        if (opt === this.verbosity) {
-          option.selected = true;
-        }
-        select.appendChild(option);
-      }
-
-      select.addEventListener('change', () => {
-        this.verbosity = select.value as (typeof VERBOSITY_OPTIONS)[number];
-      });
-
-      return select;
-    }));
-
-    // Theme (static for now)
-    panel.appendChild(this.buildSettingsSection('Theme', () => {
-      const themeLabel = document.createElement('span');
-      themeLabel.textContent = 'Dark';
-      this.applyStyles(themeLabel, {
-        fontSize: '11px',
-        color: '#888',
-        fontFamily: 'system-ui, sans-serif',
-      });
-      return themeLabel;
-    }));
-
-    // Connection info
-    panel.appendChild(this.buildSettingsSection('Connection', () => {
-      const infoBlock = document.createElement('div');
-      this.applyStyles(infoBlock, {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '2px',
-      });
-
-      const items = [
-        { key: 'Server', value: 'localhost' },
-        { key: 'Port', value: '3901' },
-        { key: 'ID', value: '--' },
-      ];
-
-      for (const item of items) {
-        const row = document.createElement('div');
-        this.applyStyles(row, {
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: '10px',
-          fontFamily: 'system-ui, sans-serif',
-        });
-
-        const keySpan = document.createElement('span');
-        keySpan.textContent = item.key;
-        keySpan.style.color = '#666';
-        row.appendChild(keySpan);
-
-        const valSpan = document.createElement('span');
-        valSpan.textContent = item.value;
-        valSpan.style.color = '#999';
-        valSpan.style.fontVariantNumeric = 'tabular-nums';
-        row.appendChild(valSpan);
-
-        infoBlock.appendChild(row);
-      }
-
-      return infoBlock;
-    }));
-
-    // Project info
-    panel.appendChild(this.buildSettingsSection('Project', () => {
-      const infoBlock = document.createElement('div');
-      this.applyStyles(infoBlock, {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '2px',
-      });
-
-      const items = [
-        { key: 'Stack', value: 'detecting...' },
-        { key: '.improv', value: 'none' },
-      ];
-
-      for (const item of items) {
-        const row = document.createElement('div');
-        this.applyStyles(row, {
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: '10px',
-          fontFamily: 'system-ui, sans-serif',
-        });
-
-        const keySpan = document.createElement('span');
-        keySpan.textContent = item.key;
-        keySpan.style.color = '#666';
-        row.appendChild(keySpan);
-
-        const valSpan = document.createElement('span');
-        valSpan.textContent = item.value;
-        valSpan.style.color = '#999';
-        row.appendChild(valSpan);
-
-        infoBlock.appendChild(row);
-      }
-
-      return infoBlock;
-    }));
-
-    // Clear All button
-    const clearBtn = document.createElement('button');
-    clearBtn.textContent = 'Clear All';
-    this.applyStyles(clearBtn, {
+    // Verbosity dropdown
+    const verbSection = this.buildSettingsRow('Verbosity');
+    const select = document.createElement('select');
+    applyStyles(select, {
       width: '100%',
-      border: '1px solid #552222',
-      background: 'rgba(239,68,68,0.1)',
-      color: '#ef4444',
-      fontSize: '11px',
-      fontFamily: 'system-ui, sans-serif',
-      fontWeight: '600',
+      background: '#252525',
+      color: 'rgba(255,255,255,0.75)',
+      border: '1px solid rgba(255,255,255,0.12)',
       borderRadius: '8px',
-      padding: '6px 12px',
+      padding: '6px 8px',
+      fontSize: '12px',
+      fontFamily: 'system-ui, sans-serif',
+      outline: 'none',
       cursor: 'pointer',
-      transition: 'background 120ms ease, transform 80ms ease',
-      marginTop: '2px',
     });
-    clearBtn.addEventListener('mouseenter', () => {
-      clearBtn.style.background = 'rgba(239,68,68,0.2)';
+    for (const opt of VERBOSITY_OPTIONS) {
+      const option = document.createElement('option');
+      option.value = opt;
+      option.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
+      if (opt === this.verbosity) option.selected = true;
+      select.appendChild(option);
+    }
+    select.addEventListener('change', () => {
+      this.verbosity = select.value as (typeof VERBOSITY_OPTIONS)[number];
     });
-    clearBtn.addEventListener('mouseleave', () => {
-      clearBtn.style.background = 'rgba(239,68,68,0.1)';
-    });
-    clearBtn.addEventListener('mousedown', () => {
-      clearBtn.style.transform = 'scale(0.96)';
-    });
-    clearBtn.addEventListener('mouseup', () => {
-      clearBtn.style.transform = '';
-    });
-    clearBtn.addEventListener('click', () => {
-      this.clearAllCallbacks.forEach((cb) => cb());
-    });
-    panel.appendChild(clearBtn);
+    verbSection.appendChild(select);
+    panel.appendChild(verbSection);
 
-    return panel;
-  }
-
-  private buildSettingsSection(
-    title: string,
-    buildContent: () => HTMLElement,
-  ): HTMLDivElement {
-    const section = document.createElement('div');
-    this.applyStyles(section, {
+    // Connection status
+    const connSection = this.buildSettingsRow('Connection');
+    const connInfo = document.createElement('div');
+    applyStyles(connInfo, {
       display: 'flex',
       flexDirection: 'column',
       gap: '4px',
     });
 
+    const portRow = this.buildKVRow('Port', String(this.port));
+    connInfo.appendChild(portRow);
+
+    const statusRow = this.buildKVRow('Status', this.connected ? 'Connected' : 'Disconnected');
+    const statusVal = statusRow.lastElementChild as HTMLElement;
+    if (statusVal) {
+      statusVal.style.color = this.connected ? '#22c55e' : '#ef4444';
+    }
+    connInfo.appendChild(statusRow);
+
+    connSection.appendChild(connInfo);
+    panel.appendChild(connSection);
+
+    // Insert into the same shadow root as the toolbar
+    this.el.parentNode!.appendChild(panel);
+  }
+
+  private buildSettingsRow(label: string): HTMLDivElement {
+    const section = document.createElement('div');
+    applyStyles(section, {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '6px',
+    });
+
     const heading = document.createElement('span');
-    heading.textContent = title;
-    this.applyStyles(heading, {
+    heading.textContent = label;
+    applyStyles(heading, {
       fontSize: '10px',
       fontWeight: '600',
-      color: '#555',
+      color: 'rgba(255,255,255,0.35)',
       textTransform: 'uppercase',
       letterSpacing: '0.8px',
       fontFamily: 'system-ui, sans-serif',
     });
     section.appendChild(heading);
-
-    section.appendChild(buildContent());
-
     return section;
   }
 
-  private toggleSettings(show: boolean): void {
-    if (show) {
-      this.modePanel.style.display = 'none';
-      this.settingsPanel.style.display = 'flex';
-    } else {
-      this.settingsPanel.style.display = 'none';
-      this.modePanel.style.display = 'flex';
-    }
-  }
-
-  // ---- SVG Icon Helpers ----
-
-  private createGearIcon(): SVGSVGElement {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('width', '14');
-    svg.setAttribute('height', '14');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '1.5');
-    svg.setAttribute('stroke-linecap', 'round');
-    svg.setAttribute('stroke-linejoin', 'round');
-
-    const outerPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    outerPath.setAttribute('d', GEAR_ICON_OUTER);
-    svg.appendChild(outerPath);
-
-    const innerPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    innerPath.setAttribute('d', GEAR_ICON_INNER);
-    svg.appendChild(innerPath);
-
-    return svg;
-  }
-
-  private createBackIcon(): SVGSVGElement {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('width', '14');
-    svg.setAttribute('height', '14');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '1.5');
-    svg.setAttribute('stroke-linecap', 'round');
-    svg.setAttribute('stroke-linejoin', 'round');
-
-    const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    pathEl.setAttribute('d', BACK_ARROW_ICON);
-    svg.appendChild(pathEl);
-
-    return svg;
-  }
-
-  // ---- Utility Helpers ----
-
-  private createDivider(): HTMLDivElement {
-    const divider = document.createElement('div');
-    this.applyStyles(divider, {
-      height: '1px',
-      background: '#333',
-      margin: '4px 10px',
-      flexShrink: '0',
+  private buildKVRow(key: string, value: string): HTMLDivElement {
+    const row = document.createElement('div');
+    applyStyles(row, {
+      display: 'flex',
+      justifyContent: 'space-between',
+      fontSize: '11px',
+      fontFamily: 'system-ui, sans-serif',
     });
-    return divider;
+
+    const k = document.createElement('span');
+    k.textContent = key;
+    applyStyles(k, { color: 'rgba(255,255,255,0.4)' });
+    row.appendChild(k);
+
+    const v = document.createElement('span');
+    v.textContent = value;
+    applyStyles(v, {
+      color: 'rgba(255,255,255,0.65)',
+      fontVariantNumeric: 'tabular-nums',
+    });
+    row.appendChild(v);
+
+    return row;
   }
 
-  private applyStyles(el: HTMLElement, styles: Partial<CSSStyleDeclaration>): void {
-    for (const [key, value] of Object.entries(styles)) {
-      if (value !== undefined) {
-        (el.style as Record<string, string>)[key] = value;
-      }
-    }
-  }
+  // ------------------------------------------------------------------
+  // Drag
+  // ------------------------------------------------------------------
 
-  private addButtonInteraction(
-    btn: HTMLButtonElement,
-    normalBg: string,
-    hoverBg: string,
-  ): void {
-    btn.addEventListener('mouseenter', () => {
-      btn.style.background = hoverBg;
-    });
-    btn.addEventListener('mouseleave', () => {
-      btn.style.background = normalBg;
-    });
-    btn.addEventListener('mousedown', () => {
-      btn.style.transform = 'scale(0.96)';
-    });
-    btn.addEventListener('mouseup', () => {
-      btn.style.transform = '';
-    });
-  }
-
-  // ---- Drag ----
-
-  private initDrag(dragHandle: HTMLElement): void {
+  private initDrag(): void {
     let dragging = false;
     let startX = 0;
     let startY = 0;
     let origRight = 20;
     let origBottom = 20;
 
-    dragHandle.addEventListener('mousedown', (e: MouseEvent) => {
+    this.el.addEventListener('mousedown', (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest('button')) return;
+      // Only drag when clicking pill background, not buttons
+      if (target.closest('button') || target.closest('span')) return;
       dragging = true;
       startX = e.clientX;
       startY = e.clientY;
       origRight = parseInt(this.el.style.right || '20', 10);
       origBottom = parseInt(this.el.style.bottom || '20', 10);
-      dragHandle.style.cursor = 'grabbing';
+      this.el.style.cursor = 'grabbing';
       e.preventDefault();
     });
 
@@ -727,33 +583,47 @@ export class Toolbar {
       const dy = e.clientY - startY;
       this.el.style.right = `${origRight - dx}px`;
       this.el.style.bottom = `${origBottom - dy}px`;
+
+      // Move settings panel if visible
+      if (this.settingsPanel) {
+        this.settingsPanel.style.right = `${origRight - dx}px`;
+        this.settingsPanel.style.bottom = `${origBottom - dy + 48}px`;
+      }
     });
 
     document.addEventListener('mouseup', () => {
       if (dragging) {
         dragging = false;
-        dragHandle.style.cursor = 'grab';
+        this.el.style.cursor = '';
       }
     });
   }
 
-  // ---- Public API ----
+  // ------------------------------------------------------------------
+  // Private: update mode button visuals
+  // ------------------------------------------------------------------
+
+  private updateModeButtonStyles(): void {
+    this.modeButtons.forEach((btn, mode) => {
+      if (mode === this.activeMode) {
+        btn.style.background = 'rgba(59,130,246,0.2)';
+        btn.style.color = '#6dacfc';
+        btn.dataset['active'] = '1';
+      } else {
+        btn.style.background = 'transparent';
+        btn.style.color = 'rgba(255,255,255,0.65)';
+        delete btn.dataset['active'];
+      }
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // Public API
+  // ------------------------------------------------------------------
 
   setActiveMode(mode: ImprovMode | null): void {
     this.activeMode = mode;
-    this.modeButtons.forEach((btn, m) => {
-      if (m === mode) {
-        btn.style.background = 'rgba(59,130,246,0.2)';
-        btn.style.color = '#6dacfc';
-      } else {
-        btn.style.background = 'transparent';
-        btn.style.color = '#aaa';
-      }
-    });
-
-    // Show Send to Claude in annotate/prompt modes
-    const showSend = mode === 'annotate' || mode === 'prompt';
-    this.sendBtn.style.display = showSend ? 'block' : 'none';
+    this.updateModeButtonStyles();
   }
 
   getActiveMode(): ImprovMode | null {
@@ -776,28 +646,45 @@ export class Toolbar {
     this.clearAllCallbacks.push(callback);
   }
 
-  showSendButton(visible: boolean): void {
-    this.sendBtn.style.display = visible ? 'block' : 'none';
-  }
-
   setConnected(connected: boolean): void {
-    this.statusDot.style.background = connected ? '#22c55e' : '#ef4444';
+    this.connected = connected;
   }
 
   setBadge(count: number): void {
     if (count > 0) {
-      this.badge.style.display = 'inline-block';
-      this.badge.textContent = `${count} pending`;
-      this.applyBtn.style.display = 'block';
-      this.applyBtn.textContent = `Apply (${count})`;
+      this.badgeEl.style.display = 'inline-flex';
+      this.badgeEl.textContent = String(count);
+      this.badgeDivider.style.display = '';
+      this.sendBtnWrap.style.display = 'flex';
     } else {
-      this.badge.style.display = 'none';
-      this.badge.textContent = '';
-      this.applyBtn.style.display = 'none';
+      this.badgeEl.style.display = 'none';
+      this.badgeEl.textContent = '';
+      this.badgeDivider.style.display = 'none';
+      // Only hide send if no other reason to show it
+      if (!this.sendBtnWrap.dataset['forceVisible']) {
+        this.sendBtnWrap.style.display = 'none';
+      }
+    }
+  }
+
+  showSendButton(visible: boolean): void {
+    if (visible) {
+      this.sendBtnWrap.style.display = 'flex';
+      this.sendBtnWrap.dataset['forceVisible'] = '1';
+    } else {
+      delete this.sendBtnWrap.dataset['forceVisible'];
+      // Only hide if badge count is also 0
+      if (this.badgeEl.style.display === 'none') {
+        this.sendBtnWrap.style.display = 'none';
+      }
     }
   }
 
   destroy(): void {
+    if (this.settingsPanel) {
+      this.settingsPanel.remove();
+      this.settingsPanel = null;
+    }
     this.el.remove();
   }
 }
