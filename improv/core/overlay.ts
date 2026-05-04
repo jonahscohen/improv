@@ -3,6 +3,8 @@ export class Overlay {
   private shadow: ShadowRoot;
   private container: HTMLDivElement;
   private highlight: HTMLDivElement | null = null;
+  private trackedElement: HTMLElement | null = null;
+  private rafId: number | null = null;
 
   constructor() {
     this.host = document.createElement('div');
@@ -32,6 +34,7 @@ export class Overlay {
   }
 
   unmount(): void {
+    this.stopTracking();
     this.host.remove();
   }
 
@@ -48,10 +51,22 @@ export class Overlay {
   }
 
   showHighlight(rect: DOMRect): void {
+    this.trackedElement = null;
+    this.stopTracking();
+    this.positionHighlight(rect);
+  }
+
+  trackElement(el: HTMLElement): void {
+    this.trackedElement = el;
+    this.positionHighlight(el.getBoundingClientRect());
+    this.startTracking();
+  }
+
+  private positionHighlight(rect: DOMRect): void {
     if (!this.highlight) {
       this.highlight = document.createElement('div');
       this.highlight.style.cssText =
-        'position:fixed;pointer-events:none;border:2px solid #3b82f6;border-radius:2px;transition:all 80ms ease;';
+        'position:fixed;pointer-events:none;border:2px solid #3b82f6;border-radius:2px;transition:top 60ms ease,left 60ms ease,width 60ms ease,height 60ms ease;';
       this.container.appendChild(this.highlight);
     }
 
@@ -63,7 +78,33 @@ export class Overlay {
     });
   }
 
+  private startTracking(): void {
+    if (this.rafId !== null) return;
+    const tick = () => {
+      if (this.trackedElement && this.highlight) {
+        const rect = this.trackedElement.getBoundingClientRect();
+        Object.assign(this.highlight.style, {
+          top: `${rect.top}px`,
+          left: `${rect.left}px`,
+          width: `${rect.width}px`,
+          height: `${rect.height}px`,
+        });
+      }
+      this.rafId = requestAnimationFrame(tick);
+    };
+    this.rafId = requestAnimationFrame(tick);
+  }
+
+  private stopTracking(): void {
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+  }
+
   hideHighlight(): void {
+    this.stopTracking();
+    this.trackedElement = null;
     if (this.highlight) {
       this.highlight.remove();
       this.highlight = null;

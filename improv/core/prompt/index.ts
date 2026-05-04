@@ -72,7 +72,7 @@ export class PromptMode {
         this.multiSelect.add(selected);
       }
 
-      this.overlay.showHighlight(el.getBoundingClientRect());
+      this.overlay.trackElement(el);
 
       const rect = el.getBoundingClientRect();
       const promptX = rect.left;

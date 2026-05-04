@@ -114,7 +114,7 @@ export class ManipulateMode {
     this.selectedElement = el;
     this.selectedSelector = generateSelector(el);
 
-    this.overlay.showHighlight(el.getBoundingClientRect());
+    this.overlay.trackElement(el);
 
     const controls = detectControls(el);
     const computedStyles = getComputedStylesSubset(el);
