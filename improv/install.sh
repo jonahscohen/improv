@@ -31,9 +31,9 @@ cp "$SCRIPT_DIR/tsconfig.server.json" "$IMPROV_DIR/"
 cp "$SCRIPT_DIR/tsconfig.core.json" "$IMPROV_DIR/"
 cp "$SCRIPT_DIR/build.js" "$IMPROV_DIR/"
 
-# Install dependencies
+# Install dependencies (needs devDeps for typescript + esbuild build step)
 echo "Installing dependencies..."
-(cd "$IMPROV_DIR" && npm install --production 2>/dev/null) || {
+(cd "$IMPROV_DIR" && npm install 2>/dev/null) || {
   echo "WARNING: npm install failed. Run manually: cd $IMPROV_DIR && npm install"
 }
 
@@ -45,7 +45,7 @@ echo "Building core script..."
 
 # Build server
 echo "Building server..."
-(cd "$IMPROV_DIR" && npx tsc -p tsconfig.server.json 2>/dev/null) || {
+(cd "$IMPROV_DIR" && npx -y tsc -p tsconfig.server.json 2>/dev/null) || {
   echo "WARNING: Server build failed. Run manually: cd $IMPROV_DIR && npx tsc -p tsconfig.server.json"
 }
 
