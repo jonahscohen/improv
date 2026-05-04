@@ -20,6 +20,1037 @@ const CATEGORY_LABELS: Record<string, string> = {
   blocks:   'Blocks',
 };
 
+// Wireframe mode state
+let _wireframeMode = false;
+let _wireframeListeners: Array<() => void> = [];
+
+export function isWireframe(): boolean {
+  return _wireframeMode;
+}
+
+export function toggleWireframe(): void {
+  _wireframeMode = !_wireframeMode;
+  for (const fn of _wireframeListeners) fn();
+}
+
+function onWireframeChange(fn: () => void): void {
+  _wireframeListeners.push(fn);
+}
+
+function offWireframeChange(fn: () => void): void {
+  _wireframeListeners = _wireframeListeners.filter((f) => f !== fn);
+}
+
+// SVG namespace
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+// Helper to create SVG elements
+function svgEl(tag: string, attrs: Record<string, string>): SVGElement {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    el.setAttribute(k, v);
+  }
+  return el;
+}
+
+function createBaseSvg(): SVGSVGElement {
+  const svg = document.createElementNS(SVG_NS, 'svg') as SVGSVGElement;
+  svg.setAttribute('width', '20');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('viewBox', '0 0 20 16');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '0.5');
+  return svg;
+}
+
+// ---- ICON BUILDERS ----
+// Each returns an SVGSVGElement with a 20x16 wireframe icon
+
+function iconNavigation(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '3', width: '18', height: '10', rx: '1' }));
+  svg.appendChild(svgEl('rect', { x: '4', y: '6', width: '4', height: '2', rx: '0.5' }));
+  svg.appendChild(svgEl('rect', { x: '9', y: '6', width: '3', height: '2', rx: '0.5' }));
+  svg.appendChild(svgEl('rect', { x: '14', y: '6', width: '3', height: '2', rx: '0.5' }));
+  return svg;
+}
+
+function iconHeader(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '2', width: '18', height: '12', rx: '1' }));
+  const r = svgEl('rect', { x: '3', y: '5', width: '14', height: '2', rx: '0.5' });
+  r.setAttribute('fill', 'currentColor');
+  r.setAttribute('fill-opacity', '0.15');
+  r.setAttribute('stroke', 'none');
+  svg.appendChild(r);
+  svg.appendChild(svgEl('line', { x1: '3', y1: '9', x2: '12', y2: '9' }));
+  return svg;
+}
+
+function iconHero(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '1', width: '18', height: '14', rx: '1' }));
+  const r = svgEl('rect', { x: '5', y: '4', width: '10', height: '2', rx: '0.5' });
+  r.setAttribute('fill', 'currentColor');
+  r.setAttribute('fill-opacity', '0.15');
+  r.setAttribute('stroke', 'none');
+  svg.appendChild(r);
+  svg.appendChild(svgEl('line', { x1: '6', y1: '8', x2: '14', y2: '8' }));
+  svg.appendChild(svgEl('rect', { x: '7', y: '10', width: '6', height: '2', rx: '1' }));
+  return svg;
+}
+
+function iconSection(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '1', width: '18', height: '14', rx: '1' }));
+  const r = svgEl('rect', { x: '3', y: '3', width: '8', height: '2', rx: '0.5' });
+  r.setAttribute('fill', 'currentColor');
+  r.setAttribute('fill-opacity', '0.15');
+  r.setAttribute('stroke', 'none');
+  svg.appendChild(r);
+  svg.appendChild(svgEl('line', { x1: '3', y1: '7', x2: '15', y2: '7' }));
+  svg.appendChild(svgEl('line', { x1: '3', y1: '10', x2: '13', y2: '10' }));
+  return svg;
+}
+
+function iconSidebar(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '1', width: '7', height: '14', rx: '1' }));
+  svg.appendChild(svgEl('line', { x1: '3', y1: '4', x2: '6', y2: '4' }));
+  svg.appendChild(svgEl('line', { x1: '3', y1: '7', x2: '6', y2: '7' }));
+  svg.appendChild(svgEl('line', { x1: '3', y1: '10', x2: '6', y2: '10' }));
+  return svg;
+}
+
+function iconFooter(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '10', width: '18', height: '5', rx: '1' }));
+  svg.appendChild(svgEl('rect', { x: '3', y: '12', width: '4', height: '1.5', rx: '0.5' }));
+  svg.appendChild(svgEl('rect', { x: '8', y: '12', width: '4', height: '1.5', rx: '0.5' }));
+  svg.appendChild(svgEl('rect', { x: '13', y: '12', width: '4', height: '1.5', rx: '0.5' }));
+  return svg;
+}
+
+function iconModal(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '3', y: '2', width: '14', height: '12', rx: '1.5' }));
+  const r = svgEl('rect', { x: '5', y: '4', width: '10', height: '2', rx: '0.5' });
+  r.setAttribute('fill', 'currentColor');
+  r.setAttribute('fill-opacity', '0.15');
+  r.setAttribute('stroke', 'none');
+  svg.appendChild(r);
+  svg.appendChild(svgEl('line', { x1: '5', y1: '8', x2: '13', y2: '8' }));
+  svg.appendChild(svgEl('rect', { x: '11', y: '10', width: '4', height: '2', rx: '1' }));
+  return svg;
+}
+
+function iconBanner(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '5', width: '18', height: '6', rx: '1' }));
+  const r = svgEl('rect', { x: '3', y: '7', width: '8', height: '2', rx: '0.5' });
+  r.setAttribute('fill', 'currentColor');
+  r.setAttribute('fill-opacity', '0.15');
+  r.setAttribute('stroke', 'none');
+  svg.appendChild(r);
+  svg.appendChild(svgEl('rect', { x: '13', y: '7', width: '4', height: '2', rx: '1' }));
+  return svg;
+}
+
+function iconDrawer(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '10', y: '1', width: '9', height: '14', rx: '1' }));
+  const r = svgEl('rect', { x: '1', y: '1', width: '7', height: '14', rx: '1' });
+  r.setAttribute('opacity', '0.15');
+  svg.appendChild(r);
+  return svg;
+}
+
+function iconPopover(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '4', y: '1', width: '12', height: '10', rx: '1' }));
+  svg.appendChild(svgEl('line', { x1: '6', y1: '4', x2: '14', y2: '4' }));
+  svg.appendChild(svgEl('line', { x1: '6', y1: '7', x2: '12', y2: '7' }));
+  svg.appendChild(svgEl('path', { d: 'M8,11 L10,13 L12,11' }));
+  return svg;
+}
+
+function iconDivider(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const l = svgEl('line', { x1: '2', y1: '8', x2: '18', y2: '8' });
+  l.setAttribute('opacity', '0.3');
+  svg.appendChild(l);
+  return svg;
+}
+
+// CONTENT icons
+
+function iconCard(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '2', y: '1', width: '16', height: '14', rx: '1' }));
+  const r = svgEl('rect', { x: '2', y: '1', width: '16', height: '6', rx: '0' });
+  r.setAttribute('fill', 'currentColor');
+  r.setAttribute('fill-opacity', '0.04');
+  r.setAttribute('stroke', 'none');
+  svg.appendChild(r);
+  svg.appendChild(svgEl('line', { x1: '4', y1: '9', x2: '14', y2: '9' }));
+  svg.appendChild(svgEl('line', { x1: '4', y1: '12', x2: '10', y2: '12' }));
+  return svg;
+}
+
+function iconText(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const l1 = svgEl('line', { x1: '2', y1: '3', x2: '16', y2: '3' });
+  l1.setAttribute('opacity', '0.4');
+  svg.appendChild(l1);
+  const l2 = svgEl('line', { x1: '2', y1: '6', x2: '14', y2: '6' });
+  l2.setAttribute('opacity', '0.3');
+  svg.appendChild(l2);
+  const l3 = svgEl('line', { x1: '2', y1: '9', x2: '12', y2: '9' });
+  l3.setAttribute('opacity', '0.25');
+  svg.appendChild(l3);
+  const l4 = svgEl('line', { x1: '2', y1: '12', x2: '10', y2: '12' });
+  l4.setAttribute('opacity', '0.2');
+  svg.appendChild(l4);
+  return svg;
+}
+
+function iconImage(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '2', y: '1', width: '16', height: '14', rx: '1' }));
+  const d1 = svgEl('line', { x1: '2', y1: '1', x2: '18', y2: '15' });
+  d1.setAttribute('opacity', '0.2');
+  svg.appendChild(d1);
+  const d2 = svgEl('line', { x1: '18', y1: '1', x2: '2', y2: '15' });
+  d2.setAttribute('opacity', '0.2');
+  svg.appendChild(d2);
+  return svg;
+}
+
+function iconVideo(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '2', width: '18', height: '12', rx: '1' }));
+  const tri = svgEl('path', { d: 'M8,5 L8,11 L14,8 Z' });
+  tri.setAttribute('fill', 'currentColor');
+  tri.setAttribute('fill-opacity', '0.15');
+  svg.appendChild(tri);
+  return svg;
+}
+
+function iconTable(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '1', width: '18', height: '14', rx: '1' }));
+  svg.appendChild(svgEl('line', { x1: '1', y1: '5', x2: '19', y2: '5' }));
+  svg.appendChild(svgEl('line', { x1: '1', y1: '9', x2: '19', y2: '9' }));
+  svg.appendChild(svgEl('line', { x1: '7', y1: '1', x2: '7', y2: '15' }));
+  svg.appendChild(svgEl('line', { x1: '13', y1: '1', x2: '13', y2: '15' }));
+  return svg;
+}
+
+function iconGrid(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '1', width: '8', height: '6', rx: '1' }));
+  svg.appendChild(svgEl('rect', { x: '11', y: '1', width: '8', height: '6', rx: '1' }));
+  svg.appendChild(svgEl('rect', { x: '1', y: '9', width: '8', height: '6', rx: '1' }));
+  svg.appendChild(svgEl('rect', { x: '11', y: '9', width: '8', height: '6', rx: '1' }));
+  return svg;
+}
+
+function iconList(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('circle', { cx: '3', cy: '3', r: '1.5' }));
+  svg.appendChild(svgEl('line', { x1: '6', y1: '3', x2: '16', y2: '3' }));
+  svg.appendChild(svgEl('circle', { cx: '3', cy: '8', r: '1.5' }));
+  svg.appendChild(svgEl('line', { x1: '6', y1: '8', x2: '16', y2: '8' }));
+  svg.appendChild(svgEl('circle', { cx: '3', cy: '13', r: '1.5' }));
+  svg.appendChild(svgEl('line', { x1: '6', y1: '13', x2: '16', y2: '13' }));
+  return svg;
+}
+
+function iconChart(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const bars = [
+    { x: '3', y: '10', width: '3', height: '5' },
+    { x: '7', y: '7', width: '3', height: '8' },
+    { x: '11', y: '4', width: '3', height: '11' },
+    { x: '15', y: '6', width: '3', height: '9' },
+  ];
+  for (const b of bars) {
+    const r = svgEl('rect', { x: b.x, y: b.y, width: b.width, height: b.height, rx: '0.5' });
+    r.setAttribute('fill', 'currentColor');
+    r.setAttribute('fill-opacity', '0.15');
+    svg.appendChild(r);
+  }
+  return svg;
+}
+
+function iconCodeBlock(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '1', width: '18', height: '14', rx: '1' }));
+  // 3 dots
+  const dots = [
+    { cx: '4', cy: '3.5', r: '0.8' },
+    { cx: '6.5', cy: '3.5', r: '0.8' },
+    { cx: '9', cy: '3.5', r: '0.8' },
+  ];
+  for (const d of dots) {
+    const c = svgEl('circle', d);
+    c.setAttribute('fill', 'currentColor');
+    c.setAttribute('fill-opacity', '0.25');
+    c.setAttribute('stroke', 'none');
+    svg.appendChild(c);
+  }
+  // lines
+  const lines = [
+    { x1: '4', y1: '7', x2: '14', y2: '7' },
+    { x1: '6', y1: '9.5', x2: '12', y2: '9.5' },
+    { x1: '4', y1: '12', x2: '10', y2: '12' },
+  ];
+  for (const l of lines) {
+    const ln = svgEl('line', l);
+    ln.setAttribute('opacity', '0.3');
+    svg.appendChild(ln);
+  }
+  return svg;
+}
+
+function iconMap(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '1', width: '18', height: '14', rx: '1' }));
+  const d1 = svgEl('line', { x1: '1', y1: '14', x2: '10', y2: '1' });
+  d1.setAttribute('opacity', '0.15');
+  svg.appendChild(d1);
+  const d2 = svgEl('line', { x1: '10', y1: '1', x2: '18', y2: '14' });
+  d2.setAttribute('opacity', '0.15');
+  svg.appendChild(d2);
+  const pin = svgEl('circle', { cx: '10', cy: '7', r: '1.5' });
+  pin.setAttribute('fill', 'currentColor');
+  pin.setAttribute('fill-opacity', '0.2');
+  svg.appendChild(pin);
+  return svg;
+}
+
+function iconTimeline(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const vline = svgEl('line', { x1: '5', y1: '2', x2: '5', y2: '14' });
+  vline.setAttribute('opacity', '0.25');
+  svg.appendChild(vline);
+  // circles
+  svg.appendChild(svgEl('circle', { cx: '5', cy: '3', r: '1.5' }));
+  const c2 = svgEl('circle', { cx: '5', cy: '8', r: '1.5' });
+  c2.setAttribute('fill', 'currentColor');
+  c2.setAttribute('fill-opacity', '0.2');
+  svg.appendChild(c2);
+  svg.appendChild(svgEl('circle', { cx: '5', cy: '13', r: '1.5' }));
+  // lines
+  svg.appendChild(svgEl('line', { x1: '8', y1: '3', x2: '16', y2: '3' }));
+  svg.appendChild(svgEl('line', { x1: '8', y1: '8', x2: '14', y2: '8' }));
+  svg.appendChild(svgEl('line', { x1: '8', y1: '13', x2: '16', y2: '13' }));
+  return svg;
+}
+
+function iconCalendar(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '1', width: '18', height: '14', rx: '1' }));
+  svg.appendChild(svgEl('line', { x1: '1', y1: '5', x2: '19', y2: '5' }));
+  svg.appendChild(svgEl('line', { x1: '6', y1: '0', x2: '6', y2: '3' }));
+  svg.appendChild(svgEl('line', { x1: '14', y1: '0', x2: '14', y2: '3' }));
+  const dotPositions = [
+    { cx: '5', cy: '8' }, { cx: '10', cy: '8' }, { cx: '15', cy: '8' },
+    { cx: '5', cy: '12' }, { cx: '10', cy: '12' },
+  ];
+  for (const pos of dotPositions) {
+    const d = svgEl('circle', { ...pos, r: '0.8' });
+    d.setAttribute('fill', 'currentColor');
+    d.setAttribute('fill-opacity', '0.2');
+    d.setAttribute('stroke', 'none');
+    svg.appendChild(d);
+  }
+  return svg;
+}
+
+function iconAccordion(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '1', width: '18', height: '4', rx: '0.5' }));
+  svg.appendChild(svgEl('rect', { x: '1', y: '6.5', width: '18', height: '4', rx: '0.5' }));
+  svg.appendChild(svgEl('rect', { x: '1', y: '12', width: '18', height: '3', rx: '0.5' }));
+  svg.appendChild(svgEl('line', { x1: '3', y1: '3', x2: '12', y2: '3' }));
+  return svg;
+}
+
+function iconCarousel(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '4', y: '2', width: '12', height: '10', rx: '1' }));
+  svg.appendChild(svgEl('path', { d: 'M3,7 L1,8 L3,9' }));
+  svg.appendChild(svgEl('path', { d: 'M17,7 L19,8 L17,9' }));
+  svg.appendChild(svgEl('circle', { cx: '8', cy: '14', r: '0.8' }));
+  const c2 = svgEl('circle', { cx: '10', cy: '14', r: '0.8' });
+  c2.setAttribute('fill', 'currentColor');
+  c2.setAttribute('fill-opacity', '0.2');
+  c2.setAttribute('stroke', 'none');
+  svg.appendChild(c2);
+  svg.appendChild(svgEl('circle', { cx: '12', cy: '14', r: '0.8' }));
+  return svg;
+}
+
+function iconLogo(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '3', width: '6', height: '10', rx: '1' }));
+  svg.appendChild(svgEl('path', { d: 'M4,6 L2.5,10 L5.5,10 Z' }));
+  svg.appendChild(svgEl('line', { x1: '9', y1: '5', x2: '18', y2: '5' }));
+  svg.appendChild(svgEl('line', { x1: '9', y1: '8', x2: '16', y2: '8' }));
+  return svg;
+}
+
+function iconFaq(): SVGSVGElement {
+  const svg = createBaseSvg();
+  // Question marks as circles + dots
+  const q1 = svgEl('circle', { cx: '4', cy: '4', r: '2.5' });
+  q1.setAttribute('opacity', '0.3');
+  svg.appendChild(q1);
+  svg.appendChild(svgEl('line', { x1: '4', y1: '8', x2: '4', y2: '8.5' }));
+  const q2 = svgEl('circle', { cx: '4', cy: '11', r: '2.5' });
+  q2.setAttribute('opacity', '0.3');
+  svg.appendChild(q2);
+  svg.appendChild(svgEl('line', { x1: '4', y1: '14.5', x2: '4', y2: '15' }));
+  // answer lines
+  svg.appendChild(svgEl('line', { x1: '8', y1: '4', x2: '17', y2: '4' }));
+  svg.appendChild(svgEl('line', { x1: '8', y1: '7', x2: '15', y2: '7' }));
+  svg.appendChild(svgEl('line', { x1: '8', y1: '11', x2: '17', y2: '11' }));
+  svg.appendChild(svgEl('line', { x1: '8', y1: '14', x2: '15', y2: '14' }));
+  return svg;
+}
+
+function iconGallery(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const rects = [
+    { x: '1', y: '1', width: '5', height: '6' },
+    { x: '8', y: '1', width: '5', height: '6' },
+    { x: '15', y: '1', width: '4', height: '6' },
+    { x: '1', y: '9', width: '5', height: '6' },
+    { x: '8', y: '9', width: '5', height: '6' },
+    { x: '15', y: '9', width: '4', height: '6' },
+  ];
+  for (const r of rects) {
+    svg.appendChild(svgEl('rect', { ...r, rx: '0.5' }));
+  }
+  return svg;
+}
+
+// CONTROLS icons
+
+function iconButton(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const r = svgEl('rect', { x: '3', y: '5', width: '14', height: '6', rx: '3' });
+  r.setAttribute('fill', 'currentColor');
+  r.setAttribute('fill-opacity', '0.15');
+  svg.appendChild(r);
+  svg.appendChild(svgEl('line', { x1: '7', y1: '8', x2: '13', y2: '8' }));
+  return svg;
+}
+
+function iconInput(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const label = svgEl('rect', { x: '2', y: '2', width: '6', height: '2', rx: '0.5' });
+  label.setAttribute('fill', 'currentColor');
+  label.setAttribute('fill-opacity', '0.15');
+  label.setAttribute('stroke', 'none');
+  svg.appendChild(label);
+  svg.appendChild(svgEl('rect', { x: '2', y: '6', width: '16', height: '8', rx: '1' }));
+  const cursor = svgEl('line', { x1: '4', y1: '10', x2: '10', y2: '10' });
+  cursor.setAttribute('opacity', '0.2');
+  svg.appendChild(cursor);
+  return svg;
+}
+
+function iconSearch(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '2', y: '4', width: '16', height: '8', rx: '4' }));
+  svg.appendChild(svgEl('circle', { cx: '5', cy: '8', r: '2' }));
+  svg.appendChild(svgEl('line', { x1: '6.5', y1: '9.5', x2: '8', y2: '11' }));
+  const txt = svgEl('line', { x1: '10', y1: '8', x2: '15', y2: '8' });
+  txt.setAttribute('opacity', '0.2');
+  svg.appendChild(txt);
+  return svg;
+}
+
+function iconForm(): SVGSVGElement {
+  const svg = createBaseSvg();
+  // First field
+  const l1 = svgEl('rect', { x: '2', y: '1', width: '7', height: '2', rx: '0.5' });
+  l1.setAttribute('fill', 'currentColor');
+  l1.setAttribute('fill-opacity', '0.15');
+  l1.setAttribute('stroke', 'none');
+  svg.appendChild(l1);
+  svg.appendChild(svgEl('rect', { x: '2', y: '3.5', width: '16', height: '3', rx: '0.5' }));
+  // Second field
+  const l2 = svgEl('rect', { x: '2', y: '8', width: '7', height: '2', rx: '0.5' });
+  l2.setAttribute('fill', 'currentColor');
+  l2.setAttribute('fill-opacity', '0.15');
+  l2.setAttribute('stroke', 'none');
+  svg.appendChild(l2);
+  svg.appendChild(svgEl('rect', { x: '2', y: '10.5', width: '16', height: '3', rx: '0.5' }));
+  // Submit button
+  const btn = svgEl('rect', { x: '5', y: '14', width: '10', height: '2', rx: '1' });
+  btn.setAttribute('fill', 'currentColor');
+  btn.setAttribute('fill-opacity', '0.15');
+  svg.appendChild(btn);
+  return svg;
+}
+
+function iconTabs(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const t1 = svgEl('rect', { x: '2', y: '3', width: '8', height: '4', rx: '1' });
+  t1.setAttribute('fill', 'currentColor');
+  t1.setAttribute('fill-opacity', '0.08');
+  svg.appendChild(t1);
+  svg.appendChild(svgEl('rect', { x: '10', y: '3', width: '8', height: '4', rx: '1' }));
+  svg.appendChild(svgEl('rect', { x: '2', y: '7', width: '16', height: '8', rx: '1' }));
+  return svg;
+}
+
+function iconDropdown(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '2', y: '2', width: '16', height: '5', rx: '1' }));
+  svg.appendChild(svgEl('path', { d: 'M14,4 L16,6 L18,4' }));
+  const dashed = svgEl('rect', { x: '2', y: '9', width: '16', height: '6', rx: '1' });
+  dashed.setAttribute('stroke-dasharray', '2,1.5');
+  svg.appendChild(dashed);
+  return svg;
+}
+
+function iconToggle(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '4', y: '5', width: '12', height: '6', rx: '3' }));
+  const c = svgEl('circle', { cx: '12', cy: '8', r: '2.5' });
+  c.setAttribute('fill', 'currentColor');
+  c.setAttribute('fill-opacity', '0.15');
+  svg.appendChild(c);
+  return svg;
+}
+
+function iconStepper(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const c1 = svgEl('circle', { cx: '4', cy: '8', r: '2' });
+  c1.setAttribute('fill', 'currentColor');
+  c1.setAttribute('fill-opacity', '0.15');
+  svg.appendChild(c1);
+  svg.appendChild(svgEl('circle', { cx: '10', cy: '8', r: '2' }));
+  svg.appendChild(svgEl('circle', { cx: '16', cy: '8', r: '2' }));
+  svg.appendChild(svgEl('line', { x1: '6', y1: '8', x2: '8', y2: '8' }));
+  svg.appendChild(svgEl('line', { x1: '12', y1: '8', x2: '14', y2: '8' }));
+  return svg;
+}
+
+function iconRating(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const starPath = (cx: number, cy: number): string => {
+    return `M${cx},${cy - 2} L${cx + 0.6},${cy - 0.7} L${cx + 2},${cy - 0.5} L${cx + 1},${cy + 0.5} L${cx + 1.3},${cy + 2} L${cx},${cy + 1} L${cx - 1.3},${cy + 2} L${cx - 1},${cy + 0.5} L${cx - 2},${cy - 0.5} L${cx - 0.6},${cy - 0.7} Z`;
+  };
+  const s1 = svgEl('path', { d: starPath(5, 8) });
+  s1.setAttribute('fill', 'currentColor');
+  s1.setAttribute('fill-opacity', '0.15');
+  svg.appendChild(s1);
+  const s2 = svgEl('path', { d: starPath(10, 8) });
+  s2.setAttribute('fill', 'currentColor');
+  s2.setAttribute('fill-opacity', '0.15');
+  svg.appendChild(s2);
+  svg.appendChild(svgEl('path', { d: starPath(15, 8) }));
+  return svg;
+}
+
+function iconFileUpload(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const r = svgEl('rect', { x: '2', y: '2', width: '16', height: '12', rx: '1' });
+  r.setAttribute('stroke-dasharray', '2,1.5');
+  svg.appendChild(r);
+  svg.appendChild(svgEl('path', { d: 'M10,5 L10,9 M8,6 L10,4 L12,6' }));
+  const ln = svgEl('line', { x1: '5', y1: '11', x2: '15', y2: '11' });
+  ln.setAttribute('opacity', '0.2');
+  svg.appendChild(ln);
+  return svg;
+}
+
+function iconCheckbox(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '5', y: '4', width: '10', height: '8', rx: '1.5' }));
+  svg.appendChild(svgEl('path', { d: 'M7,8 L9,10 L13,6' }));
+  return svg;
+}
+
+function iconRadio(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('circle', { cx: '10', cy: '8', r: '4' }));
+  const inner = svgEl('circle', { cx: '10', cy: '8', r: '2' });
+  inner.setAttribute('fill', 'currentColor');
+  inner.setAttribute('fill-opacity', '0.15');
+  svg.appendChild(inner);
+  return svg;
+}
+
+function iconSlider(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const track = svgEl('line', { x1: '2', y1: '8', x2: '18', y2: '8' });
+  track.setAttribute('opacity', '0.2');
+  svg.appendChild(track);
+  const filled = svgEl('line', { x1: '2', y1: '8', x2: '11', y2: '8' });
+  filled.setAttribute('opacity', '0.25');
+  svg.appendChild(filled);
+  svg.appendChild(svgEl('circle', { cx: '11', cy: '8', r: '2.5' }));
+  return svg;
+}
+
+function iconDatePicker(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '2', y: '1', width: '16', height: '5', rx: '1' }));
+  const cal = svgEl('rect', { x: '14', y: '2.5', width: '3', height: '2', rx: '0.5' });
+  cal.setAttribute('fill', 'currentColor');
+  cal.setAttribute('fill-opacity', '0.15');
+  cal.setAttribute('stroke', 'none');
+  svg.appendChild(cal);
+  const dashed = svgEl('rect', { x: '2', y: '7', width: '16', height: '8', rx: '1' });
+  dashed.setAttribute('stroke-dasharray', '2,1');
+  svg.appendChild(dashed);
+  const dots = [
+    { cx: '5', cy: '10' }, { cx: '9', cy: '10' }, { cx: '13', cy: '10' }, { cx: '5', cy: '13' },
+  ];
+  for (const pos of dots) {
+    const d = svgEl('circle', { ...pos, r: '0.7' });
+    d.setAttribute('fill', 'currentColor');
+    d.setAttribute('fill-opacity', '0.15');
+    d.setAttribute('stroke', 'none');
+    svg.appendChild(d);
+  }
+  return svg;
+}
+
+// ELEMENTS icons
+
+function iconAvatar(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('circle', { cx: '10', cy: '6', r: '3.5' }));
+  const arc = svgEl('path', { d: 'M5,14 Q5,10 10,9.5 Q15,10 15,14' });
+  arc.setAttribute('opacity', '0.25');
+  svg.appendChild(arc);
+  return svg;
+}
+
+function iconBadge(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const r = svgEl('rect', { x: '4', y: '5', width: '12', height: '6', rx: '3' });
+  r.setAttribute('fill', 'currentColor');
+  r.setAttribute('fill-opacity', '0.08');
+  svg.appendChild(r);
+  const ln = svgEl('line', { x1: '7', y1: '8', x2: '13', y2: '8' });
+  ln.setAttribute('opacity', '0.3');
+  svg.appendChild(ln);
+  return svg;
+}
+
+function iconTag(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '3', y: '5', width: '12', height: '6', rx: '2' }));
+  svg.appendChild(svgEl('line', { x1: '5', y1: '8', x2: '10', y2: '8' }));
+  // X
+  const x1 = svgEl('line', { x1: '14', y1: '6', x2: '16', y2: '10' });
+  x1.setAttribute('opacity', '0.3');
+  svg.appendChild(x1);
+  const x2 = svgEl('line', { x1: '16', y1: '6', x2: '14', y2: '10' });
+  x2.setAttribute('opacity', '0.3');
+  svg.appendChild(x2);
+  return svg;
+}
+
+function iconBreadcrumb(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('line', { x1: '1', y1: '8', x2: '4', y2: '8' }));
+  svg.appendChild(svgEl('line', { x1: '8', y1: '8', x2: '11', y2: '8' }));
+  svg.appendChild(svgEl('line', { x1: '15', y1: '8', x2: '18', y2: '8' }));
+  const ch1 = svgEl('path', { d: 'M6,6 L7,8 L6,10' });
+  ch1.setAttribute('opacity', '0.25');
+  svg.appendChild(ch1);
+  const ch2 = svgEl('path', { d: 'M13,6 L14,8 L13,10' });
+  ch2.setAttribute('opacity', '0.25');
+  svg.appendChild(ch2);
+  return svg;
+}
+
+function iconPagination(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '2', y: '5', width: '3', height: '6', rx: '0.5' }));
+  const r2 = svgEl('rect', { x: '6', y: '5', width: '3', height: '6', rx: '0.5' });
+  r2.setAttribute('fill', 'currentColor');
+  r2.setAttribute('fill-opacity', '0.08');
+  svg.appendChild(r2);
+  svg.appendChild(svgEl('rect', { x: '10', y: '5', width: '3', height: '6', rx: '0.5' }));
+  svg.appendChild(svgEl('rect', { x: '14', y: '5', width: '3', height: '6', rx: '0.5' }));
+  return svg;
+}
+
+function iconProgress(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const bg = svgEl('rect', { x: '2', y: '7', width: '16', height: '2', rx: '1' });
+  bg.setAttribute('opacity', '0.2');
+  svg.appendChild(bg);
+  const fill = svgEl('rect', { x: '2', y: '7', width: '10', height: '2', rx: '1' });
+  fill.setAttribute('fill', 'currentColor');
+  fill.setAttribute('fill-opacity', '0.2');
+  svg.appendChild(fill);
+  return svg;
+}
+
+function iconAlert(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '3', width: '18', height: '10', rx: '1' }));
+  svg.appendChild(svgEl('circle', { cx: '5', cy: '8', r: '2' }));
+  svg.appendChild(svgEl('line', { x1: '5', y1: '6.5', x2: '5', y2: '8' }));
+  const dot = svgEl('circle', { cx: '5', cy: '9', r: '0.3' });
+  dot.setAttribute('fill', 'currentColor');
+  dot.setAttribute('stroke', 'none');
+  svg.appendChild(dot);
+  svg.appendChild(svgEl('line', { x1: '9', y1: '8', x2: '17', y2: '8' }));
+  return svg;
+}
+
+function iconToast(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '4', width: '18', height: '8', rx: '1.5' }));
+  const c = svgEl('circle', { cx: '4', cy: '8', r: '1.5' });
+  c.setAttribute('fill', 'currentColor');
+  c.setAttribute('fill-opacity', '0.15');
+  c.setAttribute('stroke', 'none');
+  svg.appendChild(c);
+  svg.appendChild(svgEl('line', { x1: '8', y1: '7', x2: '16', y2: '7' }));
+  const l2 = svgEl('line', { x1: '8', y1: '9.5', x2: '13', y2: '9.5' });
+  l2.setAttribute('opacity', '0.2');
+  svg.appendChild(l2);
+  return svg;
+}
+
+function iconNotification(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '2', width: '18', height: '12', rx: '1' }));
+  const c = svgEl('circle', { cx: '4', cy: '5', r: '1.5' });
+  c.setAttribute('fill', 'currentColor');
+  c.setAttribute('fill-opacity', '0.15');
+  c.setAttribute('stroke', 'none');
+  svg.appendChild(c);
+  svg.appendChild(svgEl('line', { x1: '8', y1: '4', x2: '16', y2: '4' }));
+  svg.appendChild(svgEl('line', { x1: '8', y1: '7', x2: '14', y2: '7' }));
+  // badge dot
+  const badge = svgEl('circle', { cx: '16', cy: '3', r: '1.5' });
+  badge.setAttribute('fill', 'currentColor');
+  badge.setAttribute('fill-opacity', '0.3');
+  badge.setAttribute('stroke', 'none');
+  svg.appendChild(badge);
+  return svg;
+}
+
+function iconTooltip(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '3', y: '1', width: '14', height: '10', rx: '1' }));
+  svg.appendChild(svgEl('line', { x1: '6', y1: '5', x2: '14', y2: '5' }));
+  svg.appendChild(svgEl('path', { d: 'M8,11 L10,13 L12,11' }));
+  return svg;
+}
+
+function iconStat(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '1', width: '18', height: '14', rx: '1' }));
+  const label = svgEl('rect', { x: '3', y: '3', width: '6', height: '1.5', rx: '0.5' });
+  label.setAttribute('fill', 'currentColor');
+  label.setAttribute('fill-opacity', '0.15');
+  label.setAttribute('stroke', 'none');
+  svg.appendChild(label);
+  const val = svgEl('rect', { x: '3', y: '6', width: '12', height: '3', rx: '0.5' });
+  val.setAttribute('fill', 'currentColor');
+  val.setAttribute('fill-opacity', '0.2');
+  val.setAttribute('stroke', 'none');
+  svg.appendChild(val);
+  const sub = svgEl('line', { x1: '3', y1: '11', x2: '10', y2: '11' });
+  sub.setAttribute('opacity', '0.15');
+  svg.appendChild(sub);
+  return svg;
+}
+
+function iconSkeleton(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const rects = [
+    { x: '2', y: '2', width: '16', height: '3', rx: '1' },
+    { x: '2', y: '7', width: '12', height: '3', rx: '1' },
+    { x: '2', y: '12', width: '8', height: '2', rx: '1' },
+  ];
+  for (const r of rects) {
+    const el = svgEl('rect', r);
+    el.setAttribute('fill', 'currentColor');
+    el.setAttribute('fill-opacity', '0.08');
+    el.setAttribute('stroke', 'none');
+    svg.appendChild(el);
+  }
+  return svg;
+}
+
+function iconChip(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const r1 = svgEl('rect', { x: '1', y: '5', width: '8', height: '6', rx: '3' });
+  r1.setAttribute('fill', 'currentColor');
+  r1.setAttribute('fill-opacity', '0.08');
+  svg.appendChild(r1);
+  svg.appendChild(svgEl('rect', { x: '11', y: '5', width: '8', height: '6', rx: '3' }));
+  // X on second chip
+  const x1 = svgEl('line', { x1: '16', y1: '7', x2: '18', y2: '9' });
+  x1.setAttribute('opacity', '0.25');
+  svg.appendChild(x1);
+  const x2 = svgEl('line', { x1: '18', y1: '7', x2: '16', y2: '9' });
+  x2.setAttribute('opacity', '0.25');
+  svg.appendChild(x2);
+  return svg;
+}
+
+function iconIcon(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('path', { d: 'M10,2 L11.5,6 L16,6.5 L12.5,9.5 L13.5,14 L10,11.5 L6.5,14 L7.5,9.5 L4,6.5 L8.5,6 Z' }));
+  return svg;
+}
+
+function iconSpinner(): SVGSVGElement {
+  const svg = createBaseSvg();
+  const bg = svgEl('circle', { cx: '10', cy: '8', r: '5' });
+  bg.setAttribute('opacity', '0.12');
+  svg.appendChild(bg);
+  const arc = svgEl('path', { d: 'M10,3 A5,5 0 0,1 15,8' });
+  arc.setAttribute('opacity', '0.35');
+  svg.appendChild(arc);
+  return svg;
+}
+
+// BLOCKS icons
+
+function iconPricing(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '2', y: '0.5', width: '16', height: '15', rx: '1' }));
+  const title = svgEl('rect', { x: '5', y: '2', width: '10', height: '2', rx: '0.5' });
+  title.setAttribute('fill', 'currentColor');
+  title.setAttribute('fill-opacity', '0.15');
+  title.setAttribute('stroke', 'none');
+  svg.appendChild(title);
+  const price = svgEl('rect', { x: '6', y: '5', width: '8', height: '2', rx: '0.5' });
+  price.setAttribute('fill', 'currentColor');
+  price.setAttribute('fill-opacity', '0.2');
+  price.setAttribute('stroke', 'none');
+  svg.appendChild(price);
+  svg.appendChild(svgEl('line', { x1: '5', y1: '9', x2: '15', y2: '9' }));
+  svg.appendChild(svgEl('line', { x1: '5', y1: '11', x2: '15', y2: '11' }));
+  const btn = svgEl('rect', { x: '5', y: '13', width: '10', height: '2', rx: '1' });
+  btn.setAttribute('fill', 'currentColor');
+  btn.setAttribute('fill-opacity', '0.15');
+  svg.appendChild(btn);
+  return svg;
+}
+
+function iconTestimonial(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '1', width: '18', height: '14', rx: '1' }));
+  const quote = svgEl('path', { d: 'M3,3 L4,5' });
+  quote.setAttribute('opacity', '0.3');
+  svg.appendChild(quote);
+  svg.appendChild(svgEl('line', { x1: '5', y1: '6', x2: '16', y2: '6' }));
+  svg.appendChild(svgEl('line', { x1: '5', y1: '8', x2: '14', y2: '8' }));
+  svg.appendChild(svgEl('circle', { cx: '4', cy: '12', r: '1.5' }));
+  svg.appendChild(svgEl('line', { x1: '7', y1: '12', x2: '14', y2: '12' }));
+  return svg;
+}
+
+function iconCta(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '1', y: '2', width: '18', height: '12', rx: '1' }));
+  const title = svgEl('rect', { x: '5', y: '4', width: '10', height: '2', rx: '0.5' });
+  title.setAttribute('fill', 'currentColor');
+  title.setAttribute('fill-opacity', '0.15');
+  title.setAttribute('stroke', 'none');
+  svg.appendChild(title);
+  svg.appendChild(svgEl('line', { x1: '6', y1: '8', x2: '14', y2: '8' }));
+  svg.appendChild(svgEl('rect', { x: '6', y: '10', width: '8', height: '2.5', rx: '1' }));
+  return svg;
+}
+
+function iconProductCard(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '2', y: '0.5', width: '16', height: '15', rx: '1' }));
+  const img = svgEl('rect', { x: '2', y: '0.5', width: '16', height: '6', rx: '0' });
+  img.setAttribute('fill', 'currentColor');
+  img.setAttribute('fill-opacity', '0.04');
+  img.setAttribute('stroke', 'none');
+  svg.appendChild(img);
+  const title = svgEl('rect', { x: '4', y: '8', width: '10', height: '2', rx: '0.5' });
+  title.setAttribute('fill', 'currentColor');
+  title.setAttribute('fill-opacity', '0.15');
+  title.setAttribute('stroke', 'none');
+  svg.appendChild(title);
+  svg.appendChild(svgEl('line', { x1: '4', y1: '11.5', x2: '8', y2: '11.5' }));
+  svg.appendChild(svgEl('rect', { x: '4', y: '13', width: '12', height: '2', rx: '1' }));
+  return svg;
+}
+
+function iconProfile(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('circle', { cx: '10', cy: '4', r: '2.5' }));
+  const name = svgEl('rect', { x: '5', y: '8', width: '10', height: '2', rx: '0.5' });
+  name.setAttribute('fill', 'currentColor');
+  name.setAttribute('fill-opacity', '0.15');
+  name.setAttribute('stroke', 'none');
+  svg.appendChild(name);
+  const bio = svgEl('line', { x1: '6', y1: '12', x2: '14', y2: '12' });
+  bio.setAttribute('opacity', '0.2');
+  svg.appendChild(bio);
+  return svg;
+}
+
+function iconFeature(): SVGSVGElement {
+  const svg = createBaseSvg();
+  // Two rows
+  svg.appendChild(svgEl('rect', { x: '2', y: '2', width: '4', height: '4', rx: '0.5' }));
+  svg.appendChild(svgEl('line', { x1: '8', y1: '3', x2: '17', y2: '3' }));
+  svg.appendChild(svgEl('line', { x1: '8', y1: '5', x2: '15', y2: '5' }));
+  svg.appendChild(svgEl('rect', { x: '2', y: '10', width: '4', height: '4', rx: '0.5' }));
+  svg.appendChild(svgEl('line', { x1: '8', y1: '11', x2: '17', y2: '11' }));
+  svg.appendChild(svgEl('line', { x1: '8', y1: '13', x2: '15', y2: '13' }));
+  return svg;
+}
+
+function iconTeam(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('circle', { cx: '6', cy: '4', r: '2' }));
+  const c2 = svgEl('circle', { cx: '10', cy: '4', r: '2' });
+  c2.setAttribute('fill', 'currentColor');
+  c2.setAttribute('fill-opacity', '0.08');
+  svg.appendChild(c2);
+  svg.appendChild(svgEl('circle', { cx: '14', cy: '4', r: '2' }));
+  const ln1 = svgEl('line', { x1: '3', y1: '9', x2: '17', y2: '9' });
+  ln1.setAttribute('fill', 'currentColor');
+  ln1.setAttribute('fill-opacity', '0.15');
+  svg.appendChild(ln1);
+  const ln2 = svgEl('line', { x1: '5', y1: '12', x2: '15', y2: '12' });
+  ln2.setAttribute('opacity', '0.2');
+  svg.appendChild(ln2);
+  return svg;
+}
+
+function iconLogin(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '2', y: '0.5', width: '16', height: '15', rx: '1.5' }));
+  const title = svgEl('rect', { x: '5', y: '2', width: '10', height: '2', rx: '0.5' });
+  title.setAttribute('fill', 'currentColor');
+  title.setAttribute('fill-opacity', '0.15');
+  title.setAttribute('stroke', 'none');
+  svg.appendChild(title);
+  svg.appendChild(svgEl('rect', { x: '4', y: '5.5', width: '12', height: '3', rx: '0.5' }));
+  svg.appendChild(svgEl('rect', { x: '4', y: '9.5', width: '12', height: '3', rx: '0.5' }));
+  const btn = svgEl('rect', { x: '5', y: '13', width: '10', height: '2', rx: '1' });
+  btn.setAttribute('fill', 'currentColor');
+  btn.setAttribute('fill-opacity', '0.15');
+  svg.appendChild(btn);
+  return svg;
+}
+
+function iconContact(): SVGSVGElement {
+  const svg = createBaseSvg();
+  svg.appendChild(svgEl('rect', { x: '2', y: '0.5', width: '16', height: '15', rx: '1' }));
+  const label = svgEl('rect', { x: '3', y: '2', width: '5', height: '1.5', rx: '0.5' });
+  label.setAttribute('fill', 'currentColor');
+  label.setAttribute('fill-opacity', '0.15');
+  label.setAttribute('stroke', 'none');
+  svg.appendChild(label);
+  svg.appendChild(svgEl('rect', { x: '3', y: '4', width: '14', height: '2.5', rx: '0.5' }));
+  svg.appendChild(svgEl('rect', { x: '3', y: '7.5', width: '14', height: '4', rx: '0.5' }));
+  const btn = svgEl('rect', { x: '5', y: '13', width: '10', height: '2', rx: '1' });
+  btn.setAttribute('fill', 'currentColor');
+  btn.setAttribute('fill-opacity', '0.15');
+  svg.appendChild(btn);
+  return svg;
+}
+
+// Icon registry
+const ICON_BUILDERS: Record<string, () => SVGSVGElement> = {
+  // Layout
+  navigation: iconNavigation,
+  header: iconHeader,
+  hero: iconHero,
+  section: iconSection,
+  sidebar: iconSidebar,
+  footer: iconFooter,
+  modal: iconModal,
+  banner: iconBanner,
+  drawer: iconDrawer,
+  popover: iconPopover,
+  divider: iconDivider,
+  // Content
+  card: iconCard,
+  text: iconText,
+  image: iconImage,
+  video: iconVideo,
+  table: iconTable,
+  grid: iconGrid,
+  list: iconList,
+  chart: iconChart,
+  codeBlock: iconCodeBlock,
+  map: iconMap,
+  timeline: iconTimeline,
+  calendar: iconCalendar,
+  accordion: iconAccordion,
+  carousel: iconCarousel,
+  logo: iconLogo,
+  faq: iconFaq,
+  gallery: iconGallery,
+  // Controls
+  button: iconButton,
+  input: iconInput,
+  search: iconSearch,
+  form: iconForm,
+  tabs: iconTabs,
+  dropdown: iconDropdown,
+  toggle: iconToggle,
+  stepper: iconStepper,
+  rating: iconRating,
+  fileUpload: iconFileUpload,
+  checkbox: iconCheckbox,
+  radio: iconRadio,
+  slider: iconSlider,
+  datePicker: iconDatePicker,
+  // Elements
+  avatar: iconAvatar,
+  badge: iconBadge,
+  tag: iconTag,
+  breadcrumb: iconBreadcrumb,
+  pagination: iconPagination,
+  progress: iconProgress,
+  alert: iconAlert,
+  toast: iconToast,
+  notification: iconNotification,
+  tooltip: iconTooltip,
+  stat: iconStat,
+  skeleton: iconSkeleton,
+  chip: iconChip,
+  icon: iconIcon,
+  spinner: iconSpinner,
+  // Blocks
+  pricing: iconPricing,
+  testimonial: iconTestimonial,
+  cta: iconCta,
+  productCard: iconProductCard,
+  profile: iconProfile,
+  feature: iconFeature,
+  team: iconTeam,
+  login: iconLogin,
+  contact: iconContact,
+};
+
+export function getWireframeIcon(name: string): SVGSVGElement | null {
+  const builder = ICON_BUILDERS[name];
+  if (!builder) return null;
+  return builder();
+}
+
 export class ComponentPalette {
   private shadow: ShadowRoot;
   private panel: HTMLDivElement | null = null;
@@ -28,6 +1059,9 @@ export class ComponentPalette {
   private placedCount = 0;
   private countLabel: HTMLSpanElement | null = null;
   private activeDragItem: HTMLDivElement | null = null;
+  private wireframeToggleEl: HTMLDivElement | null = null;
+  private dotGridEl: HTMLDivElement | null = null;
+  private wireframeChangeHandler: (() => void) | null = null;
 
   constructor(shadowRoot: ShadowRoot) {
     this.shadow = shadowRoot;
@@ -126,8 +1160,67 @@ export class ComponentPalette {
 
     this.shadow.appendChild(this.panel);
 
+    // Dot-grid background overlay
+    this.dotGridEl = document.createElement('div');
+    Object.assign(this.dotGridEl.style, {
+      position:      'fixed',
+      inset:         '0',
+      zIndex:        '2147483640',
+      pointerEvents: 'none',
+      display:       'none',
+      background:    'white',
+      backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px)',
+      backgroundSize:  '24px 24px',
+    });
+    this.shadow.appendChild(this.dotGridEl);
+
+    // Listen to wireframe state changes
+    this.wireframeChangeHandler = () => this.applyWireframeState();
+    onWireframeChange(this.wireframeChangeHandler);
+
     document.addEventListener('dragover', this.handleDragOver);
     document.addEventListener('drop', this.handleDrop);
+  }
+
+  private applyWireframeState(): void {
+    const wf = isWireframe();
+    // Update toggle knob
+    if (this.wireframeToggleEl) {
+      const knob = this.wireframeToggleEl.querySelector('[data-toggle-knob]') as HTMLDivElement | null;
+      const track = this.wireframeToggleEl.querySelector('[data-toggle-track]') as HTMLDivElement | null;
+      if (knob && track) {
+        if (wf) {
+          track.style.background = 'rgba(249,115,22,0.3)';
+          knob.style.transform = 'translateX(12px)';
+          knob.style.background = '#f97316';
+        } else {
+          track.style.background = 'rgba(255,255,255,0.15)';
+          knob.style.transform = 'translateX(0)';
+          knob.style.background = 'rgba(255,255,255,0.7)';
+        }
+      }
+    }
+    // Update dot grid
+    if (this.dotGridEl) {
+      this.dotGridEl.style.display = wf ? '' : 'none';
+    }
+    // Update palette item active states via accent color
+    if (this.panel) {
+      const items = this.panel.querySelectorAll('[data-primitive-type]');
+      items.forEach((item) => {
+        // If drag-active, swap the blue to orange
+        const el = item as HTMLDivElement;
+        if (el === this.activeDragItem) {
+          if (wf) {
+            el.style.background = 'rgba(249,115,22,0.15)';
+            el.style.border = '1px solid rgba(249,115,22,0.3)';
+          } else {
+            el.style.background = 'rgba(59,130,246,0.15)';
+            el.style.border = '1px solid rgba(59,130,246,0.3)';
+          }
+        }
+      });
+    }
   }
 
   private buildSection(cat: PrimitiveType['category'], isFirst: boolean): HTMLDivElement {
@@ -191,28 +1284,25 @@ export class ComponentPalette {
     // Mini icon box
     const iconBox = document.createElement('div');
     Object.assign(iconBox.style, {
-      width:        '20px',
-      height:       '16px',
-      border:       '1px dashed rgba(255,255,255,0.15)',
-      background:   'rgba(255,255,255,0.04)',
-      borderRadius: '3px',
-      flexShrink:   '0',
-      display:      'flex',
-      alignItems:   'center',
+      width:          '20px',
+      height:         '16px',
+      border:         '1px dashed rgba(255,255,255,0.15)',
+      background:     'rgba(255,255,255,0.04)',
+      borderRadius:   '3px',
+      flexShrink:     '0',
+      display:        'flex',
+      alignItems:     'center',
       justifyContent: 'center',
+      color:          'rgba(255,255,255,0.35)',
     });
 
-    // Tiny SVG sketch per category
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', '14');
-    svg.setAttribute('height', '10');
-    svg.setAttribute('viewBox', '0 0 14 10');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'rgba(255,255,255,0.35)');
-    svg.setAttribute('stroke-width', '1');
-
-    this.drawMiniIcon(svg, category);
-    iconBox.appendChild(svg);
+    // Per-component wireframe icon
+    const iconSvg = getWireframeIcon(name);
+    if (iconSvg) {
+      iconSvg.style.width = '20px';
+      iconSvg.style.height = '16px';
+      iconBox.appendChild(iconSvg);
+    }
     item.appendChild(iconBox);
 
     // Label
@@ -248,8 +1338,11 @@ export class ComponentPalette {
       e.dataTransfer.setData('improv/type', name);
       e.dataTransfer.setData('improv/category', category);
       this.activeDragItem = item;
-      item.style.background = 'rgba(59,130,246,0.15)';
-      item.style.border = '1px solid rgba(59,130,246,0.3)';
+      const wf = isWireframe();
+      item.style.background = wf ? 'rgba(249,115,22,0.15)' : 'rgba(59,130,246,0.15)';
+      item.style.border = wf
+        ? '1px solid rgba(249,115,22,0.3)'
+        : '1px solid rgba(59,130,246,0.3)';
     });
 
     item.addEventListener('dragend', () => {
@@ -261,71 +1354,22 @@ export class ComponentPalette {
     return item;
   }
 
-  private drawMiniIcon(svg: SVGSVGElement, category: string): void {
-    switch (category) {
-      case 'layout': {
-        // Horizontal lines (nav/header shape)
-        const l1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        l1.setAttribute('x1', '2'); l1.setAttribute('y1', '3');
-        l1.setAttribute('x2', '12'); l1.setAttribute('y2', '3');
-        const l2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        l2.setAttribute('x1', '2'); l2.setAttribute('y1', '7');
-        l2.setAttribute('x2', '9'); l2.setAttribute('y2', '7');
-        svg.appendChild(l1);
-        svg.appendChild(l2);
-        break;
-      }
-      case 'content': {
-        // Small rect (card)
-        const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        r.setAttribute('x', '3'); r.setAttribute('y', '2');
-        r.setAttribute('width', '8'); r.setAttribute('height', '6');
-        r.setAttribute('rx', '1');
-        svg.appendChild(r);
-        break;
-      }
-      case 'controls': {
-        // Small rounded rect (button)
-        const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        r.setAttribute('x', '2'); r.setAttribute('y', '3');
-        r.setAttribute('width', '10'); r.setAttribute('height', '4');
-        r.setAttribute('rx', '2');
-        svg.appendChild(r);
-        break;
-      }
-      case 'elements': {
-        // Small circle (avatar)
-        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        c.setAttribute('cx', '7'); c.setAttribute('cy', '5');
-        c.setAttribute('r', '3');
-        svg.appendChild(c);
-        break;
-      }
-      case 'blocks': {
-        // Stacked rects (pricing card)
-        const r1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        r1.setAttribute('x', '3'); r1.setAttribute('y', '1');
-        r1.setAttribute('width', '8'); r1.setAttribute('height', '3');
-        r1.setAttribute('rx', '0.5');
-        const r2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        r2.setAttribute('x', '3'); r2.setAttribute('y', '5.5');
-        r2.setAttribute('width', '8'); r2.setAttribute('height', '3');
-        r2.setAttribute('rx', '0.5');
-        svg.appendChild(r1);
-        svg.appendChild(r2);
-        break;
-      }
-    }
-  }
-
   private buildFooter(): HTMLDivElement {
     const footer = document.createElement('div');
     Object.assign(footer.style, {
-      display:     'flex',
-      alignItems:  'center',
+      display:        'flex',
+      alignItems:     'center',
       justifyContent: 'space-between',
-      padding:     '8px 12px',
-      borderTop:   '1px solid rgba(255,255,255,0.07)',
+      padding:        '8px 12px',
+      borderTop:      '1px solid rgba(255,255,255,0.07)',
+    });
+
+    // Left side: count + wireframe toggle
+    const leftGroup = document.createElement('div');
+    Object.assign(leftGroup.style, {
+      display:    'flex',
+      alignItems: 'center',
+      gap:        '8px',
     });
 
     // Count label
@@ -336,7 +1380,58 @@ export class ComponentPalette {
       fontWeight: '500',
       color:      'rgba(255,255,255,0.5)',
     });
-    footer.appendChild(this.countLabel);
+    leftGroup.appendChild(this.countLabel);
+
+    // Wireframe toggle
+    this.wireframeToggleEl = document.createElement('div');
+    Object.assign(this.wireframeToggleEl.style, {
+      display:    'flex',
+      alignItems: 'center',
+      gap:        '4px',
+      cursor:     'pointer',
+    });
+
+    const toggleLabel = document.createElement('span');
+    toggleLabel.textContent = 'Wire';
+    Object.assign(toggleLabel.style, {
+      fontSize:   '10px',
+      fontWeight: '500',
+      color:      'rgba(255,255,255,0.4)',
+    });
+    this.wireframeToggleEl.appendChild(toggleLabel);
+
+    const toggleTrack = document.createElement('div');
+    toggleTrack.dataset['toggleTrack'] = '';
+    Object.assign(toggleTrack.style, {
+      width:        '24px',
+      height:       '12px',
+      borderRadius: '6px',
+      background:   'rgba(255,255,255,0.15)',
+      position:     'relative',
+      transition:   'background 0.15s ease',
+    });
+
+    const toggleKnob = document.createElement('div');
+    toggleKnob.dataset['toggleKnob'] = '';
+    Object.assign(toggleKnob.style, {
+      width:        '10px',
+      height:       '10px',
+      borderRadius: '50%',
+      background:   'rgba(255,255,255,0.7)',
+      position:     'absolute',
+      top:          '1px',
+      left:         '1px',
+      transition:   'transform 0.15s ease, background 0.15s ease',
+    });
+    toggleTrack.appendChild(toggleKnob);
+    this.wireframeToggleEl.appendChild(toggleTrack);
+
+    this.wireframeToggleEl.addEventListener('click', () => {
+      toggleWireframe();
+    });
+
+    leftGroup.appendChild(this.wireframeToggleEl);
+    footer.appendChild(leftGroup);
 
     // Clear button
     const clearBtn = document.createElement('span');
@@ -399,9 +1494,14 @@ export class ComponentPalette {
   destroy(): void {
     document.removeEventListener('dragover', this.handleDragOver);
     document.removeEventListener('drop', this.handleDrop);
+    if (this.wireframeChangeHandler) {
+      offWireframeChange(this.wireframeChangeHandler);
+    }
     this.panel?.remove();
+    this.dotGridEl?.remove();
     this.panel = null;
     this.countLabel = null;
+    this.dotGridEl = null;
   }
 
   onDrop(callback: DropCallback): void {
@@ -414,5 +1514,13 @@ export class ComponentPalette {
 
   onClear(callback: ClearCallback): void {
     this.clearCallback = callback;
+  }
+
+  isWireframe(): boolean {
+    return isWireframe();
+  }
+
+  toggleWireframe(): void {
+    toggleWireframe();
   }
 }

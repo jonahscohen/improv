@@ -453,7 +453,7 @@ export class LayoutMode {
   }
 }
 
-export { ComponentPalette } from './palette';
+export { ComponentPalette, isWireframe, toggleWireframe, getWireframeIcon } from './palette';
 export { SkeletonRenderer } from './skeleton';
 export { GuideLineRenderer } from './guide-lines';
 export { SectionDetector } from './rearrange';
