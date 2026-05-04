@@ -162,9 +162,21 @@ export class PromptMode {
       context,
       prompt: text,
       elementCount: selected.length,
+    }).then(() => {
+      this.notifyPromptSent(text, selected.length);
     }).catch(() => {
-      // Fire and forget - transport may not be connected
+      this.notifyPromptSent(text, selected.length);
     });
+  }
+
+  private promptSentCallbacks: Array<(text: string, count: number) => void> = [];
+
+  onPromptSent(callback: (text: string, count: number) => void): void {
+    this.promptSentCallbacks.push(callback);
+  }
+
+  private notifyPromptSent(text: string, count: number): void {
+    for (const cb of this.promptSentCallbacks) cb(text, count);
   }
 
   private copyContext(): void {

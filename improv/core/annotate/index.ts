@@ -263,6 +263,7 @@ export class AnnotateMode {
     });
 
     this._push(id);
+    this.notifyChange();
   }
 
   private _submitTextAnnotation(
@@ -286,6 +287,7 @@ export class AnnotateMode {
 
     this.marker.create(rect, this.store.count(), intent);
     this._push(id);
+    this.notifyChange();
   }
 
   private _push(id: string): void {
@@ -301,5 +303,15 @@ export class AnnotateMode {
 
   getStore(): AnnotationStore {
     return this.store;
+  }
+
+  onAnnotationChange(callback: () => void): void {
+    this.changeCallbacks.push(callback);
+  }
+
+  private changeCallbacks: Array<() => void> = [];
+
+  private notifyChange(): void {
+    for (const cb of this.changeCallbacks) cb();
   }
 }

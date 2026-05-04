@@ -157,16 +157,34 @@ export class ImprovCore {
       this.manipulateMode.activate();
     } else if (mode === 'prompt') {
       this.promptMode = new PromptMode(this.overlay, this.transport, this.registry);
+      this.promptMode.onPromptSent((text, count) => {
+        this.applyConfirmation?.showSuccess([{
+          label: text.length > 60 ? text.slice(0, 57) + '...' : text,
+          detail: `${count} element${count === 1 ? '' : 's'} selected`,
+        }]);
+      });
       this.promptMode.activate();
     } else if (mode === 'annotate') {
       this.annotateMode = new AnnotateMode(this.overlay, this.transport, this.registry);
+      this.annotateMode.onAnnotationChange(() => {
+        this.toolbar?.setBadge(this.getTotalPendingCount());
+      });
       this.annotateMode.activate();
     } else if (mode === 'layout') {
       this.layoutMode = new LayoutMode(this.overlay, this.transport);
       this.layoutMode.activate();
     }
 
-    this.toolbar?.setBadge(this.changeBuffer?.count() ?? 0);
+    this.toolbar?.setBadge(this.getTotalPendingCount());
+    this.toolbar?.showSendButton(mode === 'annotate' || mode === 'prompt');
+  }
+
+  private getTotalPendingCount(): number {
+    let count = this.changeBuffer?.count() ?? 0;
+    if (this.annotateMode) {
+      count += this.annotateMode.getStore().pendingCount();
+    }
+    return count;
   }
 
   private async applyChanges(): Promise<void> {
