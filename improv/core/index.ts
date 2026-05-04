@@ -4,6 +4,7 @@ import { Toolbar } from './toolbar';
 import { AdapterRegistry } from './adapter-registry';
 import { PreviewEngine } from './preview-engine';
 import { ChangeBuffer } from './change-buffer';
+import { ApplyConfirmation } from './apply-confirmation';
 import { ManipulateMode } from './manipulate/index.js';
 import { PromptMode } from './prompt/index.js';
 import { AnnotateMode } from './annotate/index.js';
@@ -30,6 +31,7 @@ export class ImprovCore {
   private promptMode: PromptMode | null = null;
   private annotateMode: AnnotateMode | null = null;
   private layoutMode: LayoutMode | null = null;
+  private applyConfirmation: ApplyConfirmation | null = null;
 
   constructor() {
     this.transport = new Transport();
@@ -65,6 +67,7 @@ export class ImprovCore {
           this.toolbar.setConnected(this.transport.isConnected());
           this.toolbar.onMode((mode) => this.switchMode(mode));
           this.toolbar.onApply(() => this.applyChanges());
+          this.toolbar.onSendToClaude(() => this.sendAnnotations());
           this.toolbar.setBadge(this.changeBuffer?.count() ?? 0);
         }
         return;
@@ -98,10 +101,13 @@ export class ImprovCore {
 
     this.overlay.mount();
 
+    this.applyConfirmation = new ApplyConfirmation(this.overlay.getShadowRoot());
+
     this.toolbar = new Toolbar(this.overlay.getShadowRoot());
     this.toolbar.setConnected(this.transport.isConnected());
     this.toolbar.onMode((mode) => this.switchMode(mode));
     this.toolbar.onApply(() => this.applyChanges());
+    this.toolbar.onSendToClaude(() => this.sendAnnotations());
 
     // Keep connected status in sync
     const onDisconnected = () => this.toolbar?.setConnected(false);
@@ -117,6 +123,8 @@ export class ImprovCore {
     this.switchMode(null);
     this.toolbar?.destroy();
     this.toolbar = null;
+    this.applyConfirmation?.destroy();
+    this.applyConfirmation = null;
     this.overlay.unmount();
 
     this.previewEngine?.detach();
@@ -162,6 +170,9 @@ export class ImprovCore {
   private async applyChanges(): Promise<void> {
     if (!this.changeBuffer || this.changeBuffer.count() === 0) return;
     const changes = this.changeBuffer.flush();
+
+    this.applyConfirmation?.showSending('Sending to Claude...');
+
     try {
       await this.transport.request('push_changes', {
         changes: changes.map((c) => ({
@@ -173,10 +184,48 @@ export class ImprovCore {
       });
       this.previewEngine?.clearAll();
       this.toolbar?.setBadge(0);
-    } catch {
+
+      const items = changes.map((c) => ({
+        label: `${c.selector}`,
+        detail: `${c.property}: ${c.newValue}`,
+      }));
+      this.applyConfirmation?.showSuccess(items);
+    } catch (err) {
+      // Restore changes to the buffer on failure
       for (const c of changes) {
         this.changeBuffer?.add(c.selector, c.property, c.oldValue, c.newValue);
       }
+      const message = err instanceof Error ? err.message : 'Connection error';
+      this.applyConfirmation?.showError(message, () => this.applyChanges());
+    }
+  }
+
+  private async sendAnnotations(): Promise<void> {
+    if (!this.annotateMode) return;
+    const store = this.annotateMode.getStore();
+    const pending = store.getPending();
+    if (pending.length === 0) return;
+
+    this.applyConfirmation?.showSending('Sending annotations to Claude...');
+
+    try {
+      await this.transport.request('push_annotations', {
+        annotations: pending,
+      });
+
+      const items = pending.map((a) => ({
+        label: a.comment.length > 60 ? `${a.comment.slice(0, 57)}...` : a.comment,
+        detail: a.elementSelector !== 'text-selection' ? a.elementSelector : 'Text selection',
+      }));
+
+      const successItems = items.length > 0
+        ? items
+        : [{ label: `${pending.length} annotation${pending.length === 1 ? '' : 's'} sent` }];
+
+      this.applyConfirmation?.showSuccess(successItems);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Connection error';
+      this.applyConfirmation?.showError(message, () => this.sendAnnotations());
     }
   }
 
