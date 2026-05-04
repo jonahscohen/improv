@@ -1,6 +1,7 @@
 import type { ImprovMode } from './types';
 
 type ModeCallback = (mode: ImprovMode | null) => void;
+type ApplyCallback = () => void;
 
 // SVG path data sourced verbatim from Heroicons (stroke-based, 24x24 viewBox)
 const ICONS: Record<string, string> = {
@@ -25,8 +26,10 @@ export class Toolbar {
   private el: HTMLDivElement;
   private activeMode: ImprovMode | null = null;
   private modeCallbacks: ModeCallback[] = [];
+  private applyCallbacks: ApplyCallback[] = [];
   private statusDot: HTMLDivElement;
   private badge: HTMLDivElement;
+  private applyBtn: HTMLButtonElement;
   private buttons = new Map<ImprovMode, HTMLButtonElement>();
 
   constructor(shadowRoot: ShadowRoot) {
@@ -61,6 +64,41 @@ export class Toolbar {
       buttonRow.appendChild(btn);
     }
     this.el.appendChild(buttonRow);
+
+    // Apply button (hidden until changes are queued)
+    this.applyBtn = document.createElement('button');
+    this.applyBtn.textContent = 'Apply';
+    this.applyBtn.style.cssText = [
+      'display:none',
+      'width:100%',
+      'border:none',
+      'background:#22c55e',
+      'color:#fff',
+      'font-size:12px',
+      'font-family:system-ui,sans-serif',
+      'font-weight:600',
+      'border-radius:8px',
+      'padding:6px 12px',
+      'cursor:pointer',
+      'transition:background 120ms ease,transform 80ms ease',
+      'margin-top:2px',
+    ].join(';');
+    this.applyBtn.addEventListener('click', () => {
+      this.applyCallbacks.forEach((cb) => cb());
+    });
+    this.applyBtn.addEventListener('mouseenter', () => {
+      this.applyBtn.style.background = '#16a34a';
+    });
+    this.applyBtn.addEventListener('mouseleave', () => {
+      this.applyBtn.style.background = '#22c55e';
+    });
+    this.applyBtn.addEventListener('mousedown', () => {
+      this.applyBtn.style.transform = 'scale(0.96)';
+    });
+    this.applyBtn.addEventListener('mouseup', () => {
+      this.applyBtn.style.transform = '';
+    });
+    this.el.appendChild(this.applyBtn);
 
     // Bottom row: status dot + badge
     const bottomRow = document.createElement('div');
@@ -199,6 +237,10 @@ export class Toolbar {
     this.modeCallbacks.push(callback);
   }
 
+  onApply(callback: ApplyCallback): void {
+    this.applyCallbacks.push(callback);
+  }
+
   setConnected(connected: boolean): void {
     this.statusDot.style.background = connected ? '#22c55e' : '#ef4444';
   }
@@ -207,9 +249,12 @@ export class Toolbar {
     if (count > 0) {
       this.badge.style.display = 'block';
       this.badge.textContent = String(count);
+      this.applyBtn.style.display = 'block';
+      this.applyBtn.textContent = `Apply (${count})`;
     } else {
       this.badge.style.display = 'none';
       this.badge.textContent = '';
+      this.applyBtn.style.display = 'none';
     }
   }
 

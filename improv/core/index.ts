@@ -94,6 +94,7 @@ export class ImprovCore {
     this.toolbar = new Toolbar(this.overlay.getShadowRoot());
     this.toolbar.setConnected(this.transport.isConnected());
     this.toolbar.onMode((mode) => this.switchMode(mode));
+    this.toolbar.onApply(() => this.applyChanges());
 
     // Keep connected status in sync
     const onDisconnected = () => this.toolbar?.setConnected(false);
@@ -146,6 +147,27 @@ export class ImprovCore {
     }
 
     this.toolbar?.setBadge(this.changeBuffer?.count() ?? 0);
+  }
+
+  private async applyChanges(): Promise<void> {
+    if (!this.changeBuffer || this.changeBuffer.count() === 0) return;
+    const changes = this.changeBuffer.flush();
+    try {
+      await this.transport.request('push_changes', {
+        changes: changes.map((c) => ({
+          selector: c.selector,
+          property: c.property,
+          oldValue: c.oldValue,
+          newValue: c.newValue,
+        })),
+      });
+      this.previewEngine?.clearAll();
+      this.toolbar?.setBadge(0);
+    } catch {
+      for (const c of changes) {
+        this.changeBuffer?.add(c.selector, c.property, c.oldValue, c.newValue);
+      }
+    }
   }
 
   registerAdapter(adapter: ImprovAdapter): void {
