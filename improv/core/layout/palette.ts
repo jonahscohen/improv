@@ -1051,6 +1051,18 @@ export function getWireframeIcon(name: string): SVGSVGElement | null {
   return builder();
 }
 
+/**
+ * Splits camelCase into separate words and capitalizes each.
+ * "codeBlock" -> "Code Block", "datePicker" -> "Date Picker"
+ */
+function formatName(name: string): string {
+  // Insert a space before each uppercase letter, then capitalize each word
+  const words = name.replace(/([A-Z])/g, ' $1').trim().split(/\s+/);
+  return words
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
 export class ComponentPalette {
   private shadow: ShadowRoot;
   private panel: HTMLDivElement | null = null;
@@ -1184,19 +1196,19 @@ export class ComponentPalette {
 
   private applyWireframeState(): void {
     const wf = isWireframe();
-    // Update toggle knob
+    // Update toggle pill
     if (this.wireframeToggleEl) {
-      const knob = this.wireframeToggleEl.querySelector('[data-toggle-knob]') as HTMLDivElement | null;
-      const track = this.wireframeToggleEl.querySelector('[data-toggle-track]') as HTMLDivElement | null;
-      if (knob && track) {
+      const pill = this.wireframeToggleEl.querySelector('[data-toggle-track]') as HTMLDivElement | null;
+      const label = this.wireframeToggleEl.querySelector('[data-toggle-knob]') as HTMLSpanElement | null;
+      if (pill && label) {
         if (wf) {
-          track.style.background = 'rgba(249,115,22,0.3)';
-          knob.style.transform = 'translateX(12px)';
-          knob.style.background = '#f97316';
+          pill.style.background = 'rgba(249,115,22,0.2)';
+          pill.style.borderColor = 'rgba(249,115,22,0.5)';
+          label.style.color = '#f97316';
         } else {
-          track.style.background = 'rgba(255,255,255,0.15)';
-          knob.style.transform = 'translateX(0)';
-          knob.style.background = 'rgba(255,255,255,0.7)';
+          pill.style.background = 'transparent';
+          pill.style.borderColor = 'rgba(255,255,255,0.25)';
+          label.style.color = 'rgba(255,255,255,0.5)';
         }
       }
     }
@@ -1307,7 +1319,7 @@ export class ComponentPalette {
 
     // Label
     const label = document.createElement('span');
-    label.textContent = name;
+    label.textContent = formatName(name);
     Object.assign(label.style, {
       fontSize:     '0.8125rem',
       fontWeight:   '500',
@@ -1358,7 +1370,7 @@ export class ComponentPalette {
     const footer = document.createElement('div');
     Object.assign(footer.style, {
       display:        'flex',
-      alignItems:     'center',
+      alignItems:     'flex-start',
       justifyContent: 'space-between',
       padding:        '8px 12px',
       borderTop:      '1px solid rgba(255,255,255,0.07)',
@@ -1367,9 +1379,9 @@ export class ComponentPalette {
     // Left side: count + wireframe toggle
     const leftGroup = document.createElement('div');
     Object.assign(leftGroup.style, {
-      display:    'flex',
-      alignItems: 'center',
-      gap:        '8px',
+      display:       'flex',
+      flexDirection: 'column',
+      gap:           '6px',
     });
 
     // Count label
@@ -1382,49 +1394,47 @@ export class ComponentPalette {
     });
     leftGroup.appendChild(this.countLabel);
 
-    // Wireframe toggle
+    // Wireframe toggle - pill-shaped button with dashed border
     this.wireframeToggleEl = document.createElement('div');
     Object.assign(this.wireframeToggleEl.style, {
-      display:    'flex',
-      alignItems: 'center',
-      gap:        '4px',
-      cursor:     'pointer',
+      display:       'flex',
+      flexDirection: 'column',
+      gap:           '2px',
+      cursor:        'pointer',
+    });
+
+    const togglePill = document.createElement('div');
+    togglePill.dataset['toggleTrack'] = '';
+    Object.assign(togglePill.style, {
+      display:      'flex',
+      alignItems:   'center',
+      justifyContent: 'center',
+      padding:      '3px 8px',
+      borderRadius: '10px',
+      border:       '1px dashed rgba(255,255,255,0.25)',
+      background:   'transparent',
+      transition:   'background 0.15s ease, border-color 0.15s ease',
     });
 
     const toggleLabel = document.createElement('span');
-    toggleLabel.textContent = 'Wire';
+    toggleLabel.dataset['toggleKnob'] = '';
+    toggleLabel.textContent = 'Wireframe Mode';
     Object.assign(toggleLabel.style, {
       fontSize:   '10px',
       fontWeight: '500',
-      color:      'rgba(255,255,255,0.4)',
+      color:      'rgba(255,255,255,0.5)',
+      transition: 'color 0.15s ease',
     });
-    this.wireframeToggleEl.appendChild(toggleLabel);
+    togglePill.appendChild(toggleLabel);
+    this.wireframeToggleEl.appendChild(togglePill);
 
-    const toggleTrack = document.createElement('div');
-    toggleTrack.dataset['toggleTrack'] = '';
-    Object.assign(toggleTrack.style, {
-      width:        '24px',
-      height:       '12px',
-      borderRadius: '6px',
-      background:   'rgba(255,255,255,0.15)',
-      position:     'relative',
-      transition:   'background 0.15s ease',
+    const toggleDesc = document.createElement('span');
+    toggleDesc.textContent = 'Show component outlines on blank canvas';
+    Object.assign(toggleDesc.style, {
+      fontSize: '10px',
+      color:    'rgba(255,255,255,0.4)',
     });
-
-    const toggleKnob = document.createElement('div');
-    toggleKnob.dataset['toggleKnob'] = '';
-    Object.assign(toggleKnob.style, {
-      width:        '10px',
-      height:       '10px',
-      borderRadius: '50%',
-      background:   'rgba(255,255,255,0.7)',
-      position:     'absolute',
-      top:          '1px',
-      left:         '1px',
-      transition:   'transform 0.15s ease, background 0.15s ease',
-    });
-    toggleTrack.appendChild(toggleKnob);
-    this.wireframeToggleEl.appendChild(toggleTrack);
+    this.wireframeToggleEl.appendChild(toggleDesc);
 
     this.wireframeToggleEl.addEventListener('click', () => {
       toggleWireframe();

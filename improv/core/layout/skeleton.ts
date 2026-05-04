@@ -94,12 +94,12 @@ export class SkeletonRenderer {
       display:        'flex',
       alignItems:     'center',
       justifyContent: 'center',
-      padding:        '8px',
+      padding:        '16px',
     });
 
     // Scale the SVG proportionally to fill the skeleton with padding
     // The icon's native viewBox is 20x16
-    const padding = 16; // 8px each side
+    const padding = 32; // 16px each side
     const availW = Math.max(20, width - padding);
     const availH = Math.max(16, height - padding);
 

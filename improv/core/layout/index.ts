@@ -29,6 +29,8 @@ export class LayoutMode {
   private placements: LayoutPlacementData[] = [];
   private applyBtn: HTMLButtonElement | null = null;
   private previewPanel: HTMLDivElement | null = null;
+  private selectedSkeletonId: string | null = null;
+  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(overlay: Overlay, transport: Transport) {
     this.overlay   = overlay;
@@ -51,6 +53,23 @@ export class LayoutMode {
       this.handleDrop(type, category, clientX, clientY);
     });
 
+    // Wire clear callback to remove all skeletons
+    this.palette.onClear(() => {
+      this.skeletonRenderer?.clear();
+      this.placements = [];
+      this.selectedSkeletonId = null;
+    });
+
+    // Delete/Backspace removes selected skeleton
+    this.keydownHandler = (e: KeyboardEvent) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && this.selectedSkeletonId) {
+        this.skeletonRenderer?.remove(this.selectedSkeletonId);
+        this.placements = this.placements.filter((p) => p.id !== this.selectedSkeletonId);
+        this.selectedSkeletonId = null;
+      }
+    };
+    document.addEventListener('keydown', this.keydownHandler);
+
     this.sectionDetector.enable((sections) => {
       console.debug('[improv] sections reordered', sections.length);
     });
@@ -66,13 +85,19 @@ export class LayoutMode {
     this.applyBtn?.remove();
     this.previewPanel?.remove();
 
-    this.palette           = null;
-    this.skeletonRenderer  = null;
-    this.guideLineRenderer = null;
-    this.sectionDetector   = null;
-    this.applyBtn          = null;
-    this.previewPanel      = null;
-    this.placements        = [];
+    if (this.keydownHandler) {
+      document.removeEventListener('keydown', this.keydownHandler);
+      this.keydownHandler = null;
+    }
+
+    this.palette            = null;
+    this.skeletonRenderer   = null;
+    this.guideLineRenderer  = null;
+    this.sectionDetector    = null;
+    this.applyBtn           = null;
+    this.previewPanel       = null;
+    this.placements         = [];
+    this.selectedSkeletonId = null;
   }
 
   private handleDrop(type: string, category: string, clientX: number, clientY: number): void {
@@ -127,6 +152,14 @@ export class LayoutMode {
     el.addEventListener('mousedown', (e: MouseEvent) => {
       // Don't start drag when clicking on a resize handle
       if ((e.target as HTMLElement).style.cursor?.includes('resize')) return;
+
+      // Select this skeleton
+      if (this.selectedSkeletonId && this.selectedSkeletonId !== placement.id) {
+        this.skeletonRenderer?.deselect(this.selectedSkeletonId);
+      }
+      this.selectedSkeletonId = placement.id;
+      this.skeletonRenderer?.select(placement.id);
+
       dragging = true;
       startX   = e.clientX;
       startY   = e.clientY;
