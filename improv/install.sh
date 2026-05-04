@@ -54,9 +54,22 @@ echo "Installing CLI tools..."
 cp "$SCRIPT_DIR/cli/init.sh" "$IMPROV_DIR/init.sh"
 cp "$SCRIPT_DIR/cli/remove.sh" "$IMPROV_DIR/remove.sh"
 chmod +x "$IMPROV_DIR/init.sh" "$IMPROV_DIR/remove.sh"
-ln -sf "$IMPROV_DIR/init.sh" "${CLAUDE_DIR}/improv-init"
-ln -sf "$IMPROV_DIR/remove.sh" "${CLAUDE_DIR}/improv-remove"
-echo "Symlinked improv-init and improv-remove to $CLAUDE_DIR"
+
+# Put commands in PATH - try /usr/local/bin first, then homebrew, then ~/.local/bin
+BIN_DIR=""
+for d in /usr/local/bin /opt/homebrew/bin "${HOME}/.local/bin"; do
+  if [ -d "$d" ] && [ -w "$d" ]; then
+    BIN_DIR="$d"
+    break
+  fi
+done
+if [ -z "$BIN_DIR" ]; then
+  mkdir -p "${HOME}/.local/bin"
+  BIN_DIR="${HOME}/.local/bin"
+fi
+ln -sf "$IMPROV_DIR/init.sh" "$BIN_DIR/improv-init"
+ln -sf "$IMPROV_DIR/remove.sh" "$BIN_DIR/improv-remove"
+echo "Installed improv-init and improv-remove to $BIN_DIR"
 
 # Register MCP server in ~/.claude.json
 python3 -c "
