@@ -1,7 +1,7 @@
 import type { Overlay } from '../overlay';
 import type { Transport } from '../transport';
 import type { LayoutPlacementData } from '../types';
-import { ComponentPalette } from './palette';
+import { ComponentPalette, onAccentChange, offAccentChange, setGridActive } from './palette';
 import { SkeletonRenderer } from './skeleton';
 import { GuideLineRenderer } from './guide-lines';
 import { SectionDetector } from './rearrange';
@@ -32,6 +32,7 @@ export class LayoutMode {
   private selectedSkeletonId: string | null = null;
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private scrollHandler: (() => void) | null = null;
+  private accentChangeHandler: (() => void) | null = null;
 
   constructor(overlay: Overlay, transport: Transport) {
     this.overlay   = overlay;
@@ -77,6 +78,12 @@ export class LayoutMode {
     };
     window.addEventListener('scroll', this.scrollHandler, { passive: true });
 
+    // Listen for accent color changes and refresh skeleton colors
+    this.accentChangeHandler = () => {
+      this.skeletonRenderer?.refreshColors();
+    };
+    onAccentChange(this.accentChangeHandler);
+
     this.sectionDetector.enable((sections) => {
       console.debug('[improv] sections reordered', sections.length);
     });
@@ -99,6 +106,10 @@ export class LayoutMode {
     if (this.scrollHandler) {
       window.removeEventListener('scroll', this.scrollHandler);
       this.scrollHandler = null;
+    }
+    if (this.accentChangeHandler) {
+      offAccentChange(this.accentChangeHandler);
+      this.accentChangeHandler = null;
     }
 
     this.palette            = null;
@@ -181,6 +192,9 @@ export class LayoutMode {
       placement.scrollY = window.scrollY;
       placement.y = originY;
       e.preventDefault();
+
+      // Darken grid dots during drag
+      setGridActive(true);
     });
 
     const onMove = (e: MouseEvent): void => {
@@ -218,6 +232,7 @@ export class LayoutMode {
     const onUp = (): void => {
       if (!dragging) return;
       dragging = false;
+      setGridActive(false);
       setTimeout(() => this.guideLineRenderer?.hide(), 400);
     };
 
@@ -501,7 +516,7 @@ export class LayoutMode {
   }
 }
 
-export { ComponentPalette, isWireframe, toggleWireframe, getWireframeIcon } from './palette';
+export { ComponentPalette, isWireframe, toggleWireframe, getWireframeIcon, setGridActive, getWireframeTheme, onAccentChange, offAccentChange } from './palette';
 export { SkeletonRenderer } from './skeleton';
 export { GuideLineRenderer } from './guide-lines';
 export { SectionDetector } from './rearrange';

@@ -26,6 +26,36 @@ let _wireframeListeners: Array<() => void> = [];
 let _accentR = 59, _accentG = 130, _accentB = 246;
 let _accentListeners: Array<() => void> = [];
 
+// Wireframe theme state
+type WireframeTheme = 'system' | 'dark' | 'light';
+let _wireframeTheme: WireframeTheme = 'light';
+
+export function getWireframeTheme(): WireframeTheme {
+  return _wireframeTheme;
+}
+
+function resolveTheme(): 'light' | 'dark' {
+  if (_wireframeTheme === 'system') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return _wireframeTheme;
+}
+
+// Grid active state (darkens dots during drag)
+let _gridDotGridEl: HTMLDivElement | null = null;
+
+export function setGridActive(active: boolean): void {
+  if (!_gridDotGridEl) return;
+  const theme = resolveTheme();
+  const dotAlpha = active ? 0.22 : 0.08;
+  if (theme === 'dark') {
+    const lightAlpha = active ? 0.14 : 0.06;
+    _gridDotGridEl.style.backgroundImage = `radial-gradient(circle, rgba(255,255,255,${lightAlpha}) 1px, transparent 1px)`;
+  } else {
+    _gridDotGridEl.style.backgroundImage = `radial-gradient(circle, rgba(0,0,0,${dotAlpha}) 1px, transparent 1px)`;
+  }
+}
+
 export function getAccentRGB(): [number, number, number] {
   return [_accentR, _accentG, _accentB];
 }
@@ -1206,6 +1236,7 @@ export class ComponentPalette {
       backgroundSize:  '24px 24px',
     });
     document.body.appendChild(this.dotGridEl);
+    _gridDotGridEl = this.dotGridEl;
 
     // Page opacity overlay (white layer that dims page content)
     this.opacityOverlayEl = document.createElement('div');
@@ -1218,7 +1249,7 @@ export class ComponentPalette {
       height:        '100vh',
       background:    '#ffffff',
       opacity:       '0',
-      zIndex:        '2147483599',
+      zIndex:        '2147483598',
       pointerEvents: 'none',
       display:       'none',
     });
@@ -1253,6 +1284,7 @@ export class ComponentPalette {
     // Update dot grid
     if (this.dotGridEl) {
       this.dotGridEl.style.display = wf ? '' : 'none';
+      if (wf) this.applyTheme();
     }
     // Update palette item active states via accent color
     if (this.panel) {
@@ -1270,6 +1302,23 @@ export class ComponentPalette {
           }
         }
       });
+    }
+  }
+
+  private applyTheme(): void {
+    const theme = resolveTheme();
+    if (this.dotGridEl) {
+      if (theme === 'dark') {
+        this.dotGridEl.style.background = '#141414';
+        this.dotGridEl.style.backgroundImage = 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)';
+      } else {
+        this.dotGridEl.style.background = 'white';
+        this.dotGridEl.style.backgroundImage = 'radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px)';
+      }
+      this.dotGridEl.style.backgroundSize = '24px 24px';
+    }
+    if (this.opacityOverlayEl) {
+      this.opacityOverlayEl.style.background = theme === 'dark' ? '#141414' : '#ffffff';
     }
   }
 
@@ -1639,6 +1688,64 @@ export class ComponentPalette {
 
     footer.appendChild(this.wireframeToggleEl);
 
+    // Theme selector (System / Dark / Light)
+    const themeRow = document.createElement('div');
+    Object.assign(themeRow.style, {
+      display:    'flex',
+      alignItems: 'center',
+      gap:        '4px',
+    });
+
+    const themeLabel = document.createElement('span');
+    themeLabel.textContent = 'Theme';
+    Object.assign(themeLabel.style, {
+      fontSize:   '10px',
+      fontWeight: '500',
+      color:      'rgba(255,255,255,0.4)',
+      marginRight: '4px',
+    });
+    themeRow.appendChild(themeLabel);
+
+    const themePills: HTMLDivElement[] = [];
+    const THEME_OPTIONS: WireframeTheme[] = ['system', 'dark', 'light'];
+    for (const opt of THEME_OPTIONS) {
+      const pill = document.createElement('div');
+      const isActive = opt === _wireframeTheme;
+      pill.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
+      Object.assign(pill.style, {
+        fontSize:     '10px',
+        fontWeight:   '500',
+        padding:      '2px 8px',
+        borderRadius: '8px',
+        cursor:       'pointer',
+        color:        isActive ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)',
+        background:   isActive ? 'rgba(255,255,255,0.12)' : 'transparent',
+        transition:   'background 0.12s ease, color 0.12s ease',
+      });
+      pill.addEventListener('mouseenter', () => {
+        if (_wireframeTheme !== opt) {
+          pill.style.background = 'rgba(255,255,255,0.06)';
+        }
+      });
+      pill.addEventListener('mouseleave', () => {
+        if (_wireframeTheme !== opt) {
+          pill.style.background = 'transparent';
+        }
+      });
+      pill.addEventListener('click', () => {
+        _wireframeTheme = opt;
+        for (const p of themePills) {
+          const active = p.textContent?.toLowerCase() === opt;
+          p.style.color = active ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)';
+          p.style.background = active ? 'rgba(255,255,255,0.12)' : 'transparent';
+        }
+        this.applyTheme();
+      });
+      themePills.push(pill);
+      themeRow.appendChild(pill);
+    }
+    footer.appendChild(themeRow);
+
     // Helper text
     const helperText = document.createElement('span');
     helperText.textContent = 'Drag components onto the canvas.';
@@ -1698,6 +1805,7 @@ export class ComponentPalette {
     this.countLabel = null;
     this.dotGridEl = null;
     this.opacityOverlayEl = null;
+    _gridDotGridEl = null;
   }
 
   onDrop(callback: DropCallback): void {

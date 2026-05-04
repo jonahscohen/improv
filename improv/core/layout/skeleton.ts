@@ -1916,6 +1916,40 @@ export class SkeletonRenderer {
     el.appendChild(handle);
   }
 
+  refreshColors(): void {
+    const vars = this.getCSSVars();
+    const accent = this.getAccentColor();
+    for (const [, el] of this.skeletons) {
+      // Re-apply CSS custom properties
+      for (const [key, val] of Object.entries(vars)) {
+        el.style.setProperty(key, val);
+      }
+      // Update label color
+      const label = el.querySelector('span') as HTMLSpanElement | null;
+      if (label) {
+        label.style.color = accent;
+      }
+      // Update resize handles
+      const handles = el.querySelectorAll('div');
+      handles.forEach((handle) => {
+        const cursor = (handle as HTMLDivElement).style.cursor;
+        if (cursor && cursor.includes('resize')) {
+          (handle as HTMLDivElement).style.background = accent;
+        }
+      });
+      // Update border for selected
+      if (el.dataset['skeletonId'] === this.selectedId) {
+        el.style.border = `1.5px solid ${accent}`;
+        const shadowColor = isWireframe()
+          ? 'rgba(249,115,22,0.2)'
+          : 'rgba(59,130,246,0.2)';
+        el.style.boxShadow = `0 0 0 2px ${shadowColor}, 0 1px 4px rgba(0,0,0,0.08)`;
+      } else {
+        el.style.border = this.getBorderStyle();
+      }
+    }
+  }
+
   update(id: string, x: number, y: number, width?: number, height?: number): void {
     const el = this.skeletons.get(id);
     if (!el) return;
