@@ -7,7 +7,15 @@ import { GuideLineRenderer } from './guide-lines';
 import { SectionDetector } from './rearrange';
 import { computeSnap } from './snap';
 import type { SnapTarget } from './snap';
-import { getPrimitive } from './primitives';
+import { getPrimitive, PRIMITIVES } from './primitives';
+
+const CATEGORY_COLORS: Record<string, string> = {
+  layout:   '#3b82f6',
+  content:  '#8b5cf6',
+  controls: '#22c55e',
+  elements: '#f97316',
+  blocks:   '#ec4899',
+};
 
 export class LayoutMode {
   private overlay: Overlay;
@@ -20,6 +28,7 @@ export class LayoutMode {
 
   private placements: LayoutPlacementData[] = [];
   private applyBtn: HTMLButtonElement | null = null;
+  private previewPanel: HTMLDivElement | null = null;
 
   constructor(overlay: Overlay, transport: Transport) {
     this.overlay   = overlay;
@@ -33,14 +42,16 @@ export class LayoutMode {
     this.skeletonRenderer  = new SkeletonRenderer(container);
     this.guideLineRenderer = new GuideLineRenderer(container);
     this.sectionDetector   = new SectionDetector();
-    this.palette           = new ComponentPalette(shadow);
+
+    // Build component list from all PRIMITIVES
+    const components = PRIMITIVES.map((p) => ({ name: p.name, category: p.category }));
+    this.palette = new ComponentPalette(shadow, components);
 
     this.palette.onDrop((type, category, clientX, clientY) => {
       this.handleDrop(type, category, clientX, clientY);
     });
 
     this.sectionDetector.enable((sections) => {
-      // Section reorder recorded; layout is live on page already
       console.debug('[improv] sections reordered', sections.length);
     });
 
@@ -53,19 +64,21 @@ export class LayoutMode {
     this.guideLineRenderer?.hide();
     this.sectionDetector?.disable();
     this.applyBtn?.remove();
+    this.previewPanel?.remove();
 
     this.palette           = null;
     this.skeletonRenderer  = null;
     this.guideLineRenderer = null;
     this.sectionDetector   = null;
     this.applyBtn          = null;
+    this.previewPanel      = null;
     this.placements        = [];
   }
 
   private handleDrop(type: string, category: string, clientX: number, clientY: number): void {
     const prim = getPrimitive(type);
-    const w = prim?.defaultWidth  ?? 200;
-    const h = prim?.defaultHeight ?? 80;
+    const w    = prim?.defaultWidth  ?? 200;
+    const h    = prim?.defaultHeight ?? 80;
 
     // Center skeleton on cursor
     const x = clientX - w / 2;
@@ -89,24 +102,31 @@ export class LayoutMode {
 
     this.placements.push(placement);
 
-    const el = this.skeletonRenderer!.create(placement);
-    this.guideLineRenderer!.show(snapResult.guides);
+    const color = CATEGORY_COLORS[category] ?? '#3b82f6';
+    const el    = this.skeletonRenderer!.create(placement, color);
 
-    // Wire drag on the created skeleton
+    this.guideLineRenderer!.show(
+      snapResult.guides.map((g) => ({
+        axis:     g.axis,
+        position: g.position,
+      })),
+    );
+
     this.wireDrag(el, placement);
 
-    // Hide guides after a moment
     setTimeout(() => this.guideLineRenderer?.hide(), 800);
   }
 
   private wireDrag(el: HTMLDivElement, placement: LayoutPlacementData): void {
-    let startX = 0;
-    let startY = 0;
-    let originX = placement.x;
-    let originY = placement.y;
+    let startX   = 0;
+    let startY   = 0;
+    let originX  = placement.x;
+    let originY  = placement.y;
     let dragging = false;
 
     el.addEventListener('mousedown', (e: MouseEvent) => {
+      // Don't start drag when clicking on a resize handle
+      if ((e.target as HTMLElement).style.cursor?.includes('resize')) return;
       dragging = true;
       startX   = e.clientX;
       startY   = e.clientY;
@@ -118,10 +138,10 @@ export class LayoutMode {
     const onMove = (e: MouseEvent): void => {
       if (!dragging) return;
 
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      const proposedX = originX + dx;
-      const proposedY = originY + dy;
+      const dx         = e.clientX - startX;
+      const dy         = e.clientY - startY;
+      const proposedX  = originX + dx;
+      const proposedY  = originY + dy;
 
       const snapResult = computeSnap(
         { x: proposedX, y: proposedY, width: placement.width, height: placement.height },
@@ -132,7 +152,19 @@ export class LayoutMode {
       placement.y = snapResult.snappedY;
 
       this.skeletonRenderer!.update(placement.id, placement.x, placement.y);
-      this.guideLineRenderer!.show(snapResult.guides);
+
+      // Enrich guides with distance data
+      const guides = snapResult.guides.map((g) => {
+        if (g.axis === 'x') {
+          const dist = Math.abs(g.position - placement.x);
+          return { axis: g.axis, position: g.position, distance: dist };
+        } else {
+          const dist = Math.abs(g.position - placement.y);
+          return { axis: g.axis, position: g.position, distance: dist };
+        }
+      });
+
+      this.guideLineRenderer!.show(guides);
     };
 
     const onUp = (): void => {
@@ -154,39 +186,270 @@ export class LayoutMode {
   private buildApplyButton(shadow: ShadowRoot): HTMLButtonElement {
     const btn = document.createElement('button');
     btn.textContent = 'Apply Layout';
-    btn.style.position   = 'fixed';
-    btn.style.bottom     = '20px';
-    btn.style.right      = '20px';
-    btn.style.padding    = '10px 20px';
-    btn.style.background = '#6366f1';
-    btn.style.color      = '#fff';
-    btn.style.border     = 'none';
-    btn.style.borderRadius = '6px';
-    btn.style.fontFamily = 'system-ui, sans-serif';
-    btn.style.fontSize   = '13px';
-    btn.style.fontWeight = '600';
-    btn.style.cursor     = 'pointer';
-    btn.style.zIndex     = '2147483646';
-    btn.style.pointerEvents = 'all';
-    btn.style.boxShadow  = '0 2px 12px rgba(99,102,241,0.4)';
+
+    Object.assign(btn.style, {
+      position:      'fixed',
+      bottom:        '40px',
+      left:          '240px',
+      padding:       '10px 20px',
+      background:    '#3b82f6',
+      color:         '#fff',
+      border:        'none',
+      borderRadius:  '8px',
+      fontFamily:    'system-ui, sans-serif',
+      fontSize:      '13px',
+      fontWeight:    '600',
+      cursor:        'pointer',
+      zIndex:        '2147483646',
+      pointerEvents: 'all',
+      boxShadow:     '0 2px 16px rgba(59,130,246,0.5)',
+      transition:    'background 120ms ease, transform 80ms ease, box-shadow 120ms ease',
+      letterSpacing: '0.02em',
+    });
 
     btn.addEventListener('mouseenter', () => {
-      btn.style.background = '#4f46e5';
+      btn.style.background  = '#2563eb';
+      btn.style.boxShadow   = '0 4px 20px rgba(59,130,246,0.6)';
     });
     btn.addEventListener('mouseleave', () => {
-      btn.style.background = '#6366f1';
+      btn.style.background  = '#3b82f6';
+      btn.style.boxShadow   = '0 2px 16px rgba(59,130,246,0.5)';
+    });
+    btn.addEventListener('mousedown', () => {
+      btn.style.transform   = 'scale(0.97)';
+    });
+    btn.addEventListener('mouseup', () => {
+      btn.style.transform   = '';
     });
 
     btn.addEventListener('click', () => {
-      this.transport.request('push_layout', {
-        placements: this.placements,
-      }).catch(() => {
-        // Non-fatal if transport is not connected
-      });
+      this.showPreviewPanel(shadow);
     });
 
     shadow.appendChild(btn);
     return btn;
+  }
+
+  private showPreviewPanel(shadow: ShadowRoot): void {
+    // Remove existing panel
+    this.previewPanel?.remove();
+
+    const panel = document.createElement('div');
+    Object.assign(panel.style, {
+      position:      'fixed',
+      bottom:        '90px',
+      left:          '240px',
+      width:         '360px',
+      maxHeight:     '360px',
+      background:    '#1a1a2e',
+      border:        '1px solid #333',
+      borderRadius:  '12px',
+      boxShadow:     '0 8px 40px rgba(0,0,0,0.6)',
+      zIndex:        '2147483646',
+      pointerEvents: 'all',
+      fontFamily:    'system-ui, -apple-system, sans-serif',
+      display:       'flex',
+      flexDirection: 'column',
+      overflow:      'hidden',
+    });
+
+    // Panel header
+    const panelHeader = document.createElement('div');
+    Object.assign(panelHeader.style, {
+      padding:       '14px 16px 12px',
+      borderBottom:  '1px solid #2a2a3e',
+      flexShrink:    '0',
+    });
+
+    const panelTitle = document.createElement('div');
+    panelTitle.textContent = `${this.placements.length} component${this.placements.length !== 1 ? 's' : ''} to place`;
+    Object.assign(panelTitle.style, {
+      color:         '#e0e0ee',
+      fontSize:      '13px',
+      fontWeight:    '600',
+    });
+
+    const panelSub = document.createElement('div');
+    panelSub.textContent = 'Review positions before pushing to Claude';
+    Object.assign(panelSub.style, {
+      color:         '#666',
+      fontSize:      '11px',
+      marginTop:     '3px',
+    });
+
+    panelHeader.appendChild(panelTitle);
+    panelHeader.appendChild(panelSub);
+    panel.appendChild(panelHeader);
+
+    // Placement list
+    const listArea = document.createElement('div');
+    Object.assign(listArea.style, {
+      flex:       '1',
+      overflowY:  'auto',
+      padding:    '8px 0',
+    });
+
+    for (const p of this.placements) {
+      const row = document.createElement('div');
+      Object.assign(row.style, {
+        display:     'flex',
+        alignItems:  'center',
+        padding:     '6px 16px',
+        gap:         '10px',
+      });
+
+      const color = CATEGORY_COLORS[p.category] ?? '#3b82f6';
+
+      const dot = document.createElement('div');
+      Object.assign(dot.style, {
+        width:        '7px',
+        height:       '7px',
+        borderRadius: '50%',
+        background:   color,
+        flexShrink:   '0',
+      });
+
+      const name = document.createElement('span');
+      name.textContent = p.componentType;
+      Object.assign(name.style, {
+        color:      '#b0b0c0',
+        fontSize:   '12px',
+        fontWeight: '500',
+        flex:       '1',
+      });
+
+      const pos = document.createElement('span');
+      pos.textContent = `${Math.round(p.x)}, ${Math.round(p.y)}`;
+      Object.assign(pos.style, {
+        color:      '#555',
+        fontSize:   '11px',
+        fontFamily: 'monospace',
+      });
+
+      row.appendChild(dot);
+      row.appendChild(name);
+      row.appendChild(pos);
+      listArea.appendChild(row);
+    }
+
+    panel.appendChild(listArea);
+
+    // Action buttons
+    const actions = document.createElement('div');
+    Object.assign(actions.style, {
+      display:       'flex',
+      gap:           '8px',
+      padding:       '12px 16px',
+      borderTop:     '1px solid #2a2a3e',
+      flexShrink:    '0',
+    });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    Object.assign(cancelBtn.style, {
+      flex:          '1',
+      padding:       '8px',
+      background:    'transparent',
+      border:        '1px solid #333',
+      borderRadius:  '7px',
+      color:         '#888',
+      fontSize:      '12px',
+      fontWeight:    '600',
+      cursor:        'pointer',
+      fontFamily:    'system-ui, sans-serif',
+      transition:    'border-color 100ms ease, color 100ms ease',
+    });
+    cancelBtn.addEventListener('mouseenter', () => {
+      cancelBtn.style.borderColor = '#555';
+      cancelBtn.style.color       = '#aaa';
+    });
+    cancelBtn.addEventListener('mouseleave', () => {
+      cancelBtn.style.borderColor = '#333';
+      cancelBtn.style.color       = '#888';
+    });
+    cancelBtn.addEventListener('click', () => {
+      panel.remove();
+      this.previewPanel = null;
+    });
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = 'Push Layout';
+    Object.assign(confirmBtn.style, {
+      flex:          '2',
+      padding:       '8px',
+      background:    '#3b82f6',
+      border:        'none',
+      borderRadius:  '7px',
+      color:         '#fff',
+      fontSize:      '12px',
+      fontWeight:    '600',
+      cursor:        'pointer',
+      fontFamily:    'system-ui, sans-serif',
+      transition:    'background 100ms ease',
+    });
+    confirmBtn.addEventListener('mouseenter', () => {
+      confirmBtn.style.background = '#2563eb';
+    });
+    confirmBtn.addEventListener('mouseleave', () => {
+      confirmBtn.style.background = '#3b82f6';
+    });
+    confirmBtn.addEventListener('click', () => {
+      this.pushLayout(panel);
+    });
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(confirmBtn);
+    panel.appendChild(actions);
+
+    shadow.appendChild(panel);
+    this.previewPanel = panel;
+  }
+
+  private pushLayout(panel: HTMLDivElement): void {
+    this.transport
+      .request('push_layout', { placements: this.placements })
+      .then(() => {
+        this.showConfirmationFlash();
+      })
+      .catch(() => {
+        // Non-fatal if transport is not connected - still show flash
+        this.showConfirmationFlash();
+      });
+
+    panel.remove();
+    this.previewPanel = null;
+  }
+
+  private showConfirmationFlash(): void {
+    const shadow = this.overlay.getShadowRoot();
+    const flash  = document.createElement('div');
+    flash.textContent = 'Layout pushed';
+
+    Object.assign(flash.style, {
+      position:      'fixed',
+      bottom:        '40px',
+      left:          '240px',
+      padding:       '10px 20px',
+      background:    '#22c55e',
+      color:         '#fff',
+      border:        'none',
+      borderRadius:  '8px',
+      fontFamily:    'system-ui, sans-serif',
+      fontSize:      '13px',
+      fontWeight:    '600',
+      zIndex:        '2147483646',
+      pointerEvents: 'none',
+      boxShadow:     '0 2px 16px rgba(34,197,94,0.5)',
+      transition:    'opacity 400ms ease',
+      opacity:       '1',
+    });
+
+    shadow.appendChild(flash);
+
+    setTimeout(() => {
+      flash.style.opacity = '0';
+      setTimeout(() => flash.remove(), 400);
+    }, 1800);
   }
 }
 
