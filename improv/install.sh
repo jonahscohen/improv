@@ -49,6 +49,15 @@ echo "Building server..."
   echo "WARNING: Server build failed. Run manually: cd $IMPROV_DIR && npx tsc -p tsconfig.server.json"
 }
 
+# Install CLI tools
+echo "Installing CLI tools..."
+cp "$SCRIPT_DIR/cli/init.sh" "$IMPROV_DIR/init.sh"
+cp "$SCRIPT_DIR/cli/remove.sh" "$IMPROV_DIR/remove.sh"
+chmod +x "$IMPROV_DIR/init.sh" "$IMPROV_DIR/remove.sh"
+ln -sf "$IMPROV_DIR/init.sh" "${CLAUDE_DIR}/improv-init"
+ln -sf "$IMPROV_DIR/remove.sh" "${CLAUDE_DIR}/improv-remove"
+echo "Symlinked improv-init and improv-remove to $CLAUDE_DIR"
+
 # Register MCP server in ~/.claude.json
 python3 -c "
 import json, os
@@ -130,3 +139,4 @@ echo "Improv installed successfully."
 echo "  Core script: $IMPROV_DIR/dist/improv-core.js"
 echo "  MCP server: $IMPROV_DIR/dist/server/index.js"
 echo "  Skill: $SKILL_DIR/SKILL.md"
+echo "  CLI: improv-init / improv-remove (symlinked to $CLAUDE_DIR)"
