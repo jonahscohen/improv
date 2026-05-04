@@ -3,7 +3,7 @@ import type { ImprovMode } from './types';
 type ModeCallback = (mode: ImprovMode | null) => void;
 type ActionCallback = () => void;
 
-const MODES: ImprovMode[] = ['manipulate', 'prompt', 'annotate', 'layout'];
+const MODES: ImprovMode[] = ['manipulate', 'prompt', 'annotate'];
 
 const MODE_LABELS: Record<ImprovMode, string> = {
   manipulate: 'Manipulate',

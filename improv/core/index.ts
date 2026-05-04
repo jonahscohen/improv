@@ -8,7 +8,7 @@ import { ApplyConfirmation } from './apply-confirmation';
 import { ManipulateMode } from './manipulate/index.js';
 import { PromptMode } from './prompt/index.js';
 import { AnnotateMode } from './annotate/index.js';
-import { LayoutMode } from './layout/index.js';
+// import { LayoutMode } from './layout/index.js'; // disabled for now
 import type { ImprovAdapter, ImprovMode } from './types';
 
 declare global {
@@ -30,7 +30,7 @@ export class ImprovCore {
   private manipulateMode: ManipulateMode | null = null;
   private promptMode: PromptMode | null = null;
   private annotateMode: AnnotateMode | null = null;
-  private layoutMode: LayoutMode | null = null;
+  // private layoutMode: LayoutMode | null = null; // disabled for now
   private applyConfirmation: ApplyConfirmation | null = null;
 
   constructor() {
@@ -144,8 +144,8 @@ export class ImprovCore {
     this.promptMode = null;
     this.annotateMode?.deactivate();
     this.annotateMode = null;
-    this.layoutMode?.deactivate();
-    this.layoutMode = null;
+    // this.layoutMode?.deactivate(); // disabled for now
+    // this.layoutMode = null;
 
     this.currentMode = mode;
 
@@ -172,9 +172,9 @@ export class ImprovCore {
         this.toolbar?.setBadge(this.getTotalPendingCount());
       });
       this.annotateMode.activate();
-    } else if (mode === 'layout') {
-      this.layoutMode = new LayoutMode(this.overlay, this.transport);
-      this.layoutMode.activate();
+    // } else if (mode === 'layout') { // disabled for now
+    //   this.layoutMode = new LayoutMode(this.overlay, this.transport);
+    //   this.layoutMode.activate();
     }
 
     this.toolbar?.setBadge(this.getTotalPendingCount());
