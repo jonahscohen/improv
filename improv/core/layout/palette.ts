@@ -1,7 +1,8 @@
-import { getPrimitivesByCategory } from './primitives';
-import type { PrimitiveType } from './primitives';
+import { PRIMITIVES, getPrimitivesByCategory } from './primitives.js';
+import type { PrimitiveType } from './primitives.js';
 
 type DropCallback = (type: string, category: string, x: number, y: number) => void;
+type ClearCallback = () => void;
 
 const CATEGORIES: Array<PrimitiveType['category']> = [
   'layout',
@@ -10,14 +11,6 @@ const CATEGORIES: Array<PrimitiveType['category']> = [
   'elements',
   'blocks',
 ];
-
-const CATEGORY_COLORS: Record<string, string> = {
-  layout:   '#3b82f6',
-  content:  '#8b5cf6',
-  controls: '#22c55e',
-  elements: '#f97316',
-  blocks:   '#ec4899',
-};
 
 const CATEGORY_LABELS: Record<string, string> = {
   layout:   'Layout',
@@ -29,400 +22,350 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export class ComponentPalette {
   private shadow: ShadowRoot;
-  private components: Array<{ name: string; category: string }>;
-  private sidebar: HTMLDivElement | null = null;
+  private panel: HTMLDivElement | null = null;
   private dropCallback: DropCallback | null = null;
-  private searchInput: HTMLInputElement | null = null;
-  private categoryContainers = new Map<string, HTMLDivElement>();
+  private clearCallback: ClearCallback | null = null;
+  private placedCount = 0;
+  private countLabel: HTMLSpanElement | null = null;
   private activeDragItem: HTMLDivElement | null = null;
 
-  constructor(
-    shadow: ShadowRoot,
-    components: Array<{ name: string; category: string }>,
-  ) {
-    this.shadow     = shadow;
-    this.components = components;
+  constructor(shadowRoot: ShadowRoot) {
+    this.shadow = shadowRoot;
     this.build();
   }
 
   private build(): void {
-    this.sidebar = document.createElement('div');
+    // Inject scrollbar and animation styles
+    const style = document.createElement('style');
+    style.textContent = [
+      '@keyframes improv-palette-in {',
+      '  from { opacity: 0; filter: blur(5px); }',
+      '  to { opacity: 1; filter: blur(0); }',
+      '}',
+      '.improv-palette-scroll::-webkit-scrollbar { width: 3px; }',
+      '.improv-palette-scroll::-webkit-scrollbar-track { background: transparent; }',
+      '.improv-palette-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }',
+    ].join('\n');
+    this.shadow.appendChild(style);
 
-    Object.assign(this.sidebar.style, {
-      position:        'fixed',
-      left:            '0',
-      top:             '40px',
-      bottom:          '40px',
-      width:           '220px',
-      background:      '#1a1a2e',
-      border:          '1px solid #333',
-      borderRadius:    '14px',
-      boxShadow:       '0 8px 40px rgba(0,0,0,0.6)',
-      backdropFilter:  'blur(12px)',
-      zIndex:          '2147483646',
-      pointerEvents:   'all',
-      fontFamily:      'system-ui, -apple-system, sans-serif',
-      display:         'flex',
-      flexDirection:   'column',
-      overflow:        'hidden',
-      userSelect:      'none',
+    this.panel = document.createElement('div');
+    Object.assign(this.panel.style, {
+      position:      'fixed',
+      bottom:        'calc(20px + 44px + 8px)',
+      right:         '20px',
+      width:         '256px',
+      background:    '#1c1c1c',
+      borderRadius:  '16px',
+      boxShadow:     '0 1px 8px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.04)',
+      padding:       '13px 0 16px',
+      zIndex:        '2147483646',
+      pointerEvents: 'all',
+      fontFamily:    'system-ui, -apple-system, sans-serif',
+      display:       'flex',
+      flexDirection: 'column',
+      userSelect:    'none',
+      animation:     'improv-palette-in 0.2s ease',
     });
 
-    this.sidebar.appendChild(this.buildHeader());
+    // Scrollable area
+    const scrollWrap = document.createElement('div');
+    Object.assign(scrollWrap.style, {
+      position:  'relative',
+      flex:      '1',
+      minHeight: '0',
+    });
 
     const scrollArea = document.createElement('div');
+    scrollArea.className = 'improv-palette-scroll';
     Object.assign(scrollArea.style, {
-      flex:      '1',
+      maxHeight: '240px',
       overflowY: 'auto',
       overflowX: 'hidden',
-      padding:   '8px 0 12px',
     });
 
-    // Scrollbar styling via a CSSStyleSheet on the shadow root
-    this.injectScrollbarStyles();
+    // Top edge fade
+    const fadeTop = document.createElement('div');
+    Object.assign(fadeTop.style, {
+      position:       'absolute',
+      top:            '0',
+      left:           '0',
+      right:          '0',
+      height:         '32px',
+      background:     'linear-gradient(to bottom, #1c1c1c, transparent)',
+      pointerEvents:  'none',
+      zIndex:         '1',
+    });
 
-    for (const cat of CATEGORIES) {
-      const section = this.buildSection(cat as PrimitiveType['category']);
+    // Bottom edge fade
+    const fadeBottom = document.createElement('div');
+    Object.assign(fadeBottom.style, {
+      position:       'absolute',
+      bottom:         '0',
+      left:           '0',
+      right:          '0',
+      height:         '32px',
+      background:     'linear-gradient(to top, #1c1c1c, transparent)',
+      pointerEvents:  'none',
+      zIndex:         '1',
+    });
+
+    // Build sections
+    for (let i = 0; i < CATEGORIES.length; i++) {
+      const cat = CATEGORIES[i];
+      const section = this.buildSection(cat, i === 0);
       scrollArea.appendChild(section);
     }
 
-    this.sidebar.appendChild(scrollArea);
-    this.shadow.appendChild(this.sidebar);
+    scrollWrap.appendChild(fadeTop);
+    scrollWrap.appendChild(scrollArea);
+    scrollWrap.appendChild(fadeBottom);
+    this.panel.appendChild(scrollWrap);
+
+    // Footer
+    this.panel.appendChild(this.buildFooter());
+
+    this.shadow.appendChild(this.panel);
 
     document.addEventListener('dragover', this.handleDragOver);
     document.addEventListener('drop', this.handleDrop);
   }
 
-  private injectScrollbarStyles(): void {
-    const style = document.createElement('style');
-    style.textContent = `
-      div::-webkit-scrollbar { width: 4px; }
-      div::-webkit-scrollbar-track { background: transparent; }
-      div::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
-      div::-webkit-scrollbar-thumb:hover { background: #555; }
-    `;
-    this.shadow.appendChild(style);
-  }
-
-  private buildHeader(): HTMLDivElement {
-    const header = document.createElement('div');
-    Object.assign(header.style, {
-      padding:      '14px 14px 10px',
-      borderBottom: '1px solid #2a2a3e',
-      flexShrink:   '0',
-    });
-
-    const label = document.createElement('div');
-    label.textContent = 'Components';
-    Object.assign(label.style, {
-      color:          '#999',
-      fontSize:       '12px',
-      fontWeight:     '600',
-      textTransform:  'uppercase',
-      letterSpacing:  '0.08em',
-      marginBottom:   '10px',
-    });
-    header.appendChild(label);
-
-    const searchWrap = document.createElement('div');
-    Object.assign(searchWrap.style, {
-      position:     'relative',
-      display:      'flex',
-      alignItems:   'center',
-    });
-
-    const searchIcon = document.createElement('div');
-    Object.assign(searchIcon.style, {
-      position:    'absolute',
-      left:        '8px',
-      color:       '#666',
-      fontSize:    '12px',
-      pointerEvents: 'none',
-      lineHeight:  '1',
-    });
-    // Search icon via SVG (Heroicons magnifying-glass, verbatim)
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', '13');
-    svg.setAttribute('height', '13');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '2');
-    svg.setAttribute('stroke-linecap', 'round');
-    svg.setAttribute('stroke-linejoin', 'round');
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', '11');
-    circle.setAttribute('cy', '11');
-    circle.setAttribute('r', '8');
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', '21');
-    line.setAttribute('y1', '21');
-    line.setAttribute('x2', '16.65');
-    line.setAttribute('y2', '16.65');
-    svg.appendChild(circle);
-    svg.appendChild(line);
-    searchIcon.appendChild(svg);
-    searchWrap.appendChild(searchIcon);
-
-    const input = document.createElement('input');
-    input.type        = 'text';
-    input.placeholder = 'Filter...';
-    Object.assign(input.style, {
-      width:           '100%',
-      background:      '#0f0f1a',
-      border:          '1px solid #2a2a3e',
-      borderRadius:    '8px',
-      color:           '#d4d4d8',
-      fontSize:        '12px',
-      padding:         '6px 8px 6px 28px',
-      outline:         'none',
-      fontFamily:      'system-ui, sans-serif',
-      transition:      'border-color 120ms ease',
-    });
-    input.addEventListener('focus', () => {
-      input.style.borderColor = '#3b82f6';
-    });
-    input.addEventListener('blur', () => {
-      input.style.borderColor = '#2a2a3e';
-    });
-    input.addEventListener('input', () => {
-      this.applyFilter(input.value.toLowerCase().trim());
-    });
-    searchWrap.appendChild(input);
-    header.appendChild(searchWrap);
-
-    this.searchInput = input;
-    return header;
-  }
-
-  private buildSection(cat: PrimitiveType['category']): HTMLDivElement {
-    const color  = CATEGORY_COLORS[cat] ?? '#6366f1';
-    const label  = CATEGORY_LABELS[cat] ?? cat;
-    const items  = this.components.filter((c) => c.category === cat);
-    const prims  = getPrimitivesByCategory(cat);
-
+  private buildSection(cat: PrimitiveType['category'], isFirst: boolean): HTMLDivElement {
     const section = document.createElement('div');
-    section.dataset['category'] = cat;
-    Object.assign(section.style, { marginBottom: '2px' });
 
-    // Section header row
-    const headRow = document.createElement('div');
-    Object.assign(headRow.style, {
-      display:     'flex',
-      alignItems:  'center',
-      justifyContent: 'space-between',
-      padding:     '7px 14px',
-      cursor:      'pointer',
-      transition:  'background 100ms ease',
-    });
-    headRow.addEventListener('mouseenter', () => {
-      headRow.style.background = 'rgba(255,255,255,0.03)';
-    });
-    headRow.addEventListener('mouseleave', () => {
-      headRow.style.background = '';
-    });
-
-    const headLeft = document.createElement('div');
-    Object.assign(headLeft.style, {
-      display:    'flex',
-      alignItems: 'center',
-      gap:        '7px',
-    });
-
-    const dot = document.createElement('div');
-    Object.assign(dot.style, {
-      width:        '7px',
-      height:       '7px',
-      borderRadius: '50%',
-      background:   color,
-      flexShrink:   '0',
-    });
-
-    const catLabel = document.createElement('span');
-    catLabel.textContent = label;
-    Object.assign(catLabel.style, {
-      color:         '#c4c4cc',
-      fontSize:      '11px',
-      fontWeight:    '600',
-      letterSpacing: '0.04em',
-    });
-
-    const countBadge = document.createElement('span');
-    countBadge.textContent = String(items.length || prims.length);
-    Object.assign(countBadge.style, {
-      color:          '#555',
-      fontSize:       '10px',
-      fontWeight:     '500',
-    });
-
-    headLeft.appendChild(dot);
-    headLeft.appendChild(catLabel);
-    headLeft.appendChild(countBadge);
-
-    // Chevron
-    const chevron = document.createElement('div');
-    Object.assign(chevron.style, {
-      color:       '#555',
-      fontSize:    '10px',
-      transition:  'transform 180ms ease',
-      lineHeight:  '1',
-    });
-    const chevSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    chevSvg.setAttribute('width', '10');
-    chevSvg.setAttribute('height', '10');
-    chevSvg.setAttribute('viewBox', '0 0 24 24');
-    chevSvg.setAttribute('fill', 'none');
-    chevSvg.setAttribute('stroke', 'currentColor');
-    chevSvg.setAttribute('stroke-width', '2.5');
-    chevSvg.setAttribute('stroke-linecap', 'round');
-    chevSvg.setAttribute('stroke-linejoin', 'round');
-    const chevPath = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-    chevPath.setAttribute('points', '6 9 12 15 18 9');
-    chevSvg.appendChild(chevPath);
-    chevron.appendChild(chevSvg);
-
-    headRow.appendChild(headLeft);
-    headRow.appendChild(chevron);
-    section.appendChild(headRow);
-
-    // Item container
-    const itemsContainer = document.createElement('div');
-    Object.assign(itemsContainer.style, {
-      overflow: 'hidden',
-      transition: 'height 180ms ease',
-    });
-
-    const allItems = items.length ? items : prims;
-    for (const comp of allItems) {
-      const item = this.buildItem(comp.name, cat, color);
-      itemsContainer.appendChild(item);
+    if (!isFirst) {
+      section.style.marginTop = '4px';
     }
 
-    section.appendChild(itemsContainer);
-    this.categoryContainers.set(cat, itemsContainer);
-
-    // Measure natural height and set it
-    let collapsed = false;
-    const syncHeight = (): void => {
-      if (!collapsed) {
-        itemsContainer.style.height = 'auto';
-      } else {
-        itemsContainer.style.height = '0';
-      }
-    };
-
-    headRow.addEventListener('click', () => {
-      collapsed = !collapsed;
-      chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
-      syncHeight();
+    // Separator line
+    const sep = document.createElement('div');
+    Object.assign(sep.style, {
+      height:     '1px',
+      background: 'rgba(255,255,255,0.07)',
+      margin:     '0',
     });
+    if (!isFirst) {
+      section.appendChild(sep);
+    }
+
+    // Section title
+    const title = document.createElement('div');
+    title.textContent = CATEGORY_LABELS[cat] ?? cat;
+    Object.assign(title.style, {
+      fontSize:      '0.6875rem',
+      fontWeight:    '500',
+      color:         'rgba(255,255,255,0.5)',
+      textTransform: 'uppercase',
+      padding:       '8px 12px',
+      lineHeight:    '1',
+    });
+    section.appendChild(title);
+
+    // Items
+    const items = getPrimitivesByCategory(cat);
+    for (const prim of items) {
+      const row = this.buildItem(prim.name, cat);
+      section.appendChild(row);
+    }
 
     return section;
   }
 
-  private buildItem(name: string, category: string, color: string): HTMLDivElement {
+  private buildItem(name: string, category: string): HTMLDivElement {
     const item = document.createElement('div');
-    item.draggable                    = true;
-    item.dataset['primitiveType']     = name;
+    item.draggable = true;
+    item.dataset['primitiveType'] = name;
     item.dataset['primitiveCategory'] = category;
-    item.dataset['searchLabel']       = name.toLowerCase();
 
     Object.assign(item.style, {
       display:      'flex',
       alignItems:   'center',
-      height:       '32px',
-      padding:      '0 14px',
-      gap:          '9px',
+      minHeight:    '28px',
+      padding:      '4px 12px',
+      borderRadius: '6px',
       cursor:       'grab',
-      transition:   'background 100ms ease',
-      borderRadius: '0',
+      gap:          '6px',
+      border:       '1px solid transparent',
     });
 
-    const dot = document.createElement('div');
-    Object.assign(dot.style, {
-      width:        '6px',
-      height:       '6px',
-      borderRadius: '50%',
-      background:   color,
+    // Mini icon box
+    const iconBox = document.createElement('div');
+    Object.assign(iconBox.style, {
+      width:        '20px',
+      height:       '16px',
+      border:       '1px dashed rgba(255,255,255,0.15)',
+      background:   'rgba(255,255,255,0.04)',
+      borderRadius: '3px',
       flexShrink:   '0',
-      opacity:      '0.7',
+      display:      'flex',
+      alignItems:   'center',
+      justifyContent: 'center',
     });
 
+    // Tiny SVG sketch per category
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '14');
+    svg.setAttribute('height', '10');
+    svg.setAttribute('viewBox', '0 0 14 10');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'rgba(255,255,255,0.35)');
+    svg.setAttribute('stroke-width', '1');
+
+    this.drawMiniIcon(svg, category);
+    iconBox.appendChild(svg);
+    item.appendChild(iconBox);
+
+    // Label
     const label = document.createElement('span');
     label.textContent = name;
     Object.assign(label.style, {
-      color:     '#a0a0b0',
-      fontSize:  '12px',
-      fontWeight: '500',
-      overflow:   'hidden',
-      whiteSpace: 'nowrap',
+      fontSize:     '0.8125rem',
+      fontWeight:   '500',
+      color:        'rgba(255,255,255,0.85)',
+      overflow:     'hidden',
+      whiteSpace:   'nowrap',
       textOverflow: 'ellipsis',
     });
-
-    item.appendChild(dot);
     item.appendChild(label);
 
+    // Hover
     item.addEventListener('mouseenter', () => {
-      item.style.background = 'rgba(255,255,255,0.05)';
-      label.style.color     = '#e0e0ee';
+      if (this.activeDragItem !== item) {
+        item.style.background = 'rgba(255,255,255,0.06)';
+      }
     });
     item.addEventListener('mouseleave', () => {
       if (this.activeDragItem !== item) {
         item.style.background = '';
-        label.style.color     = '#a0a0b0';
+        item.style.border = '1px solid transparent';
       }
     });
 
+    // Drag
     item.addEventListener('dragstart', (e: DragEvent) => {
       if (!e.dataTransfer) return;
       e.dataTransfer.effectAllowed = 'copy';
-      e.dataTransfer.setData('improv/type',     name);
+      e.dataTransfer.setData('improv/type', name);
       e.dataTransfer.setData('improv/category', category);
-      this.activeDragItem           = item;
-      item.style.outline            = '2px solid #3b82f6';
-      item.style.outlineOffset      = '-2px';
-      item.style.borderRadius       = '4px';
+      this.activeDragItem = item;
+      item.style.background = 'rgba(59,130,246,0.15)';
+      item.style.border = '1px solid rgba(59,130,246,0.3)';
     });
 
     item.addEventListener('dragend', () => {
-      this.activeDragItem      = null;
-      item.style.outline       = '';
-      item.style.outlineOffset = '';
-      item.style.borderRadius  = '';
-      item.style.background    = '';
-      label.style.color        = '#a0a0b0';
+      this.activeDragItem = null;
+      item.style.background = '';
+      item.style.border = '1px solid transparent';
     });
 
     return item;
   }
 
-  private applyFilter(query: string): void {
-    if (!this.sidebar) return;
-
-    const sections = this.sidebar.querySelectorAll<HTMLDivElement>('[data-category]');
-    for (const section of sections) {
-      const container = this.categoryContainers.get(
-        section.dataset['category'] ?? '',
-      );
-      if (!container) continue;
-
-      const allItems = container.querySelectorAll<HTMLDivElement>('[data-search-label]');
-      let visibleCount = 0;
-
-      for (const item of allItems) {
-        const lbl = item.dataset['searchLabel'] ?? '';
-        const matches = !query || lbl.includes(query);
-        item.style.display = matches ? '' : 'none';
-        if (matches) visibleCount++;
+  private drawMiniIcon(svg: SVGSVGElement, category: string): void {
+    switch (category) {
+      case 'layout': {
+        // Horizontal lines (nav/header shape)
+        const l1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        l1.setAttribute('x1', '2'); l1.setAttribute('y1', '3');
+        l1.setAttribute('x2', '12'); l1.setAttribute('y2', '3');
+        const l2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        l2.setAttribute('x1', '2'); l2.setAttribute('y1', '7');
+        l2.setAttribute('x2', '9'); l2.setAttribute('y2', '7');
+        svg.appendChild(l1);
+        svg.appendChild(l2);
+        break;
       }
-
-      // Show/hide entire section
-      section.style.display = visibleCount === 0 && query ? 'none' : '';
-
-      // When filtering, auto-expand
-      if (query && container.style.height === '0px') {
-        container.style.height = 'auto';
+      case 'content': {
+        // Small rect (card)
+        const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        r.setAttribute('x', '3'); r.setAttribute('y', '2');
+        r.setAttribute('width', '8'); r.setAttribute('height', '6');
+        r.setAttribute('rx', '1');
+        svg.appendChild(r);
+        break;
       }
+      case 'controls': {
+        // Small rounded rect (button)
+        const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        r.setAttribute('x', '2'); r.setAttribute('y', '3');
+        r.setAttribute('width', '10'); r.setAttribute('height', '4');
+        r.setAttribute('rx', '2');
+        svg.appendChild(r);
+        break;
+      }
+      case 'elements': {
+        // Small circle (avatar)
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', '7'); c.setAttribute('cy', '5');
+        c.setAttribute('r', '3');
+        svg.appendChild(c);
+        break;
+      }
+      case 'blocks': {
+        // Stacked rects (pricing card)
+        const r1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        r1.setAttribute('x', '3'); r1.setAttribute('y', '1');
+        r1.setAttribute('width', '8'); r1.setAttribute('height', '3');
+        r1.setAttribute('rx', '0.5');
+        const r2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        r2.setAttribute('x', '3'); r2.setAttribute('y', '5.5');
+        r2.setAttribute('width', '8'); r2.setAttribute('height', '3');
+        r2.setAttribute('rx', '0.5');
+        svg.appendChild(r1);
+        svg.appendChild(r2);
+        break;
+      }
+    }
+  }
+
+  private buildFooter(): HTMLDivElement {
+    const footer = document.createElement('div');
+    Object.assign(footer.style, {
+      display:     'flex',
+      alignItems:  'center',
+      justifyContent: 'space-between',
+      padding:     '8px 12px',
+      borderTop:   '1px solid rgba(255,255,255,0.07)',
+    });
+
+    // Count label
+    this.countLabel = document.createElement('span');
+    this.countLabel.textContent = '0 placed';
+    Object.assign(this.countLabel.style, {
+      fontSize:   '11px',
+      fontWeight: '500',
+      color:      'rgba(255,255,255,0.5)',
+    });
+    footer.appendChild(this.countLabel);
+
+    // Clear button
+    const clearBtn = document.createElement('span');
+    clearBtn.textContent = 'Clear';
+    Object.assign(clearBtn.style, {
+      fontSize:   '11px',
+      fontWeight: '500',
+      color:      'rgba(255,255,255,0.5)',
+      cursor:     'pointer',
+    });
+    clearBtn.addEventListener('mouseenter', () => {
+      clearBtn.style.color = 'rgba(255,255,255,0.85)';
+    });
+    clearBtn.addEventListener('mouseleave', () => {
+      clearBtn.style.color = 'rgba(255,255,255,0.5)';
+    });
+    clearBtn.addEventListener('click', () => {
+      this.placedCount = 0;
+      this.updateCountLabel();
+      this.clearCallback?.();
+    });
+    footer.appendChild(clearBtn);
+
+    return footer;
+  }
+
+  private updateCountLabel(): void {
+    if (this.countLabel) {
+      this.countLabel.textContent = `${this.placedCount} placed`;
     }
   }
 
@@ -436,31 +379,40 @@ export class ComponentPalette {
     if (!e.dataTransfer?.types.includes('improv/type')) return;
     e.preventDefault();
 
-    const type     = e.dataTransfer.getData('improv/type');
+    const type = e.dataTransfer.getData('improv/type');
     const category = e.dataTransfer.getData('improv/category');
     if (!type || !this.dropCallback) return;
 
+    this.placedCount++;
+    this.updateCountLabel();
     this.dropCallback(type, category, e.clientX, e.clientY);
   };
 
   show(): void {
-    if (this.sidebar) this.sidebar.style.display = '';
+    if (this.panel) this.panel.style.display = '';
   }
 
   hide(): void {
-    if (this.sidebar) this.sidebar.style.display = 'none';
+    if (this.panel) this.panel.style.display = 'none';
+  }
+
+  destroy(): void {
+    document.removeEventListener('dragover', this.handleDragOver);
+    document.removeEventListener('drop', this.handleDrop);
+    this.panel?.remove();
+    this.panel = null;
+    this.countLabel = null;
   }
 
   onDrop(callback: DropCallback): void {
     this.dropCallback = callback;
   }
 
-  destroy(): void {
-    document.removeEventListener('dragover', this.handleDragOver);
-    document.removeEventListener('drop', this.handleDrop);
-    this.sidebar?.remove();
-    this.sidebar      = null;
-    this.searchInput  = null;
-    this.categoryContainers.clear();
+  getPlacedCount(): number {
+    return this.placedCount;
+  }
+
+  onClear(callback: ClearCallback): void {
+    this.clearCallback = callback;
   }
 }
