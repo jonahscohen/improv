@@ -1408,21 +1408,20 @@ export class ComponentPalette {
     const footer = document.createElement('div');
     Object.assign(footer.style, {
       display:        'flex',
-      alignItems:     'flex-start',
-      justifyContent: 'space-between',
-      padding:        '8px 12px',
+      flexDirection:  'column',
+      gap:            '10px',
+      padding:        '10px 12px 12px',
       borderTop:      '1px solid rgba(255,255,255,0.07)',
     });
 
-    // Left side: count + wireframe toggle
-    const leftGroup = document.createElement('div');
-    Object.assign(leftGroup.style, {
-      display:       'flex',
-      flexDirection: 'column',
-      gap:           '6px',
+    // Top row: count + clear
+    const topRow = document.createElement('div');
+    Object.assign(topRow.style, {
+      display:        'flex',
+      alignItems:     'center',
+      justifyContent: 'space-between',
     });
 
-    // Count label
     this.countLabel = document.createElement('span');
     this.countLabel.textContent = '0 placed';
     Object.assign(this.countLabel.style, {
@@ -1430,7 +1429,7 @@ export class ComponentPalette {
       fontWeight: '500',
       color:      'rgba(255,255,255,0.5)',
     });
-    leftGroup.appendChild(this.countLabel);
+    topRow.appendChild(this.countLabel);
 
     // Opacity slider
     const opacityWrap = document.createElement('div');
@@ -1506,47 +1505,67 @@ export class ComponentPalette {
     });
 
     opacityWrap.appendChild(opacitySlider);
-    leftGroup.appendChild(opacityWrap);
+    footer.appendChild(opacityWrap);
 
-    // Accent color picker
+    // Accent color swatches
+    const SWATCHES = [
+      { hex: '#3b82f6', r: 59,  g: 130, b: 246 },
+      { hex: '#8b5cf6', r: 139, g: 92,  b: 246 },
+      { hex: '#22c55e', r: 34,  g: 197, b: 94  },
+      { hex: '#f97316', r: 249, g: 115, b: 22  },
+      { hex: '#ef4444', r: 239, g: 68,  b: 68  },
+      { hex: '#ec4899', r: 236, g: 72,  b: 153 },
+    ];
+
     const colorWrap = document.createElement('div');
     Object.assign(colorWrap.style, {
-      display:       'flex',
-      alignItems:    'center',
-      justifyContent:'space-between',
-      gap:           '8px',
+      display:    'flex',
+      alignItems: 'center',
+      gap:        '8px',
     });
 
-    const colorLabel = document.createElement('span');
-    colorLabel.textContent = 'Accent Color';
-    Object.assign(colorLabel.style, {
-      fontSize:   '11px',
-      fontWeight: '500',
-      color:      'rgba(255,255,255,0.5)',
-    });
-    colorWrap.appendChild(colorLabel);
-
-    const colorInput = document.createElement('input');
-    colorInput.type = 'color';
-    colorInput.value = '#3b82f6';
-    Object.assign(colorInput.style, {
-      width:        '24px',
-      height:       '24px',
-      border:       '1px solid rgba(255,255,255,0.2)',
-      borderRadius: '6px',
-      background:   'none',
-      cursor:       'pointer',
-      padding:      '0',
-    });
-    colorInput.addEventListener('input', () => {
-      const hex = colorInput.value;
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      setAccentColor(r, g, b);
-    });
-    colorWrap.appendChild(colorInput);
-    leftGroup.appendChild(colorWrap);
+    const swatchDots: HTMLDivElement[] = [];
+    for (const swatch of SWATCHES) {
+      const dot = document.createElement('div');
+      const isActive = swatch.hex === '#3b82f6';
+      Object.assign(dot.style, {
+        width:        '18px',
+        height:       '18px',
+        borderRadius: '50%',
+        background:   swatch.hex,
+        cursor:       'pointer',
+        border:       isActive ? '2px solid #fff' : '2px solid transparent',
+        boxShadow:    isActive ? `0 0 0 1px ${swatch.hex}` : 'none',
+        transition:   'border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease',
+        flexShrink:   '0',
+      });
+      dot.addEventListener('mouseenter', () => {
+        if (dot.style.borderColor !== 'rgb(255, 255, 255)') {
+          dot.style.transform = 'scale(1.15)';
+        }
+      });
+      dot.addEventListener('mouseleave', () => {
+        dot.style.transform = '';
+      });
+      dot.addEventListener('mousedown', () => {
+        dot.style.transform = 'scale(0.92)';
+      });
+      dot.addEventListener('mouseup', () => {
+        dot.style.transform = '';
+      });
+      dot.addEventListener('click', () => {
+        for (const d of swatchDots) {
+          d.style.border = '2px solid transparent';
+          d.style.boxShadow = 'none';
+        }
+        dot.style.border = '2px solid #fff';
+        dot.style.boxShadow = `0 0 0 1px ${swatch.hex}`;
+        setAccentColor(swatch.r, swatch.g, swatch.b);
+      });
+      swatchDots.push(dot);
+      colorWrap.appendChild(dot);
+    }
+    footer.appendChild(colorWrap);
 
     // Wireframe toggle - pill-shaped button with dashed border
     this.wireframeToggleEl = document.createElement('div');
@@ -1594,10 +1613,7 @@ export class ComponentPalette {
       toggleWireframe();
     });
 
-    leftGroup.appendChild(this.wireframeToggleEl);
-    footer.appendChild(leftGroup);
-
-    // Clear button
+    // Clear button in the top row
     const clearBtn = document.createElement('span');
     clearBtn.textContent = 'Clear';
     Object.assign(clearBtn.style, {
@@ -1605,6 +1621,7 @@ export class ComponentPalette {
       fontWeight: '500',
       color:      'rgba(255,255,255,0.5)',
       cursor:     'pointer',
+      transition: 'color 0.12s ease',
     });
     clearBtn.addEventListener('mouseenter', () => {
       clearBtn.style.color = 'rgba(255,255,255,0.85)';
@@ -1617,7 +1634,20 @@ export class ComponentPalette {
       this.updateCountLabel();
       this.clearCallback?.();
     });
-    footer.appendChild(clearBtn);
+    topRow.appendChild(clearBtn);
+    footer.appendChild(topRow);
+
+    footer.appendChild(this.wireframeToggleEl);
+
+    // Helper text
+    const helperText = document.createElement('span');
+    helperText.textContent = 'Drag components onto the canvas.';
+    Object.assign(helperText.style, {
+      fontSize: '10px',
+      color:    'rgba(255,255,255,0.3)',
+      lineHeight: '1.3',
+    });
+    footer.appendChild(helperText);
 
     return footer;
   }
