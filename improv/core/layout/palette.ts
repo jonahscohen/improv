@@ -1073,6 +1073,7 @@ export class ComponentPalette {
   private activeDragItem: HTMLDivElement | null = null;
   private wireframeToggleEl: HTMLDivElement | null = null;
   private dotGridEl: HTMLDivElement | null = null;
+  private opacityOverlayEl: HTMLDivElement | null = null;
   private wireframeChangeHandler: (() => void) | null = null;
 
   constructor(shadowRoot: ShadowRoot) {
@@ -1177,7 +1178,7 @@ export class ComponentPalette {
     Object.assign(this.dotGridEl.style, {
       position:      'fixed',
       inset:         '0',
-      zIndex:        '2147483640',
+      zIndex:        '1',
       pointerEvents: 'none',
       display:       'none',
       background:    'white',
@@ -1185,6 +1186,22 @@ export class ComponentPalette {
       backgroundSize:  '24px 24px',
     });
     this.shadow.appendChild(this.dotGridEl);
+
+    // Page opacity overlay (white layer between page content and improv UI)
+    this.opacityOverlayEl = document.createElement('div');
+    Object.assign(this.opacityOverlayEl.style, {
+      position:      'fixed',
+      top:           '0',
+      left:          '0',
+      width:         '100vw',
+      height:        '100vh',
+      background:    '#ffffff',
+      opacity:       '0',
+      zIndex:        '-1',
+      pointerEvents: 'none',
+      display:       'none',
+    });
+    this.shadow.appendChild(this.opacityOverlayEl);
 
     // Listen to wireframe state changes
     this.wireframeChangeHandler = () => this.applyWireframeState();
@@ -1394,6 +1411,82 @@ export class ComponentPalette {
     });
     leftGroup.appendChild(this.countLabel);
 
+    // Opacity slider
+    const opacityWrap = document.createElement('div');
+    Object.assign(opacityWrap.style, {
+      display:       'flex',
+      flexDirection: 'column',
+      gap:           '3px',
+    });
+
+    const opacityLabel = document.createElement('span');
+    opacityLabel.textContent = 'Toggle Opacity';
+    Object.assign(opacityLabel.style, {
+      fontSize:   '10px',
+      fontWeight: '500',
+      color:      'rgba(255,255,255,0.5)',
+    });
+    opacityWrap.appendChild(opacityLabel);
+
+    const opacitySlider = document.createElement('input');
+    opacitySlider.type = 'range';
+    opacitySlider.min = '0';
+    opacitySlider.max = '100';
+    opacitySlider.value = '100';
+    Object.assign(opacitySlider.style, {
+      width:           '100%',
+      height:          '4px',
+      cursor:          'pointer',
+      appearance:      'none',
+      background:      'rgba(255,255,255,0.15)',
+      borderRadius:    '2px',
+      outline:         'none',
+    });
+
+    // Inject slider thumb styles (orange thumb, gray track)
+    const sliderId = 'improv-opacity-slider-' + Date.now();
+    opacitySlider.id = sliderId;
+    const sliderStyle = document.createElement('style');
+    sliderStyle.textContent = [
+      '#' + sliderId + '::-webkit-slider-thumb {',
+      '  -webkit-appearance: none;',
+      '  appearance: none;',
+      '  width: 12px;',
+      '  height: 12px;',
+      '  border-radius: 50%;',
+      '  background: #f97316;',
+      '  cursor: pointer;',
+      '  border: none;',
+      '}',
+      '#' + sliderId + '::-moz-range-thumb {',
+      '  width: 12px;',
+      '  height: 12px;',
+      '  border-radius: 50%;',
+      '  background: #f97316;',
+      '  cursor: pointer;',
+      '  border: none;',
+      '}',
+    ].join('\n');
+    this.shadow.appendChild(sliderStyle);
+
+    opacitySlider.addEventListener('input', () => {
+      const val = parseInt(opacitySlider.value, 10);
+      if (this.opacityOverlayEl) {
+        if (val >= 100) {
+          this.opacityOverlayEl.style.display = 'none';
+          this.opacityOverlayEl.style.opacity = '0';
+        } else {
+          this.opacityOverlayEl.style.display = '';
+          // At slider=0, page fully hidden (overlay opacity=1)
+          // At slider=100, page fully visible (overlay opacity=0)
+          this.opacityOverlayEl.style.opacity = String((100 - val) / 100);
+        }
+      }
+    });
+
+    opacityWrap.appendChild(opacitySlider);
+    leftGroup.appendChild(opacityWrap);
+
     // Wireframe toggle - pill-shaped button with dashed border
     this.wireframeToggleEl = document.createElement('div');
     Object.assign(this.wireframeToggleEl.style, {
@@ -1509,9 +1602,11 @@ export class ComponentPalette {
     }
     this.panel?.remove();
     this.dotGridEl?.remove();
+    this.opacityOverlayEl?.remove();
     this.panel = null;
     this.countLabel = null;
     this.dotGridEl = null;
+    this.opacityOverlayEl = null;
   }
 
   onDrop(callback: DropCallback): void {

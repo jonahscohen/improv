@@ -31,6 +31,7 @@ export class LayoutMode {
   private previewPanel: HTMLDivElement | null = null;
   private selectedSkeletonId: string | null = null;
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
+  private scrollHandler: (() => void) | null = null;
 
   constructor(overlay: Overlay, transport: Transport) {
     this.overlay   = overlay;
@@ -70,6 +71,12 @@ export class LayoutMode {
     };
     document.addEventListener('keydown', this.keydownHandler);
 
+    // Scroll listener: keep skeletons anchored to their document position
+    this.scrollHandler = () => {
+      this.skeletonRenderer?.updateScroll(this.placements);
+    };
+    window.addEventListener('scroll', this.scrollHandler, { passive: true });
+
     this.sectionDetector.enable((sections) => {
       console.debug('[improv] sections reordered', sections.length);
     });
@@ -88,6 +95,10 @@ export class LayoutMode {
     if (this.keydownHandler) {
       document.removeEventListener('keydown', this.keydownHandler);
       this.keydownHandler = null;
+    }
+    if (this.scrollHandler) {
+      window.removeEventListener('scroll', this.scrollHandler);
+      this.scrollHandler = null;
     }
 
     this.palette            = null;
@@ -163,8 +174,12 @@ export class LayoutMode {
       dragging = true;
       startX   = e.clientX;
       startY   = e.clientY;
+      // Convert stored document-absolute Y back to current viewport Y
       originX  = placement.x;
-      originY  = placement.y;
+      originY  = placement.y + placement.scrollY - window.scrollY;
+      // Update scrollY to current scroll so the new viewport coords are consistent
+      placement.scrollY = window.scrollY;
+      placement.y = originY;
       e.preventDefault();
     });
 

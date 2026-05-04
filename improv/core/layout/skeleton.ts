@@ -1670,7 +1670,7 @@ export class SkeletonRenderer {
     Object.assign(el.style, {
       position: 'absolute',
       left: `${placement.x}px`,
-      top: `${placement.y - placement.scrollY}px`,
+      top: `${placement.y}px`,
       width: `${placement.width}px`,
       height: `${placement.height}px`,
       border: this.getBorderStyle(),
@@ -1682,6 +1682,7 @@ export class SkeletonRenderer {
       userSelect: 'none',
       boxSizing: 'border-box',
       fontFamily: 'system-ui, -apple-system, sans-serif',
+      zIndex: '10',
     });
 
     // Label above skeleton
@@ -1840,7 +1841,7 @@ export class SkeletonRenderer {
       startW = placement.width;
       startH = placement.height;
       startLeft = placement.x;
-      startTop = placement.y - placement.scrollY;
+      startTop = placement.y;
 
       const onMove = (me: MouseEvent): void => {
         const dx = me.clientX - startX;
@@ -1935,6 +1936,16 @@ export class SkeletonRenderer {
     }
     this.skeletons.clear();
     this.selectedId = null;
+  }
+
+  updateScroll(placements: Array<{ id: string; y: number; scrollY: number }>): void {
+    const currentScroll = window.scrollY;
+    for (const p of placements) {
+      const el = this.skeletons.get(p.id);
+      if (!el) continue;
+      // Document-relative Y is (p.y + p.scrollY), viewport top is that minus currentScroll
+      el.style.top = `${p.y + p.scrollY - currentScroll}px`;
+    }
   }
 
   onResize(callback: ResizeCallback): void {
