@@ -844,12 +844,17 @@ export class PropertyPanel {
 
     const body = this.makeSectionBody();
 
-    // Alignment field: 6 icon buttons in 2 groups of 3
+    // Alignment field
+    const alignFieldRow = this.makeSectionRow();
+    const alignLabel = this.makeGroupLabelInline('Alignment');
+    alignFieldRow.appendChild(alignLabel);
+    body.appendChild(alignFieldRow);
+
     const alignRow = this.makeSectionRow();
     Object.assign(alignRow.style, {
       display: 'flex',
       alignItems: 'center',
-      gap: '8px',
+      gap: '12px',
     });
 
     // Horizontal alignment group
@@ -939,6 +944,11 @@ export class PropertyPanel {
     } else if (display === 'grid' || display === 'inline-grid') {
       activeDisplay = 'grid';
     }
+
+    // Display field label
+    const displayLabelRow = this.makeSectionRow();
+    displayLabelRow.appendChild(this.makeGroupLabelInline('Display'));
+    body.appendChild(displayLabelRow);
 
     // Display segmented control with sliding pill
     const displayRow = this.makeSectionRow();
@@ -2299,23 +2309,24 @@ export class PropertyPanel {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: '28px',
-        height: '28px',
-        borderRadius: '6px',
+        width: '32px',
+        height: '32px',
+        borderRadius: '8px',
         border: 'none',
-        background: isActive ? tv(V.border) : 'transparent',
+        background: isActive ? tv(V.inputBg) : 'transparent',
         color: isActive ? tv(V.text) : tv(V.textTertiary),
         cursor: 'pointer',
         padding: '0',
+        transition: 'background 120ms, color 120ms',
       });
-      btn.appendChild(svgIcon(14, 14, item.icon));
+      btn.appendChild(svgIcon(18, 18, item.icon));
 
       const onClick = () => {
         for (const b of buttons) {
           b.style.background = 'transparent';
           b.style.color = tv(V.textTertiary);
         }
-        btn.style.background = tv(V.border);
+        btn.style.background = tv(V.inputBg);
         btn.style.color = tv(V.text);
         onChange(item.value);
       };
