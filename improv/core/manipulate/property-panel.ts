@@ -54,14 +54,14 @@ function getVal(
 // SVG icon helpers (paths from Lucide, verbatim)
 // ---------------------------------------------------------------------------
 
-function svgIcon(w: number, h: number, pathData: string): SVGSVGElement {
+function svgIcon(w: number, h: number, pathData: string, strokeW = 1.5): SVGSVGElement {
   const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   el.setAttribute('width', String(w));
   el.setAttribute('height', String(h));
   el.setAttribute('viewBox', '0 0 24 24');
   el.setAttribute('fill', 'none');
   el.setAttribute('stroke', 'currentColor');
-  el.setAttribute('stroke-width', '2');
+  el.setAttribute('stroke-width', String(strokeW));
   el.setAttribute('stroke-linecap', 'round');
   el.setAttribute('stroke-linejoin', 'round');
   const parts = pathData.split('|');
