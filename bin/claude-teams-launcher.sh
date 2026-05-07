@@ -18,7 +18,6 @@ TEAMS_SKIP_FILE="$HOME/.claude/.skip-teams-launcher"
 TEAMS_DEFAULT_ON="$HOME/.claude/.teams-default-on"
 
 function _claude_inside_cmux() {
-  # cmux sets CMUX_WORKSPACE_ID when running inside a cmux terminal
   [ -n "$CMUX_WORKSPACE_ID" ] || [ -n "$CMUX_PANE_ID" ]
 }
 
@@ -27,40 +26,34 @@ function _claude_has_cmux_binary() {
 }
 
 function _claude_teams_wrap() {
-  # This function wraps whatever `claude` currently resolves to.
-  # If the Discord launcher already wrapped it, we wrap that wrapper.
-  # If not, we wrap the bare command.
-
-  # Save reference to the current claude (could be Discord wrapper or bare command)
-  local _prev_claude
   if typeset -f claude >/dev/null 2>&1; then
-    # claude is already a function (Discord launcher). Rename it.
-    functions[_claude_prev]=$functions[claude]
-    _prev_claude="_claude_prev"
-  else
-    _prev_claude="command claude"
+    functions[_claude_teams_prev]=$functions[claude]
   fi
 
+  function _claude_teams_passthrough() {
+    if typeset -f _claude_teams_prev >/dev/null 2>&1; then
+      _claude_teams_prev "$@"
+    else
+      command claude "$@"
+    fi
+  }
+
   function claude() {
-    # Hard opt-out
     if [ -f "$TEAMS_SKIP_FILE" ]; then
-      eval "$_prev_claude" "$@"
+      _claude_teams_passthrough "$@"
       return $?
     fi
 
-    # Only prompt when inside cmux
     if ! _claude_inside_cmux || ! _claude_has_cmux_binary; then
-      eval "$_prev_claude" "$@"
+      _claude_teams_passthrough "$@"
       return $?
     fi
 
-    # Auto-enable if default-on flag exists
     if [ -f "$TEAMS_DEFAULT_ON" ]; then
       cmux claude-teams "$@"
       return $?
     fi
 
-    # Prompt
     local choice
     printf "Enable Claude Code Teams? (teammate agents appear as cmux splits)\n"
     printf "  [y] Yes, launch with Teams\n"
@@ -84,16 +77,15 @@ function _claude_teams_wrap() {
         : > "$TEAMS_SKIP_FILE"
         printf "Got it. Created %s - this prompt won't appear again.\n" "$TEAMS_SKIP_FILE"
         printf "(Delete that file to re-enable.)\n"
-        eval "$_prev_claude" "$@"
+        _claude_teams_passthrough "$@"
         ;;
       *)
-        eval "$_prev_claude" "$@"
+        _claude_teams_passthrough "$@"
         ;;
     esac
   }
 }
 
-# Only install the wrapper if cmux exists on this machine
 if _claude_has_cmux_binary; then
   _claude_teams_wrap
 fi
