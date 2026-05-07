@@ -51,7 +51,7 @@ function _claude_teams_launch() {
   _CLAUDE_TEAMS_DISCORD=0
   _claude_teams_maybe_discord
   if [ "$_CLAUDE_TEAMS_DISCORD" = "1" ]; then
-    cmux claude-teams -- --channels plugin:discord@claude-plugins-official "$@"
+    cmux claude-teams --channels plugin:discord@claude-plugins-official "$@"
   else
     cmux claude-teams "$@"
   fi
