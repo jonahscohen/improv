@@ -102,6 +102,7 @@ Root cause of all lasso/tooltip failures: prompt mode used inline arrow function
 - Chains with Discord launcher - wraps whatever `claude` function already exists
 - Installed under cmux component in installer, with zshrc source block + deactivation cleanup
 - Deployed: symlink + zshrc block on this machine
+- Bug fix: zsh doesn't close over locals - `_prev_claude` was empty when `claude()` ran. Replaced with named functions (`_claude_teams_prev` + `_claude_teams_passthrough`) so the Discord wrapper chain survives
 
 ## cmux drag-drop hijack fix
 - cmux intercepts file drops on terminal and opens them in its browser pane instead of passing to Claude input
