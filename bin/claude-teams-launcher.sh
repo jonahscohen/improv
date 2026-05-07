@@ -39,19 +39,19 @@ function _claude_teams_maybe_discord() {
       connect="${connect:-Y}"
       if [[ ! "$connect" =~ ^[Nn]$ ]]; then
         typeset -f _claude_kill_stale_discord >/dev/null 2>&1 && _claude_kill_stale_discord
-        _CLAUDE_TEAMS_DISCORD_FLAGS="-- --channels plugin:discord@claude-plugins-official"
+        _CLAUDE_TEAMS_DISCORD=1
         return
       fi
     fi
   fi
-  _CLAUDE_TEAMS_DISCORD_FLAGS=""
+  _CLAUDE_TEAMS_DISCORD=0
 }
 
 function _claude_teams_launch() {
-  _CLAUDE_TEAMS_DISCORD_FLAGS=""
+  _CLAUDE_TEAMS_DISCORD=0
   _claude_teams_maybe_discord
-  if [ -n "$_CLAUDE_TEAMS_DISCORD_FLAGS" ]; then
-    cmux claude-teams $_CLAUDE_TEAMS_DISCORD_FLAGS "$@"
+  if [ "$_CLAUDE_TEAMS_DISCORD" = "1" ]; then
+    cmux claude-teams -- --channels plugin:discord@claude-plugins-official "$@"
   else
     cmux claude-teams "$@"
   fi
