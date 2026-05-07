@@ -39,7 +39,7 @@ function _claude_teams_maybe_discord() {
       connect="${connect:-Y}"
       if [[ ! "$connect" =~ ^[Nn]$ ]]; then
         typeset -f _claude_kill_stale_discord >/dev/null 2>&1 && _claude_kill_stale_discord
-        _CLAUDE_TEAMS_DISCORD_FLAGS="--channels plugin:discord@claude-plugins-official"
+        _CLAUDE_TEAMS_DISCORD_FLAGS="-- --channels plugin:discord@claude-plugins-official"
         return
       fi
     fi
