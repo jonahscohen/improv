@@ -103,6 +103,15 @@ Root cause of all lasso/tooltip failures: prompt mode used inline arrow function
 - Installed under cmux component in installer, with zshrc source block + deactivation cleanup
 - Deployed: symlink + zshrc block on this machine
 - Bug fix: zsh doesn't close over locals - `_prev_claude` was empty when `claude()` ran. Replaced with named functions (`_claude_teams_prev` + `_claude_teams_passthrough`) so the Discord wrapper chain survives
+- Bug fix: "yes" to Teams bypassed Discord entirely - added `_claude_teams_launch` that prompts for Discord and appends channel flag
+- Bug fix: `cmux claude-teams --channels` was rejected when flags were in a string variable (expanded as single token). Fixed by using literal args inline in the command.
+- Bug fix: `--` separator caused `--channels` to land as a user prompt in claude instead of a CLI flag. Removed `--` - cmux forwards `--channels` directly without it.
+
+## Memory-before-commit gate
+- memory-nudge.sh upgraded: touches `~/.claude/.memory-dirty` on project file edits, removes it on memory writes
+- bash-guard.sh: blocks `git commit` when `.memory-dirty` exists, with explicit deny message
+- Mechanical enforcement: I literally cannot commit without writing memory first
+- Full cycle tested: edit sets flag, commit blocked, memory write clears flag, commit allowed
 
 ## cmux drag-drop hijack fix
 - cmux intercepts file drops on terminal and opens them in its browser pane instead of passing to Claude input
