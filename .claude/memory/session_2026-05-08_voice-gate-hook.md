@@ -79,7 +79,30 @@ Memory note saying "don't speak when muted" was advisory and kept being violated
 - Gradient: gray base rgba(255,255,255,0.3) with white peak rgba(255,255,255,0.8) sweeping left-to-right
 - 2s loop, starts immediately, hides on text input, reappears on clear
 - Input widened to 420px
-- Multiple iterations to get the gradient right: transparent base showed black text, fixed to gray base
+- Multiple iterations to get the gradient right: transparent base showed black text, then wrong coverage
+- Final fix: exact spell.sh technique - `background: currentColor linear-gradient(...)` where currentColor (gray) fills the base and gradient sweeps white highlight on top. background-size:50% + no-repeat = single highlight band
+- Refinement: shimmer peak changed to lighter gray (0.55 not 0.8), wider band (70% not 50%), input 520px
+- Fix: input width wasn't applying - added min-width:520px, removed box-sizing:border-box
+- Smoother gradient: transition zones at 42%/58% instead of 30%/70%
+- Slower animation: 4s ease-in-out instead of 2s linear
+- NOTE: memory-nudge Bash matcher has false positives on read-only commands (node -e). Needs tuning.
+- Shimmer REVERTED entirely - couldn't get the treatment right after multiple attempts. Back to native placeholder. Width set to 300px.
+- Revert broke input: container.appendChild(this.input) was removed, and hide() still referenced this.sendBtn (renamed to queueBtn/sendNowBtn). Fixed both, verified in browser via Chrome MCP.
+
+## FAILURE: deployed broken code without verification (2026-05-09)
+- Root cause: never verified the prompt input rendered after the shimmer revert
+- The revert removed the line that appended the input to its container
+- Also left stale references to this.sendBtn which no longer exists
+- Deployed, committed, and reported success without checking
+- User caught it. Built verification hook to prevent this permanently.
+
+## Verification-before-commit gate (Field Fidelity Testing)
+- `claude/hooks/verify-before-done.sh` - PostToolUse on Bash: sets `~/.claude/.needs-verification` when deploying improv to any project
+- `claude/hooks/verify-clear.sh` - PostToolUse on Chrome MCP tools: clears the flag when browser verification happens
+- `bash-guard.sh` - blocks `git commit` when `.needs-verification` exists
+- Full cycle: deploy -> flag set -> commit blocked -> browser check -> flag cleared -> commit allowed
+- Wired in settings.json: verify-before-done on Write|Edit|MultiEdit|Bash matcher, verify-clear on mcp__claude-in-chrome__ matcher
+- This is the "Field Fidelity Testing" discipline: never claim success without browser proof
 
 ## Collaborator
 Jonah

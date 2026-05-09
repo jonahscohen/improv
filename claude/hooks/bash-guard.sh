@@ -34,6 +34,13 @@ if [ -z "$REASON" ] && echo "$CMD" | grep -qE 'git\s+commit'; then
   fi
 fi
 
+# Verification gate: block git commit if deployed code not browser-verified
+if [ -z "$REASON" ] && echo "$CMD" | grep -qE 'git\s+commit'; then
+  if [ -f "$HOME/.claude/.needs-verification" ]; then
+    REASON="BLOCKED: code was deployed but not verified in the browser. Use Chrome MCP or cmux screenshot to verify BEFORE committing."
+  fi
+fi
+
 if [ -n "$REASON" ]; then
   python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$REASON"
 else
