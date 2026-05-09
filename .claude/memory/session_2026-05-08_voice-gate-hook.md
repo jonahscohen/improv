@@ -104,5 +104,12 @@ Memory note saying "don't speak when muted" was advisory and kept being violated
 - Wired in settings.json: verify-before-done on Write|Edit|MultiEdit|Bash matcher, verify-clear on mcp__claude-in-chrome__ matcher
 - This is the "Field Fidelity Testing" discipline: never claim success without browser proof
 
+## Verification gate - expanded coverage
+- Chrome MCP: javascript_tool, read_page, get_page_text, navigate, get_screenshot all clear the flag
+- cmux browser: verify-before-done.sh clears flag when Bash command contains "cmux browser" + screenshot/snapshot
+- Manual: verify-manual.sh UserPromptSubmit hook clears flag on "verified", "looks good", "it works", "lgtm", "all good", "bypass verification"
+- User reserves the right to interrupt and bypass - the manual hook respects that
+- Playwright would clear via cmux browser path or manual bypass
+
 ## Collaborator
 Jonah

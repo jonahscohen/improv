@@ -27,6 +27,15 @@ cmd = data.get("tool_input", {}).get("command", "") if tool == "Bash" else ""
 
 verify_flag = os.path.expanduser("~/.claude/.needs-verification")
 
+# Clear flag when cmux browser verification happens
+cmux_verify = ["cmux browser", "screenshot", "snapshot"]
+if any(m in cmd for m in cmux_verify) and "cmux" in cmd:
+    try:
+        os.remove(verify_flag)
+    except FileNotFoundError:
+        pass
+    print("{}"); sys.exit(0)
+
 # Set flag when deploying improv to a project
 deploy_markers = ["dishplayscapes/improv", "blueprint-tracker/public/improv", "claude-dotfiles/public/improv"]
 if any(m in cmd for m in deploy_markers):
