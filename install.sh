@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ============================================================
 # claude-dotfiles installer
-# Interactive TUI over eleven components:
+# Interactive TUI over twelve components:
 #   brain        - Team rules + workflow (appended to CLAUDE.md) - ADDITIVE
 #   config       - Hooks, plugins, permissions (merged into settings.json) - ADDITIVE
 #   memory       - Additive memory subsystem (rules + 3 hooks + startup-check.sh loader)
@@ -15,6 +15,7 @@ set -euo pipefail
 #   discord      - smart Discord-launcher source line in .zshrc + onboarding script
 #   voice-input  - whisper.cpp + ffmpeg + transcribe CLI for voice-message input
 #   voice-output - OpenAI TTS MCP server for spoken responses
+#   reflect      - Memory corpus analysis (reflect skill + nudge hook)
 #
 # Flags:
 #   --yes              non-interactive, pick all components
@@ -51,7 +52,7 @@ err()   { printf "${RED}[error]${NC} %s\n" "$1"; }
 # ============================================================
 
 # Public components - shipped to all users.
-KEYS=(brain config memory skills statusline cmux nvm ampersand discord voice-input voice-output)
+KEYS=(brain config memory skills statusline cmux nvm ampersand discord voice-input voice-output reflect)
 TITLES=(
   "Team rules + workflow (appended to CLAUDE.md)"
   "Hooks, plugins, permissions (merged into settings.json)"
@@ -64,6 +65,7 @@ TITLES=(
   "Discord chat agent launcher"
   "Voice transcription (whisper.cpp)"
   "Voice output (OpenAI TTS)"
+  "Memory corpus analysis (reflect)"
 )
 DESCS=(
   "ADDITIVE: appends team rules (from RULES.md) and shared workflow (from CLAUDE.md) to your ~/.claude/CLAUDE.md between marker comments. Your existing CLAUDE.md content is preserved above and below the markers. If you have a claude/CLAUDE.local.md for personal overrides, those are appended in their own marker block too. Re-runs detect the markers and skip. Deactivation removes only the marked blocks."
@@ -77,6 +79,7 @@ DESCS=(
   "Adds a smart 'Connect to Discord?' prompt to your 'claude' command. Three states: cold (no bot configured) offers the interactive onboarding walkthrough or 'never ask again'; mid (bot configured but no users paired) jumps you to the pairing flow; warm (paired) shows the familiar 5-second connect prompt with default Yes. The walkthrough handles both 'I have a bot, just paste the token' and 'walk me through making a new bot in the Developer Portal'. Skip this if you don't use Discord with Claude. Tokens are stored in macOS Keychain, never in the repo."
   "Adds local voice-to-text so Claude can answer Discord voice messages and any other audio attachment. Brews whisper-cpp and ffmpeg, downloads the ggml-base.en model (~150 MB) into ~/.cache/whisper, and symlinks bin/transcribe to ~/.claude/transcribe. Local-only (no cloud, no API key). Calls: '~/.claude/transcribe path/to/audio.ogg' prints the transcript on stdout."
   "Gives Claude a voice via OpenAI text-to-speech API. Claude speaks short verbal summaries while keeping code and technical detail as text. Requires your own OpenAI API key stored in macOS Keychain (see docs). Starts muted - enable with voice-on in any terminal. Three mute controls: in-session (mute yourself), terminal alias (voice-on/voice-off), or manual file toggle. Does NOT work without an API key - this is not optional, it is required."
+  "Adds the reflect skill and nudge hook. The reflect skill spawns 5 parallel analysis agents against your accumulated .claude/memory/ files to surface patterns, tensions, and gaps nobody explicitly noticed. Triggers naturally from conversation ('what patterns are you seeing?') or via /reflect. A SessionStart hook nudges you when enough new memories have accumulated since the last reflection. No external dependencies."
 )
 FILES=(
   # brain
@@ -101,6 +104,8 @@ FILES=(
   "~/.claude/transcribe (symlink)\n~/.cache/whisper/ggml-base.en.bin\nwhisper-cpp (brew)\nffmpeg (brew)"
   # voice-output
   "~/.claude/voice-output/server.js\n~/.claude/tts-generate (symlink)\n~/.claude/.voice-config\n~/.claude/.voice-enabled (toggle)\n~/.claude/hooks/voice-mandate.sh\n~/.claude/hooks/voice-toggle.sh\n~/.claude/toggle-voice.sh\n~/.zshrc (voice-on/voice-off aliases)"
+  # reflect
+  "~/.claude/skills/reflect/SKILL.md\n~/.claude/hooks/reflect-nudge.sh\n~/.claude/last-reflect-timestamp"
 )
 DIRS=(
   "$REPO_DIR/claude"           # brain
@@ -114,8 +119,9 @@ DIRS=(
   "$REPO_DIR/bin"              # discord
   "$REPO_DIR/bin"              # voice-input
   "$REPO_DIR/claude/voice-output"  # voice-output
+  "$REPO_DIR/claude"           # reflect
 )
-PICKS=(1 1 1 1 1 1 1 1 1 1 1)
+PICKS=(1 1 1 1 1 1 1 1 1 1 1 1)
 
 # Personal components - hidden from public TUI and --help. Surfaced only when
 # the maintainer passes --personal (undocumented, undocumented-on-purpose).
@@ -199,7 +205,7 @@ apply_preset() {
   case "$1" in
     all)     set_all 1 ;;
     none)    set_all 0 ;;
-    minimal) set_all 0; set_pick brain 1; set_pick config 1; set_pick memory 1; set_pick skills 1; set_pick nvm 1 ;;
+    minimal) set_all 0; set_pick brain 1; set_pick config 1; set_pick memory 1; set_pick skills 1; set_pick nvm 1; set_pick reflect 1 ;;
     *)       err "Unknown preset: $1 (valid: all, minimal, none)"; exit 2 ;;
   esac
 }
@@ -220,7 +226,7 @@ Usage:
   ./install.sh --yes            Non-interactive, install everything
   ./install.sh --preset NAME    Non-interactive preset: all | minimal | none
   ./install.sh --only KEYS      Non-interactive, comma-separated keys
-                                (brain, config, memory, skills, statusline, cmux, nvm, ampersand, discord, voice-input, voice-output)
+                                (brain, config, memory, skills, statusline, cmux, nvm, ampersand, discord, voice-input, voice-output, reflect)
   ./install.sh --dry-run        Print resolved picks and exit
   ./install.sh --help           Show this help
 EOF
@@ -542,6 +548,7 @@ detect_component() {
     discord)    grep -Fq "discord-chat-launcher.sh" "$ZSHRC" 2>/dev/null && echo active || echo not-installed ;;
     voice-input) [ -L "$CLAUDE_DIR/transcribe" ] && echo active || echo not-installed ;;
     voice-output) [ -d "$CLAUDE_DIR/voice-output" ] && echo active || echo not-installed ;;
+    reflect)    [ -f "$CLAUDE_DIR/skills/reflect/SKILL.md" ] && echo active || echo not-installed ;;
     improv)     [ -d "$CLAUDE_DIR/improv" ] && echo active || echo not-installed ;;
     *)          echo not-installed ;;
   esac
@@ -867,6 +874,12 @@ deactivate_ampersand() {
   fi
 }
 
+deactivate_reflect() {
+  [ -d "$CLAUDE_DIR/skills/reflect" ] && rm -rf "$CLAUDE_DIR/skills/reflect"
+  [ -f "$CLAUDE_DIR/hooks/reflect-nudge.sh" ] && rm -f "$CLAUDE_DIR/hooks/reflect-nudge.sh"
+  [ -f "$CLAUDE_DIR/last-reflect-timestamp" ] && rm -f "$CLAUDE_DIR/last-reflect-timestamp"
+}
+
 deactivate_component() {
   case "$1" in
     brain)      deactivate_brain ;;
@@ -880,6 +893,7 @@ deactivate_component() {
     discord)    deactivate_discord ;;
     voice-input) deactivate_voice ;;
     voice-output) deactivate_voice_output ;;
+    reflect)    deactivate_reflect ;;
     improv) deactivate_improv ;;
   esac
 }
@@ -2091,7 +2105,37 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 fi
 
 # ============================================================
-# 14. Improv (visual micro-adjustment MCP tool)
+# 14. Reflect (memory corpus analysis)
+# ============================================================
+
+if picked reflect; then
+  echo ""
+  info "--- Reflect (memory corpus analysis) ---"
+
+  # Skill file
+  info "Installing reflect skill..."
+  mkdir -p "$CLAUDE_DIR/skills/reflect"
+  cp "$REPO_DIR/claude/skills/reflect/SKILL.md" \
+     "$CLAUDE_DIR/skills/reflect/SKILL.md"
+  ok "reflect skill installed"
+
+  # Nudge hook
+  info "Installing reflect-nudge hook..."
+  cp "$REPO_DIR/claude/hooks/reflect-nudge.sh" "$CLAUDE_DIR/hooks/reflect-nudge.sh"
+  chmod +x "$CLAUDE_DIR/hooks/reflect-nudge.sh"
+  ok "reflect-nudge hook installed"
+
+  # Timestamp file (create if missing, don't overwrite)
+  if [ ! -f "$CLAUDE_DIR/last-reflect-timestamp" ]; then
+    touch "$CLAUDE_DIR/last-reflect-timestamp"
+    ok "Created last-reflect-timestamp"
+  else
+    ok "last-reflect-timestamp already exists"
+  fi
+fi
+
+# ============================================================
+# 15. Improv (visual micro-adjustment MCP tool)
 # ============================================================
 
 if picked improv; then
@@ -2134,6 +2178,7 @@ picked nvm      && echo "  - .zshrc: nvm default auto-activation"
 picked ampersand && echo "  - .zshrc: 'ampersand' shortcut (type 'ampersand' to re-run installer; 'ampersand --pull' to sync first)"
 picked voice-input && echo "  - Voice input: whisper-cpp + ffmpeg + ggml-base.en model + ~/.claude/transcribe symlink (run '~/.claude/transcribe path/to/audio.ogg')"
 picked voice-output && echo "  - Voice output: OpenAI TTS MCP server + ~/.claude/tts-generate (run '~/.claude/tts-generate \"text\" [out.ogg]')"
+picked reflect     && echo "  - Reflect: memory corpus analysis skill + reflect-nudge SessionStart hook"
 echo ""
 # Resolve which post-install guidance is actually relevant based on picks.
 NEED_CC=0; NEED_PLUGINS=0; NEED_FONT=0
