@@ -14,6 +14,8 @@ When a user asks "what did we work on last?" or any question about prior work, t
 
 This system exists so that Claude can be opened on multiple machines sharing the same repo and retain shared context. The memory files are the cross-session, cross-machine continuity layer. Treat them as such.
 
+When a memory file has `relates_to` entries, Claude may follow those links to read related files if actively investigating a topic. This is a judgment call, not automatic - do not traverse links at session startup or during routine loading. When a memory has `superseded_by` set, treat it as historical; the superseding memory is the current truth.
+
 ### Memory Writes Are Pre-Approved (NEVER ASK PERMISSION)
 
 You have full, standing, durable permission to write, edit, and delete files anywhere under any `.claude/memory/` directory and any `~/.claude/projects/<...>/memory/` directory. This permission is encoded in `~/.claude/settings.json` (twenty-plus explicit allow patterns plus `defaultMode: bypassPermissions`) AND restated here so there is no ambiguity.
@@ -45,12 +47,73 @@ What counts as a task (non-exhaustive):
 
 If you did something and it works, it goes in memory before anything else happens. This has been corrected multiple times. It is a hard rule, not a best practice. Violating it is a failure.
 
+### Write-Time Link Check
+
+When creating or updating a memory file, perform a three-step write:
+
+1. **Write the memory file** with the full frontmatter schema, including relationship fields if relationships are known.
+2. **Update MEMORY.md** index with a one-line pointer (unchanged from current protocol).
+3. **Link check** - scan the MEMORY.md index (already in context) for memories sharing the same topic area. If a clear relationship exists, add the filename to `relates_to`. If this memory replaces an older one, set `supersedes` and update the old file's `superseded_by`.
+
+What counts as a meaningful relationship (link when):
+- The related memory describes a decision that led to this work
+- The related memory describes a prior attempt at the same problem
+- The related memory documents a rule or constraint that applies to this work
+- The related memory is the plan that this session implements
+
+Do NOT link when:
+- "Both are about the same project" (too broad)
+- "Both happened on the same day" (temporal proximity is not a relationship)
+- The connection is trivially obvious from the names alone
+
+The link check scans one-line MEMORY.md descriptions, not full file contents. Only additional reads happen if updating an old file to add `superseded_by`.
+
 ### Memory File Format
 
 - One session file per day per topic: `session_YYYY-MM-DD_<topic>.md`
-- Use the standard frontmatter format (name, description, type: project)
+- Use the standard frontmatter format with optional relationship fields:
+
+    ---
+    name: {{memory name}}
+    description: {{one-line description}}
+    type: {{user, feedback, project, decision, reference}}
+    relates_to: {{[file1.md, file2.md] - optional, memories sharing topic/context}}
+    supersedes: {{file.md - optional, if this memory replaces an older one}}
+    superseded_by: {{file.md - optional, if this memory has been replaced}}
+    ---
+
+- `relates_to` is a list (0-N entries). `supersedes` and `superseded_by` are single values. All three are optional.
+- When writing `supersedes: X`, also update file X to add `superseded_by: this_file.md`. Keep both ends in sync.
+- `relates_to` is NOT symmetric by default. Only add back-links when genuinely bidirectional.
+- Filenames are relative to the same memory directory (just `filename.md`, no paths).
+- Most memories should have 0-2 `relates_to` entries. More than 3 means you are linking too broadly.
 - List changes as they happen, one line each
 - Record key technical decisions with "Why:" rationale and "How:" approach summary, so reviewers understand both the reasoning and the mechanics
 - List files touched at the bottom
 - Update `MEMORY.md` index when creating new session files
+
+### Extended Memory Types
+
+The system provides four base memory types: user, feedback, project, reference. The following additional type is available:
+
+**`decision`** - Architectural choices, approach selections, and resolved trade-off debates.
+
+| Field | Value |
+|---|---|
+| When to save | When a trade-off is resolved, an approach is selected over alternatives, an architecture question is answered, or a design debate concludes. Not every small choice - only ones where there were meaningful alternatives and the reasoning matters for future work. |
+| How to use | When facing a similar decision, check for existing decision memories. The Alternatives and Why sections tell you whether the original reasoning still holds or whether conditions have changed enough to revisit. |
+
+Body structure for `decision` memories:
+
+    Choice made (what was decided).
+
+    **Alternatives considered:**
+    - Option A: rejected because [reason]
+    - Option B: rejected because [reason]
+
+    **Why this one:** [reasoning for the chosen approach]
+
+    **Revisit when:** [conditions that would invalidate this decision]
+
+The key distinction from `project`: a project memory says "X is happening" or "X is true right now." A decision memory says "we chose X over Y and Z, for these reasons." Project memories describe state; decision memories describe choices. Decision memories are long-lived (the reasoning persists even after the state changes).
 <!-- claude-dotfiles:memory-discipline:end -->
