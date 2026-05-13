@@ -2,6 +2,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { WsServer } from './ws-server.js';
 import type { StyleChange, Annotation, LayoutPlacement } from './types.js';
+import { readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
 
 function text(content: string) {
   return { content: [{ type: 'text' as const, text: content }] };
@@ -10,8 +13,24 @@ function text(content: string) {
 export function registerTools(mcp: McpServer, ws: WsServer): void {
   const pendingChanges: StyleChange[] = [];
   const annotations: Annotation[] = [];
-  let promptIdCounter = 0;
-  const pendingPrompts: Array<{ id: string; context: string; prompt: string; elementCount: number; timestamp: number }> = [];
+  const PROMPT_FILE = join(homedir(), '.claude', 'improv', 'prompts.json');
+
+  function readPrompts(): Array<{ id: string; context: string; prompt: string; elementCount: number; timestamp: number }> {
+    try { return JSON.parse(readFileSync(PROMPT_FILE, 'utf-8')); } catch { return []; }
+  }
+
+  function writePrompts(prompts: Array<{ id: string; context: string; prompt: string; elementCount: number; timestamp: number }>): void {
+    try { writeFileSync(PROMPT_FILE, JSON.stringify(prompts)); } catch {}
+  }
+
+  function nextPromptId(): string {
+    const prompts = readPrompts();
+    const maxId = prompts.reduce((max, p) => {
+      const n = parseInt(p.id.replace('prompt-', ''));
+      return n > max ? n : max;
+    }, 0);
+    return 'prompt-' + (maxId + 1);
+  }
   let layoutPlacements: LayoutPlacement[] = [];
 
   // WebSocket push handlers - browser pushes data into these buffers
@@ -28,7 +47,7 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
   });
 
   ws.onMessage('push_prompt', (_connectionId, params) => {
-    const id = `prompt-${++promptIdCounter}`;
+    const id = nextPromptId();
     const prompt = {
       id,
       context: (params?.context ?? '') as string,
@@ -36,7 +55,7 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
       elementCount: (params?.elementCount ?? 0) as number,
       timestamp: Date.now(),
     };
-    pendingPrompts.push(prompt);
+    const prompts = readPrompts(); prompts.push(prompt); writePrompts(prompts);
     return { accepted: 1, promptId: id };
   });
 
@@ -85,7 +104,7 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
         pending: {
           changes: pendingChanges.length,
           annotations: annotations.length,
-          prompts: pendingPrompts.length,
+          prompts: readPrompts().length,
           layoutPlacements: layoutPlacements.length,
         },
         wsPort: ws.getPort(),
@@ -215,7 +234,7 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
     async ({ timeout = 30 }) => {
       const startChanges = pendingChanges.length;
       const startAnnotations = annotations.length;
-      const startPrompts = pendingPrompts.length;
+      const startPrompts = readPrompts().length;
       const deadline = Date.now() + timeout * 1000;
 
       await new Promise<void>((resolve) => {
@@ -223,7 +242,7 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
           const hasNew =
             pendingChanges.length !== startChanges ||
             annotations.length !== startAnnotations ||
-            pendingPrompts.length !== startPrompts;
+            readPrompts().length !== startPrompts;
           if (hasNew || Date.now() >= deadline) {
             resolve();
           } else {
@@ -236,16 +255,16 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
       const timedOut =
         pendingChanges.length === startChanges &&
         annotations.length === startAnnotations &&
-        pendingPrompts.length === startPrompts;
+        readPrompts().length === startPrompts;
 
       return text(
         JSON.stringify({
           changes: pendingChanges.length,
           annotations: annotations.length,
-          prompts: pendingPrompts.length,
+          prompts: readPrompts().length,
           newChanges: pendingChanges.length - startChanges,
           newAnnotations: annotations.length - startAnnotations,
-          newPrompts: pendingPrompts.length - startPrompts,
+          newPrompts: readPrompts().length - startPrompts,
           timedOut,
         }),
       );
@@ -289,13 +308,14 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
     'Return and clear pending prompts from the browser. Each prompt includes an id you must pass back to improv_respond.',
     {},
     async () => {
-      if (pendingPrompts.length === 0) {
+      const prompts = readPrompts();
+      if (prompts.length === 0) {
         return text('No pending prompts');
       }
-      const out = pendingPrompts.map((p) =>
+      const out = prompts.map((p) =>
         `[${p.id}] Prompt: ${p.prompt}\nElements: ${p.elementCount}\nContext:\n${p.context}`
       ).join('\n\n---\n\n');
-      pendingPrompts.length = 0;
+      writePrompts([]);
       return text(out);
     },
   );
@@ -357,13 +377,13 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
       const counts = {
         changes: pendingChanges.length,
         annotations: annotations.length,
-        prompts: pendingPrompts.length,
+        prompts: readPrompts().length,
         layoutPlacements: layoutPlacements.length,
       };
 
       pendingChanges.length = 0;
       annotations.length = 0;
-      pendingPrompts.length = 0;
+      writePrompts([]);
       layoutPlacements = [];
 
       ws.broadcastToClients('cleared');

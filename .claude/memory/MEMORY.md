@@ -62,3 +62,4 @@
 - [Improv loop Phase 1 (2026-05-13)](session_2026-05-13_improv-loop-phase1.md) - Watch agent, improv_respond tool, response toast, localStorage persistence
 - [Improv changes panel (2026-05-13)](session_2026-05-13_improv-changes-panel.md) - Claude button, changes panel, keyboard shortcuts, phases 3+4, 11 ralph loop iterations
 - [Improv server resilience (2026-05-13)](session_2026-05-13_improv-server-resilience.md) - killStaleProcess fixes EADDRINUSE crash; server deployment checklist
+- [Shared prompt buffer decision](decision_improv_shared_prompt_buffer.md) - File-based prompts.json replaces in-memory buffer so all MCP instances share the queue
