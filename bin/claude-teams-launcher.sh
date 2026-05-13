@@ -71,6 +71,29 @@ function _claude_teams_wrap() {
   }
 
   function claude() {
+    # Subcommands (agents, attach, logs, stop, etc.) need the real binary
+    # without --dangerously-skip-permissions (which disables the TUI).
+    local _arg
+    for _arg in "$@"; do
+      case "$_arg" in
+        -*) continue ;;
+        agents|attach|logs|stop|kill|respawn|rm)
+          local _real_claude="" _d _clean_args=()
+          for _d in ${(s.:.)PATH}; do
+            [[ -x "$_d/claude" ]] || continue
+            [[ "$_d" == *cmux.app* ]] && continue
+            _real_claude="$_d/claude"; break
+          done
+          for _arg in "$@"; do
+            [[ "$_arg" == "--dangerously-skip-permissions" ]] && continue
+            _clean_args+=("$_arg")
+          done
+          "${_real_claude:-claude}" "${_clean_args[@]}"
+          return $? ;;
+        *) break ;;
+      esac
+    done
+
     if [ -f "$TEAMS_SKIP_FILE" ]; then
       _claude_teams_passthrough "$@"
       return $?

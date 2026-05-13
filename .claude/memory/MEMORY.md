@@ -42,3 +42,18 @@
 - [Voice toggle hook (2026-05-07)](session_2026-05-07_voice-toggle.md) - chat commands `voice on/off/toggle/status`; mirrors resume-toggle pattern
 - [Voice gate hook (2026-05-08)](session_2026-05-08_voice-gate-hook.md) - PreToolUse hard-deny on speak calls when muted; no more wasted API calls
 - [Memory graph design (2026-05-10)](session_2026-05-10_memory-graph-design.md) - Relationship links (relates_to, supersedes, superseded_by), decision type, write-time link check
+- [Reflect skill design (2026-05-11)](session_2026-05-11_reflect-design.md) - Multi-agent corpus analysis skill; 5 lens agents + synthesis; conversational trigger + lifecycle nudge
+- [Reflect skill created (2026-05-11)](session_2026-05-11_reflect-skill-created.md) - claude/skills/reflect/SKILL.md written with full multi-agent corpus analysis spec
+- [Reflect-nudge hook (2026-05-11)](session_2026-05-11_reflect-nudge-hook.md) - SessionStart hook counts new memories since last reflection, nudges when threshold exceeded
+- [Reflect installer component (2026-05-11)](session_2026-05-11_reflect-installer.md) - reflect added as 12th public component to install.sh; all 8 steps complete, dry-run verified
+- [Teams launcher reset (2026-05-11)](session_2026-05-11_teams-launcher-reset.md) - Deleted .teams-default-on to restore interactive prompt; restored .zshrc block
+- [Improv settings active state (2026-05-11)](session_2026-05-11_improv-settings-active.md) - Fixed gear button not showing blue active state when settings panel is open
+- [Reflection (2026-05-12)](reflection_2026-05-12.md) - Multi-agent corpus analysis: patterns, tensions, gaps
+- [Global verification hook (2026-05-12)](session_2026-05-12_global-verification-hook.md) - Rebuilt verify-before-done.sh as global enforcement for all code changes
+- [Improv pipeline fix (2026-05-12)](session_2026-05-12_improv-pipeline-fix.md) - Server-served architecture; dishplayscapes 214KB canonical; init.sh uses localhost:9223
+- [Improv hints fix (2026-05-12)](session_2026-05-12_improv-hints-fix.md) - clip-path was clipping tooltip; glow data-improv broke pointer events; pulse animation conflict
+- [Validation must be critical](feedback_validation_quality.md) - screenshots require critical examination, not just element existence checks
+- [Never show minified JS](feedback_no_minified_output.md) - use python/bash for dist edits; never dump minified strings into conversation
+- [Improv toolbar collapse rewrite (2026-05-12)](session_2026-05-12_improv-toolbar-collapse.md) - width transition, opacity+pointerEvents only, animation fill-mode was the blocker
+- [Improv pipeline investigation (2026-05-12)](session_2026-05-12_improv-pipeline-investigation.md) - Full trace of build-to-browser pipeline; 5 breakpoints identified; copy-on-init design is root cause
+- [Launcher subcommand passthrough (2026-05-12)](session_2026-05-12_launcher-subcommand-passthrough.md) - Fixed discord/teams launchers to pass through `claude agents` and other subcommands directly
