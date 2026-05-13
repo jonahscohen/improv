@@ -27,7 +27,7 @@ import {
   getComputedStylesSubset,
   getNearbyText,
   getAccessibilityInfo,
-} from '../selection.js';
+} from '../element-utils.js';
 import { freeze, unfreeze } from '../freeze.js';
 
 type Intent = 'fix' | 'change' | 'question' | 'approve';

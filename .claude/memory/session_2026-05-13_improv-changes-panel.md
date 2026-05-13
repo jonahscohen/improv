@@ -48,4 +48,7 @@ Built Phase 2 of the improv-claude loop: Claude button and changes panel.
 **Files touched:**
 - improv/core/changes-panel.ts (new)
 - improv/core/index.ts (all phases wired)
-- improv/core/toolbar.ts (reduced motion, focus rings, --improv-marker CSS var)
+- improv/core/toolbar.ts (reduced motion, focus rings, --improv-marker CSS var, _collapsed public)
+- improv/core/annotate/index.ts (fixed imports: selection -> element-utils)
+
+**Ralph loop iteration 2:** Fixed TypeScript errors (_collapsed private, annotate imports), added Q shortcut for queue panel, bumped auto-reload to 2s. All 4 phases + all design principles verified in browser screenshot.

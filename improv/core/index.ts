@@ -140,6 +140,11 @@ export class ImprovCore {
       } else if (e.key === 'c' || e.key === 'C') {
         e.preventDefault();
         this._changesPanel?.toggle(this._changeHistory as any);
+      } else if (e.key === 'q' || e.key === 'Q') {
+        e.preventDefault();
+        if (this.promptMode && (this.promptMode as any)._toggleQueuePanel) {
+          (this.promptMode as any)._toggleQueuePanel();
+        }
       }
     });
 

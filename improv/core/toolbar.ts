@@ -68,7 +68,7 @@ export class Toolbar {
   private _closeP2!: SVGPathElement;
   private _closeP3: SVGPathElement | null = null;
   private _closeDivider!: HTMLDivElement;
-  private _collapsed: boolean = false;
+  _collapsed: boolean = false;
   private _tt!: HTMLDivElement;
   private _ttTimer: ReturnType<typeof setTimeout> | null = null;
 
