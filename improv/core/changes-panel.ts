@@ -42,7 +42,7 @@ export class ChangesPanel {
       'position:fixed;bottom:68px;left:20px;width:360px;max-height:480px;' +
       'background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:16px;' +
       'box-shadow:0 8px 32px rgba(0,0,0,0.5);display:none;flex-direction:column;' +
-      'z-index:2147483647;pointer-events:all;font-family:system-ui,-apple-system,sans-serif;' +
+      'z-index:2147483647;pointer-events:all;font-family:"Fira Sans",system-ui,-apple-system,sans-serif;' +
       'overflow:hidden;opacity:0;transform:translateY(8px);' +
       'transition:opacity 200ms ease,transform 200ms ease';
 

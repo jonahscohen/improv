@@ -193,7 +193,7 @@ export class Toolbar {
       pointerEvents: 'all',
       userSelect: 'none',
       zIndex: '2147483647',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: "'Fira Sans', system-ui, -apple-system, sans-serif",
       animation: 'improv-pill-in 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards',
       overflow: 'hidden',
       transition: 'width 0.3s cubic-bezier(0.23, 1, 0.32, 1)',
@@ -662,7 +662,7 @@ export class Toolbar {
       flexDirection: 'column',
       gap: '14px',
       zIndex: '2147483647',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: "'Fira Sans', system-ui, -apple-system, sans-serif",
       pointerEvents: 'all',
       animation: 'improv-panel-in 0.25s cubic-bezier(0.23, 1, 0.32, 1) both',
     });
@@ -721,7 +721,7 @@ export class Toolbar {
       borderRadius: '8px',
       padding: '6px 8px',
       fontSize: '12px',
-      fontFamily: 'system-ui, sans-serif',
+      fontFamily: "'Fira Sans', system-ui, sans-serif",
       outline: 'none',
       cursor: 'pointer',
     });
@@ -892,7 +892,7 @@ export class Toolbar {
       color: 'rgba(255,255,255,0.35)',
       textTransform: 'uppercase',
       letterSpacing: '0.8px',
-      fontFamily: 'system-ui, sans-serif',
+      fontFamily: "'Fira Sans', system-ui, sans-serif",
     });
     section.appendChild(heading);
     return section;
@@ -904,7 +904,7 @@ export class Toolbar {
       display: 'flex',
       justifyContent: 'space-between',
       fontSize: '11px',
-      fontFamily: 'system-ui, sans-serif',
+      fontFamily: "'Fira Sans', system-ui, sans-serif",
     });
     const k = document.createElement('span');
     k.textContent = key;

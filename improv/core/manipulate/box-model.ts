@@ -53,7 +53,7 @@ function makeEdgeLabel(val: string, color: string, position: 'top' | 'bottom' | 
     'font-size: 9px',
     'font-variant-numeric: tabular-nums',
     `color: ${color}`,
-    'font-family: system-ui, sans-serif',
+    'font-family: "Fira Sans", system-ui, sans-serif',
     'pointer-events: none',
     'display: flex',
     'align-items: center',
@@ -136,7 +136,7 @@ export class BoxModel {
       'font-size: 8px',
       `color: ${MARGIN_TEXT}`,
       'opacity: 0.7',
-      'font-family: system-ui, sans-serif',
+      'font-family: "Fira Sans", system-ui, sans-serif',
     ].join(';');
     marginLabel.textContent = 'margin';
     marginLayer.appendChild(marginLabel);
@@ -172,7 +172,7 @@ export class BoxModel {
       'font-size: 8px',
       `color: ${PADDING_TEXT}`,
       'opacity: 0.7',
-      'font-family: system-ui, sans-serif',
+      'font-family: "Fira Sans", system-ui, sans-serif',
     ].join(';');
     paddingLabel.textContent = 'padding';
     paddingLayer.appendChild(paddingLabel);
@@ -191,16 +191,16 @@ export class BoxModel {
     ].join(';');
 
     const contentW = document.createElement('span');
-    contentW.style.cssText = `font-size: 9px; color: ${CONTENT_TEXT}; font-variant-numeric: tabular-nums; font-family: system-ui, sans-serif;`;
+    contentW.style.cssText = `font-size: 9px; color: ${CONTENT_TEXT}; font-variant-numeric: tabular-nums; font-family: "Fira Sans", system-ui, sans-serif;`;
     contentW.textContent = fmtVal(vals.width);
     this.labels.set('width', contentW);
 
     const contentX = document.createElement('span');
-    contentX.style.cssText = `font-size: 9px; color: ${CONTENT_TEXT}; opacity: 0.5; font-family: system-ui, sans-serif;`;
+    contentX.style.cssText = `font-size: 9px; color: ${CONTENT_TEXT}; opacity: 0.5; font-family: "Fira Sans", system-ui, sans-serif;`;
     contentX.textContent = 'x';
 
     const contentH = document.createElement('span');
-    contentH.style.cssText = `font-size: 9px; color: ${CONTENT_TEXT}; font-variant-numeric: tabular-nums; font-family: system-ui, sans-serif;`;
+    contentH.style.cssText = `font-size: 9px; color: ${CONTENT_TEXT}; font-variant-numeric: tabular-nums; font-family: "Fira Sans", system-ui, sans-serif;`;
     contentH.textContent = fmtVal(vals.height);
     this.labels.set('height', contentH);
 

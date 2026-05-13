@@ -1684,7 +1684,7 @@ export class SkeletonRenderer {
       cursor: 'move',
       userSelect: 'none',
       boxSizing: 'border-box',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: "'Fira Sans', system-ui, -apple-system, sans-serif",
       zIndex: '2147483610',
     });
 

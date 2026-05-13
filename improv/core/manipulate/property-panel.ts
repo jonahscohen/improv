@@ -164,7 +164,7 @@ const darkTheme: Record<string, string> = {
 };
 
 const PANEL_WIDTH = 280;
-const FONT_FAMILY = 'system-ui, -apple-system, sans-serif';
+const FONT_FAMILY = "'Fira Sans', system-ui, -apple-system, sans-serif";
 const EASING = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
 function v(cssVar: string): string {

@@ -63,7 +63,7 @@ export class StateToggle {
       'border: none',
       'font-size: 10px',
       'font-weight: 600',
-      'font-family: system-ui, sans-serif',
+      'font-family: "Fira Sans", system-ui, sans-serif',
       'cursor: pointer',
       'letter-spacing: 0.02em',
       'transition: background 0.12s, color 0.12s',

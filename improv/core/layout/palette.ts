@@ -1156,7 +1156,7 @@ export class ComponentPalette {
       padding:       '13px 0 16px',
       zIndex:        '2147483646',
       pointerEvents: 'all',
-      fontFamily:    'system-ui, -apple-system, sans-serif',
+      fontFamily:    "'Fira Sans', system-ui, -apple-system, sans-serif",
       display:       'flex',
       flexDirection: 'column',
       userSelect:    'none',

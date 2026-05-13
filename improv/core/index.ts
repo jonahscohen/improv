@@ -150,6 +150,14 @@ export class ImprovCore {
     } catch {
     }
 
+    // Load Fira Sans
+    if (!document.getElementById('improv-font')) {
+      const link = document.createElement('link');
+      link.id = 'improv-font';
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=swap';
+      document.head.appendChild(link);
+    }
     this.activate();
   }
 

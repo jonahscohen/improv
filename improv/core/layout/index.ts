@@ -259,7 +259,7 @@ export class LayoutMode {
       color:         '#fff',
       border:        'none',
       borderRadius:  '8px',
-      fontFamily:    'system-ui, sans-serif',
+      fontFamily:    "'Fira Sans', system-ui, sans-serif",
       fontSize:      '13px',
       fontWeight:    '600',
       cursor:        'pointer',
@@ -310,7 +310,7 @@ export class LayoutMode {
       boxShadow:     '0 8px 40px rgba(0,0,0,0.6)',
       zIndex:        '2147483646',
       pointerEvents: 'all',
-      fontFamily:    'system-ui, -apple-system, sans-serif',
+      fontFamily:    "'Fira Sans', system-ui, -apple-system, sans-serif",
       display:       'flex',
       flexDirection: 'column',
       overflow:      'hidden',
@@ -419,7 +419,7 @@ export class LayoutMode {
       fontSize:      '12px',
       fontWeight:    '600',
       cursor:        'pointer',
-      fontFamily:    'system-ui, sans-serif',
+      fontFamily:    "'Fira Sans', system-ui, sans-serif",
       transition:    'border-color 100ms ease, color 100ms ease',
     });
     cancelBtn.addEventListener('mouseenter', () => {
@@ -447,7 +447,7 @@ export class LayoutMode {
       fontSize:      '12px',
       fontWeight:    '600',
       cursor:        'pointer',
-      fontFamily:    'system-ui, sans-serif',
+      fontFamily:    "'Fira Sans', system-ui, sans-serif",
       transition:    'background 100ms ease',
     });
     confirmBtn.addEventListener('mouseenter', () => {
@@ -497,7 +497,7 @@ export class LayoutMode {
       color:         '#fff',
       border:        'none',
       borderRadius:  '8px',
-      fontFamily:    'system-ui, sans-serif',
+      fontFamily:    "'Fira Sans', system-ui, sans-serif",
       fontSize:      '13px',
       fontWeight:    '600',
       zIndex:        '2147483646',
