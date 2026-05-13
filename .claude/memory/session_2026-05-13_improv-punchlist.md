@@ -28,5 +28,7 @@ relates_to: [session_2026-05-13_improv-changes-panel.md]
 - Panel: filter non-actionable, scroll preservation, markDone/revert visual feedback, labels renamed, bottom bar, before/after toggle with Preview button
 - Preview toggle wired to PreviewEngine in ImprovCore
 - Send All fix: submitPrompt checked live selection (empty after queue). Added submitFromQueue that uses stored elements from queue items.
+- Revert: now sends a push_prompt with revert instructions (selector + oldValue) instead of useless PreviewEngine CSS override. Shows "Revert requested" toast.
+- Postmortem task: review the plan we tried to implement and identify gaps between spec and reality.
 - Design skill note saved to feedback_ai_icons_lobehub.md
 - Claude button restyled: 44x44, #1a1a1a bg, border + shadow matching toolbar "I" button, hover=#D9775715 (subtle orange warmth on dark, matches toolbar hover intensity), active=solid #D97757 + white icon

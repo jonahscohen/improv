@@ -212,12 +212,16 @@ export class ImprovCore {
       }
     });
 
-    this._changesPanel.setOnRevert((_promptId: string, changes: any[]) => {
-      if (this.previewEngine) {
-        for (const ch of changes) {
-          this.previewEngine.applyChange(ch.selector, ch.property, ch.oldValue);
-        }
-      }
+    this._changesPanel.setOnRevert((promptId: string, changes: any[]) => {
+      const revertDetails = changes.map((ch: any) => 
+        ch.selector + ' { ' + ch.property + ': ' + ch.oldValue + ' }'
+      ).join('\n');
+      this.transport.request('push_prompt', {
+        context: 'REVERT REQUEST for ' + promptId + ':\n' + revertDetails,
+        prompt: 'Revert the changes from ' + promptId + '. Restore these properties to their original values:\n' + revertDetails,
+        elementCount: changes.length
+      }).catch((e: unknown) => { console.warn('[Improv] Revert prompt failed:', e); });
+      this._showResponseToast('Revert requested', 'needsInfo');
     });
 
     if (this._changeHistory.some(e => !e.reviewed)) {
