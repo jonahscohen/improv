@@ -33,7 +33,7 @@ relates_to: [session_2026-05-13_improv-changes-panel.md]
 - Panel auto-closes (slide+fade) when no actionable entries remain
 - Claude button moved INTO the toolbar pill (was standalone floating element). Shows/hides via setClaudeButtonVisible. Active state: solid #D97757 bg + white icon. Hover: #D9775720 tint. Only visible when unreviewed changes exist.
 - Numbered task circles: #D97757 bg, white number, replaces green dots
-- Element highlighting: clicking task entry highlights matching DOM elements with #D97757 border + selector tooltip
+- Element highlighting: clicking task entry highlights matching DOM elements with #D97757 border + selector tooltip, rAF tracking follows scroll
 - Clear dismisses UI: clearing all tasks removes panel + Claude button
 - Postmortem: completed by agent, written to docs/superpowers/specs/2026-05-13-improv-postmortem.md
 - Design skill note saved to feedback_ai_icons_lobehub.md

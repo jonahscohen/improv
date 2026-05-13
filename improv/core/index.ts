@@ -223,16 +223,12 @@ export class ImprovCore {
     });
 
     this._changesPanel.setOnSelect((selectors: string[]) => {
-      // Clear existing highlights
-      for (const el of this._taskHighlights) el.remove();
-      this._taskHighlights = [];
-
+      this._clearTaskHighlights();
       if (selectors.length === 0) return;
 
       for (const sel of selectors) {
         let els: Element[];
         try { els = Array.from(document.querySelectorAll(sel)); } catch { continue; }
-
         for (const el of els) {
           const rect = (el as HTMLElement).getBoundingClientRect();
           if (rect.width === 0 || rect.height === 0) continue;
@@ -242,8 +238,7 @@ export class ImprovCore {
           highlight.style.cssText =
             'position:fixed;pointer-events:none;z-index:2147483646;' +
             'border:2px solid #D97757;border-radius:4px;' +
-            'top:' + rect.top + 'px;left:' + rect.left + 'px;' +
-            'width:' + rect.width + 'px;height:' + rect.height + 'px';
+            'transition:top 60ms ease,left 60ms ease,width 60ms ease,height 60ms ease';
 
           const label = document.createElement('div');
           label.dataset.improv = '';
@@ -256,9 +251,10 @@ export class ImprovCore {
           highlight.appendChild(label);
 
           document.body.appendChild(highlight);
-          this._taskHighlights.push(highlight);
+          (this._taskHighlights as any[]).push({ el: el as HTMLElement, box: highlight });
         }
       }
+      this._startHighlightTracking();
     });
 
     this._changesPanel.setOnRevert((promptId: string, changes: any[]) => {
