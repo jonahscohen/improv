@@ -61,3 +61,4 @@
 - [Improv queue polish (2026-05-13)](session_2026-05-13_improv-queue-polish.md) - Queue count 15px, markerColor at rest, contrast on active, live update
 - [Improv loop Phase 1 (2026-05-13)](session_2026-05-13_improv-loop-phase1.md) - Watch agent, improv_respond tool, response toast, localStorage persistence
 - [Improv changes panel (2026-05-13)](session_2026-05-13_improv-changes-panel.md) - Claude button, changes panel, keyboard shortcuts, phases 3+4, 11 ralph loop iterations
+- [Improv server resilience (2026-05-13)](session_2026-05-13_improv-server-resilience.md) - killStaleProcess fixes EADDRINUSE crash; server deployment checklist

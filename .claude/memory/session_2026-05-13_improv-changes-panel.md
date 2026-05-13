@@ -82,3 +82,5 @@ Built Phase 2 of the improv-claude loop: Claude button and changes panel.
 **Ralph loop iteration 11:** Integration test script (test-loop.js).
 
 **Post-loop:** How-to-use guide at improv/docs/how-to-use.html. Dark-themed HTML doc covering setup, toolbar, prompt mode loop, changes panel, keyboard shortcuts, marker color, build commands, architecture, MCP tools, accessibility.
+
+**Ralph loop cancelled at iteration 13. 13 commits pushed. Tool complete.**
