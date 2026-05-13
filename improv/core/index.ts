@@ -697,9 +697,10 @@ export class ImprovCore {
       this._claudeBtn.setAttribute('aria-label', 'Review Changes (' + unreviewed + ')');
       this._claudeBtn.setAttribute('tabindex', '0');
       this._claudeBtn.style.cssText =
-        'position:fixed;bottom:20px;left:20px;width:32px;height:32px;border-radius:50%;' +
-        'background:transparent;border:none;cursor:pointer;' +
+        'position:fixed;bottom:20px;left:20px;width:44px;height:44px;border-radius:22px;' +
+        'background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);cursor:pointer;' +
         'display:flex;align-items:center;justify-content:center;z-index:2147483647;' +
+        'box-shadow:0 2px 12px rgba(0,0,0,0.15),0 0 0 1px rgba(255,255,255,0.08);' +
         'pointer-events:all;padding:0;outline:none;' +
         'transition:background 120ms ease,color 120ms ease;' +
         'color:#D97757;' +
@@ -720,7 +721,7 @@ export class ImprovCore {
         if (!this._claudeBtn!.dataset.active) this._claudeBtn!.style.background = 'rgba(217,119,87,0.2)';
       });
       this._claudeBtn.addEventListener('mouseleave', () => {
-        if (!this._claudeBtn!.dataset.active) this._claudeBtn!.style.background = 'transparent';
+        if (!this._claudeBtn!.dataset.active) this._claudeBtn!.style.background = '#1a1a1a';
       });
       this._claudeBtn.addEventListener('click', () => {
         this._changesPanel?.toggle(this._changeHistory as any);
@@ -730,7 +731,7 @@ export class ImprovCore {
           this._claudeBtn!.querySelector('svg')!.setAttribute('fill', '#fff');
           this._claudeBtn!.dataset.active = '1';
         } else {
-          this._claudeBtn!.style.background = 'transparent';
+          this._claudeBtn!.style.background = '#1a1a1a';
           this._claudeBtn!.querySelector('svg')!.setAttribute('fill', '#D97757');
           delete this._claudeBtn!.dataset.active;
         }
