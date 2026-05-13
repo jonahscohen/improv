@@ -65,4 +65,6 @@ Built Phase 2 of the improv-claude loop: Claude button and changes panel.
 - Spec: all items checked, committed at docs/superpowers/specs/2026-05-13-improv-claude-loop-design.md
 - 6 commits pushed to remote for this feature
 
-**Ralph loop iteration 4:** Interactive feature testing. Done button: marks entry reviewed=true, persists to localStorage, removes Claude button when all reviewed. Reply button: opens inline input with placeholder, markerColor focus border. Both verified with clean state + screenshot showing full flow (panel, question callout, Done/Reply buttons, reply input, Claude button with badge).
+**Ralph loop iteration 4:** Interactive feature testing. Done button: marks entry reviewed=true, persists to localStorage, removes Claude button when all reviewed. Reply button: opens inline input with placeholder, markerColor focus border. Both verified with clean state + screenshot.
+
+**Ralph loop iteration 5:** End-to-end prompt mode UI test on dish-playscapes.lndo.site. Activated prompt mode (freeze sheet, hover label, lasso, prompt input all confirmed). Selected H2.wp-block-heading element. Submitted prompt to server - accepted with promptId:prompt-2. Screen glow visible in screenshot confirming mode activation. Full browser->server path verified with real page elements.
