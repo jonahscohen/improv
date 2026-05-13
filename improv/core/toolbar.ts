@@ -157,6 +157,21 @@ export class Toolbar {
         100% { transform: rotate(90deg); }
       }
 
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+      *:focus-visible {
+        outline: 2px solid var(--improv-marker, #3b82f6);
+        outline-offset: 2px;
+      }
+      button:focus-visible {
+        outline: 2px solid var(--improv-marker, #3b82f6);
+        outline-offset: 2px;
+      }
     `);
     shadowRoot.adoptedStyleSheets = [...shadowRoot.adoptedStyleSheets, animSheet];
 
@@ -910,6 +925,7 @@ export class Toolbar {
   updateModeButtonStyles(): void {
     const _mc = this.markerColor || '#3b82f6';
     const _ic = ['#f97316', '#eab308', '#22c55e'].indexOf(_mc) !== -1 ? '#1a1a1a' : '#fff';
+    this.el.style.setProperty('--improv-marker', _mc);
     this.modeButtons.forEach((btn, mode) => {
       if (mode === this.activeMode) {
         btn.style.background = _mc;

@@ -69,7 +69,9 @@ export class ImprovCore {
       const summary = response.summary as string;
       if (status === 'completed') {
         this._showResponseToast(summary, 'completed');
-        setTimeout(() => location.reload(), 1500);
+        this._highlightChangedElements(response.changes as any[]);
+        this._previewChanges(response.changes as any[]);
+        setTimeout(() => location.reload(), 2000);
       } else if (status === 'needsInfo') {
         this._showResponseToast(response.question as string || summary, 'needsInfo');
       } else {
@@ -581,6 +583,70 @@ export class ImprovCore {
 
   registerAdapter(adapter: ImprovAdapter): void {
     this.registry.register(adapter);
+  }
+
+  private _previewChanges(changes: Array<{ selector: string; property: string; oldValue: string; newValue: string }>): void {
+    if (!changes || changes.length === 0 || !this.previewEngine) return;
+    this.previewEngine.attach();
+    for (const c of changes) {
+      this.previewEngine.applyChange(c.selector, c.property, c.newValue);
+    }
+  }
+
+  private _highlightChangedElements(changes: Array<{ selector: string; property: string; oldValue: string; newValue: string }>): void {
+    if (!changes || changes.length === 0) return;
+    const mc = this.toolbar?.getMarkerColor() || '#3b82f6';
+    const selectors = [...new Set(changes.map(c => c.selector))];
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    for (const sel of selectors) {
+      let els: Element[];
+      try { els = Array.from(document.querySelectorAll(sel)); } catch { continue; }
+
+      for (const el of els) {
+        const htmlEl = el as HTMLElement;
+        const rect = htmlEl.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) continue;
+
+        const highlight = document.createElement('div');
+        highlight.dataset.improv = '';
+        highlight.style.cssText =
+          'position:fixed;pointer-events:none;z-index:2147483646;' +
+          'border:2px solid ' + mc + ';border-radius:4px;' +
+          'box-shadow:0 0 12px ' + mc + '40;' +
+          'top:' + rect.top + 'px;left:' + rect.left + 'px;' +
+          'width:' + rect.width + 'px;height:' + rect.height + 'px;' +
+          'transition:opacity 0.4s ease;opacity:1';
+
+        if (!reducedMotion) {
+          highlight.style.animation = 'improv-highlight-pulse 0.6s ease-in-out 2';
+        }
+
+        const selectorChanges = changes.filter(c => c.selector === sel);
+        if (selectorChanges.length > 0) {
+          const pill = document.createElement('div');
+          pill.dataset.improv = '';
+          pill.style.cssText =
+            'position:absolute;top:-24px;left:0;padding:2px 8px;border-radius:4px;' +
+            'background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);' +
+            'font-size:10px;font-family:ui-monospace,monospace;color:rgba(255,255,255,0.7);' +
+            'white-space:nowrap;pointer-events:none';
+          pill.textContent = selectorChanges.map(c => c.property + ': ' + c.newValue).join('; ');
+          highlight.appendChild(pill);
+        }
+
+        document.body.appendChild(highlight);
+        setTimeout(() => { highlight.style.opacity = '0'; }, 1200);
+        setTimeout(() => { highlight.remove(); }, 1600);
+      }
+    }
+
+    if (!document.getElementById('improv-highlight-style')) {
+      const style = document.createElement('style');
+      style.id = 'improv-highlight-style';
+      style.textContent = '@keyframes improv-highlight-pulse{0%{box-shadow:0 0 4px ' + mc + '40}50%{box-shadow:0 0 20px ' + mc + '60}100%{box-shadow:0 0 4px ' + mc + '40}}';
+      document.head.appendChild(style);
+    }
   }
 
   isActive(): boolean {

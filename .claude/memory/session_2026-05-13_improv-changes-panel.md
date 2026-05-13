@@ -29,6 +29,23 @@ Built Phase 2 of the improv-claude loop: Claude button and changes panel.
 - MarkerColor live update on Claude button via `_updateClaudeBadge` call in `_syncPromptModeColor`
 - Verified: auto-reload triggers, history persists across reload, Claude button reappears with correct badge count
 
+**Phase 3: Element highlights**
+- `_highlightChangedElements`: finds elements by selector, draws markerColor border + glow box-shadow
+- Change pills above elements showing property: newValue
+- Pulse animation (2 cycles), fades out after 1.2s, removes after 1.6s
+- Respects `prefers-reduced-motion` (skips animation)
+
+**Phase 4: Live CSS preview**
+- `_previewChanges`: injects CSS changes via PreviewEngine constructable stylesheets
+- User sees changes instantly before page reload
+- Reload delay bumped to 2s to show both preview and highlights
+
+**Accessibility:**
+- `prefers-reduced-motion` media query in toolbar stylesheet: disables all animations/transitions
+- `focus-visible` rings on all buttons using `--improv-marker` CSS variable (follows markerColor)
+- CSS variable updated in `updateModeButtonStyles` when markerColor changes
+
 **Files touched:**
 - improv/core/changes-panel.ts (new)
-- improv/core/index.ts (wired panel, Claude button, keyboard shortcuts, badge updates, auto-reload, markerColor sync)
+- improv/core/index.ts (all phases wired)
+- improv/core/toolbar.ts (reduced motion, focus rings, --improv-marker CSS var)
