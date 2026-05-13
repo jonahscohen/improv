@@ -414,7 +414,7 @@ export class PromptMode {
       if (this._changeQueue.length > 0) {
         var _cnt = this._changeQueue.length;
         for (var qi = 0; qi < this._changeQueue.length; qi++) {
-          this.submitPrompt(this._changeQueue[qi].prompt);
+          this.submitFromQueue(this._changeQueue[qi].prompt, this._changeQueue[qi].elements);
         }
         this._changeQueue.length = 0;
         this._updateQueueBadge();
@@ -667,7 +667,31 @@ export class PromptMode {
       context: o,
       prompt: e,
       elementCount: t.length
-    }).catch(() => {});
+    }).catch((e: unknown) => { console.warn('[Improv] Submit failed:', e); });
+  }
+
+  submitFromQueue(promptText: string, elements: { domNode: Element; selector: string; tagName: string }[]) {
+    if (elements.length === 0) {
+      this.transport.request("push_prompt", {
+        context: 'No elements selected',
+        prompt: promptText,
+        elementCount: 0
+      }).catch((e: unknown) => { console.warn('[Improv] Submit failed:', e); });
+      return;
+    }
+    let o = elements.map(r => {
+      let s = getNearbyText(r.domNode as HTMLElement),
+        a = getAccessibilityInfo(r.domNode as HTMLElement),
+        l = buildElementInfo(r.domNode, r.selector, [], {}, s, a);
+      return formatElementInfo(l);
+    }).join("\n\n---\n\n");
+    this.notifyPromptSent(promptText, elements.length);
+    this._core && this._core._showToast(promptText, elements.length);
+    this.transport.request("push_prompt", {
+      context: o,
+      prompt: promptText,
+      elementCount: elements.length
+    }).catch((e: unknown) => { console.warn('[Improv] Submit failed:', e); });
   }
 
   onPromptSent(cb: (prompt: string, count: number) => void) {

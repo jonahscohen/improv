@@ -27,5 +27,6 @@ relates_to: [session_2026-05-13_improv-changes-panel.md]
 - Claude icon: Lobehub SVG, #D97757, pulse animation, badge removed
 - Panel: filter non-actionable, scroll preservation, markDone/revert visual feedback, labels renamed, bottom bar, before/after toggle with Preview button
 - Preview toggle wired to PreviewEngine in ImprovCore
+- Send All fix: submitPrompt checked live selection (empty after queue). Added submitFromQueue that uses stored elements from queue items.
 - Design skill note saved to feedback_ai_icons_lobehub.md
 - Claude button restyled: 44x44, #1a1a1a bg, border + shadow matching toolbar "I" button, hover=#D9775715 (subtle orange warmth on dark, matches toolbar hover intensity), active=solid #D97757 + white icon
