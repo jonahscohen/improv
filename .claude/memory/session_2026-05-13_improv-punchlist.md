@@ -41,7 +41,7 @@ relates_to: [session_2026-05-13_improv-changes-panel.md]
 - Keybinds: panel shortcuts (J/K/D/R) skip when Cmd/Ctrl/Alt held so CMD+R etc work
 - Custom scrollbar: thin 6px, rgba(255,255,255,0.15) thumb, transparent track
 - Custom typefaces: ImprovSans/Serif/Mono served from localhost:9223/fonts/
-- Claude button ONLY in queuebar. No standalone. When prompt mode deactivates but Claude changes exist, action pill persists showing only Claude button (queue/send/clear hidden). When prompt mode reactivates, full pill restored.
+- Claude button in queuebar when prompt mode active. When prompt mode off but unreviewed changes exist from localStorage, a queuebar-styled pill appears at bottom-left with just the Claude button. Removed when prompt mode activates (its pill takes over) or when all changes cleared.
 - Postmortem: completed by agent, written to docs/superpowers/specs/2026-05-13-improv-postmortem.md
 - Design skill note saved to feedback_ai_icons_lobehub.md
 - Claude button restyled: 44x44, #1a1a1a bg, border + shadow matching toolbar "I" button, hover=#D9775715 (subtle orange warmth on dark, matches toolbar hover intensity), active=solid #D97757 + white icon
