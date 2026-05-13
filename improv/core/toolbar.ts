@@ -1,224 +1,78 @@
 import type { ImprovMode } from './types';
+import {
+  iconManipulate,
+  iconPrompt,
+  iconLayout,
+  iconSettings,
+  iconEraser,
+  iconSend,
+  iconClose,
+  MODE_ICON_BUILDERS,
+  type IconBuilder,
+} from './icons';
 
 type ModeCallback = (mode: ImprovMode | null) => void;
 type ActionCallback = () => void;
 
-const MODES: ImprovMode[] = ['manipulate', 'prompt', 'annotate'];
+const MODES: ImprovMode[] = ['prompt', 'manipulate'];
 
-const MODE_LABELS: Record<ImprovMode, string> = {
+const MODE_LABELS: Record<string, string> = {
   manipulate: 'Manipulate',
   prompt: 'Prompt',
-  annotate: 'Annotate',
   layout: 'Layout',
 };
 
 const VERBOSITY_OPTIONS = ['compact', 'standard', 'detailed', 'forensic'] as const;
 
-// ---------------------------------------------------------------------------
-// Lucide icon builders (all 24x24 viewBox, stroke-based, no innerHTML)
-// ---------------------------------------------------------------------------
-
-function svgBase(size: number): SVGSVGElement {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('width', String(size));
-  svg.setAttribute('height', String(size));
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '2');
-  svg.setAttribute('stroke-linecap', 'round');
-  svg.setAttribute('stroke-linejoin', 'round');
-  return svg;
-}
-
-function addPath(svg: SVGSVGElement, d: string): void {
-  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  p.setAttribute('d', d);
-  svg.appendChild(p);
-}
-
-function addLine(svg: SVGSVGElement, x1: string, y1: string, x2: string, y2: string): void {
-  const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-  l.setAttribute('x1', x1);
-  l.setAttribute('y1', y1);
-  l.setAttribute('x2', x2);
-  l.setAttribute('y2', y2);
-  svg.appendChild(l);
-}
-
-function addRect(
-  svg: SVGSVGElement,
-  x: string,
-  y: string,
-  w: string,
-  h: string,
-  rx: string,
-): void {
-  const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  r.setAttribute('x', x);
-  r.setAttribute('y', y);
-  r.setAttribute('width', w);
-  r.setAttribute('height', h);
-  r.setAttribute('rx', rx);
-  svg.appendChild(r);
-}
-
-function addCircle(svg: SVGSVGElement, cx: string, cy: string, r: string): void {
-  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  c.setAttribute('cx', cx);
-  c.setAttribute('cy', cy);
-  c.setAttribute('r', r);
-  c.setAttribute('fill', 'none');
-  c.setAttribute('stroke', 'currentColor');
-  svg.appendChild(c);
-}
-
-// Lucide: sliders-horizontal
-function iconSlidersHorizontal(size: number): SVGSVGElement {
-  const svg = svgBase(size);
-  const lines: [string, string, string, string][] = [
-    ['10', '5', '3', '5'],
-    ['12', '19', '3', '19'],
-    ['21', '12', '12', '12'],
-    ['21', '19', '16', '19'],
-    ['21', '5', '14', '5'],
-    ['8', '12', '3', '12'],
-  ];
-  for (const [x1, y1, x2, y2] of lines) {
-    addLine(svg, x1, y1, x2, y2);
-  }
-  // Vertical slider knobs
-  addLine(svg, '14', '3', '14', '7');
-  addLine(svg, '16', '17', '16', '21');
-  addLine(svg, '8', '10', '8', '14');
-  return svg;
-}
-
-// Lucide: message-square-text
-function iconMessageSquareText(size: number): SVGSVGElement {
-  const svg = svgBase(size);
-  addPath(
-    svg,
-    'M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z',
-  );
-  addLine(svg, '7', '11', '17', '11');
-  addLine(svg, '7', '15', '13', '15');
-  addLine(svg, '7', '7', '15', '7');
-  return svg;
-}
-
-// Lucide: pen-line
-function iconPenLine(size: number): SVGSVGElement {
-  const svg = svgBase(size);
-  addLine(svg, '13', '21', '21', '21');
-  addPath(
-    svg,
-    'M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z',
-  );
-  return svg;
-}
-
-// Lucide: layout-grid
-function iconLayoutGrid(size: number): SVGSVGElement {
-  const svg = svgBase(size);
-  addRect(svg, '3', '3', '7', '7', '1');
-  addRect(svg, '14', '3', '7', '7', '1');
-  addRect(svg, '14', '14', '7', '7', '1');
-  addRect(svg, '3', '14', '7', '7', '1');
-  return svg;
-}
-
-// Lucide: settings
-function iconSettings(size: number): SVGSVGElement {
-  const svg = svgBase(size);
-  addPath(
-    svg,
-    'M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915',
-  );
-  addCircle(svg, '12', '12', '3');
-  return svg;
-}
-
-// Lucide: eraser
-function iconEraser(size: number): SVGSVGElement {
-  const svg = svgBase(size);
-  addPath(
-    svg,
-    'M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21',
-  );
-  addLine(svg, '5.082', '11.09', '13.91', '19.918');
-  return svg;
-}
-
-// Lucide: send
-function iconSend(size: number): SVGSVGElement {
-  const svg = svgBase(size);
-  addPath(
-    svg,
-    'M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z',
-  );
-  addLine(svg, '21.854', '2.147', '10.914', '13.086');
-  return svg;
-}
-
-// Lucide: x (close)
-function iconX(size: number): SVGSVGElement {
-  const svg = svgBase(size);
-  addLine(svg, '18', '6', '6', '18');
-  addLine(svg, '6', '6', '18', '18');
-  return svg;
-}
-
-const MODE_ICON_BUILDERS: Record<ImprovMode, (size: number) => SVGSVGElement> = {
-  manipulate: iconSlidersHorizontal,
-  prompt: iconMessageSquareText,
-  annotate: iconPenLine,
-  layout: iconLayoutGrid,
-};
-
-// ---------------------------------------------------------------------------
-// Style helper
-// ---------------------------------------------------------------------------
-
 function applyStyles(el: HTMLElement | SVGElement, styles: Partial<CSSStyleDeclaration>): void {
   for (const [key, value] of Object.entries(styles)) {
     if (value !== undefined) {
-      (el.style as Record<string, string>)[key] = value;
+      (el.style as any)[key] = value;
     }
   }
 }
 
-// ---------------------------------------------------------------------------
-// Toolbar
-// ---------------------------------------------------------------------------
-
 export class Toolbar {
-  private el: HTMLDivElement;
-  private activeMode: ImprovMode | null = null;
+  el: HTMLDivElement;
+  activeMode: ImprovMode | null = null;
+  modeCallbacks: ModeCallback[] = [];
+  applyCallbacks: ActionCallback[] = [];
+  sendToClaudeCallbacks: ActionCallback[] = [];
+  clearAllCallbacks: ActionCallback[] = [];
+  modeButtons = new Map<ImprovMode, HTMLButtonElement>();
+  badgeEl: HTMLSpanElement;
+  badgeDivider: HTMLDivElement;
+  sendBtnWrap: HTMLButtonElement;
+  actionDivider: HTMLDivElement;
+  settingsPanel: HTMLDivElement | null = null;
+  settingsBtn: HTMLButtonElement | null = null;
+  verbosity: string = 'standard';
+  connected: boolean = false;
+  port: number = 3901;
+  markerColor: string = (function () {
+    try {
+      return localStorage.getItem('improv-marker-color') || '#3b82f6';
+    } catch (e) {
+      return '#3b82f6';
+    }
+  })();
+  markerColorCallbacks: Array<(color: string) => void> = [];
+  showHints: boolean | undefined;
+  showSelectionLabels: boolean | undefined;
+  hintsCallbacks: Array<(v: boolean) => void> = [];
+  selectionLabelCallbacks: Array<(v: boolean) => void> = [];
 
-  // Callback registries
-  private modeCallbacks: ModeCallback[] = [];
-  private applyCallbacks: ActionCallback[] = [];
-  private sendToClaudeCallbacks: ActionCallback[] = [];
-  private clearAllCallbacks: ActionCallback[] = [];
-
-  // DOM references
-  private modeButtons = new Map<ImprovMode, HTMLButtonElement>();
-  private badgeEl: HTMLSpanElement;
-  private badgeDivider: HTMLDivElement;
-  private sendBtnWrap: HTMLButtonElement;
-  private actionDivider: HTMLDivElement;
-  private settingsPanel: HTMLDivElement | null = null;
-
-  // Settings state
-  private verbosity: (typeof VERBOSITY_OPTIONS)[number] = 'standard';
-  private connected = false;
-  private port = 3901;
-  private markerColor = '#ef4444';
-  private markerColorCallbacks: Array<(color: string) => void> = [];
+  private _closeBtn!: HTMLButtonElement;
+  private _closeSvg!: SVGSVGElement;
+  private _closeP1!: SVGPathElement;
+  private _closeP2!: SVGPathElement;
+  private _closeP3: SVGPathElement | null = null;
+  private _closeDivider!: HTMLDivElement;
+  private _collapsed: boolean = false;
+  private _tt!: HTMLDivElement;
+  private _ttTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(shadowRoot: ShadowRoot) {
-    // ---- Inject animation keyframes ----
     const animSheet = new CSSStyleSheet();
     animSheet.replaceSync(`
       @keyframes improv-pill-in {
@@ -233,15 +87,79 @@ export class Toolbar {
         from { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(3px); }
         to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
       }
+      @keyframes improv-input-glow {
+        0% { box-shadow: 0 0 4px 0px var(--improv-glow-color, #3b82f6); }
+        50% { box-shadow: 0 0 8px 1px var(--improv-glow-color, #3b82f6); }
+        100% { box-shadow: 0 0 4px 0px var(--improv-glow-color, #3b82f6); }
+      }
+      @keyframes improv-glow-pulse {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+      }
+      @keyframes improv-toast-slide-in {
+        from { transform: translateY(-100%) translateX(-50%); opacity: 0; }
+        to { transform: translateY(0) translateX(-50%); opacity: 1; }
+      }
+      @keyframes improv-toast-slide-out {
+        from { transform: translateY(0) translateX(-50%); opacity: 1; }
+        to { transform: translateY(-100%) translateX(-50%); opacity: 0; }
+      }
+      @keyframes improv-toast-progress {
+        0% { width: 0%; }
+        100% { width: 100%; }
+      }
+      @keyframes improv-toast-check-draw {
+        from { stroke-dashoffset: 20; }
+        to { stroke-dashoffset: 0; }
+      }
+      @keyframes improv-send-pulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 currentColor; }
+        30% { transform: scale(1.12); }
+        50% { transform: scale(0.95); }
+        70% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
       @keyframes improv-badge-pop {
         0% { transform: scale(0.5); }
         60% { transform: scale(1.15); }
         100% { transform: scale(1); }
       }
+      @keyframes improv-msg-wiggle {
+        0% { transform: scale(1) rotate(0deg); }
+        20% { transform: scale(1.05) rotate(-7deg); }
+        50% { transform: scale(1.05) rotate(7deg); }
+        80% { transform: scale(1.02) rotate(-2deg); }
+        100% { transform: scale(1) rotate(0deg); }
+      }
+      @keyframes improv-icon-hover-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(120deg); }
+      }
+      @keyframes improv-icon-hover-nudge {
+        0% { transform: translate(0, 0); }
+        15% { transform: translate(1.5px, -1.5px); }
+        30% { transform: translate(0, 0); }
+        45% { transform: translate(1.5px, -1.5px); }
+        60% { transform: translate(0, 0); }
+        100% { transform: translate(0, 0); }
+      }
+      @keyframes improv-icon-hover-shake {
+        0% { transform: translateX(0); }
+        20% { transform: translateX(-2px) rotate(-3deg); }
+        40% { transform: translateX(2px) rotate(3deg); }
+        60% { transform: translateX(-1px) rotate(-1deg); }
+        80% { transform: translateX(1px) rotate(1deg); }
+        100% { transform: translateX(0) rotate(0); }
+      }
+      @keyframes improv-icon-hover-rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(90deg); }
+      }
+
     `);
     shadowRoot.adoptedStyleSheets = [...shadowRoot.adoptedStyleSheets, animSheet];
 
-    // ---- Pill bar container ----
     this.el = document.createElement('div');
     applyStyles(this.el, {
       position: 'fixed',
@@ -253,17 +171,23 @@ export class Toolbar {
       background: '#1a1a1a',
       border: '1px solid rgba(255,255,255,0.1)',
       borderRadius: '22px',
+      boxSizing: 'border-box',
       padding: '6px',
-      gap: '0px',
+      gap: '2px',
       boxShadow: '0 2px 12px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.08)',
       pointerEvents: 'all',
       userSelect: 'none',
       zIndex: '2147483647',
       fontFamily: 'system-ui, -apple-system, sans-serif',
-      animation: 'improv-pill-in 0.35s cubic-bezier(0.23, 1, 0.32, 1) both',
+      animation: 'improv-pill-in 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards',
+      overflow: 'hidden',
+      transition: 'width 0.3s cubic-bezier(0.23, 1, 0.32, 1)',
     });
 
-    // ---- Badge (change count) ----
+    this.el.addEventListener('animationend', () => {
+      this.el.style.animation = 'none';
+    });
+
     this.badgeEl = document.createElement('span');
     applyStyles(this.badgeEl, {
       display: 'none',
@@ -281,21 +205,17 @@ export class Toolbar {
       boxSizing: 'border-box',
       flexShrink: '0',
     });
-    this.el.appendChild(this.badgeEl);
 
-    // Badge divider (only visible when badge is visible)
     this.badgeDivider = this.createVerticalDivider();
     this.badgeDivider.style.display = 'none';
-    this.el.appendChild(this.badgeDivider);
 
-    // ---- Mode buttons (staggered entry) ----
     let btnDelay = 0;
     for (const mode of MODES) {
-      const btn = this.createToolbarButton(
-        MODE_ICON_BUILDERS[mode],
-        MODE_LABELS[mode],
-      );
+      const btn = this.createToolbarButton(MODE_ICON_BUILDERS[mode], MODE_LABELS[mode]);
       btn.style.animation = `improv-icon-in 0.2s cubic-bezier(0.23, 1, 0.32, 1) ${btnDelay}ms both`;
+      btn.addEventListener('animationend', function () {
+        this.style.animation = 'none';
+      }, { once: true });
       btn.addEventListener('click', () => {
         const next = this.activeMode === mode ? null : mode;
         this.setActiveMode(next);
@@ -306,55 +226,203 @@ export class Toolbar {
       btnDelay += 30;
     }
 
-    // ---- Divider before actions ----
     this.actionDivider = this.createVerticalDivider();
-    this.el.appendChild(this.actionDivider);
+    this.actionDivider.style.display = 'none';
 
-    // ---- Send/Apply button ----
     this.sendBtnWrap = this.createToolbarButton(iconSend, 'Send');
     applyStyles(this.sendBtnWrap, { display: 'none' });
     this.sendBtnWrap.addEventListener('click', () => {
       this.applyCallbacks.forEach((cb) => cb());
       this.sendToClaudeCallbacks.forEach((cb) => cb());
     });
-    this.el.appendChild(this.sendBtnWrap);
+    this.sendBtnWrap.style.display = 'none';
 
-    // ---- Clear button ----
     const clearBtn = this.createToolbarButton(iconEraser, 'Clear');
     clearBtn.addEventListener('click', () => {
       this.clearAllCallbacks.forEach((cb) => cb());
     });
-    this.el.appendChild(clearBtn);
+    clearBtn.style.display = 'none';
 
-    // ---- Settings button ----
     const settingsBtn = this.createToolbarButton(iconSettings, 'Settings');
     settingsBtn.addEventListener('click', () => {
       this.toggleSettingsPanel();
     });
+    this.settingsBtn = settingsBtn;
     this.el.appendChild(settingsBtn);
 
-    // ---- Drag ----
+    this._closeDivider = this.createVerticalDivider();
+    this.el.appendChild(this._closeDivider);
+
+    this._closeBtn = document.createElement('button');
+    applyStyles(this._closeBtn, {
+      width: '32px',
+      height: '32px',
+      border: 'none',
+      background: 'transparent',
+      borderRadius: '50%',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '0',
+      color: 'rgba(255,255,255,0.65)',
+      transition: 'background 120ms ease, color 120ms ease, transform 80ms ease',
+      flexShrink: '0',
+      zIndex: '1',
+      position: 'absolute',
+      right: '5px',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      outline: 'none',
+    });
+
+    this._closeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    this._closeSvg.setAttribute('width', '18');
+    this._closeSvg.setAttribute('height', '18');
+    this._closeSvg.setAttribute('viewBox', '0 0 24 24');
+    this._closeSvg.setAttribute('fill', 'none');
+    this._closeSvg.setAttribute('stroke', 'currentColor');
+    this._closeSvg.setAttribute('stroke-width', '2');
+    this._closeSvg.setAttribute('stroke-linecap', 'round');
+
+    this._closeP1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    this._closeP1.setAttribute('d', 'M18 6 6 18');
+    this._closeP1.style.cssText = 'stroke-dasharray:20;stroke-dashoffset:0;transition:stroke-dashoffset 0.3s ease';
+    this._closeSvg.appendChild(this._closeP1);
+
+    this._closeP2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    this._closeP2.setAttribute('d', 'm6 6 12 12');
+    this._closeP2.style.cssText = 'stroke-dasharray:20;stroke-dashoffset:0;transition:stroke-dashoffset 0.3s ease 0.1s';
+    this._closeSvg.appendChild(this._closeP2);
+
+    this._closeBtn.appendChild(this._closeSvg);
+
+    this._closeBtn.addEventListener('mouseenter', () => {
+      if (!this._closeBtn.dataset.active) {
+        this._closeBtn.style.background = this.markerColor + '33';
+        this._closeBtn.style.color = this.markerColor || '#3b82f6';
+      }
+      this._closeP1.style.transition = 'none';
+      this._closeP1.style.strokeDashoffset = '20';
+      this._closeSvg.getBoundingClientRect();
+      this._closeP1.style.transition = 'stroke-dashoffset 0.3s ease';
+      this._closeP1.style.strokeDashoffset = '0';
+      this._closeP2.style.transition = 'none';
+      this._closeP2.style.strokeDashoffset = '20';
+      this._closeP2.getBoundingClientRect();
+      this._closeP2.style.transition = 'stroke-dashoffset 0.3s ease 0.1s';
+      this._closeP2.style.strokeDashoffset = '0';
+    });
+
+    this._closeBtn.addEventListener('mouseleave', () => {
+      if (!this._closeBtn.dataset.active) {
+        this._closeBtn.style.background = 'transparent';
+        this._closeBtn.style.color = 'rgba(255,255,255,0.65)';
+      }
+    });
+
+    this._closeBtn.addEventListener('mousedown', () => {
+      this._closeBtn.style.transform = 'translateY(-50%) scale(0.92)';
+    });
+
+    this._closeBtn.addEventListener('mouseup', () => {
+      this._closeBtn.style.transform = 'translateY(-50%)';
+    });
+
+    this._collapsed = false;
+
+    this._closeBtn.addEventListener('click', () => {
+      if (!this._collapsed) {
+        this.setActiveMode(null);
+        this.modeCallbacks.forEach((d) => d(null));
+        if (this.settingsPanel) {
+          this.settingsPanel.remove();
+          this.settingsPanel = null;
+        }
+        this._collapsed = true;
+        this.el.style.width = '44px';
+        for (let _ci = 0; _ci < this.el.childNodes.length; _ci++) {
+          const _ch = this.el.childNodes[_ci] as HTMLElement;
+          if (_ch !== this._closeBtn && _ch !== (this._tt as any)) {
+            _ch.style.transition = 'none';
+            _ch.style.opacity = '0';
+            _ch.style.pointerEvents = 'none';
+          }
+        }
+        this._closeP1.setAttribute('d', 'M19 4L10 4');
+        this._closeP1.style.strokeDasharray = '12';
+        this._closeP2.setAttribute('d', 'M14 20L5 20');
+        this._closeP2.style.strokeDasharray = '12';
+        if (!this._closeP3) {
+          this._closeP3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          this._closeP3.setAttribute('d', 'M15 4L9 20');
+          this._closeP3.style.cssText = 'stroke-dasharray:20;stroke-dashoffset:0';
+          this._closeSvg.appendChild(this._closeP3);
+        } else {
+          this._closeP3.style.display = '';
+        }
+      } else {
+        this._collapsed = false;
+        this._closeP1.setAttribute('d', 'M18 6 6 18');
+        this._closeP1.style.strokeDasharray = '20';
+        this._closeP2.setAttribute('d', 'm6 6 12 12');
+        this._closeP2.style.strokeDasharray = '20';
+        if (this._closeP3) this._closeP3.style.display = 'none';
+        if (this.settingsPanel) {
+          this.settingsPanel.remove();
+          this.settingsPanel = null;
+        }
+        for (let _ci = 0; _ci < this.el.childNodes.length; _ci++) {
+          const _ch = this.el.childNodes[_ci] as HTMLElement;
+          if (_ch !== this._closeBtn && _ch !== (this._tt as any)) {
+            _ch.style.animation = 'none';
+            _ch.style.transition = 'opacity 0.2s ease 0.1s';
+            _ch.style.opacity = '1';
+            _ch.style.pointerEvents = '';
+          }
+        }
+        this.el.style.width = '157px';
+      }
+    });
+
+    this.el.appendChild(this._closeBtn);
+
+    this._tt = document.createElement('div');
+    this._tt.style.cssText = 'position:fixed;transform:translateX(-50%) translateY(4px);background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:5px 14px;font-size:11px;font-family:system-ui,sans-serif;font-weight:500;color:rgba(255,255,255,0.85);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 120ms ease,transform 120ms ease;box-shadow:0 2px 8px rgba(0,0,0,0.3);z-index:2147483647';
+    this._ttTimer = null;
+
     this.initDrag();
 
     shadowRoot.appendChild(this.el);
+    shadowRoot.appendChild(this._tt);
+
+    this._collapsed = true;
+    this.el.style.width = '44px';
+    for (let _ii = 0; _ii < this.el.childNodes.length; _ii++) {
+      const _ic = this.el.childNodes[_ii] as HTMLElement;
+      if (_ic !== this._closeBtn && _ic !== (this._tt as any)) {
+        _ic.style.opacity = '0';
+        _ic.style.pointerEvents = 'none';
+      }
+    }
+    this._closeP1.setAttribute('d', 'M19 4L10 4');
+    this._closeP1.style.strokeDasharray = '12';
+    this._closeP2.setAttribute('d', 'M14 20L5 20');
+    this._closeP2.style.strokeDasharray = '12';
+    this._closeP3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    this._closeP3.setAttribute('d', 'M15 4L9 20');
+    this._closeP3.style.cssText = 'stroke-dasharray:20;stroke-dashoffset:0';
+    this._closeSvg.appendChild(this._closeP3);
   }
 
-  // ------------------------------------------------------------------
-  // Button factory
-  // ------------------------------------------------------------------
-
-  private createToolbarButton(
-    iconBuilder: (size: number) => SVGSVGElement,
-    tooltip: string,
-  ): HTMLButtonElement {
+  createToolbarButton(iconBuilder: IconBuilder, tooltip: string): HTMLButtonElement {
     const btn = document.createElement('button');
-    btn.title = tooltip;
     applyStyles(btn, {
       width: '32px',
       height: '32px',
       border: 'none',
       background: 'transparent',
-      borderRadius: '10px',
+      borderRadius: '50%',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
@@ -365,23 +433,167 @@ export class Toolbar {
       flexShrink: '0',
     });
 
-    const icon = iconBuilder(18);
-    applyStyles(icon, { flexShrink: '0', pointerEvents: 'none' });
+    const icon = iconBuilder(18) as any;
+    applyStyles(icon, {
+      flexShrink: '0',
+      pointerEvents: 'none',
+    });
+
+    icon.addEventListener('animationend', () => {
+      icon.style.animation = '';
+      if (icon._slAnim) {
+        icon._slAnim = false;
+        const _els2 = icon.querySelectorAll('[data-sl]');
+        const _dur2 = 400;
+        const _start2 = performance.now();
+        const _tgt2 = icon._slNormals;
+        const _cur2 = icon._slTargets;
+        (function _step2(ts: number) {
+          const p2 = Math.min((ts - _start2) / _dur2, 1);
+          const ep2 = 1 - Math.pow(1 - p2, 3);
+          for (let _j = 0; _j < _els2.length; _j++) {
+            const _el2 = _els2[_j] as SVGElement;
+            const _id2 = (_el2 as any).dataset.sl;
+            const _t2 = _tgt2[_id2];
+            const _c2 = _cur2[_id2];
+            if (!_t2) continue;
+            for (const _k2 in _t2) {
+              const _from2 = _c2[_k2];
+              const _to2 = _t2[_k2];
+              _el2.setAttribute(_k2, String(_from2 + (_to2 - _from2) * ep2));
+            }
+          }
+          if (p2 < 1) requestAnimationFrame(_step2);
+        })(performance.now());
+      }
+    });
+
     btn.appendChild(icon);
 
     btn.addEventListener('mouseenter', () => {
-      if (!btn.dataset['active']) {
-        btn.style.background = 'rgba(255,255,255,0.08)';
+      if (!btn.dataset.active) {
+        btn.style.background = this.markerColor + '33';
+        btn.style.color = this.markerColor || '#3b82f6';
+      }
+      if (tooltip === 'Prompt') {
+        icon.style.animation = 'improv-msg-wiggle 0.5s cubic-bezier(0.23,1,0.32,1)';
+      } else if (tooltip === 'Manipulate') {
+        const _targets: Record<string, Record<string, number>> = {
+          t1r: { x2: 10 },
+          t1l: { x1: 5 },
+          t2r: { x2: 18 },
+          t2l: { x1: 13 },
+          t3l: { x2: 4 },
+          t3r: { x1: 8 },
+          k1: { x1: 9, x2: 9 },
+          k2: { x1: 14, x2: 14 },
+          k3: { x1: 8, x2: 8 },
+        };
+        const _normals: Record<string, Record<string, number>> = {
+          t1r: { x2: 14 },
+          t1l: { x1: 10 },
+          t2r: { x2: 12 },
+          t2l: { x1: 8 },
+          t3l: { x2: 12 },
+          t3r: { x1: 16 },
+          k1: { x1: 14, x2: 14 },
+          k2: { x1: 8, x2: 8 },
+          k3: { x1: 16, x2: 16 },
+        };
+        const _els = icon.querySelectorAll('[data-sl]');
+        icon._slAnim = true;
+        icon._slTargets = _targets;
+        icon._slNormals = _normals;
+        const _dur = 400;
+        const _start = performance.now();
+        (function _step(ts: number) {
+          if (!icon._slAnim) return;
+          const p = Math.min((ts - _start) / _dur, 1);
+          const ep = 1 - Math.pow(1 - p, 3);
+          for (let _i = 0; _i < _els.length; _i++) {
+            const _el = _els[_i] as SVGElement;
+            const _id = (_el as any).dataset.sl;
+            const _t = _targets[_id];
+            const _n = _normals[_id];
+            if (!_t) continue;
+            for (const _k in _t) {
+              const _from = _n[_k];
+              const _to = _t[_k];
+              _el.setAttribute(_k, String(_from + (_to - _from) * ep));
+            }
+          }
+          if (p < 1) requestAnimationFrame(_step);
+        })(performance.now());
+      } else {
+        const _anim: Record<string, string> = {
+          Settings: 'improv-icon-hover-spin',
+          Send: 'improv-icon-hover-nudge',
+          Clear: 'improv-icon-hover-shake',
+        };
+        const anim = _anim[tooltip];
+        if (anim) icon.style.animation = anim + ' 0.7s cubic-bezier(0.23,1,0.32,1)';
+      }
+      if (this._tt) {
+        if (this._ttTimer) {
+          clearTimeout(this._ttTimer);
+          this._ttTimer = null;
+        }
+        if (this.showHints === false) return;
+        this._tt.textContent = tooltip;
+        const w = btn.getBoundingClientRect();
+        const bx = w.left + w.width / 2;
+        const by = this.el.getBoundingClientRect().top - this._tt.offsetHeight - 8;
+        this._tt.style.left = bx + 'px';
+        this._tt.style.top = by + 'px';
+        this._tt.style.opacity = '1';
+        this._tt.style.transform = 'translateX(-50%) translateY(0)';
       }
     });
+
     btn.addEventListener('mouseleave', () => {
-      if (!btn.dataset['active']) {
+      if (!btn.dataset.active) {
         btn.style.background = 'transparent';
+        btn.style.color = 'rgba(255,255,255,0.65)';
+      }
+      icon.style.animation = '';
+      if (icon._slAnim) {
+        icon._slAnim = false;
+        const _els2 = icon.querySelectorAll('[data-sl]');
+        const _dur2 = 400;
+        const _start2 = performance.now();
+        const _tgt2 = icon._slNormals;
+        const _cur2 = icon._slTargets;
+        (function _step2(ts: number) {
+          const p2 = Math.min((ts - _start2) / _dur2, 1);
+          const ep2 = 1 - Math.pow(1 - p2, 3);
+          for (let _j = 0; _j < _els2.length; _j++) {
+            const _el2 = _els2[_j] as SVGElement;
+            const _id2 = (_el2 as any).dataset.sl;
+            const _t2 = _tgt2[_id2];
+            const _c2 = _cur2[_id2];
+            if (!_t2) continue;
+            for (const _k2 in _t2) {
+              const _from2 = _c2[_k2];
+              const _to2 = _t2[_k2];
+              _el2.setAttribute(_k2, String(_from2 + (_to2 - _from2) * ep2));
+            }
+          }
+          if (p2 < 1) requestAnimationFrame(_step2);
+        })(performance.now());
+      }
+      if (this._tt) {
+        this._tt.style.opacity = '0';
+        this._tt.style.transform = 'translateX(-50%) translateY(4px)';
+        this._ttTimer = setTimeout(() => {
+          this._tt.textContent = '';
+        }, 120);
       }
     });
+
     btn.addEventListener('mousedown', () => {
       btn.style.transform = 'scale(0.92)';
     });
+
     btn.addEventListener('mouseup', () => {
       btn.style.transform = '';
     });
@@ -389,11 +601,7 @@ export class Toolbar {
     return btn;
   }
 
-  // ------------------------------------------------------------------
-  // Vertical divider (between groups)
-  // ------------------------------------------------------------------
-
-  private createVerticalDivider(): HTMLDivElement {
+  createVerticalDivider(): HTMLDivElement {
     const d = document.createElement('div');
     applyStyles(d, {
       width: '1px',
@@ -405,15 +613,22 @@ export class Toolbar {
     return d;
   }
 
-  // ------------------------------------------------------------------
-  // Settings panel
-  // ------------------------------------------------------------------
-
-  private toggleSettingsPanel(): void {
+  toggleSettingsPanel(): void {
     if (this.settingsPanel) {
       this.settingsPanel.remove();
       this.settingsPanel = null;
+      if (this.settingsBtn) {
+        this.settingsBtn.style.background = 'transparent';
+        this.settingsBtn.style.color = 'rgba(255,255,255,0.65)';
+        delete this.settingsBtn.dataset.active;
+      }
       return;
+    }
+
+    if (this.settingsBtn) {
+      this.settingsBtn.style.background = this.markerColor || '#3b82f6';
+      this.settingsBtn.style.color = ['#f97316', '#eab308', '#22c55e'].indexOf(this.markerColor) !== -1 ? '#1a1a1a' : '#fff';
+      this.settingsBtn.dataset.active = '1';
     }
 
     const panel = document.createElement('div');
@@ -437,7 +652,6 @@ export class Toolbar {
       animation: 'improv-panel-in 0.25s cubic-bezier(0.23, 1, 0.32, 1) both',
     });
 
-    // Header row with title and close button
     const headerRow = document.createElement('div');
     applyStyles(headerRow, {
       display: 'flex',
@@ -469,7 +683,7 @@ export class Toolbar {
       color: 'rgba(255,255,255,0.5)',
       transition: 'background 120ms ease',
     });
-    closeBtn.appendChild(iconX(14));
+    closeBtn.appendChild(iconClose(14));
     closeBtn.addEventListener('mouseenter', () => {
       closeBtn.style.background = 'rgba(255,255,255,0.08)';
     });
@@ -482,7 +696,6 @@ export class Toolbar {
     headerRow.appendChild(closeBtn);
     panel.appendChild(headerRow);
 
-    // Verbosity dropdown
     const verbSection = this.buildSettingsRow('Verbosity');
     const select = document.createElement('select');
     applyStyles(select, {
@@ -505,12 +718,11 @@ export class Toolbar {
       select.appendChild(option);
     }
     select.addEventListener('change', () => {
-      this.verbosity = select.value as (typeof VERBOSITY_OPTIONS)[number];
+      this.verbosity = select.value;
     });
     verbSection.appendChild(select);
     panel.appendChild(verbSection);
 
-    // Connection status
     const connSection = this.buildSettingsRow('Connection');
     const connInfo = document.createElement('div');
     applyStyles(connInfo, {
@@ -518,21 +730,15 @@ export class Toolbar {
       flexDirection: 'column',
       gap: '4px',
     });
-
     const portRow = this.buildKVRow('Port', String(this.port));
     connInfo.appendChild(portRow);
-
     const statusRow = this.buildKVRow('Status', this.connected ? 'Connected' : 'Disconnected');
     const statusVal = statusRow.lastElementChild as HTMLElement;
-    if (statusVal) {
-      statusVal.style.color = this.connected ? '#22c55e' : '#ef4444';
-    }
+    if (statusVal) statusVal.style.color = this.connected ? '#22c55e' : '#ef4444';
     connInfo.appendChild(statusRow);
-
     connSection.appendChild(connInfo);
     panel.appendChild(connSection);
 
-    // Marker color swatches
     const colorSection = this.buildSettingsRow('Marker Color');
     const swatchRow = document.createElement('div');
     applyStyles(swatchRow, {
@@ -541,15 +747,7 @@ export class Toolbar {
       alignItems: 'center',
     });
 
-    const SWATCHES = [
-      '#ef4444',
-      '#f97316',
-      '#eab308',
-      '#22c55e',
-      '#3b82f6',
-      '#8b5cf6',
-    ];
-
+    const SWATCHES = ['#3b82f6', '#ef4444', '#f97316', '#eab308', '#22c55e', '#8b5cf6'];
     const swatchEls: HTMLDivElement[] = [];
     for (const hex of SWATCHES) {
       const dot = document.createElement('div');
@@ -570,9 +768,15 @@ export class Toolbar {
           dot.style.transform = 'scale(1.15)';
         }
       });
-      dot.addEventListener('mouseleave', () => { dot.style.transform = ''; });
-      dot.addEventListener('mousedown', () => { dot.style.transform = 'scale(0.92)'; });
-      dot.addEventListener('mouseup', () => { dot.style.transform = ''; });
+      dot.addEventListener('mouseleave', () => {
+        dot.style.transform = '';
+      });
+      dot.addEventListener('mousedown', () => {
+        dot.style.transform = 'scale(0.92)';
+      });
+      dot.addEventListener('mouseup', () => {
+        dot.style.transform = '';
+      });
       dot.addEventListener('click', () => {
         for (const d of swatchEls) {
           d.style.border = '2px solid transparent';
@@ -581,6 +785,9 @@ export class Toolbar {
         dot.style.border = '2px solid #fff';
         dot.style.boxShadow = `0 0 0 1px ${hex}`;
         this.markerColor = hex;
+        try {
+          localStorage.setItem('improv-marker-color', hex);
+        } catch (e) {}
         for (const cb of this.markerColorCallbacks) cb(hex);
       });
       swatchEls.push(dot);
@@ -589,18 +796,79 @@ export class Toolbar {
     colorSection.appendChild(swatchRow);
     panel.appendChild(colorSection);
 
-    // Insert into the same shadow root as the toolbar
+    const _hintRow = this.buildSettingsRow('Hints');
+    const _hintToggle = this.buildToggle(this.showHints !== false, (v: boolean) => {
+      this.showHints = v;
+      if (!v && this._tt) this._tt.style.opacity = '0';
+      this.hintsCallbacks.forEach((cb) => {
+        cb(v);
+      });
+    });
+    _hintRow.appendChild(_hintToggle);
+    panel.appendChild(_hintRow);
+
+    const _labelRow = this.buildSettingsRow('Selection Labels');
+    const _labelToggle = this.buildToggle(this.showSelectionLabels !== false, (v: boolean) => {
+      this.showSelectionLabels = v;
+      this.selectionLabelCallbacks.forEach((cb) => {
+        cb(v);
+      });
+    });
+    _labelRow.appendChild(_labelToggle);
+    panel.appendChild(_labelRow);
+
     this.el.parentNode!.appendChild(panel);
   }
 
-  private buildSettingsRow(label: string): HTMLDivElement {
+  buildToggle(initial: boolean, onChange: (v: boolean) => void): HTMLDivElement {
+    const wrap = document.createElement('div');
+    applyStyles(wrap, {
+      width: '36px',
+      height: '20px',
+      borderRadius: '10px',
+      background: initial ? '#0D99FF' : '#333',
+      cursor: 'pointer',
+      position: 'relative',
+      transition: 'background 150ms ease',
+      flexShrink: '0',
+    });
+    const knob = document.createElement('div');
+    applyStyles(knob, {
+      width: '16px',
+      height: '16px',
+      borderRadius: '50%',
+      background: '#fff',
+      position: 'absolute',
+      top: '2px',
+      left: initial ? '18px' : '2px',
+      transition: 'left 150ms ease',
+    });
+    wrap.appendChild(knob);
+    let on = initial;
+    wrap.addEventListener('click', function () {
+      on = !on;
+      wrap.style.background = on ? '#0D99FF' : '#333';
+      knob.style.left = on ? '18px' : '2px';
+      onChange(on);
+    });
+    return wrap;
+  }
+
+  onHintsChange(cb: (v: boolean) => void): void {
+    this.hintsCallbacks.push(cb);
+  }
+
+  onSelectionLabelChange(cb: (v: boolean) => void): void {
+    this.selectionLabelCallbacks.push(cb);
+  }
+
+  buildSettingsRow(label: string): HTMLDivElement {
     const section = document.createElement('div');
     applyStyles(section, {
       display: 'flex',
       flexDirection: 'column',
       gap: '6px',
     });
-
     const heading = document.createElement('span');
     heading.textContent = label;
     applyStyles(heading, {
@@ -615,7 +883,7 @@ export class Toolbar {
     return section;
   }
 
-  private buildKVRow(key: string, value: string): HTMLDivElement {
+  buildKVRow(key: string, value: string): HTMLDivElement {
     const row = document.createElement('div');
     applyStyles(row, {
       display: 'flex',
@@ -623,12 +891,10 @@ export class Toolbar {
       fontSize: '11px',
       fontFamily: 'system-ui, sans-serif',
     });
-
     const k = document.createElement('span');
     k.textContent = key;
     applyStyles(k, { color: 'rgba(255,255,255,0.4)' });
     row.appendChild(k);
-
     const v = document.createElement('span');
     v.textContent = value;
     applyStyles(v, {
@@ -636,77 +902,30 @@ export class Toolbar {
       fontVariantNumeric: 'tabular-nums',
     });
     row.appendChild(v);
-
     return row;
   }
 
-  // ------------------------------------------------------------------
-  // Drag
-  // ------------------------------------------------------------------
+  initDrag(): void {}
 
-  private initDrag(): void {
-    let dragging = false;
-    let startX = 0;
-    let startY = 0;
-    let origRight = 20;
-    let origBottom = 20;
-
-    this.el.addEventListener('mousedown', (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      // Only drag when clicking pill background, not buttons
-      if (target.closest('button') || target.closest('span')) return;
-      dragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      origRight = parseInt(this.el.style.right || '20', 10);
-      origBottom = parseInt(this.el.style.bottom || '20', 10);
-      this.el.style.cursor = 'grabbing';
-      e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e: MouseEvent) => {
-      if (!dragging) return;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      this.el.style.right = `${origRight - dx}px`;
-      this.el.style.bottom = `${origBottom - dy}px`;
-
-      // Move settings panel if visible
-      if (this.settingsPanel) {
-        this.settingsPanel.style.right = `${origRight - dx}px`;
-        this.settingsPanel.style.bottom = `${origBottom - dy + 48}px`;
-      }
-    });
-
-    document.addEventListener('mouseup', () => {
-      if (dragging) {
-        dragging = false;
-        this.el.style.cursor = '';
-      }
-    });
-  }
-
-  // ------------------------------------------------------------------
-  // Private: update mode button visuals
-  // ------------------------------------------------------------------
-
-  private updateModeButtonStyles(): void {
+  updateModeButtonStyles(): void {
+    const _mc = this.markerColor || '#3b82f6';
+    const _ic = ['#f97316', '#eab308', '#22c55e'].indexOf(_mc) !== -1 ? '#1a1a1a' : '#fff';
     this.modeButtons.forEach((btn, mode) => {
       if (mode === this.activeMode) {
-        btn.style.background = 'rgba(59,130,246,0.2)';
-        btn.style.color = '#6dacfc';
-        btn.dataset['active'] = '1';
+        btn.style.background = _mc;
+        btn.style.color = _ic;
+        btn.dataset.active = '1';
       } else {
         btn.style.background = 'transparent';
         btn.style.color = 'rgba(255,255,255,0.65)';
-        delete btn.dataset['active'];
+        delete btn.dataset.active;
       }
     });
+    if (this.settingsBtn && this.settingsBtn.dataset.active) {
+      this.settingsBtn.style.background = _mc;
+      this.settingsBtn.style.color = _ic;
+    }
   }
-
-  // ------------------------------------------------------------------
-  // Public API
-  // ------------------------------------------------------------------
 
   setActiveMode(mode: ImprovMode | null): void {
     this.activeMode = mode;
@@ -717,24 +936,24 @@ export class Toolbar {
     return this.activeMode;
   }
 
-  onMode(callback: ModeCallback): void {
-    this.modeCallbacks.push(callback);
+  onMode(cb: ModeCallback): void {
+    this.modeCallbacks.push(cb);
   }
 
-  onApply(callback: ActionCallback): void {
-    this.applyCallbacks.push(callback);
+  onApply(cb: ActionCallback): void {
+    this.applyCallbacks.push(cb);
   }
 
-  onSendToClaude(callback: ActionCallback): void {
-    this.sendToClaudeCallbacks.push(callback);
+  onSendToClaude(cb: ActionCallback): void {
+    this.sendToClaudeCallbacks.push(cb);
   }
 
-  onClearAll(callback: ActionCallback): void {
-    this.clearAllCallbacks.push(callback);
+  onClearAll(cb: ActionCallback): void {
+    this.clearAllCallbacks.push(cb);
   }
 
-  onMarkerColorChange(callback: (color: string) => void): void {
-    this.markerColorCallbacks.push(callback);
+  onMarkerColorChange(cb: (color: string) => void): void {
+    this.markerColorCallbacks.push(cb);
   }
 
   getMarkerColor(): string {
@@ -761,8 +980,7 @@ export class Toolbar {
       this.badgeEl.style.display = 'none';
       this.badgeEl.textContent = '';
       this.badgeDivider.style.display = 'none';
-      // Only hide send if no other reason to show it
-      if (!this.sendBtnWrap.dataset['forceVisible']) {
+      if (!(this.sendBtnWrap as any).dataset.forceVisible) {
         this.sendBtnWrap.style.display = 'none';
       }
     }
@@ -771,10 +989,9 @@ export class Toolbar {
   showSendButton(visible: boolean): void {
     if (visible) {
       this.sendBtnWrap.style.display = 'flex';
-      this.sendBtnWrap.dataset['forceVisible'] = '1';
+      (this.sendBtnWrap as any).dataset.forceVisible = '1';
     } else {
-      delete this.sendBtnWrap.dataset['forceVisible'];
-      // Only hide if badge count is also 0
+      delete (this.sendBtnWrap as any).dataset.forceVisible;
       if (this.badgeEl.style.display === 'none') {
         this.sendBtnWrap.style.display = 'none';
       }

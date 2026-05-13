@@ -5,6 +5,7 @@ export class Overlay {
   private highlight: HTMLDivElement | null = null;
   private trackedElement: HTMLElement | null = null;
   private rafId: number | null = null;
+  private _hlColor: string | undefined;
 
   constructor() {
     this.host = document.createElement('div');
@@ -66,7 +67,7 @@ export class Overlay {
     if (!this.highlight) {
       this.highlight = document.createElement('div');
       this.highlight.style.cssText =
-        'position:fixed;pointer-events:none;border:2px solid #3b82f6;border-radius:2px;transition:top 60ms ease,left 60ms ease,width 60ms ease,height 60ms ease;';
+        'position:fixed;pointer-events:none;border:2px solid ' + (this._hlColor || '#3b82f6') + ';border-radius:5px;transition:top 60ms ease,left 60ms ease,width 60ms ease,height 60ms ease;';
       this.container.appendChild(this.highlight);
     }
 
@@ -118,6 +119,13 @@ export class Overlay {
   removeFromContainer(el: HTMLElement): void {
     if (this.container.contains(el)) {
       this.container.removeChild(el);
+    }
+  }
+
+  setHighlightColor(c: string): void {
+    this._hlColor = c;
+    if (this.highlight) {
+      this.highlight.style.borderColor = c;
     }
   }
 }

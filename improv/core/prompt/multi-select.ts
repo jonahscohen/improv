@@ -1,26 +1,30 @@
-import type { SelectedElement } from '../types.js';
+export interface SelectedElement {
+  domNode: Element;
+  selector: string;
+  tagName: string;
+  textContent: string;
+  classes: string[];
+  computedStyles: Record<string, string>;
+  boundingBox: DOMRect;
+  adapterData: any[];
+}
 
 export class MultiSelect {
-  private items: SelectedElement[] = [];
+  items: SelectedElement[] = [];
 
-  add(el: SelectedElement): void {
-    this.items.push(el);
+  add(e: SelectedElement) {
+    this.items.push(e);
   }
 
-  remove(el: SelectedElement): void {
-    this.items = this.items.filter((item) => item.domNode !== el.domNode);
+  remove(e: SelectedElement) {
+    this.items = this.items.filter(t => t.domNode !== e.domNode);
   }
 
-  toggle(el: SelectedElement): void {
-    const exists = this.items.some((item) => item.domNode === el.domNode);
-    if (exists) {
-      this.remove(el);
-    } else {
-      this.add(el);
-    }
+  toggle(e: SelectedElement) {
+    this.items.some(n => n.domNode === e.domNode) ? this.remove(e) : this.add(e);
   }
 
-  clear(): void {
+  clear() {
     this.items = [];
   }
 

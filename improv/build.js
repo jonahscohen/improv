@@ -2,26 +2,25 @@ import * as esbuild from 'esbuild';
 import { argv } from 'process';
 
 const coreOnly = argv.includes('--core-only');
+const dev = argv.includes('--dev');
 
-// Build core bundle
 await esbuild.build({
   entryPoints: ['core/index.ts'],
   bundle: true,
   outfile: 'dist/improv-core.js',
   format: 'iife',
   globalName: 'Improv',
-  minify: true,
+  minify: !dev,
   sourcemap: true,
   target: 'es2022',
 });
 
-console.log('Built: dist/improv-core.js');
+console.log(`Built: dist/improv-core.js (${dev ? 'dev' : 'prod'})`);
 
 if (coreOnly) {
   process.exit(0);
 }
 
-// Build adapters - skip missing ones gracefully
 const adapters = ['react', 'vue', 'svelte'];
 
 for (const name of adapters) {
@@ -32,7 +31,7 @@ for (const name of adapters) {
       outfile: `dist/improv-${name}.js`,
       format: 'iife',
       globalName: `Improv_${name}`,
-      minify: true,
+      minify: !dev,
       sourcemap: true,
       target: 'es2022',
     });

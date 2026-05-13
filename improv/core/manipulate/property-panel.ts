@@ -1,6 +1,11 @@
 import { attachScrub, parseNumericValue, formatNumericValue } from './scrub.js';
 import type { DetectedControls } from './control-detector.js';
 import {
+  radiusTopLeft,
+  alPaddingHorizontal,
+  alPaddingVertical,
+  alPaddingSides,
+  alSpacingHorizontal,
   layoutAlignLeft,
   layoutAlignRight,
   layoutAlignHorizontalCenter,
@@ -19,12 +24,6 @@ import {
   gridView,
   chevronDown,
   plus,
-  minus,
-  alPaddingHorizontal,
-  alPaddingVertical,
-  alPaddingSides,
-  alSpacingHorizontal,
-  radiusTopLeft,
   lockClosed,
   lockOpen,
   iconDot,
@@ -36,66 +35,46 @@ import {
   iconPositionBottom,
 } from './icons.js';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 type PropertyChangeCallback = (property: string, value: string) => void;
 type ElementSelectCallback = (element: HTMLElement) => void;
 
-// ---------------------------------------------------------------------------
-// Color helpers
-// ---------------------------------------------------------------------------
-
 function rgbToHex(rgb: string): string {
-  const match = rgb.match(
-    /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*[\d.]+)?\s*\)$/,
-  );
+  const match = rgb.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*[\d.]+)?\s*\)$/);
   if (!match) return '#000000';
   const r = parseInt(match[1], 10);
   const g = parseInt(match[2], 10);
   const b = parseInt(match[3], 10);
-  return '#' + [r, g, b].map((n) => n.toString(16).padStart(2, '0')).join('');
+  return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
 }
 
-function parseColor(val: string): string {
+function normalizeColor(val: string): string {
   if (!val || val === 'transparent') return '#000000';
   if (val.startsWith('rgb')) return rgbToHex(val);
-  if (val.startsWith('#'))
+  if (val.startsWith('#')) {
     return val.length === 4
       ? '#' + val[1] + val[1] + val[2] + val[2] + val[3] + val[3]
       : val;
+  }
   return '#000000';
 }
 
-function parsePx(val: string): number {
+function parseFloatSafe(val: string): number {
   const n = parseFloat(val);
   return isNaN(n) ? 0 : n;
 }
 
-function parseOpacity(rgba: string): number {
-  const m = rgba.match(/rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([\d.]+)\s*\)/);
-  if (m) return Math.round(parseFloat(m[1]) * 100);
-  return 100;
+function extractOpacityPercent(val: string): number {
+  const match = val.match(/rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([\d.]+)\s*\)/);
+  return match ? Math.round(parseFloat(match[1]) * 100) : 100;
 }
 
-interface ParsedShadow {
-  inset: boolean;
-  x: number;
-  y: number;
-  blur: number;
-  spread: number;
-  color: string;
-}
-
-function parseBoxShadow(val: string): ParsedShadow | null {
+function parseShadow(val: string): { inset: boolean; x: number; y: number; blur: number; spread: number; color: string } | null {
   if (!val || val === 'none') return null;
   const inset = val.includes('inset');
-  const clean = val.replace('inset', '').trim();
-  const colorMatch = clean.match(/(rgba?\([^)]+\)|#[0-9a-fA-F]{3,8})/);
+  const cleaned = val.replace('inset', '').trim();
+  const colorMatch = cleaned.match(/(rgba?\([^)]+\)|#[0-9a-fA-F]{3,8})/);
   const color = colorMatch ? colorMatch[1] : 'rgba(0,0,0,0.15)';
-  const withoutColor = clean.replace(/(rgba?\([^)]+\)|#[0-9a-fA-F]{3,8})/, '').trim();
-  const nums = withoutColor.split(/\s+/).map(parseFloat).filter(n => !isNaN(n));
+  const nums = cleaned.replace(/(rgba?\([^)]+\)|#[0-9a-fA-F]{3,8})/, '').trim().split(/\s+/).map(parseFloat).filter(n => !isNaN(n));
   return {
     inset,
     x: nums[0] ?? 0,
@@ -106,56 +85,53 @@ function parseBoxShadow(val: string): ParsedShadow | null {
   };
 }
 
-function buildBoxShadow(s: ParsedShadow): string {
+function formatShadow(s: { inset: boolean; x: number; y: number; blur: number; spread: number; color: string }): string {
   const parts: string[] = [];
   if (s.inset) parts.push('inset');
   parts.push(s.x + 'px', s.y + 'px', s.blur + 'px', s.spread + 'px', s.color);
   return parts.join(' ');
 }
 
-interface ParsedFilter {
-  type: string;
-  value: number;
-  unit: string;
-}
-
-function parseFilterString(val: string): ParsedFilter[] {
+function parseFilters(val: string): { type: string; value: number; unit: string }[] {
   if (!val || val === 'none') return [];
-  const re = /(\w[\w-]*)\(([^)]+)\)/g;
-  const result: ParsedFilter[] = [];
+  const regex = /(\w[\w-]*)\(([^)]+)\)/g;
+  const results: { type: string; value: number; unit: string }[] = [];
   let m;
-  while ((m = re.exec(val)) !== null) {
+  while ((m = regex.exec(val)) !== null) {
     const type = m[1];
     const raw = m[2].trim();
     const num = parseFloat(raw);
     const unit = raw.replace(String(num), '').trim() || '';
-    result.push({ type, value: isNaN(num) ? 0 : num, unit });
+    results.push({ type, value: isNaN(num) ? 0 : num, unit });
   }
-  return result;
+  return results;
 }
 
-function buildFilterString(filters: ParsedFilter[]): string {
+function formatFilters(filters: { type: string; value: number; unit: string }[]): string {
   if (filters.length === 0) return 'none';
   return filters.map(f => f.type + '(' + f.value + f.unit + ')').join(' ');
 }
 
-function cssPropToCamel(property: string): string {
-  return property.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+function toCamelCase(prop: string): string {
+  return prop.replace(/-([a-z])/g, (_m, c) => c.toUpperCase());
 }
 
-function getVal(
-  computedStyles: Record<string, string>,
-  property: string,
-): string {
-  const camel = cssPropToCamel(property);
-  return computedStyles[camel] ?? computedStyles[property] ?? '';
+function getVal(styles: Record<string, string>, prop: string): string {
+  const camel = toCamelCase(prop);
+  return styles[camel] ?? styles[prop] ?? '';
 }
 
-// ---------------------------------------------------------------------------
-// CSS Custom Property names (set on panel root, referenced everywhere)
-// ---------------------------------------------------------------------------
+interface TreeNode {
+  element: HTMLElement;
+  depth: number;
+  children: TreeNode[];
+  expanded: boolean;
+  tagName: string;
+  displayName: string;
+  isComponent: boolean;
+}
 
-const V = {
+const cssVars = {
   surface: '--improv-surface',
   surfaceHover: '--improv-surface-hover',
   text: '--improv-text',
@@ -169,53 +145,31 @@ const V = {
   surfaceActive: '--improv-surface-active',
   black: '--improv-black',
   white: '--improv-white',
-} as const;
-
-// Resolved dark-mode values (design tokens)
-const TOKENS: Record<string, string> = {
-  [V.surface]: 'color-mix(in srgb, #1c1917 95%, #ffffff)',
-  [V.surfaceHover]: 'color-mix(in srgb, #ffffff 5%, transparent)',
-  [V.text]: 'color-mix(in srgb, #ffffff 90%, transparent)',
-  [V.textSecondary]: 'color-mix(in srgb, #ffffff 70%, transparent)',
-  [V.textTertiary]: 'color-mix(in srgb, #ffffff 50%, transparent)',
-  [V.border]: 'color-mix(in srgb, #ffffff 10%, transparent)',
-  [V.inputBg]: 'color-mix(in srgb, #ffffff 5%, transparent)',
-  [V.blueBg]: 'color-mix(in srgb, #0768CF 50%, transparent)',
-  [V.blueText]: '#0D99FF',
-  [V.blue500]: '#0D99FF',
-  [V.surfaceActive]: 'color-mix(in srgb, #ffffff 5%, transparent)',
-  [V.black]: '#1c1917',
-  [V.white]: '#ffffff',
 };
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+const darkTheme: Record<string, string> = {
+  [cssVars.surface]: 'color-mix(in srgb, #1c1917 95%, #ffffff)',
+  [cssVars.surfaceHover]: 'color-mix(in srgb, #ffffff 5%, transparent)',
+  [cssVars.text]: 'color-mix(in srgb, #ffffff 90%, transparent)',
+  [cssVars.textSecondary]: 'color-mix(in srgb, #ffffff 70%, transparent)',
+  [cssVars.textTertiary]: 'color-mix(in srgb, #ffffff 50%, transparent)',
+  [cssVars.border]: 'color-mix(in srgb, #ffffff 10%, transparent)',
+  [cssVars.inputBg]: 'color-mix(in srgb, #ffffff 5%, transparent)',
+  [cssVars.blueBg]: 'color-mix(in srgb, #0768CF 50%, transparent)',
+  [cssVars.blueText]: '#0D99FF',
+  [cssVars.blue500]: '#0D99FF',
+  [cssVars.surfaceActive]: 'color-mix(in srgb, #ffffff 5%, transparent)',
+  [cssVars.black]: '#1c1917',
+  [cssVars.white]: '#ffffff',
+};
 
 const PANEL_WIDTH = 280;
-const FONT = 'system-ui, -apple-system, sans-serif';
-const EASE = 'cubic-bezier(0.23, 1, 0.32, 1)';
+const FONT_FAMILY = 'system-ui, -apple-system, sans-serif';
+const EASING = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
-// Shorthand accessors for var() references
-const tv = (name: string) => `var(${name})`;
-
-// ---------------------------------------------------------------------------
-// Tree node type for the Elements tab
-// ---------------------------------------------------------------------------
-
-interface TreeNode {
-  element: HTMLElement;
-  depth: number;
-  children: TreeNode[];
-  expanded: boolean;
-  tagName: string;
-  displayName: string;
-  isComponent: boolean;
+function v(cssVar: string): string {
+  return `var(${cssVar})`;
 }
-
-// ---------------------------------------------------------------------------
-// PropertyPanel
-// ---------------------------------------------------------------------------
 
 export class PropertyPanel {
   private shadow: ShadowRoot;
@@ -223,7 +177,7 @@ export class PropertyPanel {
   private cleanups: Array<() => void> = [];
   private changeCallback: PropertyChangeCallback | null = null;
   private selectCallback: ElementSelectCallback | null = null;
-  private activeTab: 'elements' | 'design' = 'design';
+  private activeTab: string = 'design';
   private tabContentEl: HTMLDivElement | null = null;
   private controls: DetectedControls | null = null;
   private computedStyles: Record<string, string> = {};
@@ -231,23 +185,17 @@ export class PropertyPanel {
   private selectedElement: HTMLElement | null = null;
   private treeRoot: TreeNode | null = null;
 
-  constructor(shadowRoot: ShadowRoot) {
-    this.shadow = shadowRoot;
+  constructor(shadow: ShadowRoot) {
+    this.shadow = shadow;
     this.container = document.createElement('div');
     this.applyContainerStyles();
     this.shadow.appendChild(this.container);
   }
 
-  // -----------------------------------------------------------------------
-  // Container styles - set CSS custom properties on the root
-  // -----------------------------------------------------------------------
-
   private applyContainerStyles(): void {
-    // Apply CSS custom properties
-    for (const [prop, value] of Object.entries(TOKENS)) {
-      this.container.style.setProperty(prop, value);
+    for (const [k, val] of Object.entries(darkTheme)) {
+      this.container.style.setProperty(k, val);
     }
-
     Object.assign(this.container.style, {
       position: 'fixed',
       right: '16px',
@@ -256,75 +204,50 @@ export class PropertyPanel {
       maxHeight: 'calc(100vh - 84px)',
       overflowY: 'auto',
       scrollbarWidth: 'none',
-      background: tv(V.surface),
+      background: v(cssVars.surface),
       borderRadius: '16px',
-      border: '1px solid ' + tv(V.border),
-      boxShadow:
-        '0 2px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(255,255,255,0.04)',
+      border: '1px solid ' + v(cssVars.border),
+      boxShadow: '0 2px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(255,255,255,0.04)',
       pointerEvents: 'auto',
-      fontFamily: FONT,
+      fontFamily: FONT_FAMILY,
       fontSize: '13px',
-      color: tv(V.text),
+      color: v(cssVars.text),
       zIndex: '2147483647',
       opacity: '0',
       transform: 'translateY(12px)',
     });
-
     requestAnimationFrame(() => {
-      this.container.style.transition =
-        'opacity 150ms ' + EASE + ', transform 150ms ' + EASE;
+      this.container.style.transition = 'opacity 150ms ' + EASING + ', transform 150ms ' + EASING;
       this.container.style.opacity = '1';
       this.container.style.transform = 'translateY(0)';
     });
-
-    // Hide scrollbar for webkit
     const style = document.createElement('style');
-    style.textContent =
-      ':host ::-webkit-scrollbar { display: none; }\n' +
-      '.improv-pp-panel::-webkit-scrollbar { display: none; }';
+    style.textContent = `:host ::-webkit-scrollbar { display: none; }
+.improv-pp-panel::-webkit-scrollbar { display: none; }`;
     this.shadow.appendChild(style);
     this.container.classList.add('improv-pp-panel');
   }
 
-  // -----------------------------------------------------------------------
-  // Public API
-  // -----------------------------------------------------------------------
-
-  render(
-    controls: DetectedControls,
-    computedStyles: Record<string, string>,
-  ): void {
+  render(controls: DetectedControls, computedStyles: Record<string, string>): void {
     this.cleanup();
     this.clearContainer();
     this.controls = controls;
     this.computedStyles = computedStyles;
-
-    // Capture initial values for per-field reset tracking
     this.originalValues = {};
-    for (const key of Object.keys(computedStyles)) {
-      this.originalValues[key] = computedStyles[key];
-    }
-
-    // Build element tree from document.body
+    for (const k of Object.keys(computedStyles)) this.originalValues[k] = computedStyles[k];
     this.treeRoot = this.buildTree(document.body, 0);
-
-    // Tab bar
     this.buildTabBar();
-
-    // Tab content area
     this.tabContentEl = document.createElement('div');
     this.container.appendChild(this.tabContentEl);
-
-    // Render active tab
     this.renderTabContent();
   }
 
-  onPropertyChange(callback: PropertyChangeCallback): void {
-    this.changeCallback = callback;
+  onPropertyChange(cb: PropertyChangeCallback): void {
+    this.changeCallback = cb;
   }
 
-  onElementSelect(callback: ElementSelectCallback): void {
-    this.selectCallback = callback;
+  onElementSelect(cb: ElementSelectCallback): void {
+    this.selectCallback = cb;
   }
 
   show(): void {
@@ -341,14 +264,8 @@ export class PropertyPanel {
     this.selectCallback = null;
     this.controls = null;
     this.treeRoot = null;
-    if (this.shadow.contains(this.container)) {
-      this.shadow.removeChild(this.container);
-    }
+    if (this.shadow.contains(this.container)) this.shadow.removeChild(this.container);
   }
-
-  // -----------------------------------------------------------------------
-  // Internals
-  // -----------------------------------------------------------------------
 
   private cleanup(): void {
     for (const fn of this.cleanups) fn();
@@ -356,14 +273,12 @@ export class PropertyPanel {
   }
 
   private clearContainer(): void {
-    while (this.container.firstChild) {
-      this.container.removeChild(this.container.firstChild);
-    }
+    while (this.container.firstChild) this.container.removeChild(this.container.firstChild);
   }
 
-  // -----------------------------------------------------------------------
-  // Tab bar (exact: padding 4px 8px, border-bottom 1px solid border)
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Tab bar
+  // ---------------------------------------------------------------------------
 
   private buildTabBar(): void {
     const bar = document.createElement('div');
@@ -371,126 +286,106 @@ export class PropertyPanel {
       display: 'flex',
       alignItems: 'center',
       padding: '8px',
-      borderBottom: '1px solid ' + tv(V.border),
+      borderBottom: '1px solid ' + v(cssVars.border),
       position: 'relative',
     });
 
-    // Sliding pill indicator (behind tabs)
     const pill = document.createElement('div');
     Object.assign(pill.style, {
       position: 'absolute',
       top: '8px',
       height: 'calc(100% - 16px)',
-      background: tv(V.inputBg),
+      background: v(cssVars.inputBg),
       borderRadius: '8px',
-      transition: 'transform 0.2s ' + EASE + ', width 0.2s ' + EASE,
+      transition: 'transform 0.2s ' + EASING + ', width 0.2s ' + EASING,
       pointerEvents: 'none',
     });
     bar.appendChild(pill);
 
-    const tabs: HTMLButtonElement[] = [];
-    const tabDefs: Array<{ label: string; id: 'elements' | 'design' }> = [
+    const buttons: HTMLButtonElement[] = [];
+    const tabs = [
       { label: 'Elements', id: 'elements' },
       { label: 'Design', id: 'design' },
     ];
 
-    for (const def of tabDefs) {
+    for (const tab of tabs) {
       const btn = document.createElement('button');
-      btn.textContent = def.label;
-      const isActive = this.activeTab === def.id;
-
+      btn.textContent = tab.label;
+      const isActive = this.activeTab === tab.id;
       Object.assign(btn.style, {
         background: 'none',
         border: 'none',
         padding: '8px 12px',
         fontSize: '12px',
         fontWeight: '500',
-        fontFamily: FONT,
-        color: isActive ? tv(V.text) : tv(V.textTertiary),
+        fontFamily: FONT_FAMILY,
+        color: v(isActive ? cssVars.text : cssVars.textTertiary),
         cursor: 'pointer',
         position: 'relative',
         zIndex: '1',
-        transition: 'color 150ms ' + EASE,
+        transition: 'color 150ms ' + EASING,
       });
-
       const onClick = () => {
-        this.activeTab = def.id;
-        for (let i = 0; i < tabs.length; i++) {
-          const t = tabs[i];
-          t.style.color =
-            tabDefs[i].id === def.id ? tv(V.text) : tv(V.textTertiary);
+        this.activeTab = tab.id;
+        for (let i = 0; i < buttons.length; i++) {
+          const b = buttons[i];
+          b.style.color = tabs[i].id === tab.id ? v(cssVars.text) : v(cssVars.textTertiary);
         }
-        this.updatePillPosition(pill, tabs, tabDefs);
+        this.updatePillPosition(pill, buttons, tabs);
         this.renderTabContent();
       };
       btn.addEventListener('click', onClick);
       this.cleanups.push(() => btn.removeEventListener('click', onClick));
-
-      tabs.push(btn);
+      buttons.push(btn);
       bar.appendChild(btn);
     }
 
-    // Version text on right
     const version = document.createElement('span');
     version.textContent = 'v0.1';
     Object.assign(version.style, {
       fontSize: '11px',
-      color: tv(V.textTertiary),
+      color: v(cssVars.textTertiary),
       marginLeft: 'auto',
       paddingRight: '8px',
       flexShrink: '0',
     });
-
     bar.appendChild(version);
     this.container.appendChild(bar);
-
-    // Position pill after layout
     requestAnimationFrame(() => {
-      this.updatePillPosition(pill, tabs, tabDefs);
+      this.updatePillPosition(pill, buttons, tabs);
     });
   }
 
-  private updatePillPosition(
-    pill: HTMLDivElement,
-    tabs: HTMLButtonElement[],
-    tabDefs: Array<{ id: string }>,
-  ): void {
-    const activeIdx = tabDefs.findIndex((d) => d.id === this.activeTab);
-    if (activeIdx < 0 || !tabs[activeIdx]) return;
-    const btn = tabs[activeIdx];
+  private updatePillPosition(pill: HTMLDivElement, buttons: HTMLButtonElement[], tabs: { id: string }[]): void {
+    const idx = tabs.findIndex(t => t.id === this.activeTab);
+    if (idx < 0 || !buttons[idx]) return;
+    const btn = buttons[idx];
     const parent = btn.parentElement;
     if (!parent) return;
     const parentRect = parent.getBoundingClientRect();
     const btnRect = btn.getBoundingClientRect();
-    const offsetLeft = btnRect.left - parentRect.left;
+    const offset = btnRect.left - parentRect.left;
     pill.style.width = btnRect.width + 'px';
-    pill.style.transform = 'translateX(' + offsetLeft + 'px)';
+    pill.style.transform = 'translateX(' + offset + 'px)';
   }
 
   private renderTabContent(): void {
-    if (!this.tabContentEl) return;
-    while (this.tabContentEl.firstChild) {
-      this.tabContentEl.removeChild(this.tabContentEl.firstChild);
-    }
-
-    if (this.activeTab === 'design') {
-      this.buildDesignTab(this.tabContentEl);
-    } else {
-      this.buildElementsTab(this.tabContentEl);
+    if (this.tabContentEl) {
+      while (this.tabContentEl.firstChild) this.tabContentEl.removeChild(this.tabContentEl.firstChild);
+      this.activeTab === 'design' ? this.buildDesignTab(this.tabContentEl) : this.buildElementsTab(this.tabContentEl);
     }
   }
 
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // Elements tab - DOM tree
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
 
-  private buildTree(element: HTMLElement, depth: number): TreeNode {
-    const tagName = element.tagName.toLowerCase();
-    const isComponent = this.isFrameworkComponent(element);
-    const displayName = this.getNodeDisplayName(element);
-
+  private buildTree(el: HTMLElement, depth: number): TreeNode {
+    const tagName = el.tagName.toLowerCase();
+    const isComponent = this.isFrameworkComponent(el);
+    const displayName = this.getNodeDisplayName(el);
     const node: TreeNode = {
-      element,
+      element: el,
       depth,
       children: [],
       expanded: depth < 2,
@@ -498,114 +393,76 @@ export class PropertyPanel {
       displayName,
       isComponent,
     };
-
-    for (let i = 0; i < element.children.length; i++) {
-      const child = element.children[i] as HTMLElement;
-      if (!child || child.nodeType !== 1) continue;
-      // Skip our own panel
-      if (
-        child.tagName === 'IMPROV-PANEL' ||
-        child.classList.contains('improv-pp-panel')
-      )
-        continue;
-      // Skip script/style/noscript
+    for (let i = 0; i < el.children.length; i++) {
+      const child = el.children[i] as HTMLElement;
+      if (!child || child.nodeType !== 1 || child.tagName === 'IMPROV-PANEL' || child.classList.contains('improv-pp-panel')) continue;
       const tag = child.tagName;
       if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') continue;
       node.children.push(this.buildTree(child, depth + 1));
     }
-
     return node;
   }
 
   private isFrameworkComponent(el: HTMLElement): boolean {
-    // Check for React/Vue/Svelte component markers
     for (const attr of el.getAttributeNames()) {
-      if (
-        attr.startsWith('data-reactroot') ||
-        attr.startsWith('data-v-') ||
-        attr.startsWith('data-svelte')
-      )
-        return true;
+      if (attr.startsWith('data-reactroot') || attr.startsWith('data-v-') || attr.startsWith('data-svelte')) return true;
     }
-    // Check for custom elements (web components)
-    if (el.tagName.includes('-')) return true;
-    return false;
+    return !!el.tagName.includes('-');
   }
 
   private getNodeDisplayName(el: HTMLElement): string {
-    // Prefer class name
     if (el.className && typeof el.className === 'string') {
-      const firstClass = el.className.split(/\s+/)[0];
-      if (firstClass && firstClass.length < 30) {
-        return '.' + firstClass;
-      }
+      const first = el.className.split(/\s+/)[0];
+      if (first && first.length < 30) return '.' + first;
     }
-    // Then id
-    if (el.id) {
-      return '#' + el.id;
-    }
-    // Then text content (truncated)
+    if (el.id) return '#' + el.id;
     const text = el.textContent?.trim();
     if (text && text.length > 0) {
-      const truncated = text.length > 30 ? text.substring(0, 27) + '...' : text;
-      // Only show text if this element has direct text nodes
-      let hasDirectText = false;
-      for (const child of el.childNodes) {
-        if (child.nodeType === 3 && child.textContent?.trim()) {
-          hasDirectText = true;
+      const trunc = text.length > 30 ? text.substring(0, 27) + '...' : text;
+      let hasDirect = false;
+      for (const c of el.childNodes) {
+        if (c.nodeType === 3 && c.textContent?.trim()) {
+          hasDirect = true;
           break;
         }
       }
-      if (hasDirectText) return truncated;
+      if (hasDirect) return trunc;
     }
-    // Fallback to tag
     return el.tagName.toLowerCase();
   }
 
   private buildElementsTab(parent: HTMLDivElement): void {
-    const treeContainer = document.createElement('div');
-    Object.assign(treeContainer.style, {
+    const wrapper = document.createElement('div');
+    Object.assign(wrapper.style, {
       padding: '4px 0',
       overflowX: 'auto',
     });
-
-    if (this.treeRoot) {
-      this.renderTreeNode(treeContainer, this.treeRoot);
-    }
-
-    parent.appendChild(treeContainer);
+    if (this.treeRoot) this.renderTreeNode(wrapper, this.treeRoot);
+    parent.appendChild(wrapper);
   }
 
-  private renderTreeNode(container: HTMLElement, node: TreeNode): void {
+  private renderTreeNode(parent: HTMLElement, node: TreeNode): void {
     const row = document.createElement('div');
-    const paddingLeft = node.depth * 20 + 12;
+    const padLeft = node.depth * 20 + 12;
     Object.assign(row.style, {
       display: 'flex',
       alignItems: 'center',
       height: '32px',
-      paddingLeft: paddingLeft + 'px',
+      paddingLeft: padLeft + 'px',
       paddingRight: '8px',
       cursor: 'pointer',
       userSelect: 'none',
       transition: 'background 0.12s',
     });
 
-    // Check if this is the selected element
     const isSelected = node.element === this.selectedElement;
-    if (isSelected) {
-      row.style.background = tv(V.blueBg);
-    }
+    if (isSelected) row.style.background = v(cssVars.blueBg);
 
-    // Hover
     const onEnter = () => {
-      if (!isSelected) {
-        row.style.background = tv(V.surfaceHover);
-      }
+      if (!isSelected) row.style.background = v(cssVars.surfaceHover);
     };
     const onLeave = () => {
-      if (!isSelected) {
-        row.style.background = 'transparent';
-      }
+      if (!isSelected) row.style.background = 'transparent';
     };
     row.addEventListener('mouseenter', onEnter);
     row.addEventListener('mouseleave', onLeave);
@@ -614,9 +471,9 @@ export class PropertyPanel {
       row.removeEventListener('mouseleave', onLeave);
     });
 
-    // Arrow (expand/collapse) - 16x16
-    const arrowWrap = document.createElement('div');
-    Object.assign(arrowWrap.style, {
+    // Chevron wrapper
+    const chevWrap = document.createElement('div');
+    Object.assign(chevWrap.style, {
       width: '16px',
       height: '16px',
       display: 'flex',
@@ -625,39 +482,32 @@ export class PropertyPanel {
       flexShrink: '0',
       marginRight: '4px',
     });
-
     if (node.children.length > 0) {
-      const arrow = chevronDown(16);
-      Object.assign(arrow.style, {
+      const chev = chevronDown(16);
+      Object.assign(chev.style, {
         transition: 'transform 0.12s',
         transform: node.expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-        color: tv(V.textTertiary),
+        color: v(cssVars.textTertiary),
       });
-      arrowWrap.appendChild(arrow);
-
-      const onArrowClick = (e: MouseEvent) => {
+      chevWrap.appendChild(chev);
+      const onChev = (e: Event) => {
         e.stopPropagation();
         node.expanded = !node.expanded;
-        arrow.style.transform = node.expanded
-          ? 'rotate(0deg)'
-          : 'rotate(-90deg)';
-        // Toggle children visibility
-        const childContainer = row.nextElementSibling as HTMLElement | null;
-        if (childContainer && childContainer.dataset.treeChildren === 'true') {
-          childContainer.style.display = node.expanded ? 'block' : 'none';
+        chev.style.transform = node.expanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        const next = row.nextElementSibling as HTMLElement | null;
+        if (next && next.dataset.treeChildren === 'true') {
+          next.style.display = node.expanded ? 'block' : 'none';
         }
       };
-      arrowWrap.addEventListener('click', onArrowClick);
-      arrowWrap.style.cursor = 'pointer';
-      this.cleanups.push(() =>
-        arrowWrap.removeEventListener('click', onArrowClick),
-      );
+      chevWrap.addEventListener('click', onChev);
+      chevWrap.style.cursor = 'pointer';
+      this.cleanups.push(() => chevWrap.removeEventListener('click', onChev));
     }
-    row.appendChild(arrowWrap);
+    row.appendChild(chevWrap);
 
-    // Icon - 16x16 (tag icon for DOM, component icon for framework)
-    const iconWrap = document.createElement('div');
-    Object.assign(iconWrap.style, {
+    // Dot indicator
+    const dotWrap = document.createElement('div');
+    Object.assign(dotWrap.style, {
       width: '16px',
       height: '16px',
       display: 'flex',
@@ -665,173 +515,120 @@ export class PropertyPanel {
       justifyContent: 'center',
       flexShrink: '0',
       marginRight: '6px',
-      color: node.isComponent ? tv(V.blueText) : tv(V.textTertiary),
+      color: node.isComponent ? v(cssVars.blueText) : v(cssVars.textTertiary),
     });
-    // Use a simple dot for tree nodes since we don't have specific tree icons in the reference
-    const treeDot = document.createElement('div');
-    Object.assign(treeDot.style, {
+    const dot = document.createElement('div');
+    Object.assign(dot.style, {
       width: '4px',
       height: '4px',
       borderRadius: '50%',
       background: 'currentColor',
     });
-    iconWrap.appendChild(treeDot);
-    row.appendChild(iconWrap);
+    dotWrap.appendChild(dot);
+    row.appendChild(dotWrap);
 
-    // Name
-    const nameEl = document.createElement('span');
-    nameEl.textContent = node.displayName;
-    Object.assign(nameEl.style, {
+    // Label
+    const label = document.createElement('span');
+    label.textContent = node.displayName;
+    Object.assign(label.style, {
       fontSize: '13px',
       fontWeight: '400',
-      color: tv(V.text),
+      color: v(cssVars.text),
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap',
       flex: '1',
       minWidth: '0',
     });
-    row.appendChild(nameEl);
+    row.appendChild(label);
 
-    // Click to select element
+    // Click handler
     const onRowClick = () => {
       this.selectedElement = node.element;
       this.selectCallback?.(node.element);
-      // Re-render tree to update selection highlighting
-      if (this.tabContentEl) {
-        this.renderTabContent();
-      }
+      if (this.tabContentEl) this.renderTabContent();
     };
     row.addEventListener('click', onRowClick);
     this.cleanups.push(() => row.removeEventListener('click', onRowClick));
+    parent.appendChild(row);
 
-    container.appendChild(row);
-
-    // Children container
+    // Children
     if (node.children.length > 0) {
-      const childContainer = document.createElement('div');
-      childContainer.dataset.treeChildren = 'true';
-      childContainer.style.display = node.expanded ? 'block' : 'none';
-      for (const child of node.children) {
-        this.renderTreeNode(childContainer, child);
-      }
-      container.appendChild(childContainer);
+      const childWrap = document.createElement('div');
+      childWrap.dataset.treeChildren = 'true';
+      childWrap.style.display = node.expanded ? 'block' : 'none';
+      for (const child of node.children) this.renderTreeNode(childWrap, child);
+      parent.appendChild(childWrap);
     }
   }
 
-  // -----------------------------------------------------------------------
-  // Design tab - all 11 sections
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Design tab - sections
+  // ---------------------------------------------------------------------------
 
-  private buildDesignTab(parent: HTMLDivElement): void {
+  private buildDesignTab(parent: HTMLElement): void {
     if (!this.controls) return;
-    const cs = this.computedStyles;
-    const groupNames = new Set(this.controls.groups.map((g) => g.name));
-    const hasTypography = groupNames.has('typography');
-    const hasFlex = groupNames.has('flex');
-    const hasGrid = groupNames.has('grid');
-
-    // Determine element tag
+    const t = this.computedStyles;
+    const names = new Set(this.controls.groups.map(g => g.name));
+    const hasTypo = names.has('typography');
+    const hasFlex = names.has('flex');
+    const hasGrid = names.has('grid');
     const tag = this.getElementTag();
-
-    // 1. Element Tag
     this.buildElementTagSection(parent, tag);
-
-    // 2. Position
-    this.buildPositionSection(parent, cs);
-
-    // 3. Layout
-    this.buildLayoutSection(parent, cs, hasFlex, hasGrid);
-
-    // 4. Spacing
-    this.buildSpacingSection(parent, cs);
-
-    // 5. Size
-    this.buildSizeSection(parent, cs);
-
-    // 6. Typography (only for text elements)
-    if (hasTypography) {
-      this.buildTypographySection(parent, cs);
-    }
-
-    // 7. Appearance
-    this.buildAppearanceSection(parent, cs);
-
-    // 8. Fill
-    this.buildFillSection(parent, cs);
-
-    // 9. Border
-    this.buildBorderSection(parent, cs);
-
-    // 10. Shadow
-    this.buildShadowSection(parent, cs);
-
-    // 11. Filters
-    this.buildFiltersSection(parent, cs);
+    this.buildPositionSection(parent, t);
+    this.buildLayoutSection(parent, t, hasFlex, hasGrid);
+    this.buildSpacingSection(parent, t);
+    this.buildSizeSection(parent, t);
+    if (hasTypo) this.buildTypographySection(parent, t);
+    this.buildAppearanceSection(parent, t);
+    this.buildFillSection(parent, t);
+    this.buildBorderSection(parent, t);
+    this.buildShadowSection(parent, t);
+    this.buildFiltersSection(parent, t);
   }
 
   private getElementTag(): string {
     if (!this.controls) return 'div';
-    const groups = new Set(this.controls.groups.map((g) => g.name));
-    if (groups.has('image')) return 'img';
-    if (groups.has('typography')) {
-      const fs = parsePx(getVal(this.computedStyles, 'font-size'));
-      if (fs >= 28) return 'h1';
-      if (fs >= 22) return 'h2';
-      if (fs >= 18) return 'h3';
-      return 'p';
+    const names = new Set(this.controls.groups.map(g => g.name));
+    if (names.has('image')) return 'img';
+    if (names.has('typography')) {
+      const fs = parseFloatSafe(getVal(this.computedStyles, 'font-size'));
+      return fs >= 28 ? 'h1' : fs >= 22 ? 'h2' : fs >= 18 ? 'h3' : 'p';
     }
-    if (groups.has('flex') || groups.has('grid')) return 'div';
+    if (names.has('flex') || names.has('grid')) {
+      // intentional fall-through to return 'div'
+    }
     return 'div';
   }
 
-  // -----------------------------------------------------------------------
-  // 1. Element Tag Section
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Element tag section
+  // ---------------------------------------------------------------------------
 
-  private buildElementTagSection(parent: HTMLDivElement, tag: string): void {
+  private buildElementTagSection(parent: HTMLElement, tag: string): void {
     const section = this.createSection();
-
-    // Header with element tag as title
     const header = this.makeSectionHeader(tag);
     section.appendChild(header);
-
-    // Body
     const body = this.makeSectionBody();
 
-    // Target group
     const targetRow = this.makeSectionRow();
-
     const targetLabel = this.makeGroupLabelInline('Target');
     targetRow.appendChild(targetLabel);
-
-    // Selector pills
     const pillWrap = document.createElement('div');
     Object.assign(pillWrap.style, {
       display: 'flex',
       gap: '4px',
       flexWrap: 'wrap',
     });
-
-    const instancePill = this.makeSelectorPill('This instance', true);
-    pillWrap.appendChild(instancePill);
-
+    const pill = this.makeSelectorPill('This instance', true);
+    pillWrap.appendChild(pill);
     targetRow.appendChild(pillWrap);
     body.appendChild(targetRow);
 
-    // Trigger group
     const triggerRow = this.makeSectionRow();
-
     const triggerLabel = this.makeGroupLabelInline('Trigger');
     triggerRow.appendChild(triggerLabel);
-
-    const triggerSelect = this.makeSelectControl(
-      ['None', 'Hover', 'Focus', 'Active'],
-      'None',
-      (_val: string) => {
-        // State trigger - future feature
-      },
-    );
+    const triggerSelect = this.makeSelectControl(['None', 'Hover', 'Focus', 'Active'], 'None', (_val) => {});
     triggerRow.appendChild(triggerSelect);
     body.appendChild(triggerRow);
 
@@ -839,75 +636,67 @@ export class PropertyPanel {
     parent.appendChild(section);
   }
 
-  // -----------------------------------------------------------------------
-  // 2. Position Section - 6-button alignment row
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Position section
+  // ---------------------------------------------------------------------------
 
-  private buildPositionSection(
-    parent: HTMLDivElement,
-    cs: Record<string, string>,
-  ): void {
+  private buildPositionSection(parent: HTMLElement, t: Record<string, string>): void {
     const section = this.createSection();
-
     const header = this.makeSectionHeader('Position');
     section.appendChild(header);
-
     const body = this.makeSectionBody();
 
-    // Alignment field (label above controls - Field pattern)
-    const alignField = this.makeSectionRow();
-    const alignFieldWrap = document.createElement('div');
-    Object.assign(alignFieldWrap.style, {
-      display: 'flex', flexDirection: 'column', gap: '4px', flex: '1', minWidth: '0',
-    });
-    alignFieldWrap.appendChild(this.makeFieldLabel('Alignment'));
-
-    const alignRow = document.createElement('div');
-    const alignContainer = document.createElement('div');
-    Object.assign(alignContainer.style, {
+    // Alignment row
+    const alignRow = this.makeSectionRow();
+    const alignCol = document.createElement('div');
+    Object.assign(alignCol.style, {
       display: 'flex',
-      gap: '8px',
+      flexDirection: 'column',
+      gap: '4px',
+      flex: '1',
+      minWidth: '0',
     });
+    alignCol.appendChild(this.makeFieldLabel('Alignment'));
 
-    // Determine enabled state for groups
-    const positionVal = getVal(cs, 'position') || 'static';
-    const parentDisplay = getVal(cs, 'display') || 'block';
-    const parentFlexDir = getVal(cs, 'flex-direction') || 'row';
-    const isAbsOrFixed = positionVal === 'absolute' || positionVal === 'fixed';
-    const isParentGrid = parentDisplay === 'grid' || parentDisplay === 'inline-grid';
-    const isParentFlexCol = (parentDisplay === 'flex' || parentDisplay === 'inline-flex') && parentFlexDir.includes('column');
-    const isParentFlexRow = (parentDisplay === 'flex' || parentDisplay === 'inline-flex') && !parentFlexDir.includes('column');
+    const alignBtnRow = document.createElement('div');
+    Object.assign(alignBtnRow.style, { display: 'flex', gap: '8px' });
 
-    const hEnabled = isAbsOrFixed || isParentGrid || isParentFlexCol;
-    const vEnabled = isAbsOrFixed || isParentGrid || isParentFlexRow;
+    const pos = getVal(t, 'position') || 'static';
+    const disp = getVal(t, 'display') || 'block';
+    const fd = getVal(t, 'flex-direction') || 'row';
 
-    // Horizontal alignment group
+    const isAbsFixed = pos === 'absolute' || pos === 'fixed';
+    const isGrid = disp === 'grid' || disp === 'inline-grid';
+    const isFlexCol = (disp === 'flex' || disp === 'inline-flex') && fd.includes('column');
+    const isFlexRow = (disp === 'flex' || disp === 'inline-flex') && !fd.includes('column');
+    const hEnabled = isAbsFixed || isGrid || isFlexCol;
+    const vEnabled = isAbsFixed || isGrid || isFlexRow;
+
+    // Horizontal align group
     const hGroup = document.createElement('div');
     Object.assign(hGroup.style, {
       flex: '1',
       display: 'flex',
-      background: tv(V.surfaceHover),
+      background: v(cssVars.surfaceHover),
       borderRadius: '8px',
       overflow: 'hidden',
       opacity: hEnabled ? '1' : '0.3',
       pointerEvents: hEnabled ? 'auto' : 'none',
     });
-
-    const hIcons = [
+    const hItems = [
       { icon: () => layoutAlignLeft(24), value: 'left' },
       { icon: () => layoutAlignHorizontalCenter(24), value: 'center' },
       { icon: () => layoutAlignRight(24), value: 'right' },
     ];
-
-    for (let i = 0; i < hIcons.length; i++) {
-      const item = hIcons[i];
+    for (let i = 0; i < hItems.length; i++) {
+      const item = hItems[i];
       const btn = document.createElement('button');
       Object.assign(btn.style, {
         flex: '1',
         height: '32px',
         border: 'none',
         background: 'transparent',
-        color: tv(V.text),
+        color: v(cssVars.text),
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
@@ -915,55 +704,47 @@ export class PropertyPanel {
         padding: '0',
         transition: 'background 0.15s ease',
       });
-      if (i > 0) {
-        btn.style.boxShadow = 'inset 1px 0 0 ' + tv(V.surface);
-      }
+      if (i > 0) btn.style.boxShadow = 'inset 1px 0 0 ' + v(cssVars.surface);
       btn.appendChild(item.icon());
-
-      const onBtnEnter = () => { btn.style.background = tv(V.border); };
-      const onBtnLeave = () => { btn.style.background = 'transparent'; };
-      const onBtnClick = () => {
-        this.emitChange('text-align', item.value);
-      };
-      btn.addEventListener('mouseenter', onBtnEnter);
-      btn.addEventListener('mouseleave', onBtnLeave);
-      btn.addEventListener('click', onBtnClick);
+      const onE = () => { btn.style.background = v(cssVars.border); };
+      const onL = () => { btn.style.background = 'transparent'; };
+      const onC = () => { this.emitChange('text-align', item.value); };
+      btn.addEventListener('mouseenter', onE);
+      btn.addEventListener('mouseleave', onL);
+      btn.addEventListener('click', onC);
       this.cleanups.push(() => {
-        btn.removeEventListener('mouseenter', onBtnEnter);
-        btn.removeEventListener('mouseleave', onBtnLeave);
-        btn.removeEventListener('click', onBtnClick);
+        btn.removeEventListener('mouseenter', onE);
+        btn.removeEventListener('mouseleave', onL);
+        btn.removeEventListener('click', onC);
       });
-
       hGroup.appendChild(btn);
     }
 
-    // Vertical alignment group
+    // Vertical align group
     const vGroup = document.createElement('div');
     Object.assign(vGroup.style, {
       flex: '1',
       display: 'flex',
-      background: tv(V.surfaceHover),
+      background: v(cssVars.surfaceHover),
       borderRadius: '8px',
       overflow: 'hidden',
       opacity: vEnabled ? '1' : '0.3',
       pointerEvents: vEnabled ? 'auto' : 'none',
     });
-
-    const vIcons = [
+    const vItems = [
       { icon: () => layoutAlignTop(24), value: 'flex-start' },
       { icon: () => layoutAlignVerticalCenter(24), value: 'center' },
       { icon: () => layoutAlignBottom(24), value: 'flex-end' },
     ];
-
-    for (let i = 0; i < vIcons.length; i++) {
-      const item = vIcons[i];
+    for (let i = 0; i < vItems.length; i++) {
+      const item = vItems[i];
       const btn = document.createElement('button');
       Object.assign(btn.style, {
         flex: '1',
         height: '32px',
         border: 'none',
         background: 'transparent',
-        color: tv(V.text),
+        color: v(cssVars.text),
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
@@ -971,401 +752,363 @@ export class PropertyPanel {
         padding: '0',
         transition: 'background 0.15s ease',
       });
-      if (i > 0) {
-        btn.style.boxShadow = 'inset 1px 0 0 ' + tv(V.surface);
-      }
+      if (i > 0) btn.style.boxShadow = 'inset 1px 0 0 ' + v(cssVars.surface);
       btn.appendChild(item.icon());
-
-      const onBtnEnter = () => { btn.style.background = tv(V.border); };
-      const onBtnLeave = () => { btn.style.background = 'transparent'; };
-      const onBtnClick = () => {
-        this.emitChange('align-items', item.value);
-      };
-      btn.addEventListener('mouseenter', onBtnEnter);
-      btn.addEventListener('mouseleave', onBtnLeave);
-      btn.addEventListener('click', onBtnClick);
+      const onE = () => { btn.style.background = v(cssVars.border); };
+      const onL = () => { btn.style.background = 'transparent'; };
+      const onC = () => { this.emitChange('align-items', item.value); };
+      btn.addEventListener('mouseenter', onE);
+      btn.addEventListener('mouseleave', onL);
+      btn.addEventListener('click', onC);
       this.cleanups.push(() => {
-        btn.removeEventListener('mouseenter', onBtnEnter);
-        btn.removeEventListener('mouseleave', onBtnLeave);
-        btn.removeEventListener('click', onBtnClick);
+        btn.removeEventListener('mouseenter', onE);
+        btn.removeEventListener('mouseleave', onL);
+        btn.removeEventListener('click', onC);
       });
-
       vGroup.appendChild(btn);
     }
 
-    alignContainer.appendChild(hGroup);
-    alignContainer.appendChild(vGroup);
-    alignFieldWrap.appendChild(alignContainer);
-    alignField.appendChild(alignFieldWrap);
-    body.appendChild(alignField);
+    alignBtnRow.appendChild(hGroup);
+    alignBtnRow.appendChild(vGroup);
+    alignCol.appendChild(alignBtnRow);
+    alignRow.appendChild(alignCol);
+    body.appendChild(alignRow);
 
-    // Position type field (label above - Field pattern)
+    // Type row
     const typeRow = this.makeSectionRow();
-    const typeField = document.createElement('div');
-    Object.assign(typeField.style, {
-      display: 'flex', flexDirection: 'column', gap: '4px', flex: '1', minWidth: '0',
+    const typeCol = document.createElement('div');
+    Object.assign(typeCol.style, {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+      flex: '1',
+      minWidth: '0',
     });
-    typeField.appendChild(this.makeFieldLabel('Type'));
-    const posSelect = this.makeSelectControl(
+    typeCol.appendChild(this.makeFieldLabel('Type'));
+    const typeSelect = this.makeSelectControl(
       ['static', 'relative', 'absolute', 'fixed', 'sticky'],
-      positionVal,
+      pos,
       (val) => this.emitChange('position', val),
     );
-    typeField.appendChild(posSelect);
-    typeRow.appendChild(typeField);
+    typeCol.appendChild(typeSelect);
+    typeRow.appendChild(typeCol);
     body.appendChild(typeRow);
 
-    // Constraints input for absolute/fixed positioning
-    if (positionVal === 'absolute' || positionVal === 'fixed') {
-      const constraintsRow = this.makeSectionRow();
-      const cWrap = document.createElement('div');
-      Object.assign(cWrap.style, {
+    // Absolute/fixed offset controls
+    if (pos === 'absolute' || pos === 'fixed') {
+      const offsetRow = this.makeSectionRow();
+      const offsetWrap = document.createElement('div');
+      Object.assign(offsetWrap.style, {
         display: 'flex',
         gap: '4px',
         alignItems: 'center',
         width: '100%',
       });
 
-      const leftSide = document.createElement('div');
-      Object.assign(leftSide.style, { flex: '1', minWidth: '0' });
-      leftSide.appendChild(this.makePropInput('left', null, cs, 1, false, 'L'));
-      cWrap.appendChild(leftSide);
+      const leftCol = document.createElement('div');
+      Object.assign(leftCol.style, { flex: '1', minWidth: '0' });
+      leftCol.appendChild(this.makePropInput('left', null, t, 1, false, 'L'));
+      offsetWrap.appendChild(leftCol);
 
       const centerCol = document.createElement('div');
       Object.assign(centerCol.style, {
-        flex: '1', minWidth: '0', display: 'flex',
-        flexDirection: 'column', gap: '4px', alignItems: 'stretch',
+        flex: '1',
+        minWidth: '0',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        alignItems: 'stretch',
       });
+      centerCol.appendChild(this.makePropInput('top', null, t, 1, false, 'T'));
 
-      centerCol.appendChild(this.makePropInput('top', null, cs, 1, false, 'T'));
-
-      const pinBox = document.createElement('div');
-      Object.assign(pinBox.style, {
+      const previewBox = document.createElement('div');
+      Object.assign(previewBox.style, {
         position: 'relative',
-        background: tv(V.surfaceHover),
+        background: v(cssVars.surfaceHover),
         borderRadius: '8px',
         width: '100%',
         height: '64px',
       });
-      const pinCenter = document.createElement('div');
-      Object.assign(pinCenter.style, {
-        position: 'absolute', left: '50%', top: '50%',
+      const previewInner = document.createElement('div');
+      Object.assign(previewInner.style, {
+        position: 'absolute',
+        left: '50%',
+        top: '50%',
         transform: 'translate(-50%, -50%)',
-        width: '24px', height: '24px',
-        background: tv(V.surface),
-        border: '1px solid ' + tv(V.border),
+        width: '24px',
+        height: '24px',
+        background: v(cssVars.surface),
+        border: '1px solid ' + v(cssVars.border),
         borderRadius: '8px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         padding: '0',
       });
-      const pinDot = document.createElement('div');
-      Object.assign(pinDot.style, {
-        width: '4px', height: '4px', borderRadius: '50%', background: '#3b82f6',
+      const previewDot = document.createElement('div');
+      Object.assign(previewDot.style, {
+        width: '4px',
+        height: '4px',
+        borderRadius: '50%',
+        background: '#3b82f6',
       });
-      pinCenter.appendChild(pinDot);
-      pinBox.appendChild(pinCenter);
-      centerCol.appendChild(pinBox);
+      previewInner.appendChild(previewDot);
+      previewBox.appendChild(previewInner);
+      centerCol.appendChild(previewBox);
+      centerCol.appendChild(this.makePropInput('bottom', null, t, 1, false, 'B'));
+      offsetWrap.appendChild(centerCol);
 
-      centerCol.appendChild(this.makePropInput('bottom', null, cs, 1, false, 'B'));
-      cWrap.appendChild(centerCol);
+      const rightCol = document.createElement('div');
+      Object.assign(rightCol.style, { flex: '1', minWidth: '0' });
+      rightCol.appendChild(this.makePropInput('right', null, t, 1, false, 'R'));
+      offsetWrap.appendChild(rightCol);
 
-      const rightSide = document.createElement('div');
-      Object.assign(rightSide.style, { flex: '1', minWidth: '0' });
-      rightSide.appendChild(this.makePropInput('right', null, cs, 1, false, 'R'));
-      cWrap.appendChild(rightSide);
-
-      constraintsRow.appendChild(cWrap);
-      body.appendChild(constraintsRow);
+      offsetRow.appendChild(offsetWrap);
+      body.appendChild(offsetRow);
     }
 
-    // Offsets for relative positioning
-    if (positionVal === 'relative') {
-      const offsetLabel = this.makeSectionRow();
-      offsetLabel.appendChild(this.makeGroupLabelInline('Offsets'));
-      body.appendChild(offsetLabel);
+    // Relative offsets
+    if (pos === 'relative') {
+      const labelRow = this.makeSectionRow();
+      labelRow.appendChild(this.makeGroupLabelInline('Offsets'));
+      body.appendChild(labelRow);
 
-      const offsetRow1 = this.makeSectionRow();
-      Object.assign(offsetRow1.style, { display: 'flex', gap: '8px' });
-      offsetRow1.appendChild(this.makePropInput('top', null, cs, 1, false, 'T'));
-      offsetRow1.appendChild(this.makePropInput('right', null, cs, 1, false, 'R'));
-      body.appendChild(offsetRow1);
+      const r1 = this.makeSectionRow();
+      Object.assign(r1.style, { display: 'flex', gap: '8px' });
+      r1.appendChild(this.makePropInput('top', null, t, 1, false, 'T'));
+      r1.appendChild(this.makePropInput('right', null, t, 1, false, 'R'));
+      body.appendChild(r1);
 
-      const offsetRow2 = this.makeSectionRow();
-      Object.assign(offsetRow2.style, { display: 'flex', gap: '8px' });
-      offsetRow2.appendChild(this.makePropInput('bottom', null, cs, 1, false, 'B'));
-      offsetRow2.appendChild(this.makePropInput('left', null, cs, 1, false, 'L'));
-      body.appendChild(offsetRow2);
+      const r2 = this.makeSectionRow();
+      Object.assign(r2.style, { display: 'flex', gap: '8px' });
+      r2.appendChild(this.makePropInput('bottom', null, t, 1, false, 'B'));
+      r2.appendChild(this.makePropInput('left', null, t, 1, false, 'L'));
+      body.appendChild(r2);
     }
 
-    // Sticky offset
-    if (positionVal === 'sticky') {
-      const stickyLabel = this.makeSectionRow();
-      stickyLabel.appendChild(this.makeGroupLabelInline('Sticky offset'));
-      body.appendChild(stickyLabel);
+    // Sticky offsets
+    if (pos === 'sticky') {
+      const labelRow = this.makeSectionRow();
+      labelRow.appendChild(this.makeGroupLabelInline('Sticky offset'));
+      body.appendChild(labelRow);
 
-      const stickyRow = this.makeSectionRow();
-      Object.assign(stickyRow.style, { display: 'flex', gap: '8px' });
-      stickyRow.appendChild(this.makePropInput('top', null, cs, 1, false, 'T'));
-      stickyRow.appendChild(this.makePropInput('bottom', null, cs, 1, false, 'B'));
-      body.appendChild(stickyRow);
+      const r = this.makeSectionRow();
+      Object.assign(r.style, { display: 'flex', gap: '8px' });
+      r.appendChild(this.makePropInput('top', null, t, 1, false, 'T'));
+      r.appendChild(this.makePropInput('bottom', null, t, 1, false, 'B'));
+      body.appendChild(r);
     }
 
     section.appendChild(body);
     parent.appendChild(section);
   }
 
-  // -----------------------------------------------------------------------
-  // 3. Layout Section
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Layout section
+  // ---------------------------------------------------------------------------
 
-  private buildLayoutSection(
-    parent: HTMLDivElement,
-    cs: Record<string, string>,
-    hasFlex: boolean,
-    _hasGrid: boolean,
-  ): void {
+  private buildLayoutSection(parent: HTMLElement, t: Record<string, string>, hasFlex: boolean, hasGrid: boolean): void {
     const section = this.createSection();
-
     const header = this.makeSectionHeader('Layout');
     section.appendChild(header);
-
     const body = this.makeSectionBody();
 
-    // Determine active display mode
-    const display = getVal(cs, 'display') || 'block';
-    const flexDir = getVal(cs, 'flex-direction') || 'row';
-    let activeDisplay = 'block';
-    if (display === 'flex' || display === 'inline-flex') {
-      activeDisplay = flexDir === 'column' ? 'flex-col' : 'flex-row';
-    } else if (display === 'grid' || display === 'inline-grid') {
-      activeDisplay = 'grid';
+    const disp = getVal(t, 'display') || 'block';
+    const fd = getVal(t, 'flex-direction') || 'row';
+    let lt = 'block';
+    if (disp === 'flex' || disp === 'inline-flex') {
+      lt = fd === 'column' ? 'flex-col' : 'flex-row';
+    } else if (disp === 'grid' || disp === 'inline-grid') {
+      lt = 'grid';
     }
 
-    // Display field (label above - Field pattern)
-    const displayRow = this.makeSectionRow();
-    const displayField = document.createElement('div');
-    Object.assign(displayField.style, {
-      display: 'flex', flexDirection: 'column', gap: '4px', flex: '1', minWidth: '0',
+    // Display segmented control
+    const dispRow = this.makeSectionRow();
+    const dispCol = document.createElement('div');
+    Object.assign(dispCol.style, {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+      flex: '1',
+      minWidth: '0',
     });
-    displayField.appendChild(this.makeFieldLabel('Display'));
-    const segmented = this.makeSegmentedControlWithIcons(
-      [
-        { iconFn: () => rectangleSmall(24), value: 'block', label: 'Block' },
-        { iconFn: () => autolayoutAddHorizontal(24), value: 'flex-row', label: 'Flex Row' },
-        { iconFn: () => autolayoutAddVertical(24), value: 'flex-col', label: 'Flex Column' },
-        { iconFn: () => gridView(24), value: 'grid', label: 'Grid' },
-      ],
-      activeDisplay,
-      (val) => {
-        if (val === 'block') {
-          this.emitChange('display', 'block');
-        } else if (val === 'flex-row') {
-          this.emitChange('display', 'flex');
-          this.emitChange('flex-direction', 'row');
-        } else if (val === 'flex-col') {
-          this.emitChange('display', 'flex');
-          this.emitChange('flex-direction', 'column');
-        } else if (val === 'grid') {
-          this.emitChange('display', 'grid');
-        }
-      },
-    );
-    displayField.appendChild(segmented);
-    displayRow.appendChild(displayField);
-    body.appendChild(displayRow);
+    dispCol.appendChild(this.makeFieldLabel('Display'));
+    const dispCtrl = this.makeSegmentedControlWithIcons([
+      { iconFn: () => rectangleSmall(24), value: 'block', label: 'Block' },
+      { iconFn: () => autolayoutAddHorizontal(24), value: 'flex-row', label: 'Flex Row' },
+      { iconFn: () => autolayoutAddVertical(24), value: 'flex-col', label: 'Flex Column' },
+      { iconFn: () => gridView(24), value: 'grid', label: 'Grid' },
+    ], lt, (val) => {
+      if (val === 'block') {
+        this.emitChange('display', 'block');
+      } else if (val === 'flex-row') {
+        this.emitChange('display', 'flex');
+        this.emitChange('flex-direction', 'row');
+      } else if (val === 'flex-col') {
+        this.emitChange('display', 'flex');
+        this.emitChange('flex-direction', 'column');
+      } else if (val === 'grid') {
+        this.emitChange('display', 'grid');
+      }
+    });
+    dispCol.appendChild(dispCtrl);
+    dispRow.appendChild(dispCol);
+    body.appendChild(dispRow);
 
-    // Flex-specific controls (reference layout: Alignment+Gap side by side, then Reverse+Wrap)
+    // Flex-specific controls
     if (hasFlex) {
-      // Alignment + Gap on same row (reference layout)
-      const alignGapRow = this.makeSectionRow();
-      Object.assign(alignGapRow.style, {
+      // Alignment + Gap row
+      const flexRow = this.makeSectionRow();
+      Object.assign(flexRow.style, {
         display: 'flex',
         gap: '8px',
         alignItems: 'flex-start',
       });
 
-      // Left: Alignment field with 3x3 grid
-      const alignField = document.createElement('div');
-      Object.assign(alignField.style, {
-        display: 'flex', flexDirection: 'column', gap: '4px',
-        flex: '1', minWidth: '0',
-      });
-      alignField.appendChild(this.makeFieldLabel('Alignment'));
-      alignField.appendChild(this.makeAlignmentGrid(cs));
-      alignGapRow.appendChild(alignField);
-
-      // Right: Gap field
-      const gapField = document.createElement('div');
-      Object.assign(gapField.style, {
-        display: 'flex', flexDirection: 'column', gap: '4px',
-        flex: '1', minWidth: '0',
-      });
-      gapField.appendChild(this.makeFieldLabel('Gap'));
-      gapField.appendChild(this.makePropInputWithIcon('gap', () => alSpacingHorizontal(24), cs));
-      alignGapRow.appendChild(gapField);
-
-      body.appendChild(alignGapRow);
-
-      // Reverse + Wrap (Field pattern: labels above selects, side by side)
-      const revWrapRow = this.makeSectionRow();
-      Object.assign(revWrapRow.style, {
+      const alignCol = document.createElement('div');
+      Object.assign(alignCol.style, {
         display: 'flex',
-        gap: '8px',
+        flexDirection: 'column',
+        gap: '4px',
+        flex: '1',
+        minWidth: '0',
       });
+      alignCol.appendChild(this.makeFieldLabel('Alignment'));
+      alignCol.appendChild(this.makeAlignmentGrid(t));
+      flexRow.appendChild(alignCol);
 
-      const revField = document.createElement('div');
-      Object.assign(revField.style, {
-        display: 'flex', flexDirection: 'column', gap: '4px',
-        flex: '1', minWidth: '0',
+      const gapCol = document.createElement('div');
+      Object.assign(gapCol.style, {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        flex: '1',
+        minWidth: '0',
       });
-      revField.appendChild(this.makeFieldLabel('Reverse'));
-      revField.appendChild(this.makeSelectControl(
-        ['No', 'Yes'],
-        flexDir.includes('reverse') ? 'Yes' : 'No',
-        (val) => {
-          const baseDir = activeDisplay === 'flex-col' ? 'column' : 'row';
-          this.emitChange('flex-direction', val === 'Yes' ? baseDir + '-reverse' : baseDir);
-        },
-      ));
-      revWrapRow.appendChild(revField);
+      gapCol.appendChild(this.makeFieldLabel('Gap'));
+      gapCol.appendChild(this.makePropInputWithIcon('gap', () => alSpacingHorizontal(24), t));
+      flexRow.appendChild(gapCol);
+      body.appendChild(flexRow);
 
-      const wrapField = document.createElement('div');
-      Object.assign(wrapField.style, {
-        display: 'flex', flexDirection: 'column', gap: '4px',
-        flex: '1', minWidth: '0',
+      // Reverse + Wrap row
+      const wrapRow = this.makeSectionRow();
+      Object.assign(wrapRow.style, { display: 'flex', gap: '8px' });
+
+      const reverseCol = document.createElement('div');
+      Object.assign(reverseCol.style, {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        flex: '1',
+        minWidth: '0',
       });
-      wrapField.appendChild(this.makeFieldLabel('Wrap'));
-      wrapField.appendChild(this.makeSelectControl(
-        ['Nowrap', 'Wrap', 'Wrap-reverse'],
-        (() => {
-          const w = getVal(cs, 'flex-wrap') || 'nowrap';
-          return w === 'nowrap' ? 'Nowrap' : w === 'wrap' ? 'Wrap' : 'Wrap-reverse';
-        })(),
-        (val) => this.emitChange('flex-wrap', val.toLowerCase()),
-      ));
-      revWrapRow.appendChild(wrapField);
+      reverseCol.appendChild(this.makeFieldLabel('Reverse'));
+      reverseCol.appendChild(this.makeSelectControl(['No', 'Yes'], fd.includes('reverse') ? 'Yes' : 'No', (val) => {
+        const base = lt === 'flex-col' ? 'column' : 'row';
+        this.emitChange('flex-direction', val === 'Yes' ? base + '-reverse' : base);
+      }));
+      wrapRow.appendChild(reverseCol);
 
-      body.appendChild(revWrapRow);
+      const wrapCol = document.createElement('div');
+      Object.assign(wrapCol.style, {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        flex: '1',
+        minWidth: '0',
+      });
+      wrapCol.appendChild(this.makeFieldLabel('Wrap'));
+      const wrapVal = (() => {
+        const fw = getVal(t, 'flex-wrap') || 'nowrap';
+        return fw === 'nowrap' ? 'Nowrap' : fw === 'wrap' ? 'Wrap' : 'Wrap-reverse';
+      })();
+      wrapCol.appendChild(this.makeSelectControl(['Nowrap', 'Wrap', 'Wrap-reverse'], wrapVal, (val) => this.emitChange('flex-wrap', val.toLowerCase())));
+      wrapRow.appendChild(wrapCol);
+      body.appendChild(wrapRow);
     }
 
     section.appendChild(body);
     parent.appendChild(section);
   }
 
-  // -----------------------------------------------------------------------
-  // 4. Spacing Section
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Spacing section
+  // ---------------------------------------------------------------------------
 
-  private buildSpacingSection(
-    parent: HTMLDivElement,
-    cs: Record<string, string>,
-  ): void {
+  private buildSpacingSection(parent: HTMLElement, t: Record<string, string>): void {
     const section = this.createSection();
-
     const header = this.makeSectionHeader('Spacing');
     section.appendChild(header);
-
     const body = this.makeSectionBody();
 
-    // Padding group
-    const padRow = this.makeSectionRowWithSplit();
-    Object.assign(padRow.style, {
+    // Padding row
+    const paddingRow = this.makeSectionRowWithSplit();
+    Object.assign(paddingRow.style, {
       display: 'flex',
       alignItems: 'center',
       gap: '6px',
     });
+    const paddingLabel = this.makeGroupLabelInline('Padding');
+    paddingRow.appendChild(paddingLabel);
+    paddingRow.appendChild(this.makePropInputWithIcon('padding-left', () => alPaddingHorizontal(24), t));
+    paddingRow.appendChild(this.makePropInputWithIcon('padding-top', () => alPaddingVertical(24), t));
+    paddingRow.appendChild(this.makeSplitButton());
+    body.appendChild(paddingRow);
 
-    const padLabel = this.makeGroupLabelInline('Padding');
-    padRow.appendChild(padLabel);
-
-    // Horizontal padding input with reference icon
-    padRow.appendChild(
-      this.makePropInputWithIcon('padding-left', () => alPaddingHorizontal(24), cs),
-    );
-
-    // Vertical padding input with reference icon
-    padRow.appendChild(
-      this.makePropInputWithIcon('padding-top', () => alPaddingVertical(24), cs),
-    );
-
-    // Split button
-    padRow.appendChild(this.makeSplitButton());
-
-    body.appendChild(padRow);
-
-    // Margin group
-    const marRow = this.makeSectionRowWithSplit();
-    Object.assign(marRow.style, {
+    // Margin row
+    const marginRow = this.makeSectionRowWithSplit();
+    Object.assign(marginRow.style, {
       display: 'flex',
       alignItems: 'center',
       gap: '6px',
     });
-
-    const marLabel = this.makeGroupLabelInline('Margin');
-    marRow.appendChild(marLabel);
-
-    marRow.appendChild(
-      this.makePropInputWithIcon('margin-left', () => alPaddingHorizontal(24), cs),
-    );
-    marRow.appendChild(
-      this.makePropInputWithIcon('margin-top', () => alPaddingVertical(24), cs),
-    );
-    marRow.appendChild(this.makeSplitButton());
-
-    body.appendChild(marRow);
+    const marginLabel = this.makeGroupLabelInline('Margin');
+    marginRow.appendChild(marginLabel);
+    marginRow.appendChild(this.makePropInputWithIcon('margin-left', () => alPaddingHorizontal(24), t));
+    marginRow.appendChild(this.makePropInputWithIcon('margin-top', () => alPaddingVertical(24), t));
+    marginRow.appendChild(this.makeSplitButton());
+    body.appendChild(marginRow);
 
     section.appendChild(body);
     parent.appendChild(section);
   }
 
-  // -----------------------------------------------------------------------
-  // 5. Size Section
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Size section
+  // ---------------------------------------------------------------------------
 
-  private buildSizeSection(
-    parent: HTMLDivElement,
-    cs: Record<string, string>,
-  ): void {
+  private buildSizeSection(parent: HTMLElement, t: Record<string, string>): void {
     const section = this.createSection();
-
-    const header = this.makeSectionHeader('Size', () => {
-      // Add size constraint action
-    });
+    const header = this.makeSectionHeader('Size', () => {});
     section.appendChild(header);
-
     const body = this.makeSectionBody();
 
-    // Width + Height row with labels above
-    const labelsRow = this.makeSectionRow();
-    Object.assign(labelsRow.style, {
-      display: 'flex',
-      gap: '8px',
-    });
-    const wLabelSpan = this.makeGroupLabelInline('Width');
-    wLabelSpan.style.flex = '1';
-    const hLabelSpan = this.makeGroupLabelInline('Height');
-    hLabelSpan.style.flex = '1';
-    labelsRow.appendChild(wLabelSpan);
-    labelsRow.appendChild(hLabelSpan);
-    // Spacer for lock button
-    const lockSpacer = document.createElement('div');
-    lockSpacer.style.width = '32px';
-    lockSpacer.style.flexShrink = '0';
-    labelsRow.appendChild(lockSpacer);
-    body.appendChild(labelsRow);
+    // Labels row
+    const labelRow = this.makeSectionRow();
+    Object.assign(labelRow.style, { display: 'flex', gap: '8px' });
+    const wLabel = this.makeGroupLabelInline('Width');
+    wLabel.style.flex = '1';
+    const hLabel = this.makeGroupLabelInline('Height');
+    hLabel.style.flex = '1';
+    labelRow.appendChild(wLabel);
+    labelRow.appendChild(hLabel);
+    const spacer = document.createElement('div');
+    spacer.style.width = '32px';
+    spacer.style.flexShrink = '0';
+    labelRow.appendChild(spacer);
+    body.appendChild(labelRow);
 
-    // Combo inputs row
-    const whRow = this.makeSectionRow();
-    Object.assign(whRow.style, {
+    // Inputs row
+    const inputRow = this.makeSectionRow();
+    Object.assign(inputRow.style, {
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
     });
+    inputRow.appendChild(this.makeComboInput('width', t));
+    inputRow.appendChild(this.makeComboInput('height', t));
 
-    whRow.appendChild(this.makeComboInput('width', cs));
-    whRow.appendChild(this.makeComboInput('height', cs));
-
-    // Lock aspect ratio button (reference lock icon)
+    // Lock button
     const lockBtn = document.createElement('button');
     let locked = false;
     Object.assign(lockBtn.style, {
@@ -1377,92 +1120,73 @@ export class PropertyPanel {
       borderRadius: '8px',
       border: 'none',
       background: 'transparent',
-      color: tv(V.textTertiary),
+      color: v(cssVars.textTertiary),
       cursor: 'pointer',
       padding: '0',
       flexShrink: '0',
     });
     lockBtn.appendChild(lockOpen(24));
-    const onLockEnter = () => {
-      lockBtn.style.background = tv(V.surfaceHover);
-    };
-    const onLockLeave = () => {
-      lockBtn.style.background = 'transparent';
-    };
-    const onLockClick = () => {
+    const lockE = () => { lockBtn.style.background = v(cssVars.surfaceHover); };
+    const lockL = () => { lockBtn.style.background = 'transparent'; };
+    const lockC = () => {
       locked = !locked;
       while (lockBtn.firstChild) lockBtn.removeChild(lockBtn.firstChild);
       lockBtn.appendChild(locked ? lockClosed(24) : lockOpen(24));
-      lockBtn.style.color = locked ? tv(V.text) : tv(V.textTertiary);
+      lockBtn.style.color = v(locked ? cssVars.text : cssVars.textTertiary);
     };
-    lockBtn.addEventListener('mouseenter', onLockEnter);
-    lockBtn.addEventListener('mouseleave', onLockLeave);
-    lockBtn.addEventListener('click', onLockClick);
+    lockBtn.addEventListener('mouseenter', lockE);
+    lockBtn.addEventListener('mouseleave', lockL);
+    lockBtn.addEventListener('click', lockC);
     this.cleanups.push(() => {
-      lockBtn.removeEventListener('mouseenter', onLockEnter);
-      lockBtn.removeEventListener('mouseleave', onLockLeave);
-      lockBtn.removeEventListener('click', onLockClick);
+      lockBtn.removeEventListener('mouseenter', lockE);
+      lockBtn.removeEventListener('mouseleave', lockL);
+      lockBtn.removeEventListener('click', lockC);
     });
-    whRow.appendChild(lockBtn);
+    inputRow.appendChild(lockBtn);
+    body.appendChild(inputRow);
 
-    body.appendChild(whRow);
+    // Max labels row
+    const maxLabelRow = this.makeSectionRow();
+    Object.assign(maxLabelRow.style, { display: 'flex', gap: '8px', marginTop: '4px' });
+    const mwLabel = this.makeGroupLabelInline('Max W');
+    mwLabel.style.flex = '1';
+    const mhLabel = this.makeGroupLabelInline('Max H');
+    mhLabel.style.flex = '1';
+    maxLabelRow.appendChild(mwLabel);
+    maxLabelRow.appendChild(mhLabel);
+    body.appendChild(maxLabelRow);
 
-    // Max W + Max H labels
-    const maxLabelsRow = this.makeSectionRow();
-    Object.assign(maxLabelsRow.style, {
-      display: 'flex',
-      gap: '8px',
-      marginTop: '4px',
-    });
-    const mwLabelSpan = this.makeGroupLabelInline('Max W');
-    mwLabelSpan.style.flex = '1';
-    const mhLabelSpan = this.makeGroupLabelInline('Max H');
-    mhLabelSpan.style.flex = '1';
-    maxLabelsRow.appendChild(mwLabelSpan);
-    maxLabelsRow.appendChild(mhLabelSpan);
-    body.appendChild(maxLabelsRow);
-
-    // Max W + Max H inputs
+    // Max inputs row
     const maxRow = this.makeSectionRow();
     Object.assign(maxRow.style, {
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
     });
-
-    maxRow.appendChild(
-      this.makePropInput('max-width', null, cs, 1, true),
-    );
-    maxRow.appendChild(
-      this.makePropInput('max-height', null, cs, 1, true),
-    );
-
+    maxRow.appendChild(this.makePropInput('max-width', null, t, 1, true));
+    maxRow.appendChild(this.makePropInput('max-height', null, t, 1, true));
     body.appendChild(maxRow);
 
     section.appendChild(body);
     parent.appendChild(section);
   }
 
-  // -----------------------------------------------------------------------
-  // 6. Typography Section
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Typography section
+  // ---------------------------------------------------------------------------
 
-  private buildTypographySection(
-    parent: HTMLDivElement,
-    cs: Record<string, string>,
-  ): void {
+  private buildTypographySection(parent: HTMLElement, t: Record<string, string>): void {
     const section = this.createSection();
-
     const header = this.makeSectionHeader('Typography');
     section.appendChild(header);
-
     const body = this.makeSectionBody();
 
-    // Font family picker
-    const fontFamily = getVal(cs, 'font-family') || 'system-ui';
-    const fontRow = this.makeSectionRow();
-    const fontBtn = document.createElement('button');
-    Object.assign(fontBtn.style, {
+    const ff = getVal(t, 'font-family') || 'system-ui';
+
+    // Font family button
+    const ffRow = this.makeSectionRow();
+    const ffBtn = document.createElement('button');
+    Object.assign(ffBtn.style, {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -1470,267 +1194,208 @@ export class PropertyPanel {
       height: '32px',
       padding: '0 8px',
       borderRadius: '8px',
-      background: tv(V.surfaceHover),
+      background: v(cssVars.surfaceHover),
       border: 'none',
-      color: tv(V.text),
+      color: v(cssVars.text),
       fontSize: '11px',
       fontWeight: '450',
-      fontFamily: FONT,
+      fontFamily: FONT_FAMILY,
       cursor: 'pointer',
       textAlign: 'left',
     });
-    const firstFont = fontFamily.split(',')[0].trim().replace(/["']/g, '');
-    const fontText = document.createElement('span');
-    fontText.textContent = firstFont;
-    Object.assign(fontText.style, {
+    const ffName = ff.split(',')[0].trim().replace(/["']/g, '');
+    const ffSpan = document.createElement('span');
+    ffSpan.textContent = ffName;
+    Object.assign(ffSpan.style, {
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap',
     });
-    fontBtn.appendChild(fontText);
-    fontBtn.appendChild(chevronDown(24));
-
-    const onFontEnter = () => {
-      fontBtn.style.background = tv(V.border);
-    };
-    const onFontLeave = () => {
-      fontBtn.style.background = tv(V.surfaceHover);
-    };
-    fontBtn.addEventListener('mouseenter', onFontEnter);
-    fontBtn.addEventListener('mouseleave', onFontLeave);
+    ffBtn.appendChild(ffSpan);
+    ffBtn.appendChild(chevronDown(24));
+    const ffE = () => { ffBtn.style.background = v(cssVars.border); };
+    const ffL = () => { ffBtn.style.background = v(cssVars.surfaceHover); };
+    ffBtn.addEventListener('mouseenter', ffE);
+    ffBtn.addEventListener('mouseleave', ffL);
     this.cleanups.push(() => {
-      fontBtn.removeEventListener('mouseenter', onFontEnter);
-      fontBtn.removeEventListener('mouseleave', onFontLeave);
+      ffBtn.removeEventListener('mouseenter', ffE);
+      ffBtn.removeEventListener('mouseleave', ffL);
     });
-
-    fontRow.appendChild(fontBtn);
-    body.appendChild(fontRow);
+    ffRow.appendChild(ffBtn);
+    body.appendChild(ffRow);
 
     // Size + Weight row
-    const sizeWeightRow = this.makeSectionRow();
-    Object.assign(sizeWeightRow.style, {
-      display: 'flex',
-      gap: '8px',
-    });
-
+    const swRow = this.makeSectionRow();
+    Object.assign(swRow.style, { display: 'flex', gap: '8px' });
     const sizeLabel = this.makeGroupLabelInline('Size');
-    sizeWeightRow.appendChild(sizeLabel);
-    sizeWeightRow.appendChild(this.makePropInput('font-size', null, cs));
-
+    swRow.appendChild(sizeLabel);
+    swRow.appendChild(this.makePropInput('font-size', null, t));
     const weightLabel = this.makeGroupLabelInline('Weight');
-    sizeWeightRow.appendChild(weightLabel);
-    const weightVal = getVal(cs, 'font-weight') || '400';
+    swRow.appendChild(weightLabel);
+    const fw = getVal(t, 'font-weight') || '400';
     const weightSelect = this.makeSelectControl(
       ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
-      weightVal,
+      fw,
       (val) => this.emitChange('font-weight', val),
     );
-    sizeWeightRow.appendChild(weightSelect);
-    body.appendChild(sizeWeightRow);
+    swRow.appendChild(weightSelect);
+    body.appendChild(swRow);
 
-    // Line height + Letter spacing
-    const lineLetterRow = this.makeSectionRow();
-    Object.assign(lineLetterRow.style, {
-      display: 'flex',
-      gap: '8px',
-    });
+    // Line height + Letter spacing row
+    const lhRow = this.makeSectionRow();
+    Object.assign(lhRow.style, { display: 'flex', gap: '8px' });
     const lhLabel = this.makeGroupLabelInline('Line height');
-    lineLetterRow.appendChild(lhLabel);
-    lineLetterRow.appendChild(
-      this.makeComboInput('line-height', cs, 0.1),
-    );
-
+    lhRow.appendChild(lhLabel);
+    lhRow.appendChild(this.makeComboInput('line-height', t, 0.1));
     const lsLabel = this.makeGroupLabelInline('Letter spacing');
-    lineLetterRow.appendChild(lsLabel);
-    lineLetterRow.appendChild(
-      this.makeComboInput('letter-spacing', cs, 0.1),
-    );
-    body.appendChild(lineLetterRow);
+    lhRow.appendChild(lsLabel);
+    lhRow.appendChild(this.makeComboInput('letter-spacing', t, 0.1));
+    body.appendChild(lhRow);
 
-    // Color row (swatch + hex input + opacity)
+    // Color row
     const colorRow = this.makeSectionRow();
-    const colorControl = this.makeColorInput('color', cs);
-    colorRow.appendChild(colorControl);
+    const colorInput = this.makeColorInput('color', t);
+    colorRow.appendChild(colorInput);
     body.appendChild(colorRow);
 
-    // Text align segmented - 3-option with reference icons
-    const alignRow = this.makeSectionRow();
-    Object.assign(alignRow.style, {
+    // Text align row
+    const taRow = this.makeSectionRow();
+    Object.assign(taRow.style, {
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
     });
+    const taLabel = this.makeGroupLabelInline('Align');
+    taRow.appendChild(taLabel);
+    const taVal = getVal(t, 'text-align') || 'left';
+    const taCtrl = this.makeSegmentedControlWithIcons([
+      { iconFn: () => textAlignLeft(24), value: 'left', label: 'Left' },
+      { iconFn: () => textAlignCenter(24), value: 'center', label: 'Center' },
+      { iconFn: () => textAlignRight(24), value: 'right', label: 'Right' },
+    ], taVal, (val) => this.emitChange('text-align', val));
+    taRow.appendChild(taCtrl);
+    body.appendChild(taRow);
 
-    const alignLabel = this.makeGroupLabelInline('Align');
-    alignRow.appendChild(alignLabel);
-
-    const currentAlign = getVal(cs, 'text-align') || 'left';
-    const alignSeg = this.makeSegmentedControlWithIcons(
-      [
-        { iconFn: () => textAlignLeft(24), value: 'left', label: 'Left' },
-        { iconFn: () => textAlignCenter(24), value: 'center', label: 'Center' },
-        { iconFn: () => textAlignRight(24), value: 'right', label: 'Right' },
-      ],
-      currentAlign,
-      (val) => this.emitChange('text-align', val),
-    );
-    alignRow.appendChild(alignSeg);
-    body.appendChild(alignRow);
-
-    // Vertical align segmented - 3-option with reference icons
-    const vAlignRow = this.makeSectionRow();
-    Object.assign(vAlignRow.style, {
+    // Vertical align row
+    const vaRow = this.makeSectionRow();
+    Object.assign(vaRow.style, {
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
     });
-
-    const vAlignLabel = this.makeGroupLabelInline('Vertical');
-    vAlignRow.appendChild(vAlignLabel);
-
-    const currentVAlign = getVal(cs, 'vertical-align') || 'top';
-    let vAlignVal = 'top';
-    if (currentVAlign === 'middle') vAlignVal = 'middle';
-    else if (currentVAlign === 'bottom') vAlignVal = 'bottom';
-
-    const vAlignSeg = this.makeSegmentedControlWithIcons(
-      [
-        { iconFn: () => textAlignTop(24), value: 'top', label: 'Top' },
-        { iconFn: () => textAlignMiddle(24), value: 'middle', label: 'Middle' },
-        { iconFn: () => textAlignBottom(24), value: 'bottom', label: 'Bottom' },
-      ],
-      vAlignVal,
-      (val) => this.emitChange('vertical-align', val),
-    );
-    vAlignRow.appendChild(vAlignSeg);
-    body.appendChild(vAlignRow);
+    const vaLabel = this.makeGroupLabelInline('Vertical');
+    vaRow.appendChild(vaLabel);
+    const vaRaw = getVal(t, 'vertical-align') || 'top';
+    let vaVal = 'top';
+    if (vaRaw === 'middle') vaVal = 'middle';
+    else if (vaRaw === 'bottom') vaVal = 'bottom';
+    const vaCtrl = this.makeSegmentedControlWithIcons([
+      { iconFn: () => textAlignTop(24), value: 'top', label: 'Top' },
+      { iconFn: () => textAlignMiddle(24), value: 'middle', label: 'Middle' },
+      { iconFn: () => textAlignBottom(24), value: 'bottom', label: 'Bottom' },
+    ], vaVal, (val) => this.emitChange('vertical-align', val));
+    vaRow.appendChild(vaCtrl);
+    body.appendChild(vaRow);
 
     section.appendChild(body);
     parent.appendChild(section);
   }
 
-  // -----------------------------------------------------------------------
-  // 7. Appearance Section
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Appearance section
+  // ---------------------------------------------------------------------------
 
-  private buildAppearanceSection(
-    parent: HTMLDivElement,
-    cs: Record<string, string>,
-  ): void {
+  private buildAppearanceSection(parent: HTMLElement, t: Record<string, string>): void {
     const section = this.createSection();
-
     const header = this.makeSectionHeader('Appearance');
     section.appendChild(header);
-
     const body = this.makeSectionBody();
 
     // Opacity + Z-index row
-    const opZRow = this.makeSectionRow();
-    Object.assign(opZRow.style, { display: 'flex', gap: '8px' });
-
+    const opRow = this.makeSectionRow();
+    Object.assign(opRow.style, { display: 'flex', gap: '8px' });
     const opLabel = this.makeGroupLabelInline('Opacity');
-    opZRow.appendChild(opLabel);
-    opZRow.appendChild(this.makePropInput('opacity', null, cs, 0.05));
+    opRow.appendChild(opLabel);
+    opRow.appendChild(this.makePropInput('opacity', null, t, 0.05));
+    const ziLabel = this.makeGroupLabelInline('Z index');
+    opRow.appendChild(ziLabel);
+    opRow.appendChild(this.makePropInput('z-index', null, t, 1));
+    body.appendChild(opRow);
 
-    const zLabel = this.makeGroupLabelInline('Z index');
-    opZRow.appendChild(zLabel);
-    opZRow.appendChild(this.makePropInput('z-index', null, cs, 1));
-    body.appendChild(opZRow);
-
-    // Corner radius group with split button and reference icon
-    const radiusRow = this.makeSectionRowWithSplit();
-    Object.assign(radiusRow.style, {
+    // Corner radius row
+    const crRow = this.makeSectionRowWithSplit();
+    Object.assign(crRow.style, {
       display: 'flex',
       alignItems: 'center',
       gap: '6px',
     });
-
-    const radiusLabel = this.makeGroupLabelInline('Corner radius');
-    radiusRow.appendChild(radiusLabel);
-    radiusRow.appendChild(
-      this.makePropInputWithIcon('border-radius', () => radiusTopLeft(24), cs),
-    );
-    radiusRow.appendChild(this.makeSplitButton());
-
-    body.appendChild(radiusRow);
+    const crLabel = this.makeGroupLabelInline('Corner radius');
+    crRow.appendChild(crLabel);
+    crRow.appendChild(this.makePropInputWithIcon('border-radius', () => radiusTopLeft(24), t));
+    crRow.appendChild(this.makeSplitButton());
+    body.appendChild(crRow);
 
     // Overflow row
-    const overflowRow = this.makeSectionRow();
-    Object.assign(overflowRow.style, {
+    const ofRow = this.makeSectionRow();
+    Object.assign(ofRow.style, {
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
     });
-    const overflowLabel = this.makeGroupLabelInline('Overflow');
-    overflowRow.appendChild(overflowLabel);
-    const overflowVal = getVal(cs, 'overflow') || 'visible';
-    const overflowSelect = this.makeSelectControl(
-      ['visible', 'hidden', 'scroll', 'auto'],
-      overflowVal,
-      (val) => this.emitChange('overflow', val),
-    );
-    overflowRow.appendChild(overflowSelect);
-    body.appendChild(overflowRow);
+    const ofLabel = this.makeGroupLabelInline('Overflow');
+    ofRow.appendChild(ofLabel);
+    const ofVal = getVal(t, 'overflow') || 'visible';
+    const ofSelect = this.makeSelectControl(['visible', 'hidden', 'scroll', 'auto'], ofVal, (val) => this.emitChange('overflow', val));
+    ofRow.appendChild(ofSelect);
+    body.appendChild(ofRow);
 
     section.appendChild(body);
     parent.appendChild(section);
   }
 
-  // -----------------------------------------------------------------------
-  // 8. Fill Section
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Fill section
+  // ---------------------------------------------------------------------------
 
-  private buildFillSection(
-    parent: HTMLDivElement,
-    cs: Record<string, string>,
-  ): void {
+  private buildFillSection(parent: HTMLElement, t: Record<string, string>): void {
     const section = this.createSection();
-    const bgColor = getVal(cs, 'background-color');
-    const hasBg = bgColor && bgColor !== 'transparent' && bgColor !== 'rgba(0, 0, 0, 0)';
-
+    const bg = getVal(t, 'background-color');
+    const hasFill = bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)';
     const header = this.makeSectionHeader('Fill', () => {
-      // Add fill - set a default background color
       this.emitChange('background-color', '#ffffff');
     });
     section.appendChild(header);
-
-    if (hasBg) {
+    if (hasFill) {
       const body = this.makeSectionBody();
-      const colorRow = this.makeSectionRow();
-      colorRow.appendChild(this.makeColorInput('background-color', cs));
-      body.appendChild(colorRow);
+      const row = this.makeSectionRow();
+      row.appendChild(this.makeColorInput('background-color', t));
+      body.appendChild(row);
       section.appendChild(body);
     }
-
     parent.appendChild(section);
   }
 
-  // -----------------------------------------------------------------------
-  // 9. Border Section
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Border section
+  // ---------------------------------------------------------------------------
 
-  private buildBorderSection(
-    parent: HTMLDivElement,
-    cs: Record<string, string>,
-  ): void {
+  private buildBorderSection(parent: HTMLElement, t: Record<string, string>): void {
     const section = this.createSection();
-    const borderStyle = getVal(cs, 'border-style') || getVal(cs, 'border-top-style') || 'none';
-    const borderWidth = parsePx(getVal(cs, 'border-width') || getVal(cs, 'border-top-width') || '0');
-    const hasBorder = borderStyle !== 'none' && borderWidth > 0;
-
+    const bs = getVal(t, 'border-style') || getVal(t, 'border-top-style') || 'none';
+    const bw = parseFloatSafe(getVal(t, 'border-width') || getVal(t, 'border-top-width') || '0');
+    const hasBorder = bs !== 'none' && bw > 0;
     const header = this.makeSectionHeader('Border', () => {
       this.emitChange('border-style', 'solid');
       this.emitChange('border-width', '1px');
       this.emitChange('border-color', '#333333');
     });
     section.appendChild(header);
-
     if (hasBorder) {
       const body = this.makeSectionBody();
 
       // Color row
       const colorRow = this.makeSectionRow();
-      colorRow.appendChild(this.makeColorInput('border-color', cs));
+      colorRow.appendChild(this.makeColorInput('border-color', t));
       body.appendChild(colorRow);
 
       // Width row
@@ -1742,7 +1407,7 @@ export class PropertyPanel {
       });
       const widthLabel = this.makeGroupLabelInline('Width');
       widthRow.appendChild(widthLabel);
-      widthRow.appendChild(this.makePropInput('border-width', null, cs));
+      widthRow.appendChild(this.makePropInput('border-width', null, t));
       widthRow.appendChild(this.makeSplitButton());
       body.appendChild(widthRow);
 
@@ -1755,65 +1420,54 @@ export class PropertyPanel {
       });
       const styleLabel = this.makeGroupLabelInline('Style');
       styleRow.appendChild(styleLabel);
-      const styleSelect = this.makeSelectControl(
-        ['solid', 'dashed', 'dotted', 'double'],
-        borderStyle,
-        (val) => this.emitChange('border-style', val),
-      );
+      const styleSelect = this.makeSelectControl(['solid', 'dashed', 'dotted', 'double'], bs, (val) => this.emitChange('border-style', val));
       styleRow.appendChild(styleSelect);
       body.appendChild(styleRow);
 
       section.appendChild(body);
     }
-
     parent.appendChild(section);
   }
 
-  // -----------------------------------------------------------------------
-  // 10. Shadow Section
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Shadow section
+  // ---------------------------------------------------------------------------
 
-  private buildShadowSection(
-    parent: HTMLDivElement,
-    cs: Record<string, string>,
-  ): void {
+  private buildShadowSection(parent: HTMLElement, t: Record<string, string>): void {
     const section = this.createSection();
-    const shadowVal = getVal(cs, 'box-shadow');
-    const shadow = parseBoxShadow(shadowVal);
-
+    const raw = getVal(t, 'box-shadow');
+    const shadow = parseShadow(raw);
     const header = this.makeSectionHeader('Shadow', () => {
       this.emitChange('box-shadow', '0px 2px 8px 0px rgba(0,0,0,0.15)');
     });
     section.appendChild(header);
-
     if (shadow) {
       const body = this.makeSectionBody();
 
       // Color row
       const colorRow = this.makeSectionRow();
-      const shadowColorHex = parseColor(shadow.color);
-      const shadowColorContainer = document.createElement('div');
-      Object.assign(shadowColorContainer.style, {
+      const hex = normalizeColor(shadow.color);
+      const colorWrap = document.createElement('div');
+      Object.assign(colorWrap.style, {
         display: 'flex',
         alignItems: 'center',
         height: '32px',
         gap: '1px',
       });
 
-      // Hex section
-      const hexSection = document.createElement('div');
-      Object.assign(hexSection.style, {
+      const colorLeft = document.createElement('div');
+      Object.assign(colorLeft.style, {
         flex: '1',
         display: 'flex',
         alignItems: 'center',
         minWidth: '0',
         height: '32px',
-        background: tv(V.surfaceHover),
+        background: v(cssVars.surfaceHover),
         borderRadius: '8px 0 0 8px',
       });
 
-      const swatchContainer = document.createElement('div');
-      Object.assign(swatchContainer.style, {
+      const swatchWrap = document.createElement('div');
+      Object.assign(swatchWrap.style, {
         width: '32px',
         display: 'flex',
         alignItems: 'center',
@@ -1821,19 +1475,19 @@ export class PropertyPanel {
         flexShrink: '0',
         position: 'relative',
       });
-      const swatchInner = document.createElement('div');
-      Object.assign(swatchInner.style, {
+      const swatch = document.createElement('div');
+      Object.assign(swatch.style, {
         width: '20px',
         height: '20px',
         borderRadius: '2px',
-        background: shadowColorHex,
+        background: hex,
         position: 'relative',
         overflow: 'hidden',
       });
-      const colorInput = document.createElement('input');
-      colorInput.type = 'color';
-      colorInput.value = shadowColorHex;
-      Object.assign(colorInput.style, {
+      const colorPicker = document.createElement('input');
+      colorPicker.type = 'color';
+      colorPicker.value = hex;
+      Object.assign(colorPicker.style, {
         position: 'absolute',
         inset: '0',
         opacity: '0',
@@ -1843,74 +1497,70 @@ export class PropertyPanel {
         padding: '0',
         border: 'none',
       });
-      const onShadowColorInput = () => {
-        swatchInner.style.background = colorInput.value;
-        shadow.color = colorInput.value;
-        this.emitChange('box-shadow', buildBoxShadow(shadow));
+      const onColorInput = () => {
+        swatch.style.background = colorPicker.value;
+        shadow.color = colorPicker.value;
+        this.emitChange('box-shadow', formatShadow(shadow));
       };
-      colorInput.addEventListener('input', onShadowColorInput);
-      this.cleanups.push(() => colorInput.removeEventListener('input', onShadowColorInput));
-      swatchContainer.appendChild(swatchInner);
-      swatchContainer.appendChild(colorInput);
-      hexSection.appendChild(swatchContainer);
+      colorPicker.addEventListener('input', onColorInput);
+      this.cleanups.push(() => colorPicker.removeEventListener('input', onColorInput));
+      swatchWrap.appendChild(swatch);
+      swatchWrap.appendChild(colorPicker);
+      colorLeft.appendChild(swatchWrap);
 
       const hexInput = document.createElement('input');
       hexInput.type = 'text';
-      hexInput.value = shadowColorHex;
+      hexInput.value = hex;
       Object.assign(hexInput.style, {
         flex: '1',
         height: '100%',
         border: 'none',
         outline: 'none',
         background: 'transparent',
-        color: tv(V.text),
+        color: v(cssVars.text),
         fontSize: '11px',
         fontWeight: '450',
-        fontFamily: FONT,
+        fontFamily: FONT_FAMILY,
         padding: '0',
         letterSpacing: '-0.005em',
       });
-      hexSection.appendChild(hexInput);
-      shadowColorContainer.appendChild(hexSection);
+      colorLeft.appendChild(hexInput);
+      colorWrap.appendChild(colorLeft);
 
-      // Opacity section
-      const opSection = document.createElement('div');
-      Object.assign(opSection.style, {
+      const opacityWrap = document.createElement('div');
+      Object.assign(opacityWrap.style, {
         display: 'flex',
         alignItems: 'center',
         height: '32px',
-        background: tv(V.surfaceHover),
+        background: v(cssVars.surfaceHover),
         borderRadius: '0 8px 8px 0',
         padding: '0 8px 0 4px',
       });
-      const opInput = document.createElement('input');
-      opInput.type = 'text';
-      opInput.value = String(parseOpacity(shadow.color));
-      Object.assign(opInput.style, {
+      const opacityInput = document.createElement('input');
+      opacityInput.type = 'text';
+      opacityInput.value = String(extractOpacityPercent(shadow.color));
+      Object.assign(opacityInput.style, {
         width: '28px',
         height: '100%',
         border: 'none',
         outline: 'none',
         background: 'transparent',
-        color: tv(V.text),
+        color: v(cssVars.text),
         fontSize: '11px',
         fontWeight: '450',
-        fontFamily: FONT,
+        fontFamily: FONT_FAMILY,
         textAlign: 'right',
         letterSpacing: '-0.005em',
         fontVariantNumeric: 'tabular-nums',
       });
       const pctLabel = document.createElement('span');
       pctLabel.textContent = '%';
-      Object.assign(pctLabel.style, {
-        fontSize: '11px',
-        color: tv(V.textTertiary),
-      });
-      opSection.appendChild(opInput);
-      opSection.appendChild(pctLabel);
-      shadowColorContainer.appendChild(opSection);
+      Object.assign(pctLabel.style, { fontSize: '11px', color: v(cssVars.textTertiary) });
+      opacityWrap.appendChild(opacityInput);
+      opacityWrap.appendChild(pctLabel);
+      colorWrap.appendChild(opacityWrap);
 
-      colorRow.appendChild(shadowColorContainer);
+      colorRow.appendChild(colorWrap);
       body.appendChild(colorRow);
 
       // X/Y row
@@ -1935,156 +1585,135 @@ export class PropertyPanel {
       bsRow.appendChild(this.makeShadowPropInput(shadow, 'spread'));
       body.appendChild(bsRow);
 
-      // Type row (inset toggle)
+      // Type row
       const typeRow = this.makeSectionRow();
-      Object.assign(typeRow.style, { display: 'flex', alignItems: 'center', gap: '8px' });
+      Object.assign(typeRow.style, {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+      });
       const typeLabel = this.makeGroupLabelInline('Type');
       typeRow.appendChild(typeLabel);
-      const typeSelect = this.makeSelectControl(
-        ['Outside', 'Inside'],
-        shadow.inset ? 'Inside' : 'Outside',
-        (val) => {
-          shadow.inset = val === 'Inside';
-          this.emitChange('box-shadow', buildBoxShadow(shadow));
-        },
-      );
+      const typeSelect = this.makeSelectControl(['Outside', 'Inside'], shadow.inset ? 'Inside' : 'Outside', (val) => {
+        shadow.inset = val === 'Inside';
+        this.emitChange('box-shadow', formatShadow(shadow));
+      });
       typeRow.appendChild(typeSelect);
       body.appendChild(typeRow);
 
       section.appendChild(body);
     }
-
     parent.appendChild(section);
   }
 
-  // -----------------------------------------------------------------------
-  // 11. Filters Section
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Filters section
+  // ---------------------------------------------------------------------------
 
-  private buildFiltersSection(
-    parent: HTMLDivElement,
-    cs: Record<string, string>,
-  ): void {
+  private buildFiltersSection(parent: HTMLElement, t: Record<string, string>): void {
     const section = this.createSection();
-    const filterVal = getVal(cs, 'filter');
-    const filters = parseFilterString(filterVal);
-
+    const raw = getVal(t, 'filter');
+    const filters = parseFilters(raw);
     const header = this.makeSectionHeader('Filters', () => {
       this.emitChange('filter', 'blur(0px)');
     });
     section.appendChild(header);
-
     if (filters.length > 0) {
       const body = this.makeSectionBody();
-
-      for (let fi = 0; fi < filters.length; fi++) {
-        const filter = filters[fi];
-        const filterRow = this.makeSectionRow();
-        Object.assign(filterRow.style, {
+      for (let i = 0; i < filters.length; i++) {
+        const f = filters[i];
+        const row = this.makeSectionRow();
+        Object.assign(row.style, {
           display: 'flex',
           alignItems: 'center',
           height: '32px',
-          background: tv(V.surfaceHover),
+          background: v(cssVars.surfaceHover),
           borderRadius: '8px',
           padding: '0 8px',
           gap: '8px',
         });
 
-        // Filter label
-        const fLabel = document.createElement('span');
-        fLabel.textContent = filter.type;
-        Object.assign(fLabel.style, {
+        const typeLabel = document.createElement('span');
+        typeLabel.textContent = f.type;
+        Object.assign(typeLabel.style, {
           fontSize: '11px',
           fontWeight: '400',
-          color: tv(V.textTertiary),
+          color: v(cssVars.textTertiary),
           flexShrink: '0',
           minWidth: '50px',
         });
-        filterRow.appendChild(fLabel);
+        row.appendChild(typeLabel);
 
-        // Slider track
-        const trackWrap = document.createElement('div');
-        Object.assign(trackWrap.style, {
+        const track = document.createElement('div');
+        Object.assign(track.style, {
           flex: '1',
           height: '4px',
           borderRadius: '2px',
-          background: tv(V.border),
+          background: v(cssVars.border),
           position: 'relative',
           cursor: 'pointer',
         });
 
-        // Determine percentage for common filter types
         let maxVal = 100;
-        if (filter.unit === 'px') maxVal = 50;
-        else if (filter.unit === 'deg') maxVal = 360;
-        else if (filter.type === 'saturate' || filter.type === 'contrast' || filter.type === 'brightness') maxVal = 200;
-        const pct = Math.min(100, (filter.value / maxVal) * 100);
+        if (f.unit === 'px') maxVal = 50;
+        else if (f.unit === 'deg') maxVal = 360;
+        else if (f.type === 'saturate' || f.type === 'contrast' || f.type === 'brightness') maxVal = 200;
 
-        const fillBar = document.createElement('div');
-        Object.assign(fillBar.style, {
+        const fillPct = Math.min(100, f.value / maxVal * 100);
+        const fill = document.createElement('div');
+        Object.assign(fill.style, {
           position: 'absolute',
           left: '0',
           top: '0',
           height: '100%',
-          width: pct + '%',
+          width: fillPct + '%',
           borderRadius: '2px',
-          background: tv(V.blue500),
+          background: v(cssVars.blue500),
         });
-        trackWrap.appendChild(fillBar);
+        track.appendChild(fill);
 
-        // Click/drag on track to change value
         const onTrackClick = (e: MouseEvent) => {
-          const rect = trackWrap.getBoundingClientRect();
+          const rect = track.getBoundingClientRect();
           const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-          filter.value = Math.round(ratio * maxVal * 10) / 10;
-          fillBar.style.width = (ratio * 100) + '%';
-          valSpan.textContent = filter.value + filter.unit;
-          this.emitChange('filter', buildFilterString(filters));
+          f.value = Math.round(ratio * maxVal * 10) / 10;
+          fill.style.width = ratio * 100 + '%';
+          valLabel.textContent = f.value + f.unit;
+          this.emitChange('filter', formatFilters(filters));
         };
-        trackWrap.addEventListener('click', onTrackClick);
-        this.cleanups.push(() => trackWrap.removeEventListener('click', onTrackClick));
+        track.addEventListener('click', onTrackClick);
+        this.cleanups.push(() => track.removeEventListener('click', onTrackClick));
+        row.appendChild(track);
 
-        filterRow.appendChild(trackWrap);
-
-        // Value display
-        const valSpan = document.createElement('span');
-        valSpan.textContent = filter.value + filter.unit;
-        Object.assign(valSpan.style, {
+        const valLabel = document.createElement('span');
+        valLabel.textContent = f.value + f.unit;
+        Object.assign(valLabel.style, {
           fontSize: '11px',
           fontWeight: '450',
-          color: tv(V.text),
+          color: v(cssVars.text),
           fontVariantNumeric: 'tabular-nums',
           minWidth: '36px',
           textAlign: 'right',
           flexShrink: '0',
         });
-        filterRow.appendChild(valSpan);
-
-        body.appendChild(filterRow);
+        row.appendChild(valLabel);
+        body.appendChild(row);
       }
-
       section.appendChild(body);
     }
-
     parent.appendChild(section);
   }
 
-  // -----------------------------------------------------------------------
-  // Section structure helpers (exact dimensions)
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Shared UI primitives
+  // ---------------------------------------------------------------------------
 
   private createSection(): HTMLDivElement {
-    const section = document.createElement('div');
-    Object.assign(section.style, {
-      borderBottom: '1px solid ' + tv(V.border),
-    });
-    return section;
+    const el = document.createElement('div');
+    Object.assign(el.style, { borderBottom: '1px solid ' + v(cssVars.border) });
+    return el;
   }
 
-  private makeSectionHeader(
-    title: string,
-    onAdd?: () => void,
-  ): HTMLDivElement {
+  private makeSectionHeader(title: string, onAdd?: () => void): HTMLDivElement {
     const header = document.createElement('div');
     Object.assign(header.style, {
       display: 'flex',
@@ -2094,15 +1723,15 @@ export class PropertyPanel {
       height: '44px',
     });
 
-    const titleEl = document.createElement('span');
-    titleEl.textContent = title;
-    Object.assign(titleEl.style, {
+    const label = document.createElement('span');
+    label.textContent = title;
+    Object.assign(label.style, {
       fontSize: '12px',
       fontWeight: '500',
-      color: tv(V.text),
+      color: v(cssVars.text),
       lineHeight: '20px',
     });
-    header.appendChild(titleEl);
+    header.appendChild(label);
 
     if (onAdd) {
       const addBtn = document.createElement('button');
@@ -2115,27 +1744,17 @@ export class PropertyPanel {
         borderRadius: '8px',
         border: 'none',
         background: 'transparent',
-        color: tv(V.textTertiary),
+        color: v(cssVars.textTertiary),
         cursor: 'pointer',
         padding: '0',
         opacity: '0',
         transition: 'opacity 120ms, background 120ms',
       });
       addBtn.appendChild(plus(24));
-
-      // Show add button on section hover
-      const onHeaderEnter = () => {
-        addBtn.style.opacity = '1';
-      };
-      const onHeaderLeave = () => {
-        addBtn.style.opacity = '0';
-      };
-      const onBtnEnter = () => {
-        addBtn.style.background = tv(V.surfaceHover);
-      };
-      const onBtnLeave = () => {
-        addBtn.style.background = 'transparent';
-      };
+      const onHeaderEnter = () => { addBtn.style.opacity = '1'; };
+      const onHeaderLeave = () => { addBtn.style.opacity = '0'; };
+      const onBtnEnter = () => { addBtn.style.background = v(cssVars.surfaceHover); };
+      const onBtnLeave = () => { addBtn.style.background = 'transparent'; };
       header.addEventListener('mouseenter', onHeaderEnter);
       header.addEventListener('mouseleave', onHeaderLeave);
       addBtn.addEventListener('mouseenter', onBtnEnter);
@@ -2148,7 +1767,6 @@ export class PropertyPanel {
         addBtn.removeEventListener('mouseleave', onBtnLeave);
         addBtn.removeEventListener('click', onAdd);
       });
-
       header.appendChild(addBtn);
     }
 
@@ -2156,65 +1774,54 @@ export class PropertyPanel {
   }
 
   private makeSectionBody(): HTMLDivElement {
-    const body = document.createElement('div');
-    Object.assign(body.style, {
+    const el = document.createElement('div');
+    Object.assign(el.style, {
       display: 'flex',
       flexDirection: 'column',
       gap: '12px',
       paddingBottom: '16px',
     });
-    return body;
+    return el;
   }
 
-  // Row with standard padding: 0 48px 0 16px
   private makeSectionRow(): HTMLDivElement {
-    const row = document.createElement('div');
-    Object.assign(row.style, {
-      padding: '0 48px 0 16px',
-    });
-    return row;
+    const el = document.createElement('div');
+    Object.assign(el.style, { padding: '0 48px 0 16px' });
+    return el;
   }
 
-  // Row with split button padding: 0 8px 0 16px
   private makeSectionRowWithSplit(): HTMLDivElement {
-    const row = document.createElement('div');
-    Object.assign(row.style, {
-      padding: '0 8px 0 16px',
-    });
-    return row;
+    const el = document.createElement('div');
+    Object.assign(el.style, { padding: '0 8px 0 16px' });
+    return el;
   }
 
-  // Group label inline: 11px, weight 400, color textTertiary
   private makeGroupLabelInline(text: string): HTMLSpanElement {
-    const label = document.createElement('span');
-    label.textContent = text;
-    Object.assign(label.style, {
+    const el = document.createElement('span');
+    el.textContent = text;
+    Object.assign(el.style, {
       fontSize: '11px',
       fontWeight: '400',
       letterSpacing: '-0.005em',
-      color: tv(V.textTertiary),
+      color: v(cssVars.textTertiary),
       lineHeight: '16px',
       flexShrink: '0',
     });
-    return label;
+    return el;
   }
 
   private makeFieldLabel(text: string): HTMLSpanElement {
-    const label = document.createElement('span');
-    label.textContent = text;
-    Object.assign(label.style, {
+    const el = document.createElement('span');
+    el.textContent = text;
+    Object.assign(el.style, {
       fontSize: '11px',
       fontWeight: '400',
       letterSpacing: '-0.005em',
-      color: tv(V.textTertiary),
+      color: v(cssVars.textTertiary),
       lineHeight: '16px',
     });
-    return label;
+    return el;
   }
-
-  // -----------------------------------------------------------------------
-  // Selector pill (for Target row)
-  // -----------------------------------------------------------------------
 
   private makeSelectorPill(text: string, active: boolean): HTMLButtonElement {
     const btn = document.createElement('button');
@@ -2224,19 +1831,15 @@ export class PropertyPanel {
       borderRadius: '8px',
       fontSize: '11px',
       fontWeight: '500',
-      fontFamily: FONT,
+      fontFamily: FONT_FAMILY,
       border: 'none',
       cursor: 'pointer',
-      background: active ? tv(V.blueBg) : tv(V.surfaceHover),
-      color: active ? tv(V.blueText) : tv(V.textSecondary),
+      background: v(active ? cssVars.blueBg : cssVars.surfaceHover),
+      color: v(active ? cssVars.blueText : cssVars.textSecondary),
       transition: 'background 120ms, color 120ms',
     });
     return btn;
   }
-
-  // -----------------------------------------------------------------------
-  // Split button (32x32) with minus icon
-  // -----------------------------------------------------------------------
 
   private makeSplitButton(): HTMLButtonElement {
     const btn = document.createElement('button');
@@ -2249,44 +1852,34 @@ export class PropertyPanel {
       borderRadius: '8px',
       border: 'none',
       background: 'transparent',
-      color: tv(V.textTertiary),
+      color: v(cssVars.textTertiary),
       cursor: 'pointer',
       padding: '0',
       flexShrink: '0',
     });
     btn.appendChild(alPaddingSides(24));
-
-    const onEnter = () => {
-      btn.style.background = tv(V.surfaceHover);
-    };
-    const onLeave = () => {
-      btn.style.background = 'transparent';
-    };
-    btn.addEventListener('mouseenter', onEnter);
-    btn.addEventListener('mouseleave', onLeave);
+    const onE = () => { btn.style.background = v(cssVars.surfaceHover); };
+    const onL = () => { btn.style.background = 'transparent'; };
+    btn.addEventListener('mouseenter', onE);
+    btn.addEventListener('mouseleave', onL);
     this.cleanups.push(() => {
-      btn.removeEventListener('mouseenter', onEnter);
-      btn.removeEventListener('mouseleave', onLeave);
+      btn.removeEventListener('mouseenter', onE);
+      btn.removeEventListener('mouseleave', onL);
     });
-
     return btn;
   }
 
-  // -----------------------------------------------------------------------
-  // Per-field reset dot (4px, #0D99FF)
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Reset dot
+  // ---------------------------------------------------------------------------
 
-  private makeResetDot(
-    property: string,
-    currentValue: string,
-    onReset: () => void,
-  ): HTMLDivElement {
+  private makeResetDot(prop: string, currentVal: string, onReset: () => void): HTMLDivElement {
     const dot = document.createElement('div');
     Object.assign(dot.style, {
       width: '4px',
       height: '4px',
       borderRadius: '50%',
-      background: tv(V.blue500),
+      background: v(cssVars.blue500),
       cursor: 'pointer',
       flexShrink: '0',
       display: 'none',
@@ -2295,47 +1888,33 @@ export class PropertyPanel {
       top: '50%',
       transform: 'translateY(-50%)',
     });
-
-    // Check if value differs from original
-    const origKey = cssPropToCamel(property);
-    const origVal =
-      this.originalValues[origKey] ?? this.originalValues[property] ?? '';
-    if (currentValue !== origVal && currentValue !== '') {
-      dot.style.display = 'block';
-    }
-
-    const onClick = (e: MouseEvent) => {
+    const camel = toCamelCase(prop);
+    const orig = this.originalValues[camel] ?? this.originalValues[prop] ?? '';
+    if (currentVal !== orig && currentVal !== '') dot.style.display = 'block';
+    const onClick = (e: Event) => {
       e.stopPropagation();
       dot.style.display = 'none';
       onReset();
     };
     dot.addEventListener('click', onClick);
     this.cleanups.push(() => dot.removeEventListener('click', onClick));
-
     return dot;
   }
 
-  // -----------------------------------------------------------------------
-  // PropInput control (exact: h32, r8, bg inputBg)
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Property input (numeric with optional prefix label)
+  // ---------------------------------------------------------------------------
 
-  private makePropInput(
-    property: string,
-    _iconPath: string | null,
-    computedStyles: Record<string, string>,
-    step: number = 1,
-    showDash: boolean = false,
-    textLabel: string | null = null,
-  ): HTMLDivElement {
-    const rawValue = getVal(computedStyles, property);
-    const parsed = parseNumericValue(rawValue);
+  private makePropInput(prop: string, _unused: null | undefined, styles: Record<string, string>, step: number = 1, optional: boolean = false, prefix: string | null = null): HTMLDivElement {
+    const raw = getVal(styles, prop);
+    const parsed = parseNumericValue(raw);
 
     const wrapper = document.createElement('div');
     Object.assign(wrapper.style, {
       position: 'relative',
       height: '32px',
       borderRadius: '8px',
-      background: tv(V.surfaceHover),
+      background: v(cssVars.surfaceHover),
       display: 'flex',
       alignItems: 'center',
       overflow: 'visible',
@@ -2343,25 +1922,18 @@ export class PropertyPanel {
       minWidth: '0',
       transition: 'background-color 0.15s',
     });
-
-    const onEnter = () => {
-      wrapper.style.background = tv(V.border);
-    };
-    const onLeave = () => {
-      if (wrapper.querySelector('input:focus')) return;
-      wrapper.style.background = tv(V.surfaceHover);
-    };
-    wrapper.addEventListener('mouseenter', onEnter);
-    wrapper.addEventListener('mouseleave', onLeave);
+    const wE = () => { wrapper.style.background = v(cssVars.border); };
+    const wL = () => { if (!wrapper.querySelector('input:focus')) wrapper.style.background = v(cssVars.surfaceHover); };
+    wrapper.addEventListener('mouseenter', wE);
+    wrapper.addEventListener('mouseleave', wL);
     this.cleanups.push(() => {
-      wrapper.removeEventListener('mouseenter', onEnter);
-      wrapper.removeEventListener('mouseleave', onLeave);
+      wrapper.removeEventListener('mouseenter', wE);
+      wrapper.removeEventListener('mouseleave', wL);
     });
 
-    // Text label area (e.g. "T", "R", "B", "L" for offsets)
-    if (textLabel) {
-      const labelEl = document.createElement('div');
-      Object.assign(labelEl.style, {
+    if (prefix) {
+      const prefixEl = document.createElement('div');
+      Object.assign(prefixEl.style, {
         position: 'absolute',
         left: '0',
         width: '32px',
@@ -2372,134 +1944,109 @@ export class PropertyPanel {
         fontSize: '11px',
         fontWeight: '450',
         letterSpacing: '-0.005em',
-        color: tv(V.text),
+        color: v(cssVars.text),
         flexShrink: '0',
         userSelect: 'none',
         cursor: 'ew-resize',
         zIndex: '1',
       });
-      labelEl.textContent = textLabel;
-      wrapper.appendChild(labelEl);
-
+      prefixEl.textContent = prefix;
+      wrapper.appendChild(prefixEl);
       if (parsed !== null) {
         const unit = parsed.unit || 'px';
-        const cleanup = attachScrub(labelEl, {
+        const cleanup = attachScrub(prefixEl, {
           initialValue: parsed.number,
           step,
           onUpdate: (val) => {
-            input.value = String(Math.round(val * 1000) / 1000);
+            input.value = String(Math.round(val * 1e3) / 1e3);
           },
           onCommit: (val) => {
-            input.value = String(Math.round(val * 1000) / 1000);
-            this.emitChange(property, formatNumericValue(val, unit));
+            input.value = String(Math.round(val * 1e3) / 1e3);
+            this.emitChange(prop, formatNumericValue(val, unit));
           },
         });
         this.cleanups.push(cleanup);
       }
     }
 
-    // Reset dot
-    const resetDot = this.makeResetDot(property, rawValue, () => {
-      const origKey = cssPropToCamel(property);
-      const origVal =
-        this.originalValues[origKey] ??
-        this.originalValues[property] ??
-        '';
-      input.value = origVal;
-      this.emitChange(property, origVal);
+    const resetDot = this.makeResetDot(prop, raw, () => {
+      const camel = toCamelCase(prop);
+      const orig = this.originalValues[camel] ?? this.originalValues[prop] ?? '';
+      input.value = orig;
+      this.emitChange(prop, orig);
     });
     wrapper.appendChild(resetDot);
 
-    // Input field
     const input = document.createElement('input');
     input.type = 'text';
-    const displayVal = parsed
-      ? String(Math.round(parsed.number * 1000) / 1000)
-      : rawValue || '';
+    const displayVal = parsed ? String(Math.round(parsed.number * 1e3) / 1e3) : raw || '';
     input.value = displayVal;
-    if (showDash && !displayVal) {
-      input.placeholder = '-';
-    }
+    if (optional && !displayVal) input.placeholder = '-';
     Object.assign(input.style, {
       flex: '1',
       height: '100%',
       border: 'none',
       outline: 'none',
       background: 'transparent',
-      color: tv(V.text),
+      color: v(cssVars.text),
       fontSize: '11px',
       fontWeight: '450',
-      fontFamily: FONT,
-      padding: textLabel ? '0 8px 0 32px' : '0 8px',
+      fontFamily: FONT_FAMILY,
+      padding: prefix ? '0 8px 0 32px' : '0 8px',
       boxSizing: 'border-box',
       letterSpacing: '-0.005em',
       fontVariantNumeric: 'tabular-nums',
     });
 
-    const onFocus = () => {
-      wrapper.style.outline = '1px solid ' + tv(V.border);
-      wrapper.style.background = tv(V.border);
-    };
-    const onBlur = () => {
-      wrapper.style.outline = 'none';
-      wrapper.style.background = tv(V.surfaceHover);
-    };
-    input.addEventListener('focus', onFocus);
-    input.addEventListener('blur', onBlur);
+    const fI = () => { wrapper.style.outline = '1px solid ' + v(cssVars.border); wrapper.style.background = v(cssVars.border); };
+    const fO = () => { wrapper.style.outline = 'none'; wrapper.style.background = v(cssVars.surfaceHover); };
+    input.addEventListener('focus', fI);
+    input.addEventListener('blur', fO);
     this.cleanups.push(() => {
-      input.removeEventListener('focus', onFocus);
-      input.removeEventListener('blur', onBlur);
+      input.removeEventListener('focus', fI);
+      input.removeEventListener('blur', fO);
     });
 
-    // Commit on Enter or change
-    const onCommit = () => {
+    const commit = () => {
       const val = input.value.trim();
       if (parsed) {
-        const num = parseFloat(val);
-        if (!isNaN(num)) {
+        const n = parseFloat(val);
+        if (!isNaN(n)) {
           const unit = parsed.unit || 'px';
-          this.emitChange(property, formatNumericValue(num, unit));
+          this.emitChange(prop, formatNumericValue(n, unit));
         }
       } else {
-        this.emitChange(property, val);
+        this.emitChange(prop, val);
       }
     };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        onCommit();
-        input.blur();
-      }
+    const onKd = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') { commit(); input.blur(); }
     };
-    input.addEventListener('change', onCommit);
-    input.addEventListener('keydown', onKeyDown);
+    input.addEventListener('change', commit);
+    input.addEventListener('keydown', onKd);
     this.cleanups.push(() => {
-      input.removeEventListener('change', onCommit);
-      input.removeEventListener('keydown', onKeyDown);
+      input.removeEventListener('change', commit);
+      input.removeEventListener('keydown', onKd);
     });
 
     wrapper.appendChild(input);
     return wrapper;
   }
 
-  // -----------------------------------------------------------------------
-  // PropInput with reference SVG icon (icon factory function, not path string)
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Property input with icon
+  // ---------------------------------------------------------------------------
 
-  private makePropInputWithIcon(
-    property: string,
-    iconFn: () => SVGSVGElement,
-    computedStyles: Record<string, string>,
-    step: number = 1,
-  ): HTMLDivElement {
-    const rawValue = getVal(computedStyles, property);
-    const parsed = parseNumericValue(rawValue);
+  private makePropInputWithIcon(prop: string, iconFn: () => SVGSVGElement, styles: Record<string, string>, step: number = 1): HTMLDivElement {
+    const raw = getVal(styles, prop);
+    const parsed = parseNumericValue(raw);
 
     const wrapper = document.createElement('div');
     Object.assign(wrapper.style, {
       position: 'relative',
       height: '32px',
       borderRadius: '8px',
-      background: tv(V.surfaceHover),
+      background: v(cssVars.surfaceHover),
       display: 'flex',
       alignItems: 'center',
       overflow: 'visible',
@@ -2507,24 +2054,17 @@ export class PropertyPanel {
       minWidth: '0',
       transition: 'background-color 0.15s',
     });
-
-    const onEnter = () => {
-      wrapper.style.background = tv(V.border);
-    };
-    const onLeave = () => {
-      if (wrapper.querySelector('input:focus')) return;
-      wrapper.style.background = tv(V.surfaceHover);
-    };
-    wrapper.addEventListener('mouseenter', onEnter);
-    wrapper.addEventListener('mouseleave', onLeave);
+    const wE = () => { wrapper.style.background = v(cssVars.border); };
+    const wL = () => { if (!wrapper.querySelector('input:focus')) wrapper.style.background = v(cssVars.surfaceHover); };
+    wrapper.addEventListener('mouseenter', wE);
+    wrapper.addEventListener('mouseleave', wL);
     this.cleanups.push(() => {
-      wrapper.removeEventListener('mouseenter', onEnter);
-      wrapper.removeEventListener('mouseleave', onLeave);
+      wrapper.removeEventListener('mouseenter', wE);
+      wrapper.removeEventListener('mouseleave', wL);
     });
 
-    // Icon label area (32px wide, ew-resize cursor)
-    const labelEl = document.createElement('div');
-    Object.assign(labelEl.style, {
+    const iconWrap = document.createElement('div');
+    Object.assign(iconWrap.style, {
       width: '32px',
       display: 'flex',
       alignItems: 'center',
@@ -2532,49 +2072,39 @@ export class PropertyPanel {
       cursor: 'ew-resize',
       userSelect: 'none',
       flexShrink: '0',
-      color: tv(V.textTertiary),
+      color: v(cssVars.textTertiary),
       position: 'relative',
     });
+    iconWrap.appendChild(iconFn());
 
-    labelEl.appendChild(iconFn());
-
-    // Reset dot inside label area
-    const resetDot = this.makeResetDot(property, rawValue, () => {
-      const origKey = cssPropToCamel(property);
-      const origVal =
-        this.originalValues[origKey] ??
-        this.originalValues[property] ??
-        '';
-      input.value = origVal;
-      this.emitChange(property, origVal);
+    const resetDot = this.makeResetDot(prop, raw, () => {
+      const camel = toCamelCase(prop);
+      const orig = this.originalValues[camel] ?? this.originalValues[prop] ?? '';
+      input.value = orig;
+      this.emitChange(prop, orig);
     });
-    labelEl.appendChild(resetDot);
+    iconWrap.appendChild(resetDot);
+    wrapper.appendChild(iconWrap);
 
-    wrapper.appendChild(labelEl);
-
-    // Scrub on label area
     if (parsed !== null) {
       const unit = parsed.unit || 'px';
-      const cleanup = attachScrub(labelEl, {
+      const cleanup = attachScrub(iconWrap, {
         initialValue: parsed.number,
         step,
         onUpdate: (val) => {
-          input.value = String(Math.round(val * 1000) / 1000);
+          input.value = String(Math.round(val * 1e3) / 1e3);
         },
         onCommit: (val) => {
-          input.value = String(Math.round(val * 1000) / 1000);
-          this.emitChange(property, formatNumericValue(val, unit));
+          input.value = String(Math.round(val * 1e3) / 1e3);
+          this.emitChange(prop, formatNumericValue(val, unit));
         },
       });
       this.cleanups.push(cleanup);
     }
 
-    // Input field
     const input = document.createElement('input');
     input.type = 'text';
-    const displayVal = parsed
-      ? String(Math.round(parsed.number * 1000) / 1000)
-      : rawValue || '';
+    const displayVal = parsed ? String(Math.round(parsed.number * 1e3) / 1e3) : raw || '';
     input.value = displayVal;
     Object.assign(input.style, {
       flex: '1',
@@ -2582,75 +2112,62 @@ export class PropertyPanel {
       border: 'none',
       outline: 'none',
       background: 'transparent',
-      color: tv(V.text),
+      color: v(cssVars.text),
       fontSize: '11px',
       fontWeight: '450',
-      fontFamily: FONT,
+      fontFamily: FONT_FAMILY,
       padding: '0 8px',
       boxSizing: 'border-box',
       letterSpacing: '-0.005em',
       fontVariantNumeric: 'tabular-nums',
     });
 
-    const onFocus = () => {
-      wrapper.style.outline = '1px solid ' + tv(V.border);
-      wrapper.style.background = tv(V.border);
-    };
-    const onBlur = () => {
-      wrapper.style.outline = 'none';
-      wrapper.style.background = tv(V.surfaceHover);
-    };
-    input.addEventListener('focus', onFocus);
-    input.addEventListener('blur', onBlur);
+    const fI = () => { wrapper.style.outline = '1px solid ' + v(cssVars.border); wrapper.style.background = v(cssVars.border); };
+    const fO = () => { wrapper.style.outline = 'none'; wrapper.style.background = v(cssVars.surfaceHover); };
+    input.addEventListener('focus', fI);
+    input.addEventListener('blur', fO);
     this.cleanups.push(() => {
-      input.removeEventListener('focus', onFocus);
-      input.removeEventListener('blur', onBlur);
+      input.removeEventListener('focus', fI);
+      input.removeEventListener('blur', fO);
     });
 
-    // Commit on Enter or change
-    const onCommit = () => {
+    const commit = () => {
       const val = input.value.trim();
       if (parsed) {
-        const num = parseFloat(val);
-        if (!isNaN(num)) {
+        const n = parseFloat(val);
+        if (!isNaN(n)) {
           const unit = parsed.unit || 'px';
-          this.emitChange(property, formatNumericValue(num, unit));
+          this.emitChange(prop, formatNumericValue(n, unit));
         }
       } else {
-        this.emitChange(property, val);
+        this.emitChange(prop, val);
       }
     };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        onCommit();
-        input.blur();
-      }
+    const onKd = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') { commit(); input.blur(); }
     };
-    input.addEventListener('change', onCommit);
-    input.addEventListener('keydown', onKeyDown);
+    input.addEventListener('change', commit);
+    input.addEventListener('keydown', onKd);
     this.cleanups.push(() => {
-      input.removeEventListener('change', onCommit);
-      input.removeEventListener('keydown', onKeyDown);
+      input.removeEventListener('change', commit);
+      input.removeEventListener('keydown', onKd);
     });
 
     wrapper.appendChild(input);
     return wrapper;
   }
 
-  // -----------------------------------------------------------------------
-  // Shadow prop input (modifies shadow object and emits box-shadow)
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Shadow property input
+  // ---------------------------------------------------------------------------
 
-  private makeShadowPropInput(
-    shadow: ParsedShadow,
-    key: 'x' | 'y' | 'blur' | 'spread',
-  ): HTMLDivElement {
+  private makeShadowPropInput(shadow: { inset: boolean; x: number; y: number; blur: number; spread: number; color: string }, field: 'x' | 'y' | 'blur' | 'spread'): HTMLDivElement {
     const wrapper = document.createElement('div');
     Object.assign(wrapper.style, {
       position: 'relative',
       height: '32px',
       borderRadius: '8px',
-      background: tv(V.surfaceHover),
+      background: v(cssVars.surfaceHover),
       display: 'flex',
       alignItems: 'center',
       overflow: 'visible',
@@ -2658,85 +2175,71 @@ export class PropertyPanel {
       minWidth: '0',
       transition: 'background-color 0.15s',
     });
-
-    const onEnter = () => { wrapper.style.background = tv(V.border); };
-    const onLeave = () => {
-      if (wrapper.querySelector('input:focus')) return;
-      wrapper.style.background = tv(V.surfaceHover);
-    };
-    wrapper.addEventListener('mouseenter', onEnter);
-    wrapper.addEventListener('mouseleave', onLeave);
+    const wE = () => { wrapper.style.background = v(cssVars.border); };
+    const wL = () => { if (!wrapper.querySelector('input:focus')) wrapper.style.background = v(cssVars.surfaceHover); };
+    wrapper.addEventListener('mouseenter', wE);
+    wrapper.addEventListener('mouseleave', wL);
     this.cleanups.push(() => {
-      wrapper.removeEventListener('mouseenter', onEnter);
-      wrapper.removeEventListener('mouseleave', onLeave);
+      wrapper.removeEventListener('mouseenter', wE);
+      wrapper.removeEventListener('mouseleave', wL);
     });
 
     const input = document.createElement('input');
     input.type = 'text';
-    input.value = String(shadow[key]);
+    input.value = String(shadow[field]);
     Object.assign(input.style, {
       flex: '1',
       height: '100%',
       border: 'none',
       outline: 'none',
       background: 'transparent',
-      color: tv(V.text),
+      color: v(cssVars.text),
       fontSize: '11px',
       fontWeight: '450',
-      fontFamily: FONT,
+      fontFamily: FONT_FAMILY,
       padding: '0 8px',
       boxSizing: 'border-box',
       letterSpacing: '-0.005em',
       fontVariantNumeric: 'tabular-nums',
     });
 
-    const onFocus = () => {
-      wrapper.style.outline = '1px solid ' + tv(V.border);
-      wrapper.style.background = tv(V.border);
-    };
-    const onBlur = () => {
-      wrapper.style.outline = 'none';
-      wrapper.style.background = tv(V.surfaceHover);
-    };
-    input.addEventListener('focus', onFocus);
-    input.addEventListener('blur', onBlur);
+    const fI = () => { wrapper.style.outline = '1px solid ' + v(cssVars.border); wrapper.style.background = v(cssVars.border); };
+    const fO = () => { wrapper.style.outline = 'none'; wrapper.style.background = v(cssVars.surfaceHover); };
+    input.addEventListener('focus', fI);
+    input.addEventListener('blur', fO);
     this.cleanups.push(() => {
-      input.removeEventListener('focus', onFocus);
-      input.removeEventListener('blur', onBlur);
+      input.removeEventListener('focus', fI);
+      input.removeEventListener('blur', fO);
     });
 
-    const onCommit = () => {
-      const num = parseFloat(input.value.trim());
-      if (!isNaN(num)) {
-        shadow[key] = num;
-        this.emitChange('box-shadow', buildBoxShadow(shadow));
+    const commit = () => {
+      const n = parseFloat(input.value.trim());
+      if (!isNaN(n)) {
+        shadow[field] = n;
+        this.emitChange('box-shadow', formatShadow(shadow));
       }
     };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') { onCommit(); input.blur(); }
+    const onKd = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') { commit(); input.blur(); }
     };
-    input.addEventListener('change', onCommit);
-    input.addEventListener('keydown', onKeyDown);
+    input.addEventListener('change', commit);
+    input.addEventListener('keydown', onKd);
     this.cleanups.push(() => {
-      input.removeEventListener('change', onCommit);
-      input.removeEventListener('keydown', onKeyDown);
+      input.removeEventListener('change', commit);
+      input.removeEventListener('keydown', onKd);
     });
 
     wrapper.appendChild(input);
     return wrapper;
   }
 
-  // -----------------------------------------------------------------------
-  // ComboInput (split structure: input + chevron trigger with 1px gap)
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Combo input (value + unit dropdown)
+  // ---------------------------------------------------------------------------
 
-  private makeComboInput(
-    property: string,
-    computedStyles: Record<string, string>,
-    step: number = 1,
-  ): HTMLDivElement {
-    const rawValue = getVal(computedStyles, property);
-    const parsed = parseNumericValue(rawValue);
+  private makeComboInput(prop: string, styles: Record<string, string>, step: number = 1): HTMLDivElement {
+    const raw = getVal(styles, prop);
+    const parsed = parseNumericValue(raw);
 
     const wrapper = document.createElement('div');
     Object.assign(wrapper.style, {
@@ -2749,44 +2252,36 @@ export class PropertyPanel {
       gap: '1px',
     });
 
-    // Left: input area
-    const inputArea = document.createElement('div');
-    Object.assign(inputArea.style, {
+    const left = document.createElement('div');
+    Object.assign(left.style, {
       flex: '1',
       height: '32px',
       borderRadius: '8px 0 0 8px',
-      background: tv(V.surfaceHover),
+      background: v(cssVars.surfaceHover),
       display: 'flex',
       alignItems: 'center',
       paddingLeft: '8px',
       minWidth: '0',
       transition: 'background 0.15s',
     });
-
-    const onInputAreaEnter = () => { inputArea.style.background = tv(V.border); };
-    const onInputAreaLeave = () => {
-      if (inputArea.querySelector('input:focus')) return;
-      inputArea.style.background = tv(V.surfaceHover);
-    };
-    inputArea.addEventListener('mouseenter', onInputAreaEnter);
-    inputArea.addEventListener('mouseleave', onInputAreaLeave);
+    const lE = () => { left.style.background = v(cssVars.border); };
+    const lL = () => { if (!left.querySelector('input:focus')) left.style.background = v(cssVars.surfaceHover); };
+    left.addEventListener('mouseenter', lE);
+    left.addEventListener('mouseleave', lL);
     this.cleanups.push(() => {
-      inputArea.removeEventListener('mouseenter', onInputAreaEnter);
-      inputArea.removeEventListener('mouseleave', onInputAreaLeave);
+      left.removeEventListener('mouseenter', lE);
+      left.removeEventListener('mouseleave', lL);
     });
 
     const input = document.createElement('input');
     input.type = 'text';
     let displayVal = '';
-    if (
-      property === 'width' &&
-      (rawValue === 'auto' || !rawValue)
-    ) {
+    if (prop === 'width' && (raw === 'auto' || !raw)) {
       displayVal = 'Fill';
     } else if (parsed) {
-      displayVal = String(Math.round(parsed.number * 1000) / 1000);
+      displayVal = String(Math.round(parsed.number * 1e3) / 1e3);
     } else {
-      displayVal = rawValue || '';
+      displayVal = raw || '';
     }
     input.value = displayVal;
     Object.assign(input.style, {
@@ -2795,10 +2290,10 @@ export class PropertyPanel {
       border: 'none',
       outline: 'none',
       background: 'transparent',
-      color: tv(V.text),
+      color: v(cssVars.text),
       fontSize: '11px',
       fontWeight: '450',
-      fontFamily: FONT,
+      fontFamily: FONT_FAMILY,
       padding: '0',
       paddingRight: '4px',
       boxSizing: 'border-box',
@@ -2807,96 +2302,79 @@ export class PropertyPanel {
       minWidth: '0',
     });
 
-    const onFocus = () => {
-      inputArea.style.outline = '1px solid ' + tv(V.border);
-      inputArea.style.background = tv(V.border);
-    };
-    const onBlur = () => {
-      inputArea.style.outline = 'none';
-      inputArea.style.background = tv(V.surfaceHover);
-    };
-    input.addEventListener('focus', onFocus);
-    input.addEventListener('blur', onBlur);
+    const fI = () => { left.style.outline = '1px solid ' + v(cssVars.border); left.style.background = v(cssVars.border); };
+    const fO = () => { left.style.outline = 'none'; left.style.background = v(cssVars.surfaceHover); };
+    input.addEventListener('focus', fI);
+    input.addEventListener('blur', fO);
     this.cleanups.push(() => {
-      input.removeEventListener('focus', onFocus);
-      input.removeEventListener('blur', onBlur);
+      input.removeEventListener('focus', fI);
+      input.removeEventListener('blur', fO);
     });
 
-    // Commit
-    const onCommit = () => {
+    const commit = () => {
       const val = input.value.trim();
       if (parsed) {
-        const num = parseFloat(val);
-        if (!isNaN(num)) {
+        const n = parseFloat(val);
+        if (!isNaN(n)) {
           const unit = parsed.unit || 'px';
-          this.emitChange(property, formatNumericValue(num, unit));
+          this.emitChange(prop, formatNumericValue(n, unit));
         }
       } else {
-        this.emitChange(property, val);
+        this.emitChange(prop, val);
       }
     };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        onCommit();
-        input.blur();
-      }
+    const onKd = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') { commit(); input.blur(); }
     };
-    input.addEventListener('change', onCommit);
-    input.addEventListener('keydown', onKeyDown);
+    input.addEventListener('change', commit);
+    input.addEventListener('keydown', onKd);
     this.cleanups.push(() => {
-      input.removeEventListener('change', onCommit);
-      input.removeEventListener('keydown', onKeyDown);
+      input.removeEventListener('change', commit);
+      input.removeEventListener('keydown', onKd);
     });
 
-    inputArea.appendChild(input);
-    wrapper.appendChild(inputArea);
+    left.appendChild(input);
+    wrapper.appendChild(left);
 
-    // Right: chevron trigger (32x32)
-    const chevronTrigger = document.createElement('div');
-    Object.assign(chevronTrigger.style, {
+    const right = document.createElement('div');
+    Object.assign(right.style, {
       width: '32px',
       height: '32px',
       borderRadius: '0 8px 8px 0',
-      background: tv(V.surfaceHover),
+      background: v(cssVars.surfaceHover),
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       cursor: 'pointer',
-      color: tv(V.textTertiary),
+      color: v(cssVars.textTertiary),
       flexShrink: '0',
       transition: 'background 0.15s',
     });
-    chevronTrigger.appendChild(chevronDown(24));
-
-    const onChevEnter = () => { chevronTrigger.style.background = tv(V.border); };
-    const onChevLeave = () => { chevronTrigger.style.background = tv(V.surfaceHover); };
-    chevronTrigger.addEventListener('mouseenter', onChevEnter);
-    chevronTrigger.addEventListener('mouseleave', onChevLeave);
+    right.appendChild(chevronDown(24));
+    const rE = () => { right.style.background = v(cssVars.border); };
+    const rL = () => { right.style.background = v(cssVars.surfaceHover); };
+    right.addEventListener('mouseenter', rE);
+    right.addEventListener('mouseleave', rL);
     this.cleanups.push(() => {
-      chevronTrigger.removeEventListener('mouseenter', onChevEnter);
-      chevronTrigger.removeEventListener('mouseleave', onChevLeave);
+      right.removeEventListener('mouseenter', rE);
+      right.removeEventListener('mouseleave', rL);
     });
-
-    wrapper.appendChild(chevronTrigger);
+    wrapper.appendChild(right);
 
     return wrapper;
   }
 
-  // -----------------------------------------------------------------------
-  // SelectControl (exact: h32, r8, bg inputBg, 32px chevron area)
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Select control (dropdown)
+  // ---------------------------------------------------------------------------
 
-  private makeSelectControl(
-    options: string[],
-    currentValue: string,
-    onChange: (val: string) => void,
-  ): HTMLDivElement {
+  private makeSelectControl(options: string[], current: string, onChange: (val: string) => void): HTMLDivElement {
     const wrapper = document.createElement('div');
     Object.assign(wrapper.style, {
       position: 'relative',
       height: '32px',
       borderRadius: '8px',
-      background: tv(V.surfaceHover),
+      background: v(cssVars.surfaceHover),
       display: 'flex',
       alignItems: 'center',
       flex: '1',
@@ -2907,14 +2385,14 @@ export class PropertyPanel {
       overflow: 'visible',
     });
 
-    const valueText = document.createElement('span');
-    valueText.textContent = currentValue;
-    Object.assign(valueText.style, {
+    const label = document.createElement('span');
+    label.textContent = current;
+    Object.assign(label.style, {
       flex: '1',
       fontSize: '11px',
       fontWeight: '450',
       letterSpacing: '-0.005em',
-      color: tv(V.text),
+      color: v(cssVars.text),
       paddingLeft: '32px',
       overflow: 'hidden',
       textOverflow: 'ellipsis',
@@ -2922,61 +2400,47 @@ export class PropertyPanel {
       textAlign: 'left',
     });
 
-    const chevronWrap = document.createElement('div');
-    Object.assign(chevronWrap.style, {
+    const chevWrap = document.createElement('div');
+    Object.assign(chevWrap.style, {
       width: '32px',
       height: '32px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      color: tv(V.textSecondary),
+      color: v(cssVars.textSecondary),
       flexShrink: '0',
     });
-    chevronWrap.appendChild(chevronDown(24));
+    chevWrap.appendChild(chevronDown(24));
+    wrapper.appendChild(label);
+    wrapper.appendChild(chevWrap);
 
-    wrapper.appendChild(valueText);
-    wrapper.appendChild(chevronWrap);
-
-    const onEnter = () => {
-      wrapper.style.background = tv(V.border);
-    };
-    const onLeave = () => {
-      wrapper.style.background = tv(V.surfaceHover);
-    };
-    wrapper.addEventListener('mouseenter', onEnter);
-    wrapper.addEventListener('mouseleave', onLeave);
+    const wE = () => { wrapper.style.background = v(cssVars.border); };
+    const wL = () => { wrapper.style.background = v(cssVars.surfaceHover); };
+    wrapper.addEventListener('mouseenter', wE);
+    wrapper.addEventListener('mouseleave', wL);
     this.cleanups.push(() => {
-      wrapper.removeEventListener('mouseenter', onEnter);
-      wrapper.removeEventListener('mouseleave', onLeave);
+      wrapper.removeEventListener('mouseenter', wE);
+      wrapper.removeEventListener('mouseleave', wL);
     });
 
-    // Click to show dropdown
     let dropdown: HTMLDivElement | null = null;
-
     const closeDropdown = () => {
-      if (dropdown && dropdown.parentElement) {
-        dropdown.parentElement.removeChild(dropdown);
-      }
+      if (dropdown && dropdown.parentElement) dropdown.parentElement.removeChild(dropdown);
       dropdown = null;
     };
 
-    const onClick = (e: MouseEvent) => {
+    const onClick = (e: Event) => {
       e.stopPropagation();
-
-      if (dropdown) {
-        closeDropdown();
-        return;
-      }
-
+      if (dropdown) { closeDropdown(); return; }
       dropdown = document.createElement('div');
       Object.assign(dropdown.style, {
         position: 'absolute',
         top: '34px',
         left: '0',
         right: '0',
-        background: tv(V.surface),
+        background: v(cssVars.surface),
         borderRadius: '8px',
-        border: '1px solid ' + tv(V.border),
+        border: '1px solid ' + v(cssVars.border),
         boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
         zIndex: '10',
         maxHeight: '200px',
@@ -2987,94 +2451,73 @@ export class PropertyPanel {
 
       for (const opt of options) {
         const item = document.createElement('div');
-        const isActive = opt === valueText.textContent;
+        const isSelected = opt === label.textContent;
         Object.assign(item.style, {
           padding: '6px 8px',
           borderRadius: '6px',
           fontSize: '11px',
-          color: isActive ? tv(V.blueText) : tv(V.textSecondary),
-          background: isActive ? tv(V.blueBg) : 'transparent',
+          color: v(isSelected ? cssVars.blueText : cssVars.textSecondary),
+          background: isSelected ? v(cssVars.blueBg) : 'transparent',
           cursor: 'pointer',
         });
         item.textContent = opt;
-
-        const onItemEnter = () => {
-          if (!isActive) item.style.background = tv(V.surfaceHover);
-        };
-        const onItemLeave = () => {
-          if (!isActive) item.style.background = 'transparent';
-        };
-        const onItemClick = (ev: MouseEvent) => {
+        const iE = () => { if (!isSelected) item.style.background = v(cssVars.surfaceHover); };
+        const iL = () => { if (!isSelected) item.style.background = 'transparent'; };
+        const iC = (ev: Event) => {
           ev.stopPropagation();
-          valueText.textContent = opt;
+          label.textContent = opt;
           onChange(opt);
           closeDropdown();
         };
-        item.addEventListener('mouseenter', onItemEnter);
-        item.addEventListener('mouseleave', onItemLeave);
-        item.addEventListener('click', onItemClick);
+        item.addEventListener('mouseenter', iE);
+        item.addEventListener('mouseleave', iL);
+        item.addEventListener('click', iC);
         this.cleanups.push(() => {
-          item.removeEventListener('mouseenter', onItemEnter);
-          item.removeEventListener('mouseleave', onItemLeave);
-          item.removeEventListener('click', onItemClick);
+          item.removeEventListener('mouseenter', iE);
+          item.removeEventListener('mouseleave', iL);
+          item.removeEventListener('click', iC);
         });
-
         dropdown.appendChild(item);
       }
 
       wrapper.appendChild(dropdown);
-
-      // Close on outside click
-      const onDocClick = () => {
+      const docClose = () => {
         closeDropdown();
-        document.removeEventListener('click', onDocClick);
+        document.removeEventListener('click', docClose);
       };
-      setTimeout(
-        () => document.addEventListener('click', onDocClick),
-        0,
-      );
-      this.cleanups.push(() =>
-        document.removeEventListener('click', onDocClick),
-      );
+      setTimeout(() => document.addEventListener('click', docClose), 0);
+      this.cleanups.push(() => document.removeEventListener('click', docClose));
     };
-
     wrapper.addEventListener('click', onClick);
-    this.cleanups.push(() =>
-      wrapper.removeEventListener('click', onClick),
-    );
+    this.cleanups.push(() => wrapper.removeEventListener('click', onClick));
 
     return wrapper;
   }
 
-  // -----------------------------------------------------------------------
-  // SegmentedControl with reference icon factory functions
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Segmented control with icons
+  // ---------------------------------------------------------------------------
 
-  private makeSegmentedControlWithIcons(
-    items: Array<{ iconFn: () => SVGSVGElement; value: string; label: string }>,
-    activeValue: string,
-    onChange: (val: string) => void,
-  ): HTMLDivElement {
-    const outer = document.createElement('div');
-    Object.assign(outer.style, {
+  private makeSegmentedControlWithIcons(items: { iconFn: () => SVGSVGElement; value: string; label: string }[], current: string, onChange: (val: string) => void): HTMLDivElement {
+    const wrapper = document.createElement('div');
+    Object.assign(wrapper.style, {
       position: 'relative',
       display: 'flex',
       height: '32px',
-      background: tv(V.surfaceHover),
+      background: v(cssVars.surfaceHover),
       borderRadius: '8px',
       overflow: 'hidden',
       flex: '1',
     });
 
-    // Sliding pill (reference: surface bg + border)
-    const pill = document.createElement('div');
-    Object.assign(pill.style, {
+    const indicator = document.createElement('div');
+    Object.assign(indicator.style, {
       position: 'absolute',
       top: '0',
       left: '0',
       height: '100%',
-      background: tv(V.surface),
-      border: '1px solid ' + tv(V.border),
+      background: v(cssVars.surface),
+      border: '1px solid ' + v(cssVars.border),
       borderRadius: '8px',
       boxSizing: 'border-box',
       transition: 'transform 200ms cubic-bezier(0.77, 0, 0.175, 1)',
@@ -3082,10 +2525,10 @@ export class PropertyPanel {
       pointerEvents: 'none',
       zIndex: '0',
     });
-    outer.appendChild(pill);
+    wrapper.appendChild(indicator);
 
-    const buttons: HTMLButtonElement[] = [];
-    let activeIdx = items.findIndex((i) => i.value === activeValue);
+    const btns: HTMLButtonElement[] = [];
+    let activeIdx = items.findIndex(i => i.value === current);
     if (activeIdx < 0) activeIdx = 0;
 
     for (let i = 0; i < items.length; i++) {
@@ -3099,7 +2542,7 @@ export class PropertyPanel {
         height: '32px',
         border: 'none',
         background: 'transparent',
-        color: tv(V.text),
+        color: v(cssVars.text),
         cursor: 'pointer',
         position: 'relative',
         zIndex: '1',
@@ -3110,82 +2553,71 @@ export class PropertyPanel {
       btn.title = item.label;
       btn.setAttribute('aria-label', item.label);
       btn.appendChild(item.iconFn());
-
-      const onClick = () => {
+      const onC = () => {
         activeIdx = i;
-        for (let j = 0; j < buttons.length; j++) {
-          buttons[j].style.color =
-            j === i ? tv(V.text) : tv(V.textTertiary);
+        for (let j = 0; j < btns.length; j++) {
+          btns[j].style.color = v(j === i ? cssVars.text : cssVars.textTertiary);
         }
-        updatePill();
+        updateIndicator();
         onChange(item.value);
       };
-      btn.addEventListener('click', onClick);
-      this.cleanups.push(() =>
-        btn.removeEventListener('click', onClick),
-      );
-
-      buttons.push(btn);
-      outer.appendChild(btn);
+      btn.addEventListener('click', onC);
+      this.cleanups.push(() => btn.removeEventListener('click', onC));
+      btns.push(btn);
+      wrapper.appendChild(btn);
     }
 
-    const updatePill = () => {
-      if (!buttons[activeIdx]) return;
-      const segW = 100 / items.length;
-      pill.style.width = segW + '%';
-      pill.style.transform =
-        'translateX(' + activeIdx * 100 + '%)';
+    const updateIndicator = () => {
+      if (!btns[activeIdx]) return;
+      const pct = 100 / items.length;
+      indicator.style.width = pct + '%';
+      indicator.style.transform = 'translateX(' + activeIdx * 100 + '%)';
     };
+    requestAnimationFrame(updateIndicator);
 
-    requestAnimationFrame(updatePill);
-
-    return outer;
+    return wrapper;
   }
 
-  // -----------------------------------------------------------------------
-  // Alignment 3x3 grid with reference iconDot/iconPosition* icons
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Alignment grid (3x3)
+  // ---------------------------------------------------------------------------
 
-  private makeAlignmentGrid(
-    cs: Record<string, string>,
-  ): HTMLDivElement {
+  private makeAlignmentGrid(styles: Record<string, string>): HTMLDivElement {
     const grid = document.createElement('div');
     Object.assign(grid.style, {
       display: 'grid',
       gridTemplateColumns: 'repeat(3, 1fr)',
       gridTemplateRows: 'repeat(3, 1fr)',
-      background: tv(V.surfaceHover),
+      background: v(cssVars.surfaceHover),
       borderRadius: '8px',
       width: '100%',
       height: '72px',
     });
 
-    const BLUE = '#0D99FF';
-    const GRAY = '#a8a29e';
+    const activeColor = '#0D99FF';
+    const inactiveColor = '#a8a29e';
 
-    // Each position maps to jc+ai values and a position-specific icon
-    const positionIcons = [
-      { jc: 'flex-start', ai: 'flex-start', icon: (c: string) => iconPositionTop(16, c) },
-      { jc: 'center', ai: 'flex-start', icon: (c: string) => iconPositionCenterV(16, c) },
-      { jc: 'flex-end', ai: 'flex-start', icon: (c: string) => iconPositionBottom(16, c) },
-      { jc: 'flex-start', ai: 'center', icon: (c: string) => iconPositionTop(16, c) },
-      { jc: 'center', ai: 'center', icon: (c: string) => iconPositionCenterV(16, c) },
-      { jc: 'flex-end', ai: 'center', icon: (c: string) => iconPositionBottom(16, c) },
-      { jc: 'flex-start', ai: 'flex-end', icon: (c: string) => iconPositionTop(16, c) },
-      { jc: 'center', ai: 'flex-end', icon: (c: string) => iconPositionCenterV(16, c) },
-      { jc: 'flex-end', ai: 'flex-end', icon: (c: string) => iconPositionBottom(16, c) },
+    const positions = [
+      { jc: 'flex-start', ai: 'flex-start', icon: (c: string) => iconPositionLeft(16, c) },
+      { jc: 'center', ai: 'flex-start', icon: (c: string) => iconPositionCenterH(16, c) },
+      { jc: 'flex-end', ai: 'flex-start', icon: (c: string) => iconPositionRight(16, c) },
+      { jc: 'flex-start', ai: 'center', icon: (c: string) => iconPositionLeft(16, c) },
+      { jc: 'center', ai: 'center', icon: (c: string) => iconPositionCenterH(16, c) },
+      { jc: 'flex-end', ai: 'center', icon: (c: string) => iconPositionRight(16, c) },
+      { jc: 'flex-start', ai: 'flex-end', icon: (c: string) => iconPositionLeft(16, c) },
+      { jc: 'center', ai: 'flex-end', icon: (c: string) => iconPositionCenterH(16, c) },
+      { jc: 'flex-end', ai: 'flex-end', icon: (c: string) => iconPositionRight(16, c) },
     ];
 
-    const currentJC = getVal(cs, 'justify-content') || 'flex-start';
-    const currentAI = getVal(cs, 'align-items') || 'flex-start';
+    const currentJC = getVal(styles, 'justify-content') || 'flex-start';
+    const currentAI = getVal(styles, 'align-items') || 'flex-start';
+    const btns: HTMLButtonElement[] = [];
 
-    const cells: HTMLButtonElement[] = [];
-
-    for (let idx = 0; idx < positionIcons.length; idx++) {
-      const pos = positionIcons[idx];
-      const cell = document.createElement('button');
+    for (let i = 0; i < positions.length; i++) {
+      const pos = positions[i];
+      const btn = document.createElement('button');
       const isActive = pos.jc === currentJC && pos.ai === currentAI;
-      Object.assign(cell.style, {
+      Object.assign(btn.style, {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -3195,96 +2627,79 @@ export class PropertyPanel {
         cursor: 'pointer',
         overflow: 'hidden',
       });
-
-      // Active: show position icon in blue. Inactive: show dot in gray.
       if (isActive) {
-        cell.appendChild(pos.icon(BLUE));
+        btn.appendChild(pos.icon(activeColor));
       } else {
-        cell.appendChild(iconDot(16, GRAY));
+        btn.appendChild(iconDot(16, inactiveColor));
       }
 
-      const onCellEnter = () => {
-        if (!isActive) cell.style.color = tv(V.text);
-      };
-      const onCellLeave = () => {
-        if (!isActive) cell.style.color = tv(V.textTertiary);
-      };
-      const onCellClick = () => {
+      const onE = () => { if (!isActive) btn.style.color = v(cssVars.text); };
+      const onL = () => { if (!isActive) btn.style.color = v(cssVars.textTertiary); };
+      const onC = () => {
         this.emitChange('justify-content', pos.jc);
         this.emitChange('align-items', pos.ai);
-        for (let i = 0; i < cells.length; i++) {
-          const c = cells[i];
-          const p = positions[i];
-          const active = p.jc === pos.jc && p.ai === pos.ai;
-          c.style.color = active ? tv(V.text) : tv(V.textTertiary);
+        for (let j = 0; j < btns.length; j++) {
+          const pp = positions[j];
+          const match = pp.jc === pos.jc && pp.ai === pos.ai;
+          btns[j].style.color = v(match ? cssVars.text : cssVars.textTertiary);
         }
       };
-      cell.addEventListener('mouseenter', onCellEnter);
-      cell.addEventListener('mouseleave', onCellLeave);
-      cell.addEventListener('click', onCellClick);
+      btn.addEventListener('mouseenter', onE);
+      btn.addEventListener('mouseleave', onL);
+      btn.addEventListener('click', onC);
       this.cleanups.push(() => {
-        cell.removeEventListener('mouseenter', onCellEnter);
-        cell.removeEventListener('mouseleave', onCellLeave);
-        cell.removeEventListener('click', onCellClick);
+        btn.removeEventListener('mouseenter', onE);
+        btn.removeEventListener('mouseleave', onL);
+        btn.removeEventListener('click', onC);
       });
-
-      cells.push(cell);
-      grid.appendChild(cell);
+      btns.push(btn);
+      grid.appendChild(btn);
     }
 
     return grid;
   }
 
-  // -----------------------------------------------------------------------
-  // ColorInput (exact: swatch + hex + opacity, split into two sections)
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Color input (swatch + hex + opacity)
+  // ---------------------------------------------------------------------------
 
-  private makeColorInput(
-    property: string,
-    computedStyles: Record<string, string>,
-  ): HTMLDivElement {
-    const rawValue = getVal(computedStyles, property);
-    const hexValue = parseColor(rawValue);
-    const opacityVal = parseOpacity(rawValue);
+  private makeColorInput(prop: string, styles: Record<string, string>): HTMLDivElement {
+    const raw = getVal(styles, prop);
+    const hex = normalizeColor(raw);
+    const opacity = extractOpacityPercent(raw);
 
-    // Container row
-    const row = document.createElement('div');
-    Object.assign(row.style, {
+    const wrapper = document.createElement('div');
+    Object.assign(wrapper.style, {
       display: 'flex',
       alignItems: 'center',
       height: '32px',
       gap: '1px',
     });
 
-    // Left: hex section (swatch + hex input)
-    const hexSection = document.createElement('div');
-    Object.assign(hexSection.style, {
+    // Left side: swatch + hex input
+    const left = document.createElement('div');
+    Object.assign(left.style, {
       flex: '1',
       display: 'flex',
       alignItems: 'center',
       minWidth: '0',
       height: '32px',
       position: 'relative',
-      background: tv(V.surfaceHover),
+      background: v(cssVars.surfaceHover),
       borderRadius: '8px 0 0 8px',
       transition: 'background 0.15s',
     });
-
-    const onHexEnter = () => { hexSection.style.background = tv(V.border); };
-    const onHexLeave = () => {
-      if (hexSection.querySelector('input:focus')) return;
-      hexSection.style.background = tv(V.surfaceHover);
-    };
-    hexSection.addEventListener('mouseenter', onHexEnter);
-    hexSection.addEventListener('mouseleave', onHexLeave);
+    const lE = () => { left.style.background = v(cssVars.border); };
+    const lL = () => { if (!left.querySelector('input:focus')) left.style.background = v(cssVars.surfaceHover); };
+    left.addEventListener('mouseenter', lE);
+    left.addEventListener('mouseleave', lL);
     this.cleanups.push(() => {
-      hexSection.removeEventListener('mouseenter', onHexEnter);
-      hexSection.removeEventListener('mouseleave', onHexLeave);
+      left.removeEventListener('mouseenter', lE);
+      left.removeEventListener('mouseleave', lL);
     });
 
-    // Swatch container (32px wide, centers 20x20 swatch)
-    const swatchContainer = document.createElement('div');
-    Object.assign(swatchContainer.style, {
+    const swatchWrap = document.createElement('div');
+    Object.assign(swatchWrap.style, {
       width: '32px',
       display: 'flex',
       alignItems: 'center',
@@ -3292,23 +2707,19 @@ export class PropertyPanel {
       flexShrink: '0',
       position: 'relative',
     });
-
-    // Swatch inner (20x20 rounded square)
-    const swatchInner = document.createElement('div');
-    Object.assign(swatchInner.style, {
+    const swatch = document.createElement('div');
+    Object.assign(swatch.style, {
       width: '20px',
       height: '20px',
       borderRadius: '2px',
-      background: hexValue,
+      background: hex,
       position: 'relative',
       overflow: 'hidden',
     });
-
-    // Hidden native color input over swatch
-    const colorInput = document.createElement('input');
-    colorInput.type = 'color';
-    colorInput.value = hexValue;
-    Object.assign(colorInput.style, {
+    const picker = document.createElement('input');
+    picker.type = 'color';
+    picker.value = hex;
+    Object.assign(picker.style, {
       position: 'absolute',
       inset: '0',
       opacity: '0',
@@ -3318,141 +2729,112 @@ export class PropertyPanel {
       padding: '0',
       border: 'none',
     });
-    swatchContainer.appendChild(swatchInner);
-    swatchContainer.appendChild(colorInput);
+    swatchWrap.appendChild(swatch);
+    swatchWrap.appendChild(picker);
 
-    // Hex text input
     const hexInput = document.createElement('input');
     hexInput.type = 'text';
-    hexInput.value = hexValue;
+    hexInput.value = hex;
     Object.assign(hexInput.style, {
       flex: '1',
       height: '100%',
       border: 'none',
       outline: 'none',
       background: 'transparent',
-      color: tv(V.text),
+      color: v(cssVars.text),
       fontSize: '11px',
       fontWeight: '450',
-      fontFamily: FONT,
+      fontFamily: FONT_FAMILY,
       padding: '0',
       boxSizing: 'border-box',
       letterSpacing: '-0.005em',
     });
 
-    const onColorInput = () => {
-      swatchInner.style.background = colorInput.value;
-      hexInput.value = colorInput.value;
-      this.emitChange(property, colorInput.value);
+    const onPickerInput = () => {
+      swatch.style.background = picker.value;
+      hexInput.value = picker.value;
+      this.emitChange(prop, picker.value);
     };
-    colorInput.addEventListener('input', onColorInput);
-    this.cleanups.push(() =>
-      colorInput.removeEventListener('input', onColorInput),
-    );
+    picker.addEventListener('input', onPickerInput);
+    this.cleanups.push(() => picker.removeEventListener('input', onPickerInput));
 
     const onHexChange = () => {
       const val = hexInput.value.trim();
       if (/^#[0-9a-fA-F]{3,6}$/.test(val)) {
-        const normalized =
-          val.length === 4
-            ? '#' +
-              val[1] +
-              val[1] +
-              val[2] +
-              val[2] +
-              val[3] +
-              val[3]
-            : val;
-        swatchInner.style.background = normalized;
-        colorInput.value = normalized;
-        this.emitChange(property, normalized);
+        const expanded = val.length === 4 ? '#' + val[1] + val[1] + val[2] + val[2] + val[3] + val[3] : val;
+        swatch.style.background = expanded;
+        picker.value = expanded;
+        this.emitChange(prop, expanded);
       }
     };
     hexInput.addEventListener('change', onHexChange);
-    this.cleanups.push(() =>
-      hexInput.removeEventListener('change', onHexChange),
-    );
+    this.cleanups.push(() => hexInput.removeEventListener('change', onHexChange));
 
-    // Focus style on hex section
-    const onFocus = () => {
-      hexSection.style.outline = '1px solid ' + tv(V.border);
-    };
-    const onBlur = () => {
-      hexSection.style.outline = 'none';
-      hexSection.style.background = tv(V.surfaceHover);
-    };
-    hexInput.addEventListener('focus', onFocus);
-    hexInput.addEventListener('blur', onBlur);
+    const hfI = () => { left.style.outline = '1px solid ' + v(cssVars.border); };
+    const hfO = () => { left.style.outline = 'none'; left.style.background = v(cssVars.surfaceHover); };
+    hexInput.addEventListener('focus', hfI);
+    hexInput.addEventListener('blur', hfO);
     this.cleanups.push(() => {
-      hexInput.removeEventListener('focus', onFocus);
-      hexInput.removeEventListener('blur', onBlur);
+      hexInput.removeEventListener('focus', hfI);
+      hexInput.removeEventListener('blur', hfO);
     });
 
-    hexSection.appendChild(swatchContainer);
-    hexSection.appendChild(hexInput);
-    row.appendChild(hexSection);
+    left.appendChild(swatchWrap);
+    left.appendChild(hexInput);
+    wrapper.appendChild(left);
 
-    // Right: opacity section
-    const opSection = document.createElement('div');
-    Object.assign(opSection.style, {
+    // Right side: opacity
+    const right = document.createElement('div');
+    Object.assign(right.style, {
       display: 'flex',
       alignItems: 'center',
       height: '32px',
-      background: tv(V.surfaceHover),
+      background: v(cssVars.surfaceHover),
       borderRadius: '0 8px 8px 0',
       padding: '0 8px 0 4px',
       transition: 'background 0.15s',
     });
-
-    const onOpEnter = () => { opSection.style.background = tv(V.border); };
-    const onOpLeave = () => {
-      if (opSection.querySelector('input:focus')) return;
-      opSection.style.background = tv(V.surfaceHover);
-    };
-    opSection.addEventListener('mouseenter', onOpEnter);
-    opSection.addEventListener('mouseleave', onOpLeave);
+    const rE = () => { right.style.background = v(cssVars.border); };
+    const rL = () => { if (!right.querySelector('input:focus')) right.style.background = v(cssVars.surfaceHover); };
+    right.addEventListener('mouseenter', rE);
+    right.addEventListener('mouseleave', rL);
     this.cleanups.push(() => {
-      opSection.removeEventListener('mouseenter', onOpEnter);
-      opSection.removeEventListener('mouseleave', onOpLeave);
+      right.removeEventListener('mouseenter', rE);
+      right.removeEventListener('mouseleave', rL);
     });
 
-    const opInput = document.createElement('input');
-    opInput.type = 'text';
-    opInput.value = String(opacityVal);
-    Object.assign(opInput.style, {
+    const opacityInput = document.createElement('input');
+    opacityInput.type = 'text';
+    opacityInput.value = String(opacity);
+    Object.assign(opacityInput.style, {
       width: '28px',
       height: '100%',
       border: 'none',
       outline: 'none',
       background: 'transparent',
-      color: tv(V.text),
+      color: v(cssVars.text),
       fontSize: '11px',
       fontWeight: '450',
-      fontFamily: FONT,
+      fontFamily: FONT_FAMILY,
       textAlign: 'right',
       letterSpacing: '-0.005em',
       fontVariantNumeric: 'tabular-nums',
     });
-
     const pctLabel = document.createElement('span');
     pctLabel.textContent = '%';
-    Object.assign(pctLabel.style, {
-      fontSize: '11px',
-      color: tv(V.textTertiary),
-    });
+    Object.assign(pctLabel.style, { fontSize: '11px', color: v(cssVars.textTertiary) });
+    right.appendChild(opacityInput);
+    right.appendChild(pctLabel);
+    wrapper.appendChild(right);
 
-    opSection.appendChild(opInput);
-    opSection.appendChild(pctLabel);
-    row.appendChild(opSection);
-
-    return row;
+    return wrapper;
   }
 
-  // -----------------------------------------------------------------------
-  // Change emission
-  // -----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Emit change
+  // ---------------------------------------------------------------------------
 
-  private emitChange(property: string, value: string): void {
-    this.changeCallback?.(property, value);
+  private emitChange(prop: string, value: string): void {
+    this.changeCallback?.(prop, value);
   }
 }

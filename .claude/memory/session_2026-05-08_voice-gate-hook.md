@@ -111,5 +111,59 @@ Memory note saying "don't speak when muted" was advisory and kept being violated
 - User reserves the right to interrupt and bypass - the manual hook respects that
 - Playwright would clear via cmux browser path or manual bypass
 
+## Improv: icon refinements
+- Plus icon stroke-width 1.5 -> 2 to match mail icon weight
+- Mail icon shifted translate(-1px, 1px) for optical alignment
+- Nudge animation pokes diagonally up twice (20%/55% peaks) instead of once
+- Both prompt mail button and toolbar send button share the keyframe
+- Plus icon SVG 18->20px for visual size match with mail
+- Nudge slowed to 0.7s (was 0.35s), softer pokes (1.5px), more breathing room between pokes
+- Fix: nudge snap-back was caused by static translate(-1px,1px) on mail SVG conflicting with animation origin. Removed the offset entirely, animation on SVG icon with transform-based keyframes.
+- Fix: toolbar send used 0.4s, prompt mail used 0.7s - mismatched. Both now 0.7s.
+- Prompt input centered horizontally beneath the bottommost selected element (element center - input width/2). Applies to click, lasso, and rAF scroll tracking.
+- Pulsating glow on input field matching marker color via CSS variable (--improv-glow-color). 3s ease-in-out infinite. Updates live on color change.
+- Marker color change now fades all affected objects: buttons (bg + border), input glow, selection overlays. 300ms transitions on buttons and input.
+- Glow spread reduced: 4px-8px (was 8px-16px)
+- Input focus border fades to marker color (300ms transition on border-color)
+
+## Improv: change queue system
+- Queue data structure (_changeQueue) stores prompt text + element references per item
+- Bottom-left circle button (clipboard-document-list icon from heroicons-animated) with red badge showing count
+- Queue panel: opens above button, lists all queued changes with Edit + Remove buttons
+- Edit: closes panel, deselects current, re-selects original elements, populates prompt with original text
+- Remove: confirmation dialog before deletion
+- Icons: clipboard-document-list (heroicons-animated), circle-check (lucide-animated) for confirm, X (lucide-animated) for delete
+- Edit mode: Me class enterEditMode/exitEditMode swap queue/send buttons for checkmark (Lucide Animated "check" - M4 12 9 17L20 6) + X (Lucide Animated). Checkmark hover turns green + draws check via stroke-dashoffset. X hover redraws. Confirm saves edit, X deletes item.
+- Queue callback wiring: Me._queue calls queueCallback (simple), He provides callback that stores elements + updates badge. Fixed timing: input value set via setTimeout(50ms) to beat show()'s rAF clear. Queue plus icon replaced with Lucide Animated "plus" (M5 12h14 + M12 5v14, no circle). Queue button icon: gallery-vertical-end (Lucide Animated). Hover animation matches source: L2 (custom=2) translateY 4->0 + opacity 0->1 fires first (delay 0), L1 (custom=1) translateY 2->0 + opacity 0->1 fires second (delay 250ms). Uses reflow technique for replay. Removed leftover clipboard dasharray animation from mouseenter/mouseleave that was corrupting gallery lines. Toolbar button states: borderRadius 10px -> 50% (circles). Glow hide: must stop animation before setting opacity 0 (animation overrides inline opacity).
+- Clipboard icon hover animation: staggered dot+line draw per heroicons-animated source pattern.
+- Dist at 195,374 bytes
+- Queue persists across mode switches: _changeQueue lives on Ne (core), passed to He on creation. Button stays in DOM on deactivate, reattaches on reactivate. Only manual clear removes it.
+- Fix: queue callback wasn't wired at all after multiple attempts. Root cause: wiring in onClick/lasso got overwritten on each click. Final fix: wire onPromptQueue ONCE in activate() right after prompt creation + setMarkerColor. Verified: 2 elements queued from shift+click multi-select.
+- Full flow verified: single click, shift+click multi-select, and lasso all queue correctly. Edit mode: checkmark uses marker color, X uses red (#ef4444). Empty queue fades panel out (0.2s opacity transition) instead of showing "Queued Changes (0)". Edit mode X button clears selection + overlays before exiting.
+- After queuing: deselects objects, hides overlays + prompt, keeps mode active for next selection. Uses afterQueueCallback from Me to He.
+- Queue panel auto-refreshes: _updateQueueBadge rebuilds panel if open when items change
+- Send All + Clear All buttons moved from toolbar to bottom-left as circles. All three stagger in: 0ms, 100ms, 200ms. Eraser shake animation on Clear All hover restored. All three bottom-left buttons wrapped in a pill container (matching toolbar style: #1a1a1a, border-radius 22px, 6px padding). Divider between queue and send/clear. Pill bounces in (reflow + improv-send-pulse 0.5s) when first item enters queue, scales out when empty. Badge positioned on queue button (position:relative on btn). Queue button gets active state (full marker color + white) when panel is open, clears on close. Mouseenter + mouseleave both respect active flag. Panel header has X close button. Buttons are 32px circles inside pill. Hover: marker color bg at 20% (hex+"33") + full marker color SVG. Active: full marker color bg + white icon. Eraser icon is static Lucide (pre-mandate, approved), sized to 22x22. Both toolbars use marker color. Updates live on color change.
+- Screen glow: mimics Claude in Chrome (triple inset box-shadow at 15/25/35px), uses marker color, z-index 2147483647 (overrides Claude in Chrome's 2147483646). Fades in on mode activate, fades out on deactivate. Hides Claude in Chrome glow while active, restores on deactivate. Updates live on marker color change. Pulsates via opacity 0.6-1.0 (3s ease-in-out infinite) with static large shadow. Keyframe injected into document.head (not shadow DOM) so glow element can access it. Toolbar icon gap increased to 2px. X close button (Lucide Animated X, two paths with staggered stroke-dashoffset draw on hover) + divider after settings icon in right toolbar.
+- Send button bounce: was flat fade, now gets improv-send-pulse matching queue button. Stagger 200ms. Animation resets use "none" + offsetHeight reflow to force replay on every show cycle.
+- Viewport clamping on ALL tooltips: hover label, selection labels, toolbar tooltip, button tooltips. Right edge: flips to left of element. Left edge: clamps to 4px. Top edge: hover label flips below cursor. rAF clamping uses getBCR fallback for offsetWidth on first frame + immediate _update call before rAF loop starts. Scroll handler: repositions existing DOM elements in-place (getBCR per tracked element) instead of destroying+rebuilding. Resize handler still rebuilds (infrequent). This eliminates the DOM thrash that caused scroll jank with many selections.
+- Pill tooltips above input buttons: "Queue Change" and "Send to Claude" on hover, fade+slide animation
+- Settings panel: "Hints" toggle (toolbar + button tooltips + hover label) and "Selection Labels" toggle (per-element label pills on selection). Both default ON, toggle switches with 150ms transition. Wired to prompt mode via callback systems (hintsCallbacks, selectionLabelCallbacks). First attempt rendered toggles but didn't wire to actual behavior - fixed with guards in tooltip show functions and _showSelOverlays. Selection Labels OFF shows X in a 24px dark circle (no icon, no text). X always clickable for deselection.
+
+## Improv: toolbar collapse + toast notification
+- Toolbar collapses via clip-path (not width - width transitions don't work in cmux browser). Collapsed: `inset(0 0 0 calc(100% - 44px) round 22px)`. X morphs to italic icon (Lucide Animated). Starts collapsed on load. Drag disabled when collapsed.
+- New pill toast notification: slides from top, shows spinner + "Sending X changes to Claude...", progress bar fills 1.5s, transitions to checkmark + "Sent to Claude", auto-dismisses. Wired to: prompt submit (Cmd+Enter/send button), send-all (queuebar). Old applyConfirmation showSuccess/showSending/showError calls removed. Checkmark green (#22c55e), flex centered in container. Keyframes injected into document.head (toast is on document.body, not shadow DOM).
+
+## Improv: toast notification refinements (2026-05-11)
+- Font size decreased from 13px to 11px, font-weight set to 700 (bold)
+- Spinner replaced with dot matrix loader (port of dotmatrix.dev dotm-square-20):
+  - 4x4 grid (16 dots, 3px each, 1.5px gap) in an 18x18 container
+  - Perimeter chase: 12 outer dots form the loop, bright head with 6-dot tail [1, 0.82, 0.64, 0.46, 0.3, 0.18]
+  - Secondary train half a lap behind with 4-dot tail [0.38, 0.3, 0.22, 0.14]
+  - Base opacity 0.15 for all dots, 110ms step interval
+  - Dots use marker color (via getMarkerColor())
+  - Interval cleared on success transition (clearInterval before checkmark swap)
+- Removed improv-toast-spin keyframe (no longer needed)
+- Dist at 214,912 bytes
+
 ## Collaborator
 Jonah

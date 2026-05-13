@@ -9,6 +9,8 @@ export class LassoSelect {
   private startY = 0;
   private dragging = false;
 
+  private _color: string | undefined;
+
   private boundMousedown: (e: MouseEvent) => void;
   private boundMousemove: (e: MouseEvent) => void;
   private boundMouseup: (e: MouseEvent) => void;
@@ -37,6 +39,7 @@ export class LassoSelect {
 
   showSelectionOverlays(elements: HTMLElement[]): void {
     this.clearOverlays();
+    const _c = this._color || '#3b82f6';
     for (const el of elements) {
       const r = el.getBoundingClientRect();
       const overlay = document.createElement('div');
@@ -46,8 +49,8 @@ export class LassoSelect {
         `top:${r.top}px`,
         `width:${r.width}px`,
         `height:${r.height}px`,
-        'background:rgba(59,130,246,0.15)',
-        'border:1px solid rgba(59,130,246,0.4)',
+        'background:' + _c + '26',
+        'border:1px solid ' + _c + '66',
         'border-radius:2px',
         'pointer-events:none',
         'z-index:2147483643',
@@ -153,13 +156,14 @@ export class LassoSelect {
     const width = Math.abs(dx);
     const height = Math.abs(dy);
 
+    const _c = this._color || '#3b82f6';
     if (!this.rect) {
       this.rect = document.createElement('div');
       this.rect.style.cssText = [
         'position:fixed',
         'pointer-events:none',
-        'border:2px dashed #3b82f6',
-        'background:rgba(59,130,246,0.08)',
+        'border:2px dashed ' + _c,
+        'background:' + _c + '14',
         'z-index:2147483646',
         'border-radius:2px',
       ].join(';');
@@ -170,6 +174,8 @@ export class LassoSelect {
     this.rect.style.top = `${top}px`;
     this.rect.style.width = `${width}px`;
     this.rect.style.height = `${height}px`;
+    this.rect.style.borderColor = _c;
+    this.rect.style.background = _c + '14';
 
     // Count badge
     const captured = this._findIntersecting({ left, top, right: left + width, bottom: top + height });
@@ -253,5 +259,9 @@ export class LassoSelect {
       this.countBadge.remove();
       this.countBadge = null;
     }
+  }
+
+  setColor(c: string): void {
+    this._color = c;
   }
 }

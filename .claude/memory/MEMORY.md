@@ -56,4 +56,6 @@
 - [Never show minified JS](feedback_no_minified_output.md) - use python/bash for dist edits; never dump minified strings into conversation
 - [Improv toolbar collapse rewrite (2026-05-12)](session_2026-05-12_improv-toolbar-collapse.md) - width transition, opacity+pointerEvents only, animation fill-mode was the blocker
 - [Improv pipeline investigation (2026-05-12)](session_2026-05-12_improv-pipeline-investigation.md) - Full trace of build-to-browser pipeline; 5 breakpoints identified; copy-on-init design is root cause
-- [Launcher subcommand passthrough (2026-05-12)](session_2026-05-12_launcher-subcommand-passthrough.md) - Fixed discord/teams launchers to pass through `claude agents` and other subcommands directly
+- [Improv source reconstruction (2026-05-12)](session_2026-05-12_improv-source-reconstruction.md) - Rebuilt all TypeScript source from 217KB dist; build pipeline restored; "never rebuild" rule dead
+- [Improv Claude connection (2026-05-13)](session_2026-05-13_improv-claude-connection.md) - Full cycle browser-to-Claude-to-browser loop design; watch agent, improv_respond, auto-refresh, changes panel
+- [Improv queue polish (2026-05-13)](session_2026-05-13_improv-queue-polish.md) - Queue count 15px, markerColor at rest, contrast on active, live update
