@@ -77,4 +77,6 @@ Built Phase 2 of the improv-claude loop: Claude button and changes panel.
 
 **Ralph loop iteration 9:** Regression audit - all fixes survived reconstruction.
 
-**Ralph loop iteration 10:** "Clear done" button in panel header. Removes reviewed entries from list and localStorage. Hidden when no reviewed entries exist. Wired through ImprovCore callback.
+**Ralph loop iteration 10:** "Clear done" button in panel header.
+
+**Ralph loop iteration 11:** Integration test script (test-loop.js). Connects via WebSocket, submits prompt, verifies prompt ID assignment, confirms connections stable. Passes against running server.
