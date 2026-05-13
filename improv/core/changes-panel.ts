@@ -90,7 +90,12 @@ export class ChangesPanel {
 
     this.listEl = document.createElement('div');
     this.listEl.setAttribute('role', 'list');
-    this.listEl.style.cssText = 'overflow-y:auto;flex:1;padding:8px';
+    this.listEl.style.cssText = 'overflow-y:auto;flex:1;padding:8px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.15) transparent';
+
+    // Webkit scrollbar styles
+    const scrollStyle = document.createElement('style');
+    scrollStyle.textContent = ':host ::-webkit-scrollbar{width:6px}:host ::-webkit-scrollbar-track{background:transparent}:host ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:3px}:host ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.25)}';
+    this.container.appendChild(scrollStyle);
     this.container.appendChild(this.listEl);
 
     // Detail view container (hidden by default)
@@ -132,6 +137,7 @@ export class ChangesPanel {
 
   private handleKeydown(e: KeyboardEvent) {
     if (!this.visible) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
     const active = this.shadowRoot.activeElement ?? document.activeElement;
     const tag = (active as HTMLElement)?.tagName;
     const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || (active as HTMLElement)?.isContentEditable;
