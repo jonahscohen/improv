@@ -213,15 +213,6 @@ export class ImprovCore {
       }
     });
 
-    this._changesPanel.setOnPreviewToggle((_promptId: string, changes: any[], showOld: boolean) => {
-      if (this.previewEngine) {
-        this.previewEngine.attach();
-        for (const ch of changes) {
-          this.previewEngine.applyChange(ch.selector, ch.property, showOld ? ch.oldValue : ch.newValue);
-        }
-      }
-    });
-
     this._changesPanel.setOnSelect((selectors: string[]) => {
       this._clearTaskHighlights();
       if (selectors.length === 0) return;
@@ -255,6 +246,16 @@ export class ImprovCore {
         }
       }
       this._startHighlightTracking();
+    });
+
+    this._changesPanel.setOnItemClick((index: number) => {
+      const entries = this._changeHistory.filter((e: any) =>
+        (e.status === 'completed' && e.changes && e.changes.length > 0) || e.status === 'needsInfo'
+      );
+      const entry = entries[index];
+      if (entry) {
+        this._changesPanel!.showDetail(entry as any, index);
+      }
     });
 
     this._changesPanel.setOnRevert((promptId: string, changes: any[]) => {

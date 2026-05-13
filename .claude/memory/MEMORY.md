@@ -66,3 +66,5 @@
 - [Shared prompt buffer decision](decision_improv_shared_prompt_buffer.md) - File-based prompts.json replaces in-memory buffer so all MCP instances share the queue
 - [Improv Claude button restyle (2026-05-13)](session_2026-05-13_improv-claude-button-restyle.md) - Anthropic logo, pulse animation, #D97757 accent, badge removed
 - [Improv-Claude loop postmortem (2026-05-13)](session_2026-05-13_improv-postmortem.md) - Spec vs reality gaps, architecture mistakes, process failures, action items from 2-day implementation
+- [Improv changes panel detail view (2026-05-13)](session_2026-05-13_improv-changes-panel-detail-view.md) - Replaced inline expand/preview with clickable list items and slide-in detail subpage
+- [Improv detail view wiring (2026-05-13)](session_2026-05-13_improv-detail-view-wiring.md) - Wired setOnItemClick in index.ts, removed setOnPreviewToggle

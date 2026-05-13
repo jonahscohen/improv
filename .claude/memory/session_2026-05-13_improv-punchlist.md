@@ -35,6 +35,9 @@ relates_to: [session_2026-05-13_improv-changes-panel.md]
 - Numbered task circles: #D97757 bg, white number, replaces green dots
 - Element highlighting: clicking task entry highlights matching DOM elements with #D97757 border + selector tooltip, rAF tracking follows scroll
 - Clear dismisses UI: clearing all tasks removes panel + Claude button
+- Detail subpage: clickable list items open drawer-style detail view with back button, file-grouped diffs (red strikethrough old, green new), monospace
+- Diff stats: replaced property pills with compact +N -N stats (green/red)
+- Removed Show Changes / Hide Changes / Preview buttons
 - Postmortem: completed by agent, written to docs/superpowers/specs/2026-05-13-improv-postmortem.md
 - Design skill note saved to feedback_ai_icons_lobehub.md
 - Claude button restyled: 44x44, #1a1a1a bg, border + shadow matching toolbar "I" button, hover=#D9775715 (subtle orange warmth on dark, matches toolbar hover intensity), active=solid #D97757 + white icon

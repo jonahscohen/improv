@@ -13,6 +13,7 @@ type ReplyCallback = (promptId: string, text: string) => void;
 export class ChangesPanel {
   private container: HTMLDivElement;
   private listEl: HTMLDivElement;
+  private _detailEl: HTMLDivElement;
   private bottomBar: HTMLDivElement;
   private shadowRoot: ShadowRoot;
   private visible = false;
@@ -22,13 +23,11 @@ export class ChangesPanel {
   private onReplyCallback: ReplyCallback | null = null;
   private onDoneCallback: ((promptId: string) => void) | null = null;
   private onRevertCallback: ((promptId: string, changes: any[]) => void) | null = null;
-  private onPreviewToggleCallback: ((promptId: string, changes: any[], showOld: boolean) => void) | null = null;
   private onClearReviewedCallback: (() => void) | null = null;
   private onSelectCallback: ((selectors: string[]) => void) | null = null;
+  private onItemClickCallback: ((index: number) => void) | null = null;
   private _clearReviewedBtn: HTMLButtonElement | null = null;
   private revertedPrompts = new Set<string>();
-  private expandedPrompts = new Set<string>();
-  private previewingPrompts = new Set<string>();
   private getMarkerColor: () => string;
   private boundKeydown: (e: KeyboardEvent) => void;
 
@@ -94,6 +93,13 @@ export class ChangesPanel {
     this.listEl.style.cssText = 'overflow-y:auto;flex:1;padding:8px';
     this.container.appendChild(this.listEl);
 
+    // Detail view container (hidden by default)
+    this._detailEl = document.createElement('div');
+    this._detailEl.style.cssText =
+      'display:none;overflow-y:auto;flex:1;padding:0;' +
+      'transition:opacity 150ms ease,transform 150ms ease';
+    this.container.appendChild(this._detailEl);
+
     // Bottom bar for the clear button (below the list)
     this.bottomBar = document.createElement('div');
     this.bottomBar.style.cssText =
@@ -134,7 +140,12 @@ export class ChangesPanel {
     if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
-      this.hide();
+      // If detail view is showing, go back to list first
+      if (this._detailEl.style.display !== 'none') {
+        this.hideDetail();
+      } else {
+        this.hide();
+      }
     } else if (e.key === 'j' || e.key === 'J') {
       e.preventDefault();
       this.moveFocus(1);
@@ -198,6 +209,8 @@ export class ChangesPanel {
     this.focusedIndex = -1;
     if (this.onSelectCallback) this.onSelectCallback([]);
     document.removeEventListener('keydown', this.boundKeydown, true);
+    // Reset detail view on hide
+    this.hideDetail();
   }
 
   toggle(entries: ChangeEntry[]) {
@@ -210,9 +223,9 @@ export class ChangesPanel {
   setOnReply(cb: ReplyCallback) { this.onReplyCallback = cb; }
   setOnDone(cb: (promptId: string) => void) { this.onDoneCallback = cb; }
   setOnRevert(cb: (promptId: string, changes: any[]) => void) { this.onRevertCallback = cb; }
-  setOnPreviewToggle(cb: (promptId: string, changes: any[], showOld: boolean) => void) { this.onPreviewToggleCallback = cb; }
   setOnClearReviewed(cb: () => void) { this.onClearReviewedCallback = cb; }
   setOnSelect(cb: (selectors: string[]) => void) { this.onSelectCallback = cb; }
+  setOnItemClick(cb: (index: number) => void) { this.onItemClickCallback = cb; }
 
   private markDone(promptId: string) {
     if (this.onDoneCallback) this.onDoneCallback(promptId);
@@ -269,6 +282,172 @@ export class ChangesPanel {
     input.focus();
   }
 
+  showDetail(entry: ChangeEntry, index: number) {
+    // Hide the list
+    this.listEl.style.display = 'none';
+    this.bottomBar.style.display = 'none';
+
+    // Clear and populate detail container
+    while (this._detailEl.firstChild) this._detailEl.removeChild(this._detailEl.firstChild);
+    this._detailEl.style.display = 'flex';
+    this._detailEl.style.flexDirection = 'column';
+    this._detailEl.style.opacity = '0';
+    this._detailEl.style.transform = 'translateX(8px)';
+
+    // Back button
+    const backBtn = document.createElement('button');
+    backBtn.style.cssText =
+      'display:flex;align-items:center;gap:6px;border:none;background:none;' +
+      'color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;padding:12px 16px;' +
+      'font-family:system-ui,sans-serif;outline:none;flex-shrink:0;' +
+      'transition:color 120ms ease';
+    backBtn.addEventListener('mouseenter', () => { backBtn.style.color = 'rgba(255,255,255,0.85)'; });
+    backBtn.addEventListener('mouseleave', () => { backBtn.style.color = 'rgba(255,255,255,0.6)'; });
+
+    const arrowSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    arrowSvg.setAttribute('width', '14');
+    arrowSvg.setAttribute('height', '14');
+    arrowSvg.setAttribute('viewBox', '0 0 24 24');
+    arrowSvg.setAttribute('fill', 'none');
+    arrowSvg.setAttribute('stroke', 'currentColor');
+    arrowSvg.setAttribute('stroke-width', '2');
+    arrowSvg.setAttribute('stroke-linecap', 'round');
+    arrowSvg.setAttribute('stroke-linejoin', 'round');
+    const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    arrowPath.setAttribute('d', 'M19 12H5');
+    arrowSvg.appendChild(arrowPath);
+    const arrowHead = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    arrowHead.setAttribute('d', 'm12 19-7-7 7-7');
+    arrowSvg.appendChild(arrowHead);
+    backBtn.appendChild(arrowSvg);
+
+    const backLabel = document.createElement('span');
+    backLabel.textContent = 'Back';
+    backBtn.appendChild(backLabel);
+    backBtn.addEventListener('click', () => this.hideDetail());
+    this._detailEl.appendChild(backBtn);
+
+    // Separator
+    const sep = document.createElement('div');
+    sep.style.cssText = 'height:1px;background:rgba(255,255,255,0.1);flex-shrink:0';
+    this._detailEl.appendChild(sep);
+
+    // Scrollable content area
+    const scrollArea = document.createElement('div');
+    scrollArea.style.cssText = 'overflow-y:auto;flex:1;padding:12px 16px';
+
+    // Entry summary header
+    const summaryHeader = document.createElement('div');
+    summaryHeader.style.cssText = 'margin-bottom:16px';
+
+    const numLabel = document.createElement('span');
+    numLabel.style.cssText =
+      'display:inline-flex;align-items:center;justify-content:center;' +
+      'width:20px;height:20px;border-radius:50%;background:#D97757;' +
+      'font-size:10px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;' +
+      'font-family:system-ui,sans-serif;margin-right:8px;vertical-align:middle';
+    numLabel.textContent = String(index + 1);
+    summaryHeader.appendChild(numLabel);
+
+    const summarySpan = document.createElement('span');
+    summarySpan.style.cssText = 'font-size:13px;color:rgba(255,255,255,0.85);line-height:1.4';
+    summarySpan.textContent = entry.summary;
+    summaryHeader.appendChild(summarySpan);
+
+    scrollArea.appendChild(summaryHeader);
+
+    // Group changes by file
+    const changesByFile = new Map<string, Array<{ selector: string; property: string; oldValue: string; newValue: string }>>();
+
+    // Initialize with all filesChanged so files with no matching changes still get a header
+    for (const f of entry.filesChanged) {
+      if (!changesByFile.has(f)) changesByFile.set(f, []);
+    }
+
+    // Assign changes to files - match by checking if the selector relates to the file
+    // Since changes don't have a direct file field, distribute all changes under each file
+    // In practice each entry's changes are for the files listed in filesChanged
+    for (const c of entry.changes) {
+      // Add to all files if we can't determine which file a change belongs to
+      if (entry.filesChanged.length === 1) {
+        const file = entry.filesChanged[0];
+        changesByFile.get(file)!.push(c);
+      } else {
+        // Distribute to all files when ambiguous - the selector is the disambiguator visually
+        for (const f of entry.filesChanged) {
+          if (!changesByFile.has(f)) changesByFile.set(f, []);
+          changesByFile.get(f)!.push(c);
+        }
+      }
+    }
+
+    // Render each file group
+    changesByFile.forEach((changes, filename) => {
+      const fileSection = document.createElement('div');
+      fileSection.style.cssText = 'margin-bottom:14px';
+
+      const fileHeader = document.createElement('div');
+      fileHeader.style.cssText =
+        'font-size:11px;color:rgba(255,255,255,0.5);font-family:ui-monospace,monospace;' +
+        'padding:4px 0;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06)';
+      fileHeader.textContent = filename;
+      fileSection.appendChild(fileHeader);
+
+      for (const c of changes) {
+        const diffRow = document.createElement('div');
+        diffRow.style.cssText =
+          'padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)';
+
+        const selectorEl = document.createElement('div');
+        selectorEl.style.cssText =
+          'font-size:11px;color:rgba(255,255,255,0.4);font-family:ui-monospace,monospace;' +
+          'margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+        selectorEl.textContent = c.selector;
+        diffRow.appendChild(selectorEl);
+
+        const propLine = document.createElement('div');
+        propLine.style.cssText =
+          'font-size:12px;font-family:ui-monospace,monospace;display:flex;flex-direction:column;gap:2px';
+
+        const propLabel = document.createElement('span');
+        propLabel.style.cssText = 'color:rgba(255,255,255,0.6);font-weight:500';
+        propLabel.textContent = c.property;
+        propLine.appendChild(propLabel);
+
+        const oldVal = document.createElement('span');
+        oldVal.style.cssText = 'color:#ef4444;text-decoration:line-through';
+        oldVal.textContent = c.oldValue;
+        propLine.appendChild(oldVal);
+
+        const newVal = document.createElement('span');
+        newVal.style.cssText = 'color:#22c55e';
+        newVal.textContent = c.newValue;
+        propLine.appendChild(newVal);
+
+        diffRow.appendChild(propLine);
+        fileSection.appendChild(diffRow);
+      }
+
+      scrollArea.appendChild(fileSection);
+    });
+
+    this._detailEl.appendChild(scrollArea);
+
+    // Trigger slide-in animation
+    this._detailEl.getBoundingClientRect();
+    this._detailEl.style.opacity = '1';
+    this._detailEl.style.transform = 'translateX(0)';
+  }
+
+  hideDetail() {
+    this._detailEl.style.display = 'none';
+    this._detailEl.style.opacity = '0';
+    this._detailEl.style.transform = 'translateX(8px)';
+    this.listEl.style.display = '';
+    // Restore bottom bar visibility based on state
+    this._updateClearBtn();
+  }
+
   private render() {
     // Bug fix #3: save scroll position before rebuilding
     const savedScrollTop = this.listEl.scrollTop;
@@ -293,8 +472,6 @@ export class ChangesPanel {
 
     this.filteredEntries.forEach((entry, i) => {
       const isReverted = this.revertedPrompts.has(entry.promptId);
-      const isExpanded = this.expandedPrompts.has(entry.promptId);
-      const isPreviewing = this.previewingPrompts.has(entry.promptId);
 
       const item = document.createElement('div');
       item.setAttribute('role', 'listitem');
@@ -311,7 +488,7 @@ export class ChangesPanel {
       }
 
       item.style.cssText =
-        'padding:10px 12px;border-radius:10px;margin-bottom:6px;' +
+        'padding:10px 12px;border-radius:10px;margin-bottom:6px;cursor:pointer;' +
         'background:' + bgColor + ';' +
         'transition:background 80ms ease;' +
         'opacity:' + (entry.reviewed ? '0.4' : '1');
@@ -347,25 +524,31 @@ export class ChangesPanel {
         summaryEl.appendChild(files);
       }
 
-      if (entry.changes.length > 0 && !isExpanded) {
-        const changesWrap = document.createElement('div');
-        changesWrap.style.cssText = 'margin-top:6px;display:flex;flex-wrap:wrap;gap:4px';
-        for (const c of entry.changes.slice(0, 4)) {
-          const pill = document.createElement('span');
-          pill.style.cssText =
-            'font-size:10px;padding:2px 6px;border-radius:4px;' +
-            'background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);' +
-            'font-family:ui-monospace,monospace;white-space:nowrap';
-          pill.textContent = c.property + ': ' + c.oldValue + ' -> ' + c.newValue;
-          changesWrap.appendChild(pill);
-        }
-        if (entry.changes.length > 4) {
-          const more = document.createElement('span');
-          more.style.cssText = 'font-size:10px;color:rgba(255,255,255,0.3);padding:2px 4px';
-          more.textContent = '+' + (entry.changes.length - 4) + ' more';
-          changesWrap.appendChild(more);
-        }
-        summaryEl.appendChild(changesWrap);
+      // Diff stats: +N -N
+      if (entry.changes.length > 0) {
+        const statsWrap = document.createElement('div');
+        statsWrap.style.cssText = 'margin-top:4px';
+
+        const statsSpan = document.createElement('span');
+        statsSpan.style.cssText = 'font-size:11px;font-family:ui-monospace,monospace';
+
+        const addSpan = document.createElement('span');
+        addSpan.style.cssText = 'color:#22c55e';
+        addSpan.textContent = '+' + entry.changes.length;
+
+        const sepSpan = document.createElement('span');
+        sepSpan.style.cssText = 'color:rgba(255,255,255,0.25)';
+        sepSpan.textContent = ' ';
+
+        const delSpan = document.createElement('span');
+        delSpan.style.cssText = 'color:#ef4444';
+        delSpan.textContent = '-' + entry.changes.length;
+
+        statsSpan.appendChild(addSpan);
+        statsSpan.appendChild(sepSpan);
+        statsSpan.appendChild(delSpan);
+        statsWrap.appendChild(statsSpan);
+        summaryEl.appendChild(statsWrap);
       }
 
       if (entry.status === 'needsInfo' && entry.question) {
@@ -379,97 +562,6 @@ export class ChangesPanel {
 
       topRow.appendChild(summaryEl);
       item.appendChild(topRow);
-
-      // Bug fix #6: expanded changes detail view
-      if (isExpanded && entry.changes.length > 0) {
-        const detailWrap = document.createElement('div');
-        detailWrap.style.cssText =
-          'margin-top:8px;padding-left:16px;border-left:2px solid rgba(255,255,255,0.08)';
-
-        for (const c of entry.changes) {
-          const row = document.createElement('div');
-          row.style.cssText =
-            'display:flex;flex-direction:column;gap:2px;padding:4px 0;' +
-            'border-bottom:1px solid rgba(255,255,255,0.04);font-size:10px';
-
-          const selectorEl = document.createElement('div');
-          selectorEl.style.cssText =
-            'color:rgba(255,255,255,0.4);font-family:ui-monospace,monospace;' +
-            'white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-          selectorEl.textContent = c.selector;
-          row.appendChild(selectorEl);
-
-          const valuesRow = document.createElement('div');
-          valuesRow.style.cssText = 'display:flex;gap:6px;align-items:center';
-
-          const propEl = document.createElement('span');
-          propEl.style.cssText =
-            'color:rgba(255,255,255,0.6);font-family:ui-monospace,monospace;font-weight:500';
-          propEl.textContent = c.property;
-          valuesRow.appendChild(propEl);
-
-          const oldEl = document.createElement('span');
-          oldEl.style.cssText =
-            'color:#ef4444;text-decoration:line-through;font-family:ui-monospace,monospace';
-          oldEl.textContent = c.oldValue;
-          valuesRow.appendChild(oldEl);
-
-          const arrowEl = document.createElement('span');
-          arrowEl.style.cssText = 'color:rgba(255,255,255,0.25)';
-          arrowEl.textContent = '->';
-          valuesRow.appendChild(arrowEl);
-
-          const newEl = document.createElement('span');
-          newEl.style.cssText =
-            'color:#22c55e;font-family:ui-monospace,monospace';
-          newEl.textContent = c.newValue;
-          valuesRow.appendChild(newEl);
-
-          row.appendChild(valuesRow);
-          detailWrap.appendChild(row);
-        }
-
-        // Preview toggle button
-        const previewBtn = document.createElement('button');
-        previewBtn.textContent = isPreviewing ? 'Showing Before' : 'Preview';
-        previewBtn.style.cssText =
-          'border:none;border-radius:6px;padding:4px 10px;font-size:10px;cursor:pointer;' +
-          'font-family:system-ui,sans-serif;margin-top:6px;outline:none;' +
-          'transition:background 120ms ease;' +
-          (isPreviewing
-            ? 'background:rgba(239,68,68,0.15);color:#ef4444;'
-            : 'background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);');
-        previewBtn.addEventListener('mouseenter', () => {
-          previewBtn.style.background = isPreviewing
-            ? 'rgba(239,68,68,0.25)'
-            : 'rgba(255,255,255,0.1)';
-        });
-        previewBtn.addEventListener('mouseleave', () => {
-          previewBtn.style.background = isPreviewing
-            ? 'rgba(239,68,68,0.15)'
-            : 'rgba(255,255,255,0.06)';
-        });
-        previewBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (isPreviewing) {
-            this.previewingPrompts.delete(entry.promptId);
-            // Restore new values
-            if (this.onPreviewToggleCallback) {
-              this.onPreviewToggleCallback(entry.promptId, entry.changes, false);
-            }
-          } else {
-            this.previewingPrompts.add(entry.promptId);
-            // Apply old values to show "before"
-            if (this.onPreviewToggleCallback) {
-              this.onPreviewToggleCallback(entry.promptId, entry.changes, true);
-            }
-          }
-          this.render();
-        });
-        detailWrap.appendChild(previewBtn);
-
-        item.appendChild(detailWrap);
-      }
 
       if (!entry.reviewed) {
         const actions = document.createElement('div');
@@ -498,28 +590,6 @@ export class ChangesPanel {
             revertBtn.setAttribute('aria-label', 'Revert this change preview');
             actions.appendChild(revertBtn);
           }
-
-          // Bug fix #6: Show Changes / Hide Changes toggle
-          const showChangesBtn = this.makeActionBtn(
-            isExpanded ? 'Hide Changes' : 'Show Changes',
-            () => {
-              if (isExpanded) {
-                this.expandedPrompts.delete(entry.promptId);
-                // If previewing, restore new values when collapsing
-                if (this.previewingPrompts.has(entry.promptId)) {
-                  this.previewingPrompts.delete(entry.promptId);
-                  if (this.onPreviewToggleCallback) {
-                    this.onPreviewToggleCallback(entry.promptId, entry.changes, false);
-                  }
-                }
-              } else {
-                this.expandedPrompts.add(entry.promptId);
-              }
-              this.render();
-            }
-          );
-          showChangesBtn.setAttribute('aria-label', isExpanded ? 'Hide change details' : 'Show change details');
-          actions.appendChild(showChangesBtn);
         }
 
         const replyBtn = this.makeActionBtn('Reply', () => this.startReply(i));
@@ -529,11 +599,19 @@ export class ChangesPanel {
         item.appendChild(actions);
       }
 
-      item.addEventListener('click', () => {
+      // Click anywhere on the item (that isn't a button) opens detail view
+      item.addEventListener('click', (e) => {
+        // Don't trigger if the click was on a button or input inside the item
+        const target = e.target as HTMLElement;
+        if (target.closest('button') || target.closest('input')) return;
+
         this.focusedIndex = i;
-        this.render();
         const selectors = [...new Set(entry.changes.map(c => c.selector))];
         if (this.onSelectCallback) this.onSelectCallback(selectors);
+
+        if (this.onItemClickCallback) {
+          this.onItemClickCallback(i);
+        }
       });
 
       this.listEl.appendChild(item);
