@@ -79,4 +79,6 @@ Built Phase 2 of the improv-claude loop: Claude button and changes panel.
 
 **Ralph loop iteration 10:** "Clear done" button in panel header.
 
-**Ralph loop iteration 11:** Integration test script (test-loop.js). Connects via WebSocket, submits prompt, verifies prompt ID assignment, confirms connections stable. Passes against running server.
+**Ralph loop iteration 11:** Integration test script (test-loop.js).
+
+**Post-loop:** How-to-use guide at improv/docs/how-to-use.html. Dark-themed HTML doc covering setup, toolbar, prompt mode loop, changes panel, keyboard shortcuts, marker color, build commands, architecture, MCP tools, accessibility.

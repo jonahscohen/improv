@@ -59,3 +59,5 @@
 - [Improv source reconstruction (2026-05-12)](session_2026-05-12_improv-source-reconstruction.md) - Rebuilt all TypeScript source from 217KB dist; build pipeline restored; "never rebuild" rule dead
 - [Improv Claude connection (2026-05-13)](session_2026-05-13_improv-claude-connection.md) - Full cycle browser-to-Claude-to-browser loop design; watch agent, improv_respond, auto-refresh, changes panel
 - [Improv queue polish (2026-05-13)](session_2026-05-13_improv-queue-polish.md) - Queue count 15px, markerColor at rest, contrast on active, live update
+- [Improv loop Phase 1 (2026-05-13)](session_2026-05-13_improv-loop-phase1.md) - Watch agent, improv_respond tool, response toast, localStorage persistence
+- [Improv changes panel (2026-05-13)](session_2026-05-13_improv-changes-panel.md) - Claude button, changes panel, keyboard shortcuts, phases 3+4, 11 ralph loop iterations

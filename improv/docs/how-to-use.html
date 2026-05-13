@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Improv - How to Use</title>
+<style>
+  :root { --bg: #0a0a0a; --surface: #141414; --border: #222; --text: #e5e5e5; --muted: #888; --accent: #3b82f6; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 0 24px 80px; max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 32px; font-weight: 700; margin: 48px 0 8px; letter-spacing: -0.5px; }
+  h1 span { color: var(--accent); }
+  .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 48px; }
+  h2 { font-size: 20px; font-weight: 600; margin: 48px 0 16px; padding-top: 24px; border-top: 1px solid var(--border); }
+  h3 { font-size: 15px; font-weight: 600; margin: 24px 0 8px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; }
+  p { margin-bottom: 16px; color: #ccc; }
+  ul, ol { margin: 0 0 16px 20px; color: #ccc; }
+  li { margin-bottom: 6px; }
+  code { font-family: ui-monospace, 'SF Mono', monospace; background: var(--surface); padding: 2px 6px; border-radius: 4px; font-size: 13px; color: var(--accent); }
+  pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 12px 0 20px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+  pre code { background: none; padding: 0; color: var(--text); }
+  kbd { display: inline-block; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-family: ui-monospace, monospace; font-size: 12px; color: var(--text); box-shadow: 0 1px 0 var(--border); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin: 16px 0; }
+  .card h4 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .card p { margin-bottom: 0; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  .shortcut { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+  .shortcut kbd { min-width: 28px; text-align: center; }
+  .shortcut span { color: #aaa; font-size: 14px; }
+  .flow { display: flex; flex-direction: column; gap: 2px; margin: 16px 0; }
+  .flow-step { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); font-size: 14px; }
+  .flow-step:first-child { border-radius: 8px 8px 0 0; }
+  .flow-step:last-child { border-radius: 0 0 8px 8px; }
+  .flow-num { color: var(--accent); font-weight: 700; font-size: 13px; flex-shrink: 0; width: 20px; }
+  .flow-text { color: #ccc; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+  .tag-blue { background: #3b82f620; color: #60a5fa; }
+  .tag-green { background: #22c55e20; color: #4ade80; }
+  .tag-orange { background: #f9731620; color: #fb923c; }
+</style>
+</head>
+<body>
+
+<h1><span>Improv</span> Guide</h1>
+<p class="subtitle">Visual micro-adjustment tool for front-end developers. Select elements, describe changes in natural language, and see Claude's work reflected back in real time.</p>
+
+<h2>Setup</h2>
+
+<h3>Install</h3>
+<p>If you have the dotfiles installed, improv is already available. Otherwise:</p>
+<pre><code>ampersand --only improv</code></pre>
+
+<h3>Activate in a project</h3>
+<p>Run once per project to wire the script into your dev server:</p>
+<pre><code>improv-init</code></pre>
+<p>This detects your stack (WordPress, Next.js, Vite, Drupal, static HTML) and adds a <code>&lt;script&gt;</code> tag pointing to the local MCP server. No files are copied - improv is always served fresh from <code>localhost:9223</code>.</p>
+
+<h3>Or activate from Claude</h3>
+<p>Tell Claude:</p>
+<pre><code>activate improv</code></pre>
+<p>Claude will inject the script into the active browser tab automatically.</p>
+
+<h2>The Toolbar</h2>
+
+<p>Improv starts as a small circle (<code>I</code>) in the bottom-right corner. Click it to expand the toolbar.</p>
+
+<div class="grid">
+  <div class="card">
+    <h4>Prompt Mode</h4>
+    <p>Select elements and describe changes in natural language. Claude reads your instructions and makes the code changes.</p>
+  </div>
+  <div class="card">
+    <h4>Manipulate Mode</h4>
+    <p>Click elements to open a property panel with live CSS controls. Scrub values, pick colors, adjust spacing.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h4>Settings</h4>
+  <p>Verbosity level, connection status, marker color (persists per-project), hints toggle, selection labels toggle.</p>
+</div>
+
+<h2>Prompt Mode - The Claude Loop</h2>
+
+<p>This is the core workflow. You stay in the browser. Claude stays in the terminal.</p>
+
+<div class="flow">
+  <div class="flow-step"><span class="flow-num">1</span><span class="flow-text">Click an element on the page (or shift-click for multi-select, or lasso-drag)</span></div>
+  <div class="flow-step"><span class="flow-num">2</span><span class="flow-text">Type what you want changed: "make this red", "increase padding to 24px", "swap this font"</span></div>
+  <div class="flow-step"><span class="flow-num">3</span><span class="flow-text">Hit Enter to queue, or Cmd+Enter to send immediately</span></div>
+  <div class="flow-step"><span class="flow-num">4</span><span class="flow-text">Claude picks up your prompt, finds the right source file, makes the change</span></div>
+  <div class="flow-step"><span class="flow-num">5</span><span class="flow-text">Your page reloads with the change applied. A toast confirms what happened.</span></div>
+  <div class="flow-step"><span class="flow-num">6</span><span class="flow-text">Review in the Changes panel. Mark done, reply with adjustments, or revert.</span></div>
+</div>
+
+<h3>Starting the watch loop</h3>
+<p>For Claude to pick up your prompts, start the watch loop in a Claude session:</p>
+<pre><code>improv watch</code></pre>
+<p>Claude enters a persistent loop, polling for new prompts every 60 seconds. When you submit from the browser, Claude acts on it within seconds.</p>
+
+<h3>Queueing changes</h3>
+<p>You can queue multiple changes before sending. Each one gets its own prompt with full element context. The queue count appears in the action bar at the bottom-left.</p>
+<ul>
+  <li><kbd>Enter</kbd> in the prompt input queues the change</li>
+  <li><kbd>Cmd</kbd>+<kbd>Enter</kbd> sends immediately</li>
+  <li>Click the send button to flush the entire queue</li>
+</ul>
+
+<h2>The Changes Panel</h2>
+
+<p>After Claude responds, a <span class="tag tag-blue">Claude button</span> appears at the bottom-left with a badge showing unreviewed changes. Click it to open the Changes panel.</p>
+
+<p>Each entry shows:</p>
+<ul>
+  <li>Status dot: <span class="tag tag-green">green</span> = completed, <span class="tag tag-blue">blue</span> = needs info, <span class="tag tag-orange">red</span> = failed</li>
+  <li>Summary of what Claude did</li>
+  <li>Files modified</li>
+  <li>Property diffs: <code>padding: 16px &rarr; 24px</code></li>
+  <li>If Claude has a question, it appears as a callout with a reply option</li>
+</ul>
+
+<p>Actions per entry:</p>
+<ul>
+  <li><strong>Done</strong> - marks the change as reviewed (dims it)</li>
+  <li><strong>Revert</strong> - undoes the CSS preview for that change</li>
+  <li><strong>Reply</strong> - opens an inline input to send a follow-up ("actually make it 20px instead")</li>
+</ul>
+
+<p>Use <strong>Clear done</strong> in the panel header to remove all reviewed entries.</p>
+
+<h2>Keyboard Shortcuts</h2>
+<p>All single-key shortcuts are suppressed when a text input is focused. Only <kbd>Escape</kbd> and <kbd>Cmd</kbd> combos fire regardless.</p>
+
+<div class="card">
+  <div class="shortcut"><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>.</kbd> <span>Toggle toolbar expand/collapse</span></div>
+  <div class="shortcut"><kbd>Escape</kbd> <span>Close panel / exit mode / dismiss prompt</span></div>
+  <div class="shortcut"><kbd>P</kbd> <span>Toggle Prompt mode</span></div>
+  <div class="shortcut"><kbd>M</kbd> <span>Toggle Manipulate mode</span></div>
+  <div class="shortcut"><kbd>C</kbd> <span>Toggle Changes panel</span></div>
+  <div class="shortcut"><kbd>Q</kbd> <span>Toggle Queue panel</span></div>
+  <div class="shortcut"><kbd>J</kbd> / <kbd>K</kbd> <span>Navigate entries in panels</span></div>
+  <div class="shortcut"><kbd>D</kbd> <span>Mark focused entry as done</span></div>
+  <div class="shortcut"><kbd>R</kbd> <span>Reply to focused entry</span></div>
+</div>
+
+<h2>Marker Color</h2>
+<p>The marker color is the accent color used throughout improv - active button states, selection highlights, screen glow, badge, focus rings. Change it in Settings. It persists per-project via <code>localStorage</code>.</p>
+<p>On light backgrounds (orange, yellow, green), icon colors automatically switch to dark (<code>#1a1a1a</code>) for WCAG AA contrast compliance.</p>
+
+<h2>For Developers</h2>
+
+<h3>Build</h3>
+<pre><code># Development (non-minified + source maps)
+cd improv && node build.js --dev --core-only
+
+# Production (minified + source maps)
+cd improv && node build.js --core-only
+
+# Deploy to MCP server
+cp dist/improv-core.js ~/.claude/improv/dist/improv-core.js</code></pre>
+
+<h3>Architecture</h3>
+<pre><code>improv/
+  core/           # TypeScript source (~20 files)
+    index.ts      # ImprovCore - main orchestrator
+    toolbar.ts    # Toolbar pill UI
+    icons.ts      # SVG icon builders
+    overlay.ts    # Shadow DOM overlay + highlight
+    transport.ts  # WebSocket client
+    changes-panel.ts  # Claude changes review panel
+    prompt/       # Prompt mode (selection, input, queue)
+    manipulate/   # Manipulate mode (property panel)
+    annotate/     # Annotate mode (lasso, markers)
+  server/         # MCP server (TypeScript)
+    mcp-tools.ts  # MCP tool definitions
+    ws-server.ts  # WebSocket + HTTP server
+  build.js        # esbuild bundler
+  dist/           # Built output</code></pre>
+
+<h3>MCP Tools</h3>
+<div class="card" style="font-size:13px; overflow-x:auto;">
+<table style="width:100%; border-collapse:collapse;">
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 8px;"><code>improv_activate</code></td><td style="padding:4px 8px; color:var(--muted);">Check connection, return injection script</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 8px;"><code>improv_status</code></td><td style="padding:4px 8px; color:var(--muted);">Connection count, buffer sizes</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 8px;"><code>improv_watch</code></td><td style="padding:4px 8px; color:var(--muted);">Long-poll for new prompts/changes</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 8px;"><code>improv_get_prompts</code></td><td style="padding:4px 8px; color:var(--muted);">Read and clear pending prompts</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 8px;"><code>improv_respond</code></td><td style="padding:4px 8px; color:var(--muted);">Send results back to browser</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 8px;"><code>improv_get_pending_changes</code></td><td style="padding:4px 8px; color:var(--muted);">Buffered CSS changes from Manipulate</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 8px;"><code>improv_apply_changes</code></td><td style="padding:4px 8px; color:var(--muted);">Format diffs, clear, notify browser</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 8px;"><code>improv_get_annotations</code></td><td style="padding:4px 8px; color:var(--muted);">Annotations at 4 verbosity levels</td></tr>
+<tr><td style="padding:4px 8px;"><code>improv_clear</code></td><td style="padding:4px 8px; color:var(--muted);">Clear all buffers</td></tr>
+</table>
+</div>
+
+<h2>Accessibility</h2>
+<ul>
+  <li>All buttons have <code>role="button"</code>, <code>aria-label</code>, and <code>tabindex="0"</code></li>
+  <li>Panels use <code>role="dialog"</code> with <code>aria-labelledby</code></li>
+  <li>Badge counts use <code>aria-live="polite"</code> for screen reader announcements</li>
+  <li>Focus-visible rings follow the marker color via CSS custom property</li>
+  <li><code>prefers-reduced-motion</code> disables all animations and transitions</li>
+  <li>Minimum 40x40px hit areas on all interactive elements</li>
+</ul>
+
+</body>
+</html>
