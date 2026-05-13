@@ -73,4 +73,6 @@ Built Phase 2 of the improv-claude loop: Claude button and changes panel.
 
 **Ralph loop iteration 7:** Production build deployed (216KB minified). Full verification.
 
-**Ralph loop iteration 8:** Phase 4 completion. Diff visualization: property pills show `oldValue -> newValue` with arrow. Revert button: clears PreviewEngine changes for the entry. Apply is implicit (Claude already wrote files). All 14 spec "What Needs Building" items now built and verified. Screenshot confirms diff arrows + Revert button rendering correctly.
+**Ralph loop iteration 8:** Phase 4 completion - diff arrows + revert button.
+
+**Ralph loop iteration 9:** Regression audit of earlier session fixes post-reconstruction. All survived: toolbar width transition + overflow, close button absolute positioning (right:5px top:50%), tooltip fixed position outside toolbar, screen glow 1.2s fade with brightness pulse (not opacity), prefers-reduced-motion + focus-visible in adopted stylesheet. Production build 217KB deployed and verified.
