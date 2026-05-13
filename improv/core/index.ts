@@ -31,6 +31,7 @@ export class ImprovCore {
   private promptMode: PromptMode | null = null;
   private applyConfirmation: ApplyConfirmation | null = null;
   private _toast: HTMLDivElement | null = null;
+  private _changeHistory: Array<Record<string, unknown>> = [];
 
   constructor() {
     this.transport = new Transport();
@@ -51,6 +52,29 @@ export class ImprovCore {
       this.previewEngine?.clearAll();
       this.toolbar?.setBadge(0);
     });
+
+    this.transport.on('improv_response', (data: unknown) => {
+      const response = data as Record<string, unknown>;
+      response.reviewed = false;
+      this._changeHistory.push(response);
+      try {
+        localStorage.setItem('improv-change-history', JSON.stringify(this._changeHistory));
+      } catch {}
+      const status = response.status as string;
+      const summary = response.summary as string;
+      if (status === 'completed') {
+        this._showResponseToast(summary, 'completed');
+      } else if (status === 'needsInfo') {
+        this._showResponseToast(response.question as string || summary, 'needsInfo');
+      } else {
+        this._showResponseToast(summary, 'failed');
+      }
+    });
+
+    try {
+      const stored = localStorage.getItem('improv-change-history');
+      if (stored) this._changeHistory = JSON.parse(stored);
+    } catch {}
 
     document.addEventListener('keydown', (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '.') {
@@ -374,6 +398,83 @@ export class ImprovCore {
         }
       }, 1500);
     }, 1500);
+  }
+
+  _showResponseToast(message: string, status: 'completed' | 'needsInfo' | 'failed'): void {
+    if (this._toast) {
+      this._toast.remove();
+      this._toast = null;
+    }
+    this._toast = document.createElement('div');
+    this._toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:10px 20px;z-index:2147483647;pointer-events:none;display:flex;align-items:center;gap:10px;font-family:system-ui,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,0.4);animation:improv-toast-slide-in 0.3s cubic-bezier(0.23,1,0.32,1) forwards;max-width:480px';
+
+    const _mColor = this.toolbar ? this.toolbar.getMarkerColor() : '#3b82f6';
+
+    const iconWrap = document.createElement('div');
+    iconWrap.style.cssText = 'width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center';
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '18');
+    svg.setAttribute('height', '18');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2.5');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+    if (status === 'completed') {
+      svg.style.color = '#22c55e';
+      path.setAttribute('d', 'M4 12 9 17L20 6');
+      path.style.cssText = 'stroke-dasharray:20;animation:improv-toast-check-draw 0.4s ease forwards';
+    } else if (status === 'needsInfo') {
+      svg.style.color = _mColor;
+      path.setAttribute('d', 'M12 8v4m0 4h.01');
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', '12');
+      circle.setAttribute('cy', '12');
+      circle.setAttribute('r', '10');
+      svg.appendChild(circle);
+    } else {
+      svg.style.color = '#ef4444';
+      path.setAttribute('d', 'M18 6 6 18M6 6l12 12');
+    }
+    svg.appendChild(path);
+    iconWrap.appendChild(svg);
+    this._toast.appendChild(iconWrap);
+
+    const label = document.createElement('span');
+    label.style.cssText = 'font-size:11px;font-weight:600;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    if (status === 'completed') {
+      label.textContent = message;
+    } else if (status === 'needsInfo') {
+      label.textContent = 'Claude asks: ' + message;
+    } else {
+      label.textContent = 'Failed: ' + message;
+    }
+    this._toast.appendChild(label);
+
+    if (!document.getElementById('improv-toast-style')) {
+      const ts = document.createElement('style');
+      ts.id = 'improv-toast-style';
+      ts.textContent = '@keyframes improv-toast-slide-in{from{transform:translateY(-100%) translateX(-50%);opacity:0}to{transform:translateY(0) translateX(-50%);opacity:1}}@keyframes improv-toast-slide-out{from{transform:translateY(0) translateX(-50%);opacity:1}to{transform:translateY(-100%) translateX(-50%);opacity:0}}@keyframes improv-toast-progress{0%{width:0}100%{width:100%}}@keyframes improv-toast-check-draw{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}';
+      document.head.appendChild(ts);
+    }
+    document.body.appendChild(this._toast);
+
+    const dismissDelay = status === 'needsInfo' ? 5000 : 3000;
+    const self = this;
+    setTimeout(() => {
+      if (self._toast) {
+        self._toast.style.animation = 'improv-toast-slide-out 0.3s ease forwards';
+        setTimeout(() => {
+          if (self._toast) {
+            self._toast.remove();
+            self._toast = null;
+          }
+        }, 300);
+      }
+    }, dismissDelay);
   }
 
   private getTotalPendingCount(): number {

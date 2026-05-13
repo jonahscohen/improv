@@ -10,7 +10,8 @@ function text(content: string) {
 export function registerTools(mcp: McpServer, ws: WsServer): void {
   const pendingChanges: StyleChange[] = [];
   const annotations: Annotation[] = [];
-  const pendingPrompts: Array<{ context: string; prompt: string; elementCount: number; timestamp: number }> = [];
+  let promptIdCounter = 0;
+  const pendingPrompts: Array<{ id: string; context: string; prompt: string; elementCount: number; timestamp: number }> = [];
   let layoutPlacements: LayoutPlacement[] = [];
 
   // WebSocket push handlers - browser pushes data into these buffers
@@ -27,14 +28,16 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
   });
 
   ws.onMessage('push_prompt', (_connectionId, params) => {
+    const id = `prompt-${++promptIdCounter}`;
     const prompt = {
+      id,
       context: (params?.context ?? '') as string,
       prompt: (params?.prompt ?? '') as string,
       elementCount: (params?.elementCount ?? 0) as number,
       timestamp: Date.now(),
     };
     pendingPrompts.push(prompt);
-    return { accepted: 1 };
+    return { accepted: 1, promptId: id };
   });
 
   ws.onMessage('push_layout', (_connectionId, params) => {
@@ -202,7 +205,7 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
   // Tool: improv_watch
   mcp.tool(
     'improv_watch',
-    'Poll for new changes or annotations, returning once new data arrives or timeout elapses',
+    'Poll for new prompts, changes, or annotations. Returns once new data arrives or timeout elapses. Use this in a loop to watch for user prompts from the browser.',
     {
       timeout: z
         .number()
@@ -212,12 +215,15 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
     async ({ timeout = 30 }) => {
       const startChanges = pendingChanges.length;
       const startAnnotations = annotations.length;
+      const startPrompts = pendingPrompts.length;
       const deadline = Date.now() + timeout * 1000;
 
       await new Promise<void>((resolve) => {
         const check = () => {
           const hasNew =
-            pendingChanges.length !== startChanges || annotations.length !== startAnnotations;
+            pendingChanges.length !== startChanges ||
+            annotations.length !== startAnnotations ||
+            pendingPrompts.length !== startPrompts;
           if (hasNew || Date.now() >= deadline) {
             resolve();
           } else {
@@ -227,13 +233,20 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
         check();
       });
 
+      const timedOut =
+        pendingChanges.length === startChanges &&
+        annotations.length === startAnnotations &&
+        pendingPrompts.length === startPrompts;
+
       return text(
         JSON.stringify({
           changes: pendingChanges.length,
           annotations: annotations.length,
+          prompts: pendingPrompts.length,
           newChanges: pendingChanges.length - startChanges,
           newAnnotations: annotations.length - startAnnotations,
-          timedOut: Date.now() >= Date.now(), // always false here - just informational shape
+          newPrompts: pendingPrompts.length - startPrompts,
+          timedOut,
         }),
       );
     },
@@ -273,16 +286,55 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
   // Tool: improv_get_prompts
   mcp.tool(
     'improv_get_prompts',
-    'Return pending prompts pushed from the browser (context + user instruction)',
+    'Return and clear pending prompts from the browser. Each prompt includes an id you must pass back to improv_respond.',
     {},
     async () => {
       if (pendingPrompts.length === 0) {
         return text('No pending prompts');
       }
       const out = pendingPrompts.map((p) =>
-        `Prompt: ${p.prompt}\nElements: ${p.elementCount}\nContext:\n${p.context}`
+        `[${p.id}] Prompt: ${p.prompt}\nElements: ${p.elementCount}\nContext:\n${p.context}`
       ).join('\n\n---\n\n');
+      pendingPrompts.length = 0;
       return text(out);
+    },
+  );
+
+  // Tool: improv_respond
+  mcp.tool(
+    'improv_respond',
+    'Send results back to the browser after processing a prompt. Call this after making code changes to notify the user what changed.',
+    {
+      promptId: z.string().describe('The prompt id from improv_get_prompts'),
+      summary: z.string().describe('Human-readable summary of what changed'),
+      filesChanged: z.array(z.string()).describe('List of files that were modified'),
+      changes: z.array(z.object({
+        selector: z.string().describe('CSS selector of the affected element'),
+        property: z.string().describe('CSS property or attribute changed'),
+        oldValue: z.string().describe('Previous value'),
+        newValue: z.string().describe('New value'),
+      })).describe('Individual property changes made'),
+      status: z.enum(['completed', 'needsInfo', 'failed']).describe('Result status'),
+      question: z.string().optional().describe('Follow-up question if status is needsInfo'),
+    },
+    async ({ promptId, summary, filesChanged, changes, status, question }) => {
+      ws.broadcastToClients('improv_response', {
+        promptId,
+        summary,
+        filesChanged,
+        changes,
+        status,
+        question,
+        timestamp: Date.now(),
+      });
+
+      if (status === 'completed') {
+        return text(`Response sent to browser: ${summary} (${filesChanged.length} file(s), ${changes.length} change(s))`);
+      } else if (status === 'needsInfo') {
+        return text(`Question sent to browser: ${question}`);
+      } else {
+        return text(`Failure reported to browser: ${summary}`);
+      }
     },
   );
 
