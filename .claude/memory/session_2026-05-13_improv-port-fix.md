@@ -1,8 +1,8 @@
 ---
-name: improv-server-hardening
-description: Fixed improv MCP server crashes - added uncaughtException/unhandledRejection handlers, ws.on('error'), try/catch on all sends and HTTP handler
+name: improv-persistent-watch
+description: HTTP API endpoints + error hardening + file-based polling for MCP-independent improv watch loop; committed to both installed and repo
 type: project
-relates_to: [session_2026-05-13_improv-server-resilience.md, session_2026-05-13_improv-claude-connection.md]
+relates_to: [session_2026-05-13_improv-server-resilience.md, session_2026-05-13_improv-claude-connection.md, decision_improv_shared_prompt_buffer.md]
 ---
 
 ## Improv server hardening - 2026-05-13
@@ -24,6 +24,8 @@ Collaborator: Jonah
 - connection-manager.js/ts: try/catch around broadcast sends
 
 **Also this session (port investigation):** Browser settings showing 3901 was toolbar config, not WS port. Port 9223 is correct. Changed all files to 3901 then reverted - no net port changes.
+
+**Note:** Installed files at ~/.claude/improv/dist/ get reverted by external processes (likely another session or linter). HTTP endpoints must be re-added after each revert. The repo source at improv/server/ is canonical.
 
 **Phase 2 - MCP-independent watch loop:**
 The MCP stdio pipe drops unpredictably (Claude Code side, not server side). Added HTTP endpoints to the server so the watch loop can run entirely via Bash + curl, bypassing MCP:

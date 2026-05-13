@@ -62,7 +62,7 @@
 - [Improv loop Phase 1 (2026-05-13)](session_2026-05-13_improv-loop-phase1.md) - Watch agent, improv_respond tool, response toast, localStorage persistence
 - [Improv changes panel (2026-05-13)](session_2026-05-13_improv-changes-panel.md) - Claude button, changes panel, keyboard shortcuts, phases 3+4, 11 ralph loop iterations
 - [Improv server resilience (2026-05-13)](session_2026-05-13_improv-server-resilience.md) - killStaleProcess fixes EADDRINUSE crash; server deployment checklist
-- [Improv server hardening (2026-05-13)](session_2026-05-13_improv-port-fix.md) - Fixed 5 crash vectors: uncaughtException, ws error handlers, try/catch on sends and HTTP
+- [Improv persistent watch (2026-05-13)](session_2026-05-13_improv-port-fix.md) - HTTP API + error hardening + file polling; MCP-independent watch loop; committed to installed + repo
 - [Shared prompt buffer decision](decision_improv_shared_prompt_buffer.md) - File-based prompts.json replaces in-memory buffer so all MCP instances share the queue
 - [Improv Claude button restyle (2026-05-13)](session_2026-05-13_improv-claude-button-restyle.md) - Anthropic logo, pulse animation, #D97757 accent, badge removed
 - [Improv-Claude loop postmortem (2026-05-13)](session_2026-05-13_improv-postmortem.md) - Spec vs reality gaps, architecture mistakes, process failures, action items from 2-day implementation

@@ -41,7 +41,7 @@ relates_to: [session_2026-05-13_improv-changes-panel.md]
 - Keybinds: panel shortcuts (J/K/D/R) skip when Cmd/Ctrl/Alt held so CMD+R etc work
 - Custom scrollbar: thin 6px, rgba(255,255,255,0.15) thumb, transparent track
 - Custom typefaces: ImprovSans/Serif/Mono served from localhost:9223/fonts/
-- Claude button moved INTO the queuebar action pill, sits left of queue count button with divider between. Standalone floating button removed. ImprovCore delegates visibility to prompt mode's _claudeBtn.
+- Claude button in queuebar when prompt mode active (left of queue count), standalone #1a1a1a circle when prompt mode inactive. Visibility logic: claude changes + queue = show all; claude changes only = show claude btn, hide queue/send/clear; queue only = hide claude btn; neither = hide pill entirely.
 - Postmortem: completed by agent, written to docs/superpowers/specs/2026-05-13-improv-postmortem.md
 - Design skill note saved to feedback_ai_icons_lobehub.md
 - Claude button restyled: 44x44, #1a1a1a bg, border + shadow matching toolbar "I" button, hover=#D9775715 (subtle orange warmth on dark, matches toolbar hover intensity), active=solid #D97757 + white icon
