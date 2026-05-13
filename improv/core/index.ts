@@ -197,6 +197,14 @@ export class ImprovCore {
       }).catch(() => {});
     });
 
+    this._changesPanel.setOnRevert((_promptId: string, changes: any[]) => {
+      if (this.previewEngine) {
+        for (const ch of changes) {
+          this.previewEngine.applyChange(ch.selector, ch.property, ch.oldValue);
+        }
+      }
+    });
+
     if (this._changeHistory.some(e => !e.reviewed)) {
       this._updateClaudeBadge();
     }

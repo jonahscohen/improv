@@ -71,4 +71,6 @@ Built Phase 2 of the improv-claude loop: Claude button and changes panel.
 
 **Ralph loop iteration 6:** Polish - panel slide animation, Claude button entrance + pulse.
 
-**Ralph loop iteration 7:** Production build deployed (216KB minified). Full verification on dish-playscapes.lndo.site: connected, both modes activate, response chain, Claude button + badge, changes panel. 9 commits pushed. Tool is complete per spec.
+**Ralph loop iteration 7:** Production build deployed (216KB minified). Full verification.
+
+**Ralph loop iteration 8:** Phase 4 completion. Diff visualization: property pills show `oldValue -> newValue` with arrow. Revert button: clears PreviewEngine changes for the entry. Apply is implicit (Claude already wrote files). All 14 spec "What Needs Building" items now built and verified. Screenshot confirms diff arrows + Revert button rendering correctly.

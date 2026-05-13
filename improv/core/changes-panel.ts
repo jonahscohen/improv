@@ -19,6 +19,7 @@ export class ChangesPanel {
   private entries: ChangeEntry[] = [];
   private onReplyCallback: ReplyCallback | null = null;
   private onDoneCallback: ((promptId: string) => void) | null = null;
+  private onRevertCallback: ((promptId: string, changes: any[]) => void) | null = null;
   private getMarkerColor: () => string;
   private boundKeydown: (e: KeyboardEvent) => void;
 
@@ -155,6 +156,7 @@ export class ChangesPanel {
 
   setOnReply(cb: ReplyCallback) { this.onReplyCallback = cb; }
   setOnDone(cb: (promptId: string) => void) { this.onDoneCallback = cb; }
+  setOnRevert(cb: (promptId: string, changes: any[]) => void) { this.onRevertCallback = cb; }
 
   private markDone(promptId: string) {
     const entry = this.entries.find(e => e.promptId === promptId);
@@ -261,7 +263,7 @@ export class ChangesPanel {
             'font-size:10px;padding:2px 6px;border-radius:4px;' +
             'background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);' +
             'font-family:ui-monospace,monospace;white-space:nowrap';
-          pill.textContent = c.property + ': ' + c.newValue;
+          pill.textContent = c.property + ': ' + c.oldValue + ' \u2192 ' + c.newValue;
           changesWrap.appendChild(pill);
         }
         if (entry.changes.length > 4) {
@@ -292,6 +294,14 @@ export class ChangesPanel {
         const doneBtn = this.makeActionBtn('Done', () => this.markDone(entry.promptId));
         doneBtn.setAttribute('aria-label', 'Mark change as reviewed');
         actions.appendChild(doneBtn);
+
+        if (entry.changes && entry.changes.length > 0) {
+          const revertBtn = this.makeActionBtn('Revert', () => {
+            if (this.onRevertCallback) this.onRevertCallback(entry.promptId, entry.changes);
+          });
+          revertBtn.setAttribute('aria-label', 'Revert this change preview');
+          actions.appendChild(revertBtn);
+        }
 
         const replyBtn = this.makeActionBtn('Reply', () => this.startReply(i));
         replyBtn.setAttribute('aria-label', 'Reply to this change');
