@@ -46,7 +46,7 @@ relates_to: [session_2026-05-13_improv-changes-panel.md]
 - Undo Done button on reviewed entries, wired to set reviewed=false + re-sync
 - Button hover states: #D97757 bg + #1a1a1a text on all panel buttons
 - Task number text color: #1a1a1a (was white)
-- Change history: switched from localStorage to server-side file (responses.json via HTTP GET/POST). Survives across all browser sessions and page reloads reliably.
+- Change history: server-side via responses.json (HTTP GET/POST). Standalone Claude pill restored for when prompt mode is off. Verified: wrote test response to server, reloaded page, button appeared, panel opened with entry. Full reload persistence confirmed.
 - Postmortem: completed by agent, written to docs/superpowers/specs/2026-05-13-improv-postmortem.md
 - Design skill note saved to feedback_ai_icons_lobehub.md
 - Claude button restyled: 44x44, #1a1a1a bg, border + shadow matching toolbar "I" button, hover=#D9775715 (subtle orange warmth on dark, matches toolbar hover intensity), active=solid #D97757 + white icon
