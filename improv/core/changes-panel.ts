@@ -22,6 +22,7 @@ export class ChangesPanel {
   private filteredEntries: ChangeEntry[] = [];
   private onReplyCallback: ReplyCallback | null = null;
   private onDoneCallback: ((promptId: string) => void) | null = null;
+  private onUndoDoneCallback: ((promptId: string) => void) | null = null;
   private onRevertCallback: ((promptId: string, changes: any[]) => void) | null = null;
   private onClearReviewedCallback: (() => void) | null = null;
   private onSelectCallback: ((selectors: string[]) => void) | null = null;
@@ -82,8 +83,8 @@ export class ChangesPanel {
     cp2.setAttribute('d', 'm6 6 12 12');
     closeSvg.appendChild(cp2);
     closeBtn.appendChild(closeSvg);
-    closeBtn.addEventListener('mouseenter', () => { closeBtn.style.background = 'rgba(255,255,255,0.08)'; });
-    closeBtn.addEventListener('mouseleave', () => { closeBtn.style.background = 'transparent'; });
+    closeBtn.addEventListener('mouseenter', () => { closeBtn.style.background = '#D97757'; closeBtn.style.color = '#1a1a1a'; });
+    closeBtn.addEventListener('mouseleave', () => { closeBtn.style.background = 'transparent'; closeBtn.style.color = 'rgba(255,255,255,0.5)'; });
     closeBtn.addEventListener('click', () => this.hide());
     header.appendChild(closeBtn);
     this.container.appendChild(header);
@@ -115,8 +116,8 @@ export class ChangesPanel {
     this._clearReviewedBtn.style.cssText =
       'border:none;background:none;color:rgba(255,255,255,0.3);font-size:10px;cursor:pointer;' +
       'padding:0;font-family:ImprovSans,system-ui,sans-serif;outline:none';
-    this._clearReviewedBtn.addEventListener('mouseenter', () => { this._clearReviewedBtn!.style.color = 'rgba(255,255,255,0.6)'; });
-    this._clearReviewedBtn.addEventListener('mouseleave', () => { this._clearReviewedBtn!.style.color = 'rgba(255,255,255,0.3)'; });
+    this._clearReviewedBtn.addEventListener('mouseenter', () => { this._clearReviewedBtn!.style.background = '#D97757'; this._clearReviewedBtn!.style.color = '#1a1a1a'; });
+    this._clearReviewedBtn.addEventListener('mouseleave', () => { this._clearReviewedBtn!.style.background = 'none'; this._clearReviewedBtn!.style.color = 'rgba(255,255,255,0.3)'; });
     this._clearReviewedBtn.addEventListener('click', () => {
       this.entries = this.entries.filter(e => !e.reviewed);
       if (this.onClearReviewedCallback) this.onClearReviewedCallback();
@@ -228,6 +229,7 @@ export class ChangesPanel {
 
   setOnReply(cb: ReplyCallback) { this.onReplyCallback = cb; }
   setOnDone(cb: (promptId: string) => void) { this.onDoneCallback = cb; }
+  setOnUndoDone(cb: (promptId: string) => void) { this.onUndoDoneCallback = cb; }
   setOnRevert(cb: (promptId: string, changes: any[]) => void) { this.onRevertCallback = cb; }
   setOnClearReviewed(cb: () => void) { this.onClearReviewedCallback = cb; }
   setOnSelect(cb: (selectors: string[]) => void) { this.onSelectCallback = cb; }
@@ -307,8 +309,8 @@ export class ChangesPanel {
       'color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;padding:12px 16px;' +
       'font-family:ImprovSans,system-ui,sans-serif;outline:none;flex-shrink:0;' +
       'transition:color 120ms ease';
-    backBtn.addEventListener('mouseenter', () => { backBtn.style.color = 'rgba(255,255,255,0.85)'; });
-    backBtn.addEventListener('mouseleave', () => { backBtn.style.color = 'rgba(255,255,255,0.6)'; });
+    backBtn.addEventListener('mouseenter', () => { backBtn.style.background = '#D97757'; backBtn.style.color = '#1a1a1a'; });
+    backBtn.addEventListener('mouseleave', () => { backBtn.style.background = 'none'; backBtn.style.color = 'rgba(255,255,255,0.6)'; });
 
     const arrowSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     arrowSvg.setAttribute('width', '14');
@@ -350,7 +352,7 @@ export class ChangesPanel {
     numLabel.style.cssText =
       'display:inline-flex;align-items:center;justify-content:center;' +
       'width:20px;height:20px;border-radius:50%;background:#D97757;' +
-      'font-size:10px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;' +
+      'font-size:10px;font-weight:700;color:#1a1a1a;font-variant-numeric:tabular-nums;' +
       'font-family:ImprovSans,system-ui,sans-serif;margin-right:8px;vertical-align:middle';
     numLabel.textContent = String(index + 1);
     summaryHeader.appendChild(numLabel);
@@ -509,7 +511,7 @@ export class ChangesPanel {
       numCircle.setAttribute('aria-label', entry.status);
       const numSpan = document.createElement('span');
       numSpan.style.cssText =
-        'font-size:10px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;' +
+        'font-size:10px;font-weight:700;color:#1a1a1a;font-variant-numeric:tabular-nums;' +
         'font-family:ImprovSans,system-ui,sans-serif';
       numSpan.textContent = String(i + 1);
       numCircle.appendChild(numSpan);
@@ -603,6 +605,17 @@ export class ChangesPanel {
         actions.appendChild(replyBtn);
 
         item.appendChild(actions);
+      } else {
+        const actions = document.createElement('div');
+        actions.style.cssText = 'display:flex;gap:6px;margin-top:8px;padding-left:16px';
+
+        const undoBtn = this.makeActionBtn('Undo Done', () => {
+          if (this.onUndoDoneCallback) this.onUndoDoneCallback(entry.promptId);
+        });
+        undoBtn.setAttribute('aria-label', 'Undo mark as reviewed');
+        actions.appendChild(undoBtn);
+
+        item.appendChild(actions);
       }
 
       // Click anywhere on the item (that isn't a button) opens detail view
@@ -641,8 +654,8 @@ export class ChangesPanel {
       'border:none;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);' +
       'border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;' +
       'font-family:ImprovSans,system-ui,sans-serif;transition:background 120ms ease;outline:none';
-    btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(255,255,255,0.1)'; });
-    btn.addEventListener('mouseleave', () => { btn.style.background = 'rgba(255,255,255,0.06)'; });
+    btn.addEventListener('mouseenter', () => { btn.style.background = '#D97757'; btn.style.color = '#1a1a1a'; });
+    btn.addEventListener('mouseleave', () => { btn.style.background = 'rgba(255,255,255,0.06)'; btn.style.color = 'rgba(255,255,255,0.6)'; });
     btn.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
     return btn;
   }

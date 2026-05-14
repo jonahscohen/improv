@@ -42,6 +42,10 @@ relates_to: [session_2026-05-13_improv-changes-panel.md]
 - Custom scrollbar: thin 6px, rgba(255,255,255,0.15) thumb, transparent track
 - Custom typefaces: ImprovSans/Serif/Mono served from localhost:9223/fonts/
 - Claude button in queuebar when prompt mode active. When prompt mode off but unreviewed changes exist from localStorage, a queuebar-styled pill appears at bottom-left with just the Claude button. Removed when prompt mode activates (its pill takes over) or when all changes cleared.
+- markDone isolation: only marks first unreviewed entry with matching promptId, not all
+- Undo Done button on reviewed entries, wired to set reviewed=false + re-sync
+- Button hover states: #D97757 bg + #1a1a1a text on all panel buttons
+- Task number text color: #1a1a1a (was white)
 - Postmortem: completed by agent, written to docs/superpowers/specs/2026-05-13-improv-postmortem.md
 - Design skill note saved to feedback_ai_icons_lobehub.md
 - Claude button restyled: 44x44, #1a1a1a bg, border + shadow matching toolbar "I" button, hover=#D9775715 (subtle orange warmth on dark, matches toolbar hover intensity), active=solid #D97757 + white icon

@@ -68,3 +68,5 @@
 - [Improv-Claude loop postmortem (2026-05-13)](session_2026-05-13_improv-postmortem.md) - Spec vs reality gaps, architecture mistakes, process failures, action items from 2-day implementation
 - [Improv changes panel detail view (2026-05-13)](session_2026-05-13_improv-changes-panel-detail-view.md) - Replaced inline expand/preview with clickable list items and slide-in detail subpage
 - [Improv detail view wiring (2026-05-13)](session_2026-05-13_improv-detail-view-wiring.md) - Wired setOnItemClick in index.ts, removed setOnPreviewToggle
+- [Improv changes panel fixes (2026-05-13)](session_2026-05-13_improv-changes-panel-fixes.md) - markDone isolation (first unreviewed only) + Undo Done button for reviewed entries
+- [Improv changes panel styling (2026-05-13)](session_2026-05-13_improv-changes-panel-styling.md) - Button hovers to #D97757 accent; task number text to #1a1a1a
