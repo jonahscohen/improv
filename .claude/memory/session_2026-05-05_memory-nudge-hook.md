@@ -2,6 +2,7 @@
 name: Memory nudge PostToolUse hook
 description: Built Option B from discipline enforcement plan - PostToolUse hook that nudges memory writes after code edits
 type: project
+supersedes: project_discipline_enforcement_plan.md
 ---
 
 ## What

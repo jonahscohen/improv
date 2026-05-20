@@ -20,7 +20,13 @@
 
 ---
 
-We start with yes, and build what's next. These dotfiles are the "&." Confident defaults. Real discipline. The Yes& development stack distilled into one curl, deployed in seconds, opinionated by design. If you ship things and care how they feel, you'll feel right at home.
+**The problem.** Working with Claude is fast. Working with Claude *well* is a discipline problem. The model forgets between sessions, has no opinions of its own, and will cheerfully ship a half-verified fix unless something stops it. Most "AI workflow" advice tries to fix this by adding ceremony, which the model promptly skips under pressure.
+
+**The opinion.** Externalize the discipline into files the harness enforces. Rules in CLAUDE.md, loaded every session. Hooks in settings.json that block bad behavior at the tool boundary. Memory in `.claude/memory/` that persists across machines and Yes& devs. A personal catalog that grows from your eye. Reflection that audits the whole system for drift.
+
+**The system.** Twelve components, one curl, one shortcut. A 6-layer design pipeline. Eighteen hooks across refusal, gates, nudges, and lifecycle. A learning catalog you populate via `/curate`. All opinionated, all additive, all undoable.
+
+**The proof.** Built on itself. The reflection skill exists because the corpus needed it. The personal-catalog system exists because public catalogs missed the patterns worth remembering. The second-fix gate evolved from a real same-file regression that shipped before the underlying root cause was found. Nothing in here is a feature in search of a problem.
 
 Five sections. Stop after any one and still know what you need:
 
@@ -70,20 +76,20 @@ The version-controlled answer to "how is Yes& running Claude Code right now." Wh
 
 1. **A reproducible baseline.** New Yes& developer, fresh Mac, one curl. Indistinguishable from the rest of the engineering team by lunch.
 2. **A discipline carrier.** Hooks block legacy model IDs, AI-attribution lines, and emoji before they land. CLAUDE.md mandates verification before "done." None of it is optional once installed.
-3. **A design system in shell form.** Three layers of design rules (Impeccable for strategy, DESIGN.md for tokens, make-interfaces-feel-better for tactical CSS) auto-wire on install. Generated UI lands on-brand by default, not by accident.
+3. **A 6-layer design pipeline.** Strategy (Impeccable), research (component-gallery-reference), typography (fontshare-reference + reflex-reject list), references (your personal catalog at `~/.claude/design-references/`), motion (motion-reference for GSAP + Lenis), tactical (make-interfaces-feel-better). Each layer fires at a different beat in the workflow. Generated UI lands on-brand by default, not by accident.
 4. **Memory across machines, across Yes& devs.** The memory subsystem makes Claude take notes after every task. Notes commit, notes pull, everyone knows what was decided and why.
 5. **Additive across the board.** Every component appends, merges, or creates new files. Nothing is replaced. Pick any combination without risking your existing config. Uninstall removes exactly what was installed, nothing more.
 
 ### What's in the box
 
-Eleven components. Pick any combination. Defaults are all on, so most Yes& devs just hit enter. Every component is additive.
+Twelve components. Pick any combination. Defaults are all on, so most Yes& devs just hit enter. Every component is additive.
 
 | Component | One-line | Touches |
 |---|---|---|
 | `brain` | Team rules + workflow instructions | Appends to `~/.claude/CLAUDE.md` between markers (your content preserved) |
 | `config` | Hooks, plugins, permissions | JSON-merges into `~/.claude/settings.json` (your settings preserved) |
 | `memory` | Memory discipline rules + 3 lifecycle hooks + loader | Appends to CLAUDE.md, JSON-merges into settings.json |
-| `skills` | make-interfaces-feel-better + component-gallery-reference | Adds to `~/.claude/skills/` only |
+| `skills` | Design pipeline (research, typography, references, motion, polish) + 4 peer skills | Adds to `~/.claude/skills/` + seeds `~/.claude/design-references/` catalog |
 | `statusline` | Custom prompt-bar render | Symlinks `~/.claude/statusline-command.sh` |
 | `cmux` | Split-pane terminal config | Symlinks `~/.config/cmux/settings.json` |
 | `nvm` | Fix for "claude: command not found" in fresh terminals | Marker-guarded line in `~/.zshrc` |
@@ -91,6 +97,7 @@ Eleven components. Pick any combination. Defaults are all on, so most Yes& devs 
 | `discord` | Smart Discord chat agent launcher | Marker-guarded line in `~/.zshrc`, symlinks scripts to `~/.claude/` |
 | `voice-input` | Local voice-to-text (whisper.cpp + ffmpeg) | Brews dependencies, symlinks `~/.claude/transcribe` |
 | `voice-output` | Voice responses via OpenAI TTS | MCP server at `~/.claude/voice-output/`, aliases in `~/.zshrc` |
+| `reflect` | Memory corpus analysis (5-agent reflection skill + nudge hook) | Adds `~/.claude/skills/reflect/`, `~/.claude/hooks/reflect-nudge.sh` |
 
 ### What's NOT here
 
@@ -113,7 +120,7 @@ You've seen what's in the box. Here's the opinions and disciplines behind why ea
 
 1. **Discipline beats cleverness.** Hooks that mechanically refuse certain patterns (legacy model IDs, AI-attribution lines, emoji, force-push to main) are more reliable than hoping the model behaves.
 2. **Memory beats context.** A version-controlled record of what we decided yesterday is more useful than re-explaining the project to Claude every session.
-3. **Three-layer design beats one-layer prompting.** Impeccable handles strategy, DESIGN.md handles tokens, make-interfaces-feel-better handles tactics. Stack them.
+3. **Layered design beats one-layer prompting.** Six skills stack from strategy down to tactical, each firing at a different beat: Impeccable, component-gallery-reference, fontshare-reference, design-references + /curate, motion-reference, make-interfaces-feel-better. Stack them; route, don't improvise.
 4. **Verification beats vibes.** UI work isn't done until it's screenshotted and checked. Non-UI work isn't done until each step has a runnable verify clause.
 5. **Additive beats wholesale.** Other devs and teams should be able to take what they want and leave the rest. Every component appends, merges, or creates new files. `brain` appends to your CLAUDE.md between markers. `config` JSON-merges into your settings.json. Nothing is replaced, nothing is overwritten.
 
@@ -131,15 +138,19 @@ Memory turns Claude Code from a stateless code generator into a colleague who re
 
 Memory commits to your project's git like any source file. Your teammate pulls, their Claude reads it at session start. The next Yes& dev starts where you left off, with `Collaborator:` attribution baked in. → [Memory in detail](#deep-memory).
 
-### The three-layer design stack: strategy, tokens, tactics
+### The design pipeline: six layers, each firing at the right beat
 
-Most AI-generated UI looks the same because most prompts ask for the same vague thing. Yes& devs stack three tools, each handling a different layer:
+Most AI-generated UI looks the same because most prompts ask for the same vague thing. Yes& devs stack six skills, each addressing a different question at a different moment:
 
-- **Strategy / brand:** [Impeccable](https://impeccable.style) plugin (PRODUCT.md + 23 commands). Decides who this is for and what's NOT us.
-- **Token values:** [google-labs-code/design.md](https://github.com/google-labs-code/design.md) spec. Canonical source of truth for colors, type, spacing, components.
-- **Tactical CSS / motion:** [make-interfaces-feel-better](https://github.com/jakubkrehel/make-interfaces-feel-better) skill. Sixteen specific rules with exact values.
+- **Strategy / brand:** [Impeccable](https://impeccable.style) plugin. PRODUCT.md + 23 commands. *Who is this for? What's NOT us?*
+- **Research:** `component-gallery-reference` skill. *How does the industry build this component? What's the accessibility floor?*
+- **Typography:** `fontshare-reference` skill. *Which typeface? Bakes in Impeccable's reflex-reject list so the obvious 2024-era defaults (Inter, Fraunces, etc.) get refused.*
+- **References:** `design-references` + `/curate` skills. *What did you see in the wild that should inform this build? Personal catalog that grows from your eye.*
+- **Motion:** `motion-reference` skill. *GSAP + Lenis canonical patterns - tweens, ScrollTrigger, Flip, SplitText, DrawSVG, smooth-scroll integration.*
+- **Tokens:** [google-labs-code/design.md](https://github.com/google-labs-code/design.md) spec at the project root. Canonical source of truth for colors, type, spacing, components.
+- **Tactical:** [make-interfaces-feel-better](https://github.com/jakubkrehel/make-interfaces-feel-better) skill. Sixteen exact-value rules at implementation time.
 
-Each fires at the right beat. Strategy at brief time. Tokens at write time. Tactics at implementation time. All three at QA time. Generated UI lands seen, felt, and on-brand. → [Design stack in detail](#deep-design-stack).
+Each fires at the right beat. Strategy at brief time. Research at component-build time. Typography at type-system time. References as ambient inspiration. Motion when animation enters scope. Tokens at write time. Tactical at every implementation. All seven at QA time. → [Design pipeline in detail](#deep-design-stack).
 
 ### Verification Protocol: nothing ships on vibes
 
@@ -147,7 +158,15 @@ Seven rules in CLAUDE.md that gate task completion. UI changes need a screenshot
 
 ### Hooks: refusal, not advice
 
-Two PreToolUse hooks intercept every Bash and every file write before the tool runs. `bash-guard.sh` blocks AI-attribution lines in commands, force-push to main/master, `rm` against `.claude/memory`, and legacy model IDs. `content-guard.sh` blocks the same patterns inside file content, plus emdashes, endashes, and emoji unicode ranges. Three lifecycle hooks (SessionStart, PreCompact, PostCompact) run the memory loader. → [Hook lifecycle in detail](#deep-architecture).
+Eighteen hooks split into five roles:
+
+- **Refusal hooks** (PreToolUse hard-deny). `bash-guard` blocks AI-attribution lines in commands, force-push to main/master, `rm` against `.claude/memory`, and legacy model IDs. `content-guard` blocks the same patterns inside file content, plus emdashes, endashes, and emoji. `voice-gate` denies speak calls when voice is muted (no wasted OpenAI TTS round-trips). `validation-guard` blocks DOM-shortcut tricks during UI validation - no `.click()`, no synthetic events, no `getComputedStyle` for state inspection. `memory-approve` carves out memory paths so they auto-approve even with otherwise-strict permissions.
+- **Gate hooks** (state-machine gates that block until verification fires). `verify-before-done` + `verify-clear` + `verify-manual` track unverified code edits and gate `git commit`. `screenshot-open-mandate` + `screenshot-open-clear` force you to Read a screenshot you took before claiming it counted. `second-fix-gate` (v2) warns once when two fixes land on the same file within 10 min with no verification between - intentionally silent on additive sequential edits.
+- **Nudge hooks** (PostToolUse advisory). `memory-nudge` injects a dirty-state reminder after every code change. `reflect-nudge` surfaces when the memory corpus has accumulated enough since the last reflection (default threshold: 15 new files).
+- **Toggle hooks** (state flips on user phrases). `voice-toggle` flips `~/.claude/.voice-enabled` on "voice on/off". `resume-toggle` flips cmux auto-resume on similar phrases.
+- **Lifecycle hooks**. SessionStart runs the memory loader + voice mandate. PreCompact flushes pending memory before context compresses. PostCompact reloads. SessionEnd `resume-guard` blocks cmux auto-resume.
+
+The hook layer evolved from real failures, not hypothetical ones - the lineage is rule → feedback memory → hook, formalized by the 2026-05-19 reflection. → [Hook lifecycle in detail](#deep-architecture).
 
 ### Permission posture: an honest tradeoff
 
@@ -310,14 +329,14 @@ The dense lookup material, in collapsible chapters. You won't read this end to e
 <details>
 <summary><b>Components, in detail</b></summary>
 
-When the installer launches you get a checkbox TUI listing eleven components. Each is independently togglable. Defaults are all on. Every component is additive - nothing overwrites your existing config.
+When the installer launches you get a checkbox TUI listing twelve components. Each is independently togglable. Defaults are all on. Every component is additive - nothing overwrites your existing config.
 
 | Component | Plain-English | What changes on disk |
 |-----------|---------------|----------------------|
 | `brain` | **ADDITIVE.** Appends team rules (RULES.md) and shared workflow instructions to your CLAUDE.md between marker comments. Your existing content stays. Re-runs detect markers and skip. CLAUDE.local.md for personal overrides gets its own marker block | Appends to `~/.claude/CLAUDE.md` between markers |
 | `config` | **ADDITIVE.** JSON-merges safety hooks, memory-write allow patterns, enabled plugins, and marketplace entries into your existing settings.json. Does NOT touch your defaultMode, model, or other preferences. Copies hook scripts to `~/.claude/hooks/` alongside your existing hooks | JSON-merges into `~/.claude/settings.json`; copies hooks to `~/.claude/hooks/` |
 | `memory`  | **ADDITIVE.** Bolts our memory subsystem onto an existing Claude Code: appends Memory Discipline rules to your `CLAUDE.md` between marker comments, JSON-merges three lifecycle hooks into your `settings.json`, symlinks the loader script. Marker-guarded - re-runs are no-ops, removable cleanly | Symlinks `startup-check.sh`; appends to `CLAUDE.md`; merges into `settings.json` |
-| `skills`  | **ADDITIVE.** Installs Anthropic Skills via `npx skills add`. Bundles `make-interfaces-feel-better` (tactical UI polish that auto-triggers on UI keywords) and `component-gallery-reference` (researches component.gallery before building UI components). Touches nothing else | Adds to `~/.claude/skills/` only |
+| `skills`  | **ADDITIVE.** Installs the design pipeline + peer skills. Bundled: `make-interfaces-feel-better` (tactical polish), `component-gallery-reference` (research), `fontshare-reference` (typography), `motion-reference` (GSAP + Lenis), `curate` + `design-references` (personal catalog), `social-media`, `design-team`, `visual-effects`, `icon-source`. Seeds the empty `~/.claude/design-references/` catalog with the 14-category vocab. Touches nothing else | Adds to `~/.claude/skills/`; seeds `~/.claude/design-references/` (preserves user data on re-run) |
 | `statusline` | Custom prompt-bar render. The `statusLine` command in `settings.json` is tolerant of a missing script - unticking falls back cleanly to Claude Code's default | Symlinks `~/.claude/statusline-command.sh` |
 | `cmux`    | cmux split-pane terminal config. Powers the in-app browser preview Claude uses to verify UI work | Symlinks `~/.config/cmux/settings.json` |
 | `nvm`     | Fix for "claude not found in PATH" in fresh terminals on machines where Homebrew's nvm doesn't auto-activate. Harmless no-op on machines that don't use nvm | Appends `nvm use default --silent` to `~/.zshrc` (only if `nvm.sh` is already sourced) |
@@ -325,6 +344,7 @@ When the installer launches you get a checkbox TUI listing eleven components. Ea
 | `discord` | **ADDITIVE.** Smart Discord chat agent launcher with cold/mid/warm onboarding states. Symlinks the launcher and onboarding scripts, adds the `discord-agent` shortcut to zshrc | Marker-guarded line in `~/.zshrc`; symlinks scripts to `~/.claude/` |
 | `voice-input` | **ADDITIVE.** Local voice-to-text pipeline. Brews whisper.cpp and ffmpeg, symlinks the transcription script. Handles OGG/Opus, m4a, mp3, flac, wav. Uses ggml-base.en model from `~/.cache/whisper/` | Brews dependencies; symlinks `~/.claude/transcribe` |
 | `voice-output` | **ADDITIVE.** Gives Claude a voice via OpenAI TTS. Speaks short verbal summaries while keeping code and technical detail as text. Requires an OpenAI API key in macOS Keychain. Starts muted - enable with `voice-on` | MCP server at `~/.claude/voice-output/`; `tts-generate` symlink; voice aliases in `~/.zshrc` |
+| `reflect` | **ADDITIVE.** Memory corpus analysis. The `reflect` skill spawns 5 parallel analysis agents (Pattern, Tension, Gap, Drift, Staleness) against `.claude/memory/` to surface what's emerging across sessions. SessionStart `reflect-nudge` hook surfaces when enough new memories have accumulated since last run (default threshold: 15) | Adds `~/.claude/skills/reflect/`; copies `reflect-nudge.sh` to `~/.claude/hooks/`; touches `~/.claude/last-reflect-timestamp` |
 
 The TUI also lets you pre-select via flags: `--yes` for everything, `--preset minimal` for `brain+config+memory+skills+nvm`, `--preset all`, `--preset none`, `--only csv` for an explicit subset, `--dry-run` to preview without writing.
 
@@ -421,64 +441,100 @@ Documents `cmux browser screenshot`, `navigate`, `snapshot --interactive` comman
 <a id="deep-design-stack"></a>
 
 <details>
-<summary><b>The three-layer design stack, in detail</b></summary>
+<summary><b>The design pipeline tour</b></summary>
 
-Most "AI-generated UI" looks the same because most prompts ask for the same vague thing. Yes& uses three stacked tools that each address a different layer of the design problem:
+Six layered skills + tokens + brand. Each addresses a different question at a different beat in the build flow. The pipeline doesn't sequence linearly through every build - it routes by what the task actually needs.
 
-| Layer | Owner | Answers |
-|---|---|---|
-| Strategy / brand | **[Impeccable](https://impeccable.style)** plugin (PRODUCT.md + 23 commands) | Who is this for, what's the personality, what are we NOT? |
-| Token values | **[google-labs-code/design.md](https://github.com/google-labs-code/design.md)** spec | What's primary, what's body-md, what's spacing.md? |
-| Tactical CSS / motion | **[make-interfaces-feel-better](https://github.com/jakubkrehel/make-interfaces-feel-better)** skill (16 rules) | When you write the button, scale to exactly 0.96 on press |
+### 1. Strategy / brand - Impeccable
 
-Each layer is enforced at the right moment in the workflow. Strategy at brief time. Tokens at write time. Tactics at implementation time. All three at QA time.
-
-### Impeccable: the strategy brain
-
-A plugin (`impeccable@impeccable`) auto-installed via your `enabledPlugins`. Twenty-three commands ranging from `teach` (interactive PRODUCT.md authoring) to `craft` (build from scratch) to `audit/critique/polish` (the QA triad). Reads `PRODUCT.md` and `DESIGN.md` at project root before every command, so output is always informed by the project's own register and anti-references.
+A plugin (`impeccable@impeccable`) auto-installed via your `enabledPlugins`. Twenty-three commands ranging from `teach` (interactive PRODUCT.md authoring) to `craft` (build from scratch) to `audit/critique/polish` (the QA triad). Reads `PRODUCT.md` and `DESIGN.md` at the project root before every command, so output is always informed by the project's own register and anti-references.
 
 The CLAUDE.md hard rule: before any UI work begins, Claude checks for `PRODUCT.md`. Missing or stub triggers `/impeccable teach`. Missing `DESIGN.md` plus existing code triggers a one-time-per-session nudge to run `/impeccable document`.
 
-### DESIGN.md: the token contract
+### 2. Research - component-gallery-reference
 
-Google's spec for representing a visual identity to coding agents. YAML frontmatter for tokens (colors, typography, rounded, spacing, components with `{path.to.token}` references), markdown body for rationale. Comes with `npx @google/design.md lint` for schema validation, WCAG contrast checks, broken-ref detection, and `npx @google/design.md diff` for change tracking.
+A bundled skill that has Claude browse [component.gallery](https://component.gallery) before building any standard UI component. The site catalogs 60 component types across 95 design systems (Polaris, Carbon, Primer, Spectrum, Material) with 2,672 examples.
+
+The skill adds a research step before implementation: detect tech stack from `package.json`, browse the component page filtered by that stack, exclude examples tagged "Unmaintained" or "Accessibility issues", inventory the project's design system, synthesize a brief mapping gallery patterns onto the project. Then build with three layers: function from the gallery (semantic markup, ARIA, keyboard), identity from the project (fonts, colors), gap-fills derived from gallery patterns but styled with project tokens.
+
+### 3. Typography - fontshare-reference
+
+A bundled skill that researches typefaces via [fontshare.com](https://fontshare.com), Indian Type Foundry's curated open-source catalog. Sensible organization (sans/serif/display/mono + personality tags + variable + language filters), curated quality, designer-recommended pairings.
+
+Critically, the skill bakes in Impeccable's **reflex-reject list** - the training-data-default typefaces (Inter, Fraunces, Outfit, Instrument Serif, Newsreader, Plus Jakarta Sans, DM Sans/Serif, IBM Plex, Space Grotesk, et al.) that have become monoculture. The skill also warns about fontshare's own emerging defaults (General Sans, Cabinet Grotesk, Switzer, Satoshi, Clash Display) so the catalog doesn't become the new Inter.
+
+Workflow: read PRODUCT.md, write three brand-voice words, list your reflex picks and reject any on the reject list, browse fontshare with the brand-voice words in mind, cross-check against anti-reflexes, verify weights / OpenType features / language coverage, pair within the family before adding a second face, document in DESIGN.md.
+
+### 4. References - design-references + /curate (the personal catalog)
+
+Two sibling skills plus a data directory at `~/.claude/design-references/`. This is where the system learns from your eye - the layer no public catalog can provide.
+
+`/curate` is the capture wizard. Invoke it with a URL or screenshot, walk a 5-step flow (source → auto-tag proposal → why-interesting body → slug → save). Hybrid tagging: strict Category from a controlled vocab (`list`, `navigation`, `command-palette`, `inline-affordance`, etc.); free-form Pattern + Feel for the personality words. The wizard uses multiple-choice prompts so capture stays low-friction.
+
+`design-references` is the retrieval skill. Auto-triggers on UI build keywords, greps the catalog for matching category / pattern / feel tags against the task context AND against PRODUCT.md voice words when present. Surfaces 0-5 references with body + URL + screenshot. Stays SILENT if no good matches - noisy surfacing destroys trust in the catalog.
+
+What this layer covers that the public catalogs do not: one-off patterns. A particular animation. A particular interaction. A specific brand's distinctive treatment. The patterns that don't fit any standard taxonomy but are worth remembering when they show up.
+
+### 5. Motion - motion-reference (GSAP + Lenis)
+
+A bundled skill shipping canonical patterns for the GSAP + Lenis stack. Routes by task: tweens / timelines / stagger → `gsap`; scroll-driven (pin / scrub / snap) → `ScrollTrigger`; smooth-scroll feel → Lenis; layout transitions → `Flip`; SVG path draw → `DrawSVG`; text by word / char → `SplitText`; drag → `Draggable`; SVG morph → `MorphSVG`; path animation → `MotionPath`.
+
+License note baked into the skill: as of Webflow's acquisition of GreenSock, **all formerly-paid GSAP plugins are now free** - SplitText, MorphSVG, DrawSVG, ScrollSmoother, Inertia, MotionPathHelper. No paywall.
+
+Critical patterns shipped inline: the 3-line GSAP + ScrollTrigger + Lenis glue snippet, React `useGSAP` hook with scope, `ReactLenis` root provider, Flip layout transitions, SplitText stagger, DrawSVG path animation. Plus the gotchas that bite: SSR, `ScrollTrigger.refresh()` after dynamic content, Lenis breaking native `scrollIntoView`, iOS Safari + Lenis + `position: fixed`, plugin registration placement.
+
+### 6. Tokens - DESIGN.md
+
+Google's spec for representing a visual identity to coding agents. YAML frontmatter for tokens (colors, typography, rounded, spacing, components with `{path.to.token}` references), markdown body for rationale. Comes with `npx @google/design.md lint` for schema validation, WCAG contrast checks, broken-ref detection.
 
 CLAUDE.md mandates: when writing or updating a project's DESIGN.md (via `/impeccable document`, `/impeccable extract`, or by hand), conform to the Google spec. Run lint after every write and resolve every error or warning. Generated UI references tokens via `{path.to.token}`, not hex literals, so the file stays the source of truth.
 
-### make-interfaces-feel-better: the tactical layer
+### 7. Tactical - make-interfaces-feel-better
 
-An Anthropic Skill auto-installed via `npx skills add jakubkrehel/make-interfaces-feel-better`. Auto-triggers on UI keywords: border radius, animation, optical alignment, hover state, tabular numbers, "feel better." Sixteen specific rules with exact values:
+An Anthropic Skill that auto-triggers on UI keywords: border radius, animation, optical alignment, hover state, tabular numbers, "feel better." Sixteen specific rules with exact values:
 
 - Concentric border radius (`outer = inner + padding`)
 - Optical centering (icons need manual nudge past geometric)
-- Shadows over borders (layered transparent `box-shadow` for depth)
-- Interruptible animations (CSS transitions for state, keyframes only for staged sequences)
-- Split and stagger enter animations (semantic chunks, ~100ms delay each)
-- Subtle exit animations (small fixed `translateY`, never full height)
-- Contextual icon swaps via `opacity 0->1, scale 0.25->1, blur 4px->0` and `transition: { type: spring, duration: 0.3, bounce: 0 }` if `motion`/`framer-motion` is available, else cross-fade with `cubic-bezier(0.2, 0, 0, 1)`
-- Font smoothing (`-webkit-font-smoothing: antialiased` on root)
+- Shadows over borders (layered transparent `box-shadow`)
+- Interruptible animations (CSS transitions for state, keyframes only for staged)
+- Split + stagger enters (semantic chunks, ~100ms delay each)
+- Subtle exits (small fixed `translateY`, never full height)
+- Contextual icon swaps via `opacity 0->1, scale 0.25->1, blur 4px->0`
+- Font smoothing on root
 - Tabular nums on dynamic counters
 - `text-wrap: balance` on headings, `pretty` on body
-- Image outlines `rgba(0,0,0,0.1)` light or `rgba(255,255,255,0.1)` dark, never tinted neutrals
-- `scale(0.96)` on press (always 0.96, never below 0.95)
+- Image outlines `rgba(0,0,0,0.1)` light / `rgba(255,255,255,0.1)` dark, NEVER tinted
+- `scale(0.96)` on press, always 0.96
 - `initial={false}` on AnimatePresence to skip first-load animations
 - Never `transition: all`; specify exact properties
-- `will-change` only on transform/opacity/filter, sparingly
-- Minimum 40x40px hit area, never let two hit areas overlap
+- `will-change` only on transform / opacity / filter, sparingly
+- Minimum 40x40px hit area, no overlap
 
 The skill's review-output-format (before/after tables grouped by principle) is the canonical UI-change summary across all Yes& work.
 
-### component-gallery-reference: the research layer
+### Peer skills (sibling layers, not in the main pipeline)
 
-A bundled skill (shipped with the dotfiles, no npx dependency) that has Claude browse [component.gallery](https://component.gallery) before building any standard UI component. The site catalogs 60 component types across 95 real-world design systems with 2,672 examples. The skill adds a research step before implementation:
+The `skills` component also bundles four peer skills that aren't part of the strategy-to-tactical pipeline but ship alongside:
 
-1. **Detect the project's tech stack** from package.json and config files (React, Vue, Angular, Tailwind, Sass, CSS Modules, WordPress, Drupal, HubSpot, etc.)
-2. **Browse the component page** filtered by that tech stack. Skip any example tagged "Unmaintained" or "Accessibility issues" - those are forbidden sources.
-3. **Inventory the project's design system** - tokens, existing components, visual conventions.
-4. **Synthesize a brief** mapping gallery patterns onto the project: what the project's design system covers, what gaps exist, and how to fill those gaps using gallery best practices styled with project tokens.
-5. **Build the component** with three layers: function from the gallery (semantic markup, ARIA, keyboard handling), identity from the project (fonts, colors, spacing), and gap-fills derived from gallery patterns but expressed in the project's visual language.
+- **`social-media`** - platform specs for Instagram, YouTube, TikTok, Twitter / X, LinkedIn, Threads, Bluesky, Discord, GitHub, Dribbble, Behance, Product Hunt, Substack. Safe zones, sizes, typography rules. The spec sheet, not the paintbrush.
+- **`design-team`** - multi-agent design sprints with 16 specialized roles, four phases (Research → Build → Review → Revise). Use for full pages or campaigns, not single components.
+- **`visual-effects`** - actual shader source for generative backgrounds (mesh gradient, fluid sim, fractal, halftone, swarm) plus 17 stackable post-process FX (ASCII, dither, glitch, halftone, etc.). Ships canonical implementations, not abstractions.
+- **`icon-source`** - icon-library discipline. One library per project, verbatim path sourcing, animated-vs-static selection criteria. Eight approved libraries (Heroicons, Lucide, Tabler, Bootstrap Icons, Phosphor, Material Symbols, Lucide Animated, Heroicons Animated).
 
-The skill sits between Impeccable (strategy) and make-interfaces-feel-better (polish). Impeccable decides what the brand needs. The gallery tells you how the industry builds the component. make-interfaces-feel-better polishes the details. All three together produce components that work correctly, look native, and feel right.
+### How the layers stack on a real build
+
+A typical "build me a landing-page hero" task fires the pipeline in roughly this order:
+
+1. `/impeccable shape <feature>` reads PRODUCT.md and proposes the brand direction.
+2. `component-gallery-reference` triggers if the build maps to a standard component (header, hero card, navigation).
+3. `design-references` triggers in parallel, surfacing any captured references with matching category / pattern / feel tags.
+4. `fontshare-reference` triggers if type decisions are in scope (new typeface, new pairing).
+5. `motion-reference` triggers if the hero has scroll or motion behavior.
+6. `icon-source` triggers if icons are needed.
+7. `make-interfaces-feel-better` fires during implementation for the tactical polish.
+8. `/impeccable audit + critique + polish` runs at QA time.
+
+Not every layer fires for every task. Strategy and tactical fire on almost every UI build; the others route in based on what the task actually needs.
 
 </details>
 
@@ -564,9 +620,26 @@ Claude in Chrome is an MCP server (with a Chrome extension as the bridge). cmux 
 
 ### 4. Skills (Anthropic Skills, in `~/.claude/skills/`)
 
-Reusable prompt and behavior modules that auto-trigger on keyword matches. Installed via `npx skills add <github-repo>`. Live in `~/.claude/skills/`.
+Reusable prompt and behavior modules that auto-trigger on keyword matches. Some installed via `npx skills add <github-repo>`, others bundled with this repo and copied directly. Live in `~/.claude/skills/`.
 
-The `skills` component installs `make-interfaces-feel-better` (tactical UI polish) and `component-gallery-reference` (researches component.gallery before building UI components, filters by project tech stack, excludes unmaintained sources). Both are fully additive - skills don't depend on your CLAUDE.md or settings.json structure, so they're safe to install alongside any existing Claude Code config.
+The `skills` component installs 10 skills:
+
+| Skill | Layer | Source |
+|---|---|---|
+| `make-interfaces-feel-better` | Tactical CSS polish (16 rules) | npx (jakubkrehel/make-interfaces-feel-better) |
+| `component-gallery-reference` | Research (60 component types, 95 systems) | Bundled with this repo |
+| `fontshare-reference` | Typography (fontshare.com + reflex-reject list) | Bundled with this repo |
+| `motion-reference` | Animation / scroll (GSAP + Lenis canonical patterns) | Bundled with this repo |
+| `curate` | Personal-catalog capture wizard (`/curate`) | Bundled with this repo |
+| `design-references` | Personal-catalog retrieval (auto-consults on UI builds) | Bundled with this repo |
+| `social-media` | Platform specs for 13 social platforms | Bundled with this repo |
+| `design-team` | Multi-agent design sprints (16 roles, 4 phases) | Bundled with this repo |
+| `visual-effects` | Shader + post-process FX (14 shaders, 17 effects) | Bundled with this repo |
+| `icon-source` | Icon library discipline (8 approved libraries) | Bundled with this repo |
+
+The `reflect` component (separate from `skills`) adds an 11th skill: `reflect` itself (multi-agent corpus analysis) plus its SessionStart nudge hook.
+
+All skills are fully additive - they don't depend on your CLAUDE.md or settings.json structure, so they're safe to install alongside any existing Claude Code config.
 
 ### Quick decision table
 
@@ -576,8 +649,12 @@ The `skills` component installs `make-interfaces-feel-better` (tactical UI polis
 | Drag-drop Figma URLs into a chat | Plugin (`figma`) |
 | ClickUp tasks accessible to Claude.ai | Connector (claude.ai UI, account-bound) |
 | Local browser automation in a chat | MCP server (per-app config) |
-| Tactical UI polish rules that auto-fire | Skill (`make-interfaces-feel-better` - `skills` component) |
-| Industry-validated UI component patterns | Skill (`component-gallery-reference` - `skills` component) |
+| Tactical UI polish rules that auto-fire | Skill (`make-interfaces-feel-better`) |
+| Industry-validated UI component patterns | Skill (`component-gallery-reference`) |
+| Anti-monoculture typography research | Skill (`fontshare-reference`) |
+| GSAP + Lenis canonical animation patterns | Skill (`motion-reference`) |
+| A personal catalog of patterns you've seen in the wild | Skill (`curate` + `design-references`) |
+| Memory corpus analysis across all your sessions | Skill (`reflect` - `reflect` component) |
 
 </details>
 
@@ -655,18 +732,56 @@ Valid component keys: `brain`, `config`, `memory`, `skills`, `statusline`, `cmux
 
 ### Hook lifecycle
 
-Six hooks fire automatically once the `config` component merges them into `~/.claude/settings.json`:
+Eighteen hooks across six events, grouped by role. Once the `config` and other components merge them into `~/.claude/settings.json`, they fire automatically.
+
+**Refusal hooks** (PreToolUse - hard deny, block the tool call):
+
+| Matcher | Hook | Purpose |
+|---|---|---|
+| `Bash` | `bash-guard.sh` (5s) | Blocks AI-coauthor lines, force-push to main / master, `rm` against `.claude/memory`, legacy model IDs, project-specific anti-patterns (e.g. `window.__improv.*` for validation work) |
+| `Write\|Edit\|MultiEdit` | `content-guard.sh` (5s) | Same pattern set inside file content - attribution, emdashes / endashes, emoji unicode ranges, legacy model IDs |
+| `Write\|Edit\|MultiEdit` | `memory-approve.sh` (5s) | Auto-approves memory-path writes regardless of permission mode |
+| `mcp__voice-output__speak` | `voice-gate.sh` (5s) | Denies speak calls when `~/.claude/.voice-enabled` is absent (no wasted OpenAI TTS round-trips when muted) |
+| `mcp__claude-in-chrome__javascript_tool` | `validation-guard.sh` (5s) | Blocks `.click()`, synthetic events, `getComputedStyle`, `getBoundingClientRect`, `.textContent`, underscore-prefixed app methods - the DOM shortcuts that fake UI validation without going through the real event path |
+
+**Gate hooks** (state-machine gates - block `git commit` or further work until verification fires):
 
 | Event | Hook | Purpose |
 |---|---|---|
-| `PreToolUse(Bash)` | `~/.claude/hooks/bash-guard.sh` (5s) | Blocks AI-coauthor attribution lines in commands, force-push to main/master, `rm` against `.claude/memory`, legacy model IDs |
-| `PreToolUse(Write\|Edit\|MultiEdit)` | `~/.claude/hooks/content-guard.sh` (5s) | Blocks the same patterns inside file content being written, plus emdashes/endashes and emoji unicode ranges |
-| `PreToolUse(Write\|Edit\|MultiEdit)` | `~/.claude/hooks/memory-approve.sh` (5s) | Grants automatic permission for memory-path writes, bypassing the .claude/ carve-out |
-| `SessionStart` | `~/.claude/startup-check.sh` (10s, "Loading memory...") | Loads memory at session start |
-| `PreCompact` | inline command (5s, "Flushing memory before compact...") | Reminds Claude to flush pending memory before context compresses |
-| `PostCompact` | `~/.claude/startup-check.sh` (10s, "Reloading memory after compaction...") | Re-loads memory after compression |
+| `PostToolUse(Write\|Edit\|MultiEdit)` | `verify-before-done.sh` (5s) | Sets `~/.claude/.needs-verification` on edits to `.ts/.tsx/.css/.sh/.py` files. `bash-guard` blocks `git commit` while the flag is set. Clears on cmux screenshot Read, localhost curl, test commands (`npm test`, `vitest`, `pytest`, `node *test*.js`), external curl probes with port / path, and `/tmp/*.log` Reads. |
+| `PostToolUse(Read)` | `verify-clear.sh` (5s) | Clears `.needs-verification` on Read of a `.png` (the screenshot was actually opened, not just saved) |
+| `UserPromptSubmit` | `verify-manual.sh` (5s) | Recognizes phrases like "looks good" / "ship it" / "approved" and clears verification manually when the user explicitly signs off |
+| `PostToolUse(Bash\|mcp__claude-in-chrome__computer)` | `screenshot-open-mandate.sh` (5s) | Sets `.screenshot-pending` after a screenshot is saved. `bash-guard` blocks subsequent `cmux ... screenshot` and `git commit` until the flag clears |
+| `PostToolUse(Read)` | `screenshot-open-clear.sh` (5s) | Clears `.screenshot-pending` when a matching `.png` path is Read |
+| `PostToolUse(Write\|Edit\|MultiEdit)` | `second-fix-gate.sh` v2 (5s) | Warns once when a second fix lands on the same file within 10 min with `.needs-verification` still set. Suppressed on purely-additive Edit / MultiEdit (where `new_string` contains `old_string`). Manual override via `touch ~/.claude/.suppress-fix-gate` (30-min auto-expiring TTL) |
 
-All hooks are pipe-tested before they ship - the bash-guard hook discipline (verified-via-stdin-test) is itself a feedback memory: `feedback_hook_verification_discipline.md`.
+**Nudge hooks** (PostToolUse advisory - inject reminder text, do not block):
+
+| Matcher | Hook | Purpose |
+|---|---|---|
+| `Write\|Edit\|MultiEdit\|Bash` | `memory-nudge.sh` (5s) | Injects "PROJECT FILE CHANGED. You are in dirty state. Write memory before responding" after any non-memory file change |
+| `SessionStart` | `reflect-nudge.sh` (5s) | Counts new memories since last reflection; if above threshold (default 15, configurable via `REFLECT_THRESHOLD`), surfaces a "want to run /reflect?" prompt at session start |
+
+**Toggle hooks** (UserPromptSubmit - flip state on chat phrases):
+
+| Trigger phrase | Hook | Effect |
+|---|---|---|
+| "voice on" / "voice off" / "mute yourself" / "unmute" | `voice-toggle.sh` (5s) | Touches or removes `~/.claude/.voice-enabled` |
+| "resume on" / "resume off" / "auto-resume" | `resume-toggle.sh` (5s) | Touches or removes `~/.claude/.no-auto-resume` (cmux auto-resume policy) |
+
+**Lifecycle hooks** (SessionStart / PreCompact / PostCompact / SessionEnd):
+
+| Event | Hook | Purpose |
+|---|---|---|
+| `SessionStart` | `startup-check.sh` (10s) | Loads project + global memory at session start |
+| `SessionStart` | `voice-mandate.sh` (5s) | Reads `~/.claude/.voice-enabled` and injects an active-mandate, muted-notice, or silence (gate for the voice subsystem) |
+| `PreCompact` | inline command (5s) | Flushes pending memory before context compresses |
+| `PostCompact` | `startup-check.sh` (10s) | Re-loads memory after compression |
+| `SessionEnd` | `resume-guard.sh` (5s) | Blocks cmux auto-resume so a stale session doesn't surprise you on next launch |
+
+All hooks are pipe-tested before they ship (the `bash-guard.sh` hook discipline of verified-via-stdin-test is itself a feedback memory: `feedback_hook_verification_discipline.md`). The full inventory + flag-file registry + precedence rules live at `.claude/memory/decision_hook_system_architecture.md` if you need the authoritative version - this README table summarizes.
+
+The hook layer evolved from real failures - rule → feedback memory → hook is the documented escalation pattern. The 2026-05-19 reflection traces several specific lineages: memory writes failed enough times that `memory-nudge` was built; screenshots got described-without-Reading often enough that `screenshot-open-mandate` was built; a same-file regression shipped during the 2026-05-19 improv WSS debugging that drove `second-fix-gate`.
 
 ### Idempotency model
 

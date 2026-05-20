@@ -7,7 +7,7 @@ set -euo pipefail
 #   brain        - Team rules + workflow (appended to CLAUDE.md) - ADDITIVE
 #   config       - Hooks, plugins, permissions (merged into settings.json) - ADDITIVE
 #   memory       - Additive memory subsystem (rules + 3 hooks + startup-check.sh loader)
-#   skills       - Anthropic Skills (make-interfaces-feel-better + component-gallery-reference)
+#   skills       - Anthropic Skills (make-interfaces-feel-better + component-gallery-reference + fontshare-reference + curate + design-references + motion-reference)
 #   statusline   - Custom prompt-bar render (~/.claude/statusline-command.sh)
 #   cmux         - cmux settings.json symlink
 #   nvm          - .zshrc auto-activate of nvm default (so claude/node/npm land on PATH)
@@ -57,7 +57,7 @@ TITLES=(
   "Team rules + workflow (appended to CLAUDE.md)"
   "Hooks, plugins, permissions (merged into settings.json)"
   "Memory discipline rules + hooks"
-  "UI polish + component gallery research"
+  "Design pipeline (research, typography, motion, references) + 4 peer skills"
   "Custom prompt bar"
   "cmux split-pane terminal"
   "Node version manager PATH fix"
@@ -71,7 +71,7 @@ DESCS=(
   "ADDITIVE: appends team rules (from RULES.md) and shared workflow (from CLAUDE.md) to your ~/.claude/CLAUDE.md between marker comments. Your existing CLAUDE.md content is preserved above and below the markers. If you have a claude/CLAUDE.local.md for personal overrides, those are appended in their own marker block too. Re-runs detect the markers and skip. Deactivation removes only the marked blocks."
   "ADDITIVE: JSON-merges safety hooks (bash-guard, content-guard, memory-approve), memory-write allow patterns, enabled plugins, and marketplace entries into your existing ~/.claude/settings.json. Does NOT touch your defaultMode, model, or other preferences. Copies hook scripts to ~/.claude/hooks/ alongside any hooks you already have. Deactivation removes only our entries by marker."
   "ADDITIVE memory subsystem: appends our Memory Discipline rules (loading order, per-task updates, file format) to your CLAUDE.md between marker comments, JSON-merges three hooks (SessionStart loader, PreCompact reminder, PostCompact reload) into your settings.json, and symlinks the startup-check.sh loader. Does NOT replace or overwrite anything - all changes are marker-guarded so re-runs are no-ops, and the markers can be removed cleanly if you ever want to undo. Pick this if your team wants to beef up an existing Claude Code with persistent memory capability without losing their config."
-  "Adds skills to ~/.claude/skills/, fully additive. Bundles make-interfaces-feel-better (tactical UI polish via npx) and component-gallery-reference (researches component.gallery before building UI components, filters by project tech stack, excludes unmaintained/a11y-issue sources). Does NOT touch your CLAUDE.md, settings.json, hooks, or statusline. Safe to pick standalone if you have your own Claude Code config and just want the skill capability."
+  "Adds skills to ~/.claude/skills/, fully additive. Bundles make-interfaces-feel-better (tactical UI polish via npx), component-gallery-reference (researches component.gallery before building UI components), fontshare-reference (researches fontshare.com before picking typefaces), motion-reference (canonical GSAP + Lenis patterns for animation/scroll/transition work), and a personal design-reference system: curate (capture wizard via /curate) + design-references (auto-consults your personal catalog of one-off patterns at ~/.claude/design-references/). Does NOT touch your CLAUDE.md, settings.json, hooks, or statusline. Safe to pick standalone if you have your own Claude Code config and just want the skill capability."
   "Symlinks our statusline-command.sh into ~/.claude/. The settings.json statusLine command is tolerant of a missing script, so unticking this cleanly falls back to no custom statusline (Claude Code's default takes over). Pick this if you like our prompt-bar render; skip if you prefer Claude Code's default or a different statusline you've configured yourself."
   "Settings for cmux, the split-pane terminal that hosts the in-app browser preview Claude uses to verify your UI work. Skip if you don't use cmux."
   "A small one-line addition to your zsh config that fixes a specific issue some setups hit: opening a new terminal and getting 'claude not found in PATH' even though Claude is installed. The fix only activates if your zsh config already loads nvm (Node Version Manager) - on most machines this is a harmless no-op, so it's safe to leave on. If 'claude' already runs fine in fresh terminals on your machine, you can skip this."
@@ -89,7 +89,7 @@ FILES=(
   # memory
   "~/.claude/CLAUDE.md (memory discipline block)\n~/.claude/settings.json (3 hooks merged)\n~/.claude/startup-check.sh (symlink)"
   # skills
-  "~/.claude/skills/make-interfaces-feel-better/\n~/.claude/skills/component-gallery-reference/\n~/.claude/skills/social-media/\n~/.claude/skills/design-team/\n~/.claude/skills/visual-effects/\n~/.claude/skills/icon-source/"
+  "~/.claude/skills/make-interfaces-feel-better/\n~/.claude/skills/component-gallery-reference/\n~/.claude/skills/fontshare-reference/\n~/.claude/skills/motion-reference/\n~/.claude/skills/curate/\n~/.claude/skills/design-references/\n~/.claude/design-references/ (personal catalog directory)\n~/.claude/skills/social-media/\n~/.claude/skills/design-team/\n~/.claude/skills/visual-effects/\n~/.claude/skills/icon-source/"
   # statusline
   "~/.claude/statusline-command.sh (symlink)"
   # cmux
@@ -740,6 +740,12 @@ PY
 deactivate_skills() {
   [ -d "$CLAUDE_DIR/skills/make-interfaces-feel-better" ] && rm -rf "$CLAUDE_DIR/skills/make-interfaces-feel-better"
   [ -d "$CLAUDE_DIR/skills/component-gallery-reference" ] && rm -rf "$CLAUDE_DIR/skills/component-gallery-reference"
+  [ -d "$CLAUDE_DIR/skills/fontshare-reference" ] && rm -rf "$CLAUDE_DIR/skills/fontshare-reference"
+  [ -d "$CLAUDE_DIR/skills/motion-reference" ] && rm -rf "$CLAUDE_DIR/skills/motion-reference"
+  [ -d "$CLAUDE_DIR/skills/curate" ] && rm -rf "$CLAUDE_DIR/skills/curate"
+  [ -d "$CLAUDE_DIR/skills/design-references" ] && rm -rf "$CLAUDE_DIR/skills/design-references"
+  # NOTE: ~/.claude/design-references/ is the user's personal catalog (data, not code).
+  # Deactivation removes the SKILLS but preserves the catalog so the user does not lose curated references.
 }
 
 deactivate_voice() {
@@ -1554,6 +1560,62 @@ if picked skills; then
   cp "$REPO_DIR/claude/skills/component-gallery-reference/SKILL.md" \
      "$CLAUDE_DIR/skills/component-gallery-reference/SKILL.md"
   ok "component-gallery-reference installed"
+
+  # Bundled skill: fontshare-reference (shipped with dotfiles, no npx needed)
+  info "Installing fontshare-reference (typeface research via fontshare.com)..."
+  mkdir -p "$CLAUDE_DIR/skills/fontshare-reference"
+  cp "$REPO_DIR/claude/skills/fontshare-reference/SKILL.md" \
+     "$CLAUDE_DIR/skills/fontshare-reference/SKILL.md"
+  ok "fontshare-reference installed"
+
+  # Bundled skill: motion-reference (canonical GSAP + Lenis patterns)
+  info "Installing motion-reference (GSAP + Lenis animation/scroll patterns)..."
+  mkdir -p "$CLAUDE_DIR/skills/motion-reference"
+  cp "$REPO_DIR/claude/skills/motion-reference/SKILL.md" \
+     "$CLAUDE_DIR/skills/motion-reference/SKILL.md"
+  ok "motion-reference installed"
+
+  # Bundled skill pair: curate + design-references (personal design-reference catalog system)
+  info "Installing curate (design-reference capture wizard)..."
+  mkdir -p "$CLAUDE_DIR/skills/curate"
+  cp "$REPO_DIR/claude/skills/curate/SKILL.md" \
+     "$CLAUDE_DIR/skills/curate/SKILL.md"
+  ok "curate installed"
+
+  info "Installing design-references (auto-consult personal catalog on UI builds)..."
+  mkdir -p "$CLAUDE_DIR/skills/design-references"
+  cp "$REPO_DIR/claude/skills/design-references/SKILL.md" \
+     "$CLAUDE_DIR/skills/design-references/SKILL.md"
+  ok "design-references installed"
+
+  # Seed the catalog directory + vocabulary file (only if not already present - preserve user data)
+  if [ ! -d "$CLAUDE_DIR/design-references" ]; then
+    info "Seeding personal design-reference catalog at ~/.claude/design-references/..."
+    mkdir -p "$CLAUDE_DIR/design-references/_vocab"
+    cat > "$CLAUDE_DIR/design-references/_vocab/categories.txt" <<'VOCABEOF'
+# Strict Category vocabulary for the design-references catalog.
+# One per line. Lowercase, hyphenated.
+# Adding a new category requires explicit user approval via the `curate` skill.
+
+list
+navigation
+command-palette
+inline-edit
+page-transition
+loading-state
+empty-state
+detail-reveal
+layout-transition
+notification
+data-display
+gesture
+interactive-element
+overlay
+VOCABEOF
+    ok "design-references catalog seeded (empty - populate via /curate)"
+  else
+    ok "design-references catalog already exists - leaving user data intact"
+  fi
 
   # Bundled skill: social-media (platform specs for 13 social platforms)
   info "Installing social-media (social platform specs + safe zones)..."

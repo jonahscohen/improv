@@ -1,3 +1,6 @@
+- [CLAUDE.md slim-core split plan (2026-05-19)](plan_claude_md_split.md) - audit + refactor plan for installed (378 lines) vs source (425 lines concat); installed has 46 lines of unmerged drift + source has 87 lines never installed; ~85-line core target with topic skills; reconcile installed->source FIRST before slimming
+- [Second-fix gate hook (2026-05-19)](session_2026-05-19_second-fix-gate-hook.md) - PostToolUse hook on Write|Edit|MultiEdit warns when a second fix lands on the same file/dir within 10 min while .needs-verification is still set; operationalizes reflection finding #3
+- [Verify hook server off-ramp (2026-05-19)](session_2026-05-19_verify-hook-server-offramp.md) - verify-before-done.sh now clears on test runs, node probes, external curl/wget with port or path, and /tmp/ capture-file Reads; memory-nudge Read-matcher fix reported (lives in installed settings.json, not repo)
 - [HTTPS for Safari (2026-05-19)](session_2026-05-19_https-for-safari.md) - improv ws-server now also listens on HTTPS port 9224 with auto-generated self-signed cert; setup-cert.sh trusts it once via sudo; Safari mixed-content block resolved
 - [Cache block on validation (2026-05-18)](session_2026-05-18_cache-block.md) - real-input validation reproduces the bug because the browser is caching an older bundle; the cache-header fix is stuck behind MCP server restart (Node module cache)
 - [Scroll safety net (2026-05-18)](session_2026-05-18_scroll-safety-net.md) - _appendQueueRowAnimated now has a setTimeout safety net so scroll-to-bottom + settle fire even when WAAPI finish doesn't
@@ -58,6 +61,7 @@
 - [Teams launcher reset (2026-05-11)](session_2026-05-11_teams-launcher-reset.md) - Deleted .teams-default-on to restore interactive prompt; restored .zshrc block
 - [Improv settings active state (2026-05-11)](session_2026-05-11_improv-settings-active.md) - Fixed gear button not showing blue active state when settings panel is open
 - [Reflection (2026-05-12)](reflection_2026-05-12.md) - Multi-agent corpus analysis: patterns, tensions, gaps
+- [Reflection (2026-05-19)](reflection_2026-05-19.md) - Hook intensity audit; workflow growing 8x faster than work; today's 3-bug session as canonical "no second-fix gate" example
 - [Global verification hook (2026-05-12)](session_2026-05-12_global-verification-hook.md) - Rebuilt verify-before-done.sh as global enforcement for all code changes
 - [Improv pipeline fix (2026-05-12)](session_2026-05-12_improv-pipeline-fix.md) - Server-served architecture; dishplayscapes 214KB canonical; init.sh uses localhost:9223
 - [Improv hints fix (2026-05-12)](session_2026-05-12_improv-hints-fix.md) - clip-path was clipping tooltip; glow data-improv broke pointer events; pulse animation conflict
@@ -84,3 +88,4 @@
 - [HTTP polling watch loop](decision_improv_http_polling_watch.md) - curl-based polling replaces unreliable MCP watch; never disconnects
 - [Dish Playscapes improv (2026-05-14)](session_2026-05-14_dishplayscapes-improv.md) - Claudebar + Queuebar prototypes to production, Spark sprites, timeout/retry/batching, 10 bug fixes
 - [Improv connection detection (2026-05-16)](session_2026-05-16_improv-connection-detection.md) - Claudebar silent failure debug; pivoting to connection-aware UX (hide Send when no watcher active)
+- [Hook system architecture](decision_hook_system_architecture.md) - Operational reference: inventory of 16 hooks, flag-file registry, precedence rules, known duplications, override mechanism, new-hook checklist

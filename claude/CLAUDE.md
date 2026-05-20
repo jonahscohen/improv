@@ -86,6 +86,9 @@ Rigorous protocol for sourcing icons from 8 approved libraries: Heroicons, Lucid
 ```
 Strategy:      /impeccable (23 commands, PRODUCT.md + DESIGN.md)
 Research:      component-gallery-reference (60 types, 95 systems)
+Typography:    fontshare-reference (fontshare.com catalog, integrates with impeccable's reflex-reject list)
+References:    design-references (personal catalog, auto-consults) + /curate (capture wizard)
+Motion:        motion-reference (GSAP + Lenis canonical patterns - tweens, ScrollTrigger, Flip, SplitText, DrawSVG)
 Tactical:      make-interfaces-feel-better (16 CSS polish rules)
 Social:        /social-media (13 platforms, specs + validation)
 Effects:       /visual-effects (14 shaders + 25 FX + post-processing)

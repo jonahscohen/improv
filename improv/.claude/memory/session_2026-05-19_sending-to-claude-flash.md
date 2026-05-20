@@ -51,5 +51,8 @@ External Node test confirmed: `9223 OPEN in 16ms`, `9224 ERR: Unexpected server 
 - improv/core/prompt/index.ts
 - improv/server/ws-server.ts
 
+## Commit + push (2026-05-19)
+Commit `b72a865` on branch `main`. Pushed to origin via `gh auth git-credential` HTTPS - SSH key (RSA spare3@Yes-JCohen.local) is loaded in ssh-agent but not authorized on GitHub for this account; `gh` CLI HTTPS auth worked. Bundled all accumulated unstaged work from prior sessions into this commit.
+
 ## Collaborator
 Jonah
