@@ -2,8 +2,10 @@
 
 ## References
 - [cmux browser pane](reference_cmux_browser.md) - Use cmux built-in browser for UI verification when inside a cmux terminal; prioritize over Chrome MCP
+- [cmux markdown rendering](reference_cmux_markdown_render.md) - `cmux open <file.md>` renders markdown natively; do NOT install grip/glow/markserv and serve via localhost
 
 ## Sessions
+- [Sidecoach deployment complete](session_2026-05-21_sidecoach_deployment.md) - Hooks symlinked to ~/.claude/hooks, registered in install.sh, ready for production
 - [Attribution rule shipped](session_2026-04-23_attribution-rule.md): Added human-collaborator naming rule and How/Why memory requirement to claude/CLAUDE.md so the bundle ships it
 - [PAUSE STATE - start here](session_2026-04-21_pause-state.md) - Full status of enforcement hooks (3/6 built), dotfiles portability (done), startup-check analysis (not implemented), what to do next
 - [Enforcement hooks v1 setup](session_2026-04-13_enforcement-hooks.md) - PreCompact + PreToolUse Bash + PreToolUse Write/Edit hooks installed in ~/.claude/hooks/
@@ -16,3 +18,4 @@
 - [Discipline under pressure](feedback_discipline_under_pressure.md) - Never drop per-task memory writes or visual verification to appear fast; user frustration means more care, not less
 - [Reprioritize on direct questions](feedback_reprioritize_on_questions.md) - When user asks a question, answer it directly; don't redirect to original task
 - [Efficiency matters](feedback_efficiency_matters.md) - Waste is not acceptable; optimize for load time and user experience; sequential waits kill UX
+- [Memory scope check](feedback_memory_scope_check.md) - Before writing memory, ask "project-only or every project?" - global lessons live in claude-dotfiles/claude/memory/ and symlink from ~/.claude/memory/

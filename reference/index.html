@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>claude-dotfiles reference</title>
+  <meta name="description" content="The full claude-dotfiles reference. Every component, every hook, every layer of the design pipeline, documented." />
+  <meta name="theme-color" content="#1A1F1B" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+
+  <script>
+    document.documentElement.classList.add('js');
+  </script>
+</head>
+<body>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- TOP BAR ============================================================ -->
+  <header class="topbar">
+    <div class="topbar__inner">
+
+      <a href="#top" class="brand" aria-label="claude-dotfiles reference">
+        <picture class="brand__mark">
+          <source media="(prefers-color-scheme: dark)" srcset="./assets/yes-and-logo-dark.webp" />
+          <img src="./assets/yes-and-logo-light.webp" alt="Yes&" width="86" />
+        </picture>
+        <span class="brand__doc">reference</span>
+      </a>
+
+      <nav class="topbar-nav" aria-label="Section">
+        <a href="#install">Install</a>
+        <a href="#discipline">Discipline</a>
+        <a href="#memory">Memory</a>
+        <a href="#design">Design</a>
+        <a href="#components">Components</a>
+        <a href="../marketing/" class="topbar-nav__link-out">Marketing site</a>
+        <a href="https://github.com/jonahscohen/claude-dotfiles" class="topbar-nav__link-out" rel="noopener">
+          GitHub
+          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+        </a>
+      </nav>
+
+      <button class="topbar-toggle" type="button" aria-label="Toggle sidebar" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+      </button>
+
+    </div>
+  </header>
+
+  <a id="top" aria-hidden="true"></a>
+
+  <div class="page">
+
+    <!-- LEFT SIDEBAR ===================================================== -->
+    <aside class="sidebar" aria-label="Reference sections" data-lenis-prevent>
+      <nav class="sidebar__nav">
+
+        <div class="sidebar__group">
+          <p class="sidebar__group-h">Get started</p>
+          <a href="#install" class="sidebar__link">Install &amp; quick start</a>
+          <a href="#four-houses" class="sidebar__link">The four houses</a>
+        </div>
+
+        <div class="sidebar__group">
+          <p class="sidebar__group-h">House 1 - Discipline</p>
+          <a href="#discipline" class="sidebar__link">Why the harness refuses</a>
+          <a href="#discipline-refusal" class="sidebar__link">Refusal hooks (5)</a>
+          <a href="#discipline-gates" class="sidebar__link">Gate hooks (6)</a>
+          <a href="#discipline-nudges" class="sidebar__link">Nudge hooks (2)</a>
+          <a href="#discipline-toggles" class="sidebar__link">Toggle hooks (2)</a>
+          <a href="#discipline-lifecycle" class="sidebar__link">Lifecycle hooks (3)</a>
+          <a href="#discipline-verification" class="sidebar__link">Verification protocol</a>
+          <a href="#discipline-permission" class="sidebar__link">Permission posture</a>
+        </div>
+
+        <div class="sidebar__group">
+          <p class="sidebar__group-h">House 2 - Memory</p>
+          <a href="#memory" class="sidebar__link">Why Claude remembers</a>
+          <a href="#memory-layers" class="sidebar__link">The three storage layers</a>
+          <a href="#memory-format" class="sidebar__link">File format &amp; indexing</a>
+          <a href="#memory-lifecycle" class="sidebar__link">Lifecycle hooks</a>
+          <a href="#memory-reflect" class="sidebar__link">The /reflect skill</a>
+          <a href="#memory-attribution" class="sidebar__link">Attribution &amp; collaboration</a>
+        </div>
+
+        <div class="sidebar__group">
+          <p class="sidebar__group-h">House 3 - Design</p>
+          <a href="#design" class="sidebar__link">The pipeline (7 layers)</a>
+          <a href="#design-orchestrator" class="sidebar__link">/design-build orchestrator</a>
+          <a href="#design-strategy" class="sidebar__link">1. Strategy (Impeccable)</a>
+          <a href="#design-research" class="sidebar__link">2. Research (component-gallery)</a>
+          <a href="#design-typography" class="sidebar__link">3. Typography (fontshare)</a>
+          <a href="#design-references" class="sidebar__link">4. References (catalog)</a>
+          <a href="#design-motion" class="sidebar__link">5. Motion (GSAP + Lenis)</a>
+          <a href="#design-tokens" class="sidebar__link">6. Tokens (DESIGN.md)</a>
+          <a href="#design-tactical" class="sidebar__link">7. Tactical (feel-better)</a>
+          <a href="#design-peer" class="sidebar__link">Peer skills</a>
+          <a href="#design-product" class="sidebar__link">PRODUCT.md spec</a>
+        </div>
+
+        <div class="sidebar__group">
+          <p class="sidebar__group-h">House 4 - Workflow</p>
+          <a href="#components" class="sidebar__link">The twelve components</a>
+          <a href="#customization" class="sidebar__link">Customization</a>
+          <a href="#architecture" class="sidebar__link">Architecture</a>
+        </div>
+
+        <div class="sidebar__group">
+          <p class="sidebar__group-h">Operating it</p>
+          <a href="#troubleshooting" class="sidebar__link">Troubleshooting</a>
+          <a href="#contributing" class="sidebar__link">Contributing</a>
+        </div>
+
+      </nav>
+    </aside>
+
+    <!-- MAIN ============================================================= -->
+    <main id="main" class="main">
+      <article class="content">
+
+        <!-- HERO / INSTALL ============================================== -->
+        <section id="install" class="section section--hero">
+
+          <p class="eyebrow">Reference manual</p>
+          <h1 class="page-h1">claude-dotfiles</h1>
+          <p class="lede">
+            The full reference for the Yes&amp; Claude Code stack. Every component, every hook, every layer of the design pipeline, documented.
+          </p>
+
+          <div class="install-block install-block--big" role="region" aria-label="Install command">
+            <pre class="install-block__cmd"><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash</code></pre>
+            <button class="install-block__copy" type="button" aria-label="Copy install command" data-copy="curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash">
+              <span class="install-block__copy-label">Copy</span>
+            </button>
+          </div>
+
+          <h2 id="install-quick" class="h2">Quick start</h2>
+          <p>
+            One curl installs the <code>ampersand</code> shortcut. Run it from any terminal to launch the component picker.
+          </p>
+
+          <pre class="codeblock"><code>ampersand                       <span class="cm"># interactive TUI</span>
+ampersand --pull                <span class="cm"># pull latest from GitHub then TUI</span>
+ampersand --preset minimal      <span class="cm"># brain + config + memory + skills + nvm</span>
+ampersand --only memory         <span class="cm"># just one component</span>
+ampersand --only memory,skills  <span class="cm"># multiple</span>
+ampersand --dry-run             <span class="cm"># preview without writing</span>
+ampersand --yes                 <span class="cm"># everything, non-interactive</span></code></pre>
+
+          <h3 id="install-presets" class="h3">Presets</h3>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Preset</th><th>Components included</th></tr></thead>
+              <tbody>
+                <tr><td><code>all</code></td><td>Everything (same as <code>--yes</code>)</td></tr>
+                <tr><td><code>minimal</code></td><td><code>brain</code> + <code>config</code> + <code>memory</code> + <code>skills</code> + <code>nvm</code></td></tr>
+                <tr><td><code>none</code></td><td>Nothing (useful with <code>--dry-run</code>)</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 id="install-locations" class="h3">Custom clone locations</h3>
+          <p>
+            The dotfiles can live anywhere on disk. The Ghostty config uses a <code>__DOTFILES_DIR__</code> placeholder that the installer replaces at install time, so cloning to <code>~/code/dots</code>, <code>/opt/dots</code>, or anywhere else works.
+          </p>
+          <pre class="codeblock"><code>CLAUDE_DOTFILES_DIR=~/code/dots curl -fsSL .../bootstrap.sh | bash    <span class="cm"># env var</span>
+curl -fsSL .../bootstrap.sh | bash -s -- --dir ~/code/dots             <span class="cm"># flag</span></code></pre>
+          <p>
+            Re-running <code>install.sh</code> from a new clone location refreshes the <code>ampersand</code> function's path automatically. No manual cleanup of the old <code>.zshrc</code> block required.
+          </p>
+
+          <h3 id="install-onboarding" class="h3">Onboarding a new Yes&amp; dev</h3>
+          <ol class="steplist">
+            <li><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash</code></li>
+            <li>TUI defaults, or <code>--preset all</code> to take everything.</li>
+            <li>Open a new terminal (or <code>source ~/.zshrc</code>).</li>
+            <li>Done. Same machine state as everyone else.</li>
+          </ol>
+
+        </section>
+
+        <!-- FOUR HOUSES ================================================== -->
+        <section id="four-houses" class="section">
+          <p class="eyebrow">The shape of the system</p>
+          <h2 class="h2">The four houses</h2>
+          <p class="lede">
+            Twelve components organize into four houses of thought. Each house answers a question the team had to solve before Claude could be trusted with real work.
+          </p>
+
+          <div class="houses-grid">
+
+            <a class="house-card" href="#discipline">
+              <p class="house-card__num">01</p>
+              <h3 class="house-card__h">Discipline</h3>
+              <p class="house-card__desc">Why doesn't Claude ship sloppy work here? Because the harness refuses, not advises. Eighteen hooks across five roles, the verification protocol, the permission posture.</p>
+              <p class="house-card__cta">Read the discipline house
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </p>
+            </a>
+
+            <a class="house-card" href="#memory">
+              <p class="house-card__num">02</p>
+              <h3 class="house-card__h">Memory</h3>
+              <p class="house-card__desc">Why does Claude remember here? Because we externalize the record into files git carries. Three storage layers, lifecycle hooks, reflection-driven audit, attribution baked into every entry.</p>
+              <p class="house-card__cta">Read the memory house
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </p>
+            </a>
+
+            <a class="house-card" href="#design">
+              <p class="house-card__num">03</p>
+              <h3 class="house-card__h">Design</h3>
+              <p class="house-card__desc">Why does generated UI look right here? Because seven layered skills stack from strategy to tactical, orchestrated by <code>/design-build</code>. Refuses training-data typography defaults. Learns from a personal catalog.</p>
+              <p class="house-card__cta">Read the design house
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </p>
+            </a>
+
+            <a class="house-card" href="#components">
+              <p class="house-card__num">04</p>
+              <h3 class="house-card__h">Workflow</h3>
+              <p class="house-card__desc">How do you actually use this every day? One curl, one shortcut, all additive. Boost an existing Claude Code without losing your config. Re-runs safe; uninstall clean.</p>
+              <p class="house-card__cta">Read the workflow house
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </p>
+            </a>
+
+          </div>
+        </section>
+
+        <!-- DISCIPLINE ================================================== -->
+        <section id="discipline" class="section">
+          <p class="eyebrow">House 01</p>
+          <h2 class="h2">Discipline</h2>
+          <p class="lede">
+            Rules in CLAUDE.md are advisory - the model skips them under pressure. Hooks at the tool boundary are mechanical - they fire before the tool runs and block the call. Eighteen hooks across five roles enforce the disciplines that mattered. Each hook traces back to a specific real failure that drove its creation.
+          </p>
+
+          <div class="callout">
+            <p>
+              <strong>The pattern:</strong> rule violated -&gt; feedback memory written -&gt; rule violated again -&gt; hook built -&gt; violations stop. This isn't a feature; it's a method. When something fails twice, the next response is a hook.
+            </p>
+          </div>
+
+          <h3 id="discipline-refusal" class="h3">Refusal hooks (PreToolUse, hard deny)</h3>
+          <p>
+            These hooks intercept and block. The tool call never runs.
+          </p>
+
+          <div class="table-wrap">
+            <table class="table table--hooks">
+              <thead><tr><th>Matcher</th><th>Hook</th><th>Purpose</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><code>Bash</code></td>
+                  <td><code>bash-guard.sh</code></td>
+                  <td>Blocks AI-attribution lines in commits, force-push to <code>main</code> / <code>master</code>, <code>rm</code> against <code>.claude/memory</code>, legacy model IDs, project-specific anti-patterns.</td>
+                </tr>
+                <tr>
+                  <td><code>Write|Edit|MultiEdit</code></td>
+                  <td><code>content-guard.sh</code></td>
+                  <td>Same pattern set inside file content - AI-attribution, emdashes, endashes, emoji unicode ranges, legacy model IDs.</td>
+                </tr>
+                <tr>
+                  <td><code>Write|Edit|MultiEdit</code></td>
+                  <td><code>memory-approve.sh</code></td>
+                  <td>Auto-approves memory-path writes so they don't need permission prompts regardless of permission mode.</td>
+                </tr>
+                <tr>
+                  <td><code>mcp__voice-output__speak</code></td>
+                  <td><code>voice-gate.sh</code></td>
+                  <td>Denies speak calls when <code>~/.claude/.voice-enabled</code> is absent. No wasted OpenAI TTS round-trips when muted.</td>
+                </tr>
+                <tr>
+                  <td><code>mcp__claude-in-chrome__javascript_tool</code></td>
+                  <td><code>validation-guard.sh</code></td>
+                  <td>Blocks <code>.click()</code>, synthetic events, <code>getComputedStyle</code>, <code>getBoundingClientRect</code>, <code>.textContent</code>, underscore-prefixed app methods - the DOM shortcuts that fake UI validation without going through real event paths.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 id="discipline-gates" class="h3">Gate hooks (state machines)</h3>
+          <p>
+            These don't block tool calls outright - they set or clear flag files that other hooks consult. The downstream <code>bash-guard</code> blocks <code>git commit</code> while any gate flag is set.
+          </p>
+
+          <div class="table-wrap">
+            <table class="table table--hooks">
+              <thead><tr><th>Event</th><th>Hook</th><th>Purpose</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><code>PostToolUse(Write|Edit|MultiEdit)</code></td>
+                  <td><code>verify-before-done.sh</code></td>
+                  <td>Sets <code>~/.claude/.needs-verification</code> on edits to <code>.ts/.tsx/.css/.sh/.py</code> files. Clears on cmux screenshot Read, localhost curl, test commands (npm test / vitest / pytest / etc.), external curl probes with port or path, or <code>/tmp/*test*.log</code> Reads.</td>
+                </tr>
+                <tr>
+                  <td><code>PostToolUse(Read)</code></td>
+                  <td><code>verify-clear.sh</code></td>
+                  <td>Clears <code>.needs-verification</code> on Read of a <code>.png</code> (the screenshot was actually opened, not just saved).</td>
+                </tr>
+                <tr>
+                  <td><code>UserPromptSubmit</code></td>
+                  <td><code>verify-manual.sh</code></td>
+                  <td>Recognizes phrases like "looks good" / "ship it" / "approved" and clears verification manually when the user explicitly signs off.</td>
+                </tr>
+                <tr>
+                  <td><code>PostToolUse(Bash|...computer)</code></td>
+                  <td><code>screenshot-open-mandate.sh</code></td>
+                  <td>Sets <code>~/.claude/.screenshot-pending</code> after a screenshot is saved. <code>bash-guard</code> blocks subsequent <code>cmux ... screenshot</code> and <code>git commit</code> until the flag clears.</td>
+                </tr>
+                <tr>
+                  <td><code>PostToolUse(Read)</code></td>
+                  <td><code>screenshot-open-clear.sh</code></td>
+                  <td>Clears <code>.screenshot-pending</code> when a matching <code>.png</code> path is Read.</td>
+                </tr>
+                <tr>
+                  <td><code>PostToolUse(Write|Edit|MultiEdit)</code></td>
+                  <td><code>second-fix-gate.sh</code> (v2)</td>
+                  <td>Warns once when two fixes land on the same file within 10 minutes with <code>.needs-verification</code> still set. Suppressed on purely-additive Edit / MultiEdit (where <code>new_string</code> contains <code>old_string</code>). Manual override via <code>touch ~/.claude/.suppress-fix-gate</code> (30-min auto-expiring).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 id="discipline-nudges" class="h3">Nudge hooks (advisory)</h3>
+          <p>
+            These inject reminder text into the agent's context. They don't block tool calls - they just remind. Two of them, kept intentionally limited so they don't become banner-blind noise.
+          </p>
+
+          <div class="table-wrap">
+            <table class="table table--hooks">
+              <thead><tr><th>Matcher</th><th>Hook</th><th>Purpose</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><code>Write|Edit|MultiEdit|Bash</code></td>
+                  <td><code>memory-nudge.sh</code></td>
+                  <td>Injects "PROJECT FILE CHANGED. You are in dirty state. Write memory before responding" after any non-memory file change. Skipped on paths under <code>.claude/memory/</code> or matching <code>MEMORY.md</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>SessionStart</code></td>
+                  <td><code>reflect-nudge.sh</code></td>
+                  <td>Counts new memory files since the last reflection. When above threshold (default 15, configurable via <code>REFLECT_THRESHOLD</code>), surfaces a "want to run /reflect?" prompt at session start.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 id="discipline-toggles" class="h3">Toggle hooks (state flips on chat phrases)</h3>
+
+          <div class="table-wrap">
+            <table class="table table--hooks">
+              <thead><tr><th>Trigger phrase</th><th>Hook</th><th>Effect</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>"voice on" / "voice off" / "mute yourself" / "unmute"</td>
+                  <td><code>voice-toggle.sh</code></td>
+                  <td>Touches or removes <code>~/.claude/.voice-enabled</code>. Reads by <code>voice-mandate.sh</code> at SessionStart and <code>voice-gate.sh</code> on every speak call.</td>
+                </tr>
+                <tr>
+                  <td>"auto-resume on" / "off"</td>
+                  <td><code>resume-toggle.sh</code></td>
+                  <td>Touches or removes <code>~/.claude/.no-auto-resume</code>. Reads by <code>resume-guard.sh</code> at SessionEnd to decide whether to block cmux auto-resume.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 id="discipline-lifecycle" class="h3">Lifecycle hooks (session boundaries)</h3>
+
+          <div class="table-wrap">
+            <table class="table table--hooks">
+              <thead><tr><th>Event</th><th>Hook</th><th>Purpose</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><code>SessionStart</code></td>
+                  <td><code>startup-check.sh</code></td>
+                  <td>Loads project + global memory at session start. Status: "Loading memory..." The bridge that gives Claude continuity across sessions.</td>
+                </tr>
+                <tr>
+                  <td><code>SessionStart</code></td>
+                  <td><code>voice-mandate.sh</code></td>
+                  <td>Reads <code>.voice-enabled</code> and injects an active-mandate, muted-notice, or silence (the gate for the voice subsystem).</td>
+                </tr>
+                <tr>
+                  <td><code>PreCompact</code></td>
+                  <td>inline command</td>
+                  <td>Flushes pending memory before context compresses. Status: "Flushing memory before compact..."</td>
+                </tr>
+                <tr>
+                  <td><code>PostCompact</code></td>
+                  <td><code>startup-check.sh</code></td>
+                  <td>Re-loads memory after compression. Status: "Reloading memory after compaction..."</td>
+                </tr>
+                <tr>
+                  <td><code>SessionEnd</code></td>
+                  <td><code>resume-guard.sh</code></td>
+                  <td>Blocks cmux auto-resume so a stale session doesn't surprise you on next launch (unless <code>.no-auto-resume</code> is unset).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="footnote">
+            The authoritative inventory plus flag-file registry plus precedence rules lives in the canonical memory file <code>.claude/memory/decision_hook_system_architecture.md</code>.
+          </p>
+
+          <h3 id="discipline-verification" class="h3">The verification protocol</h3>
+          <p>
+            Seven rules in <code>CLAUDE.md</code> that gate task completion. Mandatory, no exceptions.
+          </p>
+
+          <ol class="numlist">
+            <li><strong>Visual verification.</strong> UI changes must be screenshotted and described. "It renders" is not verification.</li>
+            <li><strong>Interactive verification.</strong> Buttons, dropdowns, toggles must be clicked / typed into and re-screenshotted via real input only. No JS shortcuts.</li>
+            <li><strong>Side-by-side verification.</strong> If building from a Figma reference or mockup, compare implementation against source.</li>
+            <li><strong>Completeness check.</strong> Re-read the original request, list every item, confirm each one exists.</li>
+            <li><strong>No lazy questions.</strong> If the user asked for 5 things and Claude built 3, build the other 2 instead of asking "should I continue?"</li>
+            <li><strong>No false positives.</strong> Passing type check is not a passing feature. Verify with eyes.</li>
+            <li><strong>For non-UI tasks, state a verifiable plan first.</strong> Refactors, scripts, CLI changes: write <code>&lt;step&gt; -&gt; verify: &lt;check&gt;</code> before implementing. Verify clauses must be runnable, not "looks right."</li>
+          </ol>
+
+          <h3 id="discipline-permission" class="h3">Permission posture (deliberate)</h3>
+          <p>
+            <code>claude/settings.json</code> ships with <code>defaultMode: bypassPermissions</code> and <code>skipDangerousModePermissionPrompt: true</code>. Every tool call auto-approves, and Claude Code's own warning on the bypass mode is suppressed.
+          </p>
+          <p>
+            This is on purpose. The team decided the friction of per-tool prompts outweighs the safety it adds, and the hook layer (above) already blocks the specific patterns that matter. If you want different defaults, change <code>defaultMode</code> in <code>claude/settings.json</code> to <code>default</code> (per-tool prompting) or <code>acceptEdits</code> (auto-approve edits but not bash). Remove <code>skipDangerousModePermissionPrompt</code> if you want Claude Code's own warning to show.
+          </p>
+          <p>
+            The hook layer stays useful regardless of <code>defaultMode</code> - hooks fire BEFORE the permission prompt would, so they continue blocking forbidden patterns even in fully-prompting mode.
+          </p>
+        </section>
+
+        <!-- MEMORY ===================================================== -->
+        <section id="memory" class="section">
+          <p class="eyebrow">House 02</p>
+          <h2 class="h2">Memory</h2>
+          <p class="lede">
+            Memory turns Claude Code from a stateless code generator into a colleague who remembers what was decided last week and why. It's the most load-bearing thing in this repo.
+          </p>
+
+          <h3 id="memory-layers" class="h3">The three storage layers</h3>
+
+          <div class="defn-list">
+            <div class="defn">
+              <p class="defn__term">Project root memory</p>
+              <p class="defn__path"><code>&lt;project&gt;/.claude/memory/</code></p>
+              <p class="defn__body">The canonical record for that specific project. Session files, feedback files, reference files, decision files - all indexed by <code>MEMORY.md</code>. Committed to the project's git repo like any source. Read by every collaborator's Claude on session start.</p>
+            </div>
+            <div class="defn">
+              <p class="defn__term">Global cross-project memory</p>
+              <p class="defn__path"><code>~/.claude/memory/</code></p>
+              <p class="defn__body">Per-machine, durable across all projects you open with Claude Code. The attribution policy, team-wide feedback, hook verification discipline. In Yes&amp; setups, this directory is populated by symlinks from the dotfiles repo when you tick the <code>memory</code> component, so every Yes&amp; dev's machine has the same baseline.</p>
+            </div>
+            <div class="defn">
+              <p class="defn__term">Per-project global memory</p>
+              <p class="defn__path"><code>~/.claude/projects/&lt;project-path&gt;/memory/</code></p>
+              <p class="defn__body">Automatically written by Claude Code itself for telemetry-style state. Secondary context, read at session start as a fallback when project root memory is missing.</p>
+            </div>
+          </div>
+
+          <h3 id="memory-format" class="h3">File format and indexing</h3>
+          <p>
+            Every change writes a session memory entry to <code>&lt;project&gt;/.claude/memory/session_YYYY-MM-DD_&lt;topic&gt;.md</code> before Claude responds. Not per-feature - per-task. A CSS fix, a copy change, a refactor decision each get their own entry immediately. Batching is a failure mode the <code>memory-nudge</code> hook catches.
+          </p>
+
+          <pre class="codeblock"><code><span class="cm">---</span>
+<span class="key">name</span>: &lt;one-line title&gt;
+<span class="key">description</span>: &lt;one-line summary used by future Claude to decide relevance&gt;
+<span class="key">type</span>: project
+<span class="cm">---</span>
+
+<span class="key">Collaborator</span>: &lt;name from git config user.name&gt;
+
+# What changed
+[bullet list of concrete changes]
+
+# Why
+[motivation - the rationale that future-you needs]
+
+# How to apply
+[is it live immediately, do other machines need to pull, etc.]
+
+# Files touched
+- file1.ext
+- file2.ext</code></pre>
+
+          <p>
+            Index it in <code>.claude/memory/MEMORY.md</code> as a one-line entry. The index is the load-bearing data structure for memory retrieval - keep it scannable.
+          </p>
+
+          <h4 class="h4">Memory types</h4>
+          <ul class="ul">
+            <li><code>session_YYYY-MM-DD_&lt;topic&gt;.md</code> - what happened during a work session</li>
+            <li><code>feedback_&lt;topic&gt;.md</code> - durable behavioral rules and learnings</li>
+            <li><code>reference_&lt;topic&gt;.md</code> - how to operate a tool, where things live (often global memory)</li>
+            <li><code>decision_&lt;topic&gt;.md</code> - architectural choices with rationale and revisit conditions</li>
+            <li><code>reflection_YYYY-MM-DD.md</code> - output of the <code>/reflect</code> skill</li>
+          </ul>
+
+          <h3 id="memory-lifecycle" class="h3">Lifecycle hooks</h3>
+          <p>
+            Three hooks (described in the Discipline section) make memory concrete across session boundaries:
+          </p>
+          <ul class="ul">
+            <li><strong>SessionStart</strong> runs <code>~/.claude/startup-check.sh</code> which loads project + global memory into the session's context.</li>
+            <li><strong>PreCompact</strong> flushes pending memory entries before Claude's context window compresses.</li>
+            <li><strong>PostCompact</strong> re-runs the startup loader so post-compaction Claude has fresh memory loaded again.</li>
+          </ul>
+
+          <h3 id="memory-reflect" class="h3">The /reflect skill</h3>
+          <p>
+            <code>/reflect</code> spawns five parallel analysis agents against the accumulated memory corpus:
+          </p>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Agent</th><th>Lens</th><th>What it surfaces</th></tr></thead>
+              <tbody>
+                <tr><td>Pattern Hunter</td><td>Recurrence</td><td>Themes that repeat across sessions; approaches the team gravitates toward.</td></tr>
+                <tr><td>Tension Detector</td><td>Contradiction</td><td>Rules that fight other rules; stated preferences vs observed practice.</td></tr>
+                <tr><td>Gap Analyst</td><td>Absence</td><td>What's missing that you would expect to find; underrepresented memory types.</td></tr>
+                <tr><td>Drift Tracker</td><td>Evolution</td><td>How practices have shifted over time; emerging concerns.</td></tr>
+                <tr><td>Decision Archaeologist</td><td>Staleness</td><td>Decisions whose conditions may have been met; assumptions that no longer hold.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            A synthesis agent weaves all findings into a unified narrative with ranked findings, open questions, and recommended actions. The output saves to <code>.claude/memory/reflection_YYYY-MM-DD.md</code> and informs the next round of hooks and rules.
+          </p>
+          <p>
+            A SessionStart <code>reflect-nudge</code> hook counts new memory files since the last reflection. When the threshold is exceeded (default 15, configurable via <code>REFLECT_THRESHOLD</code>), the session opener nudges you. The user says yes and it runs, no and it drops.
+          </p>
+
+          <h3 id="memory-attribution" class="h3">Attribution and collaboration</h3>
+          <p>
+            Every memory entry records a <code>Collaborator:</code> line derived from <code>git config user.name</code>. So when Alice works, her Claude tags her name; when Bob works, his Claude tags his. Memory files commit and push like any source file, so attribution flows through git like any other authorship signal.
+          </p>
+          <p>
+            Three layers of authorship come out of this:
+          </p>
+          <ul class="ul">
+            <li><strong>Per memory entry:</strong> the <code>Collaborator:</code> line at the top</li>
+            <li><strong>Per memory file:</strong> <code>git log</code> and <code>git blame</code> (identical, but ironclad)</li>
+            <li><strong>Per task:</strong> the <code>Why:</code> and <code>How:</code> fields explain reasoning so reading a session memory tells you not just what happened but who decided what and why</li>
+          </ul>
+          <p>
+            <strong>The assistant stays invisible in the output.</strong> No AI-attribution lines in commits, no auto-generated credit comments, no AI authorship anywhere. Humans are named; the assistant isn't.
+          </p>
+
+          <h4 class="h4">Project-level CLAUDE.md template</h4>
+          <p>
+            For ironclad enforcement on projects where teammates haven't installed the dotfiles, drop a <code>CLAUDE.md</code> at the project root that re-states the rules. Claude Code reads project-root <code>CLAUDE.md</code> regardless of dotfiles state:
+          </p>
+          <pre class="codeblock"><code>## Memory Discipline (project-level)
+
+After every discrete change in this project, write a memory entry to
+.claude/memory/session_YYYY-MM-DD_&lt;topic&gt;.md before responding to the user.
+
+Include:
+- Frontmatter (name, description, type: project)
+- A Collaborator: line with the human's name from git config user.name
+- A Why: rationale and How: approach for non-trivial decisions
+- A list of files touched
+
+Update .claude/memory/MEMORY.md to index the new file.
+
+This applies regardless of whether the developer has Yes&amp;-dotfiles installed.</code></pre>
+
+        </section>
+
+        <!-- DESIGN ===================================================== -->
+        <section id="design" class="section">
+          <p class="eyebrow">House 03</p>
+          <h2 class="h2">Design</h2>
+          <p class="lede">
+            Most AI-generated UI looks the same because most prompts ask for the same vague thing. This stack routes design work through seven layered skills, each addressing a different question at a different beat. The <code>/design-build</code> orchestrator (added 2026-05-20) runs them as one coordinated sequence with mandatory QA.
+          </p>
+
+          <h3 id="design-orchestrator" class="h3">The /design-build orchestrator</h3>
+          <p>
+            Empirically, the design pipeline's individual skills don't auto-trigger reliably on real builds, and the QA triad (impeccable audit / critique / polish) never fires without explicit invocation. The <code>/design-build</code> skill solves both: one explicit invocation, ten phases, two gate checkpoints (strategy + QA findings), mandatory QA.
+          </p>
+          <p>
+            Trigger only on explicit phrases: <code>/design-build &lt;feature&gt;</code>, "run the design pipeline for X," "kickoff a design build," "use the design stack on X." Do NOT trigger on generic UI keywords like "build a button" - those route to individual skills.
+          </p>
+
+          <div class="defn-list">
+            <div class="defn">
+              <p class="defn__term">Phase 0 - Pre-flight</p>
+              <p class="defn__body">Check <code>PRODUCT.md</code> (required) and <code>DESIGN.md</code> (nudge-once if missing). Capture brand voice words, register, anti-references.</p>
+            </div>
+            <div class="defn">
+              <p class="defn__term">Phase 1 - Strategy</p>
+              <p class="defn__body">Compose direction. <strong>Gate checkpoint 1</strong> via AskUserQuestion - approve / edit / reframe.</p>
+            </div>
+            <div class="defn">
+              <p class="defn__term">Phases 2-7 - Build</p>
+              <p class="defn__body">Research, references catalog grep, typography (if scope), motion (if scope), icons (if needed), build with feel-better rules applied during construction.</p>
+            </div>
+            <div class="defn">
+              <p class="defn__term">Phase 8 - QA triad (MANDATORY)</p>
+              <p class="defn__body"><code>/impeccable audit</code> (5-dimension technical scan), <code>/impeccable critique</code> (design review via sub-agents), <code>/impeccable polish</code> (final design-system alignment). Cannot be skipped. <strong>Gate checkpoint 2</strong> on findings.</p>
+            </div>
+            <div class="defn">
+              <p class="defn__term">Phase 9 - Verification</p>
+              <p class="defn__body">cmux browser, screenshots, real-input testing (no JS shortcuts).</p>
+            </div>
+            <div class="defn">
+              <p class="defn__term">Phase 10 - Memory</p>
+              <p class="defn__body">Session memory documenting which phases fired, which skipped (with reason), QA findings, friction points.</p>
+            </div>
+          </div>
+
+          <h3 id="design-strategy" class="h3">1. Strategy - <code>/impeccable</code></h3>
+          <p>
+            A plugin (<code>impeccable@impeccable</code>) auto-installed via your <code>enabledPlugins</code>. Twenty-three commands. Reads <code>PRODUCT.md</code> and <code>DESIGN.md</code> at the project root before every command.
+          </p>
+          <p>
+            Key commands across the lifecycle:
+          </p>
+          <ul class="ul">
+            <li><code>/impeccable teach</code> - interactive PRODUCT.md authoring</li>
+            <li><code>/impeccable document</code> - extract existing visual system into DESIGN.md</li>
+            <li><code>/impeccable shape &lt;feature&gt;</code> - plan only, no code</li>
+            <li><code>/impeccable craft &lt;feature&gt;</code> - build from scratch</li>
+            <li><code>/impeccable audit / critique / polish</code> - the QA triad</li>
+            <li><code>/impeccable animate / colorize / delight / bolder / overdrive</code> - add personality</li>
+            <li><code>/impeccable quieter / distill</code> - tone down a loud UI</li>
+            <li><code>/impeccable typeset / layout / adapt / clarify / optimize</code> - fix specific dimensions</li>
+            <li><code>/impeccable harden</code> - production-ready sweep (errors, i18n, edge cases)</li>
+            <li><code>/impeccable onboard</code> - first-run flows, empty states, activation</li>
+            <li><code>/impeccable extract</code> - pull reusable tokens and components</li>
+            <li><code>/impeccable live</code> - iterate visually in a live browser</li>
+          </ul>
+
+          <h3 id="design-research" class="h3">2. Research - <code>component-gallery-reference</code></h3>
+          <p>
+            A bundled skill that has Claude browse <a href="https://component.gallery">component.gallery</a> before building any standard UI component. The site catalogs 60 component types across 95 design systems (Polaris, Carbon, Primer, Spectrum, Material) with 2,672 examples.
+          </p>
+          <p>
+            Workflow: detect tech stack from <code>package.json</code>, browse the component page filtered by stack, exclude examples tagged "Unmaintained" or "Accessibility issues," inventory the project's design system, synthesize a brief mapping gallery patterns onto project tokens. Then build with three layers: function from the gallery, identity from the project, gap-fills derived from gallery patterns styled with project tokens.
+          </p>
+
+          <h3 id="design-typography" class="h3">3. Typography - <code>fontshare-reference</code></h3>
+          <p>
+            A bundled skill that researches typefaces via <a href="https://fontshare.com">fontshare.com</a>, Indian Type Foundry's curated open-source catalog. The skill bakes in Impeccable's <strong>reflex-reject list</strong> - the training-data-default typefaces that get refused as primaries on greenfield work:
+          </p>
+          <div class="reject-list">
+            <p>Fraunces, Newsreader, Lora, Crimson, Crimson Pro, Crimson Text, Playfair Display, Cormorant, Cormorant Garamond, Syne, IBM Plex Mono, IBM Plex Sans, IBM Plex Serif, Space Mono, Space Grotesk, Inter, DM Sans, DM Serif Display, DM Serif Text, Outfit, Plus Jakarta Sans, Instrument Sans, Instrument Serif.</p>
+          </div>
+          <p>
+            The skill also flags Fontshare's emerging defaults (General Sans, Cabinet Grotesk, Switzer, Satoshi, Clash Display) so the catalog doesn't become the new Inter.
+          </p>
+
+          <h3 id="design-references" class="h3">4. References - <code>design-references</code> + <code>/curate</code></h3>
+          <p>
+            The personal catalog system. <code>~/.claude/design-references/</code> holds one folder per reference (markdown + screenshot). The catalog grows from your eye over time.
+          </p>
+          <p>
+            <code>/curate</code> is the capture wizard. Five-step interactive flow: source -&gt; auto-tag proposal -&gt; why-interesting body -&gt; slug -&gt; save. Hybrid tagging: strict Category from controlled vocab (<code>list</code>, <code>navigation</code>, <code>command-palette</code>, <code>inline-affordance</code>, etc.); free-form Pattern + Feel.
+          </p>
+          <p>
+            <code>design-references</code> is the retrieval skill. Auto-triggers on UI build keywords, greps the catalog for matching category / pattern / feel against the task context AND against PRODUCT.md voice words. Surfaces 0-5 references with score &gt;= 3. Stays silent if nothing scores - noisy surfacing destroys trust.
+          </p>
+          <p>
+            What this layer covers that public catalogs don't: one-off patterns. A particular animation. A particular interaction. A specific brand's distinctive treatment. The patterns that don't fit any standard taxonomy but are worth remembering.
+          </p>
+
+          <h3 id="design-motion" class="h3">5. Motion - <code>motion-reference</code> (GSAP + Lenis)</h3>
+          <p>
+            A bundled skill shipping canonical patterns for the GSAP + Lenis stack. As of Webflow's acquisition of GreenSock, <strong>all formerly-paid GSAP plugins are free</strong> - SplitText, MorphSVG, DrawSVG, ScrollSmoother, Inertia, MotionPathHelper. No paywall.
+          </p>
+          <p>
+            Routes by task: tweens / timelines -&gt; <code>gsap</code>; scroll-driven (pin / scrub / snap) -&gt; <code>ScrollTrigger</code>; smooth-scroll feel -&gt; Lenis; layout transitions -&gt; <code>Flip</code>; SVG path draw -&gt; <code>DrawSVG</code>; text by word / char -&gt; <code>SplitText</code>; drag -&gt; <code>Draggable</code>.
+          </p>
+          <p>
+            Critical patterns shipped inline: the GSAP + ScrollTrigger + Lenis three-line glue snippet, React <code>useGSAP</code> hook with scope, <code>ReactLenis</code> root provider. Plus the gotchas: SSR, <code>ScrollTrigger.refresh()</code> after dynamic content, Lenis breaks native <code>scrollIntoView</code>, iOS Safari + Lenis + <code>position: fixed</code> quirks.
+          </p>
+
+          <h3 id="design-tokens" class="h3">6. Tokens - <code>DESIGN.md</code></h3>
+          <p>
+            Google's spec for representing a visual identity to coding agents (<a href="https://github.com/google-labs-code/design.md">google-labs-code/design.md</a>). YAML frontmatter for tokens (colors, typography, rounded, spacing, components with <code>{path.to.token}</code> references), markdown body for rationale. Comes with <code>npx @google/design.md lint</code> for schema validation, WCAG contrast checks, broken-ref detection.
+          </p>
+          <p>
+            CLAUDE.md mandate: conform to the Google spec, run lint after every write, resolve every error or warning before reporting done. Generated UI references tokens via <code>{path.to.token}</code>, not hex literals - the file stays the source of truth.
+          </p>
+
+          <h3 id="design-tactical" class="h3">7. Tactical - <code>make-interfaces-feel-better</code></h3>
+          <p>
+            An Anthropic Skill that auto-triggers on UI keywords. Sixteen specific rules with exact values, applied DURING construction (not as a post-pass).
+          </p>
+
+          <div class="rules-grid">
+            <div class="rule"><strong>Concentric radius</strong> - outer = inner + padding</div>
+            <div class="rule"><strong>Optical centering</strong> - icons need manual nudge past geometric</div>
+            <div class="rule"><strong>Shadows over borders</strong> - layered transparent box-shadow</div>
+            <div class="rule"><strong>Interruptible animations</strong> - CSS transitions for state, keyframes only for staged</div>
+            <div class="rule"><strong>Split + stagger enters</strong> - semantic chunks, ~100ms each</div>
+            <div class="rule"><strong>Subtle exits</strong> - small fixed translateY, never full height</div>
+            <div class="rule"><strong>Contextual icon swaps</strong> - opacity + scale + blur sequence</div>
+            <div class="rule"><strong>Font smoothing on root</strong> - -webkit-font-smoothing: antialiased</div>
+            <div class="rule"><strong>Tabular nums</strong> - on every dynamic counter</div>
+            <div class="rule"><strong>text-wrap balance</strong> on headings; <strong>pretty</strong> on body</div>
+            <div class="rule"><strong>Image outlines</strong> - rgba(0,0,0,0.1) light / rgba(255,255,255,0.1) dark, never tinted</div>
+            <div class="rule"><strong>scale(0.96) on press</strong> - always 0.96</div>
+            <div class="rule"><strong>initial=&#123;false&#125;</strong> on AnimatePresence to skip first-load</div>
+            <div class="rule"><strong>Never transition: all</strong> - specify exact properties</div>
+            <div class="rule"><strong>will-change sparingly</strong> - only transform / opacity / filter</div>
+            <div class="rule"><strong>40x40 hit areas</strong> minimum, no overlap</div>
+          </div>
+
+          <h3 id="design-peer" class="h3">Peer skills (siblings, not in the main pipeline)</h3>
+          <p>
+            The <code>skills</code> component also bundles four peers that ship alongside but route in independently when needed:
+          </p>
+          <div class="defn-list">
+            <div class="defn">
+              <p class="defn__term"><code>social-media</code></p>
+              <p class="defn__body">Platform specs for 13 social platforms (Instagram, YouTube, TikTok, Twitter / X, LinkedIn, Threads, Bluesky, Discord, GitHub, Dribbble, Behance, Product Hunt, Substack). Sizes, safe zones, typography rules. The spec sheet, not the paintbrush.</p>
+            </div>
+            <div class="defn">
+              <p class="defn__term"><code>design-team</code></p>
+              <p class="defn__body">Multi-agent design sprints with 16 specialized roles across 4 phases: Research -&gt; Build -&gt; Review -&gt; Revise. For full pages, campaigns, or design system creation. Not for single components.</p>
+            </div>
+            <div class="defn">
+              <p class="defn__term"><code>visual-effects</code></p>
+              <p class="defn__body">Generative shader backgrounds (14 types) and 17 stackable post-process FX. Ships actual shader source code as canonical reference implementations - not abstractions.</p>
+            </div>
+            <div class="defn">
+              <p class="defn__term"><code>icon-source</code></p>
+              <p class="defn__body">One library per project. Eight approved (Heroicons, Lucide, Tabler, Bootstrap Icons, Phosphor, Material Symbols, Lucide Animated, Heroicons Animated). Verbatim path sourcing - never redraw or "optimize" SVG paths.</p>
+            </div>
+          </div>
+
+          <h3 id="design-product" class="h3">PRODUCT.md spec (what Impeccable reads)</h3>
+          <p>
+            PRODUCT.md captures the brand strategy that all design work routes through. Five sections, all load-bearing:
+          </p>
+          <ol class="numlist">
+            <li><strong>Register.</strong> Brand-side or product-side. Affects voice, density, motion budget.</li>
+            <li><strong>Who this is for.</strong> Primary, secondary, tertiary audiences. Concrete, not "everyone."</li>
+            <li><strong>Brand personality.</strong> Three physical-object words. Not "modern" or "elegant" - "engineering-firm tailor," "quiet midnight workshop," "annotated editorial."</li>
+            <li><strong>Anti-references.</strong> The saturated lanes to avoid. Concrete: "not Vercel monochrome," "not SaaS template," "not Klim editorial-typographic."</li>
+            <li><strong>Strategic principles.</strong> 3-5 opinions that show up in every decision. Examples: "discipline before sparkle," "show don't shout."</li>
+          </ol>
+        </section>
+
+        <!-- COMPONENTS ================================================= -->
+        <section id="components" class="section">
+          <p class="eyebrow">House 04 - Workflow</p>
+          <h2 class="h2">The twelve components</h2>
+          <p class="lede">
+            Each is independently togglable in the TUI. Defaults are all on. Every component is additive - nothing overwrites your existing config.
+          </p>
+
+          <div class="components-grid">
+
+            <article class="component-card">
+              <p class="component-card__key"><code>brain</code></p>
+              <h3 class="component-card__h">Team rules + workflow</h3>
+              <p class="component-card__body">Appends team rules (RULES.md) and shared workflow instructions to your <code>CLAUDE.md</code> between marker comments. Your existing content stays. Re-runs detect markers and skip. <code>CLAUDE.local.md</code> for personal overrides gets its own marker block.</p>
+              <p class="component-card__touches">Touches: <code>~/.claude/CLAUDE.md</code> (your content preserved)</p>
+            </article>
+
+            <article class="component-card">
+              <p class="component-card__key"><code>config</code></p>
+              <h3 class="component-card__h">Hooks + plugins + permissions</h3>
+              <p class="component-card__body">JSON-merges safety hooks, memory-write allow patterns, enabled plugins, and marketplace entries into your existing <code>settings.json</code>. Does NOT touch your <code>defaultMode</code>, model, or other preferences. Copies hook scripts to <code>~/.claude/hooks/</code> alongside any hooks you already have.</p>
+              <p class="component-card__touches">Touches: <code>~/.claude/settings.json</code> + <code>~/.claude/hooks/</code></p>
+            </article>
+
+            <article class="component-card">
+              <p class="component-card__key"><code>memory</code></p>
+              <h3 class="component-card__h">Memory discipline + loader</h3>
+              <p class="component-card__body">Bolts the memory subsystem onto an existing Claude Code: appends Memory Discipline rules to CLAUDE.md between markers, JSON-merges three lifecycle hooks into settings.json, symlinks the loader script. Marker-guarded - re-runs are no-ops, removable cleanly.</p>
+              <p class="component-card__touches">Touches: CLAUDE.md, settings.json, <code>startup-check.sh</code> symlink</p>
+            </article>
+
+            <article class="component-card">
+              <p class="component-card__key"><code>skills</code></p>
+              <h3 class="component-card__h">10 Anthropic Skills + catalog seed</h3>
+              <p class="component-card__body">Bundles <code>make-interfaces-feel-better</code> (tactical polish), <code>component-gallery-reference</code> (research), <code>fontshare-reference</code> (typography), <code>motion-reference</code> (GSAP + Lenis), <code>design-build</code> (pipeline orchestrator), <code>curate</code> + <code>design-references</code> (personal catalog), plus four peer skills (<code>social-media</code>, <code>design-team</code>, <code>visual-effects</code>, <code>icon-source</code>). Seeds the empty <code>~/.claude/design-references/</code> catalog with the 14-category vocab.</p>
+              <p class="component-card__touches">Touches: <code>~/.claude/skills/</code> + <code>~/.claude/design-references/</code></p>
+            </article>
+
+            <article class="component-card">
+              <p class="component-card__key"><code>statusline</code></p>
+              <h3 class="component-card__h">Custom prompt-bar render</h3>
+              <p class="component-card__body">The <code>statusLine</code> command in <code>settings.json</code> is tolerant of a missing script, so unticking falls back cleanly to Claude Code's default. Pick if you like the prompt-bar render; skip if you have your own statusline.</p>
+              <p class="component-card__touches">Touches: <code>~/.claude/statusline-command.sh</code> (symlink)</p>
+            </article>
+
+            <article class="component-card">
+              <p class="component-card__key"><code>cmux</code></p>
+              <h3 class="component-card__h">Split-pane terminal config</h3>
+              <p class="component-card__body">cmux is the split-pane terminal that hosts the in-app browser preview Claude uses to verify UI work. The settings symlink keeps your cmux config in sync with the dotfiles repo. Powers <code>cmux browser ... screenshot</code> for visual verification.</p>
+              <p class="component-card__touches">Touches: <code>~/.config/cmux/settings.json</code> (symlink)</p>
+            </article>
+
+            <article class="component-card">
+              <p class="component-card__key"><code>nvm</code></p>
+              <h3 class="component-card__h">PATH fix for fresh terminals</h3>
+              <p class="component-card__body">Fix for the specific issue where Homebrew's nvm sources <code>nvm.sh</code> (making the <code>nvm</code> command available) but doesn't activate a default Node version, leaving <code>claude</code> not in PATH. Appends <code>nvm use default --silent</code> to your <code>.zshrc</code> only if <code>nvm.sh</code> is already sourced. Harmless no-op otherwise.</p>
+              <p class="component-card__touches">Touches: <code>~/.zshrc</code> (marker-guarded line)</p>
+            </article>
+
+            <article class="component-card">
+              <p class="component-card__key"><code>ampersand</code></p>
+              <h3 class="component-card__h">The <code>ampersand</code> zsh shortcut</h3>
+              <p class="component-card__body">Type <code>ampersand</code> from any terminal to re-launch this installer. <code>ampersand --pull</code> pulls latest from GitHub first. Forwards every other flag. Auto-migrates older block formats from prior versions of the installer.</p>
+              <p class="component-card__touches">Touches: <code>~/.zshrc</code> (marker-guarded block)</p>
+            </article>
+
+            <article class="component-card">
+              <p class="component-card__key"><code>discord</code></p>
+              <h3 class="component-card__h">Discord chat agent launcher</h3>
+              <p class="component-card__body">Smart <code>claude</code> wrapper with cold / mid / warm onboarding states. Cold (no bot): offers setup walkthrough or "never ask again." Mid (bot configured, no users paired): jumps to pairing. Warm (paired): 5-second connect prompt, default Yes. Tokens in macOS Keychain, never in repo.</p>
+              <p class="component-card__touches">Touches: <code>~/.zshrc</code> + <code>~/.claude/</code> symlinks</p>
+            </article>
+
+            <article class="component-card">
+              <p class="component-card__key"><code>voice-input</code></p>
+              <h3 class="component-card__h">Local voice-to-text</h3>
+              <p class="component-card__body">Brews whisper-cpp and ffmpeg, downloads the ggml-base.en model (~150 MB) into <code>~/.cache/whisper/</code>, symlinks <code>bin/transcribe</code> to <code>~/.claude/transcribe</code>. Handles OGG/Opus, m4a, mp3, flac, wav. Local-only - no cloud, no API key.</p>
+              <p class="component-card__touches">Touches: brew deps + <code>~/.claude/transcribe</code> symlink</p>
+            </article>
+
+            <article class="component-card">
+              <p class="component-card__key"><code>voice-output</code></p>
+              <h3 class="component-card__h">OpenAI TTS responses</h3>
+              <p class="component-card__body">Claude speaks short verbal summaries while keeping code and technical detail as text. Requires an OpenAI API key in macOS Keychain. Starts muted - enable with <code>voice-on</code> in any terminal. Three mute controls: in-session, terminal alias, or manual file toggle. Voice subsystem is gated by a SessionStart hook that injects an active-mandate, muted-notice, or silence based on the toggle state.</p>
+              <p class="component-card__touches">Touches: MCP server + zsh aliases</p>
+            </article>
+
+            <article class="component-card">
+              <p class="component-card__key"><code>reflect</code></p>
+              <h3 class="component-card__h">Memory corpus analysis</h3>
+              <p class="component-card__body">Adds the <code>/reflect</code> skill (5 parallel analysis agents) plus the SessionStart nudge hook that surfaces when enough new memories have accumulated. Triggers naturally from conversation ("what patterns are you seeing?") or explicitly via <code>/reflect</code>.</p>
+              <p class="component-card__touches">Touches: <code>~/.claude/skills/reflect/</code> + nudge hook + timestamp file</p>
+            </article>
+
+          </div>
+        </section>
+
+        <!-- CUSTOMIZATION ============================================== -->
+        <section id="customization" class="section">
+          <p class="eyebrow">Workflow</p>
+          <h2 class="h2">Customization</h2>
+          <p class="lede">
+            Bootstrap flags, installer flags, environment variables, and how to extend the team rules / plugin list / hook config.
+          </p>
+
+          <h3 class="h3">Bootstrap-time flags</h3>
+          <pre class="codeblock"><code>curl -fsSL .../bootstrap.sh | bash                          <span class="cm"># default - clones to ~/Documents/Github/claude-dotfiles</span>
+curl -fsSL .../bootstrap.sh | bash -s -- --dir PATH         <span class="cm"># custom clone location</span>
+curl -fsSL .../bootstrap.sh | bash -s -- --yes              <span class="cm"># full non-interactive install after clone</span>
+curl -fsSL .../bootstrap.sh | bash -s -- --preset minimal   <span class="cm"># specific preset</span></code></pre>
+
+          <p>Or with env vars:</p>
+          <pre class="codeblock"><code>CLAUDE_DOTFILES_DIR=~/code/dots \
+CLAUDE_DOTFILES_REPO=https://github.com/your-fork/claude-dotfiles.git \
+  curl -fsSL .../bootstrap.sh | bash</code></pre>
+
+          <h3 class="h3">Installer flags</h3>
+          <pre class="codeblock"><code>./install.sh                    <span class="cm"># interactive TUI (default)</span>
+./install.sh --yes              <span class="cm"># install everything non-interactively</span>
+./install.sh --preset NAME      <span class="cm"># all | minimal | none</span>
+./install.sh --only KEYS        <span class="cm"># comma-separated subset</span>
+./install.sh --dry-run          <span class="cm"># show resolved picks, touch no files</span>
+./install.sh --help             <span class="cm"># full usage</span></code></pre>
+
+          <p>
+            Valid component keys: <code>brain</code>, <code>config</code>, <code>memory</code>, <code>skills</code>, <code>statusline</code>, <code>cmux</code>, <code>nvm</code>, <code>ampersand</code>, <code>discord</code>, <code>voice-input</code>, <code>voice-output</code>, <code>reflect</code>.
+          </p>
+
+          <h3 class="h3">Environment variables</h3>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Variable</th><th>Default</th><th>Purpose</th></tr></thead>
+              <tbody>
+                <tr><td><code>CLAUDE_DOTFILES_DIR</code></td><td><code>~/Documents/Github/claude-dotfiles</code></td><td>Where the dotfiles repo lives on disk</td></tr>
+                <tr><td><code>CLAUDE_DOTFILES_REPO</code></td><td>github.com/jonahscohen/claude-dotfiles</td><td>Source repo for fresh clones</td></tr>
+                <tr><td><code>REFLECT_THRESHOLD</code></td><td><code>15</code></td><td>New-memory count that triggers the <code>reflect-nudge</code> hook</td></tr>
+                <tr><td><code>CMUX_SOCKET_PASSWORD</code></td><td>(unset)</td><td>For cmux socket auth in scripted contexts</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 class="h3">Customizing settings.json</h3>
+          <p>
+            <code>config</code> JSON-merges hooks, plugins, and permission patterns into your existing <code>~/.claude/settings.json</code>. It does NOT touch your <code>defaultMode</code>, model, or other preferences.
+          </p>
+          <ul class="ul">
+            <li><strong>Adding a plugin:</strong> edit <code>enabledPlugins</code> in <code>claude/settings.json</code> in the repo and add <code>"&lt;plugin&gt;@&lt;marketplace&gt;": true</code>. Commit, push, <code>ampersand --pull</code> on other machines to re-merge, restart Claude Code.</li>
+            <li><strong>Tightening permissions:</strong> edit <code>permissions.allow</code> in your own <code>~/.claude/settings.json</code> directly. Or change <code>defaultMode</code> from <code>bypassPermissions</code> to <code>default</code> to require approval on tool calls.</li>
+            <li><strong>Adding a hook:</strong> append to the appropriate <code>hooks.&lt;event&gt;</code> array in <code>claude/settings.json</code> in the repo. Commit, push, re-run install to re-merge.</li>
+          </ul>
+
+          <h3 class="h3">Customizing CLAUDE.md</h3>
+          <p>
+            <code>brain</code> appends team rules between marker comments in your <code>~/.claude/CLAUDE.md</code>. Your own content above and below the markers is preserved.
+          </p>
+          <ul class="ul">
+            <li><strong>To update the team rules:</strong> edit <code>claude/CLAUDE.md</code> in the repo, commit, push, and re-run <code>ampersand --pull</code> to re-append.</li>
+            <li><strong>To remove the team rules:</strong> sed-delete from <code>&lt;!-- claude-dotfiles:brain:begin --&gt;</code> to <code>&lt;!-- claude-dotfiles:brain:end --&gt;</code>.</li>
+            <li><strong>To re-add:</strong> re-run <code>install.sh --only brain</code>.</li>
+          </ul>
+        </section>
+
+        <!-- ARCHITECTURE ============================================== -->
+        <section id="architecture" class="section">
+          <p class="eyebrow">Workflow</p>
+          <h2 class="h2">Architecture</h2>
+          <p class="lede">
+            Under-the-hood specifics: how the installer writes to each target, how idempotency works, backup discipline, and multi-location support.
+          </p>
+
+          <h3 class="h3">Install strategy by target</h3>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Target</th><th>Strategy</th><th>Why</th></tr></thead>
+              <tbody>
+                <tr><td><code>~/.claude/CLAUDE.md</code></td><td>Marker-guarded append</td><td>Your content preserved; re-runs detect markers and skip; uninstall is sed-deletable.</td></tr>
+                <tr><td><code>~/.claude/settings.json</code></td><td>JSON-merge (python3)</td><td>Your settings preserved; our hooks / plugins / patterns merged in; does not touch <code>defaultMode</code>.</td></tr>
+                <tr><td><code>~/.claude/hooks/*.sh</code></td><td>File copy from repo</td><td>Hook scripts copied alongside your existing hooks; re-run updates from repo.</td></tr>
+                <tr><td><code>~/.claude/memory/*.md</code></td><td>Symlink to repo</td><td>Memory edits write directly into the repo working tree (Yes&amp; baseline files are versioned).</td></tr>
+                <tr><td><code>~/.claude/skills/&lt;skill&gt;/</code></td><td>npx-installed or file copy</td><td>Skills versioned by their own repo (npx) or bundled with ours (copy).</td></tr>
+                <tr><td><code>~/.config/cmux/settings.json</code></td><td>Symlink to repo</td><td>Single source of truth for cmux config.</td></tr>
+                <tr><td><code>~/.zshrc</code></td><td>Marker-guarded append</td><td>Labeled blocks that can be sed-deleted cleanly; supports self-heal on path drift.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 class="h3">Idempotency model</h3>
+          <p>Every section of <code>install.sh</code> is idempotent:</p>
+          <ul class="ul">
+            <li><strong>Symlinks</strong> - <code>make_symlink</code> checks if the target already points where we want; if so, no-op. Otherwise backs up any pre-existing real file, creates fresh.</li>
+            <li><strong>.zshrc appends</strong> - marker-guarded with grep checks. If the marker is present, no-op. The <code>ampersand</code> block self-heals: if <code>$REPO_DIR</code> doesn't match the baked path, the block is sed-deleted and re-appended.</li>
+            <li><strong>settings.json JSON-merge</strong> - marker-based detection on substrings (hook command paths, plugin names). If detected, no-op. Otherwise python3 reads existing settings.json, adds missing entries, writes back.</li>
+            <li><strong>CLAUDE.md marker-append</strong> - marker-guarded on <code>&lt;!-- claude-dotfiles:&lt;component&gt;:begin --&gt;</code>. If present, no-op.</li>
+            <li><strong>Hook file copy</strong> - overwrites only our own scripts (same filename), never touches hooks you wrote.</li>
+            <li><strong>npx skills add</strong> - idempotent via the skills CLI's own logic.</li>
+          </ul>
+
+          <h3 class="h3">Backup discipline</h3>
+          <p>
+            Any pre-existing real (non-symlink) file at a target path gets copied to <code>.backups/&lt;timestamp&gt;/&lt;original-path&gt;</code> before the installer overwrites it. Backups are gitignored. To recover from a bad install, walk <code>.backups/</code> and copy back what you want.
+          </p>
+          <p>
+            We don't ship an automated uninstaller because it would require us to know which timestamp's backups to use. Manual recovery is safer.
+          </p>
+
+          <h3 class="h3">Multi-location support</h3>
+          <p>
+            The dotfiles can be cloned to any path - <code>~/code/dots</code>, <code>/opt/dots</code>, <code>~/dotfiles/yes-and</code>. The <code>ampersand</code> shortcut bakes in the install-time <code>$REPO_DIR</code>. If you move the repo, re-running <code>install.sh</code> from the new location triggers the path-drift self-heal that rewrites the shortcut block.
+          </p>
+
+          <h3 class="h3">Drift management (source vs installed)</h3>
+          <p>
+            A real architectural detail: <code>~/.claude/CLAUDE.md</code> is the concatenation of <code>claude/RULES.md</code> + <code>claude/CLAUDE.md</code> + <code>claude/memory-discipline-section.md</code> from the dotfiles repo, assembled at install time. Edits to the installed file directly will be wiped by the next installer run. To make changes durable, edit the source files and re-run <code>ampersand --pull</code>.
+          </p>
+          <p>
+            Similar with <code>~/.claude/settings.json</code> - <code>config</code> JSON-merges from <code>claude/settings.json</code> in the repo. The installed file is the merge result, not the source. Edit the source file in the repo, push, pull, and re-run install on each machine.
+          </p>
+        </section>
+
+        <!-- TROUBLESHOOTING =========================================== -->
+        <section id="troubleshooting" class="section">
+          <p class="eyebrow">Operating it</p>
+          <h2 class="h2">Troubleshooting</h2>
+
+          <div class="faq">
+            <details class="faq__item">
+              <summary class="faq__q">"claude: command not found" in fresh terminals</summary>
+              <div class="faq__a">
+                <p><strong>Cause:</strong> Homebrew's nvm sources <code>nvm.sh</code> (making the <code>nvm</code> command available) but doesn't activate a default Node version. The cmux <code>claude</code> wrapper is first in PATH, runs when you type <code>claude</code>, looks for the real claude binary elsewhere in PATH, finds nothing because nvm hasn't activated.</p>
+                <p><strong>Fix:</strong> tick the <code>nvm</code> component in the installer. It appends <code>nvm use default --silent</code> to your <code>.zshrc</code>. New terminal (or <code>source ~/.zshrc</code>) and <code>claude</code> should resolve.</p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q"><code>ampersand: command not found</code> immediately after install</summary>
+              <div class="faq__a">
+                <p><strong>Cause:</strong> Shell functions defined inside <code>install.sh</code>'s child process don't escape into the parent shell. Your current zsh hasn't read the updated <code>.zshrc</code> yet.</p>
+                <p><strong>Fix:</strong> <code>source ~/.zshrc</code> once, or open a new terminal window. Subsequent shells read <code>.zshrc</code> at startup so this only happens once per machine.</p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">Permission prompts on every markdown write</summary>
+              <div class="faq__a">
+                <p><strong>Cause:</strong> Should not happen with <code>defaultMode: bypassPermissions</code> set, but Claude Code or its harness sometimes escalates anyway.</p>
+                <p><strong>Fix:</strong> <code>claude/settings.json</code> already includes explicit <code>Write(**/*.md)</code>, <code>Edit(**/*.md)</code>, <code>MultiEdit(**/*.md)</code> allow rules. If you're still seeing prompts, restart your Claude Code session - permissions are loaded at session start. If they persist, broaden the allow list.</p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">gum not installed and I don't want to install it</summary>
+              <div class="faq__a">
+                <p>The TUI degrades gracefully to a numbered text menu if gum isn't available and you decline to brew-install it. Same components, same flags, less polish. Pick numbers to toggle off, press enter to confirm.</p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">Memory entries from a teammate on a different machine</summary>
+              <div class="faq__a">
+                <p>Pull the project: <code>git pull</code> in the project repo. The memory files are in <code>&lt;project&gt;/.claude/memory/</code> like any other source. Claude reads them at session start.</p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">Fresh install on a new Mac, where do I start</summary>
+              <div class="faq__a">
+                <pre class="codeblock"><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash</code></pre>
+                <p>Take TUI defaults. Open a new terminal. Done.</p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">I want to install without pulling first</summary>
+              <div class="faq__a">
+                <p>Use <code>ampersand</code> (no <code>--pull</code>). Same install process, no <code>git pull</code> step. Useful when you're iterating on the dotfiles locally and don't want to pull until you've finished a series of edits.</p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">My team has its own Claude Code config and I don't want to overwrite it</summary>
+              <div class="faq__a">
+                <p>Every component is additive. <code>brain</code> appends to your CLAUDE.md between markers. <code>config</code> JSON-merges into your settings.json. Nothing is replaced. Just run <code>ampersand</code> and pick what you want.</p>
+                <pre class="codeblock"><code>ampersand --pull --only brain,config,memory,skills</code></pre>
+                <p>That installs the team rules, hooks / plugins, memory subsystem, and skills. Your existing content in CLAUDE.md and settings.json stays intact.</p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">How do I undo the dotfiles entirely</summary>
+              <div class="faq__a">
+                <p>For marker-appended files (CLAUDE.md): sed-delete from the marker begin to marker end. For JSON-merged settings (settings.json): remove the specific hook / plugin entries that were added. For symlinked files (statusline, memory, cmux): <code>rm</code> them and copy back from <code>.backups/&lt;some-timestamp&gt;/</code> if needed. For appended <code>.zshrc</code> blocks: sed-delete the marker-guarded ranges.</p>
+                <p>We don't ship an automated uninstaller because it would require us to know which timestamp's backups to use. Manual is safer.</p>
+              </div>
+            </details>
+
+            <details class="faq__item">
+              <summary class="faq__q">Hooks fire too often or in the wrong context</summary>
+              <div class="faq__a">
+                <p>Some hooks have known false-positive paths (e.g., <code>memory-nudge</code> firing on Reads, the <code>second-fix-gate</code> firing on sequential additive edits as one coherent change). When this happens during a known multi-step task, <code>touch ~/.claude/.suppress-fix-gate</code> silences the second-fix gate for 30 minutes (auto-expiring).</p>
+                <p>For persistent misfires, the authoritative hook documentation lives in <code>.claude/memory/decision_hook_system_architecture.md</code>. Tune the matchers in <code>~/.claude/settings.json</code> if a hook fires on events it shouldn't.</p>
+              </div>
+            </details>
+
+          </div>
+        </section>
+
+        <!-- CONTRIBUTING ============================================== -->
+        <section id="contributing" class="section">
+          <p class="eyebrow">For Yes&amp; devs</p>
+          <h2 class="h2">Contributing</h2>
+
+          <h3 class="h3">Adding a new component</h3>
+          <ol class="numlist">
+            <li>Add the key to <code>KEYS=(...)</code> in <code>install.sh</code> and add a TITLE + DESC in the same arrays. Bump the PICKS array length.</li>
+            <li>Add an apply block (<code>if picked &lt;key&gt;; then ... fi</code>) in the appropriate numbered section. Renumber subsequent sections to stay sequential.</li>
+            <li>If the component modifies <code>~/.zshrc</code>, use a marker-guarded append pattern (see <code>nvm</code> or <code>ampersand</code> blocks for examples). Always include path-drift self-heal logic if the block bakes in <code>$REPO_DIR</code>.</li>
+            <li>If the component modifies <code>~/.claude/settings.json</code> JSON-style, use the python3 stdlib merge pattern from the <code>memory</code> component. Marker-detection is mandatory.</li>
+            <li>Update <code>--help</code> valid keys list and the post-install summary's <code>picked &lt;key&gt; &amp;&amp; echo "..."</code> line.</li>
+            <li>Update the README + this reference manual's component grid.</li>
+            <li>Write a session memory entry: <code>.claude/memory/session_YYYY-MM-DD_&lt;topic&gt;.md</code>. Index in MEMORY.md.</li>
+            <li>Commit, push, <code>ampersand --pull</code> on a different machine to verify portability.</li>
+          </ol>
+
+          <h3 class="h3">Adding a new skill to the <code>skills</code> component</h3>
+          <p>
+            Two paths: NPM-installable skill (via <code>npx skills add &lt;github-repo&gt;</code>) or bundled (file copy).
+          </p>
+          <p>
+            For NPM: edit the apply block in install.sh's section 3. Add another <code>npx --yes skills add &lt;github-repo&gt;</code> invocation. Wrap in a non-fatal warn pattern.
+          </p>
+          <p>
+            For bundled: create the skill at <code>claude/skills/&lt;name&gt;/SKILL.md</code> in the repo, then add an install block following the <code>component-gallery-reference</code> pattern (mkdir + cp + ok).
+          </p>
+
+          <h3 class="h3">Adding a new plugin to the <code>config</code> component</h3>
+          <p>
+            Edit <code>claude/settings.json</code>. Add <code>"&lt;plugin&gt;@&lt;marketplace&gt;": true</code> to <code>enabledPlugins</code>. If the marketplace isn't already known, add it to <code>extraKnownMarketplaces</code> with <code>source</code> and <code>autoUpdate</code>. Re-run install to merge, restart Claude Code to install.
+          </p>
+          <p>
+            For Yes&amp; devs: bias toward enabling plugins the whole engineering team benefits from. Plugins that only one developer needs should live in their personal Claude Code config, not the shared dotfiles.
+          </p>
+
+          <h3 class="h3">Adding a new CLAUDE.md rule</h3>
+          <p>
+            Edit <code>claude/CLAUDE.md</code>. Decide which existing section the rule belongs to (Memory Discipline, Verification Protocol, Design Work and Impeccable, Code Quality, etc.) - rules under the wrong heading get ignored. If the rule needs cross-team enforcement on projects where the dotfiles aren't installed, also drop it into a project-root CLAUDE.md template.
+          </p>
+
+          <h3 class="h3">Memory entry conventions</h3>
+          <p>Every change to the dotfiles repo writes a session memory entry. Format:</p>
+          <pre class="codeblock"><code><span class="cm">---</span>
+<span class="key">name</span>: &lt;one-line title&gt;
+<span class="key">description</span>: &lt;one-line summary used by future Claude to decide relevance&gt;
+<span class="key">type</span>: project
+<span class="cm">---</span>
+
+<span class="key">Collaborator</span>: &lt;your name from git config user.name&gt;
+
+# What changed
+[bullet list]
+
+# Why
+[motivation]
+
+# How to apply
+[is it live immediately, do other machines need to pull, etc.]
+
+# Files touched
+- file1.ext
+- file2.ext</code></pre>
+
+          <h3 class="h3">PR hygiene</h3>
+          <p>
+            Branch from <code>main</code>. Squash-merge with a clear title. Don't take credit in commit messages - the dotfiles enforce that for code, and we extend the convention to repo work.
+          </p>
+        </section>
+
+        <!-- FOOTER CTA =============================================== -->
+        <section class="section section--end">
+          <h2 class="h2 h2--end">Read the README. Or just install it.</h2>
+          <p>
+            This reference goes deep. The <a href="../marketing/">marketing microsite</a> goes wide - the case for the system, not the inventory. The <a href="https://github.com/jonahscohen/claude-dotfiles/blob/main/README.md">README</a> is the canonical lookup. Pick the surface that matches your question.
+          </p>
+          <pre class="codeblock"><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash</code></pre>
+        </section>
+
+      </article>
+    </main>
+
+  </div>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <div class="site-footer__brand">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="./assets/yes-and-logo-dark.webp" />
+          <img src="./assets/yes-and-logo-light.webp" alt="Yes&" width="74" />
+        </picture>
+        <p class="site-footer__tag">We start with yes. You build what's next.</p>
+      </div>
+      <nav class="site-footer__nav" aria-label="Footer">
+        <a href="https://github.com/jonahscohen/claude-dotfiles">GitHub</a>
+        <a href="https://github.com/jonahscohen/claude-dotfiles/blob/main/README.md">README</a>
+        <a href="https://github.com/jonahscohen/claude-dotfiles/issues">Issues</a>
+        <a href="../marketing/">Marketing site</a>
+      </nav>
+      <p class="site-footer__license">MIT. Bundled tools licensed by their respective authors.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

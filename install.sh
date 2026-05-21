@@ -7,7 +7,7 @@ set -euo pipefail
 #   brain        - Team rules + workflow (appended to CLAUDE.md) - ADDITIVE
 #   config       - Hooks, plugins, permissions (merged into settings.json) - ADDITIVE
 #   memory       - Additive memory subsystem (rules + 3 hooks + startup-check.sh loader)
-#   skills       - Anthropic Skills (make-interfaces-feel-better + component-gallery-reference + fontshare-reference + curate + design-references + motion-reference)
+#   skills       - Anthropic Skills (make-interfaces-feel-better + component-gallery-reference + fontshare-reference + curate + design-references + motion-reference + design-build)
 #   statusline   - Custom prompt-bar render (~/.claude/statusline-command.sh)
 #   cmux         - cmux settings.json symlink
 #   nvm          - .zshrc auto-activate of nvm default (so claude/node/npm land on PATH)
@@ -52,7 +52,7 @@ err()   { printf "${RED}[error]${NC} %s\n" "$1"; }
 # ============================================================
 
 # Public components - shipped to all users.
-KEYS=(brain config memory skills statusline cmux nvm ampersand discord voice-input voice-output reflect)
+KEYS=(brain config memory skills statusline cmux nvm ampersand discord voice-input voice-output reflect sidecoach)
 TITLES=(
   "Team rules + workflow (appended to CLAUDE.md)"
   "Hooks, plugins, permissions (merged into settings.json)"
@@ -66,12 +66,13 @@ TITLES=(
   "Voice transcription (whisper.cpp)"
   "Voice output (OpenAI TTS)"
   "Memory corpus analysis (reflect)"
+  "Sidecoach workflow automation (14 design/dev flows)"
 )
 DESCS=(
   "ADDITIVE: appends team rules (from RULES.md) and shared workflow (from CLAUDE.md) to your ~/.claude/CLAUDE.md between marker comments. Your existing CLAUDE.md content is preserved above and below the markers. If you have a claude/CLAUDE.local.md for personal overrides, those are appended in their own marker block too. Re-runs detect the markers and skip. Deactivation removes only the marked blocks."
   "ADDITIVE: JSON-merges safety hooks (bash-guard, content-guard, memory-approve), memory-write allow patterns, enabled plugins, and marketplace entries into your existing ~/.claude/settings.json. Does NOT touch your defaultMode, model, or other preferences. Copies hook scripts to ~/.claude/hooks/ alongside any hooks you already have. Deactivation removes only our entries by marker."
   "ADDITIVE memory subsystem: appends our Memory Discipline rules (loading order, per-task updates, file format) to your CLAUDE.md between marker comments, JSON-merges three hooks (SessionStart loader, PreCompact reminder, PostCompact reload) into your settings.json, and symlinks the startup-check.sh loader. Does NOT replace or overwrite anything - all changes are marker-guarded so re-runs are no-ops, and the markers can be removed cleanly if you ever want to undo. Pick this if your team wants to beef up an existing Claude Code with persistent memory capability without losing their config."
-  "Adds skills to ~/.claude/skills/, fully additive. Bundles make-interfaces-feel-better (tactical UI polish via npx), component-gallery-reference (researches component.gallery before building UI components), fontshare-reference (researches fontshare.com before picking typefaces), motion-reference (canonical GSAP + Lenis patterns for animation/scroll/transition work), and a personal design-reference system: curate (capture wizard via /curate) + design-references (auto-consults your personal catalog of one-off patterns at ~/.claude/design-references/). Does NOT touch your CLAUDE.md, settings.json, hooks, or statusline. Safe to pick standalone if you have your own Claude Code config and just want the skill capability."
+  "Adds skills to ~/.claude/skills/, fully additive. Bundles make-interfaces-feel-better (tactical UI polish via npx), component-gallery-reference (researches component.gallery before building UI components), fontshare-reference (researches fontshare.com before picking typefaces), motion-reference (canonical GSAP + Lenis patterns for animation/scroll/transition work), design-build (the design pipeline orchestrator - one command runs strategy/research/typography/motion/build/QA in sequence with gate checkpoints), and a personal design-reference system: curate (capture wizard via /curate) + design-references (auto-consults your personal catalog of one-off patterns at ~/.claude/design-references/). Does NOT touch your CLAUDE.md, settings.json, hooks, or statusline. Safe to pick standalone if you have your own Claude Code config and just want the skill capability."
   "Symlinks our statusline-command.sh into ~/.claude/. The settings.json statusLine command is tolerant of a missing script, so unticking this cleanly falls back to no custom statusline (Claude Code's default takes over). Pick this if you like our prompt-bar render; skip if you prefer Claude Code's default or a different statusline you've configured yourself."
   "Settings for cmux, the split-pane terminal that hosts the in-app browser preview Claude uses to verify your UI work. Skip if you don't use cmux."
   "A small one-line addition to your zsh config that fixes a specific issue some setups hit: opening a new terminal and getting 'claude not found in PATH' even though Claude is installed. The fix only activates if your zsh config already loads nvm (Node Version Manager) - on most machines this is a harmless no-op, so it's safe to leave on. If 'claude' already runs fine in fresh terminals on your machine, you can skip this."
@@ -80,6 +81,7 @@ DESCS=(
   "Adds local voice-to-text so Claude can answer Discord voice messages and any other audio attachment. Brews whisper-cpp and ffmpeg, downloads the ggml-base.en model (~150 MB) into ~/.cache/whisper, and symlinks bin/transcribe to ~/.claude/transcribe. Local-only (no cloud, no API key). Calls: '~/.claude/transcribe path/to/audio.ogg' prints the transcript on stdout."
   "Gives Claude a voice via OpenAI text-to-speech API. Claude speaks short verbal summaries while keeping code and technical detail as text. Requires your own OpenAI API key stored in macOS Keychain (see docs). Starts muted - enable with voice-on in any terminal. Three mute controls: in-session (mute yourself), terminal alias (voice-on/voice-off), or manual file toggle. Does NOT work without an API key - this is not optional, it is required."
   "Adds the reflect skill and nudge hook. The reflect skill spawns 5 parallel analysis agents against your accumulated .claude/memory/ files to surface patterns, tensions, and gaps nobody explicitly noticed. Triggers naturally from conversation ('what patterns are you seeing?') or via /reflect. A SessionStart hook nudges you when enough new memories have accumulated since the last reflection. No external dependencies."
+  "Sidecoach: invisible workflow automation triggered by natural conversation. No slash commands. Instead of /impeccable or /make-interfaces-feel-better, simply write naturally about your work ('make this feel better', 'design a component', 'review this') and Sidecoach detects your intent and guides you through the appropriate workflow. Daemon launches at session start and monitors messages silently. Provides 14 design/development flows covering polish, review, design, implementation, accessibility, refactoring, and iteration. Each flow returns tailored guidance, checklists (6-14 items), and next steps. Built via SessionStart hook (daemon launcher), PostUserPrompt hook (message intake), and PostResponse hook (result injection). Symlinks hooks into ~/.claude/hooks/ and compiles TypeScript orchestrator + 14 handlers."
 )
 FILES=(
   # brain
@@ -89,7 +91,7 @@ FILES=(
   # memory
   "~/.claude/CLAUDE.md (memory discipline block)\n~/.claude/settings.json (3 hooks merged)\n~/.claude/startup-check.sh (symlink)"
   # skills
-  "~/.claude/skills/make-interfaces-feel-better/\n~/.claude/skills/component-gallery-reference/\n~/.claude/skills/fontshare-reference/\n~/.claude/skills/motion-reference/\n~/.claude/skills/curate/\n~/.claude/skills/design-references/\n~/.claude/design-references/ (personal catalog directory)\n~/.claude/skills/social-media/\n~/.claude/skills/design-team/\n~/.claude/skills/visual-effects/\n~/.claude/skills/icon-source/"
+  "~/.claude/skills/make-interfaces-feel-better/\n~/.claude/skills/component-gallery-reference/\n~/.claude/skills/fontshare-reference/\n~/.claude/skills/motion-reference/\n~/.claude/skills/design-build/\n~/.claude/skills/curate/\n~/.claude/skills/design-references/\n~/.claude/design-references/ (personal catalog directory)\n~/.claude/skills/social-media/\n~/.claude/skills/design-team/\n~/.claude/skills/visual-effects/\n~/.claude/skills/icon-source/"
   # statusline
   "~/.claude/statusline-command.sh (symlink)"
   # cmux
@@ -106,6 +108,8 @@ FILES=(
   "~/.claude/voice-output/server.js\n~/.claude/tts-generate (symlink)\n~/.claude/.voice-config\n~/.claude/.voice-enabled (toggle)\n~/.claude/hooks/voice-mandate.sh\n~/.claude/hooks/voice-toggle.sh\n~/.claude/toggle-voice.sh\n~/.zshrc (voice-on/voice-off aliases)"
   # reflect
   "~/.claude/skills/reflect/SKILL.md\n~/.claude/hooks/reflect-nudge.sh\n~/.claude/last-reflect-timestamp"
+  # sidecoach
+  "~/.claude/hooks/sidecoach-sessionstart.sh\n~/.claude/hooks/sidecoach-postuserp.sh\n~/.claude/hooks/sidecoach-postresponse.sh\n~/.claude/sidecoach/ (compiled handlers + daemon)"
 )
 DIRS=(
   "$REPO_DIR/claude"           # brain
@@ -120,8 +124,9 @@ DIRS=(
   "$REPO_DIR/bin"              # voice-input
   "$REPO_DIR/claude/voice-output"  # voice-output
   "$REPO_DIR/claude"           # reflect
+  "$REPO_DIR"                  # sidecoach
 )
-PICKS=(1 1 1 1 1 1 1 1 1 1 1 1)
+PICKS=(1 1 1 1 1 1 1 1 1 1 1 1 1)
 
 # Personal components - hidden from public TUI and --help. Surfaced only when
 # the maintainer passes --personal (undocumented, undocumented-on-purpose).
@@ -742,6 +747,7 @@ deactivate_skills() {
   [ -d "$CLAUDE_DIR/skills/component-gallery-reference" ] && rm -rf "$CLAUDE_DIR/skills/component-gallery-reference"
   [ -d "$CLAUDE_DIR/skills/fontshare-reference" ] && rm -rf "$CLAUDE_DIR/skills/fontshare-reference"
   [ -d "$CLAUDE_DIR/skills/motion-reference" ] && rm -rf "$CLAUDE_DIR/skills/motion-reference"
+  [ -d "$CLAUDE_DIR/skills/design-build" ] && rm -rf "$CLAUDE_DIR/skills/design-build"
   [ -d "$CLAUDE_DIR/skills/curate" ] && rm -rf "$CLAUDE_DIR/skills/curate"
   [ -d "$CLAUDE_DIR/skills/design-references" ] && rm -rf "$CLAUDE_DIR/skills/design-references"
   # NOTE: ~/.claude/design-references/ is the user's personal catalog (data, not code).
@@ -1574,6 +1580,13 @@ if picked skills; then
   cp "$REPO_DIR/claude/skills/motion-reference/SKILL.md" \
      "$CLAUDE_DIR/skills/motion-reference/SKILL.md"
   ok "motion-reference installed"
+
+  # Bundled skill: design-build (the design pipeline orchestrator)
+  info "Installing design-build (the design pipeline orchestrator - /design-build runs the full sequence)..."
+  mkdir -p "$CLAUDE_DIR/skills/design-build"
+  cp "$REPO_DIR/claude/skills/design-build/SKILL.md" \
+     "$CLAUDE_DIR/skills/design-build/SKILL.md"
+  ok "design-build installed"
 
   # Bundled skill pair: curate + design-references (personal design-reference catalog system)
   info "Installing curate (design-reference capture wizard)..."

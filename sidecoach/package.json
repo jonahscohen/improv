@@ -1,0 +1,25 @@
+{
+  "name": "sidecoach-intent-detector",
+  "version": "0.1.0",
+  "description": "Natural language intent detection for 14 Sidecoach design workflows",
+  "main": "dist/intent-detector.js",
+  "types": "dist/intent-detector.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "ts-node src/intent-detector.test.ts",
+    "test:compiled": "node dist/intent-detector.test.js"
+  },
+  "keywords": [
+    "sidecoach",
+    "intent-detection",
+    "nlp",
+    "design-workflows"
+  ],
+  "author": "Jonah",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
+  }
+}

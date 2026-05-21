@@ -1,3 +1,27 @@
+## Question-Asking Protocol (MANDATORY - MECHANICAL ENFORCEMENT VIA TOOL)
+
+**CRITICAL RULE: Always use AskUserQuestion. Never ask questions in plain text.**
+
+Every question you have must go through the AskUserQuestion tool. This is the mechanical enforcement that makes it failure-proof. The tool requires you to provide options, which prevents open-ended questions by design.
+
+**When you have a question:**
+1. Reframe it from open-ended into 2-3 concrete, mutually-exclusive options
+2. Mark one option as (Recommended) 
+3. Call AskUserQuestion with multiSelect: false
+4. Let the user select or provide their own answer
+
+**You cannot ask questions in plain text.** Not "What do you think?" Not "Should we do X?" Only use the tool.
+
+**Before calling the tool:**
+- Read relevant memory files to ground your options
+- Ensure options are mutually exclusive
+- Ensure the recommended option makes sense given the context
+- Ensure no option contradicts what the user has already decided
+
+**This is non-negotiable and mechanically enforced.** The tool call itself is the gate. If you ask a question without using the tool, you've violated the rule and the user will see it immediately.
+
+---
+
 ## Design Work and Impeccable (MANDATORY for UI tasks)
 
 The `impeccable` plugin is enabled in `~/.claude/settings.json` with `autoUpdate: true`. It ships one `/impeccable` skill with 23 commands that cover design briefs, implementation, and QA for frontend work. Use `/impeccable` as the front door for every design or QA task in every project, not as an optional tool.
@@ -84,6 +108,7 @@ Rigorous protocol for sourcing icons from 8 approved libraries: Heroicons, Lucid
 ### The complete design stack
 
 ```
+Orchestrator:  /design-build (runs strategy -> research -> type -> motion -> build -> QA as ONE sequence)
 Strategy:      /impeccable (23 commands, PRODUCT.md + DESIGN.md)
 Research:      component-gallery-reference (60 types, 95 systems)
 Typography:    fontshare-reference (fontshare.com catalog, integrates with impeccable's reflex-reject list)
