@@ -1,28 +1,28 @@
 /* =========================================================================
-   claude-dotfiles marketing microsite - styles
-   Tokens sourced from DESIGN.md.
+   Sidecoach Marketing Site - Yes& Design System
+   Design System Guardian: 36 flows, 5 systems, phase-gated architecture
    ========================================================================= */
 
 /* ---- Design tokens (mirror DESIGN.md) ---------------------------------- */
 
 :root {
-  /* Colors */
-  --c-brand-red: #DC2618;
-  --c-brand-ink: #1A1F1B;
-  --c-brand-cream: #F4EFE4;
-  --c-brand-paper: #FAF7EE;
+  /* Colors - OKLCH for perceptual uniformity */
+  --c-brand-red: oklch(47% 0.14 29);      /* #DC2618 */
+  --c-brand-ink: oklch(11% 0.01 263);     /* #1A1F1B */
+  --c-brand-cream: oklch(94% 0.01 102);   /* #F4EFE4 */
+  --c-brand-paper: oklch(98% 0.002 102);  /* #FAF7EE */
 
   --c-text-primary: var(--c-brand-ink);
-  --c-text-secondary: #54564F;
-  --c-text-tertiary: #8B8A82;
-  --c-text-inverse: var(--c-brand-cream);
+  --c-text-secondary: oklch(40% 0.008 263);
+  --c-text-tertiary: oklch(50% 0.008 263);
+  --c-text-inverse: oklch(92% 0.004 263);
 
   --c-surface-canvas: var(--c-brand-cream);
-  --c-surface-raised: var(--c-brand-paper);
+  --c-surface-raised: white;
   --c-surface-inverse: var(--c-brand-ink);
 
-  --c-border-soft: rgba(26, 31, 27, 0.08);
-  --c-border-firm: rgba(26, 31, 27, 0.16);
+  --c-border-soft: oklch(87% 0.005 263);
+  --c-border-firm: oklch(80% 0.008 263);
   --c-border-inverse: rgba(244, 239, 228, 0.12);
 
   --c-accent-red-subtle: rgba(220, 38, 24, 0.08);
@@ -460,97 +460,198 @@ button {
   font-size: 0.86em;
 }
 
-/* ---- Houses ----------------------------------------------------------- */
+/* ---- Systems Grid ---------------------------------------------------- */
 
-.houses {
+.systems {
   padding-block: var(--section-y);
+  background: var(--c-surface-canvas);
 }
 
-.houses__header { max-width: 740px; margin-bottom: var(--s-16); }
-.houses__intro { margin-top: var(--s-2); }
+.systems__header { max-width: 900px; margin: 0 auto var(--s-16); text-align: center; }
+.systems__intro { margin-top: var(--s-6); }
 
-.houses__grid {
+.systems__grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--s-6);
+  gap: var(--s-8);
 }
 
 @media (min-width: 760px) {
-  .houses__grid { grid-template-columns: 1fr 1fr; gap: var(--s-8); }
+  .systems__grid { grid-template-columns: 1fr 1fr; gap: var(--s-8); }
 }
 
-.house {
+@media (min-width: 1024px) {
+  .systems__grid { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+.system {
   background: var(--c-surface-raised);
-  border-radius: var(--r-xl);
-  padding: var(--s-10);
-  position: relative;
-  transition: transform var(--d-medium) var(--ease-out), box-shadow var(--d-medium) var(--ease-out);
+  border: 1px solid var(--c-border-soft);
+  border-radius: var(--r-lg);
+  padding: var(--s-6);
   box-shadow: var(--shadow-sm);
+  transition: all var(--d-medium) var(--ease-out));
+  display: flex;
+  flex-direction: column;
 }
 
-.house:hover {
-  transform: translateY(-2px);
+.system:hover {
+  border-color: var(--c-brand-red);
   box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
-.house__num {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  color: var(--c-brand-red);
-  font-weight: var(--fw-medium);
-  margin-bottom: var(--s-3);
-  letter-spacing: 0.04em;
-}
-
-.house__h {
+.system__h {
   font-family: var(--font-display);
-  font-size: var(--fs-2xl);
+  font-size: var(--fs-xl);
   font-weight: var(--fw-semibold);
-  line-height: var(--lh-snug);
   margin-bottom: var(--s-3);
-  letter-spacing: -0.01em;
+  line-height: var(--lh-snug);
 }
 
-.house__desc {
+.system__desc {
+  flex: 1;
   color: var(--c-text-secondary);
   font-size: var(--fs-base);
   line-height: var(--lh-relaxed);
-  text-wrap: pretty;
-  margin-bottom: var(--s-5);
+  margin-bottom: var(--s-4);
 }
 
-.house__bullets {
+.system__desc code {
+  background: oklch(97% 0.003 263);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.95em;
+}
+
+.system__status {
+  font-size: var(--fs-sm);
+  color: var(--c-brand-red);
+  font-weight: var(--fw-semibold);
+}
+
+/* ---- Flows Section --------------------------------------------------- */
+
+.flows {
+  padding-block: var(--section-y);
+  background: oklch(97% 0.003 263);
+}
+
+.flows__header { max-width: 900px; margin: 0 auto var(--s-16); text-align: center; }
+.flows__intro { margin-top: var(--s-6); }
+
+.flows__tiers {
+  display: grid;
+  gap: var(--s-12);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.tier {
+  background: var(--c-surface-raised);
+  border-left: 4px solid var(--c-brand-red);
+  border-radius: var(--r-md);
+  padding: var(--s-8);
+  box-shadow: var(--shadow-sm);
+}
+
+.tier--1 { border-left-color: #0066cc; }
+.tier--2 { border-left-color: #00cc66; }
+.tier--3 { border-left-color: var(--c-brand-red); }
+.tier--4 { border-left-color: #ff9900; }
+.tier--5 { border-left-color: #9933ff; }
+
+.tier__h {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-semibold);
+  margin-bottom: var(--s-2);
+}
+
+.tier__desc {
+  color: var(--c-text-secondary);
+  margin-bottom: var(--s-6);
+  font-size: var(--fs-base);
+}
+
+.tier__flows {
   list-style: none;
   padding: 0;
-  margin: 0;
-  border-top: 1px solid var(--c-border-soft);
-  padding-top: var(--s-4);
+  display: grid;
+  gap: var(--s-3);
+  max-width: 740px;
 }
 
-.house__bullets li {
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--c-text-secondary);
-  padding-block: var(--s-2);
+.tier__flows li {
   padding-left: var(--s-5);
   position: relative;
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  color: var(--c-text-secondary);
 }
 
-.house__bullets li::before {
+.tier__flows li:before {
   content: '';
   position: absolute;
   left: 0;
-  top: 0.65em;
+  top: 0.6em;
   width: 8px;
-  height: 1px;
-  background: var(--c-brand-red);
+  height: 2px;
+  background: var(--c-text-tertiary);
+  border-radius: 1px;
 }
 
-.house__bullets code {
-  background: rgba(26, 31, 27, 0.06);
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 0.92em;
+.tier__flows strong {
+  color: var(--c-text-primary);
+  font-weight: var(--fw-semibold);
+}
+
+/* ---- Comparison Table ------------------------------------------------ */
+
+.comparison {
+  padding-block: var(--section-y);
+  background: var(--c-surface-canvas);
+}
+
+.comparison__header { max-width: 900px; margin: 0 auto var(--s-16); text-align: center; }
+
+.comparison__table-wrap {
+  overflow-x: auto;
+  margin-top: var(--s-12);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.comparison__table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--c-surface-raised);
+  font-size: var(--fs-base);
+}
+
+.comparison__table th {
+  background: oklch(95% 0.003 263);
+  padding: var(--s-5);
+  text-align: left;
+  font-family: var(--font-display);
+  font-weight: var(--fw-semibold);
+  border-bottom: 2px solid var(--c-border-firm);
+  font-size: var(--fs-lg);
+}
+
+.comparison__table td {
+  padding: var(--s-5);
+  border-bottom: 1px solid var(--c-border-soft);
+  color: var(--c-text-secondary);
+}
+
+.comparison__table tbody tr:hover {
+  background: oklch(98% 0.002 102);
+}
+
+.comparison__table strong {
+  color: var(--c-text-primary);
+  font-weight: var(--fw-semibold);
 }
 
 /* ---- Proof (built on itself) ------------------------------------------ */
@@ -730,9 +831,9 @@ button {
   display: inline-flex;
   align-items: center;
 }
-.install__copy:hover { background: #B71D11; }
+.install__copy:hover { background: oklch(40% 0.14 29); }
 .install__copy:active { transform: scale(0.96); }
-.install__copy.is-copied { background: #B71D11; }
+.install__copy.is-copied { background: oklch(40% 0.14 29); }
 
 .install__points {
   list-style: none;
@@ -740,12 +841,12 @@ button {
   margin: 0;
   display: grid;
   gap: var(--s-5);
-  max-width: var(--text-max);
+  max-width: 740px;
 }
 
 .install__points li {
   font-size: var(--fs-base);
-  color: rgba(244, 239, 228, 0.78);
+  color: oklch(85% 0.003 263);
   line-height: var(--lh-relaxed);
   padding-left: var(--s-5);
   border-left: 1px solid var(--c-border-inverse);

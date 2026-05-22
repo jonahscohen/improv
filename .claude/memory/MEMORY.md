@@ -111,3 +111,4 @@
 - [Phase 2b Expanded Component Library (2026-05-21)](session_2026-05-21_phase2b_expanded_data.md) - Extended to 40+ components across 7 categories + 20 motion patterns; TypeScript verified
 - [Phase 2c Design Tokens & References (2026-05-21)](session_2026-05-21_phase2c_design_tokens.md) - Design-references scanning + DESIGN.md parsing wired into Flow D/F handlers
 - [Phase 3 Flow Logic Expansion (2026-05-21)](session_2026-05-21_phase3_flow_logic.md) - All 9 flows (A-I) enhanced with intelligent lookups + code templates; guidance dynamically adapts to available data
+- [CRITICAL: Sidecoach integration failures (2026-05-21)](session_2026-05-21_critical_failures.md) - Multiple choice rule violated twice; attempted impeccable when should use Sidecoach; wanted them to invoke slash commands; Sidecoach daemon not active yet

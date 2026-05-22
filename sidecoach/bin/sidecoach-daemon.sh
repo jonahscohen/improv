@@ -29,7 +29,8 @@ if [[ -z "$PIPE" || -z "$LOG" || -z "$SESSION_ID" ]]; then
   exit 1
 fi
 
-SIDECOACH_BIN="${SIDECOACH_BIN:-.}"
+SIDECOACH_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SIDECOACH_BIN="${SIDECOACH_ROOT}/bin"
 RESULTS_DIR="/tmp/sidecoach-results-${SESSION_ID}"
 mkdir -p "$RESULTS_DIR"
 

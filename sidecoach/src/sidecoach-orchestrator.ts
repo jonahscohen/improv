@@ -7,6 +7,12 @@ import { SidecoachOrchestrator as IntelligentOrchestrator } from './orchestrator
 import { DeterministicValidator } from './deterministic-validator';
 import { RegressionDetector } from './regression-detector';
 import { DesignDebtTracker } from './design-debt-tracker';
+import { ContextLoader } from './project-context';
+import { FlowABrandVerifyHandler } from './flow-handler-brand-verify';
+import { FlowBComponentResearchHandler } from './flow-handler-component-research';
+import { FlowCFontResearchHandler } from './flow-handler-font-research';
+import { FlowDReferenceSearchHandler } from './flow-handler-design-references';
+import { FlowEMotionPatternsHandler } from './flow-handler-motion-patterns';
 import {
   Flow2PolishHandler,
   Flow5ReviewHandler,
@@ -25,17 +31,10 @@ import {
   Flow13IterateHandler,
   Flow14MigrationHandler,
 } from './flow-handlers-extended';
-import {
-  FlowABrandVerifyHandler,
-  FlowBComponentResearchHandler,
-  FlowCFontResearchHandler,
-  FlowDReferenceSearchHandler,
-  FlowEMotionPatternsHandler,
-  FlowFDesignTokensHandler,
-  FlowGComponentImplementationHandler,
-  FlowHMotionIntegrationHandler,
-  FlowIAccessibilityHandler,
-} from './flow-handlers-new-tiers';
+import { FlowFDesignTokensHandler } from './flow-handler-design-tokens';
+import { FlowGComponentImplementationHandler } from './flow-handler-component-implementation';
+import { FlowHMotionIntegrationHandler } from './flow-handler-motion-integration';
+import { FlowIAccessibilityHandler } from './flow-handler-accessibility';
 import {
   FlowJTacticalPolishHandler,
   FlowKMultiLensAuditHandler,
@@ -167,7 +166,7 @@ export class FlowExecutionEngine {
     const executionContext: FlowExecutionContext = {
       utterance,
       userId: context.userId,
-      projectPath: context.projectPath,
+      projectPath: context.projectPath || process.cwd(),
       currentFile: context.currentFile,
       selectedText: context.selectedText,
       metadata: context.metadata,
@@ -178,6 +177,38 @@ export class FlowExecutionEngine {
     const flowHistory = getFlowHistory();
     const validator = new DeterministicValidator();
     const debtTracker = new DesignDebtTracker(executionContext.projectPath);
+
+    // CRITICAL: Load and cache project context before Flow A execution
+    // All downstream flows depend on register detection and cached design laws
+    const contextLoader = new ContextLoader();
+    const projectContext = contextLoader.load(executionContext.projectPath!);
+    executionContext.projectContext = projectContext;
+
+    // Run Flow A to verify brand register and cache design laws
+    const flowAHandler = new FlowABrandVerifyHandler();
+    const flowAResult = await flowAHandler.execute(executionContext);
+    flowResults.push(flowAResult);
+    flowHistory.recordFlow({
+      flowId: 'flowA_brand_verify',
+      flowName: flowAResult.flowName,
+      status: flowAResult.status as 'success' | 'error' | 'skipped',
+      message: flowAResult.message,
+      guidance: flowAResult.guidance,
+      checklist: flowAResult.checklist,
+      artifacts: flowAResult.artifacts,
+      error: flowAResult.error,
+    });
+
+    // If Flow A failed, block the chain (context is mandatory)
+    if (flowAResult.status !== 'success') {
+      return {
+        success: false,
+        message: `Cannot proceed: Brand verification failed. ${flowAResult.message}`,
+        detectedFlow: { flowId: match.flowId, flowName: match.flowName, confidence: match.confidence },
+        flowResults,
+      };
+    }
+
     let currentFlowId: FlowId | undefined = match.flowId;
     let firstFlow = true;
 

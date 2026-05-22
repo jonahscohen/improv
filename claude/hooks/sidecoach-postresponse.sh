@@ -12,7 +12,8 @@ if [[ -z "$SIDECOACH_ACTIVE" ]]; then
 fi
 
 # Check if result directory exists
-RESULTS_DIR="/tmp/sidecoach-results-${SIDECOACH_PID}"
+# Use SESSION_ID to match daemon's directory naming (not PID)
+RESULTS_DIR="/tmp/sidecoach-results-${SIDECOACH_SESSION_ID}"
 if [[ ! -d "$RESULTS_DIR" ]]; then
   exit 0
 fi

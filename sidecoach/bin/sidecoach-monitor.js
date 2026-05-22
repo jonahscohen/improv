@@ -12,7 +12,7 @@
  */
 
 const path = require('path');
-const { createOrchestrator } = require('../dist/sidecoach-orchestrator');
+const { createExecutionEngine } = require('../dist/sidecoach-orchestrator');
 
 async function main() {
   // Get utterance from command line or stdin
@@ -46,11 +46,11 @@ async function main() {
 
 async function executeFlow(utterance) {
   try {
-    // Create orchestrator (loads intent detector + handlers)
-    const orchestrator = createOrchestrator();
+    // Create execution engine (loads intent detector + handlers)
+    const engine = createExecutionEngine();
 
     // Process the utterance
-    const result = await orchestrator.process(utterance, {
+    const result = await engine.process(utterance, {
       userId: process.env.CLAUDE_USER || 'unknown',
       projectPath: process.cwd(),
     });

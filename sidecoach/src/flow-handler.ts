@@ -1,4 +1,5 @@
 import { FlowId } from './types';
+import { ProjectContext } from './project-context';
 
 export interface FlowExecutionContext {
   utterance: string;
@@ -7,6 +8,7 @@ export interface FlowExecutionContext {
   currentFile?: string;
   selectedText?: string;
   metadata?: Record<string, any>;
+  projectContext?: ProjectContext;
 }
 
 export interface FlowExecutionResult {

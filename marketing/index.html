@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>claude-dotfiles - The Yes& Claude Code stack</title>
-  <meta name="description" content="Working with Claude well is a discipline problem. The Yes& Claude Code stack is the discipline, installed." />
+  <title>Sidecoach - Design System Guardian</title>
+  <meta name="description" content="Sidecoach v3: Intent detection, phase-gating, regression detection, and design debt tracking. A design system guardian that enforces, learns, and catches what static analysis cannot." />
   <meta name="theme-color" content="#1A1F1B" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -12,11 +12,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
 
   <link rel="stylesheet" href="./styles.css" />
-  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
   <script>
-    // Mark JS as available before stylesheet parses, so the reveal CSS
-    // can opt items into "start invisible, animate in". Without this class,
-    // everything is visible by default - zero-JS users see the full page.
     document.documentElement.classList.add('js');
   </script>
 </head>
@@ -26,16 +22,13 @@
 
   <header class="site-header" data-reveal="nav">
     <div class="site-header__inner container">
-      <a href="#" class="brand" aria-label="Yes&">
-        <picture class="brand__mark">
-          <source media="(prefers-color-scheme: dark)" srcset="./assets/yes-and-logo-dark.webp" />
-          <img src="./assets/yes-and-logo-light.webp" alt="Yes&" width="120" />
-        </picture>
+      <a href="#" class="brand" aria-label="Sidecoach">
+        <span class="brand__text">Sidecoach</span>
       </a>
       <nav class="site-nav" aria-label="Primary">
-        <a href="#houses">The four houses</a>
-        <a href="#proof">Proof</a>
-        <a href="#components">What you get</a>
+        <a href="#systems">Five systems</a>
+        <a href="#flows">36 flows</a>
+        <a href="#vs-impeccable">vs. Impeccable</a>
         <a href="#install" class="site-nav__cta">Install</a>
       </nav>
     </div>
@@ -47,131 +40,91 @@
     <section class="hero" aria-labelledby="hero-h">
       <div class="container hero__inner">
 
-        <p class="eyebrow" data-reveal>The Yes&amp; Claude Code stack</p>
+        <p class="eyebrow" data-reveal>Design System Guardian</p>
 
         <h1 id="hero-h" class="hero__h" data-reveal>
-          Working with Claude is fast.<br />
-          Working with Claude
-          <span class="hero__accent">well</span>
-          is a discipline problem.
+          Static analysis catches what's<br />
+          <span class="hero__accent">visible</span>.
+          Sidecoach catches what's<br />
+          <span class="hero__accent">invisible</span>.
         </h1>
 
         <p class="hero__sub lead" data-reveal>
-          The model forgets between sessions, has no opinions of its own, and
-          will cheerfully ship a half-verified fix unless something stops it.
-          Most "AI workflow" advice solves this by adding ceremony, which the
-          model promptly skips under pressure. We took a different bet.
+          Impeccable audits the present. Sidecoach detects regressions, enforces prerequisites, tracks design debt, and learns from your project's personas. Intent detection chains flows invisibly while you work.
         </p>
 
         <div class="hero__cta" data-reveal>
           <div class="install-block" role="region" aria-label="Install command">
-            <pre class="install-block__cmd"><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash</code></pre>
-            <button class="install-block__copy" type="button" aria-label="Copy install command" data-copy="curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash">
+            <pre class="install-block__cmd"><code>npm install sidecoach</code></pre>
+            <button class="install-block__copy" type="button" aria-label="Copy install command" data-copy="npm install sidecoach">
               <span class="install-block__copy-label">Copy</span>
             </button>
           </div>
-          <p class="hero__cta-note">
-            One curl. One shortcut. Twelve components, all additive, all undoable.
-          </p>
         </div>
 
       </div>
     </section>
 
-    <!-- THE BET (the philosophical anchor) =============================== -->
-    <section class="bet" aria-labelledby="bet-h">
-      <div class="container bet__inner">
-        <h2 id="bet-h" class="section-h" data-reveal>The bet</h2>
-        <div class="bet__columns">
-          <p class="bet__col lead" data-reveal>
-            Externalize the discipline into files the harness enforces.
-            Rules in <code>CLAUDE.md</code>, loaded every session.
-            Hooks in <code>settings.json</code> that block bad behavior at the tool boundary.
-            Memory in <code>.claude/memory/</code> that persists across machines, across teammates, across time.
-          </p>
-          <p class="bet__col lead" data-reveal>
-            The result isn't a productivity hack.
-            It's a way of working with an AI colleague that has memory, opinions, and a verification protocol.
-            Twelve components, four houses of thought, one curl.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- THE FOUR HOUSES =================================================== -->
-    <section class="houses" id="houses" aria-labelledby="houses-h">
+    <!-- FIVE SYSTEMS ====================================================== -->
+    <section class="systems" id="systems" aria-labelledby="systems-h">
       <div class="container">
 
-        <header class="houses__header">
-          <p class="eyebrow" data-reveal>What's inside</p>
-          <h2 id="houses-h" class="section-h" data-reveal>The four houses</h2>
-          <p class="lead houses__intro" data-reveal>
-            Each house answers a question the team had to solve before
-            Claude could be trusted with real work. The houses are the
-            shape of the system. Everything else is implementation.
+        <header class="systems__header">
+          <p class="eyebrow" data-reveal>Core architecture</p>
+          <h2 id="systems-h" class="section-h" data-reveal>Five systems</h2>
+          <p class="lead systems__intro" data-reveal>
+            Sidecoach layers five specialized systems on top of Impeccable to turn static analysis into a live design system that learns, enforces, and catches regressions.
           </p>
         </header>
 
-        <div class="houses__grid">
+        <div class="systems__grid">
 
-          <article class="house" data-reveal>
-            <p class="house__num">01</p>
-            <h3 class="house__h">Discipline</h3>
-            <p class="house__desc">
-              The system stops Claude from shipping work it hasn't verified.
-              Rules in a file are advisory. Hooks at the tool boundary are
-              mechanical. We chose mechanical.
+          <article class="system" data-reveal>
+            <h3 class="system__h">Deterministic Validator</h3>
+            <p class="system__desc">
+              Hard gates that block flow execution when real prerequisites are unmet. Checks for PRODUCT.md content, DESIGN.md sections, design-md lint, tier dependencies, and motion library availability.
             </p>
-            <ul class="house__bullets">
-              <li>Refuses commits, edits, and tools that break the rules</li>
-              <li>Gates "done" behind real verification, not "looks right"</li>
-              <li>Each rule traces back to a failure we'd rather not repeat</li>
-            </ul>
+            <p class="system__status">Phase 3 complete</p>
           </article>
 
-          <article class="house" data-reveal>
-            <p class="house__num">02</p>
-            <h3 class="house__h">Memory</h3>
-            <p class="house__desc">
-              Claude becomes a colleague who remembers what was decided last
-              week, and why. Notes live in your repo, ride along with git,
-              and load at the start of every session.
+          <article class="system" data-reveal>
+            <h3 class="system__h">FlowHistory v2</h3>
+            <p class="system__desc">
+              Cross-session memory keyed by project path, not session ID. Stores up to 20 runs per flow with full execution history for regression comparison and baseline tracking.
             </p>
-            <ul class="house__bullets">
-              <li>Per-task memory, not per-session - granularity matters</li>
-              <li>Indexed, structured, attributable - your name on your work</li>
-              <li>Audited periodically by a reflection layer that finds drift</li>
-            </ul>
+            <p class="system__status">Phase 2 complete</p>
           </article>
 
-          <article class="house" data-reveal>
-            <p class="house__num">03</p>
-            <h3 class="house__h">Design</h3>
-            <p class="house__desc">
-              Generated UI lands on-brand because the work routes through a
-              design pipeline, not a vague prompt. Specialists for typography,
-              motion, references, polish. A generalist that spans all of them.
+          <article class="system" data-reveal>
+            <h3 class="system__h">RegressionDetector</h3>
+            <p class="system__desc">
+              Compares each flow's current output against prior runs. Detects status degradation, guidance count drops, checklist regression, and message quality loss. Blocks on severity.
             </p>
-            <ul class="house__bullets">
-              <li>Strategy reads your <code>PRODUCT.md</code> before deciding anything</li>
-              <li>Typography refuses training-data defaults like Inter and Fraunces</li>
-              <li>A personal catalog of patterns you've seen in the wild</li>
-            </ul>
+            <p class="system__status">Phase 4 complete</p>
           </article>
 
-          <article class="house" data-reveal>
-            <p class="house__num">04</p>
-            <h3 class="house__h">Workflow</h3>
-            <p class="house__desc">
-              One curl, one shortcut, all additive. Boost an existing Claude
-              Code without losing your config. Pick any subset; the rest is a
-              no-op. Re-runs are safe. Uninstall is clean.
+          <article class="system" data-reveal>
+            <h3 class="system__h">ProjectPersonaEngine</h3>
+            <p class="system__desc">
+              Generates 3 project-specific critique personas from your freeform PRODUCT.md via LLM extraction. Replaces Impeccable's 5 fixed generic archetypes with personas learned from your actual users.
             </p>
-            <ul class="house__bullets">
-              <li>Twelve components in a checkbox TUI - take defaults, hit enter</li>
-              <li>Marker-guarded - removes exactly what was installed, nothing more</li>
-              <li>Works alongside your existing CLAUDE.md and settings.json</li>
-            </ul>
+            <p class="system__status">Phase 5 complete</p>
+          </article>
+
+          <article class="system" data-reveal>
+            <h3 class="system__h">DesignDebtTracker</h3>
+            <p class="system__desc">
+              Auto-logs warning-level violations as formal design debt. Tracks deferral, estimates cost, and surfaces at session start. Close the loop on known-but-deferred issues.
+            </p>
+            <p class="system__status">Phase 6 complete</p>
+          </article>
+
+          <article class="system" data-reveal>
+            <h3 class="system__h">Impeccable Bridge</h3>
+            <p class="system__desc">
+              Runs <code>npx impeccable detect</code> as a sub-step in the multi-lens audit flow so the real 28-rule static analyzer fires during design audits, not just suggestions.
+            </p>
+            <p class="system__status">Phase 7 complete</p>
           </article>
 
         </div>
@@ -179,140 +132,148 @@
       </div>
     </section>
 
-    <!-- PROOF: BUILT ON ITSELF =========================================== -->
-    <section class="proof" id="proof" aria-labelledby="proof-h">
+    <!-- 36 FLOWS BY TIER ================================================== -->
+    <section class="flows" id="flows" aria-labelledby="flows-h">
       <div class="container">
-        <header class="proof__header">
-          <p class="eyebrow" data-reveal>How we know it works</p>
-          <h2 id="proof-h" class="section-h" data-reveal>Built on itself.</h2>
-          <p class="lead proof__intro" data-reveal>
-            Every layer in the stack traces back to a specific failure we
-            wanted to stop repeating. Nothing in here is a feature in
-            search of a problem.
+
+        <header class="flows__header">
+          <p class="eyebrow" data-reveal>Orchestrated workflows</p>
+          <h2 id="flows-h" class="section-h" data-reveal>36 flows<br />5 tiers<br />Phase-gated</h2>
+          <p class="lead flows__intro" data-reveal>
+            Flows build on each other. Tier 1 teaches the system. Tier 2 establishes design. Tier 3 polishes. Tier 4 verifies. Tier 5 ships. Intent detection chains them invisibly as you work.
           </p>
         </header>
 
-        <ol class="proof__list">
+        <div class="flows__tiers">
 
-          <li class="proof__item" data-reveal>
-            <p class="proof__when">The reflection layer</p>
-            <p class="proof__what">
-              The memory corpus got large enough that drift was inevitable.
-              Five parallel agents now audit the corpus on demand and surface
-              what's emerging, contradicting, or going stale.
-            </p>
-            <p class="proof__because">
-              It exists because the corpus needed it.
-            </p>
-          </li>
+          <div class="tier tier--1" data-reveal>
+            <h3 class="tier__h">Tier 1: Teach (Flows A-E)</h3>
+            <p class="tier__desc">Foundation. Establish PRODUCT.md and DESIGN.md as the source of truth.</p>
+            <ul class="tier__flows">
+              <li><strong>Flow A:</strong> Teach product strategy (users, brand, anti-references)</li>
+              <li><strong>Flow B:</strong> Teach design tokens (colors, typography, scale)</li>
+              <li><strong>Flow C:</strong> Validate PRODUCT.md against schema</li>
+              <li><strong>Flow D:</strong> Validate DESIGN.md against Google spec</li>
+              <li><strong>Flow E:</strong> Lint DESIGN.md with npx @google/design.md</li>
+            </ul>
+          </div>
 
-          <li class="proof__item" data-reveal>
-            <p class="proof__when">The personal catalog</p>
-            <p class="proof__what">
-              Public catalogs index components. They have no home for "the
-              way Linear's inbox staggers" or "the keycap treatment Unlumen
-              uses." So we built a capture wizard for the patterns you
-              actually see in the wild.
-            </p>
-            <p class="proof__because">
-              It exists because the patterns worth remembering didn't fit
-              anywhere else.
-            </p>
-          </li>
+          <div class="tier tier--2" data-reveal>
+            <h3 class="tier__h">Tier 2: Build (Flows F-I)</h3>
+            <p class="tier__desc">Requires: Tier 1 complete. Craft features with design as the driver.</p>
+            <ul class="tier__flows">
+              <li><strong>Flow F:</strong> Shape feature (plan UX/UI before code)</li>
+              <li><strong>Flow G:</strong> Craft feature (build end-to-end)</li>
+              <li><strong>Flow H:</strong> Extract tokens (pull patterns into system)</li>
+              <li><strong>Flow I:</strong> Document generated DESIGN.md</li>
+            </ul>
+          </div>
 
-          <li class="proof__item" data-reveal>
-            <p class="proof__when">The second-fix gate</p>
-            <p class="proof__what">
-              A regression shipped because a second fix landed on the same
-              file before the first one was verified. Now a hook warns when
-              that pattern repeats, while staying silent on legitimate
-              multi-file changes.
-            </p>
-            <p class="proof__because">
-              It exists because the failure is too easy to repeat without it.
-            </p>
-          </li>
+          <div class="tier tier--3" data-reveal>
+            <h3 class="tier__h">Tier 3: Polish (Flows J-P)</h3>
+            <p class="tier__desc">Requires: Tier 2 complete. Refine typography, motion, color, and craft.</p>
+            <ul class="tier__flows">
+              <li><strong>Flow J:</strong> Typeset (improve hierarchy and readability)</li>
+              <li><strong>Flow K:</strong> Audit multi-lens (static + impeccable + a11y)</li>
+              <li><strong>Flow L:</strong> Critique Nielsen + project personas</li>
+              <li><strong>Flow M:</strong> Polish (final alignment against design system)</li>
+              <li><strong>Flow N:</strong> Animate (add purposeful motion)</li>
+              <li><strong>Flow O:</strong> Colorize (strategic color application)</li>
+              <li><strong>Flow P:</strong> Delight (personality and memorable touches)</li>
+            </ul>
+          </div>
 
-        </ol>
+          <div class="tier tier--4" data-reveal>
+            <h3 class="tier__h">Tier 4: Verify (Flows Q-T)</h3>
+            <p class="tier__desc">Requires: Tier 3 complete. Production-ready sweep.</p>
+            <ul class="tier__flows">
+              <li><strong>Flow Q:</strong> Harden (errors, i18n, edge cases)</li>
+              <li><strong>Flow R:</strong> Adapt (responsive design across devices)</li>
+              <li><strong>Flow S:</strong> Optimize (performance and rendering)</li>
+              <li><strong>Flow T:</strong> Onboard (first-run flows, empty states)</li>
+            </ul>
+          </div>
+
+          <div class="tier tier--5" data-reveal>
+            <h3 class="tier__h">Tier 5: Master (Flows U-V)</h3>
+            <p class="tier__desc">Requires: All tiers complete. System-level operations.</p>
+            <ul class="tier__flows">
+              <li><strong>Flow U:</strong> Reflect (corpus analysis - patterns, tensions, gaps)</li>
+              <li><strong>Flow V:</strong> Architect (multi-feature orchestration)</li>
+            </ul>
+          </div>
+
+        </div>
 
       </div>
     </section>
 
-    <!-- WHAT YOU GET ====================================================== -->
-    <section class="components" id="components" aria-labelledby="components-h">
+    <!-- VS IMPECCABLE ==================================================== -->
+    <section class="comparison" id="vs-impeccable" aria-labelledby="comparison-h">
       <div class="container">
 
-        <header class="components__header">
-          <p class="eyebrow" data-reveal>The package</p>
-          <h2 id="components-h" class="section-h" data-reveal>Twelve components.<br />Pick any combination.</h2>
-          <p class="lead components__intro" data-reveal>
-            Defaults are all on, so most teams just take them.
-            Every component is additive, marker-guarded, and undoable.
-          </p>
+        <header class="comparison__header">
+          <p class="eyebrow" data-reveal>How they differ</p>
+          <h2 id="comparison-h" class="section-h" data-reveal>Sidecoach surpasses Impeccable</h2>
         </header>
 
-        <div class="components__grid">
-
-          <article class="component">
-            <p class="component__key"><code>brain</code></p>
-            <p class="component__desc">Team rules and shared workflow, appended to your CLAUDE.md between markers.</p>
-          </article>
-
-          <article class="component">
-            <p class="component__key"><code>config</code></p>
-            <p class="component__desc">Safety hooks, enabled plugins, and permission patterns merged into your settings.json.</p>
-          </article>
-
-          <article class="component">
-            <p class="component__key"><code>memory</code></p>
-            <p class="component__desc">Memory discipline rules, three lifecycle hooks, and the session loader script.</p>
-          </article>
-
-          <article class="component">
-            <p class="component__key"><code>skills</code></p>
-            <p class="component__desc">The design pipeline plus four peer skills and the personal-catalog seed.</p>
-          </article>
-
-          <article class="component">
-            <p class="component__key"><code>statusline</code></p>
-            <p class="component__desc">A custom prompt-bar render that shows session and memory state at a glance.</p>
-          </article>
-
-          <article class="component">
-            <p class="component__key"><code>cmux</code></p>
-            <p class="component__desc">Split-pane terminal config that drives the in-app browser preview.</p>
-          </article>
-
-          <article class="component">
-            <p class="component__key"><code>nvm</code></p>
-            <p class="component__desc">Fix for "claude: command not found" in fresh terminals when nvm doesn't auto-activate.</p>
-          </article>
-
-          <article class="component">
-            <p class="component__key"><code>ampersand</code></p>
-            <p class="component__desc">The shortcut you actually use: re-launch the installer from any directory.</p>
-          </article>
-
-          <article class="component">
-            <p class="component__key"><code>discord</code></p>
-            <p class="component__desc">A Discord chat agent launcher with cold/mid/warm onboarding states.</p>
-          </article>
-
-          <article class="component">
-            <p class="component__key"><code>voice-input</code></p>
-            <p class="component__desc">Local voice-to-text via whisper.cpp and ffmpeg. No cloud, no API key.</p>
-          </article>
-
-          <article class="component">
-            <p class="component__key"><code>voice-output</code></p>
-            <p class="component__desc">Spoken summaries via OpenAI TTS. Starts muted. Three ways to toggle.</p>
-          </article>
-
-          <article class="component">
-            <p class="component__key"><code>reflect</code></p>
-            <p class="component__desc">Memory corpus analysis. Five agents look for patterns, tensions, gaps.</p>
-          </article>
-
+        <div class="comparison__table-wrap" data-reveal>
+          <table class="comparison__table">
+            <thead>
+              <tr>
+                <th>Capability</th>
+                <th>Impeccable</th>
+                <th>Sidecoach v3</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Command sequencing</strong></td>
+                <td>Flat menu, any order</td>
+                <td>Phase-gated, prerequisites enforced</td>
+              </tr>
+              <tr>
+                <td><strong>Prerequisite checking</strong></td>
+                <td>None</td>
+                <td>Hard disk checks: PRODUCT.md, DESIGN.md, dependencies</td>
+              </tr>
+              <tr>
+                <td><strong>Anti-pattern detection</strong></td>
+                <td>28 CSS/DOM rules</td>
+                <td>28 impeccable rules + DeterministicValidator gates</td>
+              </tr>
+              <tr>
+                <td><strong>Regression detection</strong></td>
+                <td>None</td>
+                <td>Compares all runs per flow, blocks on status degradation</td>
+              </tr>
+              <tr>
+                <td><strong>Design debt</strong></td>
+                <td>Surface only</td>
+                <td>Auto-log, formally track, resolve with project-keyed persistence</td>
+              </tr>
+              <tr>
+                <td><strong>Persona archetypes</strong></td>
+                <td>5 fixed generic</td>
+                <td>3 generated from project PRODUCT.md via LLM extraction</td>
+              </tr>
+              <tr>
+                <td><strong>Cross-session memory</strong></td>
+                <td>None</td>
+                <td>FlowHistory v2: all runs per flow, keyed by projectPath</td>
+              </tr>
+              <tr>
+                <td><strong>Critique depth</strong></td>
+                <td>Nielsen + fixed personas</td>
+                <td>Nielsen + project personas + regression delta</td>
+              </tr>
+              <tr>
+                <td><strong>Intent detection</strong></td>
+                <td>None</td>
+                <td>Natural language triggers flows invisibly</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
       </div>
@@ -323,22 +284,22 @@
       <div class="container install__inner">
 
         <header class="install__header">
-          <p class="eyebrow eyebrow--inverse" data-reveal>Get the stack</p>
-          <h2 id="install-h" class="section-h section-h--inverse" data-reveal>One curl.<br />Twelve components.<br />Your discipline, installed.</h2>
+          <p class="eyebrow eyebrow--inverse" data-reveal>Get started</p>
+          <h2 id="install-h" class="section-h section-h--inverse" data-reveal>Install Sidecoach<br />and evolve your design system</h2>
         </header>
 
         <div class="install__block" data-reveal>
-          <pre class="install-block install-block--big"><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash</code></pre>
+          <pre class="install-block install-block--big"><code>npm install sidecoach</code></pre>
 
-          <button class="install__copy" type="button" aria-label="Copy install command" data-copy="curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash">
+          <button class="install__copy" type="button" aria-label="Copy install command" data-copy="npm install sidecoach">
             <span>Copy command</span>
           </button>
         </div>
 
         <ul class="install__points">
-          <li><strong>Already running Claude Code?</strong> Every component is additive. <code>ampersand --only brain,config,memory</code> takes the rules, hooks, and memory subsystem without touching the rest of your config.</li>
-          <li><strong>Fresh Mac?</strong> Run the curl, take TUI defaults, open a new terminal. You're set up.</li>
-          <li><strong>Want to undo?</strong> Marker-guarded blocks in your CLAUDE.md and settings.json. <code>sed</code> removes exactly what we added.</li>
+          <li><strong>Phase-gated flows.</strong> Tier 1 establishes context, Tier 2 builds, Tier 3 polishes, Tier 4 verifies. No jumping ahead.</li>
+          <li><strong>Intent detection.</strong> Describe your work naturally. Sidecoach detects intent and chains flows invisibly in the background.</li>
+          <li><strong>Project-keyed persistence.</strong> History lives in your repo, keyed by project path. Regressions surface automatically.</li>
         </ul>
 
       </div>
@@ -349,18 +310,14 @@
   <footer class="site-footer">
     <div class="container site-footer__inner">
       <div class="site-footer__brand">
-        <picture>
-          <source media="(prefers-color-scheme: dark)" srcset="./assets/yes-and-logo-dark.webp" />
-          <img src="./assets/yes-and-logo-light.webp" alt="Yes&" width="90" />
-        </picture>
-        <p class="site-footer__tag">We start with yes. You build what's next.</p>
+        <p class="site-footer__tag">Design systems that enforce, learn, and evolve.</p>
       </div>
       <nav class="site-footer__nav" aria-label="Footer">
-        <a href="https://github.com/jonahscohen/claude-dotfiles">GitHub</a>
-        <a href="https://github.com/jonahscohen/claude-dotfiles/blob/main/README.md">Documentation</a>
-        <a href="https://github.com/jonahscohen/claude-dotfiles/issues">Issues</a>
+        <a href="https://github.com/jonahscohen/sidecoach">GitHub</a>
+        <a href="https://github.com/jonahscohen/sidecoach/blob/main/README.md">Documentation</a>
+        <a href="https://github.com/jonahscohen/sidecoach/issues">Issues</a>
       </nav>
-      <p class="site-footer__license">MIT. Bundled tools licensed by their respective authors.</p>
+      <p class="site-footer__license">MIT. Built with Yes&.</p>
     </div>
   </footer>
 
