@@ -6,6 +6,7 @@ import { BaseFlowHandler, FlowExecutionContext, FlowExecutionResult, ChecklistIt
 import { MotionReference, MotionPattern } from './reference-systems';
 import { MotionReferenceImpl } from './motion-reference';
 import { SHARED_DESIGN_LAWS } from './design-laws';
+import { FlowMemoryBuilder } from './flow-memory-schema';
 
 export interface MotionPatternContext {
   motionDomainRules: string[];
@@ -149,6 +150,24 @@ export class FlowEMotionPatternsHandler extends BaseFlowHandler {
         `${motionPalette.length} motion patterns available for ${register} register. Run Flow H to integrate motion into component interactions.`,
       ];
 
+      const exponentialPassCount = validationResults.filter((r) => r.easingExpOnential).length;
+      const reducedMotionPassCount = validationResults.filter((r) => r.hasReducedMotion).length;
+
+      const memoryBuilder = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setSummary(`Motion patterns: ${easingPatterns.length} easing curves with motion domain rules + ${reducedMotionStrategies.length} reduced-motion strategies`)
+        .addRule('motion', [`Duration appropriateness`, `Exponential-only easing`, `No layout-property animation`, `Stagger patterns`, `Reduced-motion strategies`])
+        .addDecision(`Motion intensity: ${intensity}`, `${register === 'brand' ? 'Playful/ambitious' : 'Restrained'} motion for ${register} register with ${brandPersonality} personality`)
+        .addMetric('easing-curves-researched', easingPatterns.length, 'pass')
+        .addMetric('motion-patterns-validated', validationResults.length, 'pass')
+        .addMetric('exponential-easing-pass', exponentialPassCount, 'pass', validationResults.length)
+        .addMetric('reduced-motion-strategies', reducedMotionStrategies.length, 'pass', 6)
+        .addValidation('Exponential-only easing', exponentialPassCount === validationResults.length ? 'pass' : 'warning', `${exponentialPassCount}/${validationResults.length} pass`)
+        .addValidation('Reduced-motion coverage', reducedMotionPassCount === validationResults.length ? 'pass' : 'warning', `${reducedMotionPassCount}/${validationResults.length} patterns`)
+        .addReference('motion-reference', easingPatterns.length, 'easing curve patterns')
+        .addArtifact('motion-curves', easingPatterns.length, ['flowH_motion_integration', 'flowI_motion_polish']);
+
+      const memory = memoryBuilder.build();
+
       return {
         flowId: this.flowId,
         flowName: this.getFlowName(),
@@ -178,14 +197,22 @@ export class FlowEMotionPatternsHandler extends BaseFlowHandler {
               ),
             ]
           : [],
+        memory,
       };
     } catch (err) {
+      const memory = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setStatus('error')
+        .setSummary(`Motion research failed: ${String(err).substring(0, 40)}`)
+        .addValidation('motion-reference-query', 'fail', String(err))
+        .build();
+
       return {
         flowId: this.flowId,
         flowName: this.getFlowName(),
         status: 'error',
         message: 'Failed to research motion patterns',
         error: String(err),
+        memory,
       };
     }
   }

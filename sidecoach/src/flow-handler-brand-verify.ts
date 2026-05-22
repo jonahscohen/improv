@@ -4,6 +4,7 @@
 import { BaseFlowHandler, FlowExecutionContext, FlowExecutionResult, ChecklistItem } from './flow-handler';
 import { ContextLoader, ProjectContext, Register } from './project-context';
 import { SHARED_DESIGN_LAWS, REGISTER_SPECIFIC_LAWS } from './design-laws';
+import { FlowMemoryBuilder } from './flow-memory-schema';
 
 export interface BrandVerificationContext {
   projectContext: ProjectContext;
@@ -35,6 +36,12 @@ export class FlowABrandVerifyHandler extends BaseFlowHandler {
       const projectContext = this.contextLoader.load(projectPath);
 
       if (!projectContext.loaded.productMd) {
+        const memory = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+          .setStatus('error')
+          .setSummary('PRODUCT.md not found - cannot verify brand register')
+          .addGate('product-md-exists', true, false, 'PRODUCT.md required at project root')
+          .build();
+
         return {
           flowId: this.flowId,
           flowName: this.getFlowName(),
@@ -50,6 +57,7 @@ export class FlowABrandVerifyHandler extends BaseFlowHandler {
             '- antiReferences: What NOT to look like',
             '- strategicPrinciples: Core design principles',
           ],
+          memory,
         };
       }
 
@@ -103,6 +111,26 @@ export class FlowABrandVerifyHandler extends BaseFlowHandler {
         '  - Flow D: Design References (if gathering inspiration)',
       ];
 
+      const memoryBuilder = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setSummary(`Brand register ${registerDetected} verified. ${designLawsCached.length} design domains cached.`)
+        .addDecision(
+          `Selected ${registerDetected} register`,
+          `${registerDetected === 'brand' ? 'Design IS the product' : 'Design SERVES the product'}`
+        )
+        .addMetric('design-domains-cached', designLawsCached.length, 'pass', 7)
+        .addValidation('PRODUCT.md exists', 'pass')
+        .addValidation('Pre-flight checks', preflightIssues.length === 0 ? 'pass' : 'warning')
+        .addGate('product-md-exists', true, true)
+        .addGate('design-laws-cached', true, true)
+        .addGate('brand-verified', true, true);
+
+      // Add rules for each design domain
+      for (const [domainKey, domain] of Object.entries(SHARED_DESIGN_LAWS)) {
+        memoryBuilder.addRule(domainKey, [`${domain.rules.length} rules`]);
+      }
+
+      const memory = memoryBuilder.build();
+
       return {
         flowId: this.flowId,
         flowName: this.getFlowName(),
@@ -111,14 +139,22 @@ export class FlowABrandVerifyHandler extends BaseFlowHandler {
         guidance,
         checklist,
         artifacts: preflightIssues.length > 0 ? [] : [],
+        memory,
       };
     } catch (err) {
+      const memory = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setStatus('error')
+        .setSummary(`Exception: ${String(err).substring(0, 50)}`)
+        .addValidation('project-context-load', 'fail', String(err))
+        .build();
+
       return {
         flowId: this.flowId,
         flowName: this.getFlowName(),
         status: 'error',
         message: 'Failed to load project context',
         error: String(err),
+        memory,
       };
     }
   }

@@ -6,6 +6,7 @@ export declare class FlowExecutionEngine {
     private orchestrator;
     constructor();
     private initializeHandlers;
+    private recordFlowWithMemory;
     process(utterance: string, context?: Partial<FlowExecutionContext>): Promise<SidecoachResult>;
     registerHandler(handler: FlowHandler): void;
     getAvailableFlows(): FlowInfo[];

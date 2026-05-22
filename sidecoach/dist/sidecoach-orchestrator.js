@@ -9,9 +9,18 @@ const orchestrator_1 = require("./orchestrator");
 const deterministic_validator_1 = require("./deterministic-validator");
 const regression_detector_1 = require("./regression-detector");
 const design_debt_tracker_1 = require("./design-debt-tracker");
+const project_context_1 = require("./project-context");
+const flow_handler_brand_verify_1 = require("./flow-handler-brand-verify");
+const flow_handler_component_research_1 = require("./flow-handler-component-research");
+const flow_handler_font_research_1 = require("./flow-handler-font-research");
+const flow_handler_design_references_1 = require("./flow-handler-design-references");
+const flow_handler_motion_patterns_1 = require("./flow-handler-motion-patterns");
 const flow_handlers_core_1 = require("./flow-handlers-core");
 const flow_handlers_extended_1 = require("./flow-handlers-extended");
-const flow_handlers_new_tiers_1 = require("./flow-handlers-new-tiers");
+const flow_handler_design_tokens_1 = require("./flow-handler-design-tokens");
+const flow_handler_component_implementation_1 = require("./flow-handler-component-implementation");
+const flow_handler_motion_integration_1 = require("./flow-handler-motion-integration");
+const flow_handler_accessibility_1 = require("./flow-handler-accessibility");
 const flow_handlers_tier3_tier4_1 = require("./flow-handlers-tier3-tier4");
 const flow_handlers_tier5_specialized_1 = require("./flow-handlers-tier5-specialized");
 const flow_handlers_curate_qa_1 = require("./flow-handlers-curate-qa");
@@ -27,16 +36,16 @@ class FlowExecutionEngine {
         // Register all flow handlers with their implementations
         const handlerMap = [
             // Tier 1: Strategy/Research
-            ['flowA_brand_verify', () => new flow_handlers_new_tiers_1.FlowABrandVerifyHandler()],
-            ['flowB_component_research', () => new flow_handlers_new_tiers_1.FlowBComponentResearchHandler()],
-            ['flowC_font_research', () => new flow_handlers_new_tiers_1.FlowCFontResearchHandler()],
-            ['flowD_reference_inspiration', () => new flow_handlers_new_tiers_1.FlowDReferenceSearchHandler()],
-            ['flowE_motion_patterns', () => new flow_handlers_new_tiers_1.FlowEMotionPatternsHandler()],
+            ['flowA_brand_verify', () => new flow_handler_brand_verify_1.FlowABrandVerifyHandler()],
+            ['flowB_component_research', () => new flow_handler_component_research_1.FlowBComponentResearchHandler()],
+            ['flowC_font_research', () => new flow_handler_font_research_1.FlowCFontResearchHandler()],
+            ['flowD_reference_inspiration', () => new flow_handler_design_references_1.FlowDReferenceSearchHandler()],
+            ['flowE_motion_patterns', () => new flow_handler_motion_patterns_1.FlowEMotionPatternsHandler()],
             // Tier 2: Execution
-            ['flowF_design_tokens', () => new flow_handlers_new_tiers_1.FlowFDesignTokensHandler()],
-            ['flowG_component_implementation', () => new flow_handlers_new_tiers_1.FlowGComponentImplementationHandler()],
-            ['flowH_motion_integration', () => new flow_handlers_new_tiers_1.FlowHMotionIntegrationHandler()],
-            ['flowI_accessibility', () => new flow_handlers_new_tiers_1.FlowIAccessibilityHandler()],
+            ['flowF_design_tokens', () => new flow_handler_design_tokens_1.FlowFDesignTokensHandler()],
+            ['flowG_component_implementation', () => new flow_handler_component_implementation_1.FlowGComponentImplementationHandler()],
+            ['flowH_motion_integration', () => new flow_handler_motion_integration_1.FlowHMotionIntegrationHandler()],
+            ['flowI_accessibility', () => new flow_handler_accessibility_1.FlowIAccessibilityHandler()],
             // Tier 3: Polish/QA
             ['flowJ_tactical_polish', () => new flow_handlers_tier3_tier4_1.FlowJTacticalPolishHandler()],
             ['flowK_multi_lens_audit', () => new flow_handlers_tier3_tier4_1.FlowKMultiLensAuditHandler()],
@@ -73,6 +82,33 @@ class FlowExecutionEngine {
         for (const [flowId, createHandler] of handlerMap) {
             this.handlers.set(flowId, createHandler());
         }
+    }
+    recordFlowWithMemory(result) {
+        const flowHistory = (0, flow_history_1.getFlowHistory)();
+        const entry = {
+            flowId: result.flowId,
+            flowName: result.flowName,
+            status: result.status,
+            message: result.message,
+            guidance: result.guidance,
+            checklist: result.checklist,
+            artifacts: result.artifacts,
+            error: result.error,
+        };
+        // Merge memory data if present
+        if (result.memory) {
+            const memory = result.memory;
+            entry.appliedRules = memory.appliedRules;
+            entry.userDecisions = memory.userDecisions;
+            entry.metrics = memory.metrics;
+            entry.validationResults = memory.validationResults;
+            entry.referencesUsed = memory.referencesUsed;
+            entry.gates = memory.gates;
+            entry.artifactProduced = memory.artifactProduced;
+            entry.aiSlopDetection = memory.aiSlopDetection;
+            entry.summary = memory.summary;
+        }
+        flowHistory.recordFlow(entry);
     }
     async process(utterance, context = {}) {
         // Step 1: Detect intent
@@ -117,7 +153,7 @@ class FlowExecutionEngine {
         const executionContext = {
             utterance,
             userId: context.userId,
-            projectPath: context.projectPath,
+            projectPath: context.projectPath || process.cwd(),
             currentFile: context.currentFile,
             selectedText: context.selectedText,
             metadata: context.metadata,
@@ -127,6 +163,25 @@ class FlowExecutionEngine {
         const flowHistory = (0, flow_history_1.getFlowHistory)();
         const validator = new deterministic_validator_1.DeterministicValidator();
         const debtTracker = new design_debt_tracker_1.DesignDebtTracker(executionContext.projectPath);
+        // CRITICAL: Load and cache project context before Flow A execution
+        // All downstream flows depend on register detection and cached design laws
+        const contextLoader = new project_context_1.ContextLoader();
+        const projectContext = contextLoader.load(executionContext.projectPath);
+        executionContext.projectContext = projectContext;
+        // Run Flow A to verify brand register and cache design laws
+        const flowAHandler = new flow_handler_brand_verify_1.FlowABrandVerifyHandler();
+        const flowAResult = await flowAHandler.execute(executionContext);
+        flowResults.push(flowAResult);
+        this.recordFlowWithMemory(flowAResult);
+        // If Flow A failed, block the chain (context is mandatory)
+        if (flowAResult.status !== 'success') {
+            return {
+                success: false,
+                message: `Cannot proceed: Brand verification failed. ${flowAResult.message}`,
+                detectedFlow: { flowId: match.flowId, flowName: match.flowName, confidence: match.confidence },
+                flowResults,
+            };
+        }
         let currentFlowId = match.flowId;
         let firstFlow = true;
         while (currentFlowId) {
@@ -221,16 +276,7 @@ class FlowExecutionEngine {
                     result.status = 'error';
                     result.message = `${result.message}\n\n⚠️ REGRESSION DETECTED: ${regression.message}`;
                     // Break the chain on blocking regression
-                    flowHistory.recordFlow({
-                        flowId: currentFlowId,
-                        flowName: result.flowName,
-                        status: 'error',
-                        message: result.message,
-                        guidance: result.guidance,
-                        checklist: result.checklist,
-                        artifacts: result.artifacts,
-                        error: result.error,
-                    });
+                    this.recordFlowWithMemory(result);
                     flowResults.push(result);
                     currentFlowId = undefined; // Stop chaining
                     break;
@@ -241,17 +287,8 @@ class FlowExecutionEngine {
                     result.message = `${result.message}\n\n⚠️ Warning: ${warningMessages}`;
                 }
             }
-            // Record to FlowHistory
-            flowHistory.recordFlow({
-                flowId: currentFlowId,
-                flowName: result.flowName,
-                status: result.status,
-                message: result.message,
-                guidance: result.guidance,
-                checklist: result.checklist,
-                artifacts: result.artifacts,
-                error: result.error,
-            });
+            // Record to FlowHistory (with memory data if available)
+            this.recordFlowWithMemory(result);
             flowResults.push(result);
             // Determine next flow: if current flow succeeded, ask orchestrator for recommendation
             if (result.status === 'success') {

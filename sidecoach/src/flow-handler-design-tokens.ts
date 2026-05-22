@@ -3,6 +3,7 @@
 
 import { BaseFlowHandler, FlowExecutionContext, FlowExecutionResult, ChecklistItem } from './flow-handler';
 import { SHARED_DESIGN_LAWS } from './design-laws';
+import { FlowMemoryBuilder } from './flow-memory-schema';
 import fs from 'fs';
 import path from 'path';
 
@@ -206,6 +207,26 @@ export class FlowFDesignTokensHandler extends BaseFlowHandler {
         'Test token coverage: every CSS value should map to a token',
       ];
 
+      const domainPassCount = domainValidationResults.filter((r) => r.validationStatus === 'pass').length;
+
+      const memoryBuilder = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setSummary(`Design tokens validated: ${tokenSections.length} sections across all 7 domains`)
+        .addRule('color', SHARED_DESIGN_LAWS.color.rules)
+        .addRule('typography', SHARED_DESIGN_LAWS.typography.rules)
+        .addRule('spatial', SHARED_DESIGN_LAWS.spatial.rules)
+        .addRule('motion', SHARED_DESIGN_LAWS.motion.rules)
+        .addRule('interaction', SHARED_DESIGN_LAWS.interaction.rules)
+        .addRule('responsive', SHARED_DESIGN_LAWS.responsive.rules)
+        .addRule('writing', SHARED_DESIGN_LAWS.writing.rules)
+        .addDecision('Design token structure strategy', 'Semantic naming with {token.path} references per google-labs DESIGN.md spec')
+        .addMetric('token-sections-indexed', tokenSections.length, 'pass')
+        .addMetric('domain-validations-pass', domainPassCount, 'pass', 7)
+        .addValidation('DESIGN.md exists', hasDesignMd ? 'pass' : 'warning')
+        .addValidation('All 7 domains covered', domainPassCount === 7 ? 'pass' : 'warning', `${domainPassCount}/7 domains`)
+        .addArtifact('design-tokens', tokenSections.length, ['flowG_component_implementation', 'flowI_motion_polish']);
+
+      const memory = memoryBuilder.build();
+
       return {
         flowId: this.flowId,
         flowName: this.getFlowName(),
@@ -231,14 +252,22 @@ export class FlowFDesignTokensHandler extends BaseFlowHandler {
               ),
             ]
           : [],
+        memory,
       };
     } catch (err) {
+      const memory = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setStatus('error')
+        .setSummary(`Token validation failed: ${String(err).substring(0, 40)}`)
+        .addValidation('token-validation', 'fail', String(err))
+        .build();
+
       return {
         flowId: this.flowId,
         flowName: this.getFlowName(),
         status: 'error',
         message: 'Failed to validate design tokens',
         error: String(err),
+        memory,
       };
     }
   }

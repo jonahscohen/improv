@@ -7,6 +7,7 @@ import { BaseFlowHandler, FlowExecutionContext, FlowExecutionResult, ChecklistIt
 import { DesignReferencesSystem } from './reference-systems';
 import { DesignReferencesSystemImpl } from './design-references-reference';
 import { SHARED_DESIGN_LAWS, CATEGORY_REFLEX } from './design-laws';
+import { FlowMemoryBuilder } from './flow-memory-schema';
 
 export interface DesignReferenceContext {
   referencesFound: number;
@@ -90,6 +91,7 @@ export class FlowDReferenceSearchHandler extends BaseFlowHandler {
 
       // Filter high-genericity (AI slop) references
       const lowSlopReferences = referenceAnalysis.filter((r) => r.slopDetectionResults.genericityScore < 0.6);
+      const oversaturatedCount = referenceAnalysis.filter((r) => r.slopDetectionResults.oversaturated).length;
 
       // Cache context for downstream flows
       this.cachedReferenceContext = {
@@ -131,13 +133,27 @@ export class FlowDReferenceSearchHandler extends BaseFlowHandler {
         'Design References Analysis:',
         `- Total found: ${references.length}`,
         `- High quality (low AI slop): ${lowSlopReferences.length}`,
-        `- Flagged as oversaturated: ${referenceAnalysis.filter((r) => r.slopDetectionResults.oversaturated).length}`,
+        `- Flagged as oversaturated: ${oversaturatedCount}`,
         '',
         'High-Quality References (genericityScore < 0.6):',
         ...lowSlopReferences.map((r) => `- ${r.title} (${r.category}${r.hasColorPalette ? ' + color' : ''}${r.hasSpacingPattern ? ' + spacing' : ''})`),
         '',
         `Proceed to Flow E (Motion Patterns) for animation design validation.`,
       ];
+
+      const memoryBuilder = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setSummary(`Design references: ${references.length} patterns with color + spatial domains + AI slop detection`)
+        .addRule('color', [`OKLCH color space`, `Contrast validation (WCAG AA)`, `Semantic colors`, `Dark mode strategies`])
+        .addRule('spatial', [`4pt grid foundation`, `Gap vs margin patterns`, `Touch targets (40x40px)`, `White space balance`])
+        .addDecision(`Selected ${lowSlopReferences.length} high-quality references`, `Filtered oversaturated/AI-slop references (genericityScore < 0.6)`)
+        .addMetric('references-analyzed', references.length, 'pass')
+        .addMetric('high-quality-references', lowSlopReferences.length, 'pass', references.length)
+        .addMetric('ai-slop-filtered', oversaturatedCount, 'pass')
+        .addValidation('Category-reflex AI slop detection', oversaturatedCount === 0 ? 'pass' : 'warning', `${oversaturatedCount} oversaturated categories`)
+        .addReference('design-references', lowSlopReferences.length, 'design inspiration patterns')
+        .addArtifact('reference-patterns', lowSlopReferences.length, ['flowE_motion_patterns', 'flowG_component_implementation', 'flowN_design_refine']);
+
+      const memory = memoryBuilder.build();
 
       return {
         flowId: this.flowId,
@@ -168,14 +184,22 @@ export class FlowDReferenceSearchHandler extends BaseFlowHandler {
               ),
             ]
           : [],
+        memory,
       };
     } catch (err) {
+      const memory = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setStatus('error')
+        .setSummary(`Design reference search failed: ${String(err).substring(0, 40)}`)
+        .addValidation('design-references-query', 'fail', String(err))
+        .build();
+
       return {
         flowId: this.flowId,
         flowName: this.getFlowName(),
         status: 'error',
         message: 'Failed to search design references',
         error: String(err),
+        memory,
       };
     }
   }

@@ -1,4 +1,6 @@
 import { FlowId } from './types';
+import { ProjectContext } from './project-context';
+import { FlowMemoryEntry } from './flow-memory-schema';
 export interface FlowExecutionContext {
     utterance: string;
     userId?: string;
@@ -6,6 +8,7 @@ export interface FlowExecutionContext {
     currentFile?: string;
     selectedText?: string;
     metadata?: Record<string, any>;
+    projectContext?: ProjectContext;
 }
 export interface FlowExecutionResult {
     flowId: FlowId;
@@ -17,6 +20,7 @@ export interface FlowExecutionResult {
     nextSteps?: string[];
     artifacts?: FlowArtifact[];
     error?: string;
+    memory?: FlowMemoryEntry;
 }
 export interface ChecklistItem {
     id: string;

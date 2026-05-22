@@ -2,12 +2,14 @@ import { createDetector, IntentDetector } from './intent-detector';
 import { FlowHandler, FlowExecutionContext, FlowExecutionResult, BaseFlowHandler } from './flow-handler';
 import { FlowId, MatchResult, DisambiguationResult } from './types';
 import { getFlow } from './flows';
-import { getFlowHistory } from './flow-history';
+import { getFlowHistory, FlowHistoryEntry } from './flow-history';
+import { FlowMemoryEntry } from './flow-memory-schema';
 import { SidecoachOrchestrator as IntelligentOrchestrator } from './orchestrator';
 import { DeterministicValidator } from './deterministic-validator';
 import { RegressionDetector } from './regression-detector';
 import { DesignDebtTracker } from './design-debt-tracker';
 import { ContextLoader } from './project-context';
+import { persistSessionMemory } from './session-memory-writer';
 import { FlowABrandVerifyHandler } from './flow-handler-brand-verify';
 import { FlowBComponentResearchHandler } from './flow-handler-component-research';
 import { FlowCFontResearchHandler } from './flow-handler-font-research';
@@ -118,6 +120,36 @@ export class FlowExecutionEngine {
     }
   }
 
+  private recordFlowWithMemory(result: FlowExecutionResult): void {
+    const flowHistory = getFlowHistory();
+    const entry: any = {
+      flowId: result.flowId,
+      flowName: result.flowName,
+      status: result.status as 'success' | 'error' | 'skipped',
+      message: result.message,
+      guidance: result.guidance,
+      checklist: result.checklist,
+      artifacts: result.artifacts,
+      error: result.error,
+    };
+
+    // Merge memory data if present
+    if (result.memory) {
+      const memory = result.memory;
+      entry.appliedRules = memory.appliedRules;
+      entry.userDecisions = memory.userDecisions;
+      entry.metrics = memory.metrics;
+      entry.validationResults = memory.validationResults;
+      entry.referencesUsed = memory.referencesUsed;
+      entry.gates = memory.gates;
+      entry.artifactProduced = memory.artifactProduced;
+      entry.aiSlopDetection = memory.aiSlopDetection;
+      entry.summary = memory.summary;
+    }
+
+    flowHistory.recordFlow(entry as FlowHistoryEntry);
+  }
+
   async process(utterance: string, context: Partial<FlowExecutionContext> = {}): Promise<SidecoachResult> {
     // Step 1: Detect intent
     const detection = this.intentDetector.detect(utterance);
@@ -188,16 +220,7 @@ export class FlowExecutionEngine {
     const flowAHandler = new FlowABrandVerifyHandler();
     const flowAResult = await flowAHandler.execute(executionContext);
     flowResults.push(flowAResult);
-    flowHistory.recordFlow({
-      flowId: 'flowA_brand_verify',
-      flowName: flowAResult.flowName,
-      status: flowAResult.status as 'success' | 'error' | 'skipped',
-      message: flowAResult.message,
-      guidance: flowAResult.guidance,
-      checklist: flowAResult.checklist,
-      artifacts: flowAResult.artifacts,
-      error: flowAResult.error,
-    });
+    this.recordFlowWithMemory(flowAResult);
 
     // If Flow A failed, block the chain (context is mandatory)
     if (flowAResult.status !== 'success') {
@@ -315,16 +338,7 @@ export class FlowExecutionEngine {
           result.status = 'error';
           result.message = `${result.message}\n\n⚠️ REGRESSION DETECTED: ${regression.message}`;
           // Break the chain on blocking regression
-          flowHistory.recordFlow({
-            flowId: currentFlowId,
-            flowName: result.flowName,
-            status: 'error',
-            message: result.message,
-            guidance: result.guidance,
-            checklist: result.checklist,
-            artifacts: result.artifacts,
-            error: result.error,
-          });
+          this.recordFlowWithMemory(result);
           flowResults.push(result);
           currentFlowId = undefined; // Stop chaining
           break;
@@ -335,18 +349,8 @@ export class FlowExecutionEngine {
         }
       }
 
-      // Record to FlowHistory
-      flowHistory.recordFlow({
-        flowId: currentFlowId,
-        flowName: result.flowName,
-        status: result.status as 'success' | 'error' | 'skipped',
-        message: result.message,
-        guidance: result.guidance,
-        checklist: result.checklist,
-        artifacts: result.artifacts,
-        error: result.error,
-      });
-
+      // Record to FlowHistory (with memory data if available)
+      this.recordFlowWithMemory(result);
       flowResults.push(result);
 
       // Determine next flow: if current flow succeeded, ask orchestrator for recommendation
@@ -368,6 +372,9 @@ export class FlowExecutionEngine {
     // Prepend open design debt summary if any (DesignDebtTracker session start)
     const debtSummary = debtTracker.getSummary();
     const finalMessage = debtSummary ? `${debtSummary}\n\n---\n\n${combinedMessage}` : combinedMessage;
+
+    // Persist session memory for all executed flows
+    persistSessionMemory(executionContext.projectPath);
 
     return {
       success: flowResults.some((r) => r.status === 'success'),

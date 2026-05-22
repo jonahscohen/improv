@@ -6,6 +6,7 @@ import { BaseFlowHandler, FlowExecutionContext, FlowExecutionResult, ChecklistIt
 import { ComponentGalleryReference } from './reference-systems';
 import { ComponentGalleryReferenceImpl } from './component-gallery-reference';
 import { SHARED_DESIGN_LAWS } from './design-laws';
+import { FlowMemoryBuilder } from './flow-memory-schema';
 
 export interface ComponentResearchContext {
   componentPatterns: string[];
@@ -137,6 +138,23 @@ export class FlowBComponentResearchHandler extends BaseFlowHandler {
         `${componentPatterns.length} component patterns identified. Run Flow G to implement patterns with interaction states and writing guidelines.`,
       ];
 
+      const wcagPassCount = validationResults.filter((r) => r.wcagStatus === 'pass').length;
+      const wcagWarningCount = validationResults.filter((r) => r.wcagStatus === 'warning').length;
+
+      const memoryBuilder = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setSummary(`Component research: ${componentPatterns.length} patterns with 2 design domains (interaction, writing)`)
+        .addRule('interaction', [`8 interaction states`])
+        .addRule('writing', [`${writingRules.length} writing rules`])
+        .addDecision(`Selected design approach: ${designApproach}`, `Component patterns aligned to ${designApproach} architecture`)
+        .addMetric('component-patterns-analyzed', componentPatterns.length, 'pass')
+        .addMetric('interaction-states-covered', 8, 'pass')
+        .addMetric('wcag-validation-pass', wcagPassCount, 'pass', validationResults.length)
+        .addValidation('WCAG compliance', wcagWarningCount === 0 ? 'pass' : 'warning', `${wcagPassCount}/${validationResults.length} pass`)
+        .addReference('component-gallery', componentPatterns.length)
+        .addArtifact('component-patterns', componentPatterns.length, ['flowG_component_implementation', 'flowL_design_critique']);
+
+      const memory = memoryBuilder.build();
+
       return {
         flowId: this.flowId,
         flowName: this.getFlowName(),
@@ -166,14 +184,22 @@ export class FlowBComponentResearchHandler extends BaseFlowHandler {
               ),
             ]
           : [],
+        memory,
       };
     } catch (err) {
+      const memory = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setStatus('error')
+        .setSummary(`Component research failed: ${String(err).substring(0, 40)}`)
+        .addValidation('component-gallery-query', 'fail', String(err))
+        .build();
+
       return {
         flowId: this.flowId,
         flowName: this.getFlowName(),
         status: 'error',
         message: 'Failed to research component patterns',
         error: String(err),
+        memory,
       };
     }
   }

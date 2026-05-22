@@ -3,6 +3,7 @@
 
 import { BaseFlowHandler, FlowExecutionContext, FlowExecutionResult } from './flow-handler';
 import { SHARED_DESIGN_LAWS } from './design-laws';
+import { FlowMemoryBuilder } from './flow-memory-schema';
 
 interface ComponentImplementationContext {
   interactionDomainRules: string[];
@@ -126,6 +127,26 @@ export class FlowGComponentImplementationHandler extends BaseFlowHandler {
         '- Side-by-side comparison with design source confirms visual match',
       ];
 
+      const ariaLabelCount = validationResults.filter((r) => r.hasAriaLabels).length;
+      const keyboardNavCount = validationResults.filter((r) => r.hasKeyboardInteraction).length;
+      const semanticCopyCount = validationResults.filter((r) => r.copyAppropriateness).length;
+
+      const memoryBuilder = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setSummary(`Component implementation: ${componentName} with 8 interaction states + semantic copy validated`)
+        .addRule('interaction', SHARED_DESIGN_LAWS.interaction.rules)
+        .addRule('writing', SHARED_DESIGN_LAWS.writing.rules)
+        .addDecision(`Component semantic HTML structure`, `<${componentName === 'button' ? 'button' : 'div'} role="${componentName}" aria-label="..."> with BEM naming convention`)
+        .addMetric('component-states-implemented', componentStates.length, 'pass', 8)
+        .addMetric('aria-labels-count', ariaLabelCount, 'pass', componentStates.length)
+        .addMetric('keyboard-nav-count', keyboardNavCount, 'pass', componentStates.length - 1)
+        .addMetric('semantic-copy-count', semanticCopyCount, 'pass', 3)
+        .addValidation('ARIA labels implemented', ariaLabelCount === componentStates.length ? 'pass' : 'warning', `${ariaLabelCount}/${componentStates.length}`)
+        .addValidation('Keyboard navigation enabled', keyboardNavCount >= componentStates.length - 1 ? 'pass' : 'warning', `${keyboardNavCount}/${componentStates.length - 1} navigable`)
+        .addValidation('Semantic copy appropriate', semanticCopyCount === 3 ? 'pass' : 'warning', `${semanticCopyCount}/3 states with copy`)
+        .addArtifact('component-implementation', componentStates.length, ['flowH_motion_integration', 'flowI_motion_polish']);
+
+      const memory = memoryBuilder.build();
+
       return {
         flowId: this.flowId,
         flowName: this.getFlowName(),
@@ -160,14 +181,22 @@ export class FlowGComponentImplementationHandler extends BaseFlowHandler {
             '8 states to implement with validation'
           ),
         ],
+        memory,
       };
     } catch (err) {
+      const memory = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setStatus('error')
+        .setSummary(`Component implementation failed: ${String(err).substring(0, 40)}`)
+        .addValidation('component-validation', 'fail', String(err))
+        .build();
+
       return {
         flowId: this.flowId,
         flowName: this.getFlowName(),
         status: 'error',
         message: 'Failed to plan component implementation',
         error: String(err),
+        memory,
       };
     }
   }

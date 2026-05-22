@@ -1,5 +1,6 @@
 import { FlowId } from './types';
 import { ProjectContext } from './project-context';
+import { FlowMemoryEntry } from './flow-memory-schema';
 
 export interface FlowExecutionContext {
   utterance: string;
@@ -21,6 +22,7 @@ export interface FlowExecutionResult {
   nextSteps?: string[];
   artifacts?: FlowArtifact[];
   error?: string;
+  memory?: FlowMemoryEntry;
 }
 
 export interface ChecklistItem {

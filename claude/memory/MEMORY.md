@@ -13,6 +13,7 @@
 - [Ghostty placeholder + discord auto-wire](session_2026-04-14_portability-fixes.md) - Fixed ghostty path-pong (copy + placeholder), auto-wire discord source line into .zshrc with path-based idempotency
 
 ## Feedback
+- [Behavioral failures - choice offering and skipping ahead](~/.claude/memory/session_2026-05-22_behavioral-failures.md) - Three critical pattern failures: text-form choices instead of AskUserQuestion, skipping ahead after told to STOP, acknowledgment without behavioral change. Active prevention mechanisms required. Test until passing.
 - [Hook verification discipline](feedback_hook_verification_discipline.md) - Pipe-test raw hook commands before wiring into settings.json; use python3 -c json.dumps for fixtures, not echo
 - [Planner pipeline drift](feedback_planner_pipeline_drift.md) - Cap planner-reviewer-remediator iterations at 2; switch language if bash hits its safe envelope
 - [Discipline under pressure](feedback_discipline_under_pressure.md) - Never drop per-task memory writes or visual verification to appear fast; user frustration means more care, not less

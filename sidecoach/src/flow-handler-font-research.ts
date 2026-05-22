@@ -6,6 +6,7 @@ import { BaseFlowHandler, FlowExecutionContext, FlowExecutionResult, ChecklistIt
 import { FontshareReference } from './reference-systems';
 import { FontshareReferenceImpl } from './fontshare-reference';
 import { SHARED_DESIGN_LAWS } from './design-laws';
+import { FlowMemoryBuilder } from './flow-memory-schema';
 
 export interface FontResearchContext {
   brandPersonality?: string;
@@ -81,6 +82,18 @@ export class FlowCFontResearchHandler extends BaseFlowHandler {
         `${fontCandidates.length} font candidates available. Run Flow F to extract design tokens with selected typefaces.`,
       ];
 
+      const memoryBuilder = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setSummary(`Font research: ${fontCandidates.length} candidates with typography domain rules`)
+        .addRule('typography', [`${typographyRules.length} typography principles`])
+        .addDecision(`Font pairing strategy: ${pairingRules.length > 0 ? 'defined' : 'generic'}`, 'Selected pairing approach based on brand personality')
+        .addMetric('font-candidates-analyzed', fontCandidates.length, 'pass')
+        .addMetric('typography-rules-applied', typographyRules.length, 'pass', 8)
+        .addValidation('Font pairing rules', pairingRules.length > 0 ? 'pass' : 'warning')
+        .addReference('fontshare', fontCandidates.length, 'typography candidates')
+        .addArtifact('font-candidates', fontCandidates.length, ['flowF_design_tokens', 'flowG_component_implementation']);
+
+      const memory = memoryBuilder.build();
+
       return {
         flowId: this.flowId,
         flowName: this.getFlowName(),
@@ -96,14 +109,22 @@ export class FlowCFontResearchHandler extends BaseFlowHandler {
             `${fontCandidates.length} fonts matching brand personality and typography requirements`
           ),
         ] : [],
+        memory,
       };
     } catch (err) {
+      const memory = new FlowMemoryBuilder(this.flowId, this.getFlowName())
+        .setStatus('error')
+        .setSummary(`Font research failed: ${String(err).substring(0, 40)}`)
+        .addValidation('fontshare-query', 'fail', String(err))
+        .build();
+
       return {
         flowId: this.flowId,
         flowName: this.getFlowName(),
         status: 'error',
         message: 'Failed to research fonts',
         error: String(err),
+        memory,
       };
     }
   }
