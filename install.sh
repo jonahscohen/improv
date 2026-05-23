@@ -2220,6 +2220,48 @@ if picked improv; then
 fi
 
 # ============================================================
+# 16. Sidecoach (design pipeline orchestration)
+# ============================================================
+
+if picked sidecoach; then
+  log "Installing Sidecoach..."
+
+  (cd "$REPO_DIR/sidecoach" && npm install --silent && npm run build) \
+    || warn "Sidecoach build failed - run 'cd sidecoach && npm run build' manually"
+
+  mkdir -p "$HOME/.claude/skills/sidecoach"
+  ln -sf "$REPO_DIR/claude/skills/sidecoach/SKILL.md" \
+         "$HOME/.claude/skills/sidecoach/SKILL.md"
+
+  for hook in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh; do
+    ln -sf "$REPO_DIR/claude/hooks/$hook" "$HOME/.claude/hooks/$hook"
+    chmod +x "$HOME/.claude/hooks/$hook"
+  done
+
+  node -e "
+    const fs = require('fs');
+    const path = process.env.HOME + '/.claude/settings.json';
+    const s = JSON.parse(fs.readFileSync(path, 'utf8'));
+    s.hooks = s.hooks || {};
+    const hooksDir = process.env.HOME + '/.claude/hooks';
+    const addHook = (event, cmd) => {
+      s.hooks[event] = s.hooks[event] || [];
+      const already = s.hooks[event].some(h =>
+        (h.hooks||[]).some(x => x.command && x.command.includes('sidecoach'))
+      );
+      if (!already) s.hooks[event].push({ hooks: [{ type: 'command', command: cmd }] });
+    };
+    addHook('SessionStart', hooksDir + '/sidecoach-sessionstart.sh');
+    addHook('UserPromptSubmit', hooksDir + '/sidecoach-postuserp.sh');
+    addHook('Stop', hooksDir + '/sidecoach-postresponse.sh');
+    fs.writeFileSync(path, JSON.stringify(s, null, 2));
+  " && log "Sidecoach hooks wired in settings.json" \
+    || warn "Could not wire Sidecoach hooks - check settings.json manually"
+
+  ok "Sidecoach installed"
+fi
+
+# ============================================================
 # Summary
 # ============================================================
 # Suppress when invoked recursively from the returning-flow action loop -
