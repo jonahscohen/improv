@@ -6,6 +6,7 @@ import { SHARED_DESIGN_LAWS } from './design-laws';
 import { FlowMemoryBuilder } from './flow-memory-schema';
 import { ExtendedDomainValidator, DomainCheckContext } from './extended-domain-validator';
 import { EnhancedFlowExecutionContext } from './flow-execution-context-enhanced';
+import { findTokenLine } from './design-md-parser';
 
 interface MotionIntegrationContext {
   motionDomainRules: string[];
@@ -184,6 +185,20 @@ export class FlowHMotionIntegrationHandler extends BaseFlowHandler {
         { label: 'Animations interruptible (user can cancel/skip)', required: true, description: 'Allow user control' },
       ]);
 
+      // Citation helper for DESIGN.md token references
+      const designContent = (context.metadata?.designContent as string) || '';
+      const designTokens = (context.metadata?.designTokens as any) || {};
+      const cite = (dottedPath: string): string => {
+        const ln = designContent ? findTokenLine(designContent, dottedPath) : -1;
+        return ln > 0 ? ` (Source: DESIGN.md L${ln})` : '';
+      };
+
+      const easeOut = designTokens.motion?.ease?.out || '(undefined in DESIGN.md)';
+      const easeInOut = designTokens.motion?.ease?.in_out || '(undefined in DESIGN.md)';
+      const easeSpring = designTokens.motion?.ease?.spring_quick || '(undefined in DESIGN.md)';
+      const durationFast = designTokens.motion?.duration?.fast || '(undefined in DESIGN.md)';
+      const durationMedium = designTokens.motion?.duration?.medium || '(undefined in DESIGN.md)';
+
       // Build guidance
       const guidance = [
         `Brand Personality: ${brandPersonality || 'Not defined'}`,
@@ -191,8 +206,13 @@ export class FlowHMotionIntegrationHandler extends BaseFlowHandler {
         `Motion Intensity: ${intensity} (${register === 'brand' ? 'brand encourages ambitious motion' : 'product prefers restrained'})`,
         '',
         'Domain Validation Results:',
-        `- Motion domain: ${motionPassed}/${motionDomainRules.length} rules passing (${motionPassRate})`,
-        `- Interaction domain: ${interactionPassed}/${interactionDomainRules.length} rules passing (${interactionPassRate})`,
+        '',
+        'Token-Backed Motion Defaults:',
+        `- Default exit ease: ${easeOut}${cite('motion.ease.out')}`,
+        `- State-transition ease: ${easeInOut}${cite('motion.ease.in_out')}`,
+        `- Snappy press ease: ${easeSpring}${cite('motion.ease.spring_quick')}`,
+        `- Feedback duration: ${durationFast}${cite('motion.duration.fast')}`,
+        `- State-change duration: ${durationMedium}${cite('motion.duration.medium')}`,
         '',
         'Motion Domain Rules (Duration, Easing, No Layout Animation):',
         ...motionDomain.rules.map((r) => `- ${r}`),

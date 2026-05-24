@@ -189,3 +189,92 @@ relates_to: [handoff_2026-05-24_sprint1_closed_sprint2_ready.md]
 - Bash C: Memory re-touched (verification flag cleared, ready to commit)
 - Bash D: git add + git commit ready
 - T10 commit complete: typing tightened, tests passing, zero TypeScript errors
+
+## Task 11: process()-path integration test (T5 carryover)
+
+**Status: BLOCKED**
+
+### Issue: Intent Detector Ambiguity
+- Created test file: `sidecoach/src/__tests__/sprint2-process-path.test.ts` 
+- Test strategy: Call `engine.process()` with utterance to exercise the public path (unlike sprint1 which tested the private `enrichContextForHandler` directly)
+- Expected flow: Design tokens handler should be selected and citations should reach the result
+
+### Blocking Condition
+- Test utterance: "validate tokens against DESIGN.md" and "extract design tokens"
+- Intent detector returns ambiguous result with 3 equal-confidence matches (0.85 each):
+  - flowF_design_tokens
+  - flowN_rapid_iteration_refined  
+  - flow11_extract_tokens
+- Orchestrator returns error: "Your request could match multiple flows. Please clarify."
+- Result: flowResults is empty, no handler executes, no citations surface
+
+### Root Cause
+- Intent detector has insufficient discrimination between design token flows
+- The underlying bug is in intent-detector.ts, not in orchestrator or handlers
+- Per task instructions: "If it does need a workaround, the underlying bug is in the intent detector and should be filed separately"
+- Task also states: "If the test FAILS for any reason other than a known regression, STOP and report BLOCKED"
+
+### What was attempted
+1. Original utterance: "validate tokens against DESIGN.md" → ambiguous
+2. Changed to: "extract design tokens" → still ambiguous  
+3. Tried slash command path: "/sidecoach tokens" → no such command exists
+4. Did NOT patch test to pass (per instructions)
+
+## Task 12: Roll DESIGN.md citation pattern to 3 handlers
+
+**Status: IN_PROGRESS**
+
+### Step 1: Test file written
+- File: `sidecoach/src/__tests__/sprint2-rolling-citations.test.ts`
+- Asserts >=3 lines matching `Source: DESIGN.md L\d+` in guidance of:
+  - FlowSTypographyExcellenceHandler
+  - FlowGComponentImplementationHandler
+  - FlowHMotionIntegrationHandler
+- Uses real `reference/DESIGN.md` parsed via parseDesignMd; passes `designContent` and `designTokens` through context.metadata.
+
+### Step 2: Test ran, verified failure
+- Output: `FAIL typography handler: at least 3 citations (got 0)` (correct - none of the 3 handlers have been converted yet)
+
+### Step 4 verified: test PASS
+- Command: `npx ts-node src/__tests__/sprint2-rolling-citations.test.ts`
+- Output: `rolling citations PASS: typography=4, component=4, motion=5`
+- All three handlers exceed the 3-citation minimum.
+- `npx tsc --noEmit` exits 0 (zero TypeScript errors).
+
+- T12: adopted DESIGN.md citation pattern in flow-handler-typography-excellence, flow-handler-component-implementation, flow-handler-motion-integration. Each handler now has 3+ guidance lines with (Source: DESIGN.md L<n>) suffixes. Rolling Sprint 1 task progress: 4 of ~25+ handlers converted.
+- T12 commit retry: re-touching memory after rm flag-clear.
+
+### Step 3c complete: motion-integration handler converted
+- Added `import { findTokenLine } from './design-md-parser';`
+- Added cite() helper before guidance literal in execute()
+- Added 5 token-backed guidance lines citing real dotted paths:
+  - `motion.ease.out`
+  - `motion.ease.in_out` (NOTE: underscore, not inOut - matches DESIGN.md YAML key)
+  - `motion.ease.spring_quick`
+  - `motion.duration.fast`
+  - `motion.duration.medium`
+
+### Step 3b complete: component-implementation handler converted
+- Added `import { findTokenLine } from './design-md-parser';`
+- Added cite() helper before guidance literal in execute()
+- Added 4 token-backed guidance lines citing real dotted paths:
+  - `colors.brand.ink` (primary CTA background)
+  - `colors.brand.cream` (primary CTA text)
+  - `rounded.md` (button/input radius)
+  - `shadow.md` (floating card shadow)
+
+### Step 3a complete: typography handler converted
+- Added `import { findTokenLine } from './design-md-parser';`
+- Added cite() helper before the `const guidance = [` literal in execute()
+- Converted 4 guidance lines to cite real dotted paths:
+  - `typography.display.family`
+  - `typography.body.family`
+  - `typography.scale.base`
+  - `typography.scale.line_height`
+
+### Pre-existing modifications observed in target handlers
+- All three handlers have prior in-tree edits (dist + src). Specifically:
+  - `flow-handler-component-implementation.ts`: removed redundant `Domain Validation Results` summary lines, restructured ARIA copy guidance, added icon-source artifact reference + import. Looks intentional, related to prior taste/icon-source work. Preserving.
+  - `flow-handler-motion-integration.ts`: removed two redundant domain-validation summary lines from guidance. Looks intentional. Preserving.
+  - `flow-handler-typography-excellence.ts`: removed one redundant typography-domain summary line from guidance. Looks intentional. Preserving.
+- Will edit ON TOP of dirty tree, commit will include both citation work AND these pre-existing edits.

@@ -6,6 +6,8 @@ import { SHARED_DESIGN_LAWS } from './design-laws';
 import { FlowMemoryBuilder } from './flow-memory-schema';
 import { ExtendedDomainValidator, DomainCheckContext } from './extended-domain-validator';
 import { EnhancedFlowExecutionContext } from './flow-execution-context-enhanced';
+import { createIconSourceReference, buildIconSourceArtifactContent } from './icon-source-reference';
+import { findTokenLine } from './design-md-parser';
 
 interface ComponentImplementationContext {
   interactionDomainRules: string[];
@@ -118,15 +120,31 @@ export class FlowGComponentImplementationHandler extends BaseFlowHandler {
         { label: 'Document component API and props', required: false, description: 'Usage examples included' },
       ]);
 
+      // Citation helper for DESIGN.md token references
+      const designContent = (context.metadata?.designContent as string) || '';
+      const designTokens = (context.metadata?.designTokens as any) || {};
+      const cite = (dottedPath: string): string => {
+        const ln = designContent ? findTokenLine(designContent, dottedPath) : -1;
+        return ln > 0 ? ` (Source: DESIGN.md L${ln})` : '';
+      };
+
+      const ctaBackground = designTokens.colors?.brand?.ink || '(undefined in DESIGN.md)';
+      const ctaText = designTokens.colors?.brand?.cream || '(undefined in DESIGN.md)';
+      const buttonRadius = designTokens.rounded?.md || '(undefined in DESIGN.md)';
+      const cardShadow = designTokens.shadow?.md || '(undefined in DESIGN.md)';
+
       // Build guidance
       const guidance = [
         `Component: ${componentName}`,
         `Register: ${register}`,
         '',
         'Domain Validation Results:',
-        `- Interaction domain: ${interactionPassed}/${interactionDomainRules.length} rules passing (${interactionPassRate})`,
-        `- Writing domain: ${writingPassed}/${writingDomainRules.length} rules passing (${writingPassRate})`,
-        `- Responsive domain: ${responsivePassed}/${responsiveDomainRules.length} rules passing (${responsivePassRate})`,
+        '',
+        'Token-Backed Component Defaults:',
+        `- Primary CTA background: ${ctaBackground}${cite('colors.brand.ink')}`,
+        `- Primary CTA text: ${ctaText}${cite('colors.brand.cream')}`,
+        `- Button/input radius: ${buttonRadius}${cite('rounded.md')}`,
+        `- Floating card shadow: ${cardShadow}${cite('shadow.md')}`,
         '',
         'Interaction Domain (8 States):',
         ...interactionDomain.rules.map((r) => `- ${r}`),
@@ -140,26 +158,17 @@ export class FlowGComponentImplementationHandler extends BaseFlowHandler {
           return `- ${state}: ARIA=${validation?.hasAriaLabels ? 'Yes' : 'No'}, Keyboard=${validation?.hasKeyboardInteraction ? 'Yes' : 'No'}, Copy=${validation?.copyAppropriateness ? 'Yes' : 'No'}`;
         }),
         '',
-        'Semantic HTML Structure:',
-        `<${componentName === 'button' ? 'button' : 'div'} role="${componentName}" aria-label="Component label">`,
-        '  <!-- All 8 states: default, hover, focus, active, disabled, loading, error, success -->',
-        '</button>',
-        '',
-        'ARIA & Accessibility Requirements:',
-        '- Default: aria-label for icon buttons',
-        '- Hover: no change needed',
-        '- Focus: :focus-visible for keyboard users (2-3px offset ring)',
-        '- Active: visual feedback (scale, color, shadow)',
-        '- Disabled: aria-disabled="true", prevent clicks',
-        '- Loading: aria-busy="true", spinner/skeleton',
-        '- Error: aria-invalid="true", error message',
+        'ARIA & Accessibility Requirements (per state):',
+        '- Default: aria-label required for icon-only triggers',
+        '- Hover: no semantic change required',
+        '- Focus: :focus-visible ring for keyboard users (2-3px offset)',
+        '- Active: visual feedback (scale, color, or shadow shift)',
+        '- Disabled: aria-disabled="true" + suppressed pointer events',
+        '- Loading: aria-busy="true" + spinner or skeleton',
+        '- Error: aria-invalid="true" + descriptive error message',
         '- Success: aria-live="polite" confirmation',
         '',
-        'Copy Examples (Writing Domain):',
-        '- Button: "Save changes" (verb+object, not "OK")',
-        '- Destructive: "Delete 5 items" (name the destruction)',
-        '- Error: "Email already in use. Try another." (what, why, how to fix)',
-        '- Success: "Changes saved" (confirm action)',
+        'Copy guidance: pull verbs and concrete nouns from this product\'s DESIGN.md / PRODUCT.md - do not import generic examples. Cite the source line you used.',
         '',
         'Testing Checklist:',
         `- All 8 states rendered correctly (${componentStates.join(', ')})`,
@@ -205,6 +214,12 @@ export class FlowGComponentImplementationHandler extends BaseFlowHandler {
         guidance,
         checklist,
         artifacts: [
+          this.createArtifact(
+            'reference',
+            'icon-source',
+            buildIconSourceArtifactContent(createIconSourceReference()),
+            '8 approved icon libraries with selection protocol and provenance markers (taste/fabricated-svg gate enforcement)'
+          ),
           this.createArtifact(
             'reference',
             'Interaction Domain Rules',
