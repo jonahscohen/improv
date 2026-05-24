@@ -76,3 +76,14 @@ Human collaborator: Jonah.
 - Test deviation from authored contract: the four PRESET composite flows in flow-composition.ts all ship with failOnFirstError=false (composite_qa_workflow line 532). The authored halt scenario assumed an early-return on throw, which only fires when failOnFirstError=true AND step.skipOnError=false. The test now overrides BOTH on the imported PRESET_COMPOSITE_FLOWS reference for the halt scenario (qaWorkflow.failOnFirstError=true, qaWorkflow.steps[1].skipOnError=false), then restores after the run to avoid poisoning sibling tests. The contract being verified is the runCompositeLoop's checkpoint behavior under a HALT path - the override exercises exactly that path. Documented in test comments + here.
 - All 6 assertions PASS. Regression: sprint6-checkpoint-store-isolated PASS, sprint6-checkpoint-engine-gc PASS (3/3), sprint4-build-report-composite PASS, sprint5-disambiguation-silent-tiebreak PASS, sprint5-force-flowid-bypass PASS, tsc --noEmit clean (exit 0).
 - Files touched: sidecoach/src/sidecoach-orchestrator.ts (write block + cleanup block + relocated lazy boot), sidecoach/src/__tests__/sprint6-checkpoint-write-on-step.test.ts (new).
+
+## T5: resume early-branch + runCompositeFromCheckpoint wrapper (DONE)
+
+- Added private `runCompositeFromCheckpoint(compositeFlow, checkpoint)` helper that seeds runCompositeLoop with checkpoint.executionContext + [...checkpoint.flowResults] + checkpoint.cursor + checkpoint.utterance.
+- Added resume early-branch in engine.process() immediately AFTER the Sprint 5 forceFlowId block. Reads context.metadata.resumeFromCheckpoint, validates store + checkpoint + compositeFlowId, calls runCompositeFromCheckpoint, deletes the pre-resume checkpoint on completion.
+- Three hard-fail return shapes: store-not-initialized (defensive), readCheckpoint throws (missing/malformed/schemaVersion mismatch), unknown compositeFlowId in checkpoint.
+- One soft-fail: post-resume cleanup of the original checkpoint logs to stderr but doesn't fail the result.
+- Placement note: instructions said "immediately AFTER the forceFlowId block". The forceFlowId block is not a true early-return - it sets `detection` and falls through to intent-detection handling. Inserted the resume branch right after the `if (forceFlowId) {...} else {...}` finishes setting `detection`, before the "Handle no matches" check. resumeFromCheckpoint IS a true early-return - if set, it never reaches detection-handling logic below. forceFlowId and resumeFromCheckpoint are mutually-exclusive metadata signals in practice.
+- tsc --noEmit: clean (exit 0).
+- Regression: sprint6-checkpoint-store-isolated PASS, sprint6-checkpoint-engine-gc PASS, sprint6-checkpoint-write-on-step PASS, sprint5-disambiguation-silent-tiebreak PASS, sprint5-force-flowid-bypass PASS, sprint4-build-report-composite PASS.
+- T6 will add the end-to-end test that exercises the round-trip.

@@ -442,6 +442,26 @@ export class FlowExecutionEngine {
     };
   }
 
+  /**
+   * Resume a composite run from a saved checkpoint. Seeds runCompositeLoop with
+   * the checkpoint's executionContext + flowResults + cursor + utterance. The
+   * loop mints a fresh runStartIso, so the resumed run writes to a NEW
+   * checkpoint file. The caller (process() resume branch) deletes the original
+   * pre-resume checkpoint after this method returns. (Sprint 6 T5.)
+   */
+  private async runCompositeFromCheckpoint(
+    compositeFlow: CompositeFlowDefinition,
+    checkpoint: SidecoachCheckpoint,
+  ): Promise<SidecoachResult> {
+    return this.runCompositeLoop(
+      compositeFlow,
+      checkpoint.executionContext,
+      [...checkpoint.flowResults],
+      checkpoint.cursor,
+      checkpoint.utterance,
+    );
+  }
+
   // Taste validator gate: run validateTaste against the produced HTML for craft/clone-match/layout/polish flows.
   // Mutates result -> status: 'error' with violations summary when target file fails taste checks.
   // Soft-skips when no target file is in context (metadata.targetFile or currentFile ending in .html/.htm).
@@ -876,6 +896,49 @@ export class FlowExecutionEngine {
       } as MatchResult;
     } else {
       detection = this.intentDetector.detect(utterance);
+    }
+
+    // Phase 6 part 2: metadata.resumeFromCheckpoint bypass.
+    // Routes process() directly to the saved composite from the checkpoint's cursor,
+    // skipping intent detection and the normal composite-routing logic.
+    const resumeId = (context as any)?.metadata?.resumeFromCheckpoint as string | undefined;
+    if (resumeId) {
+      if (!this.checkpointStore) {
+        return {
+          success: false,
+          message: 'Cannot resume: checkpoint store not initialized',
+          detectedFlow: null,
+          flowResults: [],
+        };
+      }
+      let checkpoint: SidecoachCheckpoint;
+      try {
+        checkpoint = this.checkpointStore.readCheckpoint(resumeId);
+      } catch (err) {
+        return {
+          success: false,
+          message: `Cannot resume: ${(err as Error).message}`,
+          detectedFlow: null,
+          flowResults: [],
+        };
+      }
+      const compositeFlow = PRESET_COMPOSITE_FLOWS.find((cf) => cf.id === checkpoint.compositeFlowId);
+      if (!compositeFlow) {
+        return {
+          success: false,
+          message: `Cannot resume: unknown compositeFlowId in checkpoint: ${checkpoint.compositeFlowId}`,
+          detectedFlow: null,
+          flowResults: [],
+        };
+      }
+      const result = await this.runCompositeFromCheckpoint(compositeFlow, checkpoint);
+      // After a successful resumed run completes, delete the original pre-resume checkpoint.
+      try {
+        this.checkpointStore.deleteCheckpoint(resumeId);
+      } catch (err) {
+        process.stderr.write(`[sidecoach] resume cleanup of original checkpoint failed (will be GC'd later): ${(err as Error).message}\n`);
+      }
+      return result;
     }
 
     // Handle no matches
