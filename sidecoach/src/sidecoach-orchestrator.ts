@@ -67,6 +67,7 @@ import { FlowHandlerCache, globalPerformanceCache } from './flow-performance-cac
 import { FlowSpecificValidator } from './flow-specific-validators';
 import { FlowMetricsTracker, globalMetricsTracker } from './flow-metrics-tracker';
 import { FlowConditionalRouter } from './flow-conditional-router';
+import { ClaudemdMandateValidator } from './clausemd-mandate-validator';
 
 export class FlowExecutionEngine {
   private intentDetector: IntentDetector;
@@ -181,6 +182,13 @@ export class FlowExecutionEngine {
 
   // Phase III: Performance & Validation Integration
   private validateFlowExecution(flowId: string, context: FlowExecutionContext, result: FlowExecutionResult): void {
+    // Run CLAUDE.md mandate validation first (hard blockers)
+    const mandateValidation = ClaudemdMandateValidator.validateOutput(result, context);
+    if (mandateValidation.blockers.length > 0 || mandateValidation.violations.length > 0) {
+      const report = ClaudemdMandateValidator.reportViolations(mandateValidation);
+      console.log(`[CLAUDE.md Validation] ${flowId}:\n${report}`);
+    }
+
     // Run flow-specific validators
     const validation = FlowSpecificValidator.validateFlow(flowId, context, result);
     if (validation.warnings.length > 0) {

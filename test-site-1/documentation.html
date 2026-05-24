@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Complete Sidecoach documentation - commands, flows, best practices, and integration guides.">
+  <meta name="theme-color" content="#1A1F1B">
+  <title>Sidecoach Documentation</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    :root {
+      --c-ink: #1A1F1B;
+      --c-red: #DC2618;
+      --c-cream: #F4EFE4;
+      --c-paper: #FAF7EE;
+      --c-text-light: #F4EFE4;
+      --c-border-accent: rgba(220, 38, 24, 0.2);
+      --s-2: 0.5rem;
+      --s-3: 0.75rem;
+      --s-4: 1rem;
+      --s-5: 1.5rem;
+      --s-6: 2rem;
+      --s-8: 3rem;
+      --s-12: 4.5rem;
+      --s-20: 6rem;
+      --ff-serif: Georgia, 'Times New Roman', serif;
+      --ff-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --fw-normal: 400;
+      --fw-semibold: 600;
+      --fw-bold: 700;
+      --fs-base: 1rem;
+      --fs-sm: 0.875rem;
+      --fs-lg: 1.25rem;
+      --fs-xl: 1.5rem;
+      --fs-2xl: 2rem;
+      --fs-3xl: 2.75rem;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: var(--ff-sans);
+      font-size: var(--fs-base);
+      line-height: 1.6;
+      color: #2a2a2a;
+      background: var(--c-paper);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--c-red);
+      color: white;
+      padding: var(--s-2) var(--s-4);
+      text-decoration: none;
+      z-index: 100;
+    }
+
+    .skip-link:focus {
+      top: 0;
+    }
+
+    .topbar {
+      background: var(--c-ink);
+      color: var(--c-cream);
+      padding: var(--s-4) 0;
+      border-bottom: 2px solid var(--c-red);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .topbar-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 var(--s-6);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: var(--s-3);
+      color: var(--c-cream);
+      text-decoration: none;
+      font-weight: var(--fw-bold);
+      font-size: var(--fs-lg);
+      transition: color 0.3s, transform 0.2s;
+      padding: var(--s-2);
+      border-radius: 4px;
+      min-height: 40px;
+    }
+
+    .brand:hover {
+      color: var(--c-red);
+    }
+
+    .brand:active {
+      transform: scale(0.96);
+    }
+
+    .brand-mark {
+      width: 24px;
+      height: 24px;
+      color: var(--c-red);
+    }
+
+    .topbar-nav {
+      display: flex;
+      gap: var(--s-6);
+    }
+
+    .topbar-nav a {
+      color: var(--c-cream);
+      text-decoration: none;
+      font-size: var(--fs-sm);
+      transition: color 0.3s, transform 0.2s;
+      padding: var(--s-2) var(--s-3);
+      border-radius: 4px;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+    }
+
+    .topbar-nav a:hover {
+      color: var(--c-red);
+    }
+
+    .topbar-nav a:active {
+      transform: scale(0.96);
+    }
+
+    .container {
+      display: flex;
+      max-width: 1400px;
+      margin: 0 auto;
+      min-height: calc(100vh - 60px);
+    }
+
+    .sidebar {
+      width: 240px;
+      background: var(--c-paper);
+      padding: var(--s-8) var(--s-6);
+      border-right: 1px solid rgba(220, 38, 24, 0.15);
+      position: sticky;
+      top: 60px;
+      height: calc(100vh - 60px);
+      overflow-y: auto;
+    }
+
+    .sidebar-section {
+      margin-bottom: var(--s-8);
+    }
+
+    .sidebar-title {
+      display: block;
+      font-weight: var(--fw-bold);
+      color: var(--c-red);
+      font-size: var(--fs-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--s-4);
+    }
+
+    .sidebar-nav {
+      list-style: none;
+    }
+
+    .sidebar-nav li {
+      margin-bottom: var(--s-3);
+    }
+
+    .sidebar-nav a {
+      color: #444;
+      text-decoration: none;
+      font-size: var(--fs-sm);
+      display: block;
+      padding: var(--s-2) var(--s-3);
+      border-left: 3px solid transparent;
+      margin-left: -var(--s-3);
+      transition: color 0.2s, border-left-color 0.2s, background 0.2s;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .sidebar-nav a:hover,
+    .sidebar-nav a.active {
+      color: var(--c-red);
+      border-left-color: var(--c-red);
+      background: rgba(220, 38, 24, 0.05);
+    }
+
+    .sidebar-nav a:active {
+      transform: scale(0.96);
+    }
+
+    .main {
+      flex: 1;
+      padding: var(--s-12) var(--s-8);
+    }
+
+    section {
+      margin-bottom: var(--s-20);
+    }
+
+    section:first-of-type {
+      background: var(--c-ink);
+      color: var(--c-cream);
+      padding: var(--s-12);
+      margin: -var(--s-12) -var(--s-8) var(--s-20) -var(--s-8);
+      border-bottom: 4px solid var(--c-red);
+    }
+
+    section:first-of-type h1 {
+      font-family: var(--ff-serif);
+      font-style: italic;
+      font-size: var(--fs-3xl);
+      font-weight: var(--fw-normal);
+      margin-bottom: var(--s-4);
+      color: var(--c-red);
+    }
+
+    section:first-of-type p {
+      font-size: var(--fs-lg);
+      opacity: 0.95;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--ff-serif);
+      font-style: italic;
+      margin-bottom: var(--s-4);
+      line-height: 1.2;
+      color: var(--c-ink);
+    }
+
+    h2 {
+      font-size: var(--fs-2xl);
+      font-weight: var(--fw-normal);
+      color: var(--c-ink);
+      border-bottom: 3px solid var(--c-red);
+      padding-bottom: var(--s-3);
+      margin-bottom: var(--s-6);
+      text-wrap: balance;
+    }
+
+    h3 {
+      font-size: var(--fs-lg);
+      font-weight: var(--fw-normal);
+      margin-top: var(--s-6);
+      margin-bottom: var(--s-3);
+      color: var(--c-ink);
+    }
+
+    h4 {
+      font-size: var(--fs-base);
+      font-weight: var(--fw-semibold);
+      color: var(--c-ink);
+      margin-bottom: var(--s-2);
+    }
+
+    p, ul, ol {
+      margin-bottom: var(--s-4);
+      line-height: 1.8;
+      text-wrap: pretty;
+    }
+
+    ul, ol {
+      margin-left: var(--s-6);
+    }
+
+    li {
+      margin-bottom: var(--s-2);
+    }
+
+    code {
+      background: var(--c-paper);
+      color: var(--c-red);
+      padding: var(--s-2) var(--s-3);
+      border-radius: 3px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+
+    pre {
+      background: var(--c-ink);
+      color: var(--c-cream);
+      padding: var(--s-5);
+      border-radius: 6px;
+      overflow-x: auto;
+      margin-bottom: var(--s-6);
+      border-left: 4px solid var(--c-red);
+    }
+
+    pre code {
+      background: none;
+      color: var(--c-cream);
+      padding: 0;
+      border-radius: 0;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--s-6);
+      margin: var(--s-6) 0 var(--s-8) 0;
+    }
+
+    .feature-card {
+      background: var(--c-cream);
+      padding: var(--s-6);
+      border-radius: 6px;
+      border-top: 3px solid var(--c-cream);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      transition: border-top-color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .feature-card:hover {
+      border-top-color: var(--c-red);
+      box-shadow: 0 8px 20px rgba(220, 38, 24, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .feature-card:active {
+      transform: scale(0.96);
+    }
+
+    .feature-card h4 {
+      margin-bottom: var(--s-3);
+      color: var(--c-red);
+    }
+
+    .feature-card p {
+      font-size: var(--fs-sm);
+      color: #333;
+      margin: 0;
+    }
+
+    table {
+      width: 100%;
+      margin: var(--s-8) 0;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    th {
+      background: var(--c-ink);
+      color: var(--c-cream);
+      padding: var(--s-4);
+      text-align: left;
+      font-weight: var(--fw-bold);
+    }
+
+    td {
+      padding: var(--s-4);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    footer {
+      margin-top: var(--s-20);
+      padding-top: var(--s-8);
+      border-top: 1px solid rgba(220, 38, 24, 0.2);
+      color: #666;
+      font-size: var(--fs-sm);
+    }
+
+    footer a {
+      color: var(--c-red);
+      text-decoration: none;
+      transition: color 0.3s, transform 0.2s;
+      display: inline-block;
+      padding: var(--s-2) 0;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+    }
+
+    footer a:hover {
+      color: var(--c-ink);
+    }
+
+    footer a:active {
+      transform: scale(0.96);
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid rgba(220, 38, 24, 0.15);
+        padding: var(--s-6);
+        position: relative;
+        top: 0;
+        height: auto;
+      }
+
+      .main {
+        padding: var(--s-6);
+      }
+
+      .topbar-inner {
+        padding: 0 var(--s-4);
+      }
+
+      .topbar-nav {
+        gap: var(--s-4);
+      }
+
+      .topbar-nav a {
+        display: none;
+      }
+
+      .topbar-nav a:first-child {
+        display: inline;
+      }
+
+      h1 {
+        font-size: var(--fs-2xl);
+      }
+
+      h2 {
+        font-size: var(--fs-xl);
+      }
+
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">
+        <svg class="brand-mark" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2" width="8" height="8" fill="currentColor"/>
+          <rect x="2" y="12" width="8" height="8" fill="currentColor" opacity="0.6"/>
+          <rect x="12" y="2" width="8" height="8" fill="currentColor" opacity="0.6"/>
+          <rect x="12" y="12" width="8" height="8" fill="currentColor" opacity="0.3"/>
+          <rect x="22" y="2" width="4" height="24" fill="currentColor" opacity="0.4"/>
+        </svg>
+        Sidecoach
+      </a>
+      <div class="topbar-nav">
+        <a href="index.html">Home</a>
+        <a href="documentation.html">Documentation</a>
+        <a href="https://github.com/anthropics/claude-code" target="_blank">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <span class="sidebar-title">Documentation</span>
+        <nav class="sidebar-nav">
+          <li><a href="#overview" class="active">Overview</a></li>
+          <li><a href="#getting-started">Getting Started</a></li>
+          <li><a href="#commands">Command Reference</a></li>
+          <li><a href="#best-practices">Best Practices</a></li>
+          <li><a href="#integration">Integration</a></li>
+        </nav>
+      </div>
+      <div class="sidebar-section">
+        <span class="sidebar-title">For Designers</span>
+        <nav class="sidebar-nav">
+          <li><a href="#design-workflow">Design Workflow</a></li>
+          <li><a href="#accessibility">Accessibility</a></li>
+        </nav>
+      </div>
+      <div class="sidebar-section">
+        <span class="sidebar-title">For Developers</span>
+        <nav class="sidebar-nav">
+          <li><a href="#implementation">Implementation</a></li>
+          <li><a href="#validation">Validation</a></li>
+          <li><a href="#responsive">Responsive Design</a></li>
+        </nav>
+      </div>
+      <div class="sidebar-section">
+        <span class="sidebar-title">Reference</span>
+        <nav class="sidebar-nav">
+          <li><a href="#motion-patterns">Motion Patterns</a></li>
+          <li><a href="#component-states">Component States</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </nav>
+      </div>
+    </aside>
+
+    <main class="main" id="main">
+      <section id="overview">
+        <h1>Sidecoach Documentation</h1>
+        <p>Complete reference for Sidecoach - the design intelligence orchestration system built into Claude Code.</p>
+      </section>
+
+      <section id="getting-started">
+        <h2>Getting Started</h2>
+        <h3>Installation</h3>
+        <p>Sidecoach ships with Claude Code. No additional installation needed. Open Claude Code and start using flows immediately.</p>
+
+        <h3>Your First Command</h3>
+        <p>The quickest way to understand Sidecoach is to run a shape flow on a feature you want to build:</p>
+        <pre><code>/sidecoach shape my-new-component</code></pre>
+        <p>This launches the design exploration phase. Follow the guidance - it will guide you through research, strategy, and approach selection before you write any code.</p>
+
+        <h3>Five Mandatory Workflow Gates</h3>
+        <ol style="margin-left: var(--s-6); margin-bottom: var(--s-8);">
+          <li><strong>Before any new feature:</strong> Run <code>/sidecoach teach</code> if no PRODUCT.md exists with real content</li>
+          <li><strong>Before implementing:</strong> Run <code>/sidecoach shape</code> to get the design plan</li>
+          <li><strong>After implementing:</strong> Run <code>/sidecoach audit</code>, <code>/sidecoach critique</code>, and <code>/sidecoach polish</code></li>
+          <li><strong>Before shipping:</strong> Run <code>/sidecoach harden</code></li>
+          <li><strong>Maintain project context:</strong> Keep PRODUCT.md and DESIGN.md up to date</li>
+        </ol>
+
+        <h3>Project Files: PRODUCT.md and DESIGN.md</h3>
+        <p>Sidecoach reads two files from your project root:</p>
+        <ul style="margin-left: var(--s-6); margin-bottom: var(--s-8);">
+          <li><code>PRODUCT.md</code> - Brand identity, users, register, anti-references, strategic principles. Required for all design work.</li>
+          <li><code>DESIGN.md</code> - Color tokens, typography, components, spacing. Optional but strongly recommended. Follow the Google design.md spec.</li>
+        </ul>
+        <p>If either is missing, run <code>/sidecoach teach</code> first. Sidecoach without project context produces generic output.</p>
+      </section>
+
+      <section id="commands">
+        <h2>Command Reference</h2>
+
+        <h3>Research and Strategy Phase</h3>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h4><code>/sidecoach teach</code></h4>
+            <p>Guided setup. Creates PRODUCT.md and DESIGN.md via brand verification. Run this first if PRODUCT.md is empty or missing.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach shape &lt;feature&gt;</code></h4>
+            <p>Plan design approach before building. Runs exploration and rapid iteration. Outputs guidance, checklist, and reference artifacts.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach extract &lt;target&gt;</code></h4>
+            <p>Extract design tokens from existing implementation into DESIGN.md. Use when you have working code and need to formalize the system.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach live &lt;target&gt;</code></h4>
+            <p>Live browser iteration and real-time refinement. Open your page in a browser and make adjustments in real time while Sidecoach guides you.</p>
+          </div>
+        </div>
+
+        <h3>Implementation Phase</h3>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h4><code>/sidecoach craft &lt;feature&gt;</code></h4>
+            <p>Build new component from scratch. Covers tokens, implementation, and motion. Outputs a complete component with all states.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach layout &lt;target&gt;</code></h4>
+            <p>Restructure spatial relationships and visual hierarchy. Use when layout needs rework or optimization.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach typeset &lt;target&gt;</code></h4>
+            <p>Refine type system. Font pairing, scale, readability. Ensures typography aligns with your design tokens.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach animate &lt;target&gt;</code></h4>
+            <p>Implement production animation with exponential easing and reduced-motion support. Follows accessibility standards.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach colorize &lt;target&gt;</code></h4>
+            <p>Color refinement and palette application. Use tokens from your design system. No hardcoded values.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach delight &lt;target&gt;</code></h4>
+            <p>Add personality, micro-interactions, and joy. Subtle but memorable details.</p>
+          </div>
+        </div>
+
+        <h3>Polish and Refinement Phase</h3>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h4><code>/sidecoach polish &lt;target&gt;</code></h4>
+            <p>16-point tactical refinement. Concentric radius, optical alignment, scale-on-press, focus states, and more.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach bolder &lt;target&gt;</code></h4>
+            <p>Increase visual weight, contrast, and presence. Make design elements stand out.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach overdrive &lt;target&gt;</code></h4>
+            <p>Amplify design to maximum expressive effect. Use for hero sections or statement moments.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach quieter &lt;target&gt;</code></h4>
+            <p>Reduce noise and visual complexity. Simplify, mute colors, remove borders.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach distill &lt;target&gt;</code></h4>
+            <p>Extract and preserve only essential elements. Minimalist approach.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach clarify &lt;target&gt;</code></h4>
+            <p>Make design language explicit and unambiguous. Remove visual metaphor.</p>
+          </div>
+        </div>
+
+        <h3>QA and Validation Phase</h3>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h4><code>/sidecoach audit &lt;target&gt;</code></h4>
+            <p>5-dimension technical audit: accessibility (a11y), performance, theming, responsive design, anti-patterns. Outputs Lighthouse metrics and violations.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach critique &lt;target&gt;</code></h4>
+            <p>Independent design review. Heuristics, cognitive load, emotional journey. Uses Nielsen's 10 usability heuristics.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach optimize &lt;target&gt;</code></h4>
+            <p>Performance and efficiency improvements. Reduce bundle size, optimize images, improve LCP.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach harden &lt;target&gt;</code></h4>
+            <p>Production-readiness sweep. Error states, edge cases, i18n, a11y. Before shipping.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach adapt &lt;target&gt;</code></h4>
+            <p>Responsive design across all breakpoints. Mobile, tablet, desktop verification.</p>
+          </div>
+          <div class="feature-card">
+            <h4><code>/sidecoach list</code></h4>
+            <p>Show all available flows grouped by phase. Explore what is available.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="best-practices">
+        <h2>Best Practices</h2>
+
+        <h3>Always Start With Brand</h3>
+        <p>Run <code>/sidecoach teach</code> first if PRODUCT.md doesn't exist. Your brand is the constraint that prevents hallucination. Everything else flows from it.</p>
+
+        <h3>Shape Before Craft</h3>
+        <p>Never skip the shape flow. It identifies the design challenge, uncovers constraints, and prevents wasted implementation work. The time spent shaping is recouped 5-10x during implementation.</p>
+
+        <h3>Use References, Not Imagination</h3>
+        <p>When Sidecoach offers reference artifacts (fonts, components, motion patterns), use them verbatim. Don't approximate or substitute. References are cited and verified - your imagination is not.</p>
+
+        <h3>Validate After Every Phase</h3>
+        <p>Run the QA flows after each phase:</p>
+        <ul style="margin-left: var(--s-6); margin-bottom: var(--s-8);">
+          <li>After shape: Do you understand the design challenge?</li>
+          <li>After implementation: Is it accessible? Performant? On-brand?</li>
+          <li>After polish: Does it feel right?</li>
+          <li>Before shipping: Is it production-ready?</li>
+        </ul>
+
+        <h3>Keep Project Files Fresh</h3>
+        <p>PRODUCT.md and DESIGN.md are your project's memory. Update them as your design system grows. Extract tokens regularly. This continuity enables Sidecoach to make smarter decisions across sessions.</p>
+
+        <h3>Use Soft-Fail Validation</h3>
+        <p>Validation runs on every flow but doesn't block you. A critical accessibility issue will be flagged - address it. A minor spacing suggestion will be noted - consider it. You are always in control.</p>
+
+        <h3>Compose Flows for Complex Work</h3>
+        <p>Sidecoach supports flow composition. For a major redesign, you might chain: shape - craft - audit - polish - adapt - harden. The system routes between flows intelligently based on your project state.</p>
+      </section>
+
+      <section id="design-workflow">
+        <h2>Recommended Design Workflow</h2>
+        <ol style="margin-left: var(--s-6); margin-bottom: var(--s-8);">
+          <li><strong>Plan:</strong> <code>/sidecoach shape my-feature</code> - Understand the challenge</li>
+          <li><strong>Build:</strong> <code>/sidecoach craft my-feature</code> - Implement with tokens and motion</li>
+          <li><strong>Review:</strong> <code>/sidecoach audit</code> + <code>/sidecoach critique</code> - Technical and design review</li>
+          <li><strong>Polish:</strong> <code>/sidecoach polish</code> - Tactical refinement</li>
+          <li><strong>Test:</strong> <code>/sidecoach adapt</code> - Responsive and accessibility check</li>
+          <li><strong>Ship:</strong> <code>/sidecoach harden</code> - Production readiness</li>
+        </ol>
+      </section>
+
+      <section id="implementation">
+        <h2>Implementation Guidelines</h2>
+
+        <h3>Use Design Tokens, Never Hardcode</h3>
+        <p>Every color, font size, spacing value should come from your design system. Hardcoded values are anti-patterns. Your DESIGN.md tokens are the single source of truth.</p>
+
+        <h3>Semantic HTML First</h3>
+        <p>Use semantic elements - <code>&lt;nav&gt;</code>, <code>&lt;button&gt;</code>, <code>&lt;article&gt;</code> - before styling. Semantics enable accessibility, SEO, and maintainability.</p>
+
+        <h3>Responsive by Default</h3>
+        <p>Design for mobile first. Use viewport units and media queries. Test at 320px, 768px, and 1200px minimum. Sidecoach's adapt flow verifies this.</p>
+
+        <h3>Component States Matter</h3>
+        <p>Every interactive component needs default, hover, focus, and active states. Animation states (enter, exit, loading). Error states. Accessibility states (aria-pressed, aria-expanded). Design all of them.</p>
+
+        <h3>Avoid Common Anti-patterns</h3>
+        <ul style="margin-left: var(--s-6); margin-bottom: var(--s-8);">
+          <li>No hardcoded colors - use CSS variables</li>
+          <li>No layout shift - CLS should be 0</li>
+          <li>No deprecated APIs - check console health</li>
+          <li>No unhandled focus - every element is keyboard navigable</li>
+          <li>No missing alt text - images have descriptions</li>
+          <li>No unmeasured font loading - fonts should be preloaded</li>
+        </ul>
+      </section>
+
+      <section id="validation">
+        <h2>Validation and Quality Assurance</h2>
+
+        <h3>5-Dimension Audit</h3>
+        <p>Every design runs through 5 dimensions of validation:</p>
+        <ol style="margin-left: var(--s-6); margin-bottom: var(--s-8);">
+          <li><strong>Accessibility (a11y):</strong> WCAG 2.1 AA compliance, screen reader testing, keyboard navigation</li>
+          <li><strong>Performance:</strong> Lighthouse metrics, bundle size, LCP, CLS, FID</li>
+          <li><strong>Theming:</strong> CSS variable usage, no hardcoded values, semantic naming</li>
+          <li><strong>Responsive:</strong> Mobile, tablet, desktop rendering and interaction</li>
+          <li><strong>Anti-patterns:</strong> Console health, deprecated APIs, layout shifts, contrast violations</li>
+        </ol>
+
+        <h3>Design Critique</h3>
+        <p>Independent design review using Nielsen's 10 usability heuristics:</p>
+        <ul style="margin-left: var(--s-6); margin-bottom: var(--s-8);">
+          <li>System visibility and affordance</li>
+          <li>Match between system and real world</li>
+          <li>User control and freedom</li>
+          <li>Error prevention and recovery</li>
+          <li>Aesthetic and minimalist design</li>
+          <li>Cognitive load and clarity</li>
+        </ul>
+      </section>
+
+      <section id="responsive">
+        <h2>Responsive Design Standards</h2>
+
+        <h3>Breakpoints</h3>
+        <p>Define breakpoints in your DESIGN.md. Standard breakpoints:</p>
+        <ul style="margin-left: var(--s-6); margin-bottom: var(--s-8);">
+          <li><code>mobile: 320px - 767px</code></li>
+          <li><code>tablet: 768px - 1023px</code></li>
+          <li><code>desktop: 1024px+</code></li>
+        </ul>
+
+        <h3>Touch Targets</h3>
+        <p>All interactive elements (buttons, links, toggles) must be at least 40x40 pixels. This ensures mobile usability and accessibility.</p>
+
+        <h3>Flexible Layouts</h3>
+        <p>Use flexbox and grid. Avoid fixed widths. Let content guide the layout. Test with text at 200% zoom.</p>
+
+        <h3>Image Responsiveness</h3>
+        <p>Use srcset and sizes attributes. Optimize for different pixel densities. Never serve desktop images to mobile.</p>
+      </section>
+
+      <section id="motion-patterns">
+        <h2>Motion Patterns and Animation</h2>
+
+        <h3>Easing Functions</h3>
+        <p>Sidecoach enforces exponential easing for all motion. No linear animations. No cubic-bezier approximations.</p>
+        <pre><code>/* Good */
+transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+/* Bad */
+transition: transform 0.3s linear;</code></pre>
+
+        <h3>Reduced Motion Support</h3>
+        <p>Always respect <code>prefers-reduced-motion</code>:</p>
+        <pre><code>@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}</code></pre>
+
+        <h3>Standard Durations</h3>
+        <ul style="margin-left: var(--s-6); margin-bottom: var(--s-8);">
+          <li><code>150ms</code> - Micro-interactions (hover, focus states)</li>
+          <li><code>300ms</code> - Component transitions (menus, modals)</li>
+          <li><code>500ms</code> - Page transitions</li>
+          <li><code>1000ms+</code> - Entrance animations</li>
+        </ul>
+      </section>
+
+      <section id="accessibility">
+        <h2>Accessibility Standards</h2>
+
+        <h3>WCAG 2.1 Level AA</h3>
+        <p>All designs must meet WCAG 2.1 Level AA. This is not optional. Sidecoach's audit flow verifies this automatically.</p>
+
+        <h3>Color Contrast</h3>
+        <p>Minimum 4.5:1 for normal text, 3:1 for large text (18px+ bold, 24px+ normal).</p>
+
+        <h3>Keyboard Navigation</h3>
+        <p>Every interactive element must be keyboard accessible. Tab order must be logical. Focus states must be visible.</p>
+
+        <h3>Screen Reader Support</h3>
+        <p>Semantic HTML first. ARIA labels only when needed. Test with VoiceOver (Mac) or NVDA (Windows).</p>
+
+        <h3>Form Accessibility</h3>
+        <p>Every input must have a label. Error messages must be associated with fields. Validation must happen on blur and submit.</p>
+      </section>
+
+      <section id="component-states">
+        <h2>Component State Matrix</h2>
+        <p>Every component needs these states documented and tested:</p>
+        <table style="width: 100%; margin: var(--s-8) 0; border-collapse: collapse;">
+          <tr style="border-bottom: 1px solid var(--c-border-soft);">
+            <th style="padding: var(--s-3); text-align: left; font-weight: var(--fw-semibold);">State Type</th>
+            <th style="padding: var(--s-3); text-align: left; font-weight: var(--fw-semibold);">States</th>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--c-border-soft);">
+            <td style="padding: var(--s-3);"><strong>Interaction</strong></td>
+            <td style="padding: var(--s-3);">Default, hover, active, focus, disabled</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--c-border-soft);">
+            <td style="padding: var(--s-3);"><strong>Data</strong></td>
+            <td style="padding: var(--s-3);">Empty, loading, error, success, data-present</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--c-border-soft);">
+            <td style="padding: var(--s-3);"><strong>Responsive</strong></td>
+            <td style="padding: var(--s-3);">Mobile (320px), tablet (768px), desktop (1024px)</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--c-border-soft);">
+            <td style="padding: var(--s-3);"><strong>Animation</strong></td>
+            <td style="padding: var(--s-3);">Enter, exit, loading spinner, transition</td>
+          </tr>
+        </table>
+      </section>
+
+      <section id="integration">
+        <h2>Integration with Claude Code</h2>
+
+        <h3>Slash Commands in Claude Code</h3>
+        <p>Type any Sidecoach command as a slash command in Claude Code:</p>
+        <pre><code>/sidecoach shape new-button-component</code></pre>
+        <p>Claude will route to the right flow and execute it with full context from your project's PRODUCT.md and DESIGN.md.</p>
+
+        <h3>Natural Language Routing</h3>
+        <p>You don't need to use the exact command. Sidecoach understands natural language:</p>
+        <ul style="margin-left: var(--s-6); margin-bottom: var(--s-8);">
+          <li>"Check accessibility" routes to <code>/sidecoach audit</code></li>
+          <li>"Make this responsive" routes to <code>/sidecoach adapt</code></li>
+          <li>"Review the design" routes to <code>/sidecoach critique</code></li>
+          <li>"I want motion" routes to <code>/sidecoach animate</code></li>
+        </ul>
+
+        <h3>Context Persistence</h3>
+        <p>Sidecoach maintains session memory. Your design decisions, validation results, and token references persist across commands. No context loss between flows.</p>
+      </section>
+
+      <section id="faq">
+        <h2>Frequently Asked Questions</h2>
+
+        <h3>Do I need PRODUCT.md and DESIGN.md to use Sidecoach?</h3>
+        <p>Not initially. But Sidecoach will produce better guidance with them. Run <code>/sidecoach teach</code> to create PRODUCT.md. Extract or manually create DESIGN.md after your first implementation.</p>
+
+        <h3>Can I use Sidecoach without Claude Code?</h3>
+        <p>Sidecoach is built into Claude Code. It runs directly in your Claude Code session and uses your project context.</p>
+
+        <h3>What happens if my design doesn't meet validation gates?</h3>
+        <p>Validation is soft-fail by default. Critical issues (accessibility) are flagged - fix them. Minor suggestions are noted - consider them. You always retain control.</p>
+
+        <h3>Can I compose multiple flows into a workflow?</h3>
+        <p>Yes. Sidecoach supports flow composition and chaining. For a major redesign, you might run: shape - craft - audit - critique - polish - adapt - harden in sequence.</p>
+
+        <h3>How do I handle custom design tokens not in the reference?</h3>
+        <p>Add them to your DESIGN.md. Document your custom spacing scale, custom font sizes, custom colors. Sidecoach will use them in subsequent flows.</p>
+
+        <h3>What if Sidecoach suggests something I disagree with?</h3>
+        <p>You're in control. Flows output guidance, not commands. Read the guidance, consider it, and make your own decision. Sidecoach serves you, not the reverse.</p>
+
+        <h3>Can I disable validation?</h3>
+        <p>No. Validation runs soft-fail on every flow. The philosophy is transparency, not coercion. You see every issue and decide what to address.</p>
+      </section>
+
+      <footer style="margin-top: var(--s-20); padding-top: var(--s-12); border-top: 1px solid var(--c-border-soft); color: var(--c-text-secondary); font-size: var(--fs-sm);">
+        <p><a href="index.html">Home</a> | <a href="documentation.html">Documentation</a></p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

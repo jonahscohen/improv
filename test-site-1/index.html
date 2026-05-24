@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sidecoach - Design Intelligence Orchestration for Claude Code. Intelligent flows for every phase of design work.">
+  <meta name="theme-color" content="#1A1F1B">
+  <title>Sidecoach - Design Intelligence Orchestration</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Enhanced visual design */
+    body {
+      background: linear-gradient(135deg, var(--c-brand-paper) 0%, var(--c-brand-cream) 100%);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    p {
+      text-wrap: pretty;
+    }
+
+    .hero {
+      background: var(--c-surface-inverse);
+      color: var(--c-text-inverse);
+      padding: var(--s-16) var(--s-6);
+      margin: calc(-1 * var(--s-10)) calc(-1 * var(--s-6)) var(--s-12) calc(-1 * var(--s-6));
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(220, 38, 24, 0.1) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .hero > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: var(--fs-4xl);
+      font-weight: var(--fw-bold);
+      margin: 0 0 var(--s-4) 0;
+      line-height: var(--lh-tight);
+    }
+
+    .hero > p {
+      font-size: var(--fs-lg);
+      line-height: var(--lh-relaxed);
+      max-width: 600px;
+      margin: 0 0 var(--s-8) 0;
+      opacity: 0.95;
+    }
+
+    .hero .button {
+      background: var(--c-brand-red);
+      color: white;
+      border: none;
+      padding: var(--s-4) var(--s-8);
+      font-size: var(--fs-base);
+      font-weight: var(--fw-semibold);
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: background-color 200ms ease, transform 200ms ease;
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .hero .button:hover {
+      background: #B01F15;
+      transform: translateY(-2px);
+    }
+
+    .hero .button:active {
+      transform: scale(0.96);
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: var(--fs-3xl);
+      font-weight: var(--fw-bold);
+      color: var(--c-text-primary);
+      margin: var(--s-12) 0 var(--s-6) 0;
+      line-height: var(--lh-tight);
+      text-wrap: balance;
+    }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--s-6);
+      margin: var(--s-8) 0 var(--s-12) 0;
+    }
+
+    .problem-card {
+      background: white;
+      border-left: 4px solid var(--c-brand-red);
+      padding: var(--s-6);
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .problem-card h4 {
+      margin: 0 0 var(--s-3) 0;
+      color: var(--c-text-primary);
+      font-size: var(--fs-lg);
+      font-weight: var(--fw-semibold);
+    }
+
+    .problem-card p {
+      margin: 0;
+      color: var(--c-text-secondary);
+      font-size: var(--fs-base);
+      line-height: var(--lh-relaxed);
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--s-6);
+      margin: var(--s-8) 0 var(--s-12) 0;
+    }
+
+    .feature-card {
+      background: white;
+      padding: var(--s-8);
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      transition: border-top-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+      border-top: 3px solid var(--c-brand-cream);
+    }
+
+    .feature-card:hover {
+      border-top-color: var(--c-brand-red);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .feature-card:active {
+      transform: scale(0.96);
+    }
+
+    .feature-card h3 {
+      margin: 0 0 var(--s-3) 0;
+      font-size: var(--fs-lg);
+      font-weight: var(--fw-semibold);
+      color: var(--c-text-primary);
+    }
+
+    .feature-card p {
+      margin: 0;
+      font-size: var(--fs-sm);
+      line-height: var(--lh-relaxed);
+      color: var(--c-text-secondary);
+    }
+
+    .flows-section {
+      margin: var(--s-12) 0;
+    }
+
+    .phase-block {
+      margin: var(--s-8) 0;
+    }
+
+    .phase-block h3 {
+      font-size: var(--fs-xl);
+      font-weight: var(--fw-semibold);
+      color: var(--c-text-primary);
+      margin: var(--s-6) 0 var(--s-2) 0;
+      padding-bottom: var(--s-2);
+      border-bottom: 2px solid var(--c-border-soft);
+    }
+
+    .phase-block p {
+      color: var(--c-text-secondary);
+      margin: 0 0 var(--s-4) 0;
+    }
+
+    .flow-list {
+      background: white;
+      padding: var(--s-6);
+      border-radius: 4px;
+      list-style: none;
+      margin: 0;
+    }
+
+    .flow-list li {
+      padding: var(--s-3) 0;
+      border-bottom: 1px solid var(--c-border-soft);
+    }
+
+    .flow-list li:last-child {
+      border-bottom: none;
+    }
+
+    .flow-list code {
+      background: var(--c-brand-cream);
+      padding: 2px 6px;
+      border-radius: 2px;
+      font-family: var(--font-mono);
+      font-size: var(--fs-sm);
+      color: var(--c-brand-ink);
+    }
+
+    #cta {
+      background: var(--c-brand-cream);
+      padding: var(--s-12) var(--s-6);
+      margin-left: calc(-1 * var(--s-6));
+      margin-right: calc(-1 * var(--s-6));
+      text-align: center;
+      border-top: 1px solid var(--c-border-soft);
+      border-bottom: 1px solid var(--c-border-soft);
+    }
+
+    #cta h2 {
+      font-family: var(--font-display);
+      font-size: var(--fs-3xl);
+      margin: 0 0 var(--s-4) 0;
+      text-wrap: balance;
+    }
+
+    #cta p {
+      max-width: 600px;
+      margin: 0 auto var(--s-8) auto;
+      font-size: var(--fs-lg);
+    }
+
+    .button-group {
+      display: flex;
+      gap: var(--s-4);
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .button {
+      background: var(--c-brand-red);
+      color: white;
+      border: none;
+      padding: var(--s-4) var(--s-8);
+      font-size: var(--fs-base);
+      font-weight: var(--fw-semibold);
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 200ms ease, transform 200ms ease;
+      min-height: 40px;
+      min-width: 40px;
+    }
+
+    .button:hover {
+      background: #B01F15;
+      transform: translateY(-2px);
+    }
+
+    .button:active {
+      transform: scale(0.96);
+    }
+
+    .button-secondary {
+      background: white;
+      color: var(--c-brand-red);
+      border: 2px solid var(--c-brand-red);
+    }
+
+    .button-secondary:hover {
+      background: var(--c-brand-cream);
+    }
+
+    footer {
+      padding-top: var(--s-12);
+      margin-top: var(--s-20);
+      border-top: 1px solid var(--c-border-soft);
+      text-align: center;
+      font-size: var(--fs-sm);
+      color: var(--c-text-secondary);
+    }
+
+    footer a {
+      color: var(--c-brand-red);
+      text-decoration: none;
+      margin: 0 var(--s-3);
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">
+        <svg class="brand-mark" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px;">
+          <path d="M4 6C4 4.89543 4.89543 4 6 4H14C15.1046 4 16 4.89543 16 6V14C16 15.1046 15.1046 16 14 16H6C4.89543 16 4 15.1046 4 14V6Z" fill="currentColor"/>
+          <path d="M4 18C4 16.8954 4.89543 16 6 16H10C11.1046 16 12 16.8954 12 18V22C12 23.1046 11.1046 24 10 24H6C4.89543 24 4 23.1046 4 22V18Z" fill="currentColor" opacity="0.7"/>
+          <path d="M14 4C15.1046 4 16 4.89543 16 6V10C16 11.1046 15.1046 12 14 12H10C8.89543 12 8 11.1046 8 10V6C8 4.89543 8.89543 4 10 4H14Z" fill="currentColor" opacity="0.6"/>
+        </svg>
+        Sidecoach
+      </a>
+      <div class="topbar-nav">
+        <a href="index.html">Home</a>
+        <a href="documentation.html">Documentation</a>
+        <a href="https://github.com/anthropics/claude-code" target="_blank">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <span class="sidebar-title">Navigate</span>
+        <nav class="sidebar-nav">
+          <li><a href="#overview" class="active">Overview</a></li>
+          <li><a href="#challenge">The Challenge</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#flows">Flows</a></li>
+          <li><a href="#cta">Get Started</a></li>
+        </nav>
+      </div>
+      <div class="sidebar-section">
+        <span class="sidebar-title">Learn</span>
+        <nav class="sidebar-nav">
+          <li><a href="documentation.html">Full Documentation</a></li>
+          <li><a href="documentation.html#commands">Command Reference</a></li>
+        </nav>
+      </div>
+    </aside>
+
+    <main class="main" id="main">
+      <section id="overview" class="hero">
+        <h1>Design Intelligence Orchestration</h1>
+        <p>Sidecoach brings structure to design work. Multi-phase workflows, intelligent routing, persistent memory, and validation gates. No invention. No context loss. Just design work that stays on track.</p>
+        <a href="#cta" class="button">Explore the System</a>
+      </section>
+
+      <section id="challenge">
+        <h2 class="section-title">The Real Problem</h2>
+        <p>Design work breaks across phases. You shift between research, implementation, refinement, and QA. Each phase needs different strategies, different references, different validation rules. Current tools either stay silent or invent answers. You rebuild context constantly. There is no tie-breaking, no constraint enforcement, no validation that what you build matches what you designed.</p>
+
+        <div class="problem-grid">
+          <div class="problem-card">
+            <h4>Context Loss</h4>
+            <p>Between sessions, decisions vanish. Brand rules, design choices, component definitions disappear. You restart from scratch each time.</p>
+          </div>
+          <div class="problem-card">
+            <h4>Silent Failures</h4>
+            <p>Build a component in isolation. Is it accessible? Responsive? Performant? On-brand? You find out later, if at all.</p>
+          </div>
+          <div class="problem-card">
+            <h4>Invention Risk</h4>
+            <p>Without explicit constraints and references, AI fills gaps with plausible-sounding wrong answers. No citations. No grounding. Just confident hallucination.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="features">
+        <h2 class="section-title">How Sidecoach Works</h2>
+
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h3>Intelligent Routing</h3>
+            <p>Understand intent from natural language or slash commands. Route to the right flow automatically. No ambiguity, no guessing what you want.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Design Memory</h3>
+            <p>Every decision, constraint, token, and validation result lives in persistent memory. Context never disappears. Your design system is always available.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Multi-Phase Coverage</h3>
+            <p>36 flows across 5 phases: Research, Implementation, Polish, QA, and Specialized. Every phase has guides, validation, and reference systems.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Built-in Validation</h3>
+            <p>Accessibility, performance, responsive design, anti-patterns, mandate enforcement. Validation happens automatically. Soft-fail by design.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Reference Systems</h3>
+            <p>Colors, typography, components, motion patterns. Everything is grounded in real references. All citations visible. No invented content.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Constraint Enforcement</h3>
+            <p>Brand rules, design tokens, accessibility standards, code mandates. Violations are caught and reported. Nothing slips through.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="flows" class="flows-section">
+        <h2 class="section-title">36 Intelligent Flows</h2>
+        <p>Organized by phase and purpose. Each flow guides you through a specific design task with reference systems, validation rules, and a clear execution path.</p>
+
+        <div class="phase-block">
+          <h3>Phase 1: Research and Strategy</h3>
+          <p>Verify your brand, understand your project, extract tokens from existing work.</p>
+          <ul class="flow-list">
+            <li><code>/sidecoach teach</code> - Brand verification and product context</li>
+            <li><code>/sidecoach shape</code> - Design approach planning</li>
+            <li><code>/sidecoach extract</code> - Token and pattern extraction</li>
+            <li><code>/sidecoach live</code> - Live browser iteration</li>
+            <li><code>/sidecoach onboard</code> - First-run activation</li>
+          </ul>
+        </div>
+
+        <div class="phase-block">
+          <h3>Phase 2: Implementation</h3>
+          <p>Build components, set layout, refine typography, implement motion, apply colors, add personality.</p>
+          <ul class="flow-list">
+            <li><code>/sidecoach craft</code> - Component from scratch</li>
+            <li><code>/sidecoach layout</code> - Spatial restructuring</li>
+            <li><code>/sidecoach typeset</code> - Typography refinement</li>
+            <li><code>/sidecoach animate</code> - Production animation</li>
+            <li><code>/sidecoach colorize</code> - Color application</li>
+            <li><code>/sidecoach delight</code> - Personality and micro-interactions</li>
+          </ul>
+        </div>
+
+        <div class="phase-block">
+          <h3>Phase 3: Polish and Refinement</h3>
+          <p>Tactical improvements, visual direction, responsiveness, production readiness.</p>
+          <ul class="flow-list">
+            <li><code>/sidecoach polish</code> - Tactical 16-point refinement</li>
+            <li><code>/sidecoach bolder</code>, <code>overdrive</code>, <code>quieter</code>, <code>distill</code> - Directional adjustments</li>
+            <li><code>/sidecoach clarify</code> - Language clarity</li>
+            <li><code>/sidecoach harden</code> - Production readiness</li>
+            <li><code>/sidecoach adapt</code> - Responsive design</li>
+          </ul>
+        </div>
+
+        <div class="phase-block">
+          <h3>Phase 4: QA and Validation</h3>
+          <p>Technical audits, design review, performance optimization.</p>
+          <ul class="flow-list">
+            <li><code>/sidecoach audit</code> - 5-dimension technical assessment</li>
+            <li><code>/sidecoach critique</code> - Independent design review</li>
+            <li><code>/sidecoach optimize</code> - Performance improvements</li>
+          </ul>
+        </div>
+
+        <div class="phase-block">
+          <h3>Phase 5: Specialized</h3>
+          <p>Accessibility compliance, data visualization, internationalization, advanced motion.</p>
+          <p style="color: var(--c-text-secondary); font-size: var(--fs-sm);">12+ specialized flows. See documentation for complete list.</p>
+        </div>
+      </section>
+
+      <section id="cta">
+        <h2>Ready to Design Smarter</h2>
+        <p>Sidecoach turns design workflow into orchestrated intelligence. Every phase guided. Every decision captured. No context loss. No invention.</p>
+        <div class="button-group">
+          <a href="documentation.html" class="button">Read Documentation</a>
+          <a href="documentation.html#getting-started" class="button button-secondary">Quick Start</a>
+        </div>
+      </section>
+
+      <footer>
+        <a href="index.html">Home</a> |
+        <a href="documentation.html">Documentation</a> |
+        <a href="https://github.com/anthropics/claude-code" target="_blank">GitHub</a>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>
