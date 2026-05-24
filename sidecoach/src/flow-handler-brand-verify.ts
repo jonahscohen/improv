@@ -190,7 +190,11 @@ export class FlowABrandVerifyHandler extends BaseFlowHandler {
 
     // Add register-specific context
     const registerLaws = REGISTER_SPECIFIC_LAWS[register];
-    laws.push(`Register-specific: ${registerLaws.description}`);
+    if (registerLaws) {
+      laws.push(`Register-specific: ${registerLaws.description}`);
+    } else {
+      laws.push(`Register-specific: ${register || 'unknown'} (not found in design laws)`);
+    }
 
     return laws;
   }
