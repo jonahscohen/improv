@@ -158,7 +158,6 @@ export class FlowEMotionPatternsHandler extends BaseFlowHandler {
         ...motionRules,
         '',
         'Domain Validation Results:',
-        `- Motion domain: ${motionPassed}/${motionDomainRules.length} rules passing (${motionPassRate})`,
         '',
         'Exponential-Only Easing:',
         'Only cubic-bezier curves with exponential curves (out-quart, out-quint, etc.)',

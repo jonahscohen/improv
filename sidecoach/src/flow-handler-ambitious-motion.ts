@@ -60,8 +60,6 @@ export class FlowTAmbitiousMotionHandler extends BaseFlowHandler {
         'Ambitious Motion: Advanced animation sequences and micro-interactions for delight.',
         '',
         'Domain Validation Results:',
-        `- Motion domain: ${motionPassed}/${motionDomainRules.length} rules passing (${motionPassRate})`,
-        `- Interaction domain: ${interactionPassed}/${interactionDomainRules.length} rules passing (${interactionPassRate})`,
         '',
         'MOTION TOKENS:',
         '- Duration: 150ms (micro), 300ms (standard), 500ms (deliberate)',

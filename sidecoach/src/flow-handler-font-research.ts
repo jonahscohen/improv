@@ -99,7 +99,6 @@ export class FlowCFontResearchHandler extends BaseFlowHandler {
         ...typographyRules,
         '',
         'Domain Validation Results:',
-        `- Typography domain: ${typographyPassed}/${typographyDomainRules.length} rules passing (${typographyPassRate})`,
         '',
         'Font Pairing Strategy:',
         ...pairingRules,

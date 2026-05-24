@@ -4,6 +4,7 @@
 import { BaseFlowHandler, FlowExecutionContext, FlowExecutionResult } from './flow-handler';
 import { FlowMemoryBuilder } from './flow-memory-schema';
 import { ExtendedDomainValidator, DomainCheckContext } from './extended-domain-validator';
+import { createIconSourceReference, buildIconSourceArtifactContent } from './icon-source-reference';
 
 export class FlowOCloneMatchHandler extends BaseFlowHandler {
   constructor() {
@@ -58,9 +59,6 @@ export class FlowOCloneMatchHandler extends BaseFlowHandler {
         'Clone Match verifies pixel-perfect alignment between design and implementation.',
         '',
         'Domain Validation Results:',
-        `- Spatial domain: ${spatialPassed}/${spatialDomainRules.length} rules passing (${spatialPassRate})`,
-        `- Color domain: ${colorPassed}/${colorDomainRules.length} rules passing (${colorPassRate})`,
-        `- Responsive domain: ${responsivePassed}/${responsiveDomainRules.length} rules passing (${responsivePassRate})`,
         '',
         'SETUP:',
         '- Design screenshot at exact viewport (e.g., 1024px)',
@@ -129,6 +127,12 @@ export class FlowOCloneMatchHandler extends BaseFlowHandler {
         guidance,
         checklist,
         artifacts: [
+          this.createArtifact(
+            'reference',
+            'icon-source',
+            buildIconSourceArtifactContent(createIconSourceReference()),
+            '8 approved icon libraries with selection protocol and provenance markers (taste/fabricated-svg gate enforcement)'
+          ),
           this.createArtifact(
             'reference',
             'Clone Verification Checklist',

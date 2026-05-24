@@ -148,8 +148,6 @@ export class FlowDReferenceSearchHandler extends BaseFlowHandler {
         'Saturation & Vibrancy: appropriate for register (product vs brand)',
         '',
         'Domain Validation Results:',
-        `- Color domain: ${colorPassed}/${colorDomainRules.length} rules passing (${colorPassRate})`,
-        `- Spatial domain: ${spatialPassed}/${spatialDomainRules.length} rules passing (${spatialPassRate})`,
         '',
         'Spatial Domain Rules (4pt Grid System):',
         ...spatialRules,

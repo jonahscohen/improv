@@ -158,8 +158,6 @@ export class FlowBComponentResearchHandler extends BaseFlowHandler {
         ...writingRules,
         '',
         'Domain Validation Results:',
-        `- Interaction domain: ${interactionPassed}/${interactionDomainRules.length} rules passing (${interactionPassRate})`,
-        `- UX Writing domain: ${uxWritingPassed}/${uxWritingDomainRules.length} rules passing (${uxWritingPassRate})`,
         '',
         'Semantic Markup Requirements:',
         ...Object.entries(semanticMarkup).map(([name, markup]) => `- ${name}: use semantic ${markup}`),
