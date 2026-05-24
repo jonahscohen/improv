@@ -784,8 +784,32 @@ export class FlowExecutionEngine {
       };
     }
 
-    // Step 1: Detect intent (falls back to intent detection if not a slash command)
-    let detection: MatchResult | DisambiguationResult = this.intentDetector.detect(utterance);
+    // Step 1: Detect intent (falls back to intent detection if not a slash command).
+    // metadata.forceFlowId bypass: skip intent detection and route directly to the
+    // named flow. Used by the disambiguation UI to re-invoke after the user picks
+    // a candidate (Sprint 5 / Phase 6 T3).
+    const forceFlowId = (context.metadata as any)?.forceFlowId as string | undefined;
+    let detection: MatchResult | DisambiguationResult;
+    if (forceFlowId) {
+      const allFlowIds = this.getAllKnownFlowIds();
+      if (!allFlowIds.includes(forceFlowId)) {
+        return {
+          success: false,
+          message: `Unknown flowId: "${forceFlowId}". Cannot route via forceFlowId.`,
+          detectedFlow: null,
+          flowResults: [],
+        };
+      }
+      detection = {
+        flowId: forceFlowId as FlowId,
+        flowName: forceFlowId,
+        confidence: 1.0,
+        matchedTokens: ['forceFlowId'],
+        reason: 'metadata.forceFlowId bypass',
+      } as MatchResult;
+    } else {
+      detection = this.intentDetector.detect(utterance);
+    }
 
     // Handle no matches
     if (Array.isArray((detection as DisambiguationResult).candidates) && (detection as DisambiguationResult).candidates.length === 0) {
@@ -1173,6 +1197,17 @@ export class FlowExecutionEngine {
    */
   getHandlers(): ReadonlyMap<FlowId, FlowHandler> {
     return this.handlers;
+  }
+
+  /**
+   * Union of all known flow ids - single handlers + composite preset ids.
+   * Used by the metadata.forceFlowId bypass to validate caller-supplied flow ids
+   * before routing past intent detection.
+   */
+  private getAllKnownFlowIds(): string[] {
+    const handlerIds = Array.from(this.handlers.keys()) as string[];
+    const compositeIds = PRESET_COMPOSITE_FLOWS.map((cf) => cf.id);
+    return [...handlerIds, ...compositeIds];
   }
 
   getAvailableFlows(): FlowInfo[] {
