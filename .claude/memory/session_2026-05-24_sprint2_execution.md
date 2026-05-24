@@ -278,3 +278,25 @@ relates_to: [handoff_2026-05-24_sprint1_closed_sprint2_ready.md]
   - `flow-handler-motion-integration.ts`: removed two redundant domain-validation summary lines from guidance. Looks intentional. Preserving.
   - `flow-handler-typography-excellence.ts`: removed one redundant typography-domain summary line from guidance. Looks intentional. Preserving.
 - Will edit ON TOP of dirty tree, commit will include both citation work AND these pre-existing edits.
+
+## Task 13: Sprint 2 end-to-end integration smoke
+
+**Status: IN_PROGRESS**
+
+### Step 1: Test file written
+- File: `sidecoach/src/__tests__/sprint2-integration.test.ts`
+- Mirrors sprint1-integration.test.ts pattern with assertTrue helper
+- Asserts:
+  1. flowW_landing_composition + flowX_copywriting in getAvailableFlows()
+  2. composite_craft_landing_page in PRESET_COMPOSITE_FLOWS
+  3. getHandlers().get(flowW) and .get(flowX) return handlers
+  4. wHandler.execute() returns success with Hero guidance
+  5. xHandler.execute() returns success with "Option 1:" markers + product name substitution
+  6. Both handlers emit non-null memory artifacts
+- Test uses refRoot = reference/ as project context, base context with brand register + 'Studio Atelier' product name
+
+### Step 2 prep: Fixed FlowInfo accessor
+- Initial compile error: FlowInfo type uses `flowId` field, not `id`. Plan text had `.map((f) => f.id)` which doesn't compile.
+- Fix: Changed to `.map((f) => f.flowId)` in test file. Other CompositeFlowDefinition uses `.id` correctly (different interface).
+- T13: sprint2-integration.test.ts created and verified; full Sprint 1 + Sprint 2 suite green (15 tests pass, zero TypeScript errors). Sprint 2 closed at this commit.
+- T13 commit: flag cleared, memory re-touched, ready for final commit.
