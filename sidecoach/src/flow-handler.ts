@@ -102,6 +102,9 @@ export class BaseFlowHandler implements FlowHandler {
       // Special: Curate & All-Seven QA
       flowU_curate: 'Curate Design References',
       flowV_all_seven_qa: 'All-Seven QA Pipeline',
+      // Tier 6: Composition & Copy
+      flowW_landing_composition: 'Landing Page Composition (sections + rhythm)',
+      flowX_copywriting: 'Copywriting (per-slot draft options)',
       // Legacy flows
       flow1_clone_match: 'Clone/Match from Reference',
       flow2_polish_enhance: 'Polish/Enhance Interaction',

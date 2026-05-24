@@ -699,6 +699,43 @@ export const flows: Flow[] = [
       negativeFilters: [],
     },
   },
+  // TIER 6: COMPOSITION & COPY
+  {
+    id: 'flowW_landing_composition',
+    name: 'Landing Page Composition (sections + rhythm)',
+    description: 'Decide which sections a landing page needs and how to space them, register-aware (brand vs product)',
+    triggers: {
+      patterns: [
+        'lay out a landing page',
+        'compose a landing page',
+        'plan the sections for [page]',
+        'what sections does this landing need',
+        'landing page structure',
+        'section taxonomy for [register]',
+      ],
+      intentMarkers: ['landing', 'sections', 'compose', 'structure', 'layout-plan', 'taxonomy'],
+      avoidCollisionWith: ['flowG_component_implementation', 'flow8_refactor_layout'],
+      negativeFilters: ['component', 'fix', 'audit', 'critique'],
+    },
+  },
+  {
+    id: 'flowX_copywriting',
+    name: 'Copywriting (per-slot draft options)',
+    description: 'Generate 2-3 draft copy options per slot (hero headline, supporting line, CTA, feature title) using register + product context',
+    triggers: {
+      patterns: [
+        'draft hero copy',
+        'write copy for [section]',
+        'headline options for [page]',
+        'draft CTA copy',
+        'copy variants for [slot]',
+        'write the hero',
+      ],
+      intentMarkers: ['copy', 'headline', 'CTA', 'hero', 'tagline', 'draft', 'wording'],
+      avoidCollisionWith: ['flowA_brand_verify', 'flowW_landing_composition'],
+      negativeFilters: ['component', 'token', 'layout', 'critique'],
+    },
+  },
 ];
 
 export const flowMap = new Map(flows.map((f) => [f.id, f]));

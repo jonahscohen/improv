@@ -27,6 +27,9 @@ export type FlowId =
   // Special: Curate & All-Seven QA
   | 'flowU_curate'
   | 'flowV_all_seven_qa'
+  // Tier 6: Composition & Copy
+  | 'flowW_landing_composition'
+  | 'flowX_copywriting'
   // Legacy flows
   | 'flow1_clone_match'
   | 'flow2_polish_enhance'
