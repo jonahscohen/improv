@@ -176,29 +176,144 @@ export function createContextLoader(): ContextLoader {
 }
 
 export interface TechStack {
-  framework: 'react' | 'next' | 'vue' | 'svelte' | 'astro' | 'remix' | 'vanilla' | 'unknown';
+  framework:
+    | 'react'
+    | 'next'
+    | 'vue'
+    | 'svelte'
+    | 'astro'
+    | 'remix'
+    | 'angular'
+    | 'wordpress'
+    | 'drupal'
+    | 'hubspot'
+    | 'vanilla'
+    | 'unknown';
   hasAnimationLib: boolean;
   animationLib?: 'gsap' | 'framer-motion' | 'motion' | 'lenis' | 'anime' | null;
   hasTypescript: boolean;
   packageManager: 'npm' | 'pnpm' | 'yarn' | 'bun' | 'unknown';
 }
 
+/**
+ * Detect CMS / Angular projects by sniffing the project root for marker files.
+ * Runs BEFORE the package.json sniff inside detectTechStack so CMS markers
+ * win over a package.json that may also be present (e.g. a WordPress project
+ * with @wordpress/scripts for Gutenberg block work).
+ *
+ * Returns null if no CMS / Angular marker is found - the caller should then
+ * fall through to the existing package.json detection.
+ */
+export function detectStackFromFilesystem(
+  projectPath: string
+): 'angular' | 'wordpress' | 'drupal' | 'hubspot' | null {
+  // 1. Angular: angular.json at root
+  if (fs.existsSync(path.join(projectPath, 'angular.json'))) {
+    return 'angular';
+  }
+
+  // 2. WordPress: wp-config.php OR style.css with `Theme Name:` theme header
+  if (fs.existsSync(path.join(projectPath, 'wp-config.php'))) {
+    return 'wordpress';
+  }
+  const stylePath = path.join(projectPath, 'style.css');
+  if (fs.existsSync(stylePath)) {
+    try {
+      const header = fs.readFileSync(stylePath, 'utf8').split('\n').slice(0, 50).join('\n');
+      if (/^\s*Theme Name:\s*\S/m.test(header)) {
+        return 'wordpress';
+      }
+    } catch {
+      // unreadable style.css - ignore and continue
+    }
+  }
+
+  // 3. Drupal: composer.json with drupal/* requirement OR any top-level *.info.yml
+  const composerPath = path.join(projectPath, 'composer.json');
+  if (fs.existsSync(composerPath)) {
+    try {
+      const composer = JSON.parse(fs.readFileSync(composerPath, 'utf8'));
+      const allReqs = { ...(composer.require || {}), ...(composer['require-dev'] || {}) };
+      if (Object.keys(allReqs).some((k) => k.startsWith('drupal/'))) {
+        return 'drupal';
+      }
+    } catch {
+      // malformed composer.json - ignore and continue
+    }
+  }
+  try {
+    const entries = fs.readdirSync(projectPath);
+    if (entries.some((e) => e.endsWith('.info.yml'))) {
+      return 'drupal';
+    }
+  } catch {
+    // unreadable dir - ignore
+  }
+
+  // 4. HubSpot: theme.json with HubSpot fields OR hubl_modules/ OR hs-config* file
+  const themePath = path.join(projectPath, 'theme.json');
+  if (fs.existsSync(themePath)) {
+    try {
+      const theme = JSON.parse(fs.readFileSync(themePath, 'utf8'));
+      if (
+        theme.cms === 'hubspot' ||
+        Array.isArray(theme.template_types) ||
+        theme.label !== undefined
+      ) {
+        return 'hubspot';
+      }
+    } catch {
+      // malformed theme.json - ignore and continue
+    }
+  }
+  if (fs.existsSync(path.join(projectPath, 'hubl_modules'))) {
+    return 'hubspot';
+  }
+  try {
+    const entries = fs.readdirSync(projectPath);
+    if (entries.some((e) => /^hs-config/.test(e))) {
+      return 'hubspot';
+    }
+  } catch {
+    // unreadable dir - already handled above
+  }
+
+  return null;
+}
+
 export function detectTechStack(projectPath: string): TechStack {
+  // CMS / Angular detection first - these markers take priority over package.json
+  // because CMS projects often have a package.json for build tooling (e.g. WordPress
+  // with @wordpress/scripts for Gutenberg) but the actual runtime framework is the CMS.
+  const fsFramework = detectStackFromFilesystem(projectPath);
+
   const pkgPath = path.join(projectPath, 'package.json');
   let pkg: any = {};
+  let pkgExists = true;
   try {
     pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
   } catch {
+    pkgExists = false;
+  }
+
+  // If no package.json AND no CMS marker, fall back to vanilla.
+  if (!pkgExists && !fsFramework) {
     return { framework: 'vanilla', hasAnimationLib: false, hasTypescript: false, packageManager: 'unknown' };
   }
+
   const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
-  let framework: TechStack['framework'] = 'vanilla';
-  if (deps['next']) framework = 'next';
+
+  // Resolve framework: CMS detection wins; otherwise package.json sniff.
+  let framework: TechStack['framework'];
+  if (fsFramework) {
+    framework = fsFramework;
+  } else if (deps['next']) framework = 'next';
   else if (deps['@remix-run/react'] || deps['remix']) framework = 'remix';
   else if (deps['astro']) framework = 'astro';
   else if (deps['svelte']) framework = 'svelte';
   else if (deps['vue']) framework = 'vue';
   else if (deps['react']) framework = 'react';
+  else framework = 'vanilla';
   let animationLib: TechStack['animationLib'] = null;
   if (deps['gsap']) animationLib = 'gsap';
   else if (deps['framer-motion']) animationLib = 'framer-motion';
