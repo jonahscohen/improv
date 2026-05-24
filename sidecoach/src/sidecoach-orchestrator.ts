@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import { validateTaste, TasteViolation } from './taste-validator';
 import { createDetector, IntentDetector } from './intent-detector';
 import { FlowHandler, FlowExecutionContext, FlowExecutionResult, BaseFlowHandler } from './flow-handler';
 import { FlowId, MatchResult, DisambiguationResult } from './types';
@@ -68,6 +70,20 @@ import { FlowSpecificValidator } from './flow-specific-validators';
 import { FlowMetricsTracker, globalMetricsTracker } from './flow-metrics-tracker';
 import { FlowConditionalRouter } from './flow-conditional-router';
 import { ClaudemdMandateValidator } from './clausemd-mandate-validator';
+
+// Flows that produce HTML output and must clear the taste gate before declaring success.
+// craft / clone-match / layout / polish families (both modern flowX_* and legacy flowN_* IDs).
+const HTML_PRODUCING_FLOWS = new Set<string>([
+  'flowG_component_implementation',
+  'flowJ_tactical_polish',
+  'flowO_clone_match_special',
+  'flowR_layout_optimization',
+  'flow1_clone_match',
+  'flow2_polish_enhance',
+  'flow7_design_component',
+  'flow8_refactor_layout',
+  'flow10_implement_design',
+]);
 
 export class FlowExecutionEngine {
   private intentDetector: IntentDetector;
@@ -178,6 +194,96 @@ export class FlowExecutionEngine {
     }
 
     flowHistory.recordFlow(entry as FlowHistoryEntry);
+  }
+
+  // Taste validator gate: run validateTaste against the produced HTML for craft/clone-match/layout/polish flows.
+  // Mutates result -> status: 'error' with violations summary when target file fails taste checks.
+  // Soft-skips when no target file is in context (metadata.targetFile or currentFile ending in .html/.htm).
+  private runTasteValidationGate(
+    flowId: string,
+    context: FlowExecutionContext,
+    result: FlowExecutionResult
+  ): void {
+    if (!HTML_PRODUCING_FLOWS.has(flowId)) return;
+    if (result.status !== 'success') return;
+
+    const metaTarget = context.metadata?.targetFile as string | undefined;
+    const currentHtml =
+      context.currentFile && /\.html?$/i.test(context.currentFile)
+        ? context.currentFile
+        : undefined;
+    const targetFile = metaTarget || currentHtml;
+    if (!targetFile) return;
+
+    let html: string;
+    try {
+      html = fs.readFileSync(targetFile, 'utf8');
+    } catch {
+      return;
+    }
+
+    let css: string | undefined;
+    const cssFile = context.metadata?.targetCss as string | undefined;
+    if (cssFile) {
+      try {
+        css = fs.readFileSync(cssFile, 'utf8');
+      } catch {
+        // CSS optional
+      }
+    }
+
+    const violations: TasteViolation[] = validateTaste(html, css);
+    if (violations.length === 0) return;
+
+    const summary = violations
+      .map((v) => `- [${v.ruleId}] ${v.message}`)
+      .join('\n');
+    result.status = 'error';
+    result.error = `Taste validator: ${violations.length} violation(s) in ${targetFile}`;
+    result.guidance = [
+      ...(result.guidance || []),
+      `Taste validation FAILED on ${targetFile}:`,
+      summary,
+    ];
+    result.message = `${result.message}\n\nTaste validation FAILED on ${targetFile}:\n${summary}`;
+  }
+
+  private cachedProjectCtx: { path: string; ctx: any } | null = null;
+
+  private enrichContextForHandler(
+    context: FlowExecutionContext,
+    _flowId: string
+  ): FlowExecutionContext {
+    const projectPath = context.projectPath || process.env.SIDECOACH_PROJECT_PATH;
+    if (!projectPath) return context;
+
+    // Per-orchestrator-lifetime cache (re-read only if path changes)
+    if (!this.cachedProjectCtx || this.cachedProjectCtx.path !== projectPath) {
+      try {
+        const ctx = buildProjectContext(projectPath);
+        this.cachedProjectCtx = { path: projectPath, ctx };
+      } catch {
+        return context;
+      }
+    }
+    const loaded = this.cachedProjectCtx.ctx;
+    const enrichedMeta = {
+      ...(context.metadata || {}),
+      designTokens: context.metadata?.designTokens || loaded.parsedDesignTokens || {},
+      techStack: context.metadata?.techStack || loaded.techStack,
+      productContent: loaded.productContent,
+      designContent: loaded.designContent,
+    };
+    const enrichedProjectContext = {
+      ...(context.projectContext || {}),
+      register: context.projectContext?.register || loaded.register,
+      product: (context.projectContext as any)?.product || { content: loaded.productContent },
+    };
+    return {
+      ...context,
+      metadata: enrichedMeta,
+      projectContext: enrichedProjectContext as any,
+    };
   }
 
   // Phase III: Performance & Validation Integration
@@ -440,7 +546,7 @@ export class FlowExecutionEngine {
               this.contextManager.addToExecutionChain(step.flowId, step.flowId);
 
               // Execute the handler
-              const result = await handler.execute(executionContext);
+              const result = await handler.execute(this.enrichContextForHandler(executionContext, step.flowId));
 
               // Track flow completion in execution chain
               this.contextManager.completeInChain(
@@ -455,6 +561,7 @@ export class FlowExecutionEngine {
                 executionDuration: this.contextManager.getExecutionDuration(step.flowId),
               };
 
+              this.runTasteValidationGate(step.flowId, executionContext, result);
               this.recordFlowWithMemory(result);
 
               // Apply automatic domain validators based on flow type (soft-fail)
@@ -616,7 +723,7 @@ export class FlowExecutionEngine {
           // Track flow entry in execution chain
           this.contextManager.addToExecutionChain(flowId, flowId);
 
-          const result = await handler.execute(executionContext);
+          const result = await handler.execute(this.enrichContextForHandler(executionContext, flowId));
 
           // Track flow completion and store metadata
           this.contextManager.completeInChain(
@@ -631,6 +738,7 @@ export class FlowExecutionEngine {
             executionDuration: this.contextManager.getExecutionDuration(flowId),
           };
 
+          this.runTasteValidationGate(flowId, executionContext, result);
           this.recordFlowWithMemory(result);
           flowResults.push(result);
           if (!detectedFlow) {
@@ -841,7 +949,7 @@ export class FlowExecutionEngine {
 
       try {
         // Execute the handler
-        result = await handler.execute(executionContext);
+        result = await handler.execute(this.enrichContextForHandler(executionContext, currentFlowId));
 
         // Track flow completion in execution chain
         this.contextManager.completeInChain(
@@ -907,6 +1015,9 @@ export class FlowExecutionEngine {
           result.message = `${result.message}\n\n⚠️ Warning: ${warningMessages}`;
         }
       }
+
+      // Run taste validator gate (mutates result -> error if HTML produces violations)
+      this.runTasteValidationGate(currentFlowId, executionContext, result);
 
       // Record to FlowHistory (with memory data if available)
       this.recordFlowWithMemory(result);
