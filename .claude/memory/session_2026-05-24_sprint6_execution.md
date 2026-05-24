@@ -18,3 +18,11 @@ Human collaborator: Jonah.
 - Brief said "14 assertions" but the verbatim test file emits 16 PASS lines (count drift in brief; behavior is correct).
 - tsc --noEmit: clean (exit 0, no output).
 - Next: commit and update MEMORY.md index.
+
+## T2: Lazy GC + checkpointStore engine field (DONE)
+
+- Added `import { CheckpointStore, SidecoachCheckpoint } from './checkpoint-store';` to sidecoach-orchestrator.ts.
+- Added 2 private fields to FlowExecutionEngine: `checkpointStore: CheckpointStore | null = null` and `gcRan = false`.
+- Inserted lazy-init block at the top of `engine.process()` BEFORE the Sprint 5 forceFlowId block. Block creates the store (using context.projectPath || process.cwd()), runs gcOldCheckpoints(7), sets gcRan=true. Soft-fail wrapped in try/catch with stderr breadcrumb.
+- Test sprint6-checkpoint-engine-gc.test.ts asserts: stale file exists before boot, removed after first process() call, second process() call does NOT re-fire GC.
+- All 3 assertions PASS. tsc clean. T1 isolated test still PASS.

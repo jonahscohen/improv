@@ -74,6 +74,7 @@ import { FlowConditionalRouter } from './flow-conditional-router';
 import { ClaudemdMandateValidator } from './clausemd-mandate-validator';
 import { BuildReport } from './build-report-types';
 import { generateBuildReport, renderBuildReportMarkdown } from './build-report-aggregator';
+import { CheckpointStore, SidecoachCheckpoint } from './checkpoint-store';
 
 // Flows that produce HTML output and must clear the taste gate before declaring success.
 // craft / clone-match / layout / polish families (both modern flowX_* and legacy flowN_* IDs).
@@ -95,6 +96,8 @@ export class FlowExecutionEngine {
   private orchestrator: IntelligentOrchestrator;
   private compositionEngine: FlowCompositionEngine;
   private contextManager: EnhancedContextManager;
+  private checkpointStore: CheckpointStore | null = null;
+  private gcRan = false;
 
   constructor() {
     this.intentDetector = createDetector();
@@ -782,6 +785,17 @@ export class FlowExecutionEngine {
         detectedFlow,
         flowResults,
       };
+    }
+
+    // Phase 6 part 2: lazy CheckpointStore boot + 7-day GC sweep (runs once per engine instance).
+    if (!this.checkpointStore || !this.gcRan) {
+      this.checkpointStore = new CheckpointStore(context.projectPath || process.cwd());
+      try {
+        this.checkpointStore.gcOldCheckpoints(7);
+      } catch (err) {
+        process.stderr.write(`[sidecoach] checkpoint GC failed (continuing): ${(err as Error).message}\n`);
+      }
+      this.gcRan = true;
     }
 
     // Step 1: Detect intent (falls back to intent detection if not a slash command).
