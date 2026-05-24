@@ -70,4 +70,5 @@ export interface DisambiguationResult {
   isAmbiguous: boolean;
   recommendation?: MatchResult;
   clarificationNeeded?: string;
+  tieBreak?: { chosenFlowId: string; reason: string };
 }

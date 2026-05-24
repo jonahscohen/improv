@@ -102,12 +102,35 @@ export class IntentDetector {
     }
 
     // Return top match with others as candidates
-    return {
+    const disambig: DisambiguationResult = {
       candidates: matches.slice(0, 3),
       isAmbiguous: matches[0].confidence < 0.9 || matches.length > 1,
       recommendation: matches[0],
       clarificationNeeded: matches.length > 1 ? `Did you mean ${matches[0].flowName}?` : undefined,
     };
+
+    // Tie-break: when top candidates have equal confidence, use the recommendation field
+    // or fall back to a deterministic heuristic (alphabetical by flowId)
+    if (disambig.isAmbiguous && disambig.candidates.length > 1) {
+      const topConf = disambig.candidates[0].confidence;
+      const tied = disambig.candidates.filter((c) => c.confidence === topConf);
+      if (tied.length > 1) {
+        const rec = disambig.recommendation;
+        let chosenFlowId: string;
+        let reason: string;
+        if (rec && tied.some((c) => c.flowId === rec.flowId)) {
+          chosenFlowId = rec.flowId;
+          reason = `Used recommendation field as tiebreaker among ${tied.length} equal-confidence matches`;
+        } else {
+          const sorted = [...tied].sort((a, b) => String(a.flowId).localeCompare(String(b.flowId)));
+          chosenFlowId = sorted[0].flowId;
+          reason = `Alphabetical tiebreak among ${tied.length} equal-confidence matches (no recommendation set)`;
+        }
+        disambig.tieBreak = { chosenFlowId, reason };
+      }
+    }
+
+    return disambig;
   }
 
   // Orchestrator Integration: Prerequisite validation and flow chaining
