@@ -205,7 +205,101 @@ export function generateBuildReport(
   };
 }
 
-// Stub for the markdown renderer - implemented in T3.
-export function renderBuildReportMarkdown(_report: BuildReport): string {
-  throw new Error('renderBuildReportMarkdown not yet implemented (Sprint 4 T3)');
+/**
+ * Render a BuildReport as human-readable markdown.
+ * Pure function. No I/O.
+ */
+export function renderBuildReportMarkdown(report: BuildReport): string {
+  const lines: string[] = [];
+
+  const title = report.composite
+    ? `Build Report - ${report.composite.replace(/^composite_/, '').replace(/_/g, ' ')}`
+    : 'Build Report';
+  lines.push(`# ${title}`);
+  lines.push('');
+  lines.push(`**Generated:** ${report.generatedAt}`);
+  if (report.composite) {
+    lines.push(`**Composite:** ${report.composite}`);
+  }
+  lines.push(`**Flows executed:** ${report.flowsExecuted.join(' -> ')}`);
+  lines.push('');
+
+  const verdictLabel = report.verdict.toUpperCase();
+  lines.push(`## Verdict: ${verdictLabel}`);
+  lines.push('');
+  if (report.verdict === 'clean') {
+    lines.push('Ship clean. No blocking issues, no warnings.');
+  } else if (report.verdict === 'warnings-only') {
+    lines.push(`Ship after addressing the ${report.severityCounts.warning} warning${report.severityCounts.warning === 1 ? '' : 's'} below. No blocking issues.`);
+  } else {
+    lines.push(`Cannot ship. ${report.severityCounts.blocking} blocking issue${report.severityCounts.blocking === 1 ? '' : 's'} must be resolved first.`);
+  }
+  lines.push('');
+
+  lines.push('## Severity totals');
+  lines.push('');
+  lines.push('| Severity | Count |');
+  lines.push('|----------|------:|');
+  lines.push(`| Blocking | ${report.severityCounts.blocking} |`);
+  lines.push(`| Warning  | ${report.severityCounts.warning} |`);
+  const infoNote = report.severityCounts.info > 0 ? ` (hidden, pass --include-info to show)` : '';
+  lines.push(`| Info     | ${report.severityCounts.info}${infoNote} |`);
+  lines.push('');
+
+  lines.push(`## Overall grade: ${report.overallGrade} (${report.overallPassRate.toFixed(1)}%)`);
+  lines.push('');
+
+  if (report.domainGrades.length > 0) {
+    lines.push('## Per-domain grades');
+    lines.push('');
+    lines.push('| Domain | Pass rate | Grade | Rules |');
+    lines.push('|--------|----------:|:-----:|------:|');
+    for (const g of report.domainGrades) {
+      lines.push(`| ${g.domain} | ${g.passRate.toFixed(1)}% | ${g.letter} | ${g.rulesPassed}/${g.rulesTotal} |`);
+    }
+    lines.push('');
+  }
+
+  if (report.findings.length === 0) {
+    lines.push('## Findings');
+    lines.push('');
+    lines.push('No findings - ship clean.');
+    lines.push('');
+  } else {
+    const blockers = report.findings.filter((f) => f.severity === 'blocking');
+    const warnings = report.findings.filter((f) => f.severity === 'warning');
+    lines.push(`## Findings (${blockers.length} blocking, ${warnings.length} warning)`);
+    lines.push('');
+
+    blockers.forEach((f, i) => {
+      lines.push(`### Blocker ${i + 1}: ${f.rule}`);
+      lines.push(`- **Source:** ${f.source}`);
+      lines.push(`- **Flow:** ${f.flowId}`);
+      lines.push(`- **Message:** ${f.message}`);
+      if (f.fix) {
+        lines.push(`- **Fix:** ${f.fix}`);
+      }
+      lines.push('');
+    });
+
+    warnings.forEach((f, i) => {
+      lines.push(`### Warning ${i + 1}: ${f.rule}`);
+      lines.push(`- **Source:** ${f.source}`);
+      lines.push(`- **Flow:** ${f.flowId}`);
+      lines.push(`- **Message:** ${f.message}`);
+      if (f.fix) {
+        lines.push(`- **Fix:** ${f.fix}`);
+      }
+      lines.push('');
+    });
+  }
+
+  lines.push('## Next steps');
+  lines.push('');
+  report.nextSteps.forEach((s, i) => {
+    lines.push(`${i + 1}. ${s}`);
+  });
+  lines.push('');
+
+  return lines.join('\n');
 }

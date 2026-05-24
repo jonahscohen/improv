@@ -22,3 +22,12 @@ Human collaborator: Jonah.
 - T2: build-report-aggregator.ts with generateBuildReport for FlowExecutionResult[] input. Severity bucketing (fail->blocking, warning->warning, pass->no finding), domain grading from metrics with "<domain>.<name>" prefix, gate handling (required+!passed -> blocking, optional+!passed -> warning), nextSteps composition. memory-input + markdown renderer stubbed for T7/T3.
 - T2 commit retry: re-touching memory after rm flag-clear.
 - T2 type fix: replaced `result.memory as any` with `result.memory as FlowMemoryEntry | undefined` in findingsFromResult and domainGradesFromResults. FlowMemoryEntry imported from flow-memory-schema. TypeScript now catches shape errors at compile time. tsc --noEmit zero errors, test PASS.
+
+## T3: renderBuildReportMarkdown (DONE)
+
+- Created sprint4-build-report-renderer.test.ts with 10 fixture-based assertions across clean/warnings-only/blocked verdicts
+- Replaced stub with full markdown renderer implementation
+- Renderer output structure: header (title, generated, composite, flows), verdict block, severity totals table, overall grade, per-domain grades table, findings grouped by severity, next steps
+- Test passes: tsc --noEmit exit 0, test prints "sprint4-build-report-renderer PASS"
+- Pure function, no I/O
+- Memory sync after flag clear
