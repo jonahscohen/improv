@@ -69,3 +69,5 @@ Human collaborator: Jonah.
 - T7 Step 4: Replaced the empty memoryPaths placeholder in bin/sidecoach-build-report.js with a real scanner: reads .claude/memory/, filters to /^session_.*\.md$/, maps to absolute paths, filters by mtime >= Date.parse(--since). Falls back to all matching files when --since is 0 (treats 1970-01-01 as 0). Exits 1 on dir-read failure.
 - T7 Step 5-6 verification: 7/7 Sprint 4 tests PASS (grading, aggregator, renderer, composite, single-opt-in, memory-input, cli), tsc --noEmit clean.
 - T7 commit retry: re-touching memory after rm flag-clear (controller commit per Sprint 1 workaround).
+- T8 (close-out): full 28-test suite green, tsc clean. Wrote session_2026-05-24_sprint4_closed.md summarizing 8 task commits + 1 quality fix + out-of-scope follow-ups. Added MEMORY.md index entry (global). Sprint 4 (Phase 5) is now closed.
+- T8 commit retry: re-touching memory after rm flag-clear per Sprint 1 workaround.
