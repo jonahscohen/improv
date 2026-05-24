@@ -21,3 +21,4 @@ Human collaborator: Jonah.
 - T2 Step 4: Test PASS - tsc --noEmit zero errors, all 17 assertions verified (clean/blocked/graded/composite/info paths, sort order, severity counts, domain grades).
 - T2: build-report-aggregator.ts with generateBuildReport for FlowExecutionResult[] input. Severity bucketing (fail->blocking, warning->warning, pass->no finding), domain grading from metrics with "<domain>.<name>" prefix, gate handling (required+!passed -> blocking, optional+!passed -> warning), nextSteps composition. memory-input + markdown renderer stubbed for T7/T3.
 - T2 commit retry: re-touching memory after rm flag-clear.
+- T2 type fix: replaced `result.memory as any` with `result.memory as FlowMemoryEntry | undefined` in findingsFromResult and domainGradesFromResults. FlowMemoryEntry imported from flow-memory-schema. TypeScript now catches shape errors at compile time. tsc --noEmit zero errors, test PASS.

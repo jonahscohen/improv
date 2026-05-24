@@ -6,6 +6,7 @@
 
 import * as fs from 'fs';
 import { FlowExecutionResult } from './flow-handler';
+import { FlowMemoryEntry } from './flow-memory-schema';
 import {
   BuildReport,
   SeverityCounts,
@@ -45,7 +46,7 @@ function statusToSeverity(status: 'pass' | 'warning' | 'fail'): 'blocking' | 'wa
 
 function findingsFromResult(result: FlowExecutionResult): FindingEntry[] {
   const findings: FindingEntry[] = [];
-  const memory = result.memory as any;
+  const memory = result.memory as FlowMemoryEntry | undefined;
   if (!memory) return findings;
 
   for (const v of memory.validationResults || []) {
@@ -93,7 +94,7 @@ function domainGradesFromResults(
   const byDomain = new Map<string, { passSum: number; count: number; rulesPassed: number; rulesTotal: number }>();
 
   for (const result of results) {
-    const memory = result.memory as any;
+    const memory = result.memory as FlowMemoryEntry | undefined;
     if (!memory) continue;
     for (const m of memory.metrics || []) {
       const dotIdx = String(m.name).indexOf('.');
