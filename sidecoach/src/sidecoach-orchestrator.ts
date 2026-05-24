@@ -1222,6 +1222,11 @@ export interface SidecoachResult {
   artifacts?: any[];
   ambiguousCandidates?: Array<{ flowId: FlowId; flowName: string; confidence: number }>;
   buildReport?: BuildReport;
+  // Phase 6 disambiguation: when set, the caller should render an AskUserQuestion
+  // with `ambiguousCandidates` and re-invoke engine.process(utterance, {metadata: {forceFlowId: chosenFlowId}}).
+  needsDisambiguation?: boolean;
+  // Pre-rendered prompt string the caller can surface directly. Includes the original utterance.
+  disambiguationPrompt?: string;
 }
 
 export function createExecutionEngine(): FlowExecutionEngine {
