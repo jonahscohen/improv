@@ -38,3 +38,14 @@ Files touched:
 
 Files touched:
 - sidecoach/src/__tests__/sprint5-disambiguation-prompt-path.test.ts: new test file.
+
+## T5: end-to-end two-call resolution test (DONE)
+
+- Created sprint5-disambiguation-e2e-resolution.test.ts with 9 assertions covering the full loop: round 1 returns the prompt shape (needsDisambiguation, candidates, prompt string), caller picks first candidate, round 2 calls process() with metadata.forceFlowId=<chosen>, orchestrator bypasses detect, executes the chosen flow.
+- Verified detect was called exactly once (round 1) and NOT again on round 2 - confirms the bypass short-circuits intent detection.
+- Verified chosen flow appears in round-2 flowResults.
+- All 9 assertions PASS on first run after writing test (T2 + T3 orchestrator code already implemented both branches).
+- tsc clean. All sprint5 tests green (silent, prompt-path, force-flowid, e2e).
+
+Files touched:
+- sidecoach/src/__tests__/sprint5-disambiguation-e2e-resolution.test.ts: new test file.
