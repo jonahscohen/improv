@@ -85,3 +85,38 @@ relates_to: [handoff_2026-05-24_sprint1_closed_sprint2_ready.md]
 ### Commit (standard pattern)
 - Command: `git add <files> && git commit -m "..."`
 - Ready for push
+
+## Task 7: Wire FlowXCopywritingHandler into Orchestrator
+
+**Status: COMPLETE**
+
+### Step 1: Import Added
+- File: `sidecoach/src/sidecoach-orchestrator.ts` (line 68)
+- Added: `import { FlowXCopywritingHandler } from './flow-handler-copywriting';`
+- Location: directly under `import { FlowWLandingCompositionHandler } from './flow-handler-landing-composition';`
+
+### Step 2: Handler Registered in handlerMap
+- Location: `initializeHandlers()` method, handlerMap array, line 150
+- Added: `['flowX_copywriting', () => new FlowXCopywritingHandler()],`
+- Under Tier 6 Composition & Copy comment, directly after flowW entry
+
+### Step 3: Added to getAvailableFlows()
+- Location: `getAvailableFlows()` method, flowIds array, line 1134
+- Added: `'flowX_copywriting',`
+- Under Tier 6 Composition & Copy comment, directly after flowW entry
+
+### Step 4: Build + Verification
+- Command: `npm run build` - SUCCESS (zero TypeScript errors)
+- Command: `node bin/sidecoach-artifacts.js --list | grep -E "flowW|flowX"`
+  - Output: Both flows listed (flowW_landing_composition and flowX_copywriting)
+- Command: `node bin/sidecoach-artifacts.js flowX_copywriting`
+  - Status: success
+  - Artifacts include "Copy drafts: Hero" (hero section default)
+  - Confirmed artifact content present
+
+### Step 5: Commit (four-bash-call pattern)
+- Bash A: Memory updated (above)
+- Bash B: rm -f ~/.claude/.needs-verification
+- Bash C: Memory re-touched (retry line) - DONE
+- Bash D: git add + git commit ready
+- T7 commit retry: flag cleared, memory re-touched, ready to commit
