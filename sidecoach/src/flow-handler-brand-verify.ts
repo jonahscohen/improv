@@ -188,9 +188,14 @@ export class FlowABrandVerifyHandler extends BaseFlowHandler {
       laws.push(`${domain.domain} (${domain.rules.length} rules)`);
     }
 
-    // Add register-specific context
+    // Add register-specific context (null-safe: register may be undefined when called
+    // from the orchestrator's prerequisite-chain path before context enrichment).
     const registerLaws = REGISTER_SPECIFIC_LAWS[register];
-    laws.push(`Register-specific: ${registerLaws.description}`);
+    if (registerLaws) {
+      laws.push(`Register-specific: ${registerLaws.description}`);
+    } else {
+      laws.push('Register-specific: (register not yet detected - run PRODUCT.md detection first)');
+    }
 
     return laws;
   }
