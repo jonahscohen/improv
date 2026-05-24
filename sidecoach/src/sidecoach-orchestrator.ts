@@ -255,7 +255,7 @@ export class FlowExecutionEngine {
 
   private cachedProjectCtx: { path: string; ctx: any } | null = null;
 
-  private enrichContextForHandler(
+  enrichContextForHandler(
     context: FlowExecutionContext,
     _flowId: string
   ): FlowExecutionContext {
@@ -544,14 +544,15 @@ export class FlowExecutionEngine {
             continue;
           }
 
-          // Execute the flow with context tracking
-          if (handler.canExecute(executionContext)) {
+          // Enrich context FIRST so canExecute sees the same data as execute (T11 carryover fix).
+          const enrichedCtx = this.enrichContextForHandler(executionContext, step.flowId);
+          if (handler.canExecute(enrichedCtx)) {
             try {
               // Track flow entry in execution chain
               this.contextManager.addToExecutionChain(step.flowId, step.flowId);
 
               // Execute the handler
-              const result = await handler.execute(this.enrichContextForHandler(executionContext, step.flowId));
+              const result = await handler.execute(enrichedCtx);
 
               // Track flow completion in execution chain
               this.contextManager.completeInChain(
@@ -724,11 +725,13 @@ export class FlowExecutionEngine {
           continue;
         }
 
-        if (handler.canExecute(executionContext)) {
+        // Enrich context FIRST so canExecute sees the same data as execute (T11 carryover fix).
+        const enrichedCtx = this.enrichContextForHandler(executionContext, flowId);
+        if (handler.canExecute(enrichedCtx)) {
           // Track flow entry in execution chain
           this.contextManager.addToExecutionChain(flowId, flowId);
 
-          const result = await handler.execute(this.enrichContextForHandler(executionContext, flowId));
+          const result = await handler.execute(enrichedCtx);
 
           // Track flow completion and store metadata
           this.contextManager.completeInChain(
@@ -921,8 +924,10 @@ export class FlowExecutionEngine {
         break; // Stop chaining when prerequisites not met
       }
 
+      // Enrich context FIRST so canExecute sees the same data as execute (T11 carryover fix).
+      const enrichedCtxForNatural = this.enrichContextForHandler(executionContext, currentFlowId);
       // Check if handler can execute (revive canExecute validation)
-      if (!handler.canExecute(executionContext)) {
+      if (!handler.canExecute(enrichedCtxForNatural)) {
         const skipResult: FlowExecutionResult = {
           flowId: currentFlowId,
           flowName,
@@ -954,7 +959,7 @@ export class FlowExecutionEngine {
 
       try {
         // Execute the handler
-        result = await handler.execute(this.enrichContextForHandler(executionContext, currentFlowId));
+        result = await handler.execute(enrichedCtxForNatural);
 
         // Track flow completion in execution chain
         this.contextManager.completeInChain(
