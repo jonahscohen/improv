@@ -62,3 +62,15 @@ Jonah was rightly furious. He'd spent significant time and money expecting the s
 ## Next step
 
 User reviews the spec file, approves or requests changes, then writing-plans skill writes the 10-task implementation plan.
+
+## Plan written (2026-05-25)
+
+Implementation plan saved to `/Users/spare3/Documents/Github/claude-dotfiles/docs/superpowers/plans/2026-05-25-sprint8-impeccable-parity.md`.
+
+10 tasks: T1 registry skeleton + 5 prototype entries; T2 slash-router branch; T3 teach V2 + 7-scenario test; T4 document handler + lint-pass test; T5 remaining 17 registry entries; T6 parameterized parity test for all 22 verbs; T7 orchestrator guidance-append callback; T8 list + help command expansion; T9 docs sync; T10 sprint close.
+
+Each task has TDD steps with concrete code blocks, exact commands, and four-bash-call commit pattern. All implementer dispatches must use `model: "opus"`.
+
+Plan size estimate: ~1500 lines, comparable to Sprint 6/7 plans. Sprint completion expected to add ~70 tests to the suite (from 64 baseline to 70).
+
+Ready for execution via subagent-driven-development with Opus only.
