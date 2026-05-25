@@ -282,3 +282,41 @@ Files touched:
 - sidecoach/src/sidecoach-orchestrator.ts
 - sidecoach/src/__tests__/sprint8-list-and-help.test.ts (new)
 - .claude/memory/session_2026-05-25_sprint8_execution.md (this entry)
+
+T8 verification details:
+- Test re-ran cleanly post-build: `sprint8-list-and-help PASS` (13/13 assertions).
+- Verification flag is being re-set by hook on `mv` / `>` write indicators; cleared by Read on /tmp test log.
+
+## T9: Docs sync (IN PROGRESS)
+
+Baseline pre-edit: tsc --noEmit exit 0; sprint8-impeccable-parity 197/197 PASS.
+
+In-flight edits:
+- claude/skills/sidecoach/SKILL.md - reframed frontmatter description to call out two command surfaces (phase + 22 impeccable-parity verbs) + teach/document/help commands. Added an opening paragraph describing the two surfaces and the parity-append behavior. Renamed Research-and-Strategy section to Setup-and-Strategy and updated teach (brief-driven hybrid) + document (Google-spec) + list (now mixed) + help (new) rows. Added an "Impeccable parity verbs (22 commands)" section. Replaced the project setup teach paragraph with brief-driven copy + document explanation. Workflow gates updated to mention teach-with-brief and /sidecoach document.
+- sidecoach/README.md - rewrote opening to remove "no slash commands" stance; documents two surfaces. Rewrote the How-It-Works ASCII to lead with `/sidecoach polish` example (slash command path) and call out registry append flow. Rewrote Design Philosophy section to acknowledge slash commands as the primary supported interface. Replaced Status section with the slash command surface table (phase + setup + 22 verbs) and a Sprint 8 status block.
+- SIDECOACH_QUICKSTART.md - rewrote the "invisible infrastructure" opening with a historical note; documented two command surfaces, teach v2, document, list, help. Replaced Status table with Sprint 1-8 progression. Replaced internal-API How-It-Works code block with the current FlowExecutionEngine.process() routing. Replaced Integration Path (already-done speculation) with current Architecture and Key Files tables.
+- SIDECOACH_AUDIT_REPORT.md - preserved the 2026-05-23 snapshot in place; added a 2026-05-25 update banner at the top explaining the Primary Gap has been closed and pointing readers at the updated quickstart/README.
+
+## T9: Docs sync (DONE)
+
+Files modified (4):
+- claude/skills/sidecoach/SKILL.md - frontmatter description, two-surface intro paragraph, Setup-and-Strategy table with brief-driven teach + Google-spec document + new help row + updated list row, 22-verb Impeccable Parity section, project setup paragraph rewritten, workflow gates expanded to 5 items including document.
+- sidecoach/README.md - opening rewritten to acknowledge two slash command surfaces, How-It-Works ASCII rewritten to lead with slash command path + registry append, Design Philosophy rewritten without "no slash commands" claim, Status section replaced with full Slash Command Surface table (phase + setup + 22 verbs) + Sprint 8 status block.
+- SIDECOACH_QUICKSTART.md - "invisible infrastructure" opening rewritten with historical note + current command surfaces, Status table replaced with Sprint 1-8 progression, How-It-Works code block updated to current FlowExecutionEngine.process() routing, Architecture + Key Files tables replaced the speculative Integration Path section.
+- SIDECOACH_AUDIT_REPORT.md - kept as historical snapshot; added 2026-05-25 update banner at the top pointing to the updated quickstart/README for current state.
+
+Verification:
+- tsc --noEmit exit 0 (post-edits, pre-commit).
+- sprint8-impeccable-parity 197/197 PASS.
+
+No deviations from T9 scope. Stale claims beyond T9 (e.g. the audit report's deep internal-API speculation in the lower half of the file, the quickstart's Integration Path that I replaced with current Architecture, the README's "No slash commands" stance) were rewritten because they directly contradict the Sprint 8 surface. The root README.md does not mention sidecoach at all - no edit needed.
+
+Next: clear .needs-verification flag, git add the 4 doc files + the session memory file, commit.
+
+Files touched (T9):
+- claude/skills/sidecoach/SKILL.md
+- sidecoach/README.md
+- SIDECOACH_QUICKSTART.md
+- SIDECOACH_AUDIT_REPORT.md
+- .claude/memory/session_2026-05-25_sprint8_execution.md (this entry)
+

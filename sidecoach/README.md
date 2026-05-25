@@ -1,8 +1,13 @@
 # Sidecoach v3: Design System Guardian
 
-Sidecoach is a design system orchestration engine that detects natural-language intent and chains design/development workflows into phases. It replaces command-based interfaces with conversation-driven, phase-gated execution.
+Sidecoach is a design system orchestration engine that chains design and development workflows into phases. It supports both explicit slash commands and natural-language intent detection, enforces prerequisites at phase boundaries, and runs the right flows in sequence.
 
-Instead of `/impeccable craft ...` or `/make-interfaces-feel-better`, you describe what you're building and Sidecoach automatically detects the phase, enforces prerequisites, and chains the right flows in sequence.
+There are two parallel slash command surfaces:
+
+- **Phase commands** - sidecoach native vocabulary (`research`, `craft`, `review`, plus special verbs like `clone`, `migrate`, `refactor`, `type`, `motion`, `reference`, `comprehensive`, `rapid`).
+- **Impeccable parity verbs** - 22 commands that mirror impeccable's vocabulary 1:1 and route through the same flow chains. The orchestrator appends per-verb parity guidance (impeccable's section names verbatim, plus sidecoach's parity-plus extensions: BuildReport, taste validation, polish-standard domain grades, category-reflex detector, memory entry).
+
+You can still describe what you're building in natural language and the intent detector will route, but the slash commands are the supported primary interface.
 
 ## What Sidecoach Does
 
@@ -109,31 +114,24 @@ Instead of `/impeccable craft ...` or `/make-interfaces-feel-better`, you descri
 ## How It Works
 
 ```
-User: "make this interface feel better"
+User: "/sidecoach polish login-form"  (or NL: "make this interface feel better")
   ↓
 SessionStart hook → Launches daemon in background
   ↓
 PostUserPrompt hook → Sends utterance to daemon via named pipe
   ↓
-Daemon → sidecoach-monitor.js
+Daemon → sidecoach-monitor.js → FlowExecutionEngine.process()
   ↓
-Intent Detector → Matches "make this interface feel better" pattern
+parseSlashCommand() → 'polish' matches impeccable registry → flowJ_tactical_polish + flowM_responsive_validation
+  (NL utterances flow through Intent Detector instead, returning the same flow IDs by confidence match.)
   ↓
-Detected: flow2_polish_enhance (confidence: 0.92)
-  ↓
-Orchestrator → Gets Flow2PolishHandler
-  ↓
-Handler.execute() → Returns:
-  - message: "Initiating Polish & Enhancement workflow"
-  - guidance: 4 guidance items
-  - checklist: 14 tactical improvements
-  - nextSteps: 7 action items
+Orchestrator runs the flow chain, then appends the registry's guidanceAppend, parityChecklist, and parityPlus content so the response speaks in impeccable's voice (sections like "Design System Discovery", "Pre-Polish Assessment", "Polish Systematically") while carrying sidecoach's extensions (polish-standard domain grade, taste validation, BuildReport, memory entry).
   ↓
 Result cached to /tmp/sidecoach-results-*/
   ↓
 PostResponse hook → Reads result, injects into response
   ↓
-User sees: Sidecoach results in their response
+User sees: Sidecoach guidance + checklist + parity-plus tokens in their response
 ```
 
 ## Flow Memory System (Phase 5)
@@ -235,21 +233,47 @@ Current accuracy: 100% on test suite (8 diverse utterances)
 
 ## Design Philosophy
 
-**Natural Conversation Should Evoke Sequences of Events**
+**Conversation and slash commands route to the same engine**
 
-Sidecoach replaces command-based workflows with conversation-driven ones:
-- No slash commands
-- No "what should I do next?" friction
-- Results appear naturally in conversation flow
-- Users stay in their natural thought process
+Sidecoach supports both interfaces because each fits a different moment:
+
+- **Slash commands** are the supported primary interface for direct, intentional invocation. Use `/sidecoach polish login-form` when you know what you want. Two parallel vocabularies (phase commands and the 22 impeccable parity verbs) share the same underlying flows.
+- **Natural language intent detection** still works for unscripted descriptions. The intent detector routes free-form utterances to the same flow chains, with confidence scoring and phase-gate prerequisites.
+- **No "what should I do next?" friction.** The orchestrator chains related flows, enforces prerequisites at phase boundaries, and writes a session memory entry so the next call starts with full context.
+- **`/sidecoach list` and `/sidecoach help <verb>`** make the surface discoverable: list shows phase commands and the 22 verbs grouped by phase; help dumps the registry detail for any specific verb.
+
+## Slash command surface
+
+### Phase commands (sidecoach native vocabulary)
+- `/sidecoach research` - explore design foundations (flows A-E + 4 + 7)
+- `/sidecoach craft` / `/sidecoach implement` - build tokens, components, motion, accessibility (flows F-I + 9 + 10 + 11)
+- `/sidecoach review` - polish, audit, critique, validate (flows J-N + 2 + 3 + 5 + 12 + 13)
+- `/sidecoach clone`, `constrain`, `migrate`, `refactor`, `type`, `motion`, `reference`, `comprehensive`, `rapid` - special-case routings
+- `/sidecoach list` - shows every command grouped by phase
+- `/sidecoach help <verb>` - per-verb registry detail (description, phase, impeccable reference path, flow chain, parity checklist, sidecoach parity-plus additions)
+
+### Setup
+- `/sidecoach teach [brief]` - brief-driven hybrid; parses what's in the brief, asks targeted questions for gaps, writes PRODUCT.md
+- `/sidecoach document` - scans project HTML/CSS, writes Google-spec DESIGN.md (YAML token frontmatter + six-section body)
+
+### Impeccable parity verbs (22 commands)
+- Shape and strategy: `shape`, `onboard`
+- Build: `craft`, `animate`, `bolder`, `colorize`, `delight`, `layout`, `overdrive`, `typeset`, `clarify`
+- Review: `audit`, `critique`, `polish`, `harden`, `adapt`, `optimize`
+- Tone: `quieter`, `distill`
+- Docs: `document`, `extract`
+- Tactical: `live`
+
+Each verb routes to a sidecoach flow chain through `IMPECCABLE_VERB_REGISTRY` in `src/impeccable-command-registry.ts`. The orchestrator appends the registry entry's `guidanceAppend`, `parityChecklist` (impeccable section names verbatim), and `parityPlus` (sidecoach additions) so the response matches impeccable's voice without losing sidecoach's validators, BuildReport, taste validation, and memory.
 
 ## Status
 
-✓ All 14 flows implemented
-✓ Daemon infrastructure complete
-✓ Intent detection verified
-✓ System tests passing
-✓ Ready for deployment
+- 36 flows implemented (22 flows A-V + 14 legacy 1-14).
+- 22 impeccable parity verbs wired (Sprint 8).
+- Daemon infrastructure complete; sessionstart / postuserprompt / postresponse hooks registered.
+- Slash command router + intent detector both route through the same FlowExecutionEngine.
+- `sprint8-impeccable-parity` 197/197 PASS; `sprint8-list-and-help` 13/13 PASS; tsc clean.
+- Production ready.
 
 ## Files
 

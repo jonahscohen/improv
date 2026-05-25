@@ -1,66 +1,77 @@
-# Sidecoach v2: Invisible Flow Orchestration
+# Sidecoach Quickstart
+
+> **Historical note:** earlier drafts of this file described Sidecoach as "invisible" infrastructure with no user-facing commands. That stance was retired during Sprint 1. Sidecoach is now a slash-command-driven orchestrator with two parallel command surfaces. The intent detector still routes natural-language utterances through the same engine, but slash commands are the supported primary interface.
 
 ## What Is Sidecoach?
 
-Sidecoach is invisible infrastructure inside the intent detector. It runs automatically without you doing anything.
+Sidecoach is the design orchestration engine wired into this Claude Code installation. It chains 36 flows across research, build, and review phases, enforces prerequisites at phase boundaries, and writes session memory entries so the next call starts with full context.
 
-When you say "Help me design a button," Sidecoach:
-1. Detects intent (design from scratch)
-2. Checks history (no flows run yet = research phase)
-3. Chains flows automatically (A -> B -> C -> D -> F -> G -> H -> I -> J)
-4. Feeds each result to the next flow
-5. Claude guides you conversationally through each step
+Two slash command surfaces share the same flow chains:
 
-You never invoke Sidecoach. You never run commands. It just orchestrates in the background.
+- **Phase commands** - sidecoach native vocabulary (`research`, `craft`, `review`, plus special-case verbs `clone`, `constrain`, `migrate`, `refactor`, `type`, `motion`, `reference`, `comprehensive`, `rapid`).
+- **Impeccable parity verbs (22)** - mirror impeccable's vocabulary 1:1, route through the same flow chains, then the orchestrator appends impeccable's section names verbatim plus sidecoach's parity-plus extensions (BuildReport, taste validation, polish-standard domain grades, category-reflex detector, memory entry).
 
-## Status: Implementation Complete
+Two additional commands cover setup:
 
-All 4 phases of Sidecoach v2 are built and verified:
+- `/sidecoach teach [brief]` - brief-driven hybrid setup. Parses what the brief contains, asks targeted questions only for the gaps, writes PRODUCT.md. Refuses to overwrite a real existing PRODUCT.md unless `forceOverwrite` is set.
+- `/sidecoach document` - scans project HTML/CSS, writes Google-spec DESIGN.md (YAML token frontmatter + six-section markdown body in canonical order).
 
-| Phase | What | Status |
-|-------|------|--------|
-| **1** | 10-flow architecture + 17 tactical rules | Complete |
-| **2** | Reference data service (components, fonts, motion) | Complete |
-| **2c** | Design references + DESIGN.md parsing | Complete |
-| **3** | Intelligent lookups in all flows | Complete |
-| **4** | Orchestrator (phase detection, chaining, validation) | Complete |
+Plus discovery:
 
-Code status: TypeScript compiles cleanly. Ready for integration.
+- `/sidecoach list` - shows every command grouped by phase (phase commands and the 22 verbs in one output).
+- `/sidecoach help <verb>` - registry detail for any specific verb: description, phase, impeccable reference path, flow chain, parity checklist, sidecoach parity-plus additions.
+
+Natural language still works ("Help me design a button"); the intent detector routes free-form utterances to the same flow chains.
+
+## Status: Sprint 8 complete
+
+| Sprint | Highlight | Status |
+|---|---|---|
+| 1 | Core flow architecture, slash command router, session memory | Complete |
+| 2-4 | Reference systems, validators, BuildReport, phase chaining | Complete |
+| 5-7 | Flow handlers A-V, composite flows, conditional routing | Complete |
+| 8 | 22 impeccable parity verbs + teach v2 + document + list/help | Complete |
+
+Code status: TypeScript compiles cleanly. `sprint8-impeccable-parity` 197/197 PASS.
 
 ## Current State
 
-**Ready:**
-- Orchestrator logic: Phase detection, flow chaining, prerequisite validation
-- Reference data: 40+ components, tokens, motion patterns, design references
-- All 10 flows: Wired with intelligent guidance
-
-**Missing:**
-- Integration into IntentDetector (move orchestrator source into intent detector codebase)
-- Invisible wiring (hook orchestrator into intent detection, no user-facing commands)
-- Session persistence (wire FlowHistory to actual session store)
+**Shipped:**
+- 36 flow handlers across research, build, review, and special phases (flows A-V + legacy 1-14).
+- 22 impeccable parity verbs in `IMPECCABLE_VERB_REGISTRY` (`src/impeccable-command-registry.ts`), routed by `parseSlashCommand` in `src/slash-command-router.ts`.
+- Brief-driven `/sidecoach teach` (`src/teach-command-handler-v2.ts`).
+- Google-spec `/sidecoach document` (`src/document-command-handler.ts`).
+- `/sidecoach list` showing phase commands + verbs in one grouped output.
+- `/sidecoach help <verb>` showing per-verb registry detail.
+- Session memory writes wired through the orchestrator (`SessionMemoryWriter.persistSessionMemory`).
+- Reference systems: fontshare, component gallery, design references, motion patterns, category-reflex detector.
+- 159-rule validation framework (22-point Polish Standard + 137-rule extended domains).
 
 ## How It Works
 
 ```typescript
-// Inside IntentDetector.detectIntent()
-const orchestrator = new SidecoachOrchestrator(flowHistory);
+// FlowExecutionEngine.process(utterance) - single entry point for slash + NL.
 
-// User: "Help me design a button"
-// -> detectIntent() extracts: intent='design-from-scratch'
-const phase = orchestrator.detectPhase(context);      // 'research'
-const flowChain = orchestrator.recommendFlowSequence(phase);
-// -> ['flowA_brand_verify', 'flowB_component_research', 'flowC_font_research', ...]
+const commandMatch = parseSlashCommand(utterance);
+// Slash path: commandMatch.command set, flowIds populated from the registry or phase table.
+// NL path: commandMatch.isCommand=false, IntentDetector runs and returns a flowIds array.
 
-// Run flows in sequence, pass results forward
-for (const flowId of flowChain) {
-  orchestrator.validatePrerequisites(flowId);
-  result = await runFlow(flowId, context);
-  orchestrator.recordFlowExecution(result);
-  // -> Next iteration gets updated history automatically
+for (const flowId of flowIds) {
+  validatePrerequisites(flowId);              // phase gate + Tier 2+ DESIGN.md gate, etc.
+  const result = await runFlow(flowId, context);
+  recordFlowExecution(result);                // FlowHistory persists across calls
+  flowResults.push(result);
 }
+
+// For the 22 impeccable verbs, append the registry's guidanceAppend + parityChecklist +
+// parityPlus content so the response speaks in impeccable's voice (sections like
+// "Design System Discovery", "Pre-Polish Assessment") while still carrying sidecoach's
+// extensions (polish-standard domain grade, taste validation, BuildReport, memory).
+const entry = getImpeccableEntry(commandMatch.command);
+if (entry) chainGuidance.push(...buildImpeccableGuidanceAppend(commandMatch.command));
 ```
 
-User never sees the orchestration. They just have a conversation.
+The user picks the interface that fits the moment: slash for intentional invocation, natural language for unscripted descriptions.
 
 ## Flow Dependency Graph (10 Flows)
 
@@ -83,33 +94,29 @@ Each arrow is automatic. No user action required.
 
 ## Architecture
 
-SidecoachOrchestrator provides 5 core methods:
+`FlowExecutionEngine` (in `src/sidecoach-orchestrator.ts`) is the single entry point. It owns:
 
-| Method | Purpose |
-|--------|---------|
-| `detectPhase(context)` | Analyzes FlowHistory -> 'research' or 'execution' or 'polish' |
-| `recommendFlowSequence(phase)` | Returns ideal flow chain for current phase |
-| `validatePrerequisites(flowId)` | Checks if flow can run (dependencies met? artifacts exist?) |
-| `getNextRecommendedFlow(current, result)` | Chains to next flow automatically on success/incomplete |
-| `recordFlowExecution(result)` | Records completion in FlowHistory |
+| Surface | Purpose |
+|---|---|
+| `parseSlashCommand` (router) | Routes slash commands. Handles `list`, `composite:<name>`, `help <verb>`, the 22 impeccable verbs (via `IMPECCABLE_VERB_REGISTRY`), then phase commands (via `SLASH_COMMANDS`). |
+| Intent detector | Routes natural-language utterances when `commandMatch.isCommand` is false. |
+| `validatePrerequisites(flowId)` | Hard-blocks at phase gates (PRODUCT.md required, DESIGN.md for Tier 2+, etc.). |
+| Flow loop | Iterates the routed flow IDs, runs each, records to `FlowHistory`, accumulates results. |
+| `buildImpeccableGuidanceAppend(command)` | For the 22 verbs, appends impeccable's section names + sidecoach's parity-plus tokens to the response. |
+| `SessionMemoryWriter.persistSessionMemory()` | Writes the audit trail at session end. |
 
-## Integration Path
-
-1. Move source: Copy `sidecoach/src/orchestrator.ts`, `flow-history.ts`, `reference-data.ts` into intent detector codebase
-2. Wire into intent detection: When IntentDetector detects a flow intent, instantiate orchestrator and chain flows
-3. Remove separate build: No more `npm run build` for Sidecoach. Just source code imported by intent detector.
-4. Test: Run integration tests with real flow chains
-
-## Key Files (For Integration)
+## Key Files
 
 | File | Purpose |
-|------|---------|
-| `sidecoach/src/orchestrator.ts` | Core orchestrator (343 lines) |
-| `sidecoach/src/flow-history.ts` | Session persistence (220 lines) |
-| `sidecoach/src/reference-data.ts` | Design system indexing (960+ lines) |
-
-Copy these into intent detector. Remove the `sidecoach/` folder from separate builds.
+|---|---|
+| `src/sidecoach-orchestrator.ts` | FlowExecutionEngine, list/help/teach/document dispatch, parity-append wiring |
+| `src/slash-command-router.ts` | `parseSlashCommand`, `getAvailableCommands`, `getImpeccableCommandInfo`, `getCommandsByPhase` |
+| `src/impeccable-command-registry.ts` | `IMPECCABLE_VERB_REGISTRY` with the 22 verbs (description, flowIds, guidanceAppend, parityChecklist, parityPlus, impeccableSkillPath) |
+| `src/teach-command-handler-v2.ts` | Brief-driven PRODUCT.md generation |
+| `src/document-command-handler.ts` | Google-spec DESIGN.md generation from project HTML/CSS |
+| `src/flow-history.ts` | Cross-call session persistence |
+| `src/extended-domain-validator.ts` | 159-rule validation framework |
 
 ---
 
-Status: Implementation complete. Ready for integration into intent detector. No user-facing commands needed. Orchestration is invisible.
+Status: production ready. Two slash command surfaces shipped; natural-language intent detection still available as a peer interface; `sprint8-impeccable-parity` 197/197 PASS; tsc clean.

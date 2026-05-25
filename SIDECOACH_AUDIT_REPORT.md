@@ -2,7 +2,9 @@
 
 **Date:** 2026-05-23  
 **Status:** Comprehensive audit completed  
-**Conclusion:** ~85% complete infrastructure, 0% accessible from Claude Code
+**Conclusion (as of 2026-05-23):** ~85% complete infrastructure, 0% accessible from Claude Code
+
+> **2026-05-25 update:** this report is preserved as a historical snapshot of the state before Sprint 1 closed. The "Primary Gap" called out below (missing `~/.claude/skills/sidecoach/SKILL.md`, no user-facing commands) has been closed. SKILL.md exists at `claude/skills/sidecoach/SKILL.md`, the slash command router is live with two surfaces (phase commands + 22 impeccable parity verbs from Sprint 8), and `/sidecoach teach`, `/sidecoach document`, `/sidecoach list`, and `/sidecoach help <verb>` are all wired. The audit conclusion below is no longer accurate. For current state see `SIDECOACH_QUICKSTART.md` and `sidecoach/README.md`.
 
 ---
 
