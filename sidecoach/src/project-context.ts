@@ -192,8 +192,8 @@ export class ContextLoader {
         .join(' ')
         .replace(/\s+/g, ' ')
         .trim();
-      if (personalityText && !result.brandpersonality) {
-        result.brandpersonality = personalityText;
+      if (personalityText && !result.brandPersonality) {
+        result.brandPersonality = personalityText;
       }
     }
 
@@ -203,7 +203,7 @@ export class ContextLoader {
         .filter((l) => l.trim().startsWith('- '))
         .map((l) => l.trim().replace(/^- /, ''));
       if (bullets.length > 0) {
-        result.antireferences = bullets;
+        result.antiReferences = bullets;
       }
     }
 
@@ -213,7 +213,7 @@ export class ContextLoader {
         .filter((l) => l.trim().startsWith('- '))
         .map((l) => l.trim().replace(/^- /, ''));
       if (bullets.length > 0) {
-        result.strategicprinciples = bullets;
+        result.strategicPrinciples = bullets;
       }
     }
 

@@ -50,3 +50,38 @@ Files touched (so far):
 Files touched:
 - `sidecoach/src/__tests__/sprint10-canexecute-records-skip.test.ts` (new)
 - `sidecoach/src/sidecoach-orchestrator.ts` (else branch added)
+
+## T3: parser camelCase keys (IN PROGRESS)
+
+**Bug:** Sprint 9 T1 teach v2 post-pass in `parseMarkdownFrontmatter` wrote `brandpersonality`, `antireferences`, `strategicprinciples` (lowercased). Consumers like flowH read `brandPersonality` (camelCase). Mismatch -> consumers see undefined -> canExecute=false -> flow drops silently. ProductMetadata interface already declares camelCase.
+
+**TDD trace (so far):**
+1. Wrote failing test `sprint10-parser-camelcase-keys.test.ts` - asserts camelCase set, lowercased not set (6 checks).
+2. Confirmed FAIL - 6/6 checks failed.
+3. Edited brandpersonality -> brandPersonality in parseMarkdownFrontmatter.
+4. Edited antireferences -> antiReferences in parseMarkdownFrontmatter.
+5. Edited strategicprinciples -> strategicPrinciples in parseMarkdownFrontmatter. All three field renames complete.
+6. Re-ran test: 6/6 PASS.
+7. Regression triad: tsc clean; sprint9-product-md-parser 6/6; sprint10-context-propagation 2/2; sprint10-canexecute-records-skip 3/3.
+
+## T3: parser camelCase keys (DONE)
+
+**Status:** DONE - 6/6 PASS, tsc clean, regression triad all green.
+
+**Why:** Sprint 9 T1's teach v2 post-pass wrote keys in flat-lowercase form (brandpersonality, antireferences, strategicprinciples) but ProductMetadata interface and consumer code (flowH and others) use camelCase (brandPersonality, antiReferences, strategicPrinciples). Mismatch produced silent canExecute=false drops - the dogfood symptom that originally surfaced this sprint.
+
+**How:** Three one-token edits in `parseMarkdownFrontmatter` (sidecoach/src/project-context.ts): rename result.brandpersonality -> result.brandPersonality (both read-guard and assignment); same for antireferences -> antiReferences; same for strategicprinciples -> strategicPrinciples. Section-key derived keys (the lowercased header names like 'brand_personality', 'anti-references' used to look up sectionBodies) are unchanged - they index parsed markdown sections, not consumer output.
+
+**TDD trace:**
+1. Wrote `sprint10-parser-camelcase-keys.test.ts` - parses teach v2 BRAND fixture, asserts camelCase keys set AND lowercased keys undefined (6 checks).
+2. Confirmed FAIL - 6/6 failed.
+3. Renamed three field names in parseMarkdownFrontmatter.
+4. Re-ran: 6/6 PASS.
+5. tsc clean.
+6. Regressions: sprint9-product-md-parser 6/6 (proof key-casing change doesn't break Sprint 9's register-detection + productMd-loaded contract); sprint10-context-propagation 2/2; sprint10-canexecute-records-skip 3/3.
+
+Files touched:
+- `sidecoach/src/__tests__/sprint10-parser-camelcase-keys.test.ts` (new)
+- `sidecoach/src/project-context.ts` (three field renames in teach v2 post-pass)
+
+**Commit:** BLOCKED on verify hook (PostToolUse needs-verification flag re-set between cleanup and commit). Code change is parser-only - no browser surface to screenshot. Awaiting user direction to bypass or skip.
