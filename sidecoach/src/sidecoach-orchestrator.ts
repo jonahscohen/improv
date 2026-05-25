@@ -17,6 +17,7 @@ import { persistSessionMemory } from './session-memory-writer';
 import { parseSlashCommand, getAvailableCommands, getCommandsByPhase } from './slash-command-router';
 import { SidecoachEntryPoint, globalEntryPoint, EntryPointRequest } from './sidecoach-entry-point';
 import { TeachCommandHandlerV2 } from './teach-command-handler-v2';
+import { DocumentCommandHandler } from './document-command-handler';
 import { FlowPrerequisiteValidator } from './flow-prerequisites';
 import { FlowCompositionEngine, PRESET_COMPOSITE_FLOWS, CompositeFlowDefinition } from './flow-composition';
 import { registerFlowDomainValidators, getValidatorsForFlow } from './flow-domain-validators';
@@ -720,6 +721,27 @@ export class FlowExecutionEngine {
         });
         return {
           success: true,
+          message: result.message,
+          detectedFlow: null,
+          flowResults: [result],
+          guidance: result.guidance,
+          checklist: result.checklist,
+          artifacts: result.artifacts,
+        };
+      }
+
+      if (commandMatch.command === 'document') {
+        const docHandler = new DocumentCommandHandler();
+        const result = await docHandler.execute({
+          utterance,
+          userId: context.userId,
+          projectPath: context.projectPath || process.cwd(),
+          currentFile: context.currentFile,
+          selectedText: context.selectedText,
+          metadata: context.metadata,
+        });
+        return {
+          success: result.status === 'success',
           message: result.message,
           detectedFlow: null,
           flowResults: [result],
