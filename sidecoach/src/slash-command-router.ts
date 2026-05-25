@@ -2,7 +2,7 @@
 // Maps user commands directly to flows, bypassing intent detection
 
 import { FlowId } from './types';
-import { getImpeccableEntry } from './impeccable-command-registry';
+import { getImpeccableEntry, IMPECCABLE_VERB_REGISTRY } from './impeccable-command-registry';
 
 export interface CommandMatch {
   isCommand: boolean;
@@ -68,6 +68,19 @@ export function parseSlashCommand(utterance: string): CommandMatch {
       flowIds: [],
       target,
       reason: target ? `Routed to composite flow: ${target}` : 'Composite flow command (no target specified)',
+    };
+  }
+
+  // Sprint 8 T8: /sidecoach help <verb> command - returns details from registry.
+  // Matched BEFORE the impeccable registry branch because 'help' is not itself a
+  // verb in IMPECCABLE_VERB_REGISTRY; the verb is the target.
+  if (command === 'help') {
+    return {
+      isCommand: true,
+      command: 'help',
+      flowIds: [],
+      target,
+      reason: target ? `Help for ${target}` : 'Help (no target)',
     };
   }
 
@@ -187,6 +200,23 @@ export function getAvailableCommands(): Record<string, CommandInfo> {
       phase: 'Special',
     },
   };
+}
+
+/**
+ * Sprint 8 T8: returns CommandInfo for all 22 impeccable parity verbs from the
+ * registry, so the list-handler can show both phase commands and verbs in a
+ * single grouped output.
+ */
+export function getImpeccableCommandInfo(): Record<string, CommandInfo> {
+  const out: Record<string, CommandInfo> = {};
+  for (const [verb, entry] of Object.entries(IMPECCABLE_VERB_REGISTRY)) {
+    out[verb] = {
+      description: entry.description,
+      flows: entry.flowIds.map((f) => f as string),
+      phase: 'Special',
+    };
+  }
+  return out;
 }
 
 export function getCommandsByPhase(): CommandsByPhase {

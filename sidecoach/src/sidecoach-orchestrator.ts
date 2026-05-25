@@ -14,7 +14,7 @@ import { ExtendedDomainValidator, DomainCheckContext, DomainValidationReport } f
 import { ContextLoader } from './project-context';
 import { buildProjectContext, ProjectContext } from './context-loader';
 import { persistSessionMemory } from './session-memory-writer';
-import { parseSlashCommand, getAvailableCommands, getCommandsByPhase } from './slash-command-router';
+import { parseSlashCommand, getAvailableCommands, getCommandsByPhase, getImpeccableCommandInfo } from './slash-command-router';
 import { SidecoachEntryPoint, globalEntryPoint, EntryPointRequest } from './sidecoach-entry-point';
 import { TeachCommandHandlerV2 } from './teach-command-handler-v2';
 import { DocumentCommandHandler } from './document-command-handler';
@@ -760,25 +760,89 @@ export class FlowExecutionEngine {
 
       if (commandMatch.command === 'list') {
         const byPhase = getCommandsByPhase();
-        const groupedGuidance: string[] = [];
+        const impeccableCommands = getImpeccableCommandInfo();
+        const groupedGuidance: string[] = [
+          'Available Sidecoach Commands',
+          '',
+        ];
 
-        // Build grouped output by phase
+        // Build grouped output by phase (existing phase-based commands)
+        groupedGuidance.push('## Phase commands');
         for (const phase of ['Research', 'Implement', 'Review', 'Special']) {
           const phaseCommands = byPhase[phase]?.commands || [];
           if (phaseCommands.length > 0) {
-            groupedGuidance.push(`\n## ${phase} Phase (${phaseCommands.length} commands)`);
+            groupedGuidance.push(`\n### ${phase} Phase (${phaseCommands.length} commands)`);
             for (const cmd of phaseCommands) {
               groupedGuidance.push(`  /sidecoach ${cmd.command} - ${cmd.description} (${cmd.flowCount} flows)`);
             }
           }
         }
 
+        // Sprint 8 T8: append the 22 impeccable parity verbs under a separate heading
+        groupedGuidance.push('');
+        groupedGuidance.push('## Impeccable parity verbs');
+        for (const [verb, info] of Object.entries(impeccableCommands)) {
+          groupedGuidance.push(`  /sidecoach ${verb} - ${info.description}`);
+        }
+        groupedGuidance.push('');
+        groupedGuidance.push('Use /sidecoach help <verb> for detail on any impeccable parity verb.');
+
         return {
           success: true,
-          message: 'Available Sidecoach Commands (grouped by workflow phase)',
+          message: 'Available Sidecoach Commands',
           detectedFlow: null,
           flowResults: [],
           guidance: groupedGuidance,
+        };
+      }
+
+      // Sprint 8 T8: /sidecoach help <verb> - dump registry detail for a verb.
+      if (commandMatch.command === 'help') {
+        const verb = commandMatch.target;
+        if (!verb) {
+          return {
+            success: false,
+            message: 'Usage: /sidecoach help <verb>',
+            detectedFlow: null,
+            flowResults: [],
+            guidance: [
+              'Usage: /sidecoach help <verb>',
+              '',
+              'Run /sidecoach list to see all available verbs.',
+            ],
+          };
+        }
+        const entry = getImpeccableEntry(verb);
+        if (!entry) {
+          return {
+            success: false,
+            message: `Unknown verb: ${verb}. Try /sidecoach list to see available commands.`,
+            detectedFlow: null,
+            flowResults: [],
+          };
+        }
+        return {
+          success: true,
+          message: `Help for /sidecoach ${verb}`,
+          detectedFlow: { flowId: 'help' as any, flowName: 'Sidecoach Help', confidence: 1.0 },
+          flowResults: [],
+          guidance: [
+            `# /sidecoach ${verb}`,
+            '',
+            entry.description,
+            '',
+            `**Phase:** ${entry.phase}`,
+            `**Impeccable parity reference:** ${entry.impeccableSkillPath}`,
+            '',
+            '**Flow chain:**',
+            ...entry.flowIds.map((f) => `- ${f}`),
+            '',
+            '**Parity checklist (impeccable equivalent produces these):**',
+            ...entry.parityChecklist.map((s) => `- ${s}`),
+            '',
+            '**Sidecoach additions (parity-plus):**',
+            ...entry.parityPlus.map((s) => `- ${s}`),
+          ],
         };
       }
 

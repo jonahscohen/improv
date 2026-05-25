@@ -227,3 +227,58 @@ Files touched:
 - sidecoach/src/sidecoach-orchestrator.ts (import + helper + 2 wire points)
 - .claude/memory/session_2026-05-25_sprint8_execution.md (this entry)
 
+
+## T8: list + help expansion (IN PROGRESS)
+
+Goal: expand `/sidecoach list` to include the 22 impeccable verb commands grouped under a heading, and add a brand new `/sidecoach help <verb>` command that dumps the registry entry detail.
+
+Step 1 (DONE): created sprint8-list-and-help.test.ts with 3 sub-tests (list contents, help <verb>, help unknown).
+
+Files touched this step:
+- sidecoach/src/__tests__/sprint8-list-and-help.test.ts (new)
+
+Step 2 (DONE): ran test - confirmed FAIL with 6 assertions failing:
+- T8.1: list missing 'impeccable' heading, 'craft', 'document' verbs.
+- T8.2: help polish does not exist (returns generic flow execution, no parity wording).
+
+Step 3 (IN PROGRESS): updating slash-command-router.ts to recognize `help` command and export getImpeccableCommandInfo().
+
+Step 3 (DONE): slash-command-router.ts now:
+- Imports IMPECCABLE_VERB_REGISTRY (used by getImpeccableCommandInfo).
+- Recognizes `help` as a special command BEFORE the impeccable registry branch.
+- Exports getImpeccableCommandInfo() returning Record<verb, CommandInfo> for the list handler.
+
+Step 4 (IN PROGRESS): updating the orchestrator's `list` handler to render both phase commands AND impeccable verbs, and adding a `help` dispatch.
+
+Step 4 (DONE): orchestrator updated:
+- Imported getImpeccableCommandInfo from slash-command-router.
+- List handler now renders both `## Phase commands` and `## Impeccable parity verbs` sections, with all 22 verbs from the registry.
+- Added `if (commandMatch.command === 'help')` dispatch after list, with: usage banner when no target, unknown-verb failure, full registry dump for known verbs (description, phase, impeccable path, flow chain, parityChecklist, parityPlus).
+
+Step 5 (NEXT): run sprint8-list-and-help test to confirm PASS.
+
+## T8: list + help expansion (DONE)
+
+Goal: `/sidecoach list` now surfaces the 22 impeccable parity verbs alongside phase commands; new `/sidecoach help <verb>` shows registry detail.
+
+What shipped:
+- slash-command-router.ts: imports IMPECCABLE_VERB_REGISTRY; special-cases `help` BEFORE the impeccable registry branch (so `help` is not itself looked up as a verb); exports new getImpeccableCommandInfo() that adapts the registry to CommandInfo shape for the list handler.
+- sidecoach-orchestrator.ts: imports getImpeccableCommandInfo; list handler rebuilt to emit two sections (`## Phase commands` + `## Impeccable parity verbs`) plus a hint pointing users at `/sidecoach help <verb>`. Added `if (commandMatch.command === 'help')` dispatch with three branches: no-target (usage banner), unknown verb (failure + nudge to /sidecoach list), known verb (registry dump: description, phase, impeccable path, flow chain, parity checklist, parity-plus).
+
+Why help is special-cased BEFORE the impeccable registry branch: `help` is not in IMPECCABLE_VERB_REGISTRY (it is meta), so without the early branch it would fall through to `Unknown command: /help`. The target (the verb being asked about) is parsed by the existing `/sidecoach <command> <target>` regex.
+
+Test added:
+- sprint8-list-and-help.test.ts - 13 assertions: list contains both headings, all 5 spot-checked verbs (craft/polish/audit/critique/document) and both phases (research/review); `/sidecoach help polish` mentions polish/parity/flow; unknown verb returns failure.
+
+Test output: 13/13 PASS, final line `sprint8-list-and-help PASS`.
+
+Regression status:
+- `npx tsc --noEmit` exit 0.
+- sprint8-router-registry-branch PASS (14/14 + final PASS line - help addition did not disturb existing routing).
+- sprint8-impeccable-parity PASS (197/197 - parity verbs still produce all expected parity tokens).
+
+Files touched:
+- sidecoach/src/slash-command-router.ts
+- sidecoach/src/sidecoach-orchestrator.ts
+- sidecoach/src/__tests__/sprint8-list-and-help.test.ts (new)
+- .claude/memory/session_2026-05-25_sprint8_execution.md (this entry)
