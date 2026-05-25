@@ -85,3 +85,15 @@ Files touched:
 - `sidecoach/src/project-context.ts` (three field renames in teach v2 post-pass)
 
 **Commit:** BLOCKED on verify hook (PostToolUse needs-verification flag re-set between cleanup and commit). Code change is parser-only - no browser surface to screenshot. Awaiting user direction to bypass or skip.
+
+## Dogfood after Sprint 10 T1+T2+T3 (in progress)
+
+Re-ran sidecoach/src/dogfood-craft-step2.ts. Outcome: success=true, 4 of 4 flows successful (A/F/G/J). Pre-flight warnings GONE (Sprint 10 T3 camelCase fix worked - anti-references and users now read correctly).
+
+**Two remaining issues, queued for Sprint 11:**
+
+1. flowA "Personality: " still empty. Root cause: `productMetadata.brand_personality` (empty array from the existing markdown section parser - the header `## Brand Personality` creates a section key with empty body) preempts `productMetadata.brandPersonality` (real string from teach v2 post-pass) in flowA's `||` chain. Empty arrays are truthy in JS, so `[] || 'string'` returns `[]`. Two spots in flow-handler-brand-verify.ts: line 120 (display) and line 222 (pre-flight check). Fix: reverse the order to prefer brandPersonality first.
+
+2. Registry's craft entry has only 4 flowIds (A/F/G/J), but Sprint 8 spec said 5 (adding H/I for motion + accessibility). The implementer in Sprint 8 T1 entered only 4. Per impeccable's craft.md skill which covers "shape → tokens → components → motion → accessibility → polish", craft should include motion (flowH) and accessibility (flowI). Fix: extend the registry's craft entry to include both, plus extend parityChecklist + guidanceAppend to reference them.
+
+Both are well-localized. Sprint 11 will fix them and re-run the dogfood per chief-architect directive.
