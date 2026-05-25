@@ -48,11 +48,15 @@ export const IMPECCABLE_VERB_REGISTRY: Record<string, ImpeccableCommandEntry> = 
       'flowA_brand_verify',
       'flowF_design_tokens',
       'flowG_component_implementation',
+      'flowH_motion_integration',
+      'flowI_accessibility',
       'flowJ_tactical_polish',
     ],
     guidanceAppend: [
       'Shape brief confirmed before any code was written; gates were not compressed.',
       'Production bar enforced: real content, semantic-first markup, deliberate spacing, full state coverage.',
+      'Motion integrated: easing tokens applied to interactive components, reduced-motion respected.',
+      'Accessibility verified: WCAG 2.1 AA scan complete, contrast and focus ring checks passed.',
       'After the first pass, iterate visually against the brief and the approved direction; patch material defects and re-inspect.',
     ],
     parityChecklist: [
@@ -61,6 +65,8 @@ export const IMPECCABLE_VERB_REGISTRY: Record<string, ImpeccableCommandEntry> = 
       'Real content',
       'Semantic first',
       'Iterate Visually',
+      'motion integrated',
+      'accessibility verified',
     ],
     parityPlus: [
       'sidecoach brand verification gate',
