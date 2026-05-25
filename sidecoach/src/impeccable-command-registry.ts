@@ -46,6 +46,8 @@ export const IMPECCABLE_VERB_REGISTRY: Record<string, ImpeccableCommandEntry> = 
     phase: 'craft',
     flowIds: [
       'flowA_brand_verify',
+      'flowB_component_research',
+      'flowE_motion_patterns',
       'flowF_design_tokens',
       'flowG_component_implementation',
       'flowH_motion_integration',
@@ -54,6 +56,8 @@ export const IMPECCABLE_VERB_REGISTRY: Record<string, ImpeccableCommandEntry> = 
     ],
     guidanceAppend: [
       'Shape brief confirmed before any code was written; gates were not compressed.',
+      'Component patterns researched before any UI was built; design references vetted for AI-slop.',
+      'Motion patterns researched before motion was integrated; easing tokens selected, not invented.',
       'Production bar enforced: real content, semantic-first markup, deliberate spacing, full state coverage.',
       'Motion integrated: easing tokens applied to interactive components, reduced-motion respected.',
       'Accessibility verified: WCAG 2.1 AA scan complete, contrast and focus ring checks passed.',
@@ -61,6 +65,8 @@ export const IMPECCABLE_VERB_REGISTRY: Record<string, ImpeccableCommandEntry> = 
     ],
     parityChecklist: [
       'Shape brief confirmed',
+      'component research',
+      'motion patterns researched',
       'Production bar',
       'Real content',
       'Semantic first',
