@@ -22,40 +22,40 @@ Every question you have must go through the AskUserQuestion tool. This is the me
 
 ---
 
-## Design Work and Impeccable (MANDATORY for UI tasks)
+## Design Work and Sidecoach (MANDATORY for UI tasks)
 
-The `impeccable` plugin is enabled in `~/.claude/settings.json` with `autoUpdate: true`. It ships one `/impeccable` skill with 23 commands that cover design briefs, implementation, and QA for frontend work. Use `/impeccable` as the front door for every design or QA task in every project, not as an optional tool.
+The `sidecoach` skill is enabled in `~/.claude/settings.json` with `autoUpdate: true`. It ships one `/sidecoach` skill with 23 commands that cover design briefs, implementation, and QA for frontend work. Use `/sidecoach` as the front door for every design or QA task in every project, not as an optional tool.
 
 ### Project-level setup (do this first, once per project)
 
-Every `/impeccable` command reads two files at the project root:
+Every `/sidecoach` command reads two files at the project root:
 
 - `PRODUCT.md` - register (brand vs product), users, brand personality, anti-references, strategic principles. Required.
 - `DESIGN.md` - colors, typography, components, layout. Optional, strongly recommended.
 
-Before any design work, check whether PRODUCT.md exists at the project root and has real content (not `[TODO]` placeholders, not under 200 characters). If it is missing, empty, or a stub, run `/impeccable teach` first. It is interactive (asks about users, brand, anti-references) and writes PRODUCT.md. After it returns, resume the original task with the fresh context. Do not improvise a design on a project with no PRODUCT.md.
+Before any design work, check whether PRODUCT.md exists at the project root and has real content (not `[TODO]` placeholders, not under 200 characters). If it is missing, empty, or a stub, run `/sidecoach teach` first. It is interactive (asks about users, brand, anti-references) and writes PRODUCT.md. After it returns, resume the original task with the fresh context. Do not improvise a design on a project with no PRODUCT.md.
 
-If DESIGN.md is missing and there is already code in the project, nudge the user once per session: "Run `/impeccable document` to capture the current visual system so variants stay on-brand." Proceed even if they skip.
+If DESIGN.md is missing and there is already code in the project, nudge the user once per session: "Run `/sidecoach document` to capture the current visual system so variants stay on-brand." Proceed even if they skip.
 
 ### DESIGN.md format (Google spec)
 
-When writing or updating a project's `DESIGN.md` (via `/impeccable document`, `/impeccable extract`, or by hand), conform to the [google-labs-code/design.md](https://github.com/google-labs-code/design.md) spec: YAML frontmatter for tokens (colors, typography, rounded, spacing, components with `{token.path}` references), markdown prose body for rationale, sections in canonical order (Overview, Colors, Typography, Layout, Elevation, Shapes, Components, Do's and Don'ts). After writing or modifying the file, run `npx @google/design.md lint DESIGN.md` and address every error or warning (broken token references, WCAG contrast failures, schema violations) before reporting done. Generated UI code must reference tokens via the `{path.to.token}` form rather than hard-coding hex values, so the design system stays the single source of truth.
+When writing or updating a project's `DESIGN.md` (via `/sidecoach document`, `/sidecoach extract`, or by hand), conform to the [google-labs-code/design.md](https://github.com/google-labs-code/design.md) spec: YAML frontmatter for tokens (colors, typography, rounded, spacing, components with `{token.path}` references), markdown prose body for rationale, sections in canonical order (Overview, Colors, Typography, Layout, Elevation, Shapes, Components, Do's and Don'ts). After writing or modifying the file, run `npx @google/design.md lint DESIGN.md` and address every error or warning (broken token references, WCAG contrast failures, schema violations) before reporting done. Generated UI code must reference tokens via the `{path.to.token}` form rather than hard-coding hex values, so the design system stays the single source of truth.
 
 ### Entry-command routing (pick one before writing code)
 
 | User's intent | Command |
 |---|---|
-| Net-new feature or page, build from scratch | `/impeccable craft <feature>` |
-| Plan the design only, no code yet | `/impeccable shape <feature>` |
-| Add motion, color, personality, or boldness | `/impeccable animate`, `colorize`, `delight`, `bolder`, `overdrive` |
-| Tone down a loud or over-stimulated UI | `/impeccable quieter` or `distill` |
-| Fix typography, spacing, layout, responsive, copy, perf | `/impeccable typeset`, `layout`, `adapt`, `clarify`, `optimize` |
-| Production-ready sweep (errors, i18n, edge cases) | `/impeccable harden` |
-| First-run flows, empty states, activation | `/impeccable onboard` |
-| Pull reusable tokens and components into the design system | `/impeccable extract` |
-| Iterate visually on elements in a live browser | `/impeccable live` |
+| Net-new feature or page, build from scratch | `/sidecoach craft <feature>` |
+| Plan the design only, no code yet | `/sidecoach shape <feature>` |
+| Add motion, color, personality, or boldness | `/sidecoach animate`, `colorize`, `delight`, `bolder`, `overdrive` |
+| Tone down a loud or over-stimulated UI | `/sidecoach quieter` or `distill` |
+| Fix typography, spacing, layout, responsive, copy, perf | `/sidecoach typeset`, `layout`, `adapt`, `clarify`, `optimize` |
+| Production-ready sweep (errors, i18n, edge cases) | `/sidecoach harden` |
+| First-run flows, empty states, activation | `/sidecoach onboard` |
+| Pull reusable tokens and components into the design system | `/sidecoach extract` |
+| Iterate visually on elements in a live browser | `/sidecoach live` |
 
-When unsure, invoke `/impeccable` with no argument. It renders the full command menu grouped by category.
+When unsure, invoke `/sidecoach` with no argument. It renders the full command menu grouped by category.
 
 Once an entry command is loaded, let its reference file drive. Do not improvise around it.
 
@@ -63,7 +63,7 @@ Once an entry command is loaded, let its reference file drive. Do not improvise 
 
 Installed via `install.sh` as the `make-interfaces-feel-better` Anthropic Skill. It auto-triggers on UI keywords (border radius, animation, optical alignment, hover state, tabular numbers, "feel better," etc.) and supplies 16 specific tactical rules with exact values: `scale(0.96)` on press, concentric border radius (`outer = inner + padding`), icon swaps via opacity+scale+blur (`scale 0.25->1, opacity 0->1, blur 4px->0`), image outlines `rgba(0,0,0,0.1)` never tinted, hit areas at least 40x40px, `transition: all` banned, `font-variant-numeric: tabular-nums` on dynamic numbers, `text-wrap: balance` on headings, etc. Full reference at `~/.claude/skills/make-interfaces-feel-better/`.
 
-This skill is the tactical layer that sits between Impeccable's strategy (PRODUCT.md, register, anti-references) and DESIGN.md's tokens (colors, typography, spacing). Apply it during implementation, not as a separate pass:
+This skill is the tactical layer that sits between Sidecoach's strategy (PRODUCT.md, register, anti-references) and DESIGN.md's tokens (colors, typography, spacing). Apply it during implementation, not as a separate pass:
 
 - If the skill auto-triggers, follow it. Address every applicable item from its 14-point checklist.
 - If you are modifying UI but the skill did NOT auto-trigger, manually invoke `/make-interfaces-feel-better` before reporting done. The skill's `description` field is keyword-driven and may miss subtle UI work; an explicit invocation is the fallback.
@@ -73,21 +73,21 @@ This skill is the tactical layer that sits between Impeccable's strategy (PRODUC
 
 The existing Verification Protocol above (visual, interactive, side-by-side, completeness) still applies to UI work. In addition, any substantive UI change (new feature, redesign, significant component edit) must pass this triad before you report completion:
 
-1. `/impeccable audit <target>` - runs the 5-dimension technical scan (a11y, performance, theming, responsive, anti-patterns) plus the `npx impeccable detect` CLI. Address all Critical and High findings.
-2. `/impeccable critique <target>` - design review via independent sub-agents (AI-slop detection, Nielsen heuristics, cognitive load, emotional journey). Address anything above "minor".
-3. `/impeccable polish <target>` - final alignment pass against the project's design system. Must run last.
+1. `/sidecoach audit <target>` - runs the 5-dimension technical scan (a11y, performance, theming, responsive, anti-patterns). Address all Critical and High findings.
+2. `/sidecoach critique <target>` - design review via independent sub-agents (AI-slop detection, Nielsen heuristics, cognitive load, emotional journey). Address anything above "minor".
+3. `/sidecoach polish <target>` - final alignment pass against the project's design system. Must run last.
 4. `make-interfaces-feel-better` 14-point checklist - run through every item applicable to the change (concentric radius, optical alignment, shadows over borders, split/staggered enters, subtle exits, tabular nums, font smoothing, balanced text wrap, image outlines, scale-on-press, `initial={false}` on AnimatePresence, no `transition: all`, sparse `will-change`, 40x40 hit areas). The skill's review-output-format (before/after tables grouped by principle) is the canonical way to record what changed.
 5. If the project has a `DESIGN.md` (per the Google spec): `npx @google/design.md lint DESIGN.md` and resolve every error/warning before reporting done.
 
 Small, obviously-trivial edits (a one-line copy tweak, a named-token swap) can skip the gate. Anything where the aesthetic result is in question must run all five. "I'll skip polish because it probably looks fine" is not a valid judgment; run the commands.
 
-### What impeccable is NOT for
+### What sidecoach is NOT for
 
-Backend logic, non-UI refactors, build-tool work, infrastructure changes. Do not load `/impeccable` for those.
+Backend logic, non-UI refactors, build-tool work, infrastructure changes. Do not load `/sidecoach` for those.
 
 ## Design Peer Skills (independent entry points)
 
-Four skills that sit alongside Impeccable as independent entry points in the design stack. Each reads PRODUCT.md + DESIGN.md from the project root (same contract as Impeccable) but is invoked directly, not through Impeccable's routing.
+Four skills that sit alongside Sidecoach as independent entry points in the design stack. Each reads PRODUCT.md + DESIGN.md from the project root (same contract as Sidecoach) but is invoked directly, not through Sidecoach's routing.
 
 ### Social Media (`/social-media`)
 
@@ -109,9 +109,9 @@ Rigorous protocol for sourcing icons from 8 approved libraries: Heroicons, Lucid
 
 ```
 Orchestrator:  /design-build (runs strategy -> research -> type -> motion -> build -> QA as ONE sequence)
-Strategy:      /impeccable (23 commands, PRODUCT.md + DESIGN.md)
+Strategy:      /sidecoach (23 commands, PRODUCT.md + DESIGN.md)
 Research:      component-gallery-reference (60 types, 95 systems)
-Typography:    fontshare-reference (fontshare.com catalog, integrates with impeccable's reflex-reject list)
+Typography:    fontshare-reference (fontshare.com catalog, integrates with sidecoach's reflex-reject list)
 References:    design-references (personal catalog, auto-consults) + /curate (capture wizard)
 Motion:        motion-reference (GSAP + Lenis canonical patterns - tweens, ScrollTrigger, Flip, SplitText, DrawSVG)
 Tactical:      make-interfaces-feel-better (16 CSS polish rules)

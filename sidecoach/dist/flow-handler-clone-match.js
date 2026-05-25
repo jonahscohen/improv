@@ -7,6 +7,7 @@ exports.createFlowOHandler = createFlowOHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const extended_domain_validator_1 = require("./extended-domain-validator");
+const icon_source_reference_1 = require("./icon-source-reference");
 class FlowOCloneMatchHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowO_clone_match_special');
@@ -53,9 +54,6 @@ class FlowOCloneMatchHandler extends flow_handler_1.BaseFlowHandler {
                 'Clone Match verifies pixel-perfect alignment between design and implementation.',
                 '',
                 'Domain Validation Results:',
-                `- Spatial domain: ${spatialPassed}/${spatialDomainRules.length} rules passing (${spatialPassRate})`,
-                `- Color domain: ${colorPassed}/${colorDomainRules.length} rules passing (${colorPassRate})`,
-                `- Responsive domain: ${responsivePassed}/${responsiveDomainRules.length} rules passing (${responsivePassRate})`,
                 '',
                 'SETUP:',
                 '- Design screenshot at exact viewport (e.g., 1024px)',
@@ -123,6 +121,7 @@ class FlowOCloneMatchHandler extends flow_handler_1.BaseFlowHandler {
                 guidance,
                 checklist,
                 artifacts: [
+                    this.createArtifact('reference', 'icon-source', (0, icon_source_reference_1.buildIconSourceArtifactContent)((0, icon_source_reference_1.createIconSourceReference)()), '8 approved icon libraries with selection protocol and provenance markers (taste/fabricated-svg gate enforcement)'),
                     this.createArtifact('reference', 'Clone Verification Checklist', 'Typography (5) → Colors (1) → Spacing (4) → Shapes (3) → Layout (4) = 17-point verification', 'Pixel-perfect alignment checklist'),
                 ],
                 memory: memoryBuilder.build(),

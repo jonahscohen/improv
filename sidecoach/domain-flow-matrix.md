@@ -2,7 +2,7 @@
 
 **Created:** 2026-05-22  
 **Purpose:** Map 7 design domains to Sidecoach flows for Phase 1 consolidation  
-**Scope:** Foundation for embedding Impeccable intelligence into flow execution
+**Scope:** Foundation for embedding Sidecoach intelligence into flow execution
 
 ---
 

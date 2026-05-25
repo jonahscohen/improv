@@ -8,6 +8,8 @@ const flow_handler_1 = require("./flow-handler");
 const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const extended_domain_validator_1 = require("./extended-domain-validator");
+const design_md_parser_1 = require("./design-md-parser");
+const motion_stack_idioms_1 = require("./motion-stack-idioms");
 class FlowHMotionIntegrationHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowH_motion_integration');
@@ -143,6 +145,18 @@ class FlowHMotionIntegrationHandler extends flow_handler_1.BaseFlowHandler {
                 { label: 'Performance verified on device (60 FPS target)', required: true, description: 'No jank on low-end' },
                 { label: 'Animations interruptible (user can cancel/skip)', required: true, description: 'Allow user control' },
             ]);
+            // Citation helper for DESIGN.md token references
+            const designContent = context.metadata?.designContent || '';
+            const designTokens = context.metadata?.designTokens || {};
+            const cite = (dottedPath) => {
+                const ln = designContent ? (0, design_md_parser_1.findTokenLine)(designContent, dottedPath) : -1;
+                return ln > 0 ? ` (Source: DESIGN.md L${ln})` : '';
+            };
+            const easeOut = designTokens.motion?.ease?.out || '(undefined in DESIGN.md)';
+            const easeInOut = designTokens.motion?.ease?.in_out || '(undefined in DESIGN.md)';
+            const easeSpring = designTokens.motion?.ease?.spring_quick || '(undefined in DESIGN.md)';
+            const durationFast = designTokens.motion?.duration?.fast || '(undefined in DESIGN.md)';
+            const durationMedium = designTokens.motion?.duration?.medium || '(undefined in DESIGN.md)';
             // Build guidance
             const guidance = [
                 `Brand Personality: ${brandPersonality || 'Not defined'}`,
@@ -150,8 +164,13 @@ class FlowHMotionIntegrationHandler extends flow_handler_1.BaseFlowHandler {
                 `Motion Intensity: ${intensity} (${register === 'brand' ? 'brand encourages ambitious motion' : 'product prefers restrained'})`,
                 '',
                 'Domain Validation Results:',
-                `- Motion domain: ${motionPassed}/${motionDomainRules.length} rules passing (${motionPassRate})`,
-                `- Interaction domain: ${interactionPassed}/${interactionDomainRules.length} rules passing (${interactionPassRate})`,
+                '',
+                'Token-Backed Motion Defaults:',
+                `- Default exit ease: ${easeOut}${cite('motion.ease.out')}`,
+                `- State-transition ease: ${easeInOut}${cite('motion.ease.in_out')}`,
+                `- Snappy press ease: ${easeSpring}${cite('motion.ease.spring_quick')}`,
+                `- Feedback duration: ${durationFast}${cite('motion.duration.fast')}`,
+                `- State-change duration: ${durationMedium}${cite('motion.duration.medium')}`,
                 '',
                 'Motion Domain Rules (Duration, Easing, No Layout Animation):',
                 ...motionDomain.rules.map((r) => `- ${r}`),
@@ -184,6 +203,15 @@ class FlowHMotionIntegrationHandler extends flow_handler_1.BaseFlowHandler {
                 '- Avoid animate-all, use specific properties',
                 '- Make animations interruptible (allow user to cancel/skip)',
             ];
+            // Phase 4: Stack-specific GSAP loading + cleanup idiom.
+            // Reads detected framework from enriched context (techStack injected by
+            // enrichContextForHandler in the orchestrator). Falls back to 'unknown'
+            // which the accessor resolves to the vanilla idiom - so this block
+            // always emits something useful even when techStack is missing.
+            const framework = context.metadata?.techStack?.framework ?? 'unknown';
+            const idiom = (0, motion_stack_idioms_1.getMotionIdiom)(framework);
+            guidance.push('', `Stack-specific implementation (framework=${framework}):`, `- Loading: ${idiom.loadingPattern}`, `- Cleanup: ${idiom.cleanupPattern}`, `- Scope boundary: ${idiom.scopeBoundary}`, '', 'Example:', ...idiom.exampleSnippet.split('\n').map((l) => '  ' + l));
+            idiom.notes.forEach((n) => guidance.push(`- Note: ${n}`));
             return {
                 flowId: this.flowId,
                 flowName: this.getFlowName(),
@@ -192,6 +220,7 @@ class FlowHMotionIntegrationHandler extends flow_handler_1.BaseFlowHandler {
                 guidance,
                 checklist,
                 artifacts: [
+                    this.createArtifact('template', `Motion code template: ${framework}`, idiom.exampleSnippet, `${framework} idiom for GSAP loading + cleanup`),
                     this.createArtifact('reference', 'Motion Domain Rules', motionDomain.rules.join('\n'), 'Duration, easing, no layout animation, stagger, reduced-motion'),
                     this.createArtifact('template', 'Animation Templates', animationTemplates.map((t) => `${t.category}: ${t.duration}ms, ${t.easing}`).join('\n'), `${animationTemplates.length} templates for ${intensity} intensity`),
                     this.createArtifact('reference', 'Motion Validation Results', validationResults.map((r) => `${r.pattern}: duration=${r.durationCompliant ? 'OK' : 'FAIL'}, easing=${r.easingCompliant ? 'OK' : 'FAIL'}`).join('\n'), 'Pattern compliance against motion domain rules'),

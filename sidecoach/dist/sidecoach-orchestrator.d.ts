@@ -1,15 +1,35 @@
 import { FlowHandler, FlowExecutionContext, FlowExecutionResult } from './flow-handler';
 import { FlowId } from './types';
+import { BuildReport } from './build-report-types';
 export declare class FlowExecutionEngine {
     private intentDetector;
     private handlers;
     private orchestrator;
     private compositionEngine;
     private contextManager;
+    private checkpointStore;
+    private gcRan;
     constructor();
     private initializeValidators;
     private initializeHandlers;
     private recordFlowWithMemory;
+    /**
+     * Run the composite-flow execution loop. Extracted from `process()` so both the
+     * new-run path and the (forthcoming T5) resume path can share it.
+     * Pure refactor in T3 - no new behavior, no checkpoint writes (those come in T4).
+     */
+    private runCompositeLoop;
+    /**
+     * Resume a composite run from a saved checkpoint. Seeds runCompositeLoop with
+     * the checkpoint's executionContext + flowResults + cursor + utterance. The
+     * loop mints a fresh runStartIso, so the resumed run writes to a NEW
+     * checkpoint file. The caller (process() resume branch) deletes the original
+     * pre-resume checkpoint after this method returns. (Sprint 6 T5.)
+     */
+    private runCompositeFromCheckpoint;
+    private runTasteValidationGate;
+    private cachedProjectCtx;
+    private enrichContextForHandler;
     private validateFlowExecution;
     private cacheFlowResult;
     private trackFlowMetrics;
@@ -17,8 +37,27 @@ export declare class FlowExecutionEngine {
     private getExecutablePath;
     private processWithEntryPoint;
     process(utterance: string, context?: Partial<FlowExecutionContext>): Promise<SidecoachResult>;
+    /**
+     * Sprint 8 T7: Build the verb-command guidance-append block.
+     * Returns the array of strings to append to result.guidance for verbs that
+     * have a registry entry (the 22 verb commands). The returned
+     * array includes the parityChecklist and parityPlus tokens verbatim so the
+     * sprint8 parity test sees them in the flattened output.
+     */
+    private buildVerbGuidanceAppend;
     private showInteractiveMenu;
     registerHandler(handler: FlowHandler): void;
+    /**
+     * Read-only view of the registered handler map. Used by CLI tools that need to
+     * enumerate or dispatch by FlowId. Caller must not mutate.
+     */
+    getHandlers(): ReadonlyMap<FlowId, FlowHandler>;
+    /**
+     * Union of all known flow ids - single handlers + composite preset ids.
+     * Used by the metadata.forceFlowId bypass to validate caller-supplied flow ids
+     * before routing past intent detection.
+     */
+    private getAllKnownFlowIds;
     getAvailableFlows(): FlowInfo[];
 }
 export interface FlowInfo {
@@ -43,6 +82,9 @@ export interface SidecoachResult {
         flowName: string;
         confidence: number;
     }>;
+    buildReport?: BuildReport;
+    needsDisambiguation?: boolean;
+    disambiguationPrompt?: string;
 }
 export declare function createExecutionEngine(): FlowExecutionEngine;
 //# sourceMappingURL=sidecoach-orchestrator.d.ts.map

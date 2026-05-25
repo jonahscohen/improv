@@ -2062,6 +2062,42 @@ const DOMAIN_RULES = [
 ];
 class ExtendedDomainValidator {
     static validateAll(context) {
+        // Empty-input gate: if the handler did not provide real validation inputs
+        // (designTokens AND cssRules both empty/missing), short-circuit with a
+        // skipped status rather than running rules against undefined and
+        // synthesizing a misleading pass rate. Other inputs (htmlElement,
+        // computedStyle, colors, typography, spacing, motion, accessibility,
+        // contrast, performance, visualization, internationalization) also
+        // count as real input - if any are present, run the full validation.
+        const ctx = context || {};
+        const designTokensEmpty = !ctx.designTokens || Object.keys(ctx.designTokens).length === 0;
+        const cssRulesEmpty = !ctx.cssRules || ctx.cssRules.length === 0;
+        const anyOtherInput = !!ctx.htmlElement ||
+            !!ctx.computedStyle ||
+            !!ctx.colors ||
+            !!ctx.typography ||
+            !!ctx.spacing ||
+            !!ctx.motion ||
+            !!ctx.accessibility ||
+            !!ctx.contrast ||
+            !!ctx.performance ||
+            !!ctx.visualization ||
+            !!ctx.internationalization;
+        if (designTokensEmpty && cssRulesEmpty && !anyOtherInput) {
+            return {
+                status: 'skipped',
+                reason: 'no inputs provided',
+                totalRules: 0,
+                passed: 0,
+                violations: 0,
+                passRate: 'n/a',
+                violationsByDomain: {},
+                passRateByDomain: {},
+                criticalViolations: 0,
+                results: [],
+                summary: 'Validation skipped: no inputs provided (designTokens, cssRules, and all domain-specific inputs are empty/missing)',
+            };
+        }
         const results = DOMAIN_RULES.map(rule => rule.checkFunction(context));
         const passed = results.filter(r => r.passed).length;
         const violations = results.filter(r => !r.passed);
@@ -2077,6 +2113,7 @@ class ExtendedDomainValidator {
             passRateByDomain[domain] = `${((domainPassed / domainRules.length) * 100).toFixed(1)}%`;
         });
         return {
+            status: 'completed',
             totalRules: DOMAIN_RULES.length,
             passed,
             violations: violations.length,

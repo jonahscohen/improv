@@ -104,8 +104,6 @@ class FlowDReferenceSearchHandler extends flow_handler_1.BaseFlowHandler {
                 'Saturation & Vibrancy: appropriate for register (product vs brand)',
                 '',
                 'Domain Validation Results:',
-                `- Color domain: ${colorPassed}/${colorDomainRules.length} rules passing (${colorPassRate})`,
-                `- Spatial domain: ${spatialPassed}/${spatialDomainRules.length} rules passing (${spatialPassRate})`,
                 '',
                 'Spatial Domain Rules (4pt Grid System):',
                 ...spatialRules,
@@ -169,6 +167,8 @@ class FlowDReferenceSearchHandler extends flow_handler_1.BaseFlowHandler {
                 status: 'error',
                 message: 'Failed to search design references',
                 error: String(err),
+                guidance: [],
+                checklist: [],
                 memory,
             };
         }

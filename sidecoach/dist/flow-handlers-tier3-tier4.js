@@ -35,7 +35,6 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FlowQMigrationHandler = exports.FlowPConstraintDesignHandler = exports.FlowOCloneMatchHandler = exports.FlowNRapidIterationHandler = exports.FlowMResponsiveValidationHandler = exports.FlowLDesignCritiqueHandler = exports.FlowKMultiLensAuditHandler = exports.FlowJTacticalPolishHandler = void 0;
 const flow_handler_1 = require("./flow-handler");
-const impeccable_detect_bridge_1 = require("./impeccable-detect-bridge");
 const persona_engine_1 = require("./persona-engine");
 const anti_pattern_validator_1 = require("./anti-pattern-validator");
 const category_reflex_detector_1 = require("./category-reflex-detector");
@@ -208,18 +207,6 @@ class FlowKMultiLensAuditHandler extends flow_handler_1.BaseFlowHandler {
             'Dimension 5: Anti-patterns (hardcoded values, dead code, deprecated APIs)',
             'Address all Critical and High findings; document trade-offs for Medium',
         ];
-        // Wire ImpeccableDetectBridge for real 28-rule static analysis
-        const bridge = new impeccable_detect_bridge_1.ImpeccableDetectBridge();
-        const detectResult = bridge.detect(context.projectPath || process.cwd());
-        if (detectResult.findings.length > 0) {
-            const detectGuidance = bridge.findingsToGuidance(detectResult.findings);
-            guidance.push('---');
-            guidance.push(`Impeccable Detect findings (${detectResult.findings.length} issues):`);
-            guidance.push(...detectGuidance);
-        }
-        else if (!detectResult.success || detectResult.rulesCovered === 0) {
-            guidance.push(`Note: ${detectResult.message}`);
-        }
         // Wire AntiPatternValidator for 27-rule design anti-pattern detection
         const antiPatternValidator = new anti_pattern_validator_1.AntiPatternValidator();
         const artifacts = [];
@@ -227,10 +214,7 @@ class FlowKMultiLensAuditHandler extends flow_handler_1.BaseFlowHandler {
             enhancedContext.flowMetadata.tags = ['flowK', 'multi-lens-audit', '5-dimensions'];
             enhancedContext.flowMetadata.customData = {
                 'audit-dimensions': 5,
-                'detect-rules': 28,
                 'anti-pattern-rules': 27,
-                'findings-count': detectResult.findings.length,
-                'rules-covered': detectResult.rulesCovered,
             };
         }
         // Try to find and validate code/CSS files in the project

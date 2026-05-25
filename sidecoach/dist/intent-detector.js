@@ -32,13 +32,16 @@ class IntentDetector {
             this.createFlowODetector(),
             this.createFlowPDetector(),
             this.createFlowQDetector(),
-            // Tier 5: Specialized Refinement (NEW - impeccable v2.1.9)
+            // Tier 5: Specialized Refinement (NEW - v2.1.9)
             this.createFlowRDetector(),
             this.createFlowSDetector(),
             this.createFlowTDetector(),
             // Special: Curate & QA
             this.createFlowUDetector(),
             this.createFlowVDetector(),
+            // New: Landing & Copy
+            this.createFlowWDetector(),
+            this.createFlowXDetector(),
             // Legacy flows
             this.createFlow1Detector(),
             this.createFlow2Detector(),
@@ -87,12 +90,34 @@ class IntentDetector {
             return matches[0];
         }
         // Return top match with others as candidates
-        return {
+        const disambig = {
             candidates: matches.slice(0, 3),
             isAmbiguous: matches[0].confidence < 0.9 || matches.length > 1,
             recommendation: matches[0],
             clarificationNeeded: matches.length > 1 ? `Did you mean ${matches[0].flowName}?` : undefined,
         };
+        // Tie-break: when top candidates have equal confidence, use the recommendation field
+        // or fall back to a deterministic heuristic (alphabetical by flowId)
+        if (disambig.isAmbiguous && disambig.candidates.length > 1) {
+            const topConf = disambig.candidates[0].confidence;
+            const tied = disambig.candidates.filter((c) => c.confidence === topConf);
+            if (tied.length > 1) {
+                const rec = disambig.recommendation;
+                let chosenFlowId;
+                let reason;
+                if (rec && tied.some((c) => c.flowId === rec.flowId)) {
+                    chosenFlowId = rec.flowId;
+                    reason = `Used recommendation field as tiebreaker among ${tied.length} equal-confidence matches`;
+                }
+                else {
+                    const sorted = [...tied].sort((a, b) => String(a.flowId).localeCompare(String(b.flowId)));
+                    chosenFlowId = sorted[0].flowId;
+                    reason = `Alphabetical tiebreak among ${tied.length} equal-confidence matches (no recommendation set)`;
+                }
+                disambig.tieBreak = { chosenFlowId, reason };
+            }
+        }
+        return disambig;
     }
     // Orchestrator Integration: Prerequisite validation and flow chaining
     validateFlowPrerequisites(flowId, context) {
@@ -362,7 +387,7 @@ class IntentDetector {
             },
         };
     }
-    // Tier 5: Specialized Refinement (NEW - impeccable v2.1.9 coverage)
+    // Tier 5: Specialized Refinement (NEW - v2.1.9 coverage)
     createFlowRDetector() {
         return {
             flowId: 'flowR_layout_optimization',
@@ -622,6 +647,32 @@ class IntentDetector {
                 if (this.hasAny(u, ['qa', 'pipeline', 'full'])) {
                     if (this.hasAny(u, ['chain', 'all flows', 'tiers', 'comprehensive'])) {
                         return 0.8;
+                    }
+                }
+                return 0;
+            },
+        };
+    }
+    createFlowWDetector() {
+        return {
+            flowId: 'flowW_landing_composition',
+            score: (u) => {
+                if (this.hasAny(u, ['landing', 'composition', 'compose'])) {
+                    if (this.hasNone(u, ['research', 'reference', 'inspiration', 'component'])) {
+                        return 0.8;
+                    }
+                }
+                return 0;
+            },
+        };
+    }
+    createFlowXDetector() {
+        return {
+            flowId: 'flowX_copywriting',
+            score: (u) => {
+                if (this.hasAny(u, ['copywriting', 'copy', 'draft copy', 'headline', 'hero copy', 'section copy', 'marketing copy', 'tagline'])) {
+                    if (this.hasNone(u, ['code', 'function', 'component'])) {
+                        return 0.85;
                     }
                 }
                 return 0;

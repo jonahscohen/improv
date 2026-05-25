@@ -94,7 +94,7 @@
           <p class="sidebar__group-h">House 3 - Design</p>
           <a href="#design" class="sidebar__link">The pipeline (7 layers)</a>
           <a href="#design-orchestrator" class="sidebar__link">/design-build orchestrator</a>
-          <a href="#design-strategy" class="sidebar__link">1. Strategy (Impeccable)</a>
+          <a href="#design-strategy" class="sidebar__link">1. Strategy (Sidecoach)</a>
           <a href="#design-research" class="sidebar__link">2. Research (component-gallery)</a>
           <a href="#design-typography" class="sidebar__link">3. Typography (fontshare)</a>
           <a href="#design-references" class="sidebar__link">4. References (catalog)</a>
@@ -587,7 +587,7 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
 
           <h3 id="design-orchestrator" class="h3">The /design-build orchestrator</h3>
           <p>
-            Empirically, the design pipeline's individual skills don't auto-trigger reliably on real builds, and the QA triad (impeccable audit / critique / polish) never fires without explicit invocation. The <code>/design-build</code> skill solves both: one explicit invocation, ten phases, two gate checkpoints (strategy + QA findings), mandatory QA.
+            Empirically, the design pipeline's individual skills don't auto-trigger reliably on real builds, and the QA triad (sidecoach audit / critique / polish) never fires without explicit invocation. The <code>/design-build</code> skill solves both: one explicit invocation, ten phases, two gate checkpoints (strategy + QA findings), mandatory QA.
           </p>
           <p>
             Trigger only on explicit phrases: <code>/design-build &lt;feature&gt;</code>, "run the design pipeline for X," "kickoff a design build," "use the design stack on X." Do NOT trigger on generic UI keywords like "build a button" - those route to individual skills.
@@ -608,7 +608,7 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
             </div>
             <div class="defn">
               <p class="defn__term">Phase 8 - QA triad (MANDATORY)</p>
-              <p class="defn__body"><code>/impeccable audit</code> (5-dimension technical scan), <code>/impeccable critique</code> (design review via sub-agents), <code>/impeccable polish</code> (final design-system alignment). Cannot be skipped. <strong>Gate checkpoint 2</strong> on findings.</p>
+              <p class="defn__body"><code>/sidecoach audit</code> (5-dimension technical scan), <code>/sidecoach critique</code> (design review via sub-agents), <code>/sidecoach polish</code> (final design-system alignment). Cannot be skipped. <strong>Gate checkpoint 2</strong> on findings.</p>
             </div>
             <div class="defn">
               <p class="defn__term">Phase 9 - Verification</p>
@@ -620,26 +620,26 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
             </div>
           </div>
 
-          <h3 id="design-strategy" class="h3">1. Strategy - <code>/impeccable</code></h3>
+          <h3 id="design-strategy" class="h3">1. Strategy - <code>/sidecoach</code></h3>
           <p>
-            A plugin (<code>impeccable@impeccable</code>) auto-installed via your <code>enabledPlugins</code>. Twenty-three commands. Reads <code>PRODUCT.md</code> and <code>DESIGN.md</code> at the project root before every command.
+            A plugin (<code>sidecoach</code>) auto-installed via your <code>enabledPlugins</code>. Twenty-three commands. Reads <code>PRODUCT.md</code> and <code>DESIGN.md</code> at the project root before every command.
           </p>
           <p>
             Key commands across the lifecycle:
           </p>
           <ul class="ul">
-            <li><code>/impeccable teach</code> - interactive PRODUCT.md authoring</li>
-            <li><code>/impeccable document</code> - extract existing visual system into DESIGN.md</li>
-            <li><code>/impeccable shape &lt;feature&gt;</code> - plan only, no code</li>
-            <li><code>/impeccable craft &lt;feature&gt;</code> - build from scratch</li>
-            <li><code>/impeccable audit / critique / polish</code> - the QA triad</li>
-            <li><code>/impeccable animate / colorize / delight / bolder / overdrive</code> - add personality</li>
-            <li><code>/impeccable quieter / distill</code> - tone down a loud UI</li>
-            <li><code>/impeccable typeset / layout / adapt / clarify / optimize</code> - fix specific dimensions</li>
-            <li><code>/impeccable harden</code> - production-ready sweep (errors, i18n, edge cases)</li>
-            <li><code>/impeccable onboard</code> - first-run flows, empty states, activation</li>
-            <li><code>/impeccable extract</code> - pull reusable tokens and components</li>
-            <li><code>/impeccable live</code> - iterate visually in a live browser</li>
+            <li><code>/sidecoach teach</code> - interactive PRODUCT.md authoring</li>
+            <li><code>/sidecoach document</code> - extract existing visual system into DESIGN.md</li>
+            <li><code>/sidecoach shape &lt;feature&gt;</code> - plan only, no code</li>
+            <li><code>/sidecoach craft &lt;feature&gt;</code> - build from scratch</li>
+            <li><code>/sidecoach audit / critique / polish</code> - the QA triad</li>
+            <li><code>/sidecoach animate / colorize / delight / bolder / overdrive</code> - add personality</li>
+            <li><code>/sidecoach quieter / distill</code> - tone down a loud UI</li>
+            <li><code>/sidecoach typeset / layout / adapt / clarify / optimize</code> - fix specific dimensions</li>
+            <li><code>/sidecoach harden</code> - production-ready sweep (errors, i18n, edge cases)</li>
+            <li><code>/sidecoach onboard</code> - first-run flows, empty states, activation</li>
+            <li><code>/sidecoach extract</code> - pull reusable tokens and components</li>
+            <li><code>/sidecoach live</code> - iterate visually in a live browser</li>
           </ul>
 
           <h3 id="design-research" class="h3">2. Research - <code>component-gallery-reference</code></h3>
@@ -652,7 +652,7 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
 
           <h3 id="design-typography" class="h3">3. Typography - <code>fontshare-reference</code></h3>
           <p>
-            A bundled skill that researches typefaces via <a href="https://fontshare.com">fontshare.com</a>, Indian Type Foundry's curated open-source catalog. The skill bakes in Impeccable's <strong>reflex-reject list</strong> - the training-data-default typefaces that get refused as primaries on greenfield work:
+            A bundled skill that researches typefaces via <a href="https://fontshare.com">fontshare.com</a>, Indian Type Foundry's curated open-source catalog. The skill bakes in Sidecoach's <strong>reflex-reject list</strong> - the training-data-default typefaces that get refused as primaries on greenfield work:
           </p>
           <div class="reject-list">
             <p>Fraunces, Newsreader, Lora, Crimson, Crimson Pro, Crimson Text, Playfair Display, Cormorant, Cormorant Garamond, Syne, IBM Plex Mono, IBM Plex Sans, IBM Plex Serif, Space Mono, Space Grotesk, Inter, DM Sans, DM Serif Display, DM Serif Text, Outfit, Plus Jakarta Sans, Instrument Sans, Instrument Serif.</p>
@@ -741,7 +741,7 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
             </div>
           </div>
 
-          <h3 id="design-product" class="h3">PRODUCT.md spec (what Impeccable reads)</h3>
+          <h3 id="design-product" class="h3">PRODUCT.md spec (what Sidecoach reads)</h3>
           <p>
             PRODUCT.md captures the brand strategy that all design work routes through. Five sections, all load-bearing:
           </p>
@@ -1098,7 +1098,7 @@ CLAUDE_DOTFILES_REPO=https://github.com/your-fork/claude-dotfiles.git \
 
           <h3 class="h3">Adding a new CLAUDE.md rule</h3>
           <p>
-            Edit <code>claude/CLAUDE.md</code>. Decide which existing section the rule belongs to (Memory Discipline, Verification Protocol, Design Work and Impeccable, Code Quality, etc.) - rules under the wrong heading get ignored. If the rule needs cross-team enforcement on projects where the dotfiles aren't installed, also drop it into a project-root CLAUDE.md template.
+            Edit <code>claude/CLAUDE.md</code>. Decide which existing section the rule belongs to (Memory Discipline, Verification Protocol, Design Work and Sidecoach, Code Quality, etc.) - rules under the wrong heading get ignored. If the rule needs cross-team enforcement on projects where the dotfiles aren't installed, also drop it into a project-root CLAUDE.md template.
           </p>
 
           <h3 class="h3">Memory entry conventions</h3>

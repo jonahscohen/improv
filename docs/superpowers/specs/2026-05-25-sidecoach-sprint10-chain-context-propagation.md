@@ -5,7 +5,7 @@
 
 ## Goal
 
-Fix the root cause of why flowH (motion-integration) and flowI (accessibility) silently drop from the impeccable verb chain. Sprint 9 dogfood verified all 3 Sprint 9 fixes work, but the craft chain only produces 4 of 5 expected flows. Investigation traced this to THREE compounding bugs in the chain executor and parser/consumer contract.
+Fix the root cause of why flowH (motion-integration) and flowI (accessibility) silently drop from the sidecoach verb chain. Sprint 9 dogfood verified all 3 Sprint 9 fixes work, but the craft chain only produces 4 of 5 expected flows. Investigation traced this to THREE compounding bugs in the chain executor and parser/consumer contract.
 
 ## Root cause investigation (executed during planning)
 
@@ -144,4 +144,4 @@ If after Sprint 10 the re-dogfood still surfaces a NEW error, the chief-architec
 
 - Other surfacing of "canExecute returns false silently" elsewhere in the codebase
 - Refactoring the two ContextLoader systems into one
-- BuildReport verdict propagation for impeccable verb chains
+- BuildReport verdict propagation for sidecoach verb chains

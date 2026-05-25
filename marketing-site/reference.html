@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>reference - the full kit and kaboodle | claude-dotfiles</title>
-  <meta name="description" content="The comprehensive reference for every component of claude-dotfiles. Tab through improv, sidecoach, memory, cmux, voice, discord, hooks, impeccable, and validation-guard." />
+  <meta name="description" content="The comprehensive reference for every component of claude-dotfiles. Tab through improv, sidecoach, memory, cmux, voice, discord, hooks, and validation-guard." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -53,7 +53,6 @@
             <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-voice" id="tab-voice" data-tab="voice">voice</button>
             <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-discord" id="tab-discord" data-tab="discord">discord</button>
             <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-hooks" id="tab-hooks" data-tab="hooks">hooks</button>
-            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-impeccable" id="tab-impeccable" data-tab="impeccable">impeccable</button>
             <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-guard" id="tab-guard" data-tab="guard">validation-guard</button>
           </nav>
 
@@ -97,7 +96,7 @@
             <section class="reference__panel" id="panel-sidecoach" role="tabpanel" aria-labelledby="tab-sidecoach">
               <header>
                 <h2>sidecoach</h2>
-                <p>An opinionated design orchestrator. Eight craft flows, 22 verb commands, 159 validators across ten design domains. The replacement for Impeccable.</p>
+                <p>An opinionated design orchestrator. Eight craft flows, 22 verb commands, 159 validators across ten design domains.</p>
               </header>
 
               <h3>Install</h3>
@@ -119,7 +118,7 @@
               </ul>
 
               <h3>Verb commands</h3>
-              <p>Twenty-two slash commands matching Impeccable's surface command-for-command:</p>
+              <p>Twenty-two slash commands covering the full design pipeline:</p>
               <pre><code>/sidecoach craft     /sidecoach polish    /sidecoach audit
 /sidecoach critique  /sidecoach shape     /sidecoach typeset
 /sidecoach layout    /sidecoach adapt     /sidecoach clarify
@@ -300,26 +299,6 @@ voice off</code></pre>
 
               <h3>Source</h3>
               <p><a href="https://github.com/jonahscohen/claude-dotfiles/tree/main/claude/hooks" rel="noreferrer noopener">github.com/jonahscohen/claude-dotfiles/tree/main/claude/hooks</a></p>
-            </section>
-
-            <!-- impeccable -->
-            <section class="reference__panel" id="panel-impeccable" role="tabpanel" aria-labelledby="tab-impeccable">
-              <header>
-                <h2>impeccable</h2>
-                <p>The pre-sidecoach design plugin. Still installed for now, increasingly shadowed by sidecoach. New design work should go through <code>/sidecoach</code>.</p>
-              </header>
-
-              <h3>What it still does</h3>
-              <p>impeccable ships 22 slash commands and an auto-triggered <code>make-interfaces-feel-better</code> skill. The 23 commands cover design briefs (<code>teach</code>, <code>document</code>), implementation (<code>craft</code>, <code>shape</code>), and refinement (<code>polish</code>, <code>audit</code>, <code>critique</code>).</p>
-
-              <h3>Why it's being shadowed</h3>
-              <p>impeccable was the inspiration and the testing ground. sidecoach inherits its verb surface but adds the chain executor, the validator framework, the build report, the project-context loader, and a tested dogfood loop. As sidecoach reaches feature parity (currently complete for the verb commands and chain), impeccable becomes documentation that sidecoach uses for reference rather than runtime infrastructure.</p>
-
-              <h3>Will it be removed</h3>
-              <p>Eventually, yes. There's no scheduled date. The team rules will be updated when sidecoach can fully drop impeccable's PRODUCT.md / DESIGN.md tooling and the make-interfaces-feel-better skill.</p>
-
-              <h3>Source</h3>
-              <p><a href="https://github.com/jonahscohen/claude-dotfiles/tree/main/impeccable" rel="noreferrer noopener">github.com/jonahscohen/claude-dotfiles/tree/main/impeccable</a></p>
             </section>
 
             <!-- validation-guard -->

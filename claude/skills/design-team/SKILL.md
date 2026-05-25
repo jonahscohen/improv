@@ -57,9 +57,9 @@ The CD reviews each builder's output sequentially:
 
 1. Read the built files
 2. Run the existing QA pipeline:
-   - `/impeccable audit` (a11y, performance, theming, responsive, anti-patterns)
-   - `/impeccable critique` (AI-slop detection, Nielsen heuristics, cognitive load)
-   - `/impeccable polish` (alignment pass against design system)
+   - `/sidecoach audit` (a11y, performance, theming, responsive, anti-patterns)
+   - `/sidecoach critique` (AI-slop detection, Nielsen heuristics, cognitive load)
+   - `/sidecoach polish` (alignment pass against design system)
    - `make-interfaces-feel-better` 14-point checklist
    - `DESIGN.md` lint (if present)
 3. Check cross-section consistency (typography, spacing, color palette, component patterns)
@@ -188,7 +188,7 @@ Array of past sprint summaries (what was built, who built what, CD verdict, file
 - Any task where parallel specialized work + review improves quality
 
 **Do NOT use it for:**
-- Single component builds (just use Impeccable + component-gallery-reference)
+- Single component builds (just use Sidecoach + component-gallery-reference)
 - Bug fixes or minor tweaks
 - Non-UI work
 - Tasks where the overhead of team orchestration exceeds the benefit

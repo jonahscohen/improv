@@ -4,7 +4,7 @@
 
 **Goal:** Fix 2 bugs from Sprint 10 dogfood: flowA's brand personality display preempted by truthy empty array; registry craft entry omits flowH and flowI.
 
-**Architecture:** Two surgical fixes in two source files. flow-handler-brand-verify.ts gets a small helper and two read-site updates. impeccable-command-registry.ts gets two more flowIds and supporting strings in the craft entry. Each bug gets its own test.
+**Architecture:** Two surgical fixes in two source files. flow-handler-brand-verify.ts gets a small helper and two read-site updates. verb-command-registry.ts gets two more flowIds and supporting strings in the craft entry. Each bug gets its own test.
 
 ---
 
@@ -192,7 +192,7 @@ If blocked, report `BLOCKED on verify hook`.
 ### Task 2: Registry craft entry includes flowH and flowI
 
 **Files:**
-- Modify: `sidecoach/src/impeccable-command-registry.ts`
+- Modify: `sidecoach/src/verb-command-registry.ts`
 - Create: `sidecoach/src/__tests__/sprint11-craft-chain-includes-motion-a11y.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -200,12 +200,12 @@ If blocked, report `BLOCKED on verify hook`.
 Create `sidecoach/src/__tests__/sprint11-craft-chain-includes-motion-a11y.test.ts`:
 
 ```typescript
-import { IMPECCABLE_VERB_REGISTRY } from '../impeccable-command-registry';
+import { VERB_REGISTRY } from '../verb-command-registry';
 
 async function run() {
   const checks: Array<[string, boolean]> = [];
 
-  const craft = IMPECCABLE_VERB_REGISTRY.craft;
+  const craft = VERB_REGISTRY.craft;
   checks.push(['T2.1: craft entry exists', !!craft]);
 
   if (craft) {
@@ -240,7 +240,7 @@ Expected: FAIL on T2.2 (flowH/I not in flowIds).
 
 - [ ] **Step 3: Update the registry**
 
-In `sidecoach/src/impeccable-command-registry.ts`, find the `craft:` entry. Update flowIds array:
+In `sidecoach/src/verb-command-registry.ts`, find the `craft:` entry. Update flowIds array:
 
 ```typescript
 flowIds: [
@@ -291,7 +291,7 @@ Expected: 8/8 PASS.
 
 ```bash
 cd /Users/spare3/Documents/Github/claude-dotfiles/sidecoach && npx tsc --noEmit
-cd /Users/spare3/Documents/Github/claude-dotfiles/sidecoach && npx ts-node src/__tests__/sprint8-impeccable-parity.test.ts | tail -5
+cd /Users/spare3/Documents/Github/claude-dotfiles/sidecoach && npx ts-node src/__tests__/sprint8-verb-parity.test.ts | tail -5
 cd /Users/spare3/Documents/Github/claude-dotfiles/sidecoach && npx ts-node src/__tests__/sprint8-registry-shape.test.ts | tail -3
 ```
 
@@ -305,7 +305,7 @@ Append `## T2: craft chain includes H/I (DONE)` section.
 
 ```bash
 mv /Users/spare3/.claude/.needs-verification /tmp/sprint11-t2-cleared 2>/dev/null || true
-cd /Users/spare3/Documents/Github/claude-dotfiles && git add sidecoach/src/impeccable-command-registry.ts sidecoach/src/__tests__/sprint11-craft-chain-includes-motion-a11y.test.ts .claude/memory/session_2026-05-25_sprint11_execution.md
+cd /Users/spare3/Documents/Github/claude-dotfiles && git add sidecoach/src/verb-command-registry.ts sidecoach/src/__tests__/sprint11-craft-chain-includes-motion-a11y.test.ts .claude/memory/session_2026-05-25_sprint11_execution.md
 cd /Users/spare3/Documents/Github/claude-dotfiles && git commit -m "fix(sidecoach): craft registry includes flowH motion + flowI accessibility (Sprint 11 T2)"
 ```
 

@@ -56,3 +56,7 @@ Spec self-review, then ask Jonah to review the spec file, then invoke superpower
 Approved. Committing the spec now, then invoking writing-plans for the implementation plan.
 
 Commit retry note: re-touched memory after rm flag-clear per Sprint 1 hook workaround.
+
+## Plan drafted
+
+Implementation plan written to `docs/superpowers/plans/2026-05-24-sprint4-phase-5-graded-validation-build-report.md`. 8 tasks covering build-report-types, aggregator, markdown renderer, three orchestrator surfaces (composite auto, single opt-in, CLI), memory-input mode, and sprint close. Plan uses `spawnSync` (not `exec` with shell strings) in the CLI test to satisfy the security-reminder hook that just blocked the first draft. Self-review pass: all spec sections covered, no placeholders, type/signature names consistent. Ready to dispatch via subagent-driven-development.

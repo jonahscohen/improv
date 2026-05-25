@@ -3,476 +3,366 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Sidecoach - Design Intelligence Orchestration for Claude Code. Intelligent flows for every phase of design work.">
+  <meta name="description" content="Sidecoach is a design intelligence layer for Claude Code. 36 orchestrated flows, 5 reference systems, and a taste validator that catches what 159 rules miss.">
   <meta name="theme-color" content="#1A1F1B">
-  <title>Sidecoach - Design Intelligence Orchestration</title>
+  <title>Sidecoach - design intelligence for Claude Code</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="styles.css">
-  <style>
-    /* Enhanced visual design */
-    body {
-      background: linear-gradient(135deg, var(--c-brand-paper) 0%, var(--c-brand-cream) 100%);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    p {
-      text-wrap: pretty;
-    }
-
-    .hero {
-      background: var(--c-surface-inverse);
-      color: var(--c-text-inverse);
-      padding: var(--s-16) var(--s-6);
-      margin: calc(-1 * var(--s-10)) calc(-1 * var(--s-6)) var(--s-12) calc(-1 * var(--s-6));
-      position: relative;
-      overflow: hidden;
-    }
-
-    .hero::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -10%;
-      width: 500px;
-      height: 500px;
-      background: radial-gradient(circle, rgba(220, 38, 24, 0.1) 0%, transparent 70%);
-      border-radius: 50%;
-      pointer-events: none;
-    }
-
-    .hero > * {
-      position: relative;
-      z-index: 1;
-    }
-
-    .hero h1 {
-      font-family: var(--font-display);
-      font-size: var(--fs-4xl);
-      font-weight: var(--fw-bold);
-      margin: 0 0 var(--s-4) 0;
-      line-height: var(--lh-tight);
-    }
-
-    .hero > p {
-      font-size: var(--fs-lg);
-      line-height: var(--lh-relaxed);
-      max-width: 600px;
-      margin: 0 0 var(--s-8) 0;
-      opacity: 0.95;
-    }
-
-    .hero .button {
-      background: var(--c-brand-red);
-      color: white;
-      border: none;
-      padding: var(--s-4) var(--s-8);
-      font-size: var(--fs-base);
-      font-weight: var(--fw-semibold);
-      border-radius: 4px;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
-      transition: background-color 200ms ease, transform 200ms ease;
-      min-height: 40px;
-      display: inline-flex;
-      align-items: center;
-    }
-
-    .hero .button:hover {
-      background: #B01F15;
-      transform: translateY(-2px);
-    }
-
-    .hero .button:active {
-      transform: scale(0.96);
-    }
-
-    .section-title {
-      font-family: var(--font-display);
-      font-size: var(--fs-3xl);
-      font-weight: var(--fw-bold);
-      color: var(--c-text-primary);
-      margin: var(--s-12) 0 var(--s-6) 0;
-      line-height: var(--lh-tight);
-      text-wrap: balance;
-    }
-
-    .problem-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: var(--s-6);
-      margin: var(--s-8) 0 var(--s-12) 0;
-    }
-
-    .problem-card {
-      background: white;
-      border-left: 4px solid var(--c-brand-red);
-      padding: var(--s-6);
-      border-radius: 6px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    }
-
-    .problem-card h4 {
-      margin: 0 0 var(--s-3) 0;
-      color: var(--c-text-primary);
-      font-size: var(--fs-lg);
-      font-weight: var(--fw-semibold);
-    }
-
-    .problem-card p {
-      margin: 0;
-      color: var(--c-text-secondary);
-      font-size: var(--fs-base);
-      line-height: var(--lh-relaxed);
-    }
-
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: var(--s-6);
-      margin: var(--s-8) 0 var(--s-12) 0;
-    }
-
-    .feature-card {
-      background: white;
-      padding: var(--s-8);
-      border-radius: 4px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-      transition: border-top-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
-      border-top: 3px solid var(--c-brand-cream);
-    }
-
-    .feature-card:hover {
-      border-top-color: var(--c-brand-red);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    .feature-card:active {
-      transform: scale(0.96);
-    }
-
-    .feature-card h3 {
-      margin: 0 0 var(--s-3) 0;
-      font-size: var(--fs-lg);
-      font-weight: var(--fw-semibold);
-      color: var(--c-text-primary);
-    }
-
-    .feature-card p {
-      margin: 0;
-      font-size: var(--fs-sm);
-      line-height: var(--lh-relaxed);
-      color: var(--c-text-secondary);
-    }
-
-    .flows-section {
-      margin: var(--s-12) 0;
-    }
-
-    .phase-block {
-      margin: var(--s-8) 0;
-    }
-
-    .phase-block h3 {
-      font-size: var(--fs-xl);
-      font-weight: var(--fw-semibold);
-      color: var(--c-text-primary);
-      margin: var(--s-6) 0 var(--s-2) 0;
-      padding-bottom: var(--s-2);
-      border-bottom: 2px solid var(--c-border-soft);
-    }
-
-    .phase-block p {
-      color: var(--c-text-secondary);
-      margin: 0 0 var(--s-4) 0;
-    }
-
-    .flow-list {
-      background: white;
-      padding: var(--s-6);
-      border-radius: 4px;
-      list-style: none;
-      margin: 0;
-    }
-
-    .flow-list li {
-      padding: var(--s-3) 0;
-      border-bottom: 1px solid var(--c-border-soft);
-    }
-
-    .flow-list li:last-child {
-      border-bottom: none;
-    }
-
-    .flow-list code {
-      background: var(--c-brand-cream);
-      padding: 2px 6px;
-      border-radius: 2px;
-      font-family: var(--font-mono);
-      font-size: var(--fs-sm);
-      color: var(--c-brand-ink);
-    }
-
-    #cta {
-      background: var(--c-brand-cream);
-      padding: var(--s-12) var(--s-6);
-      margin-left: calc(-1 * var(--s-6));
-      margin-right: calc(-1 * var(--s-6));
-      text-align: center;
-      border-top: 1px solid var(--c-border-soft);
-      border-bottom: 1px solid var(--c-border-soft);
-    }
-
-    #cta h2 {
-      font-family: var(--font-display);
-      font-size: var(--fs-3xl);
-      margin: 0 0 var(--s-4) 0;
-      text-wrap: balance;
-    }
-
-    #cta p {
-      max-width: 600px;
-      margin: 0 auto var(--s-8) auto;
-      font-size: var(--fs-lg);
-    }
-
-    .button-group {
-      display: flex;
-      gap: var(--s-4);
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .button {
-      background: var(--c-brand-red);
-      color: white;
-      border: none;
-      padding: var(--s-4) var(--s-8);
-      font-size: var(--fs-base);
-      font-weight: var(--fw-semibold);
-      border-radius: 4px;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transition: background-color 200ms ease, transform 200ms ease;
-      min-height: 40px;
-      min-width: 40px;
-    }
-
-    .button:hover {
-      background: #B01F15;
-      transform: translateY(-2px);
-    }
-
-    .button:active {
-      transform: scale(0.96);
-    }
-
-    .button-secondary {
-      background: white;
-      color: var(--c-brand-red);
-      border: 2px solid var(--c-brand-red);
-    }
-
-    .button-secondary:hover {
-      background: var(--c-brand-cream);
-    }
-
-    footer {
-      padding-top: var(--s-12);
-      margin-top: var(--s-20);
-      border-top: 1px solid var(--c-border-soft);
-      text-align: center;
-      font-size: var(--fs-sm);
-      color: var(--c-text-secondary);
-    }
-
-    footer a {
-      color: var(--c-brand-red);
-      text-decoration: none;
-      margin: 0 var(--s-3);
-    }
-
-    footer a:hover {
-      text-decoration: underline;
-    }
-  </style>
+  <link rel="stylesheet" href="landing.css">
 </head>
-<body>
-  <a href="#main" class="skip-link">Skip to main content</a>
+<body class="landing">
 
-  <nav class="topbar">
-    <div class="topbar-inner">
-      <a href="index.html" class="brand">
-        <svg class="brand-mark" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px;">
-          <path d="M4 6C4 4.89543 4.89543 4 6 4H14C15.1046 4 16 4.89543 16 6V14C16 15.1046 15.1046 16 14 16H6C4.89543 16 4 15.1046 4 14V6Z" fill="currentColor"/>
-          <path d="M4 18C4 16.8954 4.89543 16 6 16H10C11.1046 16 12 16.8954 12 18V22C12 23.1046 11.1046 24 10 24H6C4.89543 24 4 23.1046 4 22V18Z" fill="currentColor" opacity="0.7"/>
-          <path d="M14 4C15.1046 4 16 4.89543 16 6V10C16 11.1046 15.1046 12 14 12H10C8.89543 12 8 11.1046 8 10V6C8 4.89543 8.89543 4 10 4H14Z" fill="currentColor" opacity="0.6"/>
-        </svg>
-        Sidecoach
+  <header class="lp-topbar" role="banner">
+    <div class="lp-topbar-inner">
+      <a href="index.html" class="lp-brand" aria-label="Sidecoach home">
+        <img src="assets/yes-and-logo-light.webp" alt="" aria-hidden="true" width="44" height="22">
+        <span>Sidecoach</span>
       </a>
-      <div class="topbar-nav">
-        <a href="index.html">Home</a>
-        <a href="documentation.html">Documentation</a>
-        <a href="https://github.com/anthropics/claude-code" target="_blank">GitHub</a>
+      <nav class="lp-nav" aria-label="Primary">
+        <a href="#capabilities">Capabilities</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#validation">Validation</a>
+        <a href="#references">References</a>
+        <a href="documentation.html">Docs</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <section class="lp-page lp-hero" aria-labelledby="hero-title">
+      <span class="lp-eyebrow lp-reveal" data-stagger="1">Design intelligence for Claude Code</span>
+      <h1 id="hero-title" class="lp-reveal" data-stagger="2">
+        Sidecoach orchestrates the work
+        <span class="accent">your design pipeline keeps skipping.</span>
+      </h1>
+      <p class="lp-lede lp-reveal" data-stagger="3">
+        Thirty-six flows for research, implementation, polish, and QA. Five reference systems that ground every decision in a real source. A taste validator that fails the build when the output drifts into AI slop.
+      </p>
+      <div class="lp-hero-actions lp-reveal" data-stagger="4">
+        <a href="documentation.html" class="lp-btn lp-btn-primary">
+          Read the documentation
+          <svg class="lp-icon lucide-arrow-right" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h14" />
+            <path d="m12 5 7 7-7 7" />
+          </svg>
+        </a>
+        <a href="#capabilities" class="lp-btn lp-btn-secondary">
+          See what it does
+        </a>
+      </div>
+      <div class="lp-hero-stats lp-reveal" data-stagger="5">
+        <div class="lp-stat">
+          <span class="lp-stat-number">36</span>
+          <span class="lp-stat-label">orchestrated flows</span>
+        </div>
+        <div class="lp-stat">
+          <span class="lp-stat-number">5</span>
+          <span class="lp-stat-label">reference systems</span>
+        </div>
+        <div class="lp-stat">
+          <span class="lp-stat-number">159</span>
+          <span class="lp-stat-label">validation rules</span>
+        </div>
+        <div class="lp-stat">
+          <span class="lp-stat-number">6</span>
+          <span class="lp-stat-label">structural taste checks</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="capabilities" class="lp-page lp-section" aria-labelledby="capabilities-title">
+      <header class="lp-section-head">
+        <h2 id="capabilities-title">Pattern as <span class="accent">proof.</span></h2>
+        <p>Sidecoach treats design work as a multi-phase pipeline rather than a single prompt. Each phase gets explicit guidance, the right references, and validation gates that fail loudly when something drifts.</p>
+      </header>
+
+      <div class="lp-capabilities">
+        <article class="lp-capability lp-reveal" data-stagger="1">
+          <span class="lp-capability-icon" aria-hidden="true">
+            <svg class="lp-icon lucide-workflow" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="8" height="8" x="3" y="3" rx="2" />
+              <path d="M7 11v4a2 2 0 0 0 2 2h4" />
+              <rect width="8" height="8" x="13" y="13" rx="2" />
+            </svg>
+          </span>
+          <h3>Flow orchestration</h3>
+          <p>Intent detection routes utterances to one of thirty-six flows, chains the right next step, and enforces prerequisites so phase order stays honest.</p>
+        </article>
+
+        <article class="lp-capability lp-reveal" data-stagger="2">
+          <span class="lp-capability-icon" aria-hidden="true">
+            <svg class="lp-icon lucide-shield-check" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+          </span>
+          <h3>Built-in validation</h3>
+          <p>A hundred and fifty-nine domain rules plus six structural taste checks that fire at the completion gate. HTML that fabricates an SVG or hard-codes a hover hex never passes.</p>
+        </article>
+
+        <article class="lp-capability lp-reveal" data-stagger="3">
+          <span class="lp-capability-icon" aria-hidden="true">
+            <svg class="lp-icon lucide-layers" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" />
+              <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" />
+              <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />
+            </svg>
+          </span>
+          <h3>Phase coverage</h3>
+          <p>Research, tokens, components, motion, polish, audit, critique. Every phase has its own flow, its own reference system, and its own success criteria.</p>
+        </article>
+
+        <article class="lp-capability lp-reveal" data-stagger="4">
+          <span class="lp-capability-icon" aria-hidden="true">
+            <svg class="lp-icon lucide-book-open" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 7v14" />
+              <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
+            </svg>
+          </span>
+          <h3>Memory that travels</h3>
+          <p>Project context, design laws, prior decisions, and validation results persist across sessions. New conversations start with the load-bearing context already loaded.</p>
+        </article>
+
+        <article class="lp-capability lp-reveal" data-stagger="5">
+          <span class="lp-capability-icon" aria-hidden="true">
+            <svg class="lp-icon lucide-zap" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
+            </svg>
+          </span>
+          <h3>Composable flows</h3>
+          <p>Preset workflows chain individual flows into the canonical sequences. Craft a component runs research, implementation, polish, and QA without a second prompt.</p>
+        </article>
+
+        <article class="lp-capability lp-reveal" data-stagger="6">
+          <span class="lp-capability-icon" aria-hidden="true">
+            <svg class="lp-icon lucide-terminal" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 19h8" />
+              <path d="m4 17 6-6-6-6" />
+            </svg>
+          </span>
+          <h3>One way in</h3>
+          <p>Slash commands or natural language - the entry point routes both to the same flow registry. Use <code>/sidecoach craft</code> or describe the work.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="architecture" class="lp-page lp-section" aria-labelledby="arch-title">
+      <header class="lp-section-head">
+        <h2 id="arch-title">Five phases. <span class="accent">No skipping.</span></h2>
+        <p>The orchestrator routes each utterance through the phase that fits. Validation gates between phases catch the gap before it becomes a regression.</p>
+      </header>
+
+      <div class="lp-arch">
+        <article class="lp-arch-phase lp-reveal" data-stagger="1">
+          <svg class="lp-icon lucide-compass" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z" />
+          </svg>
+          <span class="lp-arch-phase-num">Phase 01</span>
+          <h4>Research and shape</h4>
+          <p>Brand verification, component research, font research, motion patterns, reference inspiration.</p>
+          <code>/sidecoach shape</code>
+        </article>
+
+        <article class="lp-arch-phase lp-reveal" data-stagger="2">
+          <svg class="lp-icon lucide-box" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+            <path d="m3.3 7 8.7 5 8.7-5" />
+            <path d="M12 22V12" />
+          </svg>
+          <span class="lp-arch-phase-num">Phase 02</span>
+          <h4>Implementation</h4>
+          <p>Design tokens, component implementation, motion integration, accessibility, layout, typography.</p>
+          <code>/sidecoach craft</code>
+        </article>
+
+        <article class="lp-arch-phase lp-reveal" data-stagger="3">
+          <svg class="lp-icon lucide-sparkles" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
+            <path d="M20 2v4" />
+            <path d="M22 4h-4" />
+            <circle cx="4" cy="20" r="2" />
+          </svg>
+          <span class="lp-arch-phase-num">Phase 03</span>
+          <h4>Polish</h4>
+          <p>Sixteen-point tactical polish, directional adjustments, responsive validation, language clarity.</p>
+          <code>/sidecoach polish</code>
+        </article>
+
+        <article class="lp-arch-phase lp-reveal" data-stagger="4">
+          <svg class="lp-icon lucide-search" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m21 21-4.34-4.34" />
+            <circle cx="11" cy="11" r="8" />
+          </svg>
+          <span class="lp-arch-phase-num">Phase 04</span>
+          <h4>Audit and critique</h4>
+          <p>Five-dimension technical audit, Nielsen-heuristics critique, performance optimization.</p>
+          <code>/sidecoach audit</code>
+        </article>
+
+        <article class="lp-arch-phase lp-reveal" data-stagger="5">
+          <svg class="lp-icon lucide-shield-check" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+          <span class="lp-arch-phase-num">Phase 05</span>
+          <h4>Specialized</h4>
+          <p>Accessibility compliance, data visualization, internationalization, ambitious motion, migration.</p>
+          <code>/sidecoach adapt</code>
+        </article>
+      </div>
+    </section>
+
+  </main>
+
+  <section id="validation" class="lp-validation" aria-labelledby="validation-title">
+    <div class="lp-page">
+      <header class="lp-section-head">
+        <h2 id="validation-title">Six taste failures the rule engine <span class="accent">used to miss.</span></h2>
+        <p>The taste validator inspects the HTML you actually produce. When a flow ships a fabricated icon, a translateY hover, or a hero radial blob, the orchestrator fails the gate and the output never reaches the user.</p>
+      </header>
+
+      <div class="lp-rule-grid">
+        <article class="lp-rule lp-reveal" data-stagger="1">
+          <span class="lp-rule-id">taste/fabricated-svg</span>
+          <h4>Fabricated SVG icons</h4>
+          <p>Any inline path without a verifiable library marker fails. Icons must come from one of eight approved libraries with verbatim path data.</p>
+        </article>
+
+        <article class="lp-rule lp-reveal" data-stagger="2">
+          <span class="lp-rule-id">taste/translatey-in-hover</span>
+          <h4>translateY on hover</h4>
+          <p>Hover-lift is an AI-product reflex. The tactical polish standard is scale on active, not vertical translation on hover.</p>
+        </article>
+
+        <article class="lp-rule lp-reveal" data-stagger="3">
+          <span class="lp-rule-id">taste/large-inline-style</span>
+          <h4>Inline style bloat</h4>
+          <p>More than fifty lines of CSS inside the head fails. Rules belong in the design system, not duplicated into the page.</p>
+        </article>
+
+        <article class="lp-rule lp-reveal" data-stagger="4">
+          <span class="lp-rule-id">taste/hero-radial-blob</span>
+          <h4>Hero radial gradient</h4>
+          <p>The radial-gradient hero blob is the most recognizable AI-slop signature. Heroes hold real photography, real typography, or real product.</p>
+        </article>
+
+        <article class="lp-rule lp-reveal" data-stagger="5">
+          <span class="lp-rule-id">taste/hex-in-interactive-state</span>
+          <h4>Hex literals in hover</h4>
+          <p>When a file defines CSS custom properties, the hover and active states must derive from them. Hard-coded hex skips dark mode and theming.</p>
+        </article>
+
+        <article class="lp-rule lp-reveal" data-stagger="6">
+          <span class="lp-rule-id">taste/border-radius-inconsistency</span>
+          <h4>Radius inconsistency</h4>
+          <p>More than two distinct radius literals means the page invented its own scale. Concentric radii derive from named tokens.</p>
+        </article>
       </div>
     </div>
-  </nav>
+  </section>
 
-  <div class="container">
-    <aside class="sidebar">
-      <div class="sidebar-section">
-        <span class="sidebar-title">Navigate</span>
-        <nav class="sidebar-nav">
-          <li><a href="#overview" class="active">Overview</a></li>
-          <li><a href="#challenge">The Challenge</a></li>
-          <li><a href="#features">Features</a></li>
-          <li><a href="#flows">Flows</a></li>
-          <li><a href="#cta">Get Started</a></li>
-        </nav>
-      </div>
-      <div class="sidebar-section">
-        <span class="sidebar-title">Learn</span>
-        <nav class="sidebar-nav">
-          <li><a href="documentation.html">Full Documentation</a></li>
-          <li><a href="documentation.html#commands">Command Reference</a></li>
-        </nav>
-      </div>
-    </aside>
+  <section id="references" class="lp-page lp-section" aria-labelledby="refs-title">
+    <header class="lp-section-head">
+      <h2 id="refs-title">Five reference systems. <span class="accent">No invention.</span></h2>
+      <p>Each reference system hands the flow handler a structured catalog rather than letting the model improvise. Citations stay attached to the source.</p>
+    </header>
 
-    <main class="main" id="main">
-      <section id="overview" class="hero">
-        <h1>Design Intelligence Orchestration</h1>
-        <p>Sidecoach brings structure to design work. Multi-phase workflows, intelligent routing, persistent memory, and validation gates. No invention. No context loss. Just design work that stays on track.</p>
-        <a href="#cta" class="button">Explore the System</a>
-      </section>
+    <div class="lp-refs">
+      <article class="lp-ref lp-reveal" data-stagger="1">
+        <svg class="lp-icon lucide-image lp-ref-icon" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+          <circle cx="9" cy="9" r="2" />
+          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+        </svg>
+        <h4>Icon source</h4>
+        <p>Eight approved libraries. Selection protocol, provenance markers, one-library-per-project enforcement.</p>
+        <code>icon-source-reference</code>
+      </article>
 
-      <section id="challenge">
-        <h2 class="section-title">The Real Problem</h2>
-        <p>Design work breaks across phases. You shift between research, implementation, refinement, and QA. Each phase needs different strategies, different references, different validation rules. Current tools either stay silent or invent answers. You rebuild context constantly. There is no tie-breaking, no constraint enforcement, no validation that what you build matches what you designed.</p>
+      <article class="lp-ref lp-reveal" data-stagger="2">
+        <svg class="lp-icon lucide-type lp-ref-icon" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 4v16" />
+          <path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2" />
+          <path d="M9 20h6" />
+        </svg>
+        <h4>Fontshare</h4>
+        <p>Font candidates ranked by personality. Pairing rules. OpenType feature support. Real metrics.</p>
+        <code>fontshare-reference</code>
+      </article>
 
-        <div class="problem-grid">
-          <div class="problem-card">
-            <h4>Context Loss</h4>
-            <p>Between sessions, decisions vanish. Brand rules, design choices, component definitions disappear. You restart from scratch each time.</p>
-          </div>
-          <div class="problem-card">
-            <h4>Silent Failures</h4>
-            <p>Build a component in isolation. Is it accessible? Responsive? Performant? On-brand? You find out later, if at all.</p>
-          </div>
-          <div class="problem-card">
-            <h4>Invention Risk</h4>
-            <p>Without explicit constraints and references, AI fills gaps with plausible-sounding wrong answers. No citations. No grounding. Just confident hallucination.</p>
-          </div>
-        </div>
-      </section>
+      <article class="lp-ref lp-reveal" data-stagger="3">
+        <svg class="lp-icon lucide-box lp-ref-icon" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+          <path d="m3.3 7 8.7 5 8.7-5" />
+          <path d="M12 22V12" />
+        </svg>
+        <h4>Component gallery</h4>
+        <p>Semantic markup, ARIA requirements, interaction states, keyboard patterns. Each component comes from a real published reference.</p>
+        <code>component-gallery-reference</code>
+      </article>
 
-      <section id="features">
-        <h2 class="section-title">How Sidecoach Works</h2>
+      <article class="lp-ref lp-reveal" data-stagger="4">
+        <svg class="lp-icon lucide-palette lp-ref-icon" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
+          <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+          <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+          <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+          <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+        </svg>
+        <h4>Design references</h4>
+        <p>Curated visual catalog with category-reflex detection. Surfaces patterns that work, suppresses the oversaturated ones.</p>
+        <code>design-references-reference</code>
+      </article>
 
-        <div class="feature-grid">
-          <div class="feature-card">
-            <h3>Intelligent Routing</h3>
-            <p>Understand intent from natural language or slash commands. Route to the right flow automatically. No ambiguity, no guessing what you want.</p>
-          </div>
-          <div class="feature-card">
-            <h3>Design Memory</h3>
-            <p>Every decision, constraint, token, and validation result lives in persistent memory. Context never disappears. Your design system is always available.</p>
-          </div>
-          <div class="feature-card">
-            <h3>Multi-Phase Coverage</h3>
-            <p>36 flows across 5 phases: Research, Implementation, Polish, QA, and Specialized. Every phase has guides, validation, and reference systems.</p>
-          </div>
-          <div class="feature-card">
-            <h3>Built-in Validation</h3>
-            <p>Accessibility, performance, responsive design, anti-patterns, mandate enforcement. Validation happens automatically. Soft-fail by design.</p>
-          </div>
-          <div class="feature-card">
-            <h3>Reference Systems</h3>
-            <p>Colors, typography, components, motion patterns. Everything is grounded in real references. All citations visible. No invented content.</p>
-          </div>
-          <div class="feature-card">
-            <h3>Constraint Enforcement</h3>
-            <p>Brand rules, design tokens, accessibility standards, code mandates. Violations are caught and reported. Nothing slips through.</p>
-          </div>
-        </div>
-      </section>
+      <article class="lp-ref lp-reveal" data-stagger="5">
+        <svg class="lp-icon lucide-gauge lp-ref-icon" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m12 14 4-4" />
+            <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+        </svg>
+        <h4>Motion</h4>
+        <p>Easing curves keyed to brand personality. Duration scales. Reduced-motion fallbacks. Exponential-only easing enforcement.</p>
+        <code>motion-reference</code>
+      </article>
+    </div>
+  </section>
 
-      <section id="flows" class="flows-section">
-        <h2 class="section-title">36 Intelligent Flows</h2>
-        <p>Organized by phase and purpose. Each flow guides you through a specific design task with reference systems, validation rules, and a clear execution path.</p>
+  <section class="lp-page lp-cta" aria-labelledby="cta-title">
+    <h2 id="cta-title">Stop improvising. <span class="accent">Start orchestrating.</span></h2>
+    <p>The documentation walks through every flow, every reference system, and every gate. Install in a single command and run on any Claude Code project.</p>
+    <div class="lp-cta-actions">
+      <a href="documentation.html" class="lp-btn lp-btn-primary">
+        Read the documentation
+        <svg class="lp-icon lucide-arrow-right" data-icon-source="lucide" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h14" />
+          <path d="m12 5 7 7-7 7" />
+        </svg>
+      </a>
+      <a href="https://github.com/anthropics/claude-code" class="lp-btn lp-btn-secondary">
+        View on GitHub
+      </a>
+    </div>
+  </section>
 
-        <div class="phase-block">
-          <h3>Phase 1: Research and Strategy</h3>
-          <p>Verify your brand, understand your project, extract tokens from existing work.</p>
-          <ul class="flow-list">
-            <li><code>/sidecoach teach</code> - Brand verification and product context</li>
-            <li><code>/sidecoach shape</code> - Design approach planning</li>
-            <li><code>/sidecoach extract</code> - Token and pattern extraction</li>
-            <li><code>/sidecoach live</code> - Live browser iteration</li>
-            <li><code>/sidecoach onboard</code> - First-run activation</li>
-          </ul>
-        </div>
+  <footer class="lp-footer" role="contentinfo">
+    <div class="lp-footer-inner">
+      <a href="index.html" class="lp-footer-brand">
+        <img src="assets/yes-and-logo-dark.webp" alt="" aria-hidden="true" width="36" height="18">
+        <span>Sidecoach</span>
+      </a>
+      <nav class="lp-footer-nav" aria-label="Footer">
+        <a href="#capabilities">Capabilities</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#validation">Validation</a>
+        <a href="#references">References</a>
+        <a href="documentation.html">Documentation</a>
+      </nav>
+    </div>
+  </footer>
 
-        <div class="phase-block">
-          <h3>Phase 2: Implementation</h3>
-          <p>Build components, set layout, refine typography, implement motion, apply colors, add personality.</p>
-          <ul class="flow-list">
-            <li><code>/sidecoach craft</code> - Component from scratch</li>
-            <li><code>/sidecoach layout</code> - Spatial restructuring</li>
-            <li><code>/sidecoach typeset</code> - Typography refinement</li>
-            <li><code>/sidecoach animate</code> - Production animation</li>
-            <li><code>/sidecoach colorize</code> - Color application</li>
-            <li><code>/sidecoach delight</code> - Personality and micro-interactions</li>
-          </ul>
-        </div>
-
-        <div class="phase-block">
-          <h3>Phase 3: Polish and Refinement</h3>
-          <p>Tactical improvements, visual direction, responsiveness, production readiness.</p>
-          <ul class="flow-list">
-            <li><code>/sidecoach polish</code> - Tactical 16-point refinement</li>
-            <li><code>/sidecoach bolder</code>, <code>overdrive</code>, <code>quieter</code>, <code>distill</code> - Directional adjustments</li>
-            <li><code>/sidecoach clarify</code> - Language clarity</li>
-            <li><code>/sidecoach harden</code> - Production readiness</li>
-            <li><code>/sidecoach adapt</code> - Responsive design</li>
-          </ul>
-        </div>
-
-        <div class="phase-block">
-          <h3>Phase 4: QA and Validation</h3>
-          <p>Technical audits, design review, performance optimization.</p>
-          <ul class="flow-list">
-            <li><code>/sidecoach audit</code> - 5-dimension technical assessment</li>
-            <li><code>/sidecoach critique</code> - Independent design review</li>
-            <li><code>/sidecoach optimize</code> - Performance improvements</li>
-          </ul>
-        </div>
-
-        <div class="phase-block">
-          <h3>Phase 5: Specialized</h3>
-          <p>Accessibility compliance, data visualization, internationalization, advanced motion.</p>
-          <p style="color: var(--c-text-secondary); font-size: var(--fs-sm);">12+ specialized flows. See documentation for complete list.</p>
-        </div>
-      </section>
-
-      <section id="cta">
-        <h2>Ready to Design Smarter</h2>
-        <p>Sidecoach turns design workflow into orchestrated intelligence. Every phase guided. Every decision captured. No context loss. No invention.</p>
-        <div class="button-group">
-          <a href="documentation.html" class="button">Read Documentation</a>
-          <a href="documentation.html#getting-started" class="button button-secondary">Quick Start</a>
-        </div>
-      </section>
-
-      <footer>
-        <a href="index.html">Home</a> |
-        <a href="documentation.html">Documentation</a> |
-        <a href="https://github.com/anthropics/claude-code" target="_blank">GitHub</a>
-      </footer>
-    </main>
-  </div>
 </body>
 </html>

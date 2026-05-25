@@ -7,7 +7,7 @@ exports.ProjectPersonaEngine = void 0;
 exports.createPersonaEngine = createPersonaEngine;
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
 /**
- * Fallback generic personas (5 impeccable archetypes)
+ * Fallback generic personas (5 archetype patterns)
  * Used when PRODUCT.md parsing fails or LLM extraction unavailable
  */
 const GENERIC_PERSONAS = [

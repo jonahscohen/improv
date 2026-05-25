@@ -1,7 +1,7 @@
 // Task #24: Category-Reflex AI Slop Detection
 // Detects oversaturated/generic design patterns using genericityScore
 // Used by Flow D (Design References) to filter low-value references
-// Complies with Impeccable's AI slop detection rules
+// Complies with category-reflex AI slop detection rules
 
 export interface DesignReference {
   title: string;
@@ -26,7 +26,7 @@ export interface SlopDetectionResult {
 }
 
 // Oversaturated pattern catalog (what NOT to recommend)
-// Extracted from design trend analysis and Impeccable reference files
+// Extracted from design trend analysis and reference files
 const OVERSATURATED_PATTERNS = {
   'Hero-Metric Dashboard': {
     patterns: ['big number', 'hero metric', 'supporting stats grid', 'gradient accent'],

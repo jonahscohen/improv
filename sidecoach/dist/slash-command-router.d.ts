@@ -22,5 +22,11 @@ export interface CommandsByPhase {
     };
 }
 export declare function getAvailableCommands(): Record<string, CommandInfo>;
+/**
+ * Sprint 8 T8: returns CommandInfo for all 22 verb commands from the
+ * registry, so the list-handler can show both phase commands and verbs in a
+ * single grouped output.
+ */
+export declare function getVerbCommandInfo(): Record<string, CommandInfo>;
 export declare function getCommandsByPhase(): CommandsByPhase;
 //# sourceMappingURL=slash-command-router.d.ts.map

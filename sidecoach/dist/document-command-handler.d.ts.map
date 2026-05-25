@@ -1,0 +1,1 @@
+{"version":3,"file":"document-command-handler.d.ts","sourceRoot":"","sources":["../src/document-command-handler.ts"],"names":[],"mappings":"AAEA,OAAO,KAAK,EAAE,oBAAoB,EAAE,mBAAmB,EAAE,MAAM,gBAAgB,CAAC;AAUhF,qBAAa,sBAAsB;IAC3B,OAAO,CAAC,OAAO,EAAE,oBAAoB,GAAG,OAAO,CAAC,mBAAmB,CAAC;IA8B1E,OAAO,CAAC,WAAW;IAiDnB,OAAO,CAAC,SAAS;IAiBjB,OAAO,CAAC,cAAc;CAgGvB"}

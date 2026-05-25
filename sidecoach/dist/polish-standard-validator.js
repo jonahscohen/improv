@@ -339,6 +339,19 @@ class PolishStandardValidator {
     static getSummary() {
         return 'Sidecoach 22-Point Polish Standard: 14 baseline + 8 proprietary rules for production UI quality';
     }
+    static toValidationResult(report) {
+        const failed = report.results.filter(r => !r.passed);
+        const status = report.criticalViolations > 0 ? 'fail' :
+            report.violations > 0 ? 'partial' :
+                'pass';
+        return {
+            domain: 'polish-standard',
+            status,
+            passedRules: report.results.filter(r => r.passed).map(r => `rule-${r.ruleId}`),
+            failedRules: failed.map(r => `rule-${r.ruleId}`),
+            message: report.summary,
+        };
+    }
 }
 exports.PolishStandardValidator = PolishStandardValidator;
 //# sourceMappingURL=polish-standard-validator.js.map

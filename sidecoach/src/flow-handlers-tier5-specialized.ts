@@ -1,4 +1,4 @@
-// TIER 5: SPECIALIZED REFINEMENT FLOWS (NEW - impeccable v2.1.9 coverage)
+// TIER 5: SPECIALIZED REFINEMENT FLOWS (NEW - v2.1.9 coverage)
 // Re-exports from individual flow handler files
 
 export { FlowRLayoutOptimizationHandler } from './flow-handler-layout-optimization';

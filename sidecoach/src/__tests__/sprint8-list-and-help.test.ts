@@ -8,7 +8,7 @@ async function run() {
   const listResult: any = await engine.process('/sidecoach list', { projectPath: '/tmp', projectContext: { register: 'brand' } } as any);
   const listOutput = (listResult.guidance || []).join('\n');
   checks.push(['T8.1: list mentions phase commands heading', /phase/i.test(listOutput)]);
-  checks.push(['T8.1: list mentions impeccable verbs heading', /impeccable/i.test(listOutput)]);
+  checks.push(['T8.1: list mentions verb commands heading', /verb commands/i.test(listOutput)]);
   for (const verb of ['craft', 'polish', 'audit', 'critique', 'document']) {
     checks.push([`T8.1: list contains verb '${verb}'`, listOutput.includes(verb)]);
   }

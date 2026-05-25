@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Every Agent dispatch MUST use `model: "opus"`. Steps use checkbox (`- [ ]`) syntax.
 
-**Goal:** Fix three root-cause bugs that silently drop flowH (motion-integration) and flowI (accessibility) from the impeccable verb chain: projectContext not propagated, canExecute=false silently swallowed, parser/consumer casing mismatch.
+**Goal:** Fix three root-cause bugs that silently drop flowH (motion-integration) and flowI (accessibility) from the sidecoach verb chain: projectContext not propagated, canExecute=false silently swallowed, parser/consumer casing mismatch.
 
 **Architecture:** Two source files modified. orchestrator.ts gets one new line in the executionContext spread (projectContext propagation) plus an else branch on the canExecute check (skipped record). project-context.ts gets three field-name updates in the teach v2 post-pass (camelCase to match consumer contract).
 
@@ -292,7 +292,7 @@ Expected: 3/3 PASS.
 cd /Users/spare3/Documents/Github/claude-dotfiles/sidecoach && npx tsc --noEmit
 cd /Users/spare3/Documents/Github/claude-dotfiles/sidecoach && npx ts-node src/__tests__/sprint10-context-propagation.test.ts
 cd /Users/spare3/Documents/Github/claude-dotfiles/sidecoach && npx ts-node src/__tests__/sprint9-chain-continues-past-errors.test.ts
-cd /Users/spare3/Documents/Github/claude-dotfiles/sidecoach && npx ts-node src/__tests__/sprint8-impeccable-parity.test.ts | tail -5
+cd /Users/spare3/Documents/Github/claude-dotfiles/sidecoach && npx ts-node src/__tests__/sprint8-verb-parity.test.ts | tail -5
 ```
 
 All must pass. Parity test must still show 197/197.

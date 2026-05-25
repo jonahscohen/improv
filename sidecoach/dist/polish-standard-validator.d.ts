@@ -1,3 +1,4 @@
+import type { ValidationResult } from './flow-composition';
 export interface PolishValidationRule {
     id: number;
     name: string;
@@ -49,5 +50,6 @@ export declare class PolishStandardValidator {
     static validateAll(context: PolishCheckContext): PolishValidationReport;
     static getRules(): PolishValidationRule[];
     static getSummary(): string;
+    static toValidationResult(report: PolishValidationReport): ValidationResult;
 }
 //# sourceMappingURL=polish-standard-validator.d.ts.map

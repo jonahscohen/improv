@@ -36,7 +36,7 @@ export class DeterministicValidator {
         rule: 'PRODUCT.md_exists',
         severity: 'blocking',
         message: 'PRODUCT.md not found at project root',
-        fix: 'Run `/impeccable teach` to generate PRODUCT.md with project context',
+        fix: 'Run `/sidecoach teach` to generate PRODUCT.md with project context',
         debtCandidate: {
           description: 'Missing PRODUCT.md - project context required',
           justification: 'Auto-detected blocking prerequisite',
@@ -51,7 +51,7 @@ export class DeterministicValidator {
           rule: 'PRODUCT.md_content_length',
           severity: 'blocking',
           message: `PRODUCT.md exists but is incomplete (${content.length} chars, need >200)`,
-          fix: 'Run `/impeccable teach` to complete PRODUCT.md with brand, users, anti-references',
+          fix: 'Run `/sidecoach teach` to complete PRODUCT.md with brand, users, anti-references',
           debtCandidate: {
             description: 'PRODUCT.md stub - needs completion',
             justification: 'Auto-detected incomplete prerequisite',
@@ -85,7 +85,7 @@ export class DeterministicValidator {
           rule: 'DESIGN.md_exists',
           severity: 'blocking',
           message: 'DESIGN.md not found - required for implementation flows',
-          fix: 'Run `/impeccable document` to extract current design system',
+          fix: 'Run `/sidecoach document` to extract current design system',
           debtCandidate: {
             description: 'Missing DESIGN.md - design tokens required',
             justification: 'Auto-detected blocking prerequisite for implementation tier',

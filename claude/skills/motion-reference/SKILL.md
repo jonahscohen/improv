@@ -311,7 +311,7 @@ In React, register inside `useGSAP` or at the module level - just not inside a p
 
 ## Integration with other skills
 
-- `impeccable` provides the brand strategy (what should this feel like? what register?). This skill provides the implementation tools (how do I make it feel that way?).
+- `sidecoach` provides the brand strategy (what should this feel like? what register?). This skill provides the implementation tools (how do I make it feel that way?).
 - `make-interfaces-feel-better` overlaps on tactical motion polish (timing, easing, scale-on-press, stagger windows). When both apply, defer to make-interfaces-feel-better for specific timing values; use this skill for the API calls.
 - `design-references` may surface captured patterns that use these libraries; consult both when matching feel from a reference.
 

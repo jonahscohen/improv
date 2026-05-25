@@ -121,7 +121,7 @@ When all three trigger on the same task, the order of application is:
 - `component-gallery-reference` first - get the standard skeleton right
 - `design-references` next - layer in the personal-eye detail
 - `fontshare-reference` if type is in scope - lock the type system
-- Then `impeccable` for brand strategy, `make-interfaces-feel-better` for tactical polish
+- Then `sidecoach` for brand strategy, `make-interfaces-feel-better` for tactical polish
 
 ## What this skill does NOT do
 

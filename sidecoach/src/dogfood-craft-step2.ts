@@ -69,9 +69,9 @@ async function run() {
     }
   }
 
-  // Top-level guidance appended by orchestrator (impeccable parity)
+  // Top-level guidance appended by orchestrator (verb command)
   if (result.guidance && result.guidance.length > 0) {
-    lines.push('## Top-level appended guidance (impeccable parity)');
+    lines.push('## Top-level appended guidance (verb command)');
     lines.push('');
     for (const g of result.guidance) lines.push(g);
     lines.push('');

@@ -1,5 +1,5 @@
 // Design Laws System
-// Shared design rules extracted from Impeccable, organized by domain and register
+// Shared design rules extracted from prior design references, organized by domain and register
 
 import { Register } from './project-context';
 

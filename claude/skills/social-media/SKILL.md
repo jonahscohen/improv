@@ -5,7 +5,7 @@ description: Platform-specific sizing, safe zones, typography rules, and content
 
 # Social Media Design
 
-Platform-specific specifications for 13 platforms. This skill provides the constraints and validation layer. It does not create the visual design itself - that is the job of Impeccable (for web-based output), the design-team skill (for complex multi-asset sprints), or the agent's own judgment for simple tasks.
+Platform-specific specifications for 13 platforms. This skill provides the constraints and validation layer. It does not create the visual design itself - that is the job of Sidecoach (for web-based output), the design-team skill (for complex multi-asset sprints), or the agent's own judgment for simple tasks.
 
 ## Workflow
 

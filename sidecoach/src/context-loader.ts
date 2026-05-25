@@ -32,7 +32,6 @@ export interface ProjectContext {
 
 const PRODUCT_NAMES = ['PRODUCT.md', 'Product.md', 'product.md'];
 const DESIGN_NAMES = ['DESIGN.md', 'Design.md', 'design.md'];
-const LEGACY_NAMES = ['.impeccable.md'];
 const FALLBACK_DIRS = ['.agents/context', 'docs'];
 
 function firstExisting(dir: string, names: string[]): string | null {
@@ -57,14 +56,14 @@ function safeRead(p: string): string | null {
 
 export function resolveContextDir(cwd: string = process.cwd()): string {
   // 1. Explicit override via environment
-  const envDir = process.env.SIDECOACH_CONTEXT_DIR || process.env.IMPECCABLE_CONTEXT_DIR;
+  const envDir = process.env.SIDECOACH_CONTEXT_DIR;
   if (envDir && envDir.trim()) {
     const trimmed = envDir.trim();
     return path.isAbsolute(trimmed) ? trimmed : path.resolve(cwd, trimmed);
   }
 
-  // 2. cwd wins if any canonical or legacy file is there
-  if (firstExisting(cwd, [...PRODUCT_NAMES, ...DESIGN_NAMES, ...LEGACY_NAMES])) {
+  // 2. cwd wins if any canonical file is there
+  if (firstExisting(cwd, [...PRODUCT_NAMES, ...DESIGN_NAMES])) {
     return cwd;
   }
 
@@ -81,29 +80,13 @@ export function resolveContextDir(cwd: string = process.cwd()): string {
 }
 
 export function loadContext(cwd: string = process.cwd()): ContextLoadResult {
-  let migrated = false;
+  const migrated = false;
   const contextDir = resolveContextDir(cwd);
 
   // 1. Look for PRODUCT.md (case-insensitive)
-  let productPath = firstExisting(contextDir, PRODUCT_NAMES);
+  const productPath = firstExisting(contextDir, PRODUCT_NAMES);
 
-  // 2. Legacy: migrate .impeccable.md to PRODUCT.md at cwd root only
-  if (!productPath && contextDir === cwd) {
-    const legacyPath = firstExisting(cwd, LEGACY_NAMES);
-    if (legacyPath) {
-      const newPath = path.join(cwd, 'PRODUCT.md');
-      try {
-        fs.renameSync(legacyPath, newPath);
-        productPath = newPath;
-        migrated = true;
-      } catch {
-        // Rename failed, read legacy in place
-        productPath = legacyPath;
-      }
-    }
-  }
-
-  // 3. DESIGN.md (case-insensitive)
+  // 2. DESIGN.md (case-insensitive)
   const designPath = firstExisting(contextDir, DESIGN_NAMES);
 
   const product = productPath ? safeRead(productPath) : null;

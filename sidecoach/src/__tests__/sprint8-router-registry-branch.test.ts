@@ -8,7 +8,7 @@ async function run() {
     const m = parseSlashCommand(`/sidecoach ${verb}`);
     checks.push([`T2.1: ${verb} isCommand`, m.isCommand === true]);
     checks.push([`T2.1: ${verb} command field`, m.command === verb]);
-    checks.push([`T2.1: ${verb} reason mentions impeccable-parity`, typeof m.reason === 'string' && m.reason.includes('impeccable-parity')]);
+    checks.push([`T2.1: ${verb} reason mentions verb-parity`, typeof m.reason === 'string' && m.reason.includes('verb-parity')]);
   }
 
   // T2.2: existing phase commands still work (regression)

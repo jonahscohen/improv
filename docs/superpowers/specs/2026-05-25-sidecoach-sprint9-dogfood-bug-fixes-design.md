@@ -3,7 +3,7 @@
 **Date:** 2026-05-25
 **Author:** Jonah Cohen (collaborator)
 **Sprint:** Sprint 9 (3 bug fixes surfaced by Sprint 8 dogfood)
-**Predecessor:** Sprint 8 closed (impeccable parity + teach rebuild). The marketing-site dogfood retry exposed three bugs in actual end-to-end use that the unit tests didn't catch.
+**Predecessor:** Sprint 8 closed (verb command + teach rebuild). The marketing-site dogfood retry exposed three bugs in actual end-to-end use that the unit tests didn't catch.
 
 ## Goal
 

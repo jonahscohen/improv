@@ -163,7 +163,7 @@ Most AI-generated UI looks the same because most prompts ask for the same vague 
 
 | Layer | Skill | Question it answers |
 |---|---|---|
-| 1. Strategy | `/impeccable` plugin | Who is this for? What's NOT us? |
+| 1. Strategy | `/sidecoach` skill | Who is this for? What's NOT us? |
 | 2. Research | `component-gallery-reference` | How does the industry build this component? |
 | 3. Typography | `fontshare-reference` | Which typeface? (refuses training-data defaults) |
 | 4. References | `design-references` + `/curate` | What did you see in the wild worth borrowing? |
@@ -179,14 +179,14 @@ Plus two foundations:
 
 A typical "build me a hero section" task routes the pipeline in roughly this order:
 
-1. `/impeccable shape <feature>` reads PRODUCT.md and proposes a brand direction.
+1. `/sidecoach shape <feature>` reads PRODUCT.md and proposes a brand direction.
 2. `component-gallery-reference` triggers if the build maps to a standard component (hero, header, navigation).
 3. `design-references` triggers in parallel, surfacing captured references with matching category / pattern / feel.
 4. `fontshare-reference` triggers if type decisions are in scope.
 5. `motion-reference` triggers if the hero has scroll or motion behavior.
 6. `icon-source` (peer skill) triggers if icons are needed.
 7. `make-interfaces-feel-better` fires during implementation for the tactical polish.
-8. `/impeccable audit + critique + polish` runs at QA time.
+8. `/sidecoach audit + critique + polish` runs at QA time.
 
 Not every layer fires for every task. The pipeline routes by what the task actually needs.
 
@@ -196,7 +196,7 @@ This is the layer that earns its keep over time. `design-references` consults a 
 
 Tagging is hybrid: strict Category from a controlled vocab (`list`, `navigation`, `command-palette`, `inline-affordance`, etc.); free-form Pattern + Feel for the personality words. Public catalogs (component.gallery, fontshare) have no home for "the way Linear's inbox staggers" or "Vercel's deploy log streaming blur" - that's what this layer covers.
 
-`fontshare-reference` also bakes in `/impeccable`'s **reflex-reject list** so the obvious training-data defaults (Inter, Fraunces, Outfit, Instrument Serif, et al.) get refused at type-selection time. Fontshare's own emerging defaults (General Sans, Cabinet Grotesk, Satoshi, Clash Display) get flagged the same way.
+`fontshare-reference` also bakes in sidecoach's **reflex-reject list** so the obvious training-data defaults (Inter, Fraunces, Outfit, Instrument Serif, et al.) get refused at type-selection time. Fontshare's own emerging defaults (General Sans, Cabinet Grotesk, Satoshi, Clash Display) get flagged the same way.
 
 ### Peer skills
 
@@ -385,9 +385,9 @@ The `memory` component adds a fourth marker block (Memory Discipline rules). All
 
 **QA gate for UI work** - five steps before "done":
 
-1. `/impeccable audit <target>` - 5-dimension scan (a11y, perf, theming, responsive, anti-patterns) + `npx impeccable detect`
-2. `/impeccable critique <target>` - design review via independent sub-agents
-3. `/impeccable polish <target>` - final design-system alignment pass
+1. `/sidecoach audit <target>` - 5-dimension scan (a11y, perf, theming, responsive, anti-patterns)
+2. `/sidecoach critique <target>` - design review via independent sub-agents
+3. `/sidecoach polish <target>` - final design-system alignment pass
 4. `make-interfaces-feel-better` 14-point checklist - concentric radius, optical alignment, shadows over borders, tabular nums, scale-on-press at 0.96, etc.
 5. `npx @google/design.md lint DESIGN.md` if a DESIGN.md exists
 
@@ -401,11 +401,11 @@ The `memory` component adds a fourth marker block (Memory Discipline rules). All
 
 Six layered skills + tokens + brand. Each addresses a different question at a different beat. The pipeline doesn't sequence linearly through every build - it routes by what the task actually needs.
 
-### 1. Strategy - Impeccable
+### 1. Strategy - Sidecoach
 
-A plugin (`impeccable@impeccable`) auto-installed via your `enabledPlugins`. Twenty-three commands ranging from `teach` (interactive PRODUCT.md authoring) to `craft` (build from scratch) to `audit/critique/polish` (the QA triad). Reads `PRODUCT.md` and `DESIGN.md` at project root before every command.
+A plugin (`sidecoach`) auto-installed via your `enabledPlugins`. Twenty-three commands ranging from `teach` (interactive PRODUCT.md authoring) to `craft` (build from scratch) to `audit/critique/polish` (the QA triad). Reads `PRODUCT.md` and `DESIGN.md` at project root before every command.
 
-The CLAUDE.md hard rule: before any UI work begins, Claude checks for `PRODUCT.md`. Missing or stub triggers `/impeccable teach`. Missing `DESIGN.md` plus existing code triggers a one-time-per-session nudge to run `/impeccable document`.
+The CLAUDE.md hard rule: before any UI work begins, Claude checks for `PRODUCT.md`. Missing or stub triggers `/sidecoach teach`. Missing `DESIGN.md` plus existing code triggers a one-time-per-session nudge to run `/sidecoach document`.
 
 ### 2. Research - component-gallery-reference
 
@@ -417,7 +417,7 @@ Workflow: detect tech stack from `package.json`, browse the component page filte
 
 A bundled skill that researches typefaces via [fontshare.com](https://fontshare.com), Indian Type Foundry's curated open-source catalog.
 
-Critically bakes in `/impeccable`'s **reflex-reject list** - the training-data-default typefaces (Inter, Fraunces, Outfit, Instrument Serif, Newsreader, Plus Jakarta Sans, DM Sans/Serif, IBM Plex, Space Grotesk, et al.) get refused as primaries on greenfield work. Fontshare's own emerging defaults (General Sans, Cabinet Grotesk, Switzer, Satoshi, Clash Display) get flagged the same way.
+Critically bakes in sidecoach's **reflex-reject list** - the training-data-default typefaces (Inter, Fraunces, Outfit, Instrument Serif, Newsreader, Plus Jakarta Sans, DM Sans/Serif, IBM Plex, Space Grotesk, et al.) get refused as primaries on greenfield work. Fontshare's own emerging defaults (General Sans, Cabinet Grotesk, Switzer, Satoshi, Clash Display) get flagged the same way.
 
 ### 4. References - design-references + /curate
 
@@ -547,7 +547,7 @@ People conflate these. Four different mechanisms, four different config surfaces
 | **MCP servers** | per-app config | Machine | `claude mcp add` or per-app config files |
 | **Skills** | `~/.claude/skills/` | Machine | `npx skills add <repo>` or bundled with this repo |
 
-The `config` component enables ~20 plugins via `settings.json`: `claude-md-management`, `figma`, `firebase`, `hookify`, `skill-creator`, `sentry`, `supabase`, `swift-lsp`, `superpowers`, `agent-sdk-dev`, `typescript-lsp`, `security-guidance`, `discord`, `impeccable`, `feature-dev`, `ralph-loop`, `code-review`, `plugin-developer-toolkit`, `chrome-devtools`.
+The `config` component enables ~20 plugins via `settings.json`: `claude-md-management`, `figma`, `firebase`, `hookify`, `skill-creator`, `sentry`, `supabase`, `swift-lsp`, `superpowers`, `agent-sdk-dev`, `typescript-lsp`, `security-guidance`, `discord`, `feature-dev`, `ralph-loop`, `code-review`, `plugin-developer-toolkit`, `chrome-devtools`.
 
 The `skills` component bundles 10 skills:
 
@@ -692,7 +692,7 @@ Valid component keys: `brain`, `config`, `memory`, `skills`, `statusline`, `cmux
 
 ## License & footer
 
-The dotfiles are MIT licensed. Bundled tools (Impeccable, make-interfaces-feel-better, gum, etc.) are licensed by their respective authors - see each repository for terms.
+The dotfiles are MIT licensed. Bundled tools (gum, etc.) are licensed by their respective authors - see each repository for terms.
 
 The Yes& brand mark and logo are property of Yes&.
 

@@ -12,7 +12,7 @@ A single skill that runs the design pipeline as ONE coordinated build. The other
 The 2026-05-20 marketing-site build was the first time the design pipeline ran on a real UI task. The retrospective surfaced two structural problems:
 
 1. **Auto-triggering by description keywords didn't fire reliably.** `component-gallery-reference`, `design-references`, and `icon-source` never auto-triggered during the build. `make-interfaces-feel-better` only fired because the agent had read it recently.
-2. **The QA triad (`/impeccable audit + critique + polish`) never ran.** It's documented as "runs at QA time" in CLAUDE.md but there's no mechanism that actually invokes it.
+2. **The QA triad (`/sidecoach audit + critique + polish`) never ran.** It's documented as "runs at QA time" in CLAUDE.md but there's no mechanism that actually invokes it.
 
 `design-build` solves both by being a single, explicit orchestrator: the agent runs this skill, the skill walks all the phases, the QA triad is mandatory at the end.
 
@@ -42,9 +42,9 @@ The full pipeline is for substantial UI builds: new pages, new screens, new feat
 
 ```
 1. Check <project>/PRODUCT.md. If missing or stub (<200 chars, contains "[TODO]"):
-   - Run /impeccable teach FIRST. Block this build until it returns.
+   - Run /sidecoach teach FIRST. Block this build until it returns.
 2. Check <project>/DESIGN.md. If missing AND project has existing code:
-   - Nudge ONCE: "Run /impeccable document to capture the current visual system. Proceeding without it, but variants may drift."
+   - Nudge ONCE: "Run /sidecoach document to capture the current visual system. Proceeding without it, but variants may drift."
    - Continue. DESIGN.md is not strictly blocking for this skill.
 3. Read both files in full. Capture:
    - Three brand-voice words (from PRODUCT.md)
@@ -55,7 +55,7 @@ The full pipeline is for substantial UI builds: new pages, new screens, new feat
 
 These are the inputs to every subsequent phase. Without them the pipeline cannot route correctly.
 
-### Phase 1: Strategy (Impeccable)
+### Phase 1: Strategy (Sidecoach)
 
 ```
 Compose a brief direction for the feature:
@@ -198,11 +198,11 @@ These should land NATURALLY in the code, not as a post-pass cleanup.
 
 Before reporting the build done, run:
 
-1. **`/impeccable audit <target>`** - 5-dimension technical scan (a11y, performance, theming, responsive, anti-patterns) plus `npx impeccable detect`. Address all Critical and High findings.
-2. **`/impeccable critique <target>`** - design review via independent sub-agents (AI-slop detection, Nielsen heuristics, cognitive load, emotional journey). Address anything above "minor".
-3. **`/impeccable polish <target>`** - final design-system alignment pass.
+1. **`/sidecoach audit <target>`** - 5-dimension technical scan (a11y, performance, theming, responsive, anti-patterns) plus `npx sidecoach detect`. Address all Critical and High findings.
+2. **`/sidecoach critique <target>`** - design review via independent sub-agents (AI-slop detection, Nielsen heuristics, cognitive load, emotional journey). Address anything above "minor".
+3. **`/sidecoach polish <target>`** - final design-system alignment pass.
 
-If any of the three flag substantive issues, iterate. Do NOT skip this phase. If you cannot run impeccable for some reason (e.g., the project isn't impeccable-instrumented), record that in the build memory entry explicitly - "QA triad SKIPPED because <reason>" - so future-you sees the gap.
+If any of the three flag substantive issues, iterate. Do NOT skip this phase. If you cannot run sidecoach for some reason (e.g., the project isn't sidecoach-instrumented), record that in the build memory entry explicitly - "QA triad SKIPPED because <reason>" - so future-you sees the gap.
 
 ### Phase 9: Verification (cmux browser)
 
@@ -256,7 +256,7 @@ This skill orchestrates. The others (component-gallery-reference, fontshare-refe
 
 The other skills CAN still fire on direct invocation - e.g. "/curate this reference", "use fontshare-reference for this typeface decision". They are individual tools. `design-build` is the pipeline.
 
-`/impeccable` commands (teach, document, audit, critique, polish) are CALLED by this skill at the appropriate phases. Impeccable's other commands (craft, shape, animate, colorize, harden, etc.) can be invoked directly outside this skill.
+`/sidecoach` commands (teach, document, audit, critique, polish) are CALLED by this skill at the appropriate phases. Sidecoach's other commands (craft, shape, animate, colorize, harden, etc.) can be invoked directly outside this skill.
 
 ## What this skill is NOT for
 

@@ -60,6 +60,30 @@ All three pages screenshotted in chrome MCP, both at hero and scrolled through t
 
 Server killed (PID 5858) after verification. Port 4830 freed.
 
+## Preview server restarted per user request
+
+User asked to keep preview links open. Restarted python3 http.server on :4830, PID 85548, logging to /tmp/marketing-site-server.log. All three pages return 200. Leave running until user says otherwise - do not kill on session-end cleanup.
+
+## Shipped
+
+Commit `7651091` pushed to origin/main. 1612 insertions across DESIGN.md (existed), PRODUCT.md (existed), styles.css (760 lines, full token system), index.html (191 lines), improv.html (141 lines), sidecoach.html (184 lines), plus this memory file.
+
+## Original chief-architect task fully closed
+
+Brief from 2026-05-23: "I want a brand new (not a rehab of another landing page) but a brand NEW marketing landing page for the claude-dotfiles, advertising improv, sidecoach, and memory tools, as well as mentions of our other tools. i want that page to then link to two other pages, 1 for improv and 1 for sidecoach. both pages to serve as marketing pages for each. use the existing claude-dotfiles's design.md for color tokens and brand materials, but YOU CHOOSE the new fonts we use. fully exercise sidecoach's capabilities."
+
+Coverage:
+- [x] Brand-new landing page (no rehab of reference/) - index.html
+- [x] Advertises improv, sidecoach, memory tools - 3-card toolkit grid with equal billing
+- [x] Mentions of other tools - "In the wings" 2-col list (cmux, voice, discord, hooks, impeccable, validation-guard)
+- [x] Subpage for improv - improv.html
+- [x] Subpage for sidecoach - sidecoach.html
+- [x] DESIGN.md tokens drive all CSS values - 760-line styles.css mirrors the YAML frontmatter
+- [x] Sidecoach chose new fonts - Source Serif 4 + Hanken Grotesk + JetBrains Mono are locked in DESIGN.md (selected by sidecoach during the prior reference-site work)
+- [x] Fully exercised sidecoach - Sprint 12 took the dogfood from 5/6 -> 8/8 clean, fixed 6 distinct chain bugs, produced the 1146-line craft brief that drove this build
+
+Loop terminated on the second dogfood run (1146-line output reproduced byte-for-byte).
+
 ## sidecoach.html landed
 
 Page-hero "A design orchestrator that refuses to skip the work" with red-underlined accent. Eight-item flow list (A, B, E, F, G, H, I, J) styled as a numbered chain - mono flow id + display-serif title + body description per row. Verb commands section (paper bg) with pre block of three sample invocations. Posture section (ink bg) with four refuses: fabricated icons, hardcoded colors, "request a demo" copy, silent failures. Install snippet in cream final section.

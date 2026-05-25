@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const sidecoach_orchestrator_1 = require("../sidecoach-orchestrator");
-console.log('\n[Task 11] Interactive Menu Equivalent to /impeccable\n');
+console.log('\n[Task 11] Interactive Menu Equivalent to /sidecoach\n');
 console.log('='.repeat(80));
 const orchestrator = (0, sidecoach_orchestrator_1.createExecutionEngine)();
 // Test 1: Empty input shows menu

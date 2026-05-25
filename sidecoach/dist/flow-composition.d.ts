@@ -200,6 +200,11 @@ export declare class FlowCompositionEngine {
      * Build a composite flow for optimization
      */
     static buildOptimizationFlow(): CompositeFlowDefinition;
+    /**
+     * "Craft a landing page" - the headline composite for Sidecoach v2.
+     * Chains: brand verify -> composition -> tokens -> copywriting -> component -> motion -> polish -> audit -> all-seven QA gate.
+     */
+    static buildCraftLandingPageFlow(): CompositeFlowDefinition;
 }
 /**
  * Pre-built composite flows for common workflows

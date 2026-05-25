@@ -2,7 +2,7 @@
 // Maps user commands directly to flows, bypassing intent detection
 
 import { FlowId } from './types';
-import { getImpeccableEntry, IMPECCABLE_VERB_REGISTRY } from './impeccable-command-registry';
+import { getVerbEntry, VERB_REGISTRY } from './verb-command-registry';
 
 export interface CommandMatch {
   isCommand: boolean;
@@ -72,8 +72,8 @@ export function parseSlashCommand(utterance: string): CommandMatch {
   }
 
   // Sprint 8 T8: /sidecoach help <verb> command - returns details from registry.
-  // Matched BEFORE the impeccable registry branch because 'help' is not itself a
-  // verb in IMPECCABLE_VERB_REGISTRY; the verb is the target.
+  // Matched BEFORE the verb registry branch because 'help' is not itself a
+  // verb in VERB_REGISTRY; the verb is the target.
   if (command === 'help') {
     return {
       isCommand: true,
@@ -84,15 +84,15 @@ export function parseSlashCommand(utterance: string): CommandMatch {
     };
   }
 
-  // Sprint 8: impeccable verb-based commands (parallel to phase-based SLASH_COMMANDS)
-  const impeccableEntry = getImpeccableEntry(command);
-  if (impeccableEntry) {
+  // Sprint 8: verb-based commands (parallel to phase-based SLASH_COMMANDS)
+  const verbEntry = getVerbEntry(command);
+  if (verbEntry) {
     return {
       isCommand: true,
       command,
-      flowIds: impeccableEntry.flowIds,
+      flowIds: verbEntry.flowIds,
       target,
-      reason: `Routed to ${command} (impeccable-parity) - ${impeccableEntry.description}`,
+      reason: `Routed to ${command} (verb-parity) - ${verbEntry.description}`,
     };
   }
 
@@ -203,13 +203,13 @@ export function getAvailableCommands(): Record<string, CommandInfo> {
 }
 
 /**
- * Sprint 8 T8: returns CommandInfo for all 22 impeccable parity verbs from the
+ * Sprint 8 T8: returns CommandInfo for all 22 verb commands from the
  * registry, so the list-handler can show both phase commands and verbs in a
  * single grouped output.
  */
-export function getImpeccableCommandInfo(): Record<string, CommandInfo> {
+export function getVerbCommandInfo(): Record<string, CommandInfo> {
   const out: Record<string, CommandInfo> = {};
-  for (const [verb, entry] of Object.entries(IMPECCABLE_VERB_REGISTRY)) {
+  for (const [verb, entry] of Object.entries(VERB_REGISTRY)) {
     out[verb] = {
       description: entry.description,
       flows: entry.flowIds.map((f) => f as string),

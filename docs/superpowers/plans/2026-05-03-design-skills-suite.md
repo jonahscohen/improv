@@ -158,7 +158,7 @@ description: Platform-specific sizing, safe zones, typography rules, and content
 
 # Social Media Design
 
-Platform-specific specifications for 13 platforms. This skill provides the constraints and validation layer. It does not create the visual design itself - that is the job of Impeccable (for web-based output), the design-team skill (for complex multi-asset sprints), or the agent's own judgment for simple tasks.
+Platform-specific specifications for 13 platforms. This skill provides the constraints and validation layer. It does not create the visual design itself - that is the job of Sidecoach (for web-based output), the design-team skill (for complex multi-asset sprints), or the agent's own judgment for simple tasks.
 
 ## Workflow
 
@@ -437,9 +437,9 @@ The CD reviews each builder's output sequentially:
 
 1. Read the built files
 2. Run the existing QA pipeline:
-   - `/impeccable audit` (a11y, performance, theming, responsive, anti-patterns)
-   - `/impeccable critique` (AI-slop detection, Nielsen heuristics, cognitive load)
-   - `/impeccable polish` (alignment pass against design system)
+   - `/sidecoach audit` (a11y, performance, theming, responsive, anti-patterns)
+   - `/sidecoach critique` (AI-slop detection, Nielsen heuristics, cognitive load)
+   - `/sidecoach polish` (alignment pass against design system)
    - `make-interfaces-feel-better` 14-point checklist
    - `DESIGN.md` lint (if present)
 3. Check cross-section consistency (typography, spacing, color palette, component patterns)
@@ -568,7 +568,7 @@ Array of past sprint summaries (what was built, who built what, CD verdict, file
 - Any task where parallel specialized work + review improves quality
 
 **Do NOT use it for:**
-- Single component builds (just use Impeccable + component-gallery-reference)
+- Single component builds (just use Sidecoach + component-gallery-reference)
 - Bug fixes or minor tweaks
 - Non-UI work
 - Tasks where the overhead of team orchestration exceeds the benefit
@@ -1296,7 +1296,7 @@ git commit -m "feat: add 4 new bundled skills to installer"
 
 - [ ] **Step 1: Read the current CLAUDE.md to find insertion point**
 
-Read `claude/CLAUDE.md` and find the end of the "Design Work and Impeccable" section (before the "Permission Posture" section).
+Read `claude/CLAUDE.md` and find the end of the "Design Work and Sidecoach" section (before the "Permission Posture" section).
 
 - [ ] **Step 2: Add new section documenting the peer skills**
 
@@ -1305,7 +1305,7 @@ Insert before the "Permission Posture" section:
 ```markdown
 ## Design Peer Skills (independent entry points)
 
-Four skills that sit alongside Impeccable as independent entry points in the design stack. Each reads PRODUCT.md + DESIGN.md from the project root (same contract as Impeccable) but is invoked directly, not through Impeccable's routing.
+Four skills that sit alongside Sidecoach as independent entry points in the design stack. Each reads PRODUCT.md + DESIGN.md from the project root (same contract as Sidecoach) but is invoked directly, not through Sidecoach's routing.
 
 ### Social Media (`/social-media`)
 
@@ -1326,7 +1326,7 @@ Rigorous protocol for sourcing icons from 8 approved libraries: Heroicons, Lucid
 ### The complete design stack
 
 ```
-Strategy:      /impeccable (23 commands, PRODUCT.md + DESIGN.md)
+Strategy:      /sidecoach (23 commands, PRODUCT.md + DESIGN.md)
 Research:      component-gallery-reference (60 types, 95 systems)
 Tactical:      make-interfaces-feel-better (16 CSS polish rules)
 Social:        /social-media (13 platforms, specs + validation)

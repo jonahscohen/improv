@@ -4,7 +4,7 @@
 **Status:** Comprehensive audit completed  
 **Conclusion (as of 2026-05-23):** ~85% complete infrastructure, 0% accessible from Claude Code
 
-> **2026-05-25 update:** this report is preserved as a historical snapshot of the state before Sprint 1 closed. The "Primary Gap" called out below (missing `~/.claude/skills/sidecoach/SKILL.md`, no user-facing commands) has been closed. SKILL.md exists at `claude/skills/sidecoach/SKILL.md`, the slash command router is live with two surfaces (phase commands + 22 impeccable parity verbs from Sprint 8), and `/sidecoach teach`, `/sidecoach document`, `/sidecoach list`, and `/sidecoach help <verb>` are all wired. The audit conclusion below is no longer accurate. For current state see `SIDECOACH_QUICKSTART.md` and `sidecoach/README.md`.
+> **2026-05-25 update:** this report is preserved as a historical snapshot of the state before Sprint 1 closed. The "Primary Gap" called out below (missing `~/.claude/skills/sidecoach/SKILL.md`, no user-facing commands) has been closed. SKILL.md exists at `claude/skills/sidecoach/SKILL.md`, the slash command router is live with two surfaces (phase commands + 22 verb commands from Sprint 8), and `/sidecoach teach`, `/sidecoach document`, `/sidecoach list`, and `/sidecoach help <verb>` are all wired. The audit conclusion below is no longer accurate. For current state see `SIDECOACH_QUICKSTART.md` and `sidecoach/README.md`.
 
 ---
 
@@ -140,8 +140,8 @@ Three hooks are registered in `~/.claude/hooks/`:
 - `SIDECOACH_COMPLETE_DOMINATION_PLAN.md` (31KB)
 - `SIDECOACH_COMPREHENSIVE_ANALYSIS.md` (25KB)
 - `SIDECOACH_GOAT_PLAN.md` (19KB)
-- `gap-analysis-sidecoach-vs-impeccable.md` (28KB)
-- `impeccable-extraction-blueprint.md` (26KB)
+- `gap-analysis.md` (28KB)
+- `extraction-blueprint.md` (26KB)
 - `domain-flow-matrix.md` (14KB)
 - `flows-reference-mapping.md` (14KB)
 - `PHASES_1_TO_4_COMPLETE.md` (11KB)

@@ -1,3 +1,5 @@
+import { DesignTokens } from './design-md-parser';
+import { ProductMetadata, DesignMetadata } from './project-context';
 export interface ContextLoadResult {
     hasProduct: boolean;
     product: string | null;
@@ -15,6 +17,16 @@ export interface ProjectContext {
     designContent: string | null;
     register: 'brand' | 'product' | null;
     hasFullContext: boolean;
+    parsedDesignTokens: DesignTokens | null;
+    techStack?: {
+        framework: string;
+        hasAnimationLib: boolean;
+        animationLib?: string | null;
+        hasTypescript: boolean;
+        packageManager: string;
+    };
+    product?: ProductMetadata;
+    design?: DesignMetadata;
 }
 export declare function resolveContextDir(cwd?: string): string;
 export declare function loadContext(cwd?: string): ContextLoadResult;

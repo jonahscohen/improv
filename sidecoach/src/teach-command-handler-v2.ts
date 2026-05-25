@@ -27,7 +27,7 @@ interface Gap {
  *
  * Constraints honored in the generated PRODUCT.md:
  * - No self-attribution lines
- * - No references to /impeccable
+ * - No references to /sidecoach
  * - Brand Personality section only present when register=brand
  * - Will not overwrite a real existing PRODUCT.md (>=200 chars, no [TODO]
  *   placeholders) unless metadata.forceOverwrite is true.

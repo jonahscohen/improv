@@ -41,7 +41,7 @@ export class IntentDetector {
       this.createFlowODetector(),
       this.createFlowPDetector(),
       this.createFlowQDetector(),
-      // Tier 5: Specialized Refinement (NEW - impeccable v2.1.9)
+      // Tier 5: Specialized Refinement (NEW - v2.1.9)
       this.createFlowRDetector(),
       this.createFlowSDetector(),
       this.createFlowTDetector(),
@@ -446,7 +446,7 @@ export class IntentDetector {
     };
   }
 
-  // Tier 5: Specialized Refinement (NEW - impeccable v2.1.9 coverage)
+  // Tier 5: Specialized Refinement (NEW - v2.1.9 coverage)
 
   private createFlowRDetector(): FlowDetector {
     return {

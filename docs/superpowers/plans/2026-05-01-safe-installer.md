@@ -323,7 +323,7 @@ OUR_PLUGINS = [
     "code-review@claude-plugins-official",
     "plugin-developer-toolkit@claude-plugins-official",
     "chrome-devtools@claude-plugins-official",
-    "impeccable@impeccable",
+    "sidecoach",
 ]
 plugins = d.get("enabledPlugins", {})
 for p in OUR_PLUGINS:
@@ -332,7 +332,7 @@ if not plugins and "enabledPlugins" in d:
     del d["enabledPlugins"]
 
 # --- Marketplaces: remove ours ---
-OUR_MARKETPLACES = ["impeccable", "buildwithclaude"]
+OUR_MARKETPLACES = ["sidecoach", "buildwithclaude"]
 markets = d.get("extraKnownMarketplaces", {})
 for m in OUR_MARKETPLACES:
     markets.pop(m, None)
@@ -724,9 +724,9 @@ picked brain     && NEED_CC=1
 picked config    && { NEED_CC=1; NEED_PLUGINS=1; }
 ```
 
-- [ ] **Step 3: Update Impeccable workflow section**
+- [ ] **Step 3: Update Sidecoach workflow section**
 
-Change `picked claude` to `picked config` (impeccable is a plugin, lives in config).
+Change `picked claude` to `picked config` (sidecoach is a plugin, lives in config).
 
 - [ ] **Step 4: Add state-file migration for legacy claude -> brain + config**
 

@@ -138,7 +138,7 @@ class Flow2PolishHandler extends flow_handler_1.BaseFlowHandler {
 exports.Flow2PolishHandler = Flow2PolishHandler;
 /**
  * Flow 5: Review/QA Mode
- * Consolidates /impeccable audit - comprehensive multi-lens check
+ * Consolidates audit - comprehensive multi-lens check
  */
 class Flow5ReviewHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
@@ -260,7 +260,7 @@ class Flow5ReviewHandler extends flow_handler_1.BaseFlowHandler {
 exports.Flow5ReviewHandler = Flow5ReviewHandler;
 /**
  * Flow 7: Design a New Component
- * Consolidates /impeccable craft + QA triad (audit → critique → polish)
+ * Consolidates /sidecoach craft + QA triad (audit → critique → polish)
  */
 class Flow7DesignHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
@@ -283,11 +283,11 @@ class Flow7DesignHandler extends flow_handler_1.BaseFlowHandler {
             nextSteps: [
                 'Extract the new component from your design file',
                 'Implement in code with all required states',
-                'Run Audit: /impeccable audit <component>',
+                'Run Audit: /sidecoach audit <component>',
                 'Address all Critical and High findings',
-                'Run Critique: /impeccable critique <component>',
+                'Run Critique: /sidecoach critique <component>',
                 'Refine design based on feedback',
-                'Run Polish: /impeccable polish <component>',
+                'Run Polish: /sidecoach polish <component>',
                 'Verify final visual correctness against design system',
             ],
         };
@@ -312,7 +312,7 @@ class Flow7DesignHandler extends flow_handler_1.BaseFlowHandler {
                 id: 'audit-technical',
                 label: 'QA Triad - Audit: Technical scan',
                 required: true,
-                description: 'Run /impeccable audit to check a11y, perf, responsive, anti-patterns',
+                description: 'Run /sidecoach audit to check a11y, perf, responsive, anti-patterns',
                 completed: false,
             },
             {
@@ -326,7 +326,7 @@ class Flow7DesignHandler extends flow_handler_1.BaseFlowHandler {
                 id: 'critique-design',
                 label: 'QA Triad - Critique: Design review',
                 required: true,
-                description: 'Run /impeccable critique for Nielsen heuristics and UX feedback',
+                description: 'Run /sidecoach critique for Nielsen heuristics and UX feedback',
                 completed: false,
             },
             {
@@ -340,7 +340,7 @@ class Flow7DesignHandler extends flow_handler_1.BaseFlowHandler {
                 id: 'polish-alignment',
                 label: 'QA Triad - Polish: Design system alignment',
                 required: true,
-                description: 'Run /impeccable polish to verify design token usage and visual correctness',
+                description: 'Run /sidecoach polish to verify design token usage and visual correctness',
                 completed: false,
             },
             {

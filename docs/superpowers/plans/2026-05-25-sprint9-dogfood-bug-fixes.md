@@ -533,8 +533,8 @@ async function run() {
   const checks: Array<[string, boolean]> = [];
 
   // Get the craft chain length from the registry to know what to expect.
-  const { IMPECCABLE_VERB_REGISTRY } = require('../impeccable-command-registry');
-  const craftEntry = IMPECCABLE_VERB_REGISTRY.craft;
+  const { VERB_REGISTRY } = require('../verb-command-registry');
+  const craftEntry = VERB_REGISTRY.craft;
   const expectedChainLength = craftEntry.flowIds.length;
 
   // Monkey-patch a mid-chain handler to throw. flowG_component_implementation is mid-chain.
@@ -781,7 +781,7 @@ Human collaborator: Jonah.
 
 - ContextLoader.load() now recognizes PRODUCT.md in teach v2 section-header format. Existing YAML-style or key:value-style PRODUCT.md files still parse via the existing path.
 - engine.process() auto-stages context.metadata.designTokens from DESIGN.md when DESIGN.md is present and caller hasn't pre-staged. Explicit caller metadata wins.
-- Chain executor (for impeccable verb commands) does NOT halt on a flow error. Errored flows produce error-status FlowExecutionResults; downstream flows still attempt. Top-level result.success becomes "at least one flow succeeded".
+- Chain executor (for sidecoach verb commands) does NOT halt on a flow error. Errored flows produce error-status FlowExecutionResults; downstream flows still attempt. Top-level result.success becomes "at least one flow succeeded".
 
 ## Dogfood comparison (Sprint 8 -> Sprint 9)
 

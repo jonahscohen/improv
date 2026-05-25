@@ -20,7 +20,7 @@ export type FlowId =
   | 'flowO_clone_match_special'
   | 'flowP_constraint_design_special'
   | 'flowQ_migration_special'
-  // Tier 5: Specialized Refinement (NEW - impeccable v2.1.9)
+  // Tier 5: Specialized Refinement (NEW - v2.1.9)
   | 'flowR_layout_optimization'
   | 'flowS_typography_excellence'
   | 'flowT_ambitious_motion'

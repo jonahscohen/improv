@@ -53,3 +53,7 @@ One inline fix: the "9 records" wording was ambiguous against the 12-value union
 About to commit the spec + ask Jonah to review.
 
 Commit retry note: re-touched memory after rm flag-clear per Sprint 1 hook workaround.
+
+## Plan drafted
+
+Spec approved by Jonah. Implementation plan written to `docs/superpowers/plans/2026-05-24-sprint3-proper-phase-4-stack-aware-motion.md`. 4 tasks: T1 detection extension + filesystem helper, T2 motion-stack-idioms data module with 11 records (full GSAP snippets included in plan body, not deferred), T3 flow-handler-motion-integration consumes idioms, T4 sprint close. Plan grounds line numbers in current source (project-context.ts:178, flow-handler-motion-integration.ts:188). Each task uses the FOUR-bash-call commit pattern Sprint 1/2/3-prep established. Plan is ready to dispatch via subagent-driven-development.

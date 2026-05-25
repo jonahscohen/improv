@@ -402,6 +402,30 @@ class FlowCompositionEngine {
             failOnFirstError: false,
         };
     }
+    /**
+     * "Craft a landing page" - the headline composite for Sidecoach v2.
+     * Chains: brand verify -> composition -> tokens -> copywriting -> component -> motion -> polish -> audit -> all-seven QA gate.
+     */
+    static buildCraftLandingPageFlow() {
+        return {
+            id: 'composite_craft_landing_page',
+            name: 'Craft a landing page',
+            description: 'End-to-end landing page flow: composition, tokens, copy, component, motion, polish, audit, QA gate',
+            steps: [
+                { flowId: 'flowA_brand_verify', skipOnError: true },
+                { flowId: 'flowW_landing_composition' },
+                { flowId: 'flowF_design_tokens' },
+                { flowId: 'flowX_copywriting' },
+                { flowId: 'flowG_component_implementation' },
+                { flowId: 'flowH_motion_integration', skipOnError: true },
+                { flowId: 'flowJ_tactical_polish', skipOnError: true },
+                { flowId: 'flowK_multi_lens_audit', skipOnError: true },
+                { flowId: 'flowV_all_seven_qa', skipOnError: true },
+            ],
+            aggregateResults: true,
+            failOnFirstError: false,
+        };
+    }
 }
 exports.FlowCompositionEngine = FlowCompositionEngine;
 /**
@@ -411,5 +435,6 @@ exports.PRESET_COMPOSITE_FLOWS = [
     FlowCompositionEngine.buildResearchToImplementationFlow(),
     FlowCompositionEngine.buildQAWorkflow(),
     FlowCompositionEngine.buildOptimizationFlow(),
+    FlowCompositionEngine.buildCraftLandingPageFlow(),
 ];
 //# sourceMappingURL=flow-composition.js.map

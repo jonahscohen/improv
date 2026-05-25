@@ -39,8 +39,8 @@ async function run() {
     handlers.set('flowI_accessibility', spy);
   }
 
-  // /sidecoach audit routes through impeccable registry to [flowK_multi_lens_audit, flowI_accessibility]
-  // so flowI is reachable for spying. /sidecoach craft does NOT include flowI in its impeccable chain.
+  // /sidecoach audit routes through the verb registry to [flowK_multi_lens_audit, flowI_accessibility]
+  // so flowI is reachable for spying. /sidecoach craft does NOT include flowI in its sidecoach chain.
   await engine.process('/sidecoach audit', {
     projectPath: sandbox,
     projectContext: { register: 'brand' },

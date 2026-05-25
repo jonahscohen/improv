@@ -14,7 +14,7 @@ import { ExtendedDomainValidator, DomainCheckContext, DomainValidationReport } f
 import { ContextLoader } from './project-context';
 import { buildProjectContext, ProjectContext } from './context-loader';
 import { persistSessionMemory } from './session-memory-writer';
-import { parseSlashCommand, getAvailableCommands, getCommandsByPhase, getImpeccableCommandInfo } from './slash-command-router';
+import { parseSlashCommand, getAvailableCommands, getCommandsByPhase, getVerbCommandInfo } from './slash-command-router';
 import { SidecoachEntryPoint, globalEntryPoint, EntryPointRequest } from './sidecoach-entry-point';
 import { TeachCommandHandlerV2 } from './teach-command-handler-v2';
 import { DocumentCommandHandler } from './document-command-handler';
@@ -76,7 +76,7 @@ import { ClaudemdMandateValidator } from './clausemd-mandate-validator';
 import { BuildReport } from './build-report-types';
 import { generateBuildReport, renderBuildReportMarkdown } from './build-report-aggregator';
 import { CheckpointStore, SidecoachCheckpoint } from './checkpoint-store';
-import { getImpeccableEntry, ImpeccableCommandEntry } from './impeccable-command-registry';
+import { getVerbEntry, VerbCommandEntry } from './verb-command-registry';
 
 // Flows that produce HTML output and must clear the taste gate before declaring success.
 // craft / clone-match / layout / polish families (both modern flowX_* and legacy flowN_* IDs).
@@ -146,7 +146,7 @@ export class FlowExecutionEngine {
       ['flowO_clone_match_special', () => new FlowOCloneMatchHandler()],
       ['flowP_constraint_design_special', () => new FlowPConstraintDesignHandler()],
       ['flowQ_migration_special', () => new FlowQMigrationHandler()],
-      // Tier 5: Specialized refinement (NEW - impeccable v2.1.9 coverage)
+      // Tier 5: Specialized refinement (NEW - v2.1.9 coverage)
       ['flowR_layout_optimization', () => new FlowRLayoutOptimizationHandler()],
       ['flowS_typography_excellence', () => new FlowSTypographyExcellenceHandler()],
       ['flowT_ambitious_motion', () => new FlowTAmbitiousMotionHandler()],
@@ -754,8 +754,8 @@ export class FlowExecutionEngine {
           selectedText: context.selectedText,
           metadata: context.metadata,
         });
-        // Sprint 8 T7: append impeccable-verb guidance after the document handler runs.
-        const docGuidanceAppend = this.buildImpeccableGuidanceAppend('document');
+        // Sprint 8 T7: append verb-command guidance after the document handler runs.
+        const docGuidanceAppend = this.buildVerbGuidanceAppend('document');
         const docGuidance = [
           ...(result.guidance || []),
           ...(docGuidanceAppend || []),
@@ -773,7 +773,7 @@ export class FlowExecutionEngine {
 
       if (commandMatch.command === 'list') {
         const byPhase = getCommandsByPhase();
-        const impeccableCommands = getImpeccableCommandInfo();
+        const verbCommands = getVerbCommandInfo();
         const groupedGuidance: string[] = [
           'Available Sidecoach Commands',
           '',
@@ -791,14 +791,14 @@ export class FlowExecutionEngine {
           }
         }
 
-        // Sprint 8 T8: append the 22 impeccable parity verbs under a separate heading
+        // Sprint 8 T8: append the 22 verb commands under a separate heading
         groupedGuidance.push('');
-        groupedGuidance.push('## Impeccable parity verbs');
-        for (const [verb, info] of Object.entries(impeccableCommands)) {
+        groupedGuidance.push('## Verb commands');
+        for (const [verb, info] of Object.entries(verbCommands)) {
           groupedGuidance.push(`  /sidecoach ${verb} - ${info.description}`);
         }
         groupedGuidance.push('');
-        groupedGuidance.push('Use /sidecoach help <verb> for detail on any impeccable parity verb.');
+        groupedGuidance.push('Use /sidecoach help <verb> for detail on any verb command.');
 
         return {
           success: true,
@@ -825,7 +825,7 @@ export class FlowExecutionEngine {
             ],
           };
         }
-        const entry = getImpeccableEntry(verb);
+        const entry = getVerbEntry(verb);
         if (!entry) {
           return {
             success: false,
@@ -845,12 +845,12 @@ export class FlowExecutionEngine {
             entry.description,
             '',
             `**Phase:** ${entry.phase}`,
-            `**Impeccable parity reference:** ${entry.impeccableSkillPath}`,
+            `**Reference:** ${entry.skillRefPath}`,
             '',
             '**Flow chain:**',
             ...entry.flowIds.map((f) => `- ${f}`),
             '',
-            '**Parity checklist (impeccable equivalent produces these):**',
+            '**Parity checklist (verb command produces these):**',
             ...entry.parityChecklist.map((s) => `- ${s}`),
             '',
             '**Sidecoach additions (parity-plus):**',
@@ -1050,12 +1050,12 @@ export class FlowExecutionEngine {
           } as FlowExecutionResult);
         }
       }
-      // Sprint 8 T7: append impeccable-verb guidance after the chain executes.
-      // Only fires for verbs that have a registry entry (the 22 impeccable parity
+      // Sprint 8 T7: append verb-command guidance after the chain executes.
+      // Only fires for verbs that have a registry entry (the 22 verb command
       // verbs); phase commands like 'research' or 'review' return null from
-      // getImpeccableEntry and are unaffected.
+      // getVerbEntry and are unaffected.
       const chainGuidanceAppend = commandMatch.command
-        ? this.buildImpeccableGuidanceAppend(commandMatch.command)
+        ? this.buildVerbGuidanceAppend(commandMatch.command)
         : null;
       const chainGuidance: string[] = [];
       for (const fr of flowResults) {
@@ -1499,21 +1499,21 @@ export class FlowExecutionEngine {
   }
 
   /**
-   * Sprint 8 T7: Build the impeccable-verb guidance-append block.
+   * Sprint 8 T7: Build the verb-command guidance-append block.
    * Returns the array of strings to append to result.guidance for verbs that
-   * have a registry entry (the 22 impeccable parity verbs). The returned
+   * have a registry entry (the 22 verb commands). The returned
    * array includes the parityChecklist and parityPlus tokens verbatim so the
-   * sprint8-impeccable-parity test sees them in the flattened output.
+   * sprint8 parity test sees them in the flattened output.
    */
-  private buildImpeccableGuidanceAppend(command: string): string[] | null {
-    const entry: ImpeccableCommandEntry | undefined = getImpeccableEntry(command);
+  private buildVerbGuidanceAppend(command: string): string[] | null {
+    const entry: VerbCommandEntry | undefined = getVerbEntry(command);
     if (!entry) return null;
     const appended: string[] = [
       '',
-      `## ${entry.command} (impeccable parity)`,
+      `## ${entry.command} (verb command)`,
       ...entry.guidanceAppend,
       '',
-      '### Parity checklist (matches impeccable)',
+      '### Parity checklist',
       ...entry.parityChecklist.map((s) => `- ${s}`),
       '',
       '### Sidecoach additions (parity-plus)',

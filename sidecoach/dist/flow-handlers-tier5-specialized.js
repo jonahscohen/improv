@@ -1,5 +1,5 @@
 "use strict";
-// TIER 5: SPECIALIZED REFINEMENT FLOWS (NEW - impeccable v2.1.9 coverage)
+// TIER 5: SPECIALIZED REFINEMENT FLOWS (NEW - v2.1.9 coverage)
 // Re-exports from individual flow handler files
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FlowTAmbitiousMotionHandler = exports.FlowSTypographyExcellenceHandler = exports.FlowRLayoutOptimizationHandler = void 0;

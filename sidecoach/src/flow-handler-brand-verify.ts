@@ -210,7 +210,7 @@ export class FlowABrandVerifyHandler extends BaseFlowHandler {
 
     // Check for DESIGN.md
     if (!projectContext.loaded.designMd) {
-      issues.push('⚠️  DESIGN.md not found - run /impeccable document or create manually for full design system support');
+      issues.push('⚠️  DESIGN.md not found - run /sidecoach document or create manually for full design system support');
     }
 
     // Check for anti-references in PRODUCT.md

@@ -11,7 +11,7 @@ export interface ProjectPersona {
 }
 
 /**
- * Fallback generic personas (5 impeccable archetypes)
+ * Fallback generic personas (5 archetype patterns)
  * Used when PRODUCT.md parsing fails or LLM extraction unavailable
  */
 const GENERIC_PERSONAS: ProjectPersona[] = [

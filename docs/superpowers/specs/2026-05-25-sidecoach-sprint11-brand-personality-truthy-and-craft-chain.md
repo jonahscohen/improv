@@ -9,7 +9,7 @@ Fix the 2 bugs surfaced by Sprint 10's dogfood:
 
 1. **flowA `Personality: ` display empty even when PRODUCT.md sets brand personality.** Root cause: `productMetadata.brand_personality` is `[]` (empty array from the existing markdown section parser - the `## Brand Personality` header creates a section key with empty body). JS truthy-evaluates `[]` as truthy, so `brand_personality || brandPersonality` returns `[]`, masking the real brandPersonality string.
 
-2. **Registry's craft entry omits flowH (motion) and flowI (accessibility).** Sprint 8 spec said craft chain = [F, G, H, I, J] but the implementer entered only [A, F, G, J]. Per impeccable's `craft.md`, craft covers shape → tokens → components → motion → accessibility → polish (6 phases). Sidecoach is missing motion + a11y from craft.
+2. **Registry's craft entry omits flowH (motion) and flowI (accessibility).** Sprint 8 spec said craft chain = [F, G, H, I, J] but the implementer entered only [A, F, G, J]. Per sidecoach's `craft.md`, craft covers shape → tokens → components → motion → accessibility → polish (6 phases). Sidecoach is missing motion + a11y from craft.
 
 ## Two fixes, two tests
 
@@ -44,7 +44,7 @@ Test (`sprint11-flowa-personality-display.test.ts`):
 
 ### Fix 2: Registry craft entry includes flowH and flowI
 
-In `sidecoach/src/impeccable-command-registry.ts`, update the `craft` entry:
+In `sidecoach/src/verb-command-registry.ts`, update the `craft` entry:
 
 ```typescript
 flowIds: [
@@ -74,7 +74,7 @@ parityChecklist: [
 ```
 
 Test (`sprint11-craft-chain-includes-motion-a11y.test.ts`):
-- Import `IMPECCABLE_VERB_REGISTRY` from registry.
+- Import `VERB_REGISTRY` from registry.
 - Assert `craft.flowIds` length === 6.
 - Assert `craft.flowIds` contains 'flowH_motion_integration'.
 - Assert `craft.flowIds` contains 'flowI_accessibility'.
@@ -85,7 +85,7 @@ After this fix, the dogfood should show 6 flows (or 6 with skipped status for fl
 
 **Modified (2):**
 - `sidecoach/src/flow-handler-brand-verify.ts` - add nonEmptyStringOrNull helper + update 2 read sites
-- `sidecoach/src/impeccable-command-registry.ts` - extend craft flowIds + guidanceAppend + parityChecklist
+- `sidecoach/src/verb-command-registry.ts` - extend craft flowIds + guidanceAppend + parityChecklist
 
 **New tests (2):**
 - `sidecoach/src/__tests__/sprint11-flowa-personality-display.test.ts`
@@ -113,4 +113,4 @@ If a new bug surfaces, Sprint 12 starts immediately per chief-architect directiv
 
 - Investigating whether other flows have similar truthy-array bugs (broader audit) - focused fix only
 - Stripping the empty-array section keys from the parser output entirely (the parser writes them for legitimate use cases; consumers should defend against truthiness)
-- BuildReport verdict propagation for impeccable verb chains (Sprint 9 close noted; still deferred)
+- BuildReport verdict propagation for sidecoach verb chains (Sprint 9 close noted; still deferred)

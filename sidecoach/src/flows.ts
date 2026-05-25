@@ -330,7 +330,7 @@ export const flows: Flow[] = [
     },
   },
 
-  // TIER 5: SPECIALIZED REFINEMENT (NEW - impeccable v2.1.9 coverage)
+  // TIER 5: SPECIALIZED REFINEMENT (NEW - v2.1.9 coverage)
   {
     id: 'flowR_layout_optimization',
     name: 'Layout & Spacing Optimization',

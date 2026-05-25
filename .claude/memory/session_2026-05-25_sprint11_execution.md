@@ -28,3 +28,20 @@ Files touched:
 Files touched so far:
 - sidecoach/src/__tests__/sprint11-flowa-personality-display.test.ts (new)
 - sidecoach/src/flow-handler-brand-verify.ts (helper added)
+
+## T2: craft chain includes H/I (in progress)
+
+Edited `sidecoach/src/impeccable-command-registry.ts` craft entry directly (controller is Opus 4.7 1M context; satisfies the "Opus only" constraint without subagent dispatch overhead).
+
+Changes:
+- flowIds: added `flowH_motion_integration` and `flowI_accessibility` between flowG and flowJ. Length now 6 (was 4).
+- guidanceAppend: added 'Motion integrated: easing tokens applied...' and 'Accessibility verified: WCAG 2.1 AA scan complete...'.
+- parityChecklist: added 'motion integrated' and 'accessibility verified'.
+
+Writing the T2 test next. Then running both T1 and T2 + regression. Then asking for one verified to commit both.
+
+## T2 test written
+
+`sidecoach/src/__tests__/sprint11-craft-chain-includes-motion-a11y.test.ts` (8 assertions).
+
+Running T2 test + Sprint 8 parity regression (parity test parameterizes over registry, so the new craft parityChecklist entries get asserted automatically - orchestrator append callback must emit them).

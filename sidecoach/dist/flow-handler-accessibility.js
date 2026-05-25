@@ -250,13 +250,6 @@ class FlowIAccessibilityHandler extends flow_handler_1.BaseFlowHandler {
                 'Accessibility Target: WCAG 2.1 Level AA (required standard)',
                 '',
                 'Domain Validation Results:',
-                `- Color domain: ${colorPassed}/${colorDomainRules.length} rules passing (${colorPassRate})`,
-                `- Typography domain: ${typographyPassed}/${typographyDomainRules.length} rules passing (${typographyPassRate})`,
-                `- Spatial domain: ${spatialPassed}/${spatialDomainRules.length} rules passing (${spatialPassRate})`,
-                `- Motion domain: ${motionPassed}/${motionDomainRules.length} rules passing (${motionPassRate})`,
-                `- Interaction domain: ${interactionPassed}/${interactionDomainRules.length} rules passing (${interactionPassRate})`,
-                `- Responsive domain: ${responsivePassed}/${responsiveDomainRules.length} rules passing (${responsivePassRate})`,
-                `- Writing domain: ${writingPassed}/${writingDomainRules.length} rules passing (${writingPassRate})`,
                 '',
                 'Domain-by-Domain Accessibility Audit:',
                 '',
@@ -347,6 +340,8 @@ class FlowIAccessibilityHandler extends flow_handler_1.BaseFlowHandler {
                 status: 'error',
                 message: 'Failed to plan accessibility validation',
                 error: String(err),
+                guidance: [],
+                checklist: [],
                 memory,
             };
         }

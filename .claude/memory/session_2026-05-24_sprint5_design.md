@@ -51,3 +51,7 @@ Drafted the Sprint 5 design spec for Phase 6 part 1 (intent disambiguation UI). 
 Spec self-review, then ask Jonah to review the spec file, then invoke superpowers:writing-plans.
 
 Commit retry note: re-touched memory after rm flag-clear per Sprint 1 hook workaround.
+
+## Plan drafted
+
+Implementation plan written to `docs/superpowers/plans/2026-05-24-sprint5-phase-6-intent-disambiguation-ui.md`. 6 tasks: T1 interface extension, T2 silent-tiebreak path (folds in T4 prompt-path code change), T3 forceFlowId bypass, T4 prompt-path test, T5 end-to-end resolution test, T6 sprint close. Self-review pass: all spec sections covered, no placeholders, types/signature names consistent. The T2 edit covers BOTH the silent path AND the prompt path (they share the if/else); T4 is just the dedicated test for the else branch. Ready to dispatch via subagent-driven-development.

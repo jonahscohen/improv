@@ -1,6 +1,6 @@
 import { createExecutionEngine } from '../sidecoach-orchestrator';
 
-console.log('\n[Task 11] Interactive Menu Equivalent to /impeccable\n');
+console.log('\n[Task 11] Interactive Menu Equivalent to /sidecoach\n');
 console.log('='.repeat(80));
 
 const orchestrator = createExecutionEngine();

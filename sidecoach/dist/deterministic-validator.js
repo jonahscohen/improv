@@ -49,7 +49,7 @@ class DeterministicValidator {
                 rule: 'PRODUCT.md_exists',
                 severity: 'blocking',
                 message: 'PRODUCT.md not found at project root',
-                fix: 'Run `/impeccable teach` to generate PRODUCT.md with project context',
+                fix: 'Run `/sidecoach teach` to generate PRODUCT.md with project context',
                 debtCandidate: {
                     description: 'Missing PRODUCT.md - project context required',
                     justification: 'Auto-detected blocking prerequisite',
@@ -65,7 +65,7 @@ class DeterministicValidator {
                     rule: 'PRODUCT.md_content_length',
                     severity: 'blocking',
                     message: `PRODUCT.md exists but is incomplete (${content.length} chars, need >200)`,
-                    fix: 'Run `/impeccable teach` to complete PRODUCT.md with brand, users, anti-references',
+                    fix: 'Run `/sidecoach teach` to complete PRODUCT.md with brand, users, anti-references',
                     debtCandidate: {
                         description: 'PRODUCT.md stub - needs completion',
                         justification: 'Auto-detected incomplete prerequisite',
@@ -97,7 +97,7 @@ class DeterministicValidator {
                     rule: 'DESIGN.md_exists',
                     severity: 'blocking',
                     message: 'DESIGN.md not found - required for implementation flows',
-                    fix: 'Run `/impeccable document` to extract current design system',
+                    fix: 'Run `/sidecoach document` to extract current design system',
                     debtCandidate: {
                         description: 'Missing DESIGN.md - design tokens required',
                         justification: 'Auto-detected blocking prerequisite for implementation tier',
@@ -144,9 +144,19 @@ class DeterministicValidator {
                     });
                 }
                 catch (error) {
-                    // Check if error is timeout or actual lint failure
-                    const isTimeout = error instanceof Error && (error.message.includes('timed out') || error.message.includes('ETIMEDOUT'));
-                    const isToolMissing = error instanceof Error && (error.message.includes('not found') || error.message.includes('ENOENT'));
+                    // Inspect both error.message and any captured stdout (the lint tool
+                    // returns JSON findings on stdout AND exits non-zero on errors).
+                    const errMsg = error instanceof Error ? error.message : String(error);
+                    const stdoutStr = error?.stdout ? String(error.stdout) : '';
+                    const stderrStr = error?.stderr ? String(error.stderr) : '';
+                    const combined = `${errMsg}\n${stdoutStr}\n${stderrStr}`;
+                    const isTimeout = combined.includes('timed out') || combined.includes('ETIMEDOUT');
+                    const isToolMissing = combined.includes('not found') || combined.includes('ENOENT');
+                    // Tool-internal errors: the lint tool itself crashed (e.g. parser bug,
+                    // not a content issue with the user's DESIGN.md). Degrade to warning
+                    // so the validator doesn't block flow execution on third-party tool bugs.
+                    const isToolInternalError = combined.includes('Unexpected error during model building') ||
+                        combined.includes('raw.match is not a function');
                     if (isToolMissing) {
                         // Tool not installed - degrade to warning
                         violations.push({
@@ -163,6 +173,15 @@ class DeterministicValidator {
                             severity: 'warning',
                             message: 'Design.md lint check timed out (>10s)',
                             fix: 'Reduce complexity of DESIGN.md or increase timeout',
+                        });
+                    }
+                    else if (isToolInternalError) {
+                        // Tool itself crashed (not a content issue) - degrade to warning
+                        violations.push({
+                            rule: 'DESIGN.md_lint_tool_error',
+                            severity: 'warning',
+                            message: 'Design.md lint tool crashed internally - cannot validate content',
+                            fix: 'File issue against @google/design.md; falling back to flow execution',
                         });
                     }
                     else {

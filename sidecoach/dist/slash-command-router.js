@@ -4,7 +4,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.parseSlashCommand = parseSlashCommand;
 exports.getAvailableCommands = getAvailableCommands;
+exports.getVerbCommandInfo = getVerbCommandInfo;
 exports.getCommandsByPhase = getCommandsByPhase;
+const verb_command_registry_1 = require("./verb-command-registry");
 const SLASH_COMMANDS = {
     research: ['flowA_brand_verify', 'flowB_component_research', 'flowC_font_research', 'flowD_reference_inspiration', 'flowE_motion_patterns', 'flow4_explore_discovery', 'flow7_design_component'],
     craft: ['flowF_design_tokens', 'flowG_component_implementation', 'flowH_motion_integration', 'flowI_accessibility', 'flow9_accessible', 'flow10_implement_design', 'flow11_extract_tokens'],
@@ -25,7 +27,8 @@ const SLASH_COMMANDS = {
 function parseSlashCommand(utterance) {
     const trimmed = utterance.trim();
     // Check if starts with /sidecoach or just /
-    const match = trimmed.match(/^\/(?:sidecoach\s+)?(\w+)(?:\s+(.*))?$/i);
+    // Supports both /sidecoach command:target and /sidecoach command target
+    const match = trimmed.match(/^\/(?:sidecoach\s+)?(\w+)(?::([\w-]+)|\s+(.*))?$/i);
     if (!match) {
         return {
             isCommand: false,
@@ -34,7 +37,9 @@ function parseSlashCommand(utterance) {
         };
     }
     const command = match[1].toLowerCase();
-    const target = match[2]?.trim() || '';
+    const colonTarget = match[2]?.trim() || '';
+    const spaceTarget = match[3]?.trim() || '';
+    const target = colonTarget || spaceTarget;
     if (command === 'list') {
         return {
             isCommand: true,
@@ -44,14 +49,37 @@ function parseSlashCommand(utterance) {
             reason: 'List all available flows',
         };
     }
-    // Support composite flow commands: /sidecoach composite:composite_research_to_impl
-    if (command === 'composite' && target) {
+    // Support composite flow commands: /sidecoach composite:composite_research_to_impl or /sidecoach composite composite_research_to_impl
+    if (command === 'composite') {
         return {
             isCommand: true,
             command: 'composite',
             flowIds: [],
             target,
-            reason: `Routed to composite flow: ${target}`,
+            reason: target ? `Routed to composite flow: ${target}` : 'Composite flow command (no target specified)',
+        };
+    }
+    // Sprint 8 T8: /sidecoach help <verb> command - returns details from registry.
+    // Matched BEFORE the verb registry branch because 'help' is not itself a
+    // verb in VERB_REGISTRY; the verb is the target.
+    if (command === 'help') {
+        return {
+            isCommand: true,
+            command: 'help',
+            flowIds: [],
+            target,
+            reason: target ? `Help for ${target}` : 'Help (no target)',
+        };
+    }
+    // Sprint 8: verb-based commands (parallel to phase-based SLASH_COMMANDS)
+    const verbEntry = (0, verb_command_registry_1.getVerbEntry)(command);
+    if (verbEntry) {
+        return {
+            isCommand: true,
+            command,
+            flowIds: verbEntry.flowIds,
+            target,
+            reason: `Routed to ${command} (verb-parity) - ${verbEntry.description}`,
         };
     }
     const flowIds = SLASH_COMMANDS[command];
@@ -143,6 +171,22 @@ function getAvailableCommands() {
             phase: 'Special',
         },
     };
+}
+/**
+ * Sprint 8 T8: returns CommandInfo for all 22 verb commands from the
+ * registry, so the list-handler can show both phase commands and verbs in a
+ * single grouped output.
+ */
+function getVerbCommandInfo() {
+    const out = {};
+    for (const [verb, entry] of Object.entries(verb_command_registry_1.VERB_REGISTRY)) {
+        out[verb] = {
+            description: entry.description,
+            flows: entry.flowIds.map((f) => f),
+            phase: 'Special',
+        };
+    }
+    return out;
 }
 function getCommandsByPhase() {
     const commands = getAvailableCommands();

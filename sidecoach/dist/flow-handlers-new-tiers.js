@@ -21,7 +21,7 @@ class FlowABrandVerifyHandler extends flow_handler_1.BaseFlowHandler {
             guidance: [
                 'Verify PRODUCT.md exists at project root with real content (not [TODO] placeholders)',
                 'PRODUCT.md must include: register (brand vs product), users, brand personality, anti-references, strategic principles',
-                'Run /impeccable teach if PRODUCT.md is missing or incomplete',
+                'Run /sidecoach teach if PRODUCT.md is missing or incomplete',
                 'All design work depends on a solid brand register',
             ],
             checklist: this.createChecklist([

@@ -77,7 +77,7 @@ else {
     console.log(`  Result: FAIL`);
 }
 // Task 14: Deprecation notice
-console.log('\n[Task 14] Impeccable Soft-Deprecation Documentation');
+console.log('\n[Task 14] Legacy Skill Soft-Deprecation Documentation');
 const deprecationPath = path.join(projectRoot, 'DEPRECATION_NOTICE.md');
 const hasDeprecation = fs.existsSync(deprecationPath);
 const deprecationContent = hasDeprecation ? fs.readFileSync(deprecationPath, 'utf-8') : '';
@@ -110,7 +110,7 @@ console.log('\n' + '='.repeat(80));
 console.log('\nPhase 3 Tasks Complete:');
 console.log('  Task 12: Command → Flow Mapping Documentation');
 console.log('  Task 13: Command Routing Adapter Layer');
-console.log('  Task 14: Impeccable Soft-Deprecation Notice');
+console.log('  Task 14: Legacy Skill Soft-Deprecation Notice');
 console.log('\nAll Phase 2-3 Enhancement tasks verified and production-ready.');
 console.log('='.repeat(80));
 //# sourceMappingURL=phase3-completion.test.js.map

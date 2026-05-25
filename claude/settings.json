@@ -300,17 +300,9 @@
     "ralph-loop@claude-plugins-official": true,
     "code-review@claude-plugins-official": true,
     "plugin-developer-toolkit@claude-plugins-official": true,
-    "chrome-devtools@claude-plugins-official": true,
-    "impeccable@impeccable": true
+    "chrome-devtools@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
-    "impeccable": {
-      "source": {
-        "source": "github",
-        "repo": "pbakaus/impeccable"
-      },
-      "autoUpdate": true
-    },
     "buildwithclaude": {
       "source": {
         "source": "github",

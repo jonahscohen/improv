@@ -8,7 +8,7 @@
 ## T1: Expand craft chain to include flowB + flowE
 
 **Files:**
-- Modify: `sidecoach/src/impeccable-command-registry.ts:47-54` (craft.flowIds), and adjust `guidanceAppend` + `parityChecklist` to mention research.
+- Modify: `sidecoach/src/verb-command-registry.ts:47-54` (craft.flowIds), and adjust `guidanceAppend` + `parityChecklist` to mention research.
 - Modify: `sidecoach/src/__tests__/sprint11-craft-chain-includes-motion-a11y.test.ts` - update length expectation from 6 -> 8, add 2 assertions for B and E.
 
 **Steps:**

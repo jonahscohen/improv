@@ -13,11 +13,11 @@ Picking a font well requires three layers, and this skill is the first:
 
 1. **Catalog layer** (this skill) - Browse fontshare with the brand's voice words in mind. Understand what families exist, how they are categorized, which families have the weights / variants / language coverage the project needs. This is the breadth pass - the part that surfaces candidates the project has not considered.
 
-2. **Strategy layer** (impeccable's `brand.md` "Font selection procedure" and `typography.md` "Anti-reflexes worth defending against") - Apply the reflex-reject list, reject any pick that lands in the editorial-typographic aesthetic lane without a brief reason, cross-check that the final font does not match the same training-data default the project's last design did.
+2. **Strategy layer** (sidecoach's `brand.md` "Font selection procedure" and `typography.md` "Anti-reflexes worth defending against") - Apply the reflex-reject list, reject any pick that lands in the editorial-typographic aesthetic lane without a brief reason, cross-check that the final font does not match the same training-data default the project's last design did.
 
 3. **Project layer** (DESIGN.md, existing code, fallback chains) - Pair within the family before adding a second face. Document the pick in DESIGN.md with token references.
 
-The key principle: never let a popular fontshare font become the new monoculture. Fontshare's own "Most popular" surface (General Sans, Cabinet Grotesk, Switzer, Satoshi, Clash Display) is creeping toward training-data-default status the same way Inter and Fraunces did. Use fontshare for breadth; use impeccable's reject discipline to avoid landing on the obvious fontshare hit.
+The key principle: never let a popular fontshare font become the new monoculture. Fontshare's own "Most popular" surface (General Sans, Cabinet Grotesk, Switzer, Satoshi, Clash Display) is creeping toward training-data-default status the same way Inter and Fraunces did. Use fontshare for breadth; use sidecoach's reject discipline to avoid landing on the obvious fontshare hit.
 
 ## When to use this skill
 
@@ -44,7 +44,7 @@ The key principle: never let a popular fontshare font become the new monoculture
 - **Monospace** - code, technical, type-as-voice
 - **Handwritten** - rare for product UI; sometimes right for personality brand voice
 
-### Personality tags (cross-reference against the brand-voice words from impeccable step 1)
+### Personality tags (cross-reference against the brand-voice words from sidecoach step 1)
 Friendly, Refined, Bold, Calm, Casual, Geometric, Humanist, Industrial, Mechanical, Editorial, Quirky, Modern, Classical, Warm, Cool.
 
 ### Feature filters
@@ -61,13 +61,13 @@ Friendly, Refined, Bold, Calm, Casual, Geometric, Humanist, Industrial, Mechanic
 
 ### Step 1: Read PRODUCT.md and write three brand-voice words
 
-Same step 1 as impeccable's `brand.md` font-selection procedure. Use physical-object words, not "modern" or "elegant." For example: "warm and mechanical and opinionated" or "calm and clinical and careful."
+Same step 1 as sidecoach's `brand.md` font-selection procedure. Use physical-object words, not "modern" or "elegant." For example: "warm and mechanical and opinionated" or "calm and clinical and careful."
 
-If PRODUCT.md does not exist, run `/impeccable teach` first to seed it. Do not improvise typography without brand context.
+If PRODUCT.md does not exist, run `/sidecoach teach` first to seed it. Do not improvise typography without brand context.
 
 ### Step 2: List your reflex picks, then reject them
 
-Per impeccable's procedure: list the three fonts you would reach for by reflex. Reject any that appear on impeccable's reflex-reject list:
+Per sidecoach's procedure: list the three fonts you would reach for by reflex. Reject any that appear on sidecoach's reflex-reject list:
 
 > Fraunces, Newsreader, Lora, Crimson, Crimson Pro, Crimson Text, Playfair Display, Cormorant, Cormorant Garamond, Syne, IBM Plex Mono / Sans / Serif, Space Mono, Space Grotesk, Inter, DM Sans, DM Serif Display / Text, Outfit, Plus Jakarta Sans, Instrument Sans, Instrument Serif.
 
@@ -88,7 +88,7 @@ Open 5-8 candidate family pages. For each, read weights, OpenType features, lang
 
 **Watch for the new fontshare monoculture**. Families that appear at the top of fontshare's homepage by mid-2026 (General Sans, Cabinet Grotesk, Switzer, Satoshi, Clash Display) are trending toward training-data-default status. They are fine fonts, but if the reflex from Step 2 landed on one of them, look one filter deeper. Fontshare's catalog is wider than its homepage suggests.
 
-### Step 4: Cross-check against impeccable's anti-reflexes
+### Step 4: Cross-check against sidecoach's anti-reflexes
 
 From `typography.md`:
 
@@ -112,7 +112,7 @@ If the family is missing a feature, either pick a different family or write an e
 
 ### Step 6: Pair within the family before adding a second face
 
-Fontshare families often have enough weight contrast that ONE family + weight contrast is stronger than two competing typefaces. Per impeccable's typography.md: "You often do not need a second font."
+Fontshare families often have enough weight contrast that ONE family + weight contrast is stronger than two competing typefaces. Per sidecoach's typography.md: "You often do not need a second font."
 
 When pairing IS justified:
 
@@ -140,10 +140,10 @@ In DESIGN.md prose, record: which brand-voice words the pick serves, which refle
 This skill is the catalog / breadth layer in the font-selection sub-stack:
 
 1. **fontshare-reference** (this skill) - Browse the curated catalog. Find candidates the project has not considered.
-2. **impeccable** (`brand.md` font procedure + `typography.md` anti-reflexes) - Apply brand-voice cross-check and reject training-data defaults.
+2. **sidecoach** (`brand.md` font procedure + `typography.md` anti-reflexes) - Apply brand-voice cross-check and reject training-data defaults.
 3. **make-interfaces-feel-better** - Apply tactical typography polish at implementation time: tabular nums on data, `text-wrap: balance` on headings, `font-optical-sizing: auto` for variable fonts, all-caps tracking, FOUT fallback metrics.
 
-The catalog prevents narrow-search gaps ("settling on Inter because it's the first font Claude thinks of"). Impeccable prevents brand-strategy gaps (off-register pick). Make-interfaces-feel-better prevents implementation polish gaps.
+The catalog prevents narrow-search gaps ("settling on Inter because it's the first font Claude thinks of"). Sidecoach prevents brand-strategy gaps (off-register pick). Make-interfaces-feel-better prevents implementation polish gaps.
 
 ## Fallback - when fontshare does not have the right family
 
@@ -162,7 +162,7 @@ When falling through, document in the session memory why fontshare did not fit (
 
 Before finalizing a pick, verify NONE of these are true:
 
-- The pick is on impeccable's reflex-reject list (Fraunces, Inter, Outfit, etc.)
+- The pick is on sidecoach's reflex-reject list (Fraunces, Inter, Outfit, etc.)
 - The pick is the top result on fontshare's homepage AND was the reflex from Step 2
 - The pick lands in the editorial-typographic aesthetic lane without brief reason
 - The pick is the same family used on the last brand surface this team shipped

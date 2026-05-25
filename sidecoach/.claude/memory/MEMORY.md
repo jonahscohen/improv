@@ -1,3 +1,5 @@
+- [Sidecoach Session](session_2026-05-25_sidecoach.md) - design decisions, rules applied, metrics
+- [Sidecoach Session](session_2026-05-24_sidecoach.md) - design decisions, rules applied, metrics
 - [Phase G Block 1 Complete](session_2026-05-23_phase_g_block1_complete.md) - Flows O-P validator integration: clone-match (spatial/color/responsive), constraint-design (all 7 domains), TypeScript verified
 - [Sidecoach v3 Phase 9 Complete](session_2026-05-21_sidecoach-v3-phase9-complete.md) - FlowU Curate and FlowV All-Seven QA handlers implemented, all 9 phases complete and compiling
 - [Slash Command E2E Test Complete](session_2026-05-22_slash_command_e2e_test.md) - Comprehensive E2E validation: 15/15 parsing tests, 13/13 orchestration tests, 36/36 flows reachable, zero duplicates/gaps - production ready

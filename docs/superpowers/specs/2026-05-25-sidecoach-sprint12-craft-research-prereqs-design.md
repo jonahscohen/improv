@@ -44,7 +44,7 @@ flowI_accessibility         (execution - already in chain)
 flowJ_tactical_polish       (polish - already in chain)
 ```
 
-This matches impeccable's craft.md mental model: shape -> research -> tokens -> components -> motion -> accessibility -> polish.
+This matches sidecoach's craft.md mental model: shape -> research -> tokens -> components -> motion -> accessibility -> polish.
 
 ## Alternative rejected
 
@@ -58,7 +58,7 @@ The dogfood currently uses persistent flow history. To make the re-dogfood meani
 
 After Sprint 12 lands:
 
-- `IMPECCABLE_VERB_REGISTRY.craft.flowIds` length is 8.
+- `VERB_REGISTRY.craft.flowIds` length is 8.
 - `craft.flowIds` includes `flowB_component_research` and `flowE_motion_patterns` in the proper positions.
 - Sprint 11 chain-length test updated (was 6, now 8) plus 2 new assertions for the research entries.
 - Re-dogfood run on `marketing-site` with cleared history executes all 8 flows without prerequisite-not-met errors.

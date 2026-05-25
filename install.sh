@@ -83,7 +83,7 @@ DESCS=(
   "Adds local voice-to-text so Claude can answer Discord voice messages and any other audio attachment. Brews whisper-cpp and ffmpeg, downloads the ggml-base.en model (~150 MB) into ~/.cache/whisper, and symlinks bin/transcribe to ~/.claude/transcribe. Local-only (no cloud, no API key). Calls: '~/.claude/transcribe path/to/audio.ogg' prints the transcript on stdout."
   "Gives Claude a voice via OpenAI text-to-speech API. Claude speaks short verbal summaries while keeping code and technical detail as text. Requires your own OpenAI API key stored in macOS Keychain (see docs). Starts muted - enable with voice-on in any terminal. Three mute controls: in-session (mute yourself), terminal alias (voice-on/voice-off), or manual file toggle. Does NOT work without an API key - this is not optional, it is required."
   "Adds the reflect skill and nudge hook. The reflect skill spawns 5 parallel analysis agents against your accumulated .claude/memory/ files to surface patterns, tensions, and gaps nobody explicitly noticed. Triggers naturally from conversation ('what patterns are you seeing?') or via /reflect. A SessionStart hook nudges you when enough new memories have accumulated since the last reflection. No external dependencies."
-  "Sidecoach: invisible workflow automation triggered by natural conversation. No slash commands. Instead of /impeccable or /make-interfaces-feel-better, simply write naturally about your work ('make this feel better', 'design a component', 'review this') and Sidecoach detects your intent and guides you through the appropriate workflow. Daemon launches at session start and monitors messages silently. Provides 14 design/development flows covering polish, review, design, implementation, accessibility, refactoring, and iteration. Each flow returns tailored guidance, checklists (6-14 items), and next steps. Built via SessionStart hook (daemon launcher), PostUserPrompt hook (message intake), and PostResponse hook (result injection). Symlinks hooks into ~/.claude/hooks/ and compiles TypeScript orchestrator + 14 handlers."
+  "Sidecoach: invisible workflow automation triggered by natural conversation. No slash commands. Instead of slash commands, simply write naturally about your work ('make this feel better', 'design a component', 'review this') and Sidecoach detects your intent and guides you through the appropriate workflow. Daemon launches at session start and monitors messages silently. Provides 14 design/development flows covering polish, review, design, implementation, accessibility, refactoring, and iteration. Each flow returns tailored guidance, checklists (6-14 items), and next steps. Built via SessionStart hook (daemon launcher), PostUserPrompt hook (message intake), and PostResponse hook (result injection). Symlinks hooks into ~/.claude/hooks/ and compiles TypeScript orchestrator + 14 handlers."
   "Adds the /task-list slash-command skill at ~/.claude/skills/task-list/. Manages a single TASKS.md at the dotfiles repo root, organized by area (sidecoach, improv, marketing-site, test-site-1, dotfiles) with Active/Blocked/Done sub-sections. Verbs: add, list, done, edit, remove, block, unblock, show. Area inferred from cwd; IDs monotonic T-NNNN. Always operates on the dotfiles TASKS.md regardless of where you invoke it from. No hooks, no external deps."
 )
 FILES=(
@@ -688,14 +688,14 @@ OUR_PLUGINS = [
     "discord@claude-plugins-official", "feature-dev@claude-plugins-official",
     "ralph-loop@claude-plugins-official", "code-review@claude-plugins-official",
     "plugin-developer-toolkit@claude-plugins-official", "chrome-devtools@claude-plugins-official",
-    "impeccable@impeccable",
+    "sidecoach",
 ]
 plugins = d.get("enabledPlugins", {})
 for p in OUR_PLUGINS:
     plugins.pop(p, None)
 if not plugins and "enabledPlugins" in d:
     del d["enabledPlugins"]
-OUR_MARKETS = ["impeccable", "buildwithclaude"]
+OUR_MARKETS = ["buildwithclaude"]
 markets = d.get("extraKnownMarketplaces", {})
 for m in OUR_MARKETS:
     markets.pop(m, None)
@@ -2348,7 +2348,7 @@ if [ "$TOTAL_STEPS" -gt 0 ]; then
   fi
   if [ "$NEED_PLUGINS" -eq 1 ]; then
     STEP=$((STEP+1))
-    echo "  $STEP. Open Claude Code once - your enabled plugins (Impeccable, Figma,"
+    echo "  $STEP. Open Claude Code once - your enabled plugins ( Figma,"
     echo "      Sentry, Supabase, Discord, hookify, superpowers, etc.) auto-install"
     echo "      from settings.json on first launch. Run 'claude /plugins' to confirm."
   fi
@@ -2386,16 +2386,16 @@ if [ "$NEED_CC" -eq 1 ]; then
   echo ""
 fi
 
-# Impeccable workflow - only relevant when our settings.json (with the
-# impeccable plugin enabled) is active, i.e., config was picked.
+# Sidecoach workflow - only relevant when our settings.json (with the
+# sidecoach skill enabled) is active, i.e., config was picked.
 if picked config; then
-  echo "Design workflow (Impeccable):"
-  echo "  - The impeccable plugin is enabled in settings.json (autoUpdate on)."
-  echo "  - CLAUDE.md routes all design and UI-QA work through /impeccable."
-  echo "  - In each new project, run '/impeccable teach' once to seed PRODUCT.md"
-  echo "    and optionally DESIGN.md at the project root. Every /impeccable command"
+  echo "Design workflow (Sidecoach):"
+  echo "  - The sidecoach skill is enabled in settings.json (autoUpdate on)."
+  echo "  - CLAUDE.md routes all design and UI-QA work through /sidecoach."
+  echo "  - In each new project, run '/sidecoach teach' once to seed PRODUCT.md"
+  echo "    and optionally DESIGN.md at the project root. Every /sidecoach command"
   echo "    reads those files, so skipping this step produces generic output."
-  echo "  - Run '/impeccable' with no argument to see the full 23-command menu."
+  echo "  - Run '/sidecoach' with no argument to see the full 23-command menu."
   echo ""
 fi
 

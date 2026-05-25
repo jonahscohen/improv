@@ -7,6 +7,7 @@ exports.createFlowSHandler = createFlowSHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const extended_domain_validator_1 = require("./extended-domain-validator");
+const design_md_parser_1 = require("./design-md-parser");
 class FlowSTypographyExcellenceHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowS_typography_excellence');
@@ -46,22 +47,32 @@ class FlowSTypographyExcellenceHandler extends flow_handler_1.BaseFlowHandler {
                 { label: 'Verify kerning pairs and ligatures', required: true },
                 { label: 'Test readability at all text sizes', required: true },
             ]);
+            const designContent = context.metadata?.designContent || '';
+            const designTokens = context.metadata?.designTokens || {};
+            const cite = (dottedPath) => {
+                const ln = designContent ? (0, design_md_parser_1.findTokenLine)(designContent, dottedPath) : -1;
+                return ln > 0 ? ` (Source: DESIGN.md L${ln})` : '';
+            };
+            const displayFamily = designTokens.typography?.display?.family || '(undefined in DESIGN.md)';
+            const bodyFamily = designTokens.typography?.body?.family || '(undefined in DESIGN.md)';
+            const baseSize = designTokens.typography?.scale?.base || '(undefined in DESIGN.md)';
+            const lineHeight = designTokens.typography?.scale?.line_height || '(undefined in DESIGN.md)';
             const guidance = [
                 'Typography Excellence: Master type scales, kerning, variable fonts, and reading comfort.',
                 '',
                 'Domain Validation Results:',
-                `- Typography domain: ${typographyPassed}/${typographyDomainRules.length} rules passing (${typographyPassRate})`,
                 '',
                 'TYPE SCALE:',
-                '- Display: 48px, bold (h1)',
+                `- Display family: ${displayFamily}${cite('typography.display.family')}`,
+                `- Body family: ${bodyFamily}${cite('typography.body.family')}`,
+                `- Base body size: ${baseSize}${cite('typography.scale.base')}`,
                 '- Heading: 32px, semibold (h2)',
                 '- Subheading: 24px, semibold (h3)',
-                '- Body: 16px, regular',
                 '- Small: 14px, regular',
                 '- Tiny: 12px, regular',
                 '',
                 'KERNING & SPACING:',
-                '- Line height: 1.4 for body, 1.2 for headings',
+                `- Body line height: ${lineHeight}${cite('typography.scale.line_height')}`,
                 '- Letter spacing: normal (0) for body, 0.02em for all-caps',
                 '- Optical adjustments: shift baseline -1px for descenders',
                 '',

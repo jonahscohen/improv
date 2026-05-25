@@ -1,9 +1,9 @@
-import { IMPECCABLE_VERB_REGISTRY } from '../impeccable-command-registry';
+import { VERB_REGISTRY } from '../verb-command-registry';
 
 async function run() {
   const checks: Array<[string, boolean]> = [];
 
-  const craft = IMPECCABLE_VERB_REGISTRY.craft;
+  const craft = VERB_REGISTRY.craft;
   checks.push(['T2.1: craft entry exists', !!craft]);
 
   if (craft) {

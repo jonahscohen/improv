@@ -61,6 +61,8 @@ export declare class IntentDetector {
     private createFlow14Detector;
     private createFlowUDetector;
     private createFlowVDetector;
+    private createFlowWDetector;
+    private createFlowXDetector;
 }
 export declare function createDetector(): IntentDetector;
 //# sourceMappingURL=intent-detector.d.ts.map

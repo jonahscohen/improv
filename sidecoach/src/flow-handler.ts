@@ -95,7 +95,7 @@ export class BaseFlowHandler implements FlowHandler {
       flowO_clone_match_special: 'Clone/Match from Reference (Special)',
       flowP_constraint_design_special: 'Constraint-Based Design (Special)',
       flowQ_migration_special: 'Migration/Refactor (Special)',
-      // Tier 5: Specialized Refinement (NEW - impeccable v2.1.9)
+      // Tier 5: Specialized Refinement (NEW - v2.1.9)
       flowR_layout_optimization: 'Layout & Spacing Optimization',
       flowS_typography_excellence: 'Typography Excellence',
       flowT_ambitious_motion: 'Ambitious Motion & Physics',

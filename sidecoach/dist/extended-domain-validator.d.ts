@@ -95,6 +95,8 @@ export interface DomainCheckResult {
     evidence?: string;
 }
 export interface DomainValidationReport {
+    status?: 'completed' | 'skipped';
+    reason?: string;
     totalRules: number;
     passed: number;
     violations: number;

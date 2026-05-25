@@ -1,5 +1,4 @@
 import { BaseFlowHandler, FlowExecutionContext, FlowExecutionResult, FlowArtifact } from './flow-handler';
-import { ImpeccableDetectBridge } from './impeccable-detect-bridge';
 import { ProjectPersonaEngine } from './persona-engine';
 import { AntiPatternValidator, ValidationResult } from './anti-pattern-validator';
 import { CategoryReflexDetector, DesignReference, SlopDetectionResult } from './category-reflex-detector';
@@ -190,18 +189,6 @@ export class FlowKMultiLensAuditHandler extends BaseFlowHandler {
       'Address all Critical and High findings; document trade-offs for Medium',
     ];
 
-    // Wire ImpeccableDetectBridge for real 28-rule static analysis
-    const bridge = new ImpeccableDetectBridge();
-    const detectResult = bridge.detect(context.projectPath || process.cwd());
-    if (detectResult.findings.length > 0) {
-      const detectGuidance = bridge.findingsToGuidance(detectResult.findings);
-      guidance.push('---');
-      guidance.push(`Impeccable Detect findings (${detectResult.findings.length} issues):`);
-      guidance.push(...detectGuidance);
-    } else if (!detectResult.success || detectResult.rulesCovered === 0) {
-      guidance.push(`Note: ${detectResult.message}`);
-    }
-
     // Wire AntiPatternValidator for 27-rule design anti-pattern detection
     const antiPatternValidator = new AntiPatternValidator();
     const artifacts: FlowArtifact[] = [];
@@ -210,10 +197,7 @@ export class FlowKMultiLensAuditHandler extends BaseFlowHandler {
       enhancedContext.flowMetadata.tags = ['flowK', 'multi-lens-audit', '5-dimensions'];
       enhancedContext.flowMetadata.customData = {
         'audit-dimensions': 5,
-        'detect-rules': 28,
         'anti-pattern-rules': 27,
-        'findings-count': detectResult.findings.length,
-        'rules-covered': detectResult.rulesCovered,
       };
     }
 

@@ -39,13 +39,16 @@ class BaseFlowHandler {
             flowO_clone_match_special: 'Clone/Match from Reference (Special)',
             flowP_constraint_design_special: 'Constraint-Based Design (Special)',
             flowQ_migration_special: 'Migration/Refactor (Special)',
-            // Tier 5: Specialized Refinement (NEW - impeccable v2.1.9)
+            // Tier 5: Specialized Refinement (NEW - v2.1.9)
             flowR_layout_optimization: 'Layout & Spacing Optimization',
             flowS_typography_excellence: 'Typography Excellence',
             flowT_ambitious_motion: 'Ambitious Motion & Physics',
             // Special: Curate & All-Seven QA
             flowU_curate: 'Curate Design References',
             flowV_all_seven_qa: 'All-Seven QA Pipeline',
+            // Tier 6: Composition & Copy
+            flowW_landing_composition: 'Landing Page Composition (sections + rhythm)',
+            flowX_copywriting: 'Copywriting (per-slot draft options)',
             // Legacy flows
             flow1_clone_match: 'Clone/Match from Reference',
             flow2_polish_enhance: 'Polish/Enhance Interaction',

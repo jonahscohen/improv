@@ -1,6 +1,6 @@
 "use strict";
 // Design Laws System
-// Shared design rules extracted from Impeccable, organized by domain and register
+// Shared design rules extracted from prior design references, organized by domain and register
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CRITIQUE_RULES = exports.REGISTER_SPECIFIC_LAWS = exports.CATEGORY_REFLEX = exports.SHARED_DESIGN_LAWS = exports.ANTI_PATTERNS = void 0;
 exports.getAntiPatternById = getAntiPatternById;

@@ -10,7 +10,7 @@ export declare class Flow2PolishHandler extends BaseFlowHandler {
 }
 /**
  * Flow 5: Review/QA Mode
- * Consolidates /impeccable audit - comprehensive multi-lens check
+ * Consolidates audit - comprehensive multi-lens check
  */
 export declare class Flow5ReviewHandler extends BaseFlowHandler {
     constructor();
@@ -19,7 +19,7 @@ export declare class Flow5ReviewHandler extends BaseFlowHandler {
 }
 /**
  * Flow 7: Design a New Component
- * Consolidates /impeccable craft + QA triad (audit → critique → polish)
+ * Consolidates /sidecoach craft + QA triad (audit → critique → polish)
  */
 export declare class Flow7DesignHandler extends BaseFlowHandler {
     constructor();

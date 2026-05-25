@@ -9,6 +9,11 @@ const flow_handler_1 = require("./flow-handler");
 const project_context_1 = require("./project-context");
 const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
+function nonEmptyStringOrNull(v) {
+    if (typeof v === 'string' && v.trim().length > 0)
+        return v;
+    return null;
+}
 class FlowABrandVerifyHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowA_brand_verify');
@@ -94,7 +99,7 @@ class FlowABrandVerifyHandler extends flow_handler_1.BaseFlowHandler {
                 'Brand metadata:',
                 `  Users: ${productMetadata.users || 'Not specified'}`,
                 `  Purpose: ${productMetadata.purpose || 'Not specified'}`,
-                `  Personality: ${productMetadata.brand_personality || productMetadata.brandPersonality || 'Not specified'}`,
+                `  Personality: ${nonEmptyStringOrNull(productMetadata.brandPersonality) || nonEmptyStringOrNull(productMetadata.brand_personality) || 'Not specified'}`,
                 '',
                 ...(preflightIssues.length > 0 ? ['Pre-flight warnings:'] : []),
                 ...preflightIssues,
@@ -154,16 +159,22 @@ class FlowABrandVerifyHandler extends flow_handler_1.BaseFlowHandler {
         for (const [domainKey, domain] of Object.entries(design_laws_1.SHARED_DESIGN_LAWS)) {
             laws.push(`${domain.domain} (${domain.rules.length} rules)`);
         }
-        // Add register-specific context
+        // Add register-specific context (null-safe: register may be undefined when called
+        // from the orchestrator's prerequisite-chain path before context enrichment).
         const registerLaws = design_laws_1.REGISTER_SPECIFIC_LAWS[register];
-        laws.push(`Register-specific: ${registerLaws.description}`);
+        if (registerLaws) {
+            laws.push(`Register-specific: ${registerLaws.description}`);
+        }
+        else {
+            laws.push('Register-specific: (register not yet detected - run PRODUCT.md detection first)');
+        }
         return laws;
     }
     runPreflight(projectContext) {
         const issues = [];
         // Check for DESIGN.md
         if (!projectContext.loaded.designMd) {
-            issues.push('⚠️  DESIGN.md not found - run /impeccable document or create manually for full design system support');
+            issues.push('⚠️  DESIGN.md not found - run /sidecoach document or create manually for full design system support');
         }
         // Check for anti-references in PRODUCT.md
         if (!projectContext.product.anti_references && !projectContext.product.antiReferences) {
@@ -174,7 +185,7 @@ class FlowABrandVerifyHandler extends flow_handler_1.BaseFlowHandler {
             issues.push('⚠️  Strategic principles not defined - these guide design law application');
         }
         // Check for brand personality
-        if (!projectContext.product.brand_personality && !projectContext.product.brandPersonality) {
+        if (!nonEmptyStringOrNull(projectContext.product.brandPersonality) && !nonEmptyStringOrNull(projectContext.product.brand_personality)) {
             issues.push('⚠️  Brand personality not defined - tone/voice affects typography and color choices');
         }
         // Check for clear users definition
