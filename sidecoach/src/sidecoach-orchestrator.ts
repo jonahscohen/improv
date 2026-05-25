@@ -919,81 +919,99 @@ export class FlowExecutionEngine {
         const handler = this.handlers.get(flowId);
         if (!handler) continue;
 
-        // Check prerequisites before executing
-        const prerequisiteCheck = FlowPrerequisiteValidator.canExecute(flowId, historyEntries);
-        if (!prerequisiteCheck.canExecute) {
-          flowResults.push({
+        try {
+          // Check prerequisites before executing
+          const prerequisiteCheck = FlowPrerequisiteValidator.canExecute(flowId, historyEntries);
+          if (!prerequisiteCheck.canExecute) {
+            flowResults.push({
+              flowId,
+              flowName: flowId,
+              status: 'error',
+              message: `Flow prerequisites not met: ${prerequisiteCheck.reason}`,
+              guidance: [`Cannot execute ${flowId}: ${prerequisiteCheck.reason}`],
+              checklist: [],
+              error: prerequisiteCheck.reason,
+            } as FlowExecutionResult);
+            continue;
+          }
+
+          // Check context requirements
+          const contextCheck = FlowPrerequisiteValidator.validateContextRequirements(
             flowId,
-            flowName: flowId,
-            status: 'error',
-            message: `Flow prerequisites not met: ${prerequisiteCheck.reason}`,
-            guidance: [`Cannot execute ${flowId}: ${prerequisiteCheck.reason}`],
-            checklist: [],
-            error: prerequisiteCheck.reason,
-          } as FlowExecutionResult);
-          continue;
-        }
-
-        // Check context requirements
-        const contextCheck = FlowPrerequisiteValidator.validateContextRequirements(
-          flowId,
-          executionContext
-        );
-        if (!contextCheck.valid) {
-          flowResults.push({
-            flowId,
-            flowName: flowId,
-            status: 'error',
-            message: `Missing context: ${contextCheck.missing?.join(', ')}`,
-            guidance: [`Context requirements not met: ${contextCheck.missing?.join(', ')}`],
-            checklist: [],
-            error: `Missing: ${contextCheck.missing?.join(', ')}`,
-          } as FlowExecutionResult);
-          continue;
-        }
-
-        // Enrich context FIRST so canExecute sees the same data as execute (T11 carryover fix).
-        const enrichedCtx = this.enrichContextForHandler(executionContext, flowId);
-        if (handler.canExecute(enrichedCtx)) {
-          // Track flow entry in execution chain
-          this.contextManager.addToExecutionChain(flowId, flowId);
-
-          const result = await handler.execute(enrichedCtx);
-
-          // Track flow completion and store metadata
-          this.contextManager.completeInChain(
-            flowId,
-            result.status === 'success' ? 'completed' : 'error',
-            result.message
+            executionContext
           );
+          if (!contextCheck.valid) {
+            flowResults.push({
+              flowId,
+              flowName: flowId,
+              status: 'error',
+              message: `Missing context: ${contextCheck.missing?.join(', ')}`,
+              guidance: [`Context requirements not met: ${contextCheck.missing?.join(', ')}`],
+              checklist: [],
+              error: `Missing: ${contextCheck.missing?.join(', ')}`,
+            } as FlowExecutionResult);
+            continue;
+          }
 
-          // Store execution metadata in result
-          result.executionMetadata = {
-            executionChain: this.contextManager.getExecutionChain(),
-            executionDuration: this.contextManager.getExecutionDuration(flowId),
-          };
+          // Enrich context FIRST so canExecute sees the same data as execute (T11 carryover fix).
+          const enrichedCtx = this.enrichContextForHandler(executionContext, flowId);
+          if (handler.canExecute(enrichedCtx)) {
+            // Track flow entry in execution chain
+            this.contextManager.addToExecutionChain(flowId, flowId);
 
-          // Sprint 7 T6: ClaudemdMandate validation for single-flow execution path.
-          if (result.status === 'success') {
-            try {
-              const mandateReport = ClaudemdMandateValidator.validateOutput(result, executionContext);
-              result.validationResults = result.validationResults || [];
-              result.validationResults.push(ClaudemdMandateValidator.toValidationResult(mandateReport));
-            } catch (err) {
-              process.stderr.write(`[sidecoach] ClaudemdMandate validation failed (continuing): ${(err as Error).message}\n`);
+            const result = await handler.execute(enrichedCtx);
+
+            // Track flow completion and store metadata
+            this.contextManager.completeInChain(
+              flowId,
+              result.status === 'success' ? 'completed' : 'error',
+              result.message
+            );
+
+            // Store execution metadata in result
+            result.executionMetadata = {
+              executionChain: this.contextManager.getExecutionChain(),
+              executionDuration: this.contextManager.getExecutionDuration(flowId),
+            };
+
+            // Sprint 7 T6: ClaudemdMandate validation for single-flow execution path.
+            if (result.status === 'success') {
+              try {
+                const mandateReport = ClaudemdMandateValidator.validateOutput(result, executionContext);
+                result.validationResults = result.validationResults || [];
+                result.validationResults.push(ClaudemdMandateValidator.toValidationResult(mandateReport));
+              } catch (err) {
+                process.stderr.write(`[sidecoach] ClaudemdMandate validation failed (continuing): ${(err as Error).message}\n`);
+              }
+            }
+
+            this.runTasteValidationGate(flowId, executionContext, result);
+            this.recordFlowWithMemory(result);
+            flowResults.push(result);
+            if (!detectedFlow) {
+              detectedFlow = {
+                flowId,
+                flowName: result.flowName || flowId,
+                confidence: 1.0
+              };
             }
           }
-
-          this.runTasteValidationGate(flowId, executionContext, result);
-          this.recordFlowWithMemory(result);
-          flowResults.push(result);
-          if (!detectedFlow) {
-            detectedFlow = {
-              flowId,
-              flowName: result.flowName || flowId,
-              confidence: 1.0
-            };
-          }
+        } catch (err) {
+          // Sprint 9 T3: continue past errors so downstream flows still attempt.
+          // Dogfood showed flowH/flowI silently dropped from the chain when an
+          // earlier flow threw. Record the error as a flowResult entry and let
+          // the for-loop proceed to the next flow.
+          const message = (err as Error)?.message ?? String(err);
+          process.stderr.write(`[sidecoach] Flow ${flowId} threw (continuing chain): ${message}\n`);
+          flowResults.push({
+            flowId,
+            flowName: flowId,
+            status: 'error',
+            message: `Flow execution failed: ${message}`,
+            guidance: [`Flow ${flowId} threw an exception: ${message}`],
+            checklist: [],
+            error: String(err),
+          } as FlowExecutionResult);
         }
       }
       // Sprint 8 T7: append impeccable-verb guidance after the chain executes.
