@@ -66,6 +66,8 @@ const flow_handler_design_tokens_1 = require("./flow-handler-design-tokens");
 const flow_handler_component_implementation_1 = require("./flow-handler-component-implementation");
 const flow_handler_motion_integration_1 = require("./flow-handler-motion-integration");
 const flow_handler_accessibility_1 = require("./flow-handler-accessibility");
+const flow_handler_tactical_polish_1 = require("./flow-handler-tactical-polish");
+const flow_handler_responsive_validation_1 = require("./flow-handler-responsive-validation");
 const flow_handlers_tier3_tier4_1 = require("./flow-handlers-tier3-tier4");
 const flow_handlers_tier5_specialized_1 = require("./flow-handlers-tier5-specialized");
 const flow_handlers_curate_qa_1 = require("./flow-handlers-curate-qa");
@@ -130,10 +132,10 @@ class FlowExecutionEngine {
             ['flowH_motion_integration', () => new flow_handler_motion_integration_1.FlowHMotionIntegrationHandler()],
             ['flowI_accessibility', () => new flow_handler_accessibility_1.FlowIAccessibilityHandler()],
             // Tier 3: Polish/QA
-            ['flowJ_tactical_polish', () => new flow_handlers_tier3_tier4_1.FlowJTacticalPolishHandler()],
+            ['flowJ_tactical_polish', () => new flow_handler_tactical_polish_1.FlowJTacticalPolishHandler()],
             ['flowK_multi_lens_audit', () => new flow_handlers_tier3_tier4_1.FlowKMultiLensAuditHandler()],
             ['flowL_design_critique', () => new flow_handlers_tier3_tier4_1.FlowLDesignCritiqueHandler()],
-            ['flowM_responsive_validation', () => new flow_handlers_tier3_tier4_1.FlowMResponsiveValidationHandler()],
+            ['flowM_responsive_validation', () => new flow_handler_responsive_validation_1.FlowMResponsiveValidationHandler()],
             ['flowN_rapid_iteration_refined', () => new flow_handlers_tier3_tier4_1.FlowNRapidIterationHandler()],
             // Tier 4: Special
             ['flowO_clone_match_special', () => new flow_handlers_tier3_tier4_1.FlowOCloneMatchHandler()],

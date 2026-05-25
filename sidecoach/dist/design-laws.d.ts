@@ -229,6 +229,8 @@ export declare const CATEGORY_REFLEX: {
             ecommerce: string;
             healthcare: string;
             ai_workflows: string;
+            crypto: string;
+            productivity: string;
         };
     };
     second_order: {
@@ -237,6 +239,8 @@ export declare const CATEGORY_REFLEX: {
             'observability without dark blues': string;
             'fintech avoiding green': string;
             'ecommerce without red': string;
+            'AI workflow tool that is not SaaS-cream': string;
+            'productivity tool that is not Linear': string;
         };
     };
     oversaturated_families: string[];

@@ -1677,15 +1677,15 @@ const DOMAIN_RULES = [
     {
         id: 'WRITE_011',
         domain: 'ux-writing',
-        name: 'Capitalization Consistency',
-        description: 'Title case for headings, sentence case for body',
-        severity: 'low',
+        name: 'Sentence Case Consistency',
+        description: 'Sentence case everywhere: headings, body, labels. Title Case is banned (reads as marketing copy, not software).',
+        severity: 'medium',
         checkFunction: (ctx) => ({
             ruleId: 'WRITE_011',
             domain: 'ux-writing',
-            passed: ctx.htmlElement ? (['H1', 'H2', 'H3'].includes(ctx.htmlElement.tagName) || ctx.htmlElement.tagName === 'P') : false,
-            message: 'Capitalization should follow hierarchy',
-            remediation: 'Headings: Title Case, Body: Sentence case'
+            passed: ctx.htmlElement ? (['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(ctx.htmlElement.tagName) || ctx.htmlElement.tagName === 'P') : false,
+            message: 'Use sentence case throughout. Title Case In Every Header is a named slop pattern - reads as marketing template, not as software.',
+            remediation: 'Sentence case everywhere. Only proper nouns (names, brand) get capitalized inside a heading or body sentence. "Get started" not "Get Started"; "Frequently asked questions" not "Frequently Asked Questions".'
         })
     },
     // Performance Domain (9 rules)

@@ -1,13 +1,105 @@
 "use strict";
 // Flow J: Tactical Polish
 // 16-point refinement checklist: radius, optical, shadows, scale, transitions, hit areas, text wrap, smoothing
+// Plus linguistic-ban scan: detects slop words + rhetorical templates in project copy.
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FlowJTacticalPolishHandler = void 0;
 exports.createFlowJHandler = createFlowJHandler;
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const extended_domain_validator_1 = require("./extended-domain-validator");
 const polish_standard_validator_1 = require("./polish-standard-validator");
+const linguistic_ban_validator_1 = require("./linguistic-ban-validator");
+/**
+ * Scan all HTML files in a project directory for linguistic bans. Returns
+ * a per-file map of reports plus an aggregate.
+ *
+ * Walks the project root one level deep (no recursion into node_modules or
+ * dot-prefixed dirs). Skips files >2MB to avoid pathological inputs.
+ */
+function scanProjectCopy(projectPath) {
+    const perFile = new Map();
+    const totalFindings = [];
+    let candidates = [];
+    try {
+        const entries = fs.readdirSync(projectPath, { withFileTypes: true });
+        for (const entry of entries) {
+            if (entry.isDirectory()) {
+                if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === 'dist')
+                    continue;
+                try {
+                    const subEntries = fs.readdirSync(path.join(projectPath, entry.name), { withFileTypes: true });
+                    for (const sub of subEntries) {
+                        if (sub.isFile() && /\.(html?|md)$/i.test(sub.name)) {
+                            candidates.push(path.join(projectPath, entry.name, sub.name));
+                        }
+                    }
+                }
+                catch {
+                    // skip unreadable subdirs
+                }
+            }
+            else if (entry.isFile() && /\.(html?|md)$/i.test(entry.name)) {
+                candidates.push(path.join(projectPath, entry.name));
+            }
+        }
+    }
+    catch {
+        return { perFile, totalFindings };
+    }
+    for (const file of candidates) {
+        try {
+            const stat = fs.statSync(file);
+            if (stat.size > 2 * 1024 * 1024)
+                continue;
+            const content = fs.readFileSync(file, 'utf-8');
+            const report = (0, linguistic_ban_validator_1.scanForLinguisticBans)(content, path.relative(projectPath, file));
+            if (report.findings.length > 0) {
+                perFile.set(file, report);
+                totalFindings.push(...report.findings);
+            }
+        }
+        catch {
+            // skip unreadable file
+        }
+    }
+    return { perFile, totalFindings };
+}
 const TACTICAL_RULES = {
     radius: 'Concentric border radius: outer = inner + padding (e.g. button 8px + 4px padding = 12px container)',
     optical: 'Optical alignment: visual center differs from geometric center for circles/icons',
@@ -52,11 +144,23 @@ class FlowJTacticalPolishHandler extends flow_handler_1.BaseFlowHandler {
             const totalPassed = polishReport.passed + extendedReport.passed;
             const totalViolations = polishReport.violations + extendedReport.violations;
             const combinedPassRate = ((totalPassed / totalRules) * 100).toFixed(1);
+            // Linguistic-ban scan: walk the project's HTML/markdown copy and look
+            // for slop words + rhetorical templates. Closes the largest forensic
+            // gap: previously this validator had zero coverage of generated copy,
+            // so things like "Memory in layers. Not a feature, a discipline." and
+            // "Not a platform / Not a framework / Not for everyone" shipped without
+            // a finding. The scan is additive - file-system errors degrade
+            // gracefully and never break the chain.
+            const linguisticScan = scanProjectCopy(context.projectPath || process.cwd());
+            const linguisticP0 = linguisticScan.totalFindings.filter((f) => f.severity === 'P0').length;
+            const linguisticP1 = linguisticScan.totalFindings.filter((f) => f.severity === 'P1').length;
             const appliedRules = Object.entries(TACTICAL_RULES).map(([key, rule]) => ({
                 category: key,
                 rule,
             }));
             const checklist = this.createChecklist([
+                { label: `Linguistic ban scan: 0 P0 findings (rhetorical templates)${linguisticP0 === 0 ? ' - PASS' : ` - ${linguisticP0} P0 found`}`, required: true },
+                { label: `Linguistic ban scan: <= 2 P1 findings (slop words)${linguisticP1 <= 2 ? ' - PASS' : ` - ${linguisticP1} P1 found`}`, required: false },
                 { label: 'Scale on press: scale(0.96) for all interactive elements', required: true },
                 { label: 'Concentric border radius (outer = inner + padding)', required: true },
                 { label: 'Icon swaps via opacity+scale+blur, not visibility toggle', required: false },
@@ -74,10 +178,28 @@ class FlowJTacticalPolishHandler extends flow_handler_1.BaseFlowHandler {
                 { label: 'Optical alignment verified (icons, circles, text baselines)', required: false },
                 { label: 'All interactive elements provide tactile feedback', required: false },
             ]);
+            // Build linguistic-ban guidance lines from per-file reports
+            const linguisticGuidance = [];
+            if (linguisticScan.totalFindings.length === 0) {
+                linguisticGuidance.push('LINGUISTIC BAN SCAN: 0 findings. Project copy passes slop-word + rhetorical-template checks.');
+            }
+            else {
+                linguisticGuidance.push(`LINGUISTIC BAN SCAN: ${linguisticScan.totalFindings.length} findings across ${linguisticScan.perFile.size} files (P0: ${linguisticP0} rhetorical templates, P1: ${linguisticP1} slop words).`);
+                linguisticGuidance.push('P0 templates must be rewritten before sign-off. P1 slop words are strong recommendations to revise.');
+                linguisticGuidance.push('');
+                for (const [, report] of linguisticScan.perFile) {
+                    for (const line of (0, linguistic_ban_validator_1.findingsToGuidance)(report)) {
+                        linguisticGuidance.push(line);
+                    }
+                }
+            }
             const guidance = [
                 `Validation Matrix: 112-Rule Framework (${totalPassed}/${totalRules} rules pass - ${combinedPassRate}%)`,
                 '= 22-point Polish Standard (14 baseline + 8 proprietary)',
                 '+ 90-rule Extended Domain Validator (10 domains: 7 base + 3 new)',
+                '+ Linguistic Ban Scan (slop words + rhetorical templates)',
+                '',
+                ...linguisticGuidance,
                 '',
                 'POLISH STANDARD (22 rules):',
                 `- Polish: ${polishReport.passed}/${polishReport.totalRules} pass`,
@@ -136,14 +258,17 @@ class FlowJTacticalPolishHandler extends flow_handler_1.BaseFlowHandler {
                 .addMetric('passed-rules', totalPassed, 'pass', totalRules)
                 .addMetric('violation-count', totalViolations, 'warning')
                 .addMetric('pass-rate-percent', parseFloat(combinedPassRate), 'pass')
+                .addMetric('linguistic-p0-templates', linguisticP0, linguisticP0 === 0 ? 'pass' : 'fail')
+                .addMetric('linguistic-p1-slop-words', linguisticP1, linguisticP1 <= 2 ? 'pass' : 'warning')
                 .addValidation('Tactical polish checklist', 'pass', '16 principles documented')
                 .addValidation('Extended domain validation', 'pass', `${extendedReport.totalRules} rules across 10 domains`)
+                .addValidation('Linguistic ban scan', linguisticP0 === 0 ? 'pass' : 'fail', `${linguisticScan.totalFindings.length} findings across ${linguisticScan.perFile.size} files`)
                 .addArtifact('reference', totalRules);
             const result = {
                 flowId: this.flowId,
                 flowName: this.getFlowName(),
                 status: 'success',
-                message: `Tactical Polish workflow initialized - 112-rule validation matrix (${totalPassed}/${totalRules} pass)`,
+                message: `Tactical Polish: 112-rule matrix ${totalPassed}/${totalRules} pass. Linguistic ban: ${linguisticP0} P0 + ${linguisticP1} P1 findings across ${linguisticScan.perFile.size} files.`,
                 guidance,
                 checklist,
                 artifacts: [

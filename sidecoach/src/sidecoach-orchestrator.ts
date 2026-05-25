@@ -49,11 +49,11 @@ import { FlowFDesignTokensHandler } from './flow-handler-design-tokens';
 import { FlowGComponentImplementationHandler } from './flow-handler-component-implementation';
 import { FlowHMotionIntegrationHandler } from './flow-handler-motion-integration';
 import { FlowIAccessibilityHandler } from './flow-handler-accessibility';
+import { FlowJTacticalPolishHandler } from './flow-handler-tactical-polish';
+import { FlowMResponsiveValidationHandler } from './flow-handler-responsive-validation';
 import {
-  FlowJTacticalPolishHandler,
   FlowKMultiLensAuditHandler,
   FlowLDesignCritiqueHandler,
-  FlowMResponsiveValidationHandler,
   FlowNRapidIterationHandler,
   FlowOCloneMatchHandler,
   FlowPConstraintDesignHandler,

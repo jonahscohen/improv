@@ -316,6 +316,23 @@ export const SHARED_DESIGN_LAWS = {
 };
 
 // Category-Reflex Checks for AI Slop Detection
+//
+// The first-order check (color palette guessable from category) lives inline
+// here as a stable color-domain mapping.
+//
+// The second-order check (aesthetic family guessable from category + anti-references)
+// now pulls its `oversaturated_families` list from the absorbed library via
+// reference-loader, so the lanes that count as "saturated" stay in sync with
+// what we extracted from the predecessor's brand.md plus the emerging-lane
+// research (Linear-clean, Notion-clone-minimalism, Vercel-marketing,
+// Spotify-card-stack). Adding a new saturated lane is now an edit in one
+// place: src/reference-loader.ts:loadSaturatedAestheticLanes().
+import { loadSaturatedAestheticLanes } from './reference-loader';
+
+const SATURATED_LANE_STRINGS = loadSaturatedAestheticLanes().map(
+  (lane) => `${lane.name} (${lane.description}). Tells: ${lane.tells.join('; ')}`
+);
+
 export const CATEGORY_REFLEX = {
   first_order: {
     question: 'Can someone guess the color palette from the category alone?',
@@ -325,25 +342,21 @@ export const CATEGORY_REFLEX = {
       ecommerce: 'orange / red for CTAs is reflexive',
       healthcare: 'blue for trust / care is default',
       ai_workflows: 'cream / beige SaaS look is oversaturated',
+      crypto: 'neon-on-black is the immediate training-data default',
+      productivity: 'Linear-clean monochrome zinc/slate is the new reflex',
     },
   },
   second_order: {
     question: 'Can someone guess the aesthetic family from category + anti-references?',
     examples: {
-      'observability without dark blues': 'Still defaulting to minimalist monochrome',
-      'fintech avoiding green': 'Still using high-saturation color strategy',
-      'ecommerce without red': 'Still landing on standard gradient+shadow combos',
+      'observability without dark blues': 'Defaults to Linear-clean or editorial-typographic',
+      'fintech avoiding green': 'Defaults to Vercel-marketing gradient mesh or terminal-native',
+      'ecommerce without red': 'Defaults to Spotify-card-stack or acid-maximalism',
+      'AI workflow tool that is not SaaS-cream': 'Defaults to editorial-typographic',
+      'productivity tool that is not Linear': 'Defaults to Notion-clone-minimalism',
     },
   },
-  oversaturated_families: [
-    'SaaS cream (warm beige + rounded corners + subtle shadows)',
-    'Observability dark theme (dark blue + charts + minimal text)',
-    'FinTech trustworthy (navy + green + bold sans-serif)',
-    'Startup playful (bright colors + hand-drawn elements + emoji)',
-    'Minimal agency (sans-serif + white space + muted palette)',
-    'Enterprise formal (blue + gray + serif headlines)',
-    'AI gradient default (purple->blue gradient + dark background)',
-  ],
+  oversaturated_families: SATURATED_LANE_STRINGS,
 };
 
 // Register-Specific Laws

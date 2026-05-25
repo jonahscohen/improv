@@ -52,6 +52,7 @@ export const VERB_REGISTRY: Record<string, VerbCommandEntry> = {
       'flowG_component_implementation',
       'flowH_motion_integration',
       'flowI_accessibility',
+      'flowM_responsive_validation',
       'flowJ_tactical_polish',
     ],
     guidanceAppend: [
@@ -61,6 +62,7 @@ export const VERB_REGISTRY: Record<string, VerbCommandEntry> = {
       'Production bar enforced: real content, semantic-first markup, deliberate spacing, full state coverage.',
       'Motion integrated: easing tokens applied to interactive components, reduced-motion respected.',
       'Accessibility verified: WCAG 2.1 AA scan complete, contrast and focus ring checks passed.',
+      'Responsive verified: rendered at XS/SM/MD/LG/XL, 44x44 hit areas measured, nav pattern transitions confirmed, iOS svh/dvh checked.',
       'After the first pass, iterate visually against the brief and the approved direction; patch material defects and re-inspect.',
     ],
     parityChecklist: [
@@ -73,6 +75,7 @@ export const VERB_REGISTRY: Record<string, VerbCommandEntry> = {
       'Iterate Visually',
       'motion integrated',
       'accessibility verified',
+      'responsive verified',
     ],
     parityPlus: [
       'sidecoach brand verification gate',

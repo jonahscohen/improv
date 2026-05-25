@@ -1,6 +1,15 @@
 // Flow E: Motion Patterns
 // Research easing curves, timing, and stagger patterns against motion domain rules
-// Applies motion domain (duration, easing, reduced-motion) with exponential-only constraint
+// Applies motion domain (duration, easing, reduced-motion) with exponential-only constraint.
+//
+// As of the library-wiring pass, this flow imports the three prescribed
+// named easings (Emil Kowalski's --ease-out / --ease-in-out / --ease-drawer)
+// and the banned-easing list (built-in ease-in, bounce, elastic, back) from
+// reference-loader. The prescribed list is the canonical surface; the loose
+// pre-wiring check (`any cubic-bezier passes`) is replaced with strict
+// prescribed-or-banned validation per pattern. The Material curve
+// `cubic-bezier(0.4, 0, 0.2, 1)` is now an explicit non-recommendation
+// (passes but is flagged as weaker than prescribed).
 
 import { BaseFlowHandler, FlowExecutionContext, FlowExecutionResult, ChecklistItem } from './flow-handler';
 import { MotionReference, MotionPattern } from './reference-systems';
@@ -9,6 +18,7 @@ import { SHARED_DESIGN_LAWS } from './design-laws';
 import { FlowMemoryBuilder } from './flow-memory-schema';
 import { ExtendedDomainValidator, DomainCheckContext } from './extended-domain-validator';
 import { EnhancedFlowExecutionContext } from './flow-execution-context-enhanced';
+import { loadPrescribedEasings, loadBannedEasings } from './reference-loader';
 
 export interface MotionPatternContext {
   motionDomainRules: string[];
@@ -86,11 +96,24 @@ export class FlowEMotionPatternsHandler extends BaseFlowHandler {
         useCase: pattern.useCase,
       }));
 
-      // Validate motion patterns against motion laws (no layout-property animation, exponential easing only)
+      // Load the prescribed named easings (Emil's three strong curves) and
+      // banned-easing list from reference-loader. The prescribed list is the
+      // canonical set; anything not in it but still a cubic-bezier passes as
+      // "acceptable" but is flagged as weaker than the prescribed curves.
+      const prescribedEasings = loadPrescribedEasings();
+      const bannedEasings = loadBannedEasings();
+      const prescribedValues = new Set(prescribedEasings.map((e) => e.cssValue.replace(/\s+/g, '')));
+
+      // Validate motion patterns: each pattern's easing must be either one
+      // of the prescribed named curves OR another exponential cubic-bezier,
+      // and must not match any banned curve.
       const validationResults = [];
       for (const pattern of [...easingPatterns, ...motionPalette]) {
-        // Check if easing is exponential (cubic-bezier with exponential curve)
-        const isExponential = /cubic-bezier/.test(pattern.easing) || pattern.easing === 'ease-out' || pattern.easing === 'ease-in-out';
+        const normalizedEasing = pattern.easing.replace(/\s+/g, '');
+        const isPrescribed = prescribedValues.has(normalizedEasing);
+        const matchedBan = bannedEasings.find((b) => b.regex.test(pattern.easing));
+        const isCubicBezier = /cubic-bezier/.test(pattern.easing);
+        const isExponential = isPrescribed || (isCubicBezier && !matchedBan);
 
         // Get reduced motion alternative
         const reducedMotion = await this.motionRef.getReducedMotionAlternative(pattern);
@@ -100,6 +123,9 @@ export class FlowEMotionPatternsHandler extends BaseFlowHandler {
           hasReducedMotion: reducedMotion.reducedMotionFallback !== 'none',
           durationApropriate: pattern.duration > 0 && pattern.duration < 1000,
           easingExpOnential: isExponential,
+          easingPrescribed: isPrescribed,
+          easingBanned: !!matchedBan,
+          banReason: matchedBan?.reason,
         });
       }
 
@@ -159,10 +185,23 @@ export class FlowEMotionPatternsHandler extends BaseFlowHandler {
         '',
         'Domain Validation Results:',
         '',
+        'PRESCRIBED NAMED EASINGS (use these by name, do not improvise):',
+        ...prescribedEasings.map((e) => `- ${e.name}: ${e.cssValue}`),
+        ...prescribedEasings.map((e) => `  Use case: ${e.use}`),
+        '',
+        'BANNED EASINGS (will be flagged as findings if generated):',
+        ...bannedEasings.map((b) => `- ${b.reason}`),
+        '',
         'Exponential-Only Easing:',
         'Only cubic-bezier curves with exponential curves (out-quart, out-quint, etc.)',
         'NO linear, ease-in, step functions, or bounce/elastic',
         'Rationale: exponential curves feel natural (deceleration after force)',
+        '',
+        'FREQUENCY-FIRST DECISION (Emil Kowalski):',
+        'Before specifying any animation, answer: "How many times per day will the user see this?"',
+        '- 100+/day (cmd+k, dock, nav, primary CTA) -> NO animation. Ever. The optimal experience is instant.',
+        '- 10-100/day (modals, panels, secondary nav) -> Subtle, fast (100-200ms).',
+        '- <10/day (page transitions, onboarding, settings) -> Generous, expressive motion permitted.',
         '',
         'Layout Property Animation FORBIDDEN:',
         'Never animate width, height, top, left, margin, padding, font-size',
