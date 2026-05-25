@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>reference - the full kit and kaboodle | claude-dotfiles</title>
+  <meta name="description" content="The comprehensive reference for every component of claude-dotfiles. Tab through improv, sidecoach, memory, cmux, voice, discord, hooks, impeccable, and validation-guard." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="container">
+    <header class="topbar">
+      <a class="wordmark" href="index.html" aria-label="Yes&amp; - claude-dotfiles">
+        <img class="wordmark__img" src="assets/yes-and-logo-light.webp" alt="Yes&amp;" width="86" height="42" />
+      </a>
+      <nav aria-label="Primary">
+        <a href="improv.html">improv</a>
+        <a href="sidecoach.html">sidecoach</a>
+        <a href="memory.html">memory</a>
+        <a href="reference.html" aria-current="page">reference</a>
+        <a href="https://github.com/jonahscohen/claude-dotfiles" rel="noreferrer noopener">GitHub</a>
+      </nav>
+    </header>
+  </div>
+
+  <main id="main">
+    <section class="page-hero">
+      <div class="container">
+        <p class="page-hero__tag stagger" style="--i: 0">reference</p>
+        <h1 class="page-hero__title stagger" style="--i: 1">The whole kit. <span style="text-decoration: underline; text-decoration-color: var(--color-red); text-decoration-thickness: 4px; text-underline-offset: 0.1em;">Every component, documented.</span></h1>
+        <p class="page-hero__lede stagger" style="--i: 2">
+          Tab through every component shipped in the dotfiles. Install, usage, commands, examples, and links to the source. No marketing, just specifics.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="reference">
+          <nav class="reference__tabs" role="tablist" aria-label="Component reference">
+            <button class="reference__tab" role="tab" aria-selected="true" aria-controls="panel-improv" id="tab-improv" data-tab="improv">improv</button>
+            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-sidecoach" id="tab-sidecoach" data-tab="sidecoach">sidecoach</button>
+            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-memory" id="tab-memory" data-tab="memory">memory</button>
+            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-cmux" id="tab-cmux" data-tab="cmux">cmux</button>
+            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-voice" id="tab-voice" data-tab="voice">voice</button>
+            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-discord" id="tab-discord" data-tab="discord">discord</button>
+            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-hooks" id="tab-hooks" data-tab="hooks">hooks</button>
+            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-impeccable" id="tab-impeccable" data-tab="impeccable">impeccable</button>
+            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-guard" id="tab-guard" data-tab="guard">validation-guard</button>
+          </nav>
+
+          <div class="reference__panels">
+
+            <!-- improv -->
+            <section class="reference__panel" id="panel-improv" role="tabpanel" aria-labelledby="tab-improv" data-active="true">
+              <header>
+                <h2>improv</h2>
+                <p>A two-pane visual editor that watches your live UI. Direct manipulation in the browser, no synthetic events, your dev server stays the source of truth.</p>
+              </header>
+
+              <h3>Install</h3>
+              <pre><code>./install.sh --only improv</code></pre>
+              <p>The installer wires the editor extension, the MCP server registration in <code>~/.claude/settings.json</code>, and the watch loop. Symlinks the source into <code>~/.claude/skills/improv/</code> so future dotfiles pulls pick up upstream changes.</p>
+
+              <h3>How it works</h3>
+              <p>Two surfaces: the browser preview (a regular iframe pointed at your dev server) and the property panel (an inspector docked to the right edge). The editor extension lights up an element on click and translates property-panel writes into live CSS through your dev server's hot module reload.</p>
+              <p>The MCP server exposes a small tool set to Claude: <code>get_selection</code>, <code>apply_changes</code>, <code>watch</code>, <code>respond</code>. These are what let Claude see what you're staring at and act on it without a screenshot round-trip.</p>
+
+              <h3>Commands</h3>
+              <ul>
+                <li><code>improv start</code> - boots the preview pane and registers the watch loop with the running session</li>
+                <li><code>improv stop</code> - tears down the loop and unregisters the watch</li>
+                <li><code>improv status</code> - prints the current selection, queue length, and connection state</li>
+              </ul>
+
+              <h3>Posture</h3>
+              <ul>
+                <li>No synthetic events - clicks are real clicks, keypresses are real keypresses</li>
+                <li>No imposed design system - reads your DESIGN.md tokens, falls back to free input with a console warning</li>
+                <li>No remote - the editor runs in your browser against your dev server; nothing leaves the machine</li>
+                <li>Selection survives context compactions and session restarts</li>
+              </ul>
+
+              <h3>Source</h3>
+              <p><a href="https://github.com/jonahscohen/claude-dotfiles/tree/main/improv" rel="noreferrer noopener">github.com/jonahscohen/claude-dotfiles/tree/main/improv</a></p>
+            </section>
+
+            <!-- sidecoach -->
+            <section class="reference__panel" id="panel-sidecoach" role="tabpanel" aria-labelledby="tab-sidecoach">
+              <header>
+                <h2>sidecoach</h2>
+                <p>An opinionated design orchestrator. Eight craft flows, 22 verb commands, 159 validators across ten design domains. The replacement for Impeccable.</p>
+              </header>
+
+              <h3>Install</h3>
+              <pre><code>./install.sh --only sidecoach
+# Add PRODUCT.md and DESIGN.md to your project root
+/sidecoach craft .</code></pre>
+
+              <h3>The craft chain</h3>
+              <p>When you run <code>/sidecoach craft</code> against a project, the chain executes in dependency order:</p>
+              <ul>
+                <li><code>flowA_brand_verify</code> - reads PRODUCT.md, resolves register (brand vs product), caches design laws</li>
+                <li><code>flowB_component_research</code> - pulls component patterns vetted against AI-slop heuristics</li>
+                <li><code>flowE_motion_patterns</code> - researches easing curves, exponential-only, with six reduced-motion strategies</li>
+                <li><code>flowF_design_tokens</code> - validates DESIGN.md across all seven design domains</li>
+                <li><code>flowG_component_implementation</code> - generates token-backed component specs with eight interaction states</li>
+                <li><code>flowH_motion_integration</code> - wires motion into components with stack-aware templates</li>
+                <li><code>flowI_accessibility</code> - seven WCAG 2.1 AA domain audits with a screen reader testing plan</li>
+                <li><code>flowJ_tactical_polish</code> - sixteen-point refinement pass</li>
+              </ul>
+
+              <h3>Verb commands</h3>
+              <p>Twenty-two slash commands matching Impeccable's surface command-for-command:</p>
+              <pre><code>/sidecoach craft     /sidecoach polish    /sidecoach audit
+/sidecoach critique  /sidecoach shape     /sidecoach typeset
+/sidecoach layout    /sidecoach adapt     /sidecoach clarify
+/sidecoach optimize  /sidecoach harden    /sidecoach onboard
+/sidecoach extract   /sidecoach live      /sidecoach teach
+/sidecoach document  /sidecoach help</code></pre>
+
+              <h3>Validator framework</h3>
+              <p>159 rules across the polish standard (22) and extended domains (137). Each validator has a soft-fail mode that records findings in the build report under the relevant domain's letter grade.</p>
+
+              <h3>Posture</h3>
+              <ul>
+                <li>No fabricated icons - SVG paths must come byte-for-byte from a registered library source</li>
+                <li>No hardcoded colors - every CSS value resolves through a DESIGN.md token</li>
+                <li>No "request a demo" - the category-reflex detector watches for AI-template phrases</li>
+                <li>No silent failures - the chain doesn't half-finish; missing prereqs raise structured errors</li>
+              </ul>
+
+              <h3>Source</h3>
+              <p><a href="https://github.com/jonahscohen/claude-dotfiles/tree/main/sidecoach" rel="noreferrer noopener">github.com/jonahscohen/claude-dotfiles/tree/main/sidecoach</a></p>
+            </section>
+
+            <!-- memory -->
+            <section class="reference__panel" id="panel-memory" role="tabpanel" aria-labelledby="tab-memory">
+              <header>
+                <h2>memory</h2>
+                <p>A layered, file-based memory system. Five durability levels, typed frontmatter, a small relationship graph, indexed in a file you actually read.</p>
+              </header>
+
+              <h3>Layers</h3>
+              <ul>
+                <li><code>TaskCreate / TaskUpdate</code> - in-session ephemeral task tracking, lives for one conversation</li>
+                <li><code>.claude/memory/*.md</code> - per-task notes, persistent in the repo, written after every discrete change</li>
+                <li><code>.claude/memory/MEMORY.md</code> - one-line index loaded at every session start</li>
+                <li>Dotfiles git sync - the entire <code>.claude</code> directory ships with the repo</li>
+                <li><code>~/.claude/projects/&lt;path&gt;/memory/</code> - the auto-memory store with five frontmatter types</li>
+              </ul>
+
+              <h3>Frontmatter types</h3>
+              <ul>
+                <li><code>user</code> - facts about the human collaborator</li>
+                <li><code>feedback</code> - corrections AND validated approaches with Why + How-to-apply</li>
+                <li><code>project</code> - in-flight work state, dated absolutely</li>
+                <li><code>decision</code> - resolved trade-offs with rejected alternatives and revisit conditions</li>
+                <li><code>reference</code> - pointers to external systems (Linear, Grafana, etc.)</li>
+              </ul>
+
+              <h3>Relationship fields</h3>
+              <ul>
+                <li><code>relates_to</code> - list of memories sharing topic or context</li>
+                <li><code>supersedes</code> - this memory replaces an older file (which gets a matching <code>superseded_by</code>)</li>
+                <li><code>superseded_by</code> - the back-link, set when this memory is replaced</li>
+              </ul>
+
+              <h3>The discipline</h3>
+              <ul>
+                <li>Write per task, not per session - batching loses work when the session ends unexpectedly</li>
+                <li>No permission gate - settings grant standing write access; never ask "should I save this?"</li>
+                <li>Self-analysis after every correction - feedback memories include the failure mode, not just the fix</li>
+                <li>Write-time link check - update <code>relates_to</code> and <code>supersedes</code> as the file is written, not in a separate pass</li>
+              </ul>
+
+              <h3>Source</h3>
+              <p><a href="memory.html">The memory subpage</a> covers the layered system in more depth.</p>
+              <p><a href="https://github.com/jonahscohen/claude-dotfiles/tree/main/claude/memory" rel="noreferrer noopener">github.com/jonahscohen/claude-dotfiles/tree/main/claude/memory</a></p>
+            </section>
+
+            <!-- cmux -->
+            <section class="reference__panel" id="panel-cmux" role="tabpanel" aria-labelledby="tab-cmux">
+              <header>
+                <h2>cmux</h2>
+                <p>A multi-pane terminal surface with a built-in browser pane and markdown renderer. The visual-verification path for any UI work.</p>
+              </header>
+
+              <h3>Install</h3>
+              <pre><code>./install.sh --only cmux</code></pre>
+
+              <h3>Browser pane</h3>
+              <p>Each project has its own cmux browser surface, declared in the project's memory directory. Screenshot, navigate, click - the verification commands round-trip through a real headless browser.</p>
+              <pre><code>cmux browser --surface &lt;id&gt; screenshot --out /tmp/page.png
+cmux browser --surface &lt;id&gt; navigate "http://localhost:3000"
+cmux browser --surface &lt;id&gt; snapshot --interactive</code></pre>
+
+              <h3>Markdown panes</h3>
+              <p>Open documents inline rather than launching an editor. cmux renders markdown natively in a dedicated surface.</p>
+              <pre><code>cmux open /absolute/path/to/document.md</code></pre>
+
+              <h3>Why it matters</h3>
+              <p>cmux is the surface where the verification protocol gets enforced. Screenshots saved to <code>/tmp</code> get tracked by a hook so they can't be claimed-verified without being read.</p>
+
+              <h3>Source</h3>
+              <p><a href="https://github.com/jonahscohen/claude-dotfiles/tree/main/cmux" rel="noreferrer noopener">github.com/jonahscohen/claude-dotfiles/tree/main/cmux</a></p>
+            </section>
+
+            <!-- voice -->
+            <section class="reference__panel" id="panel-voice" role="tabpanel" aria-labelledby="tab-voice">
+              <header>
+                <h2>voice</h2>
+                <p>Whisper.cpp transcription plus OpenAI TTS. Voice memos in, voice notes back. Built around the Discord bridge but works anywhere.</p>
+              </header>
+
+              <h3>Install</h3>
+              <pre><code>./install.sh --only voice-input voice-output</code></pre>
+              <p>Installs whisper.cpp locally, downloads the ggml-base.en model, registers the OpenAI TTS MCP server, and symlinks the <code>~/.claude/transcribe</code> CLI.</p>
+
+              <h3>Transcribe an audio file</h3>
+              <pre><code>~/.claude/transcribe /path/to/audio.ogg
+# Stdout: the transcript
+# Stderr: ffmpeg diagnostics</code></pre>
+              <p>Supports OGG/Opus (Discord voice memos), m4a (iOS), mp3, flac, wav. Auto-converts to 16 kHz mono PCM via ffmpeg before whisper.</p>
+
+              <h3>Speak a response</h3>
+              <p>When voice output is unmuted (controlled by the <code>~/.claude/.voice-enabled</code> flag), the <code>mcp__voice-output__speak</code> tool generates spoken audio. The SessionStart <code>voice-mandate</code> hook injects the active mandate per turn so Claude knows whether to call it.</p>
+
+              <h3>Mid-session toggle</h3>
+              <pre><code># In the chat
+voice on
+voice off</code></pre>
+
+              <h3>Source</h3>
+              <p><a href="https://github.com/jonahscohen/claude-dotfiles/tree/main/voice-input" rel="noreferrer noopener">github.com/jonahscohen/claude-dotfiles/tree/main/voice-input</a></p>
+            </section>
+
+            <!-- discord -->
+            <section class="reference__panel" id="panel-discord" role="tabpanel" aria-labelledby="tab-discord">
+              <header>
+                <h2>discord</h2>
+                <p>A state-aware Discord bot bridge. DM Claude from your phone, pair per user, no group chats. The launcher's prompt adapts to whether you have a token, paired users, both, or neither.</p>
+              </header>
+
+              <h3>Onboard a new machine</h3>
+              <pre><code>bash ~/.claude/discord-onboard.sh</code></pre>
+              <p>Walks you through either "I already have a Discord bot" (prompts for token) or "Walk me through making a new one" (numbered Developer Portal steps). Stores the token in macOS Keychain.</p>
+
+              <h3>Pair a user</h3>
+              <p>Start a Claude session with the Discord channel attached. DM the bot. It returns a 6-character pairing code. Run <code>/discord:access pair &lt;code&gt;</code> in the terminal session. The bot writes a one-shot signal file at <code>~/.claude/channels/discord/approved/&lt;userId&gt;</code> containing the chat ID, and re-arms its in-memory allowlist on its next poll.</p>
+
+              <h3>Voice-on-Discord</h3>
+              <p>Discord voice memos arrive as OGG attachments. The transcribe script ingests them automatically. Claude replies in text or, when voice output is active, attaches a generated OGG voice note.</p>
+
+              <h3>Recovery</h3>
+              <p>If the bot restarts and the in-memory allowlist drops out of sync with <code>access.json</code>, run <code>bash ~/.claude/discord-onboard.sh --repair</code>. It walks the allowFrom list and prompts for the chat_id of any user missing a marker, then writes the file.</p>
+
+              <h3>Source</h3>
+              <p><a href="https://github.com/jonahscohen/claude-dotfiles/tree/main/discord" rel="noreferrer noopener">github.com/jonahscohen/claude-dotfiles/tree/main/discord</a></p>
+            </section>
+
+            <!-- hooks -->
+            <section class="reference__panel" id="panel-hooks" role="tabpanel" aria-labelledby="tab-hooks">
+              <header>
+                <h2>hooks</h2>
+                <p>The enforcement layer. A dozen pre- and post-tool hooks that turn team-rule violations into actual blocks rather than gentle reminders.</p>
+              </header>
+
+              <h3>Content guards</h3>
+              <ul>
+                <li><code>content-guard.sh</code> - blocks emojis, em-dashes, AI-attribution lines, legacy model IDs in file writes</li>
+                <li><code>bash-guard.sh</code> - same patterns in bash commands plus force-push protection and JS-validation-bypass detection</li>
+              </ul>
+
+              <h3>Discipline reminders</h3>
+              <ul>
+                <li><code>memory-nudge.sh</code> - fires after Write/Edit/MultiEdit to non-memory files; reminds the dirty-state memory write</li>
+                <li><code>verify-manual.sh</code> - clears the screenshot-pending flag when the user types "verified"</li>
+                <li><code>screenshot-open-mandate.sh</code> - sets a pending flag when a screenshot is captured but not Read</li>
+                <li><code>validation-guard.sh</code> - blocks synthetic clicks, dispatched events, getComputedStyle probes during validation</li>
+              </ul>
+
+              <h3>Voice and Discord</h3>
+              <ul>
+                <li><code>voice-mandate.sh</code> - SessionStart hook that injects voice availability + mute state into context</li>
+                <li><code>voice-toggle.sh</code> - UserPromptSubmit hook that flips the mute flag on "voice on" / "voice off"</li>
+                <li><code>resume-guard.sh</code> - SessionEnd hook that blocks cmux auto-resume unless toggled</li>
+              </ul>
+
+              <h3>Override protocol</h3>
+              <p>Hooks block. When a legitimate edit needs to write the exact patterns the hooks reject (documentation that quotes a forbidden phrase, hook source that references its own blockers), ask the user for permission to bypass rather than rephrasing. Some gates can be suppressed for a window via <code>touch ~/.claude/.suppress-fix-gate</code>.</p>
+
+              <h3>Source</h3>
+              <p><a href="https://github.com/jonahscohen/claude-dotfiles/tree/main/claude/hooks" rel="noreferrer noopener">github.com/jonahscohen/claude-dotfiles/tree/main/claude/hooks</a></p>
+            </section>
+
+            <!-- impeccable -->
+            <section class="reference__panel" id="panel-impeccable" role="tabpanel" aria-labelledby="tab-impeccable">
+              <header>
+                <h2>impeccable</h2>
+                <p>The pre-sidecoach design plugin. Still installed for now, increasingly shadowed by sidecoach. New design work should go through <code>/sidecoach</code>.</p>
+              </header>
+
+              <h3>What it still does</h3>
+              <p>impeccable ships 22 slash commands and an auto-triggered <code>make-interfaces-feel-better</code> skill. The 23 commands cover design briefs (<code>teach</code>, <code>document</code>), implementation (<code>craft</code>, <code>shape</code>), and refinement (<code>polish</code>, <code>audit</code>, <code>critique</code>).</p>
+
+              <h3>Why it's being shadowed</h3>
+              <p>impeccable was the inspiration and the testing ground. sidecoach inherits its verb surface but adds the chain executor, the validator framework, the build report, the project-context loader, and a tested dogfood loop. As sidecoach reaches feature parity (currently complete for the verb commands and chain), impeccable becomes documentation that sidecoach uses for reference rather than runtime infrastructure.</p>
+
+              <h3>Will it be removed</h3>
+              <p>Eventually, yes. There's no scheduled date. The team rules will be updated when sidecoach can fully drop impeccable's PRODUCT.md / DESIGN.md tooling and the make-interfaces-feel-better skill.</p>
+
+              <h3>Source</h3>
+              <p><a href="https://github.com/jonahscohen/claude-dotfiles/tree/main/impeccable" rel="noreferrer noopener">github.com/jonahscohen/claude-dotfiles/tree/main/impeccable</a></p>
+            </section>
+
+            <!-- validation-guard -->
+            <section class="reference__panel" id="panel-guard" role="tabpanel" aria-labelledby="tab-guard">
+              <header>
+                <h2>validation-guard</h2>
+                <p>A hook that turns "test like a user, not like a developer" into actual enforcement. Blocks synthetic clicks, dispatched events, private-API invocations, and DOM-state probing during validation.</p>
+              </header>
+
+              <h3>What it blocks</h3>
+              <ul>
+                <li><code>element.click()</code> - synthetic click on a DOM node</li>
+                <li><code>element.dispatchEvent(...)</code> - any synthesized event</li>
+                <li><code>obj._privateMethod(...)</code> - private API invocation</li>
+                <li><code>window.__app.method(...)</code> - application-namespace method calls</li>
+                <li><code>getComputedStyle</code>, <code>getBoundingClientRect</code>, <code>.scrollTop</code>, <code>.textContent</code> - DOM-state probes used to substitute for a screenshot</li>
+              </ul>
+
+              <h3>What it allows</h3>
+              <ul>
+                <li>cmux <code>click --selector</code>, <code>type --selector</code>, <code>press --key</code>, <code>screenshot</code></li>
+                <li>chrome MCP <code>left_click</code> with coordinates, <code>type</code>, <code>key</code>, <code>screenshot</code></li>
+                <li>Bundle setup (e.g., injecting a script tag a mixed-content page couldn't load) - that's setup, not validation</li>
+              </ul>
+
+              <h3>Escape hatches</h3>
+              <p>None. If a click can't reach what you need (shadow DOM with no exposed selector, element off-screen), stop and tell the user. The guard will block the workaround. The bug you're chasing may be exactly in the event path you'd skip.</p>
+
+              <h3>Source</h3>
+              <p><a href="https://github.com/jonahscohen/claude-dotfiles/blob/main/claude/hooks/validation-guard.sh" rel="noreferrer noopener">github.com/jonahscohen/claude-dotfiles/blob/main/claude/hooks/validation-guard.sh</a></p>
+            </section>
+
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="site-footer__row">
+        <span>Yes<span style="color: var(--color-red); font-style: italic;">&amp;</span> claude-dotfiles. Open source, MIT.</span>
+        <nav aria-label="Footer">
+          <a href="index.html">Home</a>
+          <a href="improv.html">improv</a>
+          <a href="sidecoach.html">sidecoach</a>
+          <a href="memory.html">memory</a>
+          <a href="https://github.com/jonahscohen/claude-dotfiles" rel="noreferrer noopener">GitHub</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ARIA tabs - keyboard navigation + click switches panel
+    (function () {
+      const tabs = Array.from(document.querySelectorAll('.reference__tab'));
+      const panels = Array.from(document.querySelectorAll('.reference__panel'));
+
+      function activate(tab, focus) {
+        const target = tab.getAttribute('aria-controls');
+        tabs.forEach(function (t) {
+          t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+          t.setAttribute('tabindex', t === tab ? '0' : '-1');
+        });
+        panels.forEach(function (p) {
+          p.setAttribute('data-active', p.id === target ? 'true' : 'false');
+        });
+        if (focus) tab.focus();
+        try {
+          const url = new URL(window.location);
+          url.hash = tab.dataset.tab || '';
+          history.replaceState(null, '', url);
+        } catch (e) { /* ignore */ }
+      }
+
+      tabs.forEach(function (tab, idx) {
+        tab.addEventListener('click', function () { activate(tab, false); });
+        tab.addEventListener('keydown', function (e) {
+          let next = null;
+          if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+            next = tabs[(idx + 1) % tabs.length];
+          } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+            next = tabs[(idx - 1 + tabs.length) % tabs.length];
+          } else if (e.key === 'Home') {
+            next = tabs[0];
+          } else if (e.key === 'End') {
+            next = tabs[tabs.length - 1];
+          }
+          if (next) {
+            e.preventDefault();
+            activate(next, true);
+          }
+        });
+      });
+
+      // Honor a fragment if present on first load
+      const initial = window.location.hash ? window.location.hash.slice(1) : null;
+      if (initial) {
+        const match = tabs.find(function (t) { return t.dataset.tab === initial; });
+        if (match) activate(match, false);
+      }
+    })();
+  </script>
+</body>
+</html>
