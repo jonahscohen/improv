@@ -2,6 +2,7 @@
 // Prevents violations of team rules in all flow output
 
 import { FlowExecutionResult, FlowExecutionContext } from './flow-handler';
+import type { ValidationResult } from './flow-composition';
 
 export interface MandateViolation {
   rule: string;
@@ -201,6 +202,23 @@ export class ClaudemdMandateValidator {
     }
 
     return [];
+  }
+
+  static toValidationResult(report: MandateValidationResult): ValidationResult {
+    const allViolations = report.violations.concat(report.blockers);
+    const critical = allViolations.filter(v => v.severity === 'critical');
+    const warning = allViolations.filter(v => v.severity === 'warning');
+    const status: 'pass' | 'fail' | 'partial' =
+      critical.length > 0 ? 'fail' :
+      warning.length > 0 ? 'partial' :
+      'pass';
+    return {
+      domain: 'claudemd-mandate',
+      status,
+      passedRules: [],
+      failedRules: allViolations.map(v => `${v.severity}:${v.location}`),
+      message: allViolations.map(v => v.suggestion || v.rule).join('; ') || 'No violations',
+    };
   }
 
   static reportViolations(validation: MandateValidationResult): string {
