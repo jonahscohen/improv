@@ -25,13 +25,9 @@ Three small loose ends from Sprints 2-4:
 
 92 commits pushed to origin/main (last commit 8db330c). Sprint 7 close included. Initial push required HTTPS workaround (SSH key not configured on this machine). After the push, native git push/fetch were fixed: remote URL switched from SSH to HTTPS via `git remote set-url`, and `gh auth setup-git --hostname github.com` wired gh's keychain-stored token as the credential helper for github.com. Both global config (`~/.gitconfig`) and per-repo remote persist.
 
-### 3. Sync repo claude/settings.json to live state (QUEUED)
+### 3. Sync repo claude/settings.json to live state (DONE 2026-05-24, commit 89382ac)
 
-Discovered during the multiple-choice hardening (2026-05-24): `~/.claude/settings.json` (live) is heavily drifted from the repo's `claude/settings.json`. Many hooks are wired in live but missing from the repo copy (voice-gate, validation-guard, screenshot-mandate, second-fix-gate, sidecoach-postresponse, sidecoach-postuserp, the new multiple-choice-detect-stop, multiple-choice-inject-prompt, etc.).
-
-A fresh-machine install from the dotfiles repo would NOT get any of those hooks. Needs a careful manual merge: diff the two files, walk each event/hook, decide which to add to the repo, keep the JSON valid, then verify a clone-and-link produces the same live behavior.
-
-This is a multi-hour task, not a one-line fix. Schedule it as its own sprint.
+Hooks + permissions + enabledPlugins merged from live. Filters: excluded nyx telemetry, normalized absolute paths, stripped personal-preference top-level keys (mcpServers, voice, voiceEnabled, effortLevel). Decisions: enabledPlugins from REPO (more curated, matches CLAUDE.md); model updated to claude-opus-4-7[1m] (was outdated 4.6); reflect-nudge.sh added to both repo AND live (was in repo only, user authorized adding to both). Result: 27 hooks across 8 events. Fresh-machine installs now get current state.
 
 ### 4. Tackle 16 pre-existing sidecoach test failures (QUEUED)
 
