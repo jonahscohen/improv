@@ -48,6 +48,9 @@ export class IntentDetector {
       // Special: Curate & QA
       this.createFlowUDetector(),
       this.createFlowVDetector(),
+      // New: Landing & Copy
+      this.createFlowWDetector(),
+      this.createFlowXDetector(),
       // Legacy flows
       this.createFlow1Detector(),
       this.createFlow2Detector(),
@@ -725,6 +728,34 @@ export class IntentDetector {
         if (this.hasAny(u, ['qa', 'pipeline', 'full'])) {
           if (this.hasAny(u, ['chain', 'all flows', 'tiers', 'comprehensive'])) {
             return 0.8;
+          }
+        }
+        return 0;
+      },
+    };
+  }
+
+  private createFlowWDetector(): FlowDetector {
+    return {
+      flowId: 'flowW_landing_composition',
+      score: (u) => {
+        if (this.hasAny(u, ['landing', 'composition', 'compose'])) {
+          if (this.hasNone(u, ['research', 'reference', 'inspiration', 'component'])) {
+            return 0.8;
+          }
+        }
+        return 0;
+      },
+    };
+  }
+
+  private createFlowXDetector(): FlowDetector {
+    return {
+      flowId: 'flowX_copywriting',
+      score: (u) => {
+        if (this.hasAny(u, ['copywriting', 'copy', 'draft copy', 'headline', 'hero copy', 'section copy', 'marketing copy', 'tagline'])) {
+          if (this.hasNone(u, ['code', 'function', 'component'])) {
+            return 0.85;
           }
         }
         return 0;
