@@ -4,6 +4,7 @@
 // completion gate for flows that produce HTML (craft, clone-match, layout, polish).
 
 import * as fs from 'fs';
+import type { ValidationResult } from './flow-composition';
 
 export type TasteSeverity = 'error';
 
@@ -286,6 +287,20 @@ export function formatViolations(violations: TasteViolation[], filePath: string)
     lines.push('');
   }
   return lines.join('\n');
+}
+
+export function toValidationResult(violations: TasteViolation[]): ValidationResult {
+  const status: 'pass' | 'fail' | 'partial' =
+    violations.length > 0 ? 'fail' : 'pass';
+  return {
+    domain: 'taste',
+    status,
+    passedRules: [],
+    failedRules: violations.map(v => `${v.severity}:${v.ruleId}`),
+    message: violations.length === 0
+      ? 'No taste violations'
+      : violations.map(v => `[${v.ruleId}] ${v.message}`).join('; '),
+  };
 }
 
 if (require.main === module) {

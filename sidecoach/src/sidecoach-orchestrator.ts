@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { validateTaste, TasteViolation } from './taste-validator';
+import { validateTaste, TasteViolation, toValidationResult as tasteToValidationResult } from './taste-validator';
 import { createDetector, IntentDetector } from './intent-detector';
 import { FlowHandler, FlowExecutionContext, FlowExecutionResult, BaseFlowHandler } from './flow-handler';
 import { FlowId, MatchResult, DisambiguationResult } from './types';
@@ -499,6 +499,11 @@ export class FlowExecutionEngine {
     }
 
     const violations: TasteViolation[] = validateTaste(html, css);
+
+    // Sprint 7: always push a ValidationResult so BuildReport sees the outcome.
+    result.validationResults = result.validationResults || [];
+    result.validationResults.push(tasteToValidationResult(violations));
+
     if (violations.length === 0) return;
 
     const summary = violations
