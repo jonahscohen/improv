@@ -52,8 +52,6 @@ Next step: choose execution mode (subagent-driven vs inline) per writing-plans h
 
 TASKS.md skeleton seeded at repo root (Last ID: T-0000).
 
-Files touched:
-- `docs/superpowers/specs/2026-05-25-task-list-design.md` (new, then edited)
-- `.claude/memory/MEMORY.md` (one-line index pointer)
-- `docs/superpowers/plans/2026-05-25-task-list-skill.md` (new)
-- `TASKS.md` (new)
+## Task 2 complete
+
+SKILL.md written at claude/skills/task-list/SKILL.md (123 lines). Verification passed: correct head/tail, line count >100, zero emdashes, no self-attribution. Ready for commit.
