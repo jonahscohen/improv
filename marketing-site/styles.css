@@ -5,12 +5,12 @@
 :root {
   /* colors.brand */
   --color-red: #DC2618;
-  --color-ink: #1A1F1B;
+  --color-ink: #02272B;
   --color-cream: #F4EFE4;
   --color-paper: #FAF7EE;
 
   /* colors.text */
-  --text-primary: #1A1F1B;
+  --text-primary: #02272B;
   --text-secondary: #54564F;
   --text-tertiary: #8B8A82;
   --text-inverse: #F4EFE4;
@@ -18,11 +18,11 @@
   /* colors.surface */
   --surface-canvas: #F4EFE4;
   --surface-raised: #FAF7EE;
-  --surface-inverse: #1A1F1B;
+  --surface-inverse: #02272B;
 
   /* colors.border */
-  --border-soft: rgba(26, 31, 27, 0.08);
-  --border-firm: rgba(26, 31, 27, 0.16);
+  --border-soft: rgba(2, 39, 43, 0.08);
+  --border-firm: rgba(2, 39, 43, 0.16);
   --border-inverse: rgba(244, 239, 228, 0.12);
 
   /* colors.accent */
@@ -81,9 +81,9 @@
   --space-section: 96px;
 
   /* elevation */
-  --shadow-sm: 0 1px 2px rgba(26, 31, 27, 0.04), 0 1px 1px rgba(26, 31, 27, 0.06);
-  --shadow-md: 0 2px 8px rgba(26, 31, 27, 0.06), 0 1px 2px rgba(26, 31, 27, 0.08);
-  --shadow-lg: 0 8px 24px rgba(26, 31, 27, 0.08), 0 2px 6px rgba(26, 31, 27, 0.06);
+  --shadow-sm: 0 1px 2px rgba(2, 39, 43, 0.04), 0 1px 1px rgba(2, 39, 43, 0.06);
+  --shadow-md: 0 2px 8px rgba(2, 39, 43, 0.06), 0 1px 2px rgba(2, 39, 43, 0.08);
+  --shadow-lg: 0 8px 24px rgba(2, 39, 43, 0.08), 0 2px 6px rgba(2, 39, 43, 0.06);
 
   /* motion */
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
@@ -98,7 +98,59 @@
   /* layout */
   --container-outer: 1200px;
   --container-text: 740px;
+
+  /* component-level tokens (theme-aware so dark mode can override) */
+  --btn-primary-hover: #2A302B;
+  --color-scheme: light;
+
+  /* "on-inverse" tokens: text and surface accents used INSIDE a surface-inverse
+     region (section--ink, pre blocks, install-block). In light mode the inverse
+     surface is ink, so these are cream-alphas. They flip to ink-alphas in dark
+     mode so contrast is preserved when surface-inverse becomes cream. */
+  --text-on-inverse-secondary: rgba(244, 239, 228, 0.78);
+  --text-on-inverse-tertiary: rgba(244, 239, 228, 0.56);
+  --surface-on-inverse-subtle: rgba(244, 239, 228, 0.1);
 }
+
+/* Dark theme: invert surface + text tokens. Brand colors (red, ink, cream)
+   stay constant; semantic tokens flip so any component built on them
+   automatically reads correctly in both modes. Shadows use black for
+   visibility on dark surfaces; borders use cream-alpha. */
+:root[data-theme="dark"] {
+  /* surfaces */
+  --surface-canvas: #02272B;
+  --surface-raised: #0A3036;
+  --surface-inverse: #F4EFE4;
+
+  /* text */
+  --text-primary: #F4EFE4;
+  --text-secondary: rgba(244, 239, 228, 0.78);
+  --text-tertiary: rgba(244, 239, 228, 0.56);
+  --text-inverse: #02272B;
+
+  /* borders flip alpha source from ink to cream */
+  --border-soft: rgba(244, 239, 228, 0.08);
+  --border-firm: rgba(244, 239, 228, 0.16);
+  --border-inverse: rgba(2, 39, 43, 0.16);
+
+  /* shadows deepen with black (ink-tinted shadows disappear on ink surface) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.20), 0 1px 1px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.28), 0 1px 2px rgba(0, 0, 0, 0.20);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.36), 0 2px 6px rgba(0, 0, 0, 0.24);
+
+  /* component overrides */
+  --btn-primary-hover: #E5DDC8;
+  --color-scheme: dark;
+
+  /* On-inverse tokens flip: inverse surface is now cream, so text on it
+     must be ink-alphas; subtle surface accent likewise. */
+  --text-on-inverse-secondary: rgba(2, 39, 43, 0.78);
+  --text-on-inverse-tertiary: rgba(2, 39, 43, 0.56);
+  --surface-on-inverse-subtle: rgba(2, 39, 43, 0.1);
+}
+
+/* Tell the UA so native form controls + scrollbar follow the theme */
+html { color-scheme: var(--color-scheme); }
 
 /* Reset (light, targeted) */
 *,
@@ -240,6 +292,63 @@ p {
 .wordmark__img--lg {
   height: 36px;
 }
+
+/* Wordmark swap - light asset in light theme, dark asset in dark theme.
+   Both images are in the DOM so the swap is instant (no fetch on toggle). */
+.wordmark__img--dark { display: none; }
+:root[data-theme="dark"] .wordmark__img--light { display: none; }
+:root[data-theme="dark"] .wordmark__img--dark { display: block; }
+
+/* Right-side cluster: groups primary nav + theme-toggle + nav-toggle so
+   the topbar's flex space-between keeps wordmark on the left and all
+   controls on the right. */
+.topbar__cluster {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Theme toggle - shares ergonomics with .nav-toggle (44px hit area, focus
+   ring, scale-on-press). Shows the moon in light mode (affordance: "go
+   dark") and the sun in dark mode (affordance: "go light"). */
+.theme-toggle {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              transform var(--duration-medium) var(--ease-spring-quick);
+}
+
+.theme-toggle:hover {
+  background: var(--accent-red-subtle);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--color-red);
+  outline-offset: 3px;
+}
+
+.theme-toggle:active {
+  transform: scale(0.96);
+}
+
+.theme-toggle__icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.theme-toggle__icon--sun { display: none; }
+:root[data-theme="dark"] .theme-toggle__icon--sun { display: block; }
+:root[data-theme="dark"] .theme-toggle__icon--moon { display: none; }
 
 .topbar nav {
   display: flex;
@@ -585,12 +694,12 @@ p {
 }
 
 .btn--primary {
-  background: var(--color-ink);
-  color: var(--color-cream);
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
 }
 
 .btn--primary:hover {
-  background: #2A302B;
+  background: var(--btn-primary-hover);
 }
 
 .btn--secondary {
@@ -614,7 +723,7 @@ code {
 }
 
 .section--ink code {
-  background: rgba(244, 239, 228, 0.1);
+  background: var(--surface-on-inverse-subtle);
   color: var(--text-inverse);
 }
 
@@ -670,7 +779,7 @@ pre code {
 }
 
 .section--ink .section__lede {
-  color: rgba(244, 239, 228, 0.78);
+  color: var(--text-on-inverse-secondary);
 }
 
 /* Toolkit cards */
@@ -791,7 +900,7 @@ pre code {
 }
 
 .section--ink .feature-row__body p {
-  color: rgba(244, 239, 228, 0.78);
+  color: var(--text-on-inverse-secondary);
 }
 
 .feature-row__body p:last-child {
@@ -843,7 +952,7 @@ pre code {
 }
 
 .section--ink .minor-list__desc {
-  color: rgba(244, 239, 228, 0.72);
+  color: var(--text-on-inverse-secondary);
 }
 
 /* Footer */
@@ -908,6 +1017,32 @@ pre code {
   .tool-card:active,
   .install-block__copy:active {
     transform: none;
+  }
+}
+
+/* View Transitions theme reveal. The JS-side WAAPI animation drives the
+   clip-path on ::view-transition-new(root); these rules suppress the
+   default cross-fade and lock z-order so the new theme reveals over the
+   old one (rather than fading through it). Browsers without VT API
+   support skip this block entirely and the JS falls back to instant swap. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 0;
+}
+
+::view-transition-new(root) {
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
   }
 }
 
@@ -1082,13 +1217,13 @@ pre code {
 }
 
 .reference__tab[aria-selected="true"] {
-  background: var(--color-ink);
-  color: var(--color-cream);
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
 }
 
 .reference__tab[aria-selected="true"]:hover {
-  background: var(--color-ink);
-  color: var(--color-cream);
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
   opacity: 0.92;
 }
 
@@ -1226,8 +1361,8 @@ pre code {
   position: absolute;
   top: -100px;
   left: var(--space-4);
-  background: var(--color-ink);
-  color: var(--color-cream);
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
   padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-md);
   text-decoration: none;

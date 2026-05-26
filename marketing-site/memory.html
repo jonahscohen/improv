@@ -11,6 +11,17 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
 
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <script>
+    // Set data-theme BEFORE stylesheet loads to avoid FOUC. Reads
+    // localStorage('theme'), falls back to prefers-color-scheme.
+    (function () {
+      try {
+        var stored = localStorage.getItem('theme');
+        var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css" />
   <script src="nav.js" defer></script>
 </head>
@@ -20,18 +31,37 @@
   <div class="container">
     <header class="topbar">
       <a class="wordmark" href="index.html" aria-label="Yes&amp; - claude-dotfiles">
-        <img class="wordmark__img" src="assets/yes-and-logo-light.webp" alt="Yes&amp;" width="86" height="42" />
+        <img class="wordmark__img wordmark__img--light" src="assets/yes-and-logo-light.webp" alt="Yes&amp;" width="86" height="42" />
+        <img class="wordmark__img wordmark__img--dark" src="assets/yes-and-logo-dark.webp" alt="" aria-hidden="true" width="86" height="42" />
       </a>
-      <nav aria-label="Primary" id="primary-nav">
-        <a href="improv.html">improv</a>
-        <a href="sidecoach.html">sidecoach</a>
-        <a href="memory.html" aria-current="page">memory</a>
-        <a href="reference.html">reference</a>
-        <a href="https://github.com/jonahscohen/claude-dotfiles" rel="noreferrer noopener">GitHub</a>
-      </nav>
-      <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation menu">
-        <span class="nav-toggle__icon" aria-hidden="true"></span>
-      </button>
+      <div class="topbar__cluster">
+        <nav aria-label="Primary" id="primary-nav">
+          <a href="improv.html">improv</a>
+          <a href="sidecoach.html">sidecoach</a>
+          <a href="memory.html" aria-current="page">memory</a>
+          <a href="reference.html">reference</a>
+          <a href="https://github.com/jonahscohen/claude-dotfiles" rel="noreferrer noopener">GitHub</a>
+        </nav>
+        <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
+          <svg class="theme-toggle__icon theme-toggle__icon--moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+          </svg>
+          <svg class="theme-toggle__icon theme-toggle__icon--sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2" />
+            <path d="M12 20v2" />
+            <path d="m4.93 4.93 1.41 1.41" />
+            <path d="m17.66 17.66 1.41 1.41" />
+            <path d="M2 12h2" />
+            <path d="M20 12h2" />
+            <path d="m6.34 17.66-1.41 1.41" />
+            <path d="m19.07 4.93-1.41 1.41" />
+          </svg>
+        </button>
+        <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation menu">
+          <span class="nav-toggle__icon" aria-hidden="true"></span>
+        </button>
+      </div>
     </header>
   </div>
 
