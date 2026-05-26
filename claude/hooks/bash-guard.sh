@@ -88,13 +88,26 @@ fi
 # Validation-via-cmux-eval guard. The chrome MCP javascript_tool has its own
 # PreToolUse hook (validation-guard.sh) that blocks JS shortcutting real user
 # interactions. cmux runs through Bash, so it can sneak past that. Mirror the
-# same trigger-blocking patterns here so cmux eval can't be used to bypass.
+# full trigger-blocking patterns here so cmux eval can't be used to bypass.
+# The blocklist must stay equivalent in scope to validation-guard.sh -
+# any divergence becomes a bypass route. See CLAUDE.md Verification Protocol #2.
 #
 # Activates only when the command actually contains `cmux ... eval`. Setup
 # eval calls (bundle injection: document.createElement('script'), appendChild,
 # delete window.__improv) don't match these patterns and are allowed.
 if [ -z "$REASON" ] && echo "$CMD" | grep -qE 'cmux\b[^|;&]*\beval\b'; then
+  # Feature-detection signal: typeof checks, CSS.supports, `'feature' in window/document`,
+  # navigator.userAgent, and window.matchMedia are needed for capability detection
+  # (prefers-reduced-motion, prefers-color-scheme, View Transitions API, etc.) and
+  # don't expose DOM state. We allow these IFF the eval also doesn't match any
+  # blocked pattern below - mixing feature detection with DOM probing is still blocked.
+  CMUX_FEATURE_DETECT=false
+  if echo "$CMD" | grep -qE "\btypeof\s|CSS\.supports\(|'[a-zA-Z][a-zA-Z0-9_]*'\s+in\s+(window|document)|\"[a-zA-Z][a-zA-Z0-9_]*\"\s+in\s+(window|document)|navigator\.userAgent|window\.matchMedia\("; then
+    CMUX_FEATURE_DETECT=true
+  fi
+
   CMUX_TRIGGER_REASON=""
+  # --- write/invoke shortcuts (synthetic state mutation) ---
   if echo "$CMD" | grep -qE '\.click\(\s*\)'; then
     CMUX_TRIGGER_REASON="cmux eval contains synthetic .click() - bypasses the real click event path."
   elif echo "$CMD" | grep -qE '\.dispatchEvent\('; then
@@ -105,11 +118,39 @@ if [ -z "$REASON" ] && echo "$CMD" | grep -qE 'cmux\b[^|;&]*\beval\b'; then
     CMUX_TRIGGER_REASON="cmux eval invokes a method on the __improv application namespace - skips the user-facing path."
   elif echo "$CMD" | grep -qE '\._[a-zA-Z][a-zA-Z0-9_]*\.(push|splice|shift|unshift|pop)\s*\('; then
     CMUX_TRIGGER_REASON="cmux eval mutates a private application array - the user can't reach this without a real interaction."
-  elif echo "$CMD" | grep -qE 'getComputedStyle|getBoundingClientRect|\.scrollTop|\.scrollHeight|\.offsetHeight|\.textContent|\.innerHTML'; then
+  # --- read shortcuts (DOM inspection that isn't what a user sees) ---
+  elif echo "$CMD" | grep -qE 'getComputedStyle|getBoundingClientRect|\.scrollTop|\.scrollHeight|\.offsetHeight|\.offsetWidth|\.offsetLeft|\.offsetTop|\.clientWidth|\.clientHeight|\.scrollWidth|\.scrollLeft|\.textContent|\.innerHTML|\.innerText'; then
     CMUX_TRIGGER_REASON="cmux eval inspects DOM state via developer APIs (getComputedStyle/getBoundingClientRect/scroll dims/text content) - that's DevTools-grade probing, not what a user sees."
+  elif echo "$CMD" | grep -qE '\.style[\.\[]'; then
+    CMUX_TRIGGER_REASON="cmux eval reads element.style - inline-style inspection is a developer shortcut. Take a screenshot and verify the visual result."
+  elif echo "$CMD" | grep -qE '\.classList'; then
+    CMUX_TRIGGER_REASON="cmux eval inspects classList - CSS-class presence is a developer shortcut. Verify the visual effect via screenshot."
+  elif echo "$CMD" | grep -qE '\.className'; then
+    CMUX_TRIGGER_REASON="cmux eval reads className - class-name inspection is a developer shortcut. Verify the visual result via screenshot."
+  elif echo "$CMD" | grep -qE '\.(hasAttribute|getAttribute)\('; then
+    CMUX_TRIGGER_REASON="cmux eval inspects DOM attributes (hasAttribute/getAttribute) - a developer shortcut. Interact with the element and verify its behavior like a user would."
+  elif echo "$CMD" | grep -qE '\.matches\('; then
+    CMUX_TRIGGER_REASON="cmux eval uses .matches() - a developer shortcut for selector validation. Verify the element visually."
+  elif echo "$CMD" | grep -qE '\.closest\('; then
+    CMUX_TRIGGER_REASON="cmux eval uses .closest() - a developer shortcut for DOM structure validation. Verify structure visually."
+  elif echo "$CMD" | grep -qE 'querySelectorAll\([^)]*\)\s*\.length'; then
+    CMUX_TRIGGER_REASON="cmux eval counts elements via querySelectorAll.length - a developer shortcut. Look at the page to see how many items are present."
+  elif echo "$CMD" | grep -qE 'querySelectorAll\([^)]*\)\s*\)\s*\.(forEach|map|filter|every|some|reduce)'; then
+    CMUX_TRIGGER_REASON="cmux eval iterates DOM query results - a developer inspection pattern. Navigate the page and verify each item visually."
+  elif echo "$CMD" | grep -qE 'window\.(innerWidth|innerHeight)'; then
+    CMUX_TRIGGER_REASON="cmux eval checks viewport dimensions - a developer shortcut. Use resize_window then screenshot to verify."
+  elif echo "$CMD" | grep -qE '(!!\s*document\.querySelector|document\.querySelector[^A]*\s*(!==?|===?)\s*null|Boolean\s*\(\s*document\.querySelector)'; then
+    CMUX_TRIGGER_REASON="cmux eval checks element existence via JS - a developer shortcut. Look at the page via screenshot to confirm the element is visible."
+  elif echo "$CMD" | grep -qE '\.(disabled|checked|selected)\b'; then
+    CMUX_TRIGGER_REASON="cmux eval reads form-element state (.disabled/.checked/.selected) - a developer shortcut. Click the form element and observe its behavior like a user would."
   fi
-  if [ -n "$CMUX_TRIGGER_REASON" ]; then
-    REASON="BLOCKED: $CMUX_TRIGGER_REASON Use cmux click/type/press/screenshot for real interactions. Use 'snapshot --interactive' for the element tree. Do not validate UI by directly invoking app methods or reading computed state - that proves nothing about what the human sees."
+
+  # Feature-detection early-exit: if the eval matched a feature-detection pattern
+  # AND did NOT match any blocked pattern above, allow it through silently.
+  if [ "$CMUX_FEATURE_DETECT" = true ] && [ -z "$CMUX_TRIGGER_REASON" ]; then
+    : # explicitly allow read-only feature detection
+  elif [ -n "$CMUX_TRIGGER_REASON" ]; then
+    REASON="BLOCKED: $CMUX_TRIGGER_REASON Use cmux click/type/press/screenshot for real interactions. Use 'snapshot --interactive' for the element tree. Do not validate UI by directly invoking app methods or reading computed state - that proves nothing about what the human sees. Read-only feature detection (typeof, CSS.supports, 'feat' in window, navigator.userAgent, window.matchMedia) is allowed if the eval does only that."
   fi
 fi
 

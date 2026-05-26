@@ -23,7 +23,11 @@ VERIFY_FLAG="$HOME/.claude/.needs-verification"
 
 INPUT=$(cat)
 printf '%s' "$INPUT" | python3 -c '
-import json, sys, os
+import json, sys, os, time
+
+# Debounce window: skip nudge text if a screenshot Read happened within this many seconds.
+# Flag-setting is unaffected; only the additionalContext string is suppressed.
+DEBOUNCE_SECONDS = 30
 
 try:
     data = json.load(sys.stdin)
@@ -32,6 +36,23 @@ except Exception:
 
 tool = data.get("tool_name", "")
 verify_flag = os.path.expanduser("~/.claude/.needs-verification")
+last_screenshot_read = os.path.expanduser("~/.claude/.last-screenshot-read")
+
+def recently_verified():
+    """True if a screenshot Read happened within DEBOUNCE_SECONDS."""
+    try:
+        mtime = os.path.getmtime(last_screenshot_read)
+    except (FileNotFoundError, OSError):
+        return False
+    return (time.time() - mtime) < DEBOUNCE_SECONDS
+
+def touch_last_screenshot_read():
+    try:
+        with open(last_screenshot_read, "a"):
+            pass
+        os.utime(last_screenshot_read, None)
+    except Exception:
+        pass
 
 # Code file extensions that require verification after change
 CODE_EXTS = {
@@ -132,6 +153,7 @@ if tool == "Read":
             os.remove(verify_flag)
         except FileNotFoundError:
             pass
+        touch_last_screenshot_read()
     print("{}"); sys.exit(0)
 
 # --- Handle Bash commands ---
@@ -158,6 +180,8 @@ if tool == "Bash":
             open(verify_flag, "w").close()
         except Exception:
             pass
+        if recently_verified():
+            print("{}"); sys.exit(0)
         print(json.dumps({
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
@@ -176,12 +200,15 @@ if is_code_file(file_path):
         open(verify_flag, "w").close()
     except Exception:
         pass
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "PostToolUse",
-            "additionalContext": "CODE FILE CHANGED. You MUST verify before reporting. Take a screenshot, EXAMINE it critically, and DESCRIBE what you see. Ask: does this match what was requested? Is anything overlapping, clipped, misaligned, or wrong? Element existence is not validation - visual correctness is. Do NOT claim completion without describing verified proof."
-        }
-    }))
+    if recently_verified():
+        print("{}")
+    else:
+        print(json.dumps({
+            "hookSpecificOutput": {
+                "hookEventName": "PostToolUse",
+                "additionalContext": "CODE FILE CHANGED. You MUST verify before reporting. Take a screenshot, EXAMINE it critically, and DESCRIBE what you see. Ask: does this match what was requested? Is anything overlapping, clipped, misaligned, or wrong? Element existence is not validation - visual correctness is. Do NOT claim completion without describing verified proof."
+            }
+        }))
 else:
     print("{}")
 '

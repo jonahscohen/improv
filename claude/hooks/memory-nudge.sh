@@ -10,7 +10,11 @@ DIRTY_FLAG="$HOME/.claude/.memory-dirty"
 
 INPUT=$(cat)
 printf '%s' "$INPUT" | python3 -c '
-import json, sys, os
+import json, sys, os, time
+
+# Debounce window: skip nudge text if a memory write happened within this many seconds.
+# Flag-setting is unaffected; only the additionalContext string is suppressed.
+DEBOUNCE_SECONDS = 30
 
 try:
     data = json.load(sys.stdin)
@@ -19,6 +23,23 @@ except Exception:
 
 tool = data.get("tool_name", "")
 dirty_flag = os.path.expanduser("~/.claude/.memory-dirty")
+last_memory_write = os.path.expanduser("~/.claude/.last-memory-write")
+
+def recently_satisfied():
+    """True if a memory write happened within DEBOUNCE_SECONDS."""
+    try:
+        mtime = os.path.getmtime(last_memory_write)
+    except (FileNotFoundError, OSError):
+        return False
+    return (time.time() - mtime) < DEBOUNCE_SECONDS
+
+def touch_last_memory_write():
+    try:
+        with open(last_memory_write, "a"):
+            pass
+        os.utime(last_memory_write, None)
+    except Exception:
+        pass
 
 # For Bash: check if command looks like it modifies files (not read-only)
 if tool == "Bash":
@@ -43,6 +64,7 @@ if tool == "Bash":
             os.remove(dirty_flag)
         except FileNotFoundError:
             pass
+        touch_last_memory_write()
         print("{}"); sys.exit(0)
 
     if is_write and not is_read:
@@ -50,6 +72,8 @@ if tool == "Bash":
             open(dirty_flag, "w").close()
         except Exception:
             pass
+        if recently_satisfied():
+            print("{}"); sys.exit(0)
         print(json.dumps({
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
@@ -73,6 +97,7 @@ if is_memory:
         os.remove(dirty_flag)
     except FileNotFoundError:
         pass
+    touch_last_memory_write()
     print("{}"); sys.exit(0)
 
 # Project file changed - set dirty flag and nudge
@@ -80,6 +105,9 @@ try:
     open(dirty_flag, "w").close()
 except Exception:
     pass
+
+if recently_satisfied():
+    print("{}"); sys.exit(0)
 
 print(json.dumps({
     "hookSpecificOutput": {

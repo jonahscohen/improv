@@ -27,6 +27,20 @@ except:
 REASON=""
 REMEDY=""
 
+# Feature-detection signal. Read-only capability checks (typeof, CSS.supports,
+# `'feature' in window/document`, navigator.userAgent, window.matchMedia) are
+# allowed because they don't expose DOM state - they're needed for things like
+# prefers-reduced-motion, prefers-color-scheme, View Transitions, etc. Mirror the
+# carve-out in bash-guard.sh so cmux eval and chrome MCP javascript_tool behave
+# identically. See CLAUDE.md Verification Protocol #2.
+#
+# The carve-out applies ONLY if the eval ALSO does not match any blocked pattern
+# below - mixing feature detection with DOM probing in one eval is still blocked.
+FEATURE_DETECT=false
+if echo "$JS_CODE" | grep -qE "\btypeof\s|CSS\.supports\(|'[a-zA-Z][a-zA-Z0-9_]*'\s+in\s+(window|document)|\"[a-zA-Z][a-zA-Z0-9_]*\"\s+in\s+(window|document)|navigator\.userAgent|window\.matchMedia\("; then
+  FEATURE_DETECT=true
+fi
+
 # getComputedStyle - checking CSS values programmatically
 if [ -z "$REASON" ] && echo "$JS_CODE" | grep -qE 'getComputedStyle'; then
   REASON="getComputedStyle is a developer shortcut, not a human validation method."
@@ -158,8 +172,18 @@ if [ -z "$REASON" ] && echo "$JS_CODE" | grep -qE '\._[a-zA-Z][a-zA-Z0-9_]*\.(pu
   REMEDY="Perform the user action that would cause this mutation (click a button, submit a form). If no user action causes this mutation, you're testing dead code."
 fi
 
+# Feature-detection override: if the eval ONLY does capability detection
+# (typeof / CSS.supports / 'feat' in window / navigator.userAgent / matchMedia)
+# AND no current pattern flagged it, treat as allowed. This is a defense in case
+# a future blocklist regex accidentally catches a benign feature-detection expression -
+# the early-exit prevents false positives without weakening the actual blocklist.
+if [ "$FEATURE_DETECT" = true ] && [ -z "$REASON" ]; then
+  echo '{}'
+  exit 0
+fi
+
 if [ -n "$REASON" ]; then
-  MSG="BLOCKED: $REASON Humans don't open DevTools to validate your work. $REMEDY"
+  MSG="BLOCKED: $REASON Humans don't open DevTools to validate your work. $REMEDY Read-only feature detection (typeof, CSS.supports, 'feat' in window, navigator.userAgent, window.matchMedia) is allowed if the eval does only that."
   python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$MSG"
 else
   echo '{}'
