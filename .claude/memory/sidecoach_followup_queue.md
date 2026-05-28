@@ -11,15 +11,15 @@ Established 2026-05-24 after Sprint 6 close. Jonah picked the carryover sweep fi
 
 ## Order of operations
 
-### 1. Carryover sweep (IN PROGRESS)
+### 1. Carryover sweep (DONE 2026-05-27, verified by Jonah)
 
-Three small loose ends from Sprints 2-4:
+All three loose ends closed in commits between 2026-05-24 and 2026-05-27. Verified by grepping current code (`main`, commit 128a9c1):
 
-- **Wire flowW + flowX into intent-detector.ts.** Currently the landing-composition (flowW) and copywriting (flowX) flows are reachable only via composite presets and direct flowId. Natural-language utterances like "compose landing page" or "draft hero copy" do not route to them. Need to add triggers + confidence rules in `sidecoach/src/intent-detector.ts` and write tests.
+- **Wire flowW + flowX into intent-detector.ts.** DONE. `flowW_landing_composition` at `intent-detector.ts:740`; `flowX_copywriting` at line 754 with triggers `copywriting`, `copy`, `draft copy`, `headline`, `hero copy`, `section copy`, `marketing copy`, `tagline`.
 
-- **Fix composite slash-command parser colon/space inconsistency.** Help text in `sidecoach-orchestrator.ts:480-482` advertises `composite:composite_X` syntax. The actual parser regex `^/(?:sidecoach\s+)?(\w+)(?:\s+(.*))?$` uses `\w+` which does NOT span colons. Either update help text to match the working space syntax or update the parser regex to accept colon. Decide during brainstorm.
+- **Fix composite slash-command parser colon/space inconsistency.** DONE. Parser regex moved to `slash-command-router.ts:38` and now reads `^\/(?:sidecoach\s+)?(\w+)(?::([\w-]+)|\s+(.*))?$` - explicitly accepts both `composite:foo` and `composite foo`. Help text at `sidecoach-orchestrator.ts:873-875` advertises the colon syntax and the parser handles it.
 
-- **Consume unstructured-validator output into BuildReport.** Today `build-report-aggregator.ts` only reads structured FlowMemoryEntry data (`validationResults`, `metrics`, `gates`). The ClaudemdMandate, PolishStandard, and Taste validators emit guidance lines in `result.guidance` / `result.message`. Parse those into BuildReport findings so they contribute to the verdict.
+- **Consume unstructured-validator output into BuildReport.** DONE in Sprint 7 T6. `build-report-aggregator.ts:138-160` reads `result.validationResults` (flow-composition ValidationResult shape) from ClaudemdMandate / PolishStandard / Taste validators pushed by the orchestrator. Severity scales by pass rate (>=90% info, 70-89% warning, <70% blocking). The header comment at lines 4-5 still says "out of scope" but is stale - the code below contradicts it. Minor doc-debt to clean up but functionally complete.
 
 ### 2. Push local main to origin (DONE 2026-05-24)
 
