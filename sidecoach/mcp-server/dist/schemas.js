@@ -13,7 +13,7 @@
 // both the raw shapes (for SDK registration) and the wrapped objects (for
 // internal validation in unit tests).
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TOOL_INPUT_SCHEMAS = exports.AstGrepInput = exports.astGrepShape = exports.AST_GREP_LANGUAGES = exports.StateListKeysInput = exports.stateListKeysShape = exports.StateDeleteInput = exports.stateDeleteShape = exports.StateGetInput = exports.stateGetShape = exports.StateSetInput = exports.stateSetShape = exports.GetFlowMetadataInput = exports.getFlowMetadataShape = exports.GetCheatsheetInput = exports.getCheatsheetShape = exports.GetCostLedgerInput = exports.getCostLedgerShape = exports.ValidateTasteInput = exports.validateTasteShape = exports.ValidateExtendedDomainInput = exports.validateExtendedDomainShape = exports.ValidatePolishInput = exports.validatePolishShape = exports.ResolveKeywordInput = exports.resolveKeywordShape = exports.ListFlowsInput = exports.listFlowsShape = exports.ListModesInput = exports.listModesShape = exports.ListVerbsInput = exports.listVerbsShape = void 0;
+exports.TOOL_INPUT_SCHEMAS = exports.LspWorkspaceSymbolsInput = exports.lspWorkspaceSymbolsShape = exports.LspDocumentSymbolsInput = exports.lspDocumentSymbolsShape = exports.LspFindReferencesInput = exports.lspFindReferencesShape = exports.LspGotoDefinitionInput = exports.lspGotoDefinitionShape = exports.LspHoverInput = exports.lspHoverShape = exports.LSP_LANGUAGES = exports.AstGrepInput = exports.astGrepShape = exports.AST_GREP_LANGUAGES = exports.StateListKeysInput = exports.stateListKeysShape = exports.StateDeleteInput = exports.stateDeleteShape = exports.StateGetInput = exports.stateGetShape = exports.StateSetInput = exports.stateSetShape = exports.GetFlowMetadataInput = exports.getFlowMetadataShape = exports.GetCheatsheetInput = exports.getCheatsheetShape = exports.GetCostLedgerInput = exports.getCostLedgerShape = exports.ValidateTasteInput = exports.validateTasteShape = exports.ValidateExtendedDomainInput = exports.validateExtendedDomainShape = exports.ValidatePolishInput = exports.validatePolishShape = exports.ResolveKeywordInput = exports.resolveKeywordShape = exports.ListFlowsInput = exports.listFlowsShape = exports.ListModesInput = exports.listModesShape = exports.ListVerbsInput = exports.listVerbsShape = void 0;
 const zod_1 = require("zod");
 // ---------------------------------------------------------------------------
 // Shared primitive bounds
@@ -256,6 +256,80 @@ exports.astGrepShape = {
 };
 exports.AstGrepInput = zod_1.z.object(exports.astGrepShape);
 // ---------------------------------------------------------------------------
+// Tools 16-20: LSP (T-0026)
+// ---------------------------------------------------------------------------
+// T-0026: shared LSP bounds. Positions are 0-based to match the LSP wire
+// protocol exactly (the first line/column is 0). Documented in README.
+const LSP_FILE_MAX = 2048; // T-0026
+const LSP_QUERY_MAX = 1024; // T-0026
+// T-0026: language families accepted by the workspace_symbols `language` hint.
+exports.LSP_LANGUAGES = ['typescript', 'javascript', 'go', 'rust', 'python', 'c', 'cpp']; // T-0026
+// T-0026
+const lspFileField = zod_1.z
+    .string()
+    .min(1)
+    .max(LSP_FILE_MAX)
+    .describe('Path to the source file. Relative paths resolve against SIDECOACH_PROJECT_ROOT; must stay inside it.');
+const lspLineField = zod_1.z
+    .number()
+    .int()
+    .min(0)
+    .describe('0-based line number (LSP convention: first line is 0).');
+const lspCharacterField = zod_1.z
+    .number()
+    .int()
+    .min(0)
+    .describe('0-based character offset within the line (LSP convention: first column is 0).');
+// T-0026: Tool 16 - lsp_hover
+exports.lspHoverShape = {
+    file: lspFileField,
+    line: lspLineField,
+    character: lspCharacterField,
+};
+exports.LspHoverInput = zod_1.z.object(exports.lspHoverShape); // T-0026
+// T-0026: Tool 17 - lsp_goto_definition
+exports.lspGotoDefinitionShape = {
+    file: lspFileField,
+    line: lspLineField,
+    character: lspCharacterField,
+};
+exports.LspGotoDefinitionInput = zod_1.z.object(exports.lspGotoDefinitionShape); // T-0026
+// T-0026: Tool 18 - lsp_find_references
+exports.lspFindReferencesShape = {
+    file: lspFileField,
+    line: lspLineField,
+    character: lspCharacterField,
+    includeDeclaration: zod_1.z
+        .boolean()
+        .optional()
+        .describe('Include the declaration itself among the references. Default true.'),
+};
+exports.LspFindReferencesInput = zod_1.z.object(exports.lspFindReferencesShape); // T-0026
+// T-0026: Tool 19 - lsp_document_symbols (file-level; no position needed)
+exports.lspDocumentSymbolsShape = {
+    file: lspFileField,
+};
+exports.LspDocumentSymbolsInput = zod_1.z.object(exports.lspDocumentSymbolsShape); // T-0026
+// T-0026: Tool 20 - lsp_workspace_symbols (query + server selector, not a position)
+exports.lspWorkspaceSymbolsShape = {
+    query: zod_1.z
+        .string()
+        .min(1)
+        .max(LSP_QUERY_MAX)
+        .describe('Symbol-name query searched across the workspace.'),
+    language: zod_1.z
+        .enum(exports.LSP_LANGUAGES)
+        .optional()
+        .describe('Language server to query. Omit to derive from `file`, or default to typescript.'),
+    file: zod_1.z
+        .string()
+        .min(1)
+        .max(LSP_FILE_MAX)
+        .optional()
+        .describe('Optional file whose extension selects the language server when `language` is omitted.'),
+};
+exports.LspWorkspaceSymbolsInput = zod_1.z.object(exports.lspWorkspaceSymbolsShape); // T-0026
+// ---------------------------------------------------------------------------
 // Map every tool name -> its wrapped Zod object schema (for tests + the
 // uniform input-validation guard in index.ts).
 // ---------------------------------------------------------------------------
@@ -275,5 +349,10 @@ exports.TOOL_INPUT_SCHEMAS = {
     sidecoach_state_delete: exports.StateDeleteInput,
     sidecoach_state_list_keys: exports.StateListKeysInput,
     sidecoach_ast_grep: exports.AstGrepInput,
+    sidecoach_lsp_hover: exports.LspHoverInput, // T-0026
+    sidecoach_lsp_goto_definition: exports.LspGotoDefinitionInput, // T-0026
+    sidecoach_lsp_find_references: exports.LspFindReferencesInput, // T-0026
+    sidecoach_lsp_document_symbols: exports.LspDocumentSymbolsInput, // T-0026
+    sidecoach_lsp_workspace_symbols: exports.LspWorkspaceSymbolsInput, // T-0026
 };
 //# sourceMappingURL=schemas.js.map

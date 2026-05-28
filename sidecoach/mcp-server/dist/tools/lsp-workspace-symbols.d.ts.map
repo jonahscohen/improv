@@ -1,0 +1,1 @@
+{"version":3,"file":"lsp-workspace-symbols.d.ts","sourceRoot":"","sources":["../../src/tools/lsp-workspace-symbols.ts"],"names":[],"mappings":"AAQA,OAAO,EAAE,wBAAwB,EAAE,KAAK,yBAAyB,EAAE,MAAM,YAAY,CAAC;AAEtF,OAAO,KAAK,EAAE,cAAc,EAAE,WAAW,EAAE,MAAM,SAAS,CAAC;AAE3D,eAAO,MAAM,UAAU,EAAE,cAAc,CAAC,OAAO,wBAAwB,CAStE,CAAC;AAIF,eAAO,MAAM,OAAO,EAAE,WAAW,CAAC,yBAAyB,CAkC1D,CAAC"}

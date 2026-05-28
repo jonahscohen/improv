@@ -124,4 +124,68 @@ export async function run(): Promise<void> {
     });
     assert.strictEqual(r.success, false);
   });
+
+  // T-0026 LSP schemas
+
+  await test('lsp_hover: requires file + line + character', () => {
+    assert.strictEqual(TOOL_INPUT_SCHEMAS.sidecoach_lsp_hover.safeParse({}).success, false);
+    assert.strictEqual(
+      TOOL_INPUT_SCHEMAS.sidecoach_lsp_hover.safeParse({ file: 'a.ts', line: 0, character: 0 }).success,
+      true,
+    );
+  });
+
+  await test('lsp_hover: negative line/character rejected', () => {
+    assert.strictEqual(
+      TOOL_INPUT_SCHEMAS.sidecoach_lsp_hover.safeParse({ file: 'a.ts', line: -1, character: 0 }).success,
+      false,
+    );
+    assert.strictEqual(
+      TOOL_INPUT_SCHEMAS.sidecoach_lsp_hover.safeParse({ file: 'a.ts', line: 0, character: -3 }).success,
+      false,
+    );
+  });
+
+  await test('lsp_hover: non-integer position rejected', () => {
+    assert.strictEqual(
+      TOOL_INPUT_SCHEMAS.sidecoach_lsp_hover.safeParse({ file: 'a.ts', line: 1.5, character: 0 }).success,
+      false,
+    );
+  });
+
+  await test('lsp_find_references: includeDeclaration optional boolean', () => {
+    assert.strictEqual(
+      TOOL_INPUT_SCHEMAS.sidecoach_lsp_find_references.safeParse({ file: 'a.ts', line: 0, character: 0 }).success,
+      true,
+    );
+    assert.strictEqual(
+      TOOL_INPUT_SCHEMAS.sidecoach_lsp_find_references.safeParse({
+        file: 'a.ts',
+        line: 0,
+        character: 0,
+        includeDeclaration: 'yes',
+      }).success,
+      false,
+    );
+  });
+
+  await test('lsp_document_symbols: file required, no position needed', () => {
+    assert.strictEqual(TOOL_INPUT_SCHEMAS.sidecoach_lsp_document_symbols.safeParse({}).success, false);
+    assert.strictEqual(
+      TOOL_INPUT_SCHEMAS.sidecoach_lsp_document_symbols.safeParse({ file: 'a.ts' }).success,
+      true,
+    );
+  });
+
+  await test('lsp_workspace_symbols: query required, language enum enforced', () => {
+    assert.strictEqual(TOOL_INPUT_SCHEMAS.sidecoach_lsp_workspace_symbols.safeParse({}).success, false);
+    assert.strictEqual(
+      TOOL_INPUT_SCHEMAS.sidecoach_lsp_workspace_symbols.safeParse({ query: 'Foo' }).success,
+      true,
+    );
+    assert.strictEqual(
+      TOOL_INPUT_SCHEMAS.sidecoach_lsp_workspace_symbols.safeParse({ query: 'Foo', language: 'cobol' }).success,
+      false,
+    );
+  });
 }

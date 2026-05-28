@@ -256,6 +256,98 @@ export declare const AstGrepInput: z.ZodObject<{
     maxResults?: number | undefined;
 }>;
 export type AstGrepInputT = z.infer<typeof AstGrepInput>;
+export declare const LSP_LANGUAGES: readonly ["typescript", "javascript", "go", "rust", "python", "c", "cpp"];
+export declare const lspHoverShape: {
+    file: z.ZodString;
+    line: z.ZodNumber;
+    character: z.ZodNumber;
+};
+export declare const LspHoverInput: z.ZodObject<{
+    file: z.ZodString;
+    line: z.ZodNumber;
+    character: z.ZodNumber;
+}, "strip", z.ZodTypeAny, {
+    file: string;
+    line: number;
+    character: number;
+}, {
+    file: string;
+    line: number;
+    character: number;
+}>;
+export type LspHoverInputT = z.infer<typeof LspHoverInput>;
+export declare const lspGotoDefinitionShape: {
+    file: z.ZodString;
+    line: z.ZodNumber;
+    character: z.ZodNumber;
+};
+export declare const LspGotoDefinitionInput: z.ZodObject<{
+    file: z.ZodString;
+    line: z.ZodNumber;
+    character: z.ZodNumber;
+}, "strip", z.ZodTypeAny, {
+    file: string;
+    line: number;
+    character: number;
+}, {
+    file: string;
+    line: number;
+    character: number;
+}>;
+export type LspGotoDefinitionInputT = z.infer<typeof LspGotoDefinitionInput>;
+export declare const lspFindReferencesShape: {
+    file: z.ZodString;
+    line: z.ZodNumber;
+    character: z.ZodNumber;
+    includeDeclaration: z.ZodOptional<z.ZodBoolean>;
+};
+export declare const LspFindReferencesInput: z.ZodObject<{
+    file: z.ZodString;
+    line: z.ZodNumber;
+    character: z.ZodNumber;
+    includeDeclaration: z.ZodOptional<z.ZodBoolean>;
+}, "strip", z.ZodTypeAny, {
+    file: string;
+    line: number;
+    character: number;
+    includeDeclaration?: boolean | undefined;
+}, {
+    file: string;
+    line: number;
+    character: number;
+    includeDeclaration?: boolean | undefined;
+}>;
+export type LspFindReferencesInputT = z.infer<typeof LspFindReferencesInput>;
+export declare const lspDocumentSymbolsShape: {
+    file: z.ZodString;
+};
+export declare const LspDocumentSymbolsInput: z.ZodObject<{
+    file: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    file: string;
+}, {
+    file: string;
+}>;
+export type LspDocumentSymbolsInputT = z.infer<typeof LspDocumentSymbolsInput>;
+export declare const lspWorkspaceSymbolsShape: {
+    query: z.ZodString;
+    language: z.ZodOptional<z.ZodEnum<["typescript", "javascript", "go", "rust", "python", "c", "cpp"]>>;
+    file: z.ZodOptional<z.ZodString>;
+};
+export declare const LspWorkspaceSymbolsInput: z.ZodObject<{
+    query: z.ZodString;
+    language: z.ZodOptional<z.ZodEnum<["typescript", "javascript", "go", "rust", "python", "c", "cpp"]>>;
+    file: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    query: string;
+    file?: string | undefined;
+    language?: "javascript" | "typescript" | "python" | "go" | "rust" | "c" | "cpp" | undefined;
+}, {
+    query: string;
+    file?: string | undefined;
+    language?: "javascript" | "typescript" | "python" | "go" | "rust" | "c" | "cpp" | undefined;
+}>;
+export type LspWorkspaceSymbolsInputT = z.infer<typeof LspWorkspaceSymbolsInput>;
 export declare const TOOL_INPUT_SCHEMAS: {
     readonly sidecoach_list_verbs: z.ZodObject<{
         phase: z.ZodOptional<z.ZodString>;
@@ -431,6 +523,68 @@ export declare const TOOL_INPUT_SCHEMAS: {
         language?: "html" | "css" | "javascript" | "typescript" | "tsx" | "python" | "go" | "rust" | "java" | "c" | "cpp" | "json" | "yaml" | undefined;
         path?: string | undefined;
         maxResults?: number | undefined;
+    }>;
+    readonly sidecoach_lsp_hover: z.ZodObject<{
+        file: z.ZodString;
+        line: z.ZodNumber;
+        character: z.ZodNumber;
+    }, "strip", z.ZodTypeAny, {
+        file: string;
+        line: number;
+        character: number;
+    }, {
+        file: string;
+        line: number;
+        character: number;
+    }>;
+    readonly sidecoach_lsp_goto_definition: z.ZodObject<{
+        file: z.ZodString;
+        line: z.ZodNumber;
+        character: z.ZodNumber;
+    }, "strip", z.ZodTypeAny, {
+        file: string;
+        line: number;
+        character: number;
+    }, {
+        file: string;
+        line: number;
+        character: number;
+    }>;
+    readonly sidecoach_lsp_find_references: z.ZodObject<{
+        file: z.ZodString;
+        line: z.ZodNumber;
+        character: z.ZodNumber;
+        includeDeclaration: z.ZodOptional<z.ZodBoolean>;
+    }, "strip", z.ZodTypeAny, {
+        file: string;
+        line: number;
+        character: number;
+        includeDeclaration?: boolean | undefined;
+    }, {
+        file: string;
+        line: number;
+        character: number;
+        includeDeclaration?: boolean | undefined;
+    }>;
+    readonly sidecoach_lsp_document_symbols: z.ZodObject<{
+        file: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        file: string;
+    }, {
+        file: string;
+    }>;
+    readonly sidecoach_lsp_workspace_symbols: z.ZodObject<{
+        query: z.ZodString;
+        language: z.ZodOptional<z.ZodEnum<["typescript", "javascript", "go", "rust", "python", "c", "cpp"]>>;
+        file: z.ZodOptional<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        query: string;
+        file?: string | undefined;
+        language?: "javascript" | "typescript" | "python" | "go" | "rust" | "c" | "cpp" | undefined;
+    }, {
+        query: string;
+        file?: string | undefined;
+        language?: "javascript" | "typescript" | "python" | "go" | "rust" | "c" | "cpp" | undefined;
     }>;
 };
 export type ToolName = keyof typeof TOOL_INPUT_SCHEMAS;

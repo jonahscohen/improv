@@ -1,0 +1,1 @@
+{"version":3,"file":"lsp-find-references.d.ts","sourceRoot":"","sources":["../../src/tools/lsp-find-references.ts"],"names":[],"mappings":"AAMA,OAAO,EAAE,sBAAsB,EAAE,KAAK,uBAAuB,EAAE,MAAM,YAAY,CAAC;AAElF,OAAO,KAAK,EAAE,cAAc,EAAE,WAAW,EAAE,MAAM,SAAS,CAAC;AAE3D,eAAO,MAAM,UAAU,EAAE,cAAc,CAAC,OAAO,sBAAsB,CASpE,CAAC;AAIF,eAAO,MAAM,OAAO,EAAE,WAAW,CAAC,uBAAuB,CAiCxD,CAAC"}

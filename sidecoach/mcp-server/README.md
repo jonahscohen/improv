@@ -253,6 +253,77 @@ Run an [ast-grep](https://ast-grep.github.io/) pattern search over project sourc
 - Errors: `DOWNSTREAM_UNAVAILABLE` (binary missing or vanished mid-call), `INVALID_INPUT` (path escape), `TIMEOUT` (slow query), `VALIDATOR_FAILURE` (CLI non-zero exit).
 - Search-only - no replace. T-0022 v1 ships search; replace will land in a follow-up if demand surfaces.
 
+<!-- T-0026 LSP tools begin -->
+
+### LSP tools (T-0026)
+
+Five tools wrap a real Language Server Protocol client (`src/lsp/`). They spawn a
+language server per language on demand, reuse it across calls (lease-based, so an
+in-use server is never idle-evicted mid-request), and tear it down gracefully on
+server shutdown. Positions are **0-based** to match the LSP wire protocol exactly
+(first line and first column are `0`).
+
+**Language servers are NOT bundled.** Each must be installed separately and be on
+PATH. When the server for a file's language is missing, the tool returns a
+structured `DOWNSTREAM_UNAVAILABLE` (never a crash).
+
+| Language | File extensions | Binary (install separately) |
+|---|---|---|
+| TypeScript / JavaScript | `.ts .tsx .js .jsx .mjs .cjs .mts .cts` | `typescript-language-server --stdio` |
+| Go | `.go` | `gopls` |
+| Rust | `.rs` | `rust-analyzer` |
+| Python | `.py .pyi` | `pyright-langserver --stdio` |
+| C | `.c .h` | `clangd` |
+| C++ | `.cpp .cc .cxx .hpp .hh .hxx` | `clangd` |
+
+All LSP tools resolve `file` inside `SIDECOACH_PROJECT_ROOT` (same realpath +
+symlink-escape protection as `ast_grep`), have a 60s outer timeout, a 30s
+initialize-handshake timeout, and a 15s per-request timeout.
+
+#### `sidecoach_lsp_hover`
+
+Type signature and docs at a position.
+
+- Input: `{ file: string, line: number, character: number }` (0-based line/character)
+- Output: `{ file, projectRoot, language, position, found: boolean, contents: string, range }`
+- Errors: `DOWNSTREAM_UNAVAILABLE` (no server / unsupported file type), `INVALID_INPUT` (path escape, missing file), `TIMEOUT`.
+
+#### `sidecoach_lsp_goto_definition`
+
+Locate where the symbol at a position is defined.
+
+- Input: `{ file, line, character }`
+- Output: `{ ..., definitionCount, definitions: [{ uri, range }] }` (URIs relativized to the project root; handles Location / Location[] / LocationLink[]).
+- Errors: as above.
+
+#### `sidecoach_lsp_find_references`
+
+Every reference to the symbol at a position.
+
+- Input: `{ file, line, character, includeDeclaration?: boolean }` (default `true` - the one deviation from the bare position shape, required by the LSP method).
+- Output: `{ ..., referenceCount, truncated, references: [{ uri, range }] }` (capped at 500).
+- Errors: as above.
+
+#### `sidecoach_lsp_document_symbols`
+
+File outline (functions, classes, methods, variables). File-level - no position.
+
+- Input: `{ file: string }`
+- Output: `{ ..., symbolCount, symbols: [{ name, kind, detail?, range }] }` (hierarchical `DocumentSymbol[]` is flattened; capped at 1000).
+- Errors: `DOWNSTREAM_UNAVAILABLE`, `INVALID_INPUT`, `TIMEOUT`.
+
+#### `sidecoach_lsp_workspace_symbols`
+
+Search symbol names across the whole project. Takes a query string instead of a
+position; selects the language server via the optional `language` hint, or derives
+it from an optional `file`, defaulting to `typescript`.
+
+- Input: `{ query: string, language?: "typescript"|"javascript"|"go"|"rust"|"python"|"c"|"cpp", file?: string }`
+- Output: `{ query, projectRoot, language, symbolCount, truncated, symbols: [{ name, kind, location: { uri, range } }] }` (capped at 500).
+- Errors: `DOWNSTREAM_UNAVAILABLE` (selected server missing), `INVALID_INPUT` (unknown language).
+
+<!-- T-0026 LSP tools end -->
+
 ---
 
 ## Error taxonomy

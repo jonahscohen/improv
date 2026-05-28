@@ -314,6 +314,94 @@ export const AstGrepInput = z.object(astGrepShape);
 export type AstGrepInputT = z.infer<typeof AstGrepInput>;
 
 // ---------------------------------------------------------------------------
+// Tools 16-20: LSP (T-0026)
+// ---------------------------------------------------------------------------
+
+// T-0026: shared LSP bounds. Positions are 0-based to match the LSP wire
+// protocol exactly (the first line/column is 0). Documented in README.
+const LSP_FILE_MAX = 2048; // T-0026
+const LSP_QUERY_MAX = 1024; // T-0026
+
+// T-0026: language families accepted by the workspace_symbols `language` hint.
+export const LSP_LANGUAGES = ['typescript', 'javascript', 'go', 'rust', 'python', 'c', 'cpp'] as const; // T-0026
+
+// T-0026
+const lspFileField = z
+  .string()
+  .min(1)
+  .max(LSP_FILE_MAX)
+  .describe('Path to the source file. Relative paths resolve against SIDECOACH_PROJECT_ROOT; must stay inside it.');
+const lspLineField = z
+  .number()
+  .int()
+  .min(0)
+  .describe('0-based line number (LSP convention: first line is 0).');
+const lspCharacterField = z
+  .number()
+  .int()
+  .min(0)
+  .describe('0-based character offset within the line (LSP convention: first column is 0).');
+
+// T-0026: Tool 16 - lsp_hover
+export const lspHoverShape = {
+  file: lspFileField,
+  line: lspLineField,
+  character: lspCharacterField,
+};
+export const LspHoverInput = z.object(lspHoverShape); // T-0026
+export type LspHoverInputT = z.infer<typeof LspHoverInput>; // T-0026
+
+// T-0026: Tool 17 - lsp_goto_definition
+export const lspGotoDefinitionShape = {
+  file: lspFileField,
+  line: lspLineField,
+  character: lspCharacterField,
+};
+export const LspGotoDefinitionInput = z.object(lspGotoDefinitionShape); // T-0026
+export type LspGotoDefinitionInputT = z.infer<typeof LspGotoDefinitionInput>; // T-0026
+
+// T-0026: Tool 18 - lsp_find_references
+export const lspFindReferencesShape = {
+  file: lspFileField,
+  line: lspLineField,
+  character: lspCharacterField,
+  includeDeclaration: z
+    .boolean()
+    .optional()
+    .describe('Include the declaration itself among the references. Default true.'),
+};
+export const LspFindReferencesInput = z.object(lspFindReferencesShape); // T-0026
+export type LspFindReferencesInputT = z.infer<typeof LspFindReferencesInput>; // T-0026
+
+// T-0026: Tool 19 - lsp_document_symbols (file-level; no position needed)
+export const lspDocumentSymbolsShape = {
+  file: lspFileField,
+};
+export const LspDocumentSymbolsInput = z.object(lspDocumentSymbolsShape); // T-0026
+export type LspDocumentSymbolsInputT = z.infer<typeof LspDocumentSymbolsInput>; // T-0026
+
+// T-0026: Tool 20 - lsp_workspace_symbols (query + server selector, not a position)
+export const lspWorkspaceSymbolsShape = {
+  query: z
+    .string()
+    .min(1)
+    .max(LSP_QUERY_MAX)
+    .describe('Symbol-name query searched across the workspace.'),
+  language: z
+    .enum(LSP_LANGUAGES)
+    .optional()
+    .describe('Language server to query. Omit to derive from `file`, or default to typescript.'),
+  file: z
+    .string()
+    .min(1)
+    .max(LSP_FILE_MAX)
+    .optional()
+    .describe('Optional file whose extension selects the language server when `language` is omitted.'),
+};
+export const LspWorkspaceSymbolsInput = z.object(lspWorkspaceSymbolsShape); // T-0026
+export type LspWorkspaceSymbolsInputT = z.infer<typeof LspWorkspaceSymbolsInput>; // T-0026
+
+// ---------------------------------------------------------------------------
 // Map every tool name -> its wrapped Zod object schema (for tests + the
 // uniform input-validation guard in index.ts).
 // ---------------------------------------------------------------------------
@@ -334,6 +422,11 @@ export const TOOL_INPUT_SCHEMAS = {
   sidecoach_state_delete: StateDeleteInput,
   sidecoach_state_list_keys: StateListKeysInput,
   sidecoach_ast_grep: AstGrepInput,
+  sidecoach_lsp_hover: LspHoverInput, // T-0026
+  sidecoach_lsp_goto_definition: LspGotoDefinitionInput, // T-0026
+  sidecoach_lsp_find_references: LspFindReferencesInput, // T-0026
+  sidecoach_lsp_document_symbols: LspDocumentSymbolsInput, // T-0026
+  sidecoach_lsp_workspace_symbols: LspWorkspaceSymbolsInput, // T-0026
 } as const;
 
 export type ToolName = keyof typeof TOOL_INPUT_SCHEMAS;

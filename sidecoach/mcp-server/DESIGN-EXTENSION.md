@@ -203,3 +203,117 @@ The state store is per-process and ephemeral by design - no on-disk artifacts to
 ---
 
 End of memo. Awaiting team-lead approval to begin implementation.
+
+---
+<!-- T-0026 begin -->
+
+# T-0026: LSP integration subsystem (implements the section 3a deferral)
+
+Owner: Jonah | Filed: 2026-05-28 | Status: implemented
+
+Section 3a above DEFERRED the LSP tool stack because building it to the T-0018
+bar is a ~600 LOC subsystem with a new class of failure modes. T-0026 closes
+that deferral. The subset, surface, and hardening below extend the T-0018 /
+T-0022 quality bar 1:1 (Zod-validated input, uniform `wrapHandler` guard,
+structured `ToolError` taxonomy, redacted stderr logger, per-tool timeouts).
+
+## 1. Subsystem architecture (`src/lsp/`)
+
+Four modules, each with a single responsibility and an injected seam for tests:
+
+- **`framing.ts`** - pure Content-Length wire codec. `encodeMessage()` plus
+  `LspFramer` (incremental reader). No I/O, so partial reads, concatenated
+  frames, bad/missing Content-Length, non-JSON bodies, and oversized lengths are
+  all unit-tested directly. A bad header resyncs past the header block instead of
+  wedging the stream.
+- **`servers.ts`** - language-to-binary map + extension discovery. Adding a
+  language is a one-line entry; nothing else hard-codes a language. Maps file
+  extension -> `{command, args, extensions, languageId}` and resolves the LSP
+  `languageId` (e.g. `.tsx` -> `typescriptreact`).
+- **`client.ts`** - one `LspClient` drives one server subprocess over a
+  `RawTransport` seam: request/response correlation by id, the
+  `initialize -> initialized -> workspaceFolders` handshake, `didOpen`/`didClose`
+  document lifecycle, graceful `shutdown -> exit -> force-kill`, and rejection of
+  every in-flight request when the transport dies. The production transport
+  (`spawnChildTransport`) wraps `child_process.spawn`; tests inject a fake.
+- **`index.ts`** - `LspClientManager`: spawn-on-demand per language, lease-based
+  concurrency, lazy idle eviction, binary probe (cached), graceful `shutdownAll`.
+  Plus the process-wide singleton (`getSharedLspManager` / `setSharedLspManager`
+  / `resetSharedLspManager` / `peekSharedLspManager`).
+- **`tool-support.ts`** - the shared lifecycle (resolve root -> validate path ->
+  discover server -> acquire lease -> didOpen -> request -> didClose -> release)
+  so each of the 5 tool files is a thin description + one-line delegation.
+
+Tool handlers live in `src/tools/lsp-*.ts` and delegate to `tool-support.ts`.
+
+## 2. Lease-based concurrency (the rationale)
+
+A language server is expensive to start (cold init can take seconds) so it is
+pooled and reused. But reuse plus idle eviction is a race: a sweep could evict a
+server that another request is mid-call on. The lease solves this. `acquire()`
+increments a lease counter BEFORE awaiting the init handshake and returns a
+`release()` the caller MUST call in a `finally`. `evictIdle()` only touches
+servers with **zero** leases that have been idle past the threshold (default 5
+min). So an in-use server can never be evicted out from under a request, while
+genuinely idle servers are reclaimed. Eviction is lazy (runs on each `acquire`),
+so there is no `setInterval` pinning the event loop - same discipline as the
+state store's lazy expiry. The init handshake is awaited under the lease, so a
+slow-starting server is protected during its own startup.
+
+One implementation note worth recording: the per-request timeout timer is NOT
+`unref`'d (unlike ast_grep's). A pending LSP request must keep the event loop
+alive until it settles; the timer is cleared on response and `die()` clears all
+pending timers on shutdown, so it can never outlive its request. (An earlier
+`unref` let an idle process exit before the timeout fired - benign in production
+where stdio holds the loop open, but it silently truncated the test runner.)
+
+## 3. Tool surface (5 tools, mirror OMC)
+
+All positions are 0-based (LSP convention). All `file` args resolve inside
+`SIDECOACH_PROJECT_ROOT` via `resolveProjectRoot` + `validatePathInRoot`.
+
+| Tool | Arg shape | Notes |
+|---|---|---|
+| `sidecoach_lsp_hover` | `{file, line, character}` | uniform position shape |
+| `sidecoach_lsp_goto_definition` | `{file, line, character}` | normalizes Location/LocationLink |
+| `sidecoach_lsp_find_references` | `{file, line, character, includeDeclaration?}` | +1 flag the method needs (default true) |
+| `sidecoach_lsp_document_symbols` | `{file}` | file-level; no position |
+| `sidecoach_lsp_workspace_symbols` | `{query, language?, file?}` | query, not a position; selector picks the server, defaults to typescript |
+
+Two documented deviations from the bare `file+line+character` shape:
+`find_references` adds `includeDeclaration` (required by the LSP method), and
+`workspace_symbols` is project-wide so it takes a `query` plus a server selector.
+
+Timeouts: 60s outer (per-tool), 30s initialize-handshake, 15s per request.
+
+## 4. Failure modes (extending DESIGN.md Section 5)
+
+| Trigger | Code | Behavior |
+|---|---|---|
+| No server binary on PATH for the file's language | `DOWNSTREAM_UNAVAILABLE` (`resource: lsp:<lang>`) | install hint; server never spawned |
+| Unsupported file type (no language mapping) | `DOWNSTREAM_UNAVAILABLE` (`resource: lsp`) | lists supported languages |
+| `file` resolves outside the project root / symlink escape | `INVALID_INPUT` | caught before any spawn |
+| Server crash mid-RPC (exit / EPIPE) | `DOWNSTREAM_UNAVAILABLE` | in-flight requests rejected; dead server evicted on next acquire |
+| Slow init (> init-timeout) | `TIMEOUT` | broken server evicted, not left in the pool |
+| Malformed LSP response (bad Content-Length / non-JSON / unknown id) | (no error) | frame dropped, client survives, request still resolves on a later valid frame |
+| Hang on shutdown (no `shutdown` response) | (no error) | shutdown-timeout fires, subprocess force-killed |
+| Server error response | `VALIDATOR_FAILURE` (`validator: lsp`) | error message surfaced (redacted) |
+
+All other behavior inherits the T-0018 uniform guard unchanged.
+
+## 5. Testing without real language servers
+
+The RPC layer is exercised entirely without an installed server. Unit tests
+drive `LspClient` and `LspClientManager` through an in-process `FakeTransport`
+(`__tests__/lsp-fakes.ts`). Integration tests run a genuine subprocess round-trip
+against `__tests__/fixtures/fake-lsp-server.js`, which speaks the real
+Content-Length framed protocol over stdio - so framing + client + manager + tool
+handlers are validated end-to-end deterministically. If a real server (e.g.
+`typescript-language-server`) IS on PATH, one extra integration test does a live
+round-trip; otherwise it logs a skip. Absence of a server never fails the suite.
+
+Test counts added by T-0026: unit +45 (framing 10, servers 7, client 8, manager
+8, schemas 6, tools 6), integration +8, fault-injection +6. Suite total 145 ->
+204, all green.
+
+<!-- T-0026 end -->

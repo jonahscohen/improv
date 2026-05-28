@@ -110,3 +110,62 @@ T-0018 guarantee. Server stays alive (it produced a clean response).
 =========================================================
 T-0022 EXTENSION SHUTDOWN: process exited cleanly when stdin closed (EOF)
 =========================================================
+
+
+=========================================================
+T-0026 LSP EXTENSION SMOKE - 5 new tools end-to-end
+Captured: 2026-05-28 by Jonah
+Server: dist/index.js (built with new src/lsp/ subsystem + 5 lsp tools)
+Driver: __tests__/smoke-t0026.sh
+SIDECOACH_PROJECT_ROOT=sidecoach/mcp-server
+Installed language servers on this machine: NONE
+  (which typescript-language-server gopls rust-analyzer pyright-langserver clangd -> all absent)
+So every LSP call below exercises the GRACEFUL DOWNSTREAM_UNAVAILABLE path.
+The real-subprocess round-trip (hover/definition/documentSymbol/workspaceSymbol
+returning live data) is proven deterministically in
+__tests__/integration/lsp-tools.test.ts via a fixture LSP server that speaks the
+real Content-Length framed protocol over stdio - see "Layer 2" there.
+=========================================================
+
+--- 1) initialize / tools/list - tool count rose from 15 to 20 ---
+The tools/list response now enumerates the 15 prior tools plus:
+  - sidecoach_lsp_hover
+  - sidecoach_lsp_goto_definition
+  - sidecoach_lsp_find_references
+  - sidecoach_lsp_document_symbols
+  - sidecoach_lsp_workspace_symbols
+Each ships a full description and JSON-Schema inputSchema (file+line+character,
+0-based positions; workspace_symbols takes query+language instead).
+
+--- 2) tools/call sidecoach_lsp_document_symbols (id=3) - GRACEFUL DOWNSTREAM ---
+CLIENT->SERVER: {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"sidecoach_lsp_document_symbols","arguments":{"file":"src/index.ts"}}}
+SERVER->CLIENT: isError:true {"code":"DOWNSTREAM_UNAVAILABLE","message":"no language server for typescript: typescript-language-server not found on PATH. Install `typescript-language-server` and ensure it is on PATH.","resource":"lsp:typescript"}
+
+--- 3) sidecoach_lsp_hover (id=4) on src/index.ts - GRACEFUL DOWNSTREAM ---
+SERVER->CLIENT: isError:true {"code":"DOWNSTREAM_UNAVAILABLE","resource":"lsp:typescript", ...same install hint...}
+
+--- 4) sidecoach_lsp_goto_definition (id=5) - GRACEFUL DOWNSTREAM ---
+SERVER->CLIENT: isError:true {"code":"DOWNSTREAM_UNAVAILABLE","resource":"lsp:typescript"}
+
+--- 5) sidecoach_lsp_find_references (id=6, includeDeclaration=true) - GRACEFUL DOWNSTREAM ---
+SERVER->CLIENT: isError:true {"code":"DOWNSTREAM_UNAVAILABLE","resource":"lsp:typescript"}
+
+--- 6) sidecoach_lsp_workspace_symbols (id=7, query="buildServer") - GRACEFUL DOWNSTREAM ---
+SERVER->CLIENT: isError:true {"code":"DOWNSTREAM_UNAVAILABLE","resource":"lsp:typescript"}
+
+--- 7) sidecoach_lsp_hover (id=8) on package.json - UNSUPPORTED FILE TYPE ---
+CLIENT->SERVER: {"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"sidecoach_lsp_hover","arguments":{"file":"package.json","line":0,"character":0}}}
+SERVER->CLIENT: isError:true {"code":"DOWNSTREAM_UNAVAILABLE","message":"no language server is configured for this file type: \"package.json\". Supported: typescript/javascript, go, rust, python, c/c++.","resource":"lsp"}
+
+--- 8) sidecoach_lsp_hover (id=9) on ../../../etc/hosts - PATH ESCAPE REJECTED ---
+CLIENT->SERVER: {"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"sidecoach_lsp_hover","arguments":{"file":"../../../etc/hosts","line":0,"character":0}}}
+SERVER->CLIENT: isError:true {"code":"INVALID_INPUT","message":"path escapes the project root (.../sidecoach/mcp-server): \"../../../etc/hosts\""}
+
+Every call produced a clean, structured response. No call crashed the server;
+a missing language server is never fatal. Path-scope and file-type guards fire
+before any subprocess is spawned.
+
+=========================================================
+T-0026 LSP EXTENSION SHUTDOWN: process exited cleanly when stdin closed (EOF);
+peekSharedLspManager() teardown ran (no servers had been spawned, nothing to kill).
+=========================================================

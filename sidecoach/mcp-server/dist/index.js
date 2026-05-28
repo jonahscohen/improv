@@ -16,6 +16,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const logger_1 = require("./logger");
 const server_1 = require("./server");
+const lsp_1 = require("./lsp"); // T-0026
 async function main() {
     const logger = (0, logger_1.createLogger)();
     logger.info('sidecoach mcp-server booting', {
@@ -39,6 +40,17 @@ async function main() {
             logger.warn('in-flight calls did not settle within 2s - exiting anyway', {
                 remaining: built.inFlightCount(),
             });
+        }
+        // T-0026: gracefully tear down any spawned language servers. peek (not get)
+        // so we never spawn a manager on the way out.
+        const lspManager = (0, lsp_1.peekSharedLspManager)();
+        if (lspManager) {
+            try {
+                await lspManager.shutdownAll();
+            }
+            catch (err) {
+                logger.exception(err, { phase: 'lsp-shutdown' });
+            }
         }
         try {
             await built.close();

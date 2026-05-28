@@ -17,6 +17,12 @@ import * as stateGet from './state-get';
 import * as stateDelete from './state-delete';
 import * as stateListKeys from './state-list-keys';
 import * as astGrep from './ast-grep';
+// T-0026 LSP tools
+import * as lspHover from './lsp-hover';
+import * as lspGotoDefinition from './lsp-goto-definition';
+import * as lspFindReferences from './lsp-find-references';
+import * as lspDocumentSymbols from './lsp-document-symbols';
+import * as lspWorkspaceSymbols from './lsp-workspace-symbols';
 
 import type { ToolDefinition, ToolHandler } from './types';
 
@@ -42,6 +48,13 @@ export const TOOLS: RegisteredTool[] = [
   { definition: stateDelete.definition, handler: stateDelete.handler },
   { definition: stateListKeys.definition, handler: stateListKeys.handler },
   { definition: astGrep.definition, handler: astGrep.handler },
+  // T-0026 extension tools (LSP: hover, goto-definition, find-references,
+  // document-symbols, workspace-symbols).
+  { definition: lspHover.definition, handler: lspHover.handler }, // T-0026
+  { definition: lspGotoDefinition.definition, handler: lspGotoDefinition.handler }, // T-0026
+  { definition: lspFindReferences.definition, handler: lspFindReferences.handler }, // T-0026
+  { definition: lspDocumentSymbols.definition, handler: lspDocumentSymbols.handler }, // T-0026
+  { definition: lspWorkspaceSymbols.definition, handler: lspWorkspaceSymbols.handler }, // T-0026
 ];
 
 export const TOOL_NAMES = TOOLS.map((t) => t.definition.name);

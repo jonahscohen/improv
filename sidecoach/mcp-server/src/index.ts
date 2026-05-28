@@ -16,6 +16,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 
 import { createLogger } from './logger';
 import { buildServer } from './server';
+import { peekSharedLspManager } from './lsp'; // T-0026
 
 async function main(): Promise<void> {
   const logger = createLogger();
@@ -42,6 +43,16 @@ async function main(): Promise<void> {
       logger.warn('in-flight calls did not settle within 2s - exiting anyway', {
         remaining: built.inFlightCount(),
       });
+    }
+    // T-0026: gracefully tear down any spawned language servers. peek (not get)
+    // so we never spawn a manager on the way out.
+    const lspManager = peekSharedLspManager();
+    if (lspManager) {
+      try {
+        await lspManager.shutdownAll();
+      } catch (err) {
+        logger.exception(err, { phase: 'lsp-shutdown' });
+      }
     }
     try {
       await built.close();

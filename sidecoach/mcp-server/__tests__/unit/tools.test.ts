@@ -378,4 +378,117 @@ export async function run(): Promise<void> {
       _resetAstGrepProbe();
     }
   });
+
+  // ------ LSP tools (T-0026) ------
+  // Handler-level coverage with an injected fake manager (no subprocess) and a
+  // real in-root file. Subprocess + SDK coverage lives in the integration suite.
+
+  const lspPath = require('path');
+  const MCP_ROOT = lspPath.resolve(__dirname, '..', '..');
+  const { PROJECT_ROOT_ENV } = require('../../src/project-root');
+
+  function withFakeManager(
+    responders: Record<string, (params: any) => unknown>,
+    probeOk = true,
+  ): () => Promise<void> {
+    const { LspClientManager, setSharedLspManager, resetSharedLspManager } = require('../../src/lsp/index');
+    const { FakeTransport, autoRespond } = require('../lsp-fakes');
+    const mgr = new LspClientManager({
+      transportFactory: () => {
+        const t = new FakeTransport();
+        autoRespond(t, responders);
+        return t;
+      },
+      probe: async () => ({ ok: probeOk, reason: probeOk ? undefined : 'simulated-missing' }),
+    });
+    setSharedLspManager(mgr);
+    process.env[PROJECT_ROOT_ENV] = MCP_ROOT;
+    return async () => {
+      delete process.env[PROJECT_ROOT_ENV];
+      await mgr.shutdownAll();
+      resetSharedLspManager();
+    };
+  }
+
+  await test('lsp_hover: DOWNSTREAM_UNAVAILABLE when no server binary present', async () => {
+    const cleanup = withFakeManager({}, false);
+    try {
+      const h = pickHandler('sidecoach_lsp_hover' as ToolName);
+      await h({ file: 'src/index.ts', line: 0, character: 0 }, buildDeps(fakeRegistries()));
+      assert.fail('expected throw');
+    } catch (e) {
+      assert.strictEqual((e as SidecoachToolError).code, 'DOWNSTREAM_UNAVAILABLE');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  await test('lsp_hover: unsupported file type -> DOWNSTREAM_UNAVAILABLE', async () => {
+    const cleanup = withFakeManager({});
+    try {
+      const h = pickHandler('sidecoach_lsp_hover' as ToolName);
+      await h({ file: 'package.json', line: 0, character: 0 }, buildDeps(fakeRegistries()));
+      assert.fail('expected throw');
+    } catch (e) {
+      assert.strictEqual((e as SidecoachToolError).code, 'DOWNSTREAM_UNAVAILABLE');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  await test('lsp_document_symbols: happy path flattens nested symbols', async () => {
+    const cleanup = withFakeManager({
+      'textDocument/documentSymbol': () => [
+        {
+          name: 'Outer',
+          kind: 5,
+          range: { start: { line: 0, character: 0 }, end: { line: 9, character: 0 } },
+          children: [{ name: 'inner', kind: 6, range: { start: { line: 1, character: 2 }, end: { line: 3, character: 2 } } }],
+        },
+      ],
+    });
+    try {
+      const h = pickHandler('sidecoach_lsp_document_symbols' as ToolName);
+      const r = await h({ file: 'src/index.ts' }, buildDeps(fakeRegistries()));
+      const d = r.data as any;
+      assert.strictEqual(d.symbolCount, 2);
+      assert.deepStrictEqual(d.symbols.map((s: any) => s.name), ['Outer', 'inner']);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  await test('lsp_workspace_symbols: happy path returns normalized symbols', async () => {
+    const cleanup = withFakeManager({
+      'workspace/symbol': () => [
+        { name: 'MyThing', kind: 5, location: { uri: 'file:///x/MyThing.ts', range: {} } },
+      ],
+    });
+    try {
+      const h = pickHandler('sidecoach_lsp_workspace_symbols' as ToolName);
+      const r = await h({ query: 'MyThing', language: 'typescript' }, buildDeps(fakeRegistries()));
+      const d = r.data as any;
+      assert.strictEqual(d.symbolCount, 1);
+      assert.strictEqual(d.symbols[0].name, 'MyThing');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  await test('lsp normalizeLocations handles Location, LocationLink, and null', () => {
+    const { normalizeLocations } = require('../../src/tools/lsp-goto-definition');
+    assert.deepStrictEqual(normalizeLocations(null, '/root'), []);
+    const single = normalizeLocations({ uri: 'file:///root/a.ts', range: { x: 1 } }, '/root');
+    assert.strictEqual(single[0].uri, 'a.ts');
+    const link = normalizeLocations([{ targetUri: 'file:///root/b.ts', targetRange: { y: 2 } }], '/root');
+    assert.strictEqual(link[0].uri, 'b.ts');
+  });
+
+  await test('lsp flattenSymbols flattens hierarchical and flat shapes', () => {
+    const { flattenSymbols } = require('../../src/tools/lsp-document-symbols');
+    const hierarchical = flattenSymbols([{ name: 'A', kind: 5, range: {}, children: [{ name: 'B', kind: 6, range: {} }] }]);
+    assert.deepStrictEqual(hierarchical.map((s: any) => s.name), ['A', 'B']);
+    const flat = flattenSymbols([{ name: 'C', kind: 12, location: { range: {} } }]);
+    assert.strictEqual(flat[0].name, 'C');
+  });
 }

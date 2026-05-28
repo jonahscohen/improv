@@ -52,6 +52,12 @@ const stateGet = __importStar(require("./state-get"));
 const stateDelete = __importStar(require("./state-delete"));
 const stateListKeys = __importStar(require("./state-list-keys"));
 const astGrep = __importStar(require("./ast-grep"));
+// T-0026 LSP tools
+const lspHover = __importStar(require("./lsp-hover"));
+const lspGotoDefinition = __importStar(require("./lsp-goto-definition"));
+const lspFindReferences = __importStar(require("./lsp-find-references"));
+const lspDocumentSymbols = __importStar(require("./lsp-document-symbols"));
+const lspWorkspaceSymbols = __importStar(require("./lsp-workspace-symbols"));
 exports.TOOLS = [
     { definition: listVerbs.definition, handler: listVerbs.handler },
     { definition: listModes.definition, handler: listModes.handler },
@@ -69,6 +75,13 @@ exports.TOOLS = [
     { definition: stateDelete.definition, handler: stateDelete.handler },
     { definition: stateListKeys.definition, handler: stateListKeys.handler },
     { definition: astGrep.definition, handler: astGrep.handler },
+    // T-0026 extension tools (LSP: hover, goto-definition, find-references,
+    // document-symbols, workspace-symbols).
+    { definition: lspHover.definition, handler: lspHover.handler }, // T-0026
+    { definition: lspGotoDefinition.definition, handler: lspGotoDefinition.handler }, // T-0026
+    { definition: lspFindReferences.definition, handler: lspFindReferences.handler }, // T-0026
+    { definition: lspDocumentSymbols.definition, handler: lspDocumentSymbols.handler }, // T-0026
+    { definition: lspWorkspaceSymbols.definition, handler: lspWorkspaceSymbols.handler }, // T-0026
 ];
 exports.TOOL_NAMES = exports.TOOLS.map((t) => t.definition.name);
 //# sourceMappingURL=index.js.map
