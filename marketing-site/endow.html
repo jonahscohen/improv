@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>endow - microadjustment toolbar for Claude Code | claude-dotfiles</title>
+  <meta name="description" content="endow is the microadjustment toolbar for Claude Code. Endow elements with properties via prompt mode or manipulate mode, queue the offers, and Claude works the scene in the background while you keep stacking." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <script>
+    // Set data-theme BEFORE stylesheet loads to avoid FOUC. Reads
+    // localStorage('theme'), falls back to prefers-color-scheme.
+    (function () {
+      try {
+        var stored = localStorage.getItem('theme');
+        var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="nav.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="container">
+    <header class="topbar">
+      <a class="wordmark" href="index.html" aria-label="Yes&amp; - claude-dotfiles">
+        <img class="wordmark__img wordmark__img--light" src="assets/and-dev-black.svg" alt="and-dev - claude-dotfiles" width="150" height="54" />
+        <img class="wordmark__img wordmark__img--dark" src="assets/and-dev-white.svg" alt="" aria-hidden="true" width="150" height="54" />
+      </a>
+      <div class="topbar__cluster">
+        <nav aria-label="Primary" id="primary-nav">
+          <a href="endow.html" aria-current="page">endow</a>
+          <a href="sidecoach.html">sidecoach</a>
+          <a href="cheatsheet.html">cheatsheet</a>
+          <a href="beats.html">beats</a>
+          <a href="reference.html">reference</a>
+          <a href="https://github.com/jonahscohen/claude-dotfiles" rel="noreferrer noopener">GitHub</a>
+        </nav>
+        <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
+          <svg class="theme-toggle__icon theme-toggle__icon--moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+          </svg>
+          <svg class="theme-toggle__icon theme-toggle__icon--sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2" />
+            <path d="M12 20v2" />
+            <path d="m4.93 4.93 1.41 1.41" />
+            <path d="m17.66 17.66 1.41 1.41" />
+            <path d="M2 12h2" />
+            <path d="M20 12h2" />
+            <path d="m6.34 17.66-1.41 1.41" />
+            <path d="m19.07 4.93-1.41 1.41" />
+          </svg>
+        </button>
+        <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation menu">
+          <span class="nav-toggle__icon" aria-hidden="true"></span>
+        </button>
+      </div>
+    </header>
+  </div>
+
+  <main id="main">
+    <section class="page-hero">
+      <div class="container">
+        <p class="page-hero__tag stagger" style="--i: 0">visual / endow</p>
+        <h1 class="page-hero__title stagger" style="--i: 1">Endow the UI. Claude builds the <span style="text-decoration: underline; text-decoration-color: var(--color-red); text-decoration-thickness: 4px; text-underline-offset: 0.1em;">scene</span>.</h1>
+        <p class="page-hero__lede stagger" style="--i: 2">
+          endow is the microadjustment toolbar for Claude Code. Queue a change through prompt mode or manipulate mode; Claude works the scene in the background and refreshes when it's done.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <p class="section__eyebrow">What it does</p>
+        <h2 class="section__title">Two modes. One queue. One scene.</h2>
+        <p class="section__lede">
+          endow is a toolbar that sits over your dev server. You select an element, make an offer in whichever mode fits the thought, and the queue builds. When you hand it off, Claude works through the whole stack at once and lands the scene with a refresh.
+        </p>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Prompt mode.</h3>
+          <div class="feature-row__body">
+            <p>Select an element. Type the offer in plain English. "Heavier heading," "tighten this card's padding," "swap the border for a shadow." Each prompt is an offer in the queue, scoped to the element you picked.</p>
+            <p>Good for the thoughts that are easier to say than to dial in - directional notes, vibe shifts, the kind of thing you'd whisper to a designer over their shoulder.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Manipulate mode.</h3>
+          <div class="feature-row__body">
+            <p>Select an element. Reach for the exact property you want to endow it with. Font weight, color, radius, spacing, shadow, text alignment. Every nudge becomes an offer in the queue.</p>
+            <p>Good for the thoughts that are easier to point at than to describe - "this much padding, this color, this radius." The toolbar reads your DESIGN.md tokens and surfaces them as the options.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Queue, then scene.</h3>
+          <div class="feature-row__body">
+            <p>Offers stack as you go. Stack five, stack twenty - the toolbar holds them all. When you're ready, hand them to Claude in one pass.</p>
+            <p>Claude works the offers in the background, through your real source code, through your real build pipeline. The browser refreshes when the scene is done. No half-applied state, no round-trip per tweak, no "let me regenerate."</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--paper">
+      <div class="container">
+        <p class="section__eyebrow">How to start</p>
+        <h2 class="section__title">One install. Then start endowing.</h2>
+        <p class="section__lede">
+          endow is one component of the dotfiles. Install it standalone or as part of the full toolkit.
+        </p>
+
+        <pre><code>./install.sh --only endow</code></pre>
+
+        <p style="margin-top: var(--space-6); color: var(--text-secondary); max-width: 56ch;">
+          The installer wires the toolbar, the MCP server, and the queue. Open a project, run <code>endow start</code>, and the toolbar mounts over your dev server.
+        </p>
+
+        <div style="margin-top: var(--space-8); display: flex; gap: var(--space-3); flex-wrap: wrap;">
+          <a class="btn btn--primary" href="https://github.com/jonahscohen/claude-dotfiles/tree/main/endow" rel="noreferrer noopener">Read the source</a>
+          <a class="btn btn--secondary" href="index.html">Back to the toolkit</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <p class="section__eyebrow">Coming soon</p>
+        <h2 class="section__title">Two heightenings on the way.</h2>
+        <p class="section__lede">
+          endow's first beat is the queue. Two more, both rooted in improv principles, are on the roadmap.
+        </p>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Offers mode.</h3>
+          <div class="feature-row__body">
+            <p>Before you commit to a direction, ask Claude for variations on a single offer. Three takes laid side by side - typography one way, motion another, color a third. Pick the one that lands the scene; the others fall away.</p>
+            <p>For the moments when you know the change is needed but don't yet know what it should be.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Sidecoach integration.</h3>
+          <div class="feature-row__body">
+            <p>Stack offers using sidecoach verbs instead of freeform prompts. <code>/bolder</code> on this card, <code>/quieter</code> on this section, <code>/polish</code> on this whole region - flow-oriented tasking with the full sidecoach pipeline (PRODUCT.md context, DESIGN.md tokens, QA gate triad) behind every offer.</p>
+            <p>For the moments when the change is part of a phase, not a one-off tweak.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="site-footer__row">
+        <span>Yes<span style="color: var(--color-red); font-style: italic;">&amp;</span> claude-dotfiles. Open source, MIT.</span>
+        <nav aria-label="Footer">
+          <a href="index.html">Home</a>
+          <a href="sidecoach.html">sidecoach</a>
+          <a href="beats.html">beats</a>
+          <a href="reference.html">reference</a>
+          <a href="https://github.com/jonahscohen/claude-dotfiles" rel="noreferrer noopener">GitHub</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

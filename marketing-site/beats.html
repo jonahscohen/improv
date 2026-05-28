@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>beats - layered continuity for Claude Code | claude-dotfiles</title>|<title>beats - layered continuity for Claude Code | claude-dotfiles</title>
+  <meta name="description" content="beats - the layered memory system for Claude Code. Ephemeral task tracking, per-project file memory, cross-machine sync, indexed by MEMORY.md, typed via frontmatter, linked into a graph." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <script>
+    // Set data-theme BEFORE stylesheet loads to avoid FOUC. Reads
+    // localStorage('theme'), falls back to prefers-color-scheme.
+    (function () {
+      try {
+        var stored = localStorage.getItem('theme');
+        var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="nav.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="container">
+    <header class="topbar">
+      <a class="wordmark" href="index.html" aria-label="Yes&amp; - claude-dotfiles">
+        <img class="wordmark__img wordmark__img--light" src="assets/and-dev-black.svg" alt="and-dev - claude-dotfiles" width="150" height="54" />
+        <img class="wordmark__img wordmark__img--dark" src="assets/and-dev-white.svg" alt="" aria-hidden="true" width="150" height="54" />
+      </a>
+      <div class="topbar__cluster">
+        <nav aria-label="Primary" id="primary-nav">
+          <a href="endow.html">endow</a>
+          <a href="sidecoach.html">sidecoach</a>
+          <a href="cheatsheet.html">cheatsheet</a>
+          <a href="beats.html" aria-current="page">beats</a>
+          <a href="reference.html">reference</a>
+          <a href="https://github.com/jonahscohen/claude-dotfiles" rel="noreferrer noopener">GitHub</a>
+        </nav>
+        <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
+          <svg class="theme-toggle__icon theme-toggle__icon--moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+          </svg>
+          <svg class="theme-toggle__icon theme-toggle__icon--sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2" />
+            <path d="M12 20v2" />
+            <path d="m4.93 4.93 1.41 1.41" />
+            <path d="m17.66 17.66 1.41 1.41" />
+            <path d="M2 12h2" />
+            <path d="M20 12h2" />
+            <path d="m6.34 17.66-1.41 1.41" />
+            <path d="m19.07 4.93-1.41 1.41" />
+          </svg>
+        </button>
+        <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation menu">
+          <span class="nav-toggle__icon" aria-hidden="true"></span>
+        </button>
+      </div>
+    </header>
+  </div>
+
+  <main id="main">
+    <section class="page-hero">
+      <div class="container">
+        <p class="page-hero__tag stagger" style="--i: 0">continuity / beats</p>
+        <h1 class="page-hero__title stagger" style="--i: 1">Five layers of memory, <span style="text-decoration: underline; text-decoration-color: var(--color-red); text-decoration-thickness: 4px; text-underline-offset: 0.1em;">written every task</span>.</h1>
+        <p class="page-hero__lede stagger" style="--i: 2">
+          Claude forgets at the end of every conversation. The dotfiles' memory system is the answer to that - a stack of progressively-durable layers, each with its own write cadence and lifespan, indexed in one file you actually read.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <p class="section__eyebrow">The stack</p>
+        <h2 class="section__title">Five layers. Each one outlives the one above it.</h2>
+        <p class="section__lede">
+          Memory isn't a single store. The dotfiles use five distinct layers, each tuned to a different question: "what am I doing right now?", "what did we learn this week?", "what about this project?", "what about this user?", "what does Claude need to know everywhere?"
+        </p>
+
+        <ol class="layer-list" aria-label="Memory layers">
+          <li class="layer-row">
+            <span class="layer-row__num">01</span>
+            <div class="layer-row__head">
+              <span class="layer-row__tag">ephemeral</span>
+              <h3 class="layer-row__title">In-session task tracking</h3>
+            </div>
+            <div class="layer-row__body">
+              <p>
+                <code>TaskCreate</code>, <code>TaskUpdate</code>, <code>TaskList</code>. Lives only as long as the current conversation. Shows up in the spinner so you can see what Claude is doing right now. Vanishes when the session ends.
+              </p>
+              <p class="layer-row__meta">
+                <span>Lifespan</span><span>this conversation</span>
+                <span>Written by</span><span>Claude, automatically</span>
+                <span>Read by</span><span>you, in the UI</span>
+              </p>
+            </div>
+          </li>
+
+          <li class="layer-row">
+            <span class="layer-row__num">02</span>
+            <div class="layer-row__head">
+              <span class="layer-row__tag">per-task</span>
+              <h3 class="layer-row__title">File-based session memory</h3>
+            </div>
+            <div class="layer-row__body">
+              <p>
+                After every discrete task - a fix, a refactor, a copy change, a decision - Claude writes a short note to <code>.claude/memory/session_YYYY-MM-DD_topic.md</code>. The team rules treat this as mandatory. Batching is a failure mode.
+              </p>
+              <p>
+                These files survive context compactions, cross-session restarts, and machine swaps. They're plain markdown with YAML frontmatter and they live in the repo, so they ride along with the code.
+              </p>
+              <p class="layer-row__meta">
+                <span>Lifespan</span><span>forever (or until you delete)</span>
+                <span>Written by</span><span>Claude, per task</span>
+                <span>Read by</span><span>future Claudes, at session start</span>
+              </p>
+            </div>
+          </li>
+
+          <li class="layer-row">
+            <span class="layer-row__num">03</span>
+            <div class="layer-row__head">
+              <span class="layer-row__tag">index</span>
+              <h3 class="layer-row__title">MEMORY.md - the table of contents</h3>
+            </div>
+            <div class="layer-row__body">
+              <p>
+                One file per memory directory, one line per memory file. The hook system loads <code>MEMORY.md</code> into every session start, so Claude opens the conversation already knowing the shape of what's been written before.
+              </p>
+              <p>
+                Entries are short by rule: under 200 characters, link plus a hook sentence. Detail belongs in the topic file, not the index. The system enforces a 24KB limit; over that the index is truncated and you get a warning.
+              </p>
+              <p class="layer-row__meta">
+                <span>Lifespan</span><span>matches the topic files it points at</span>
+                <span>Written by</span><span>Claude, alongside each topic write</span>
+                <span>Read by</span><span>every session, automatically</span>
+              </p>
+            </div>
+          </li>
+
+          <li class="layer-row">
+            <span class="layer-row__num">04</span>
+            <div class="layer-row__head">
+              <span class="layer-row__tag">cross-machine</span>
+              <h3 class="layer-row__title">Dotfiles git sync</h3>
+            </div>
+            <div class="layer-row__body">
+              <p>
+                The entire <code>.claude</code> directory ships in the dotfiles repo. Pull on a new machine and Claude opens with the same memory you wrote on the last one. No upload, no cloud, no auth - just <code>git clone</code> and a symlink.
+              </p>
+              <p>
+                When a memory write notes "this happened on the laptop", you can pull on the desktop the next day and Claude already knows. The dotfiles bring their own continuity.
+              </p>
+              <p class="layer-row__meta">
+                <span>Lifespan</span><span>as long as the repo exists</span>
+                <span>Synced by</span><span>regular git push / pull</span>
+                <span>Read by</span><span>every machine you clone to</span>
+              </p>
+            </div>
+          </li>
+
+          <li class="layer-row">
+            <span class="layer-row__num">05</span>
+            <div class="layer-row__head">
+              <span class="layer-row__tag">global</span>
+              <h3 class="layer-row__title">Auto-memory project store</h3>
+            </div>
+            <div class="layer-row__body">
+              <p>
+                A second memory directory at <code>~/.claude/projects/&lt;path&gt;/memory/</code>. Separate from the repo memory. Holds durable user-level facts, validated decisions, and behavioral feedback that should follow Claude across projects.
+              </p>
+              <p>
+                Five frontmatter types live here: <code>user</code>, <code>feedback</code>, <code>project</code>, <code>decision</code>, <code>reference</code>. Each has its own writing protocol - feedback memories include a "Why" line, decision memories list rejected alternatives, project memories convert relative dates to absolute.
+              </p>
+              <p class="layer-row__meta">
+                <span>Lifespan</span><span>spans the user, not the repo</span>
+                <span>Written by</span><span>Claude, when patterns emerge</span>
+                <span>Read by</span><span>every conversation on this machine</span>
+              </p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section section--paper">
+      <div class="container">
+        <p class="section__eyebrow">The shape</p>
+        <h2 class="section__title">Frontmatter, typed. A graph, not a pile.</h2>
+        <p class="section__lede">
+          Every memory file opens with YAML frontmatter that tells future-Claude what kind of memory this is and how it relates to others. The system reads these and walks the relationships when the topic comes up.
+        </p>
+
+        <pre><code>---
+name: session-2026-05-25-sprint12-closed
+description: Sprint 12 closed - first clean dogfood, 8/8 flows
+type: project
+relates_to:
+  - session_2026-05-25_sprint12_design.md
+  - feedback_chief_architect_autonomous_dogfood_loop.md
+supersedes:
+  - session_2026-05-24_dogfood_first_attempt.md
+---
+
+Human collaborator: Jonah. Executed autonomously...</code></pre>
+
+        <div class="feature-row" style="padding-block: var(--space-12);">
+          <h3 class="feature-row__title">Five types.</h3>
+          <div class="feature-row__body">
+            <p><code>user</code> - facts about the human: role, responsibilities, preferences, knowledge depth.</p>
+            <p><code>feedback</code> - corrections AND validated approaches. Each one carries a Why and a How-to-apply.</p>
+            <p><code>project</code> - state of in-flight work: who is doing what, by when, why it matters. Dated.</p>
+            <p><code>decision</code> - resolved trade-offs. Names the chosen approach, the rejected alternatives, the conditions that would warrant revisiting.</p>
+            <p><code>reference</code> - pointers to external systems: Linear projects, Grafana dashboards, doc folders.</p>
+          </div>
+        </div>
+
+        <div class="feature-row" style="padding-block: var(--space-12);">
+          <h3 class="feature-row__title">Three relationships.</h3>
+          <div class="feature-row__body">
+            <p><code>relates_to</code> - a list. The memory shares topic or context with these other entries. Not symmetric by default.</p>
+            <p><code>supersedes</code> - a single pointer. This memory replaces an older one. When written, the old file gets a matching <code>superseded_by</code> back-link.</p>
+            <p><code>superseded_by</code> - the back-link. Tells you a file is historical and points at what replaced it.</p>
+            <p>The result is a small graph, not a pile of files. When Claude reads a topic, it can walk the links to find related context without dumping the whole memory directory into the conversation.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--ink">
+      <div class="container">
+        <p class="section__eyebrow">The discipline</p>
+        <h2 class="section__title">When you write matters more than what you write.</h2>
+        <p class="section__lede">
+          The team rules treat memory writing as mandatory, frequent, and never permission-gated. Failures are mistakes you fix; they are not optional.
+        </p>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Per task, not per session.</h3>
+          <div class="feature-row__body">
+            <p>The moment a fix lands, a copy change ships, or a decision gets made - before the next thing, before responding to the user - the relevant session memory gets a one-line update. Batching is what loses work when a session ends unexpectedly.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">No permission gate.</h3>
+          <div class="feature-row__body">
+            <p>The settings file grants standing write permission to every memory path. Claude does not ask "should I save this?" - it just saves. The team rules call out the pause-to-confirm pattern as a configuration bug, not a question.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Self-analysis after every correction.</h3>
+          <div class="feature-row__body">
+            <p>When Claude misses a step or breaks a rule, the response isn't an apology - it's a two-question analysis written into a feedback memory: why did this happen, what shortcut did I take? The fix is downstream of understanding the failure mode.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Write-time link check.</h3>
+          <div class="feature-row__body">
+            <p>When a memory is written or updated, Claude scans the MEMORY.md index already in context for related entries and adds <code>relates_to</code> links where they fit. If this memory replaces an older one, the <code>supersedes</code> field gets set and the old file is updated with a matching back-link. The graph stays consistent without a separate cleanup pass.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <p class="section__eyebrow">Why bother</p>
+        <h2 class="section__title">Because the alternative is starting over every morning.</h2>
+        <p class="section__lede">
+          Without this layer, Claude opens every conversation cold - no idea what was decided yesterday, which approaches failed, which user preferences are settled. The memory system is the difference between a tool you teach once and a tool you teach every time.
+        </p>
+
+        <div style="margin-top: var(--space-8); display: flex; gap: var(--space-3); flex-wrap: wrap;">
+          <a class="btn btn--primary" href="https://github.com/jonahscohen/claude-dotfiles/tree/main/claude/memory" rel="noreferrer noopener">Read the source</a>
+          <a class="btn btn--secondary" href="reference.html">See the full reference</a>
+          <a class="btn btn--secondary" href="index.html">Back to the toolkit</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="site-footer__row">
+        <span>Yes<span style="color: var(--color-red); font-style: italic;">&amp;</span> claude-dotfiles. Open source, MIT.</span>
+        <nav aria-label="Footer">
+          <a href="index.html">Home</a>
+          <a href="endow.html">endow</a>
+          <a href="sidecoach.html">sidecoach</a>
+          <a href="reference.html">reference</a>
+          <a href="https://github.com/jonahscohen/claude-dotfiles" rel="noreferrer noopener">GitHub</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

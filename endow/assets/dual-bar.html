@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claudebar + Queuebar</title>
+<style>
+  @font-face { font-family: 'EndowSans'; font-weight: 400; src: url('../fonts/endowsans-400.woff2') format('woff2'); }
+  @font-face { font-family: 'EndowSans'; font-weight: 700; src: url('../fonts/endowsans-700.woff2') format('woff2'); }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a1a;
+    font-family: 'EndowSans', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* === BOTTOM BAR CONTAINER === */
+  .bar-tray {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 2147483647;
+  }
+
+  /* === SHARED PILL === */
+  .pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 44px;
+    background: #1a1a1a;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 22px;
+    padding: 6px 18px 6px 6px;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    transition: padding 0.35s cubic-bezier(0.4,0,0.2,1), gap 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease, transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    overflow: visible;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .pill__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    color: #D97757;
+    transition: background 0.15s, transform 0.1s;
+  }
+
+  .pill:active .pill__icon { transform: scale(0.92); }
+  .pill:hover .pill__icon { background: rgba(217,119,87,0.12); }
+  .pill.is-active .pill__icon { background: #D97757; color: #fff; }
+  .pill.is-active:hover .pill__icon { background: #D97757; }
+
+  .pill__spark {
+    width: 18px;
+    height: 18px;
+    overflow: hidden;
+  }
+
+  .pill__spark svg { width: 100%; fill: currentColor; }
+
+  .pill__label {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.85);
+    white-space: nowrap;
+    overflow: hidden;
+    transition: width 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease;
+  }
+
+  .pill__count {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #D97757;
+    transition: background 0.15s, transform 0.1s;
+  }
+
+  .pill:hover .pill__count { background: rgba(217,119,87,0.12); }
+  .pill:active .pill__count { transform: scale(0.92); }
+  .pill.is-active .pill__count { background: #D97757; color: #fff; }
+
+  .pill__hint {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #1a1a1a;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.85);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 120ms ease, transform 120ms ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    z-index: 10;
+    margin-bottom: 6px;
+  }
+
+  .pill.is-collapsed:hover .pill__hint {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Glow pulse for clickable pills */
+  .pill--glow {
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+  @keyframes glow-pulse {
+    0%, 100% { border-color: rgba(255,255,255,0.1); box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+    50% { border-color: rgba(217,119,87,0.25); box-shadow: 0 2px 12px rgba(0,0,0,0.4), 0 0 12px rgba(217,119,87,0.06); }
+  }
+  .pill--glow.is-active { animation: none; border-color: rgba(255,255,255,0.1); box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+
+  /* Slide-in from left */
+  .pill--enter-left {
+    animation: slide-in-left 0.4s cubic-bezier(0.4,0,0.2,1) both;
+  }
+  @keyframes slide-in-left {
+    from { opacity: 0; transform: translateX(-30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Dots */
+  .dots { display: inline-block; width: 1.2em; text-align: left; vertical-align: baseline; }
+  .dots::after { content: ''; animation: ellipsis 1.5s steps(4) infinite; }
+  @keyframes ellipsis { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+  /* === CONTROLS === */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .controls button {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.5);
+    font-family: 'EndowSans', system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .controls button:hover { border-color: rgba(255,255,255,0.25); color: rgba(255,255,255,0.8); }
+  .controls button:active { transform: scale(0.96); }
+
+  .state-label {
+    position: fixed;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.2);
+  }
+</style>
+</head>
+<body>
+
+<div class="bar-tray" id="tray"></div>
+
+<div class="controls">
+  <button id="btn-send">Send to Claude</button>
+  <button id="btn-queue">+ Queue Change</button>
+  <button id="btn-claude-done">Claude Done (Review)</button>
+  <button id="btn-dismiss-claude">Dismiss Claude</button>
+  <button id="btn-dismiss-queue">Dismiss Queue</button>
+  <button id="btn-reset">Reset All</button>
+</div>
+
+<div class="state-label" id="state">IDLE</div>
+
+<script>
+var tray = document.getElementById('tray');
+var stateEl = document.getElementById('state');
+
+var claudePill = null;
+var queuePill = null;
+var claudeAnim = null;
+var claudeState = 'none'; // none, sending, working, review, review-active
+var queueCount = 0;
+var queueCollapsed = false;
+
+var waitingFrameIndices = [2, 4, 7, 8, 11, 14, 15];
+var spriteConfigs = {
+  thinking: { frameCount: 9, speed: 90 },
+  writing: { frameCount: 8, speed: 90 },
+  waiting: { frameCount: 16, speed: 600 },
+  shimmer: { frameCount: 15, speed: 100 }
+};
+var spriteSvgs = {};
+var staticSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="m19.6 66.5 19.7-11 .3-1-.3-.5h-1l-3.3-.2-11.2-.3L14 53l-9.5-.5-2.4-.5L0 49l.2-1.5 2-1.3 2.9.2 6.3.5 9.5.6 6.9.4L38 49.1h1.6l.2-.7-.5-.4-.4-.4L29 41l-10.6-7-5.6-4.1-3-2-1.5-2-.6-4.2 2.7-3 3.7.3.9.2 3.7 2.9 8 6.1L37 36l1.5 1.2.6-.4.1-.3-.7-1.1L33 25l-6-10.4-2.7-4.3-.7-2.6c-.3-1-.4-2-.4-3l3-4.2L28 0l4.2.6L33.8 2l2.6 6 4.1 9.3L47 29.9l2 3.8 1 3.4.3 1h.7v-.5l.5-7.2 1-8.7 1-11.2.3-3.2 1.6-3.8 3-2L61 2.6l2 2.9-.3 1.8-1.1 7.7L59 27.1l-1.5 8.2h.9l1-1.1 4.1-5.4 6.9-8.6 3-3.5L77 13l2.3-1.8h4.3l3.1 4.7-1.4 4.9-4.4 5.6-3.7 4.7-5.3 7.1-3.2 5.7.3.4h.7l12-2.6 6.4-1.1 7.6-1.3 3.5 1.6.4 1.6-1.4 3.4-8.2 2-9.6 2-14.3 3.3-.2.1.2.3 6.4.6 2.8.2h6.8l12.6 1 3.3 2 1.9 2.7-.3 2-5.1 2.6-6.8-1.6-16-3.8-5.4-1.3h-.8v.4l4.6 4.5 8.3 7.5L89 80.1l.5 2.4-1.3 2-1.4-.2-9.2-7-3.6-3-8-6.8h-.5v.7l1.8 2.7 9.8 14.7.5 4.5-.7 1.4-2.6 1-2.7-.6-5.8-8-6-9-4.7-8.2-.5.4-2.9 30.2-1.3 1.5-3 1.2-2.5-2-1.4-3 1.4-6.2 1.6-8 1.3-6.4 1.2-7.9.7-2.6v-.2H49L43 72l-9 12.3-7.2 7.6-1.7.7-3-1.5.3-2.8L24 86l10-12.8 6-7.9 4-4.6-.1-.5h-.3L17.2 77.4l-4.7.6-2-2 .2-3 1-1 8-5.5Z"/></svg>';
+
+function setSpark(container, svgText, fill) {
+  container.textContent = '';
+  container.insertAdjacentHTML('beforeend', svgText);
+  container.querySelector('svg').setAttribute('fill', fill);
+}
+
+function animateSpark(container, spriteName) {
+  var svgText = spriteSvgs[spriteName];
+  var cfg = spriteConfigs[spriteName];
+  setSpark(container, svgText, '#D97757');
+  var svg = container.querySelector('svg');
+  var frames, dur;
+  if (spriteName === 'waiting') {
+    frames = waitingFrameIndices.map(function(i) { return { transform: 'translateY(-' + (i * (100 / cfg.frameCount)) + '%)' }; });
+    dur = 80 * frames.length;
+  } else {
+    frames = Array.from({length: cfg.frameCount}, function(_, i) { return { transform: 'translateY(-' + (i * (100 / cfg.frameCount)) + '%)' }; });
+    dur = cfg.speed * frames.length;
+  }
+  return svg.animate(frames, { duration: dur, iterations: Infinity, easing: 'steps(' + frames.length + ', jump-none)' });
+}
+
+function setState(s) { stateEl.textContent = s; }
+
+// === CLAUDE BAR ===
+function showClaudeBar(text, sprite, hasDots) {
+  if (claudePill) removeClaudeBar(true);
+  var pill = document.createElement('div');
+  pill.className = 'pill pill--enter-left';
+  pill.id = 'claude-pill';
+
+  var icon = document.createElement('div');
+  icon.className = 'pill__icon';
+  var spark = document.createElement('div');
+  spark.className = 'pill__spark';
+  icon.appendChild(spark);
+  pill.appendChild(icon);
+
+  var label = document.createElement('span');
+  label.className = 'pill__label';
+  label.textContent = text;
+  if (hasDots) {
+    var dots = document.createElement('span');
+    dots.className = 'dots';
+    label.appendChild(dots);
+  }
+  pill.appendChild(label);
+
+  tray.insertBefore(pill, tray.firstChild);
+  claudePill = pill;
+
+  claudeAnim = animateSpark(spark, sprite);
+  pill._spark = spark;
+  pill._label = label;
+}
+
+function claudeToReview() {
+  if (!claudePill) return;
+  claudeState = 'review';
+  if (claudeAnim) { claudeAnim.cancel(); claudeAnim = null; }
+  claudeAnim = animateSpark(claudePill._spark, 'waiting');
+  claudePill.classList.add('pill--glow');
+
+  // Crossfade text
+  var oldLabel = claudePill._label;
+  oldLabel.textContent = 'Review Changes';
+  var oldDots = oldLabel.querySelector('.dots');
+  if (oldDots) oldDots.remove();
+
+  claudePill.addEventListener('click', claudeClickHandler);
+}
+
+function claudeClickHandler() {
+  if (claudeState === 'review') {
+    // Collapse to icon-only
+    claudeState = 'review-active';
+    claudePill.classList.add('is-active', 'is-collapsed');
+    claudePill.classList.remove('pill--glow');
+    if (claudeAnim) { claudeAnim.cancel(); claudeAnim = null; }
+    setSpark(claudePill._spark, staticSvg, '#fff');
+
+    var labelW = claudePill._label.offsetWidth;
+    claudePill._label.style.width = labelW + 'px';
+    claudePill._label.offsetHeight;
+    claudePill._label.style.width = '0';
+    claudePill._label.style.opacity = '0';
+    claudePill.style.gap = '0';
+    claudePill.style.padding = '6px';
+
+    if (!claudePill.querySelector('.pill__hint')) {
+      var hint = document.createElement('div');
+      hint.className = 'pill__hint';
+      hint.textContent = 'Review Changes';
+      claudePill.appendChild(hint);
+    }
+    setState('CLAUDE: REVIEW ACTIVE');
+  } else if (claudeState === 'review-active') {
+    var isOn = claudePill.classList.toggle('is-active');
+    setSpark(claudePill._spark, staticSvg, isOn ? '#fff' : '#D97757');
+    setState(isOn ? 'CLAUDE: REVIEW ACTIVE' : 'CLAUDE: REVIEW INACTIVE');
+  }
+}
+
+function removeClaudeBar(instant) {
+  if (!claudePill) return;
+  claudePill.removeEventListener('click', claudeClickHandler);
+  if (instant) { claudePill.remove(); } else {
+    claudePill.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.9)' }], { duration: 250, easing: 'ease', fill: 'forwards' });
+    var p = claudePill;
+    setTimeout(function() { p.remove(); }, 260);
+  }
+  claudePill = null;
+  claudeAnim = null;
+  claudeState = 'none';
+}
+
+// === QUEUE BAR ===
+function showQueueBar() {
+  if (queuePill) return;
+  queueCollapsed = false;
+  var pill = document.createElement('div');
+  pill.className = 'pill';
+  pill.id = 'queue-pill';
+
+  var count = document.createElement('div');
+  count.className = 'pill__count';
+  count.id = 'q-count';
+  count.textContent = String(queueCount);
+  pill.appendChild(count);
+
+  var label = document.createElement('span');
+  label.className = 'pill__label';
+  label.textContent = 'Queued Changes';
+  pill.appendChild(label);
+
+  pill.addEventListener('click', queueClickHandler);
+
+  // Slide in from right if claudebar exists, otherwise from left
+  if (claudePill) {
+    pill.style.opacity = '0';
+    pill.style.transform = 'translateX(20px)';
+    tray.appendChild(pill);
+    requestAnimationFrame(function() {
+      pill.style.transition = 'opacity 0.35s ease, transform 0.35s cubic-bezier(0.4,0,0.2,1)';
+      pill.style.opacity = '1';
+      pill.style.transform = 'translateX(0)';
+    });
+  } else {
+    pill.className += ' pill--enter-left';
+    tray.appendChild(pill);
+  }
+
+  queuePill = pill;
+  queuePill._label = label;
+  queuePill._count = count;
+}
+
+function queueClickHandler() {
+  if (!queueCollapsed) {
+    queueCollapsed = true;
+    queuePill.classList.add('is-active', 'is-collapsed');
+    var labelW = queuePill._label.offsetWidth;
+    queuePill._label.style.width = labelW + 'px';
+    queuePill._label.offsetHeight;
+    queuePill._label.style.width = '0';
+    queuePill._label.style.opacity = '0';
+    queuePill.style.gap = '0';
+    queuePill.style.padding = '6px';
+    if (!queuePill.querySelector('.pill__hint')) {
+      var hint = document.createElement('div');
+      hint.className = 'pill__hint';
+      hint.textContent = 'Queued Changes';
+      queuePill.appendChild(hint);
+    }
+    setState('QUEUE: OPEN');
+  } else {
+    var isOn = queuePill.classList.toggle('is-active');
+    setState(isOn ? 'QUEUE: OPEN' : 'QUEUE: CLOSED');
+  }
+}
+
+function bumpQueueCount() {
+  queuePill._count.textContent = String(queueCount);
+  queuePill._count.animate([
+    { transform: 'scale(1)' }, { transform: 'scale(1.125)' }, { transform: 'scale(1)' }
+  ], { duration: 250, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' });
+}
+
+function removeQueueBar() {
+  if (!queuePill) return;
+  queuePill.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.9)' }], { duration: 250, easing: 'ease', fill: 'forwards' });
+  var p = queuePill;
+  setTimeout(function() { p.remove(); }, 260);
+  queuePill = null;
+  queueCount = 0;
+  queueCollapsed = false;
+}
+
+// === LOAD SPRITES & WIRE BUTTONS ===
+Promise.all([
+  fetch('spark-thinking.svg').then(function(r) { return r.text(); }),
+  fetch('spark-writing.svg').then(function(r) { return r.text(); }),
+  fetch('spark-waiting.svg').then(function(r) { return r.text(); }),
+  fetch('spark-shimmer.svg').then(function(r) { return r.text(); })
+]).then(function(results) {
+  spriteSvgs.thinking = results[0];
+  spriteSvgs.writing = results[1];
+  spriteSvgs.waiting = results[2];
+  spriteSvgs.shimmer = results[3];
+
+  // Send to Claude
+  document.getElementById('btn-send').addEventListener('click', function() {
+    claudeState = 'sending';
+    showClaudeBar('Sending to Claude', 'writing', true);
+    setState('CLAUDE: SENDING');
+
+    // Auto-progress: sending -> working -> review
+    setTimeout(function() {
+      if (claudeState !== 'sending') return;
+      claudeState = 'working';
+      if (claudeAnim) claudeAnim.cancel();
+      claudeAnim = animateSpark(claudePill._spark, 'shimmer');
+      claudePill._label.textContent = 'Working';
+      var dots = document.createElement('span');
+      dots.className = 'dots';
+      claudePill._label.appendChild(dots);
+      setState('CLAUDE: WORKING');
+    }, 2000);
+  });
+
+  // Claude Done
+  document.getElementById('btn-claude-done').addEventListener('click', function() {
+    if (!claudePill) return;
+    claudeToReview();
+    setState('CLAUDE: REVIEW CHANGES');
+  });
+
+  // Queue Change
+  document.getElementById('btn-queue').addEventListener('click', function() {
+    queueCount++;
+    if (!queuePill) {
+      showQueueBar();
+    } else {
+      bumpQueueCount();
+    }
+    setState('QUEUE: ' + queueCount + ' ITEMS');
+  });
+
+  // Dismiss Claude
+  document.getElementById('btn-dismiss-claude').addEventListener('click', function() {
+    removeClaudeBar(false);
+    setState('CLAUDE: DISMISSED');
+  });
+
+  // Dismiss Queue
+  document.getElementById('btn-dismiss-queue').addEventListener('click', function() {
+    removeQueueBar();
+    setState('QUEUE: DISMISSED');
+  });
+
+  // Reset
+  document.getElementById('btn-reset').addEventListener('click', function() {
+    removeClaudeBar(true);
+    if (queuePill) { queuePill.remove(); queuePill = null; }
+    queueCount = 0;
+    queueCollapsed = false;
+    claudeState = 'none';
+    setState('IDLE');
+  });
+});
+</script>
+</body>
+</html>
