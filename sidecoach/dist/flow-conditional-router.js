@@ -49,9 +49,9 @@ class FlowConditionalRouter {
         return prerequisites.every(flowId => this.flowHasExecuted(context, flowId));
     }
     // Feature availability conditions
-    static hasImprovTool(context) {
-        // Check if improv is available in metadata or environment
-        return !!(context.metadata?.improveAvailable !== false);
+    static hasEndowTool(context) {
+        // Check if endow is available in metadata or environment
+        return !!(context.metadata?.endowAvailable !== false);
     }
     static hasFigmaAccess(context) {
         // Check if Figma integration is available

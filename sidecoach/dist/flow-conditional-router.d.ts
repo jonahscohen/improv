@@ -23,7 +23,7 @@ export declare class FlowConditionalRouter {
     static isQAPhase(context: FlowExecutionContext): boolean;
     static flowHasExecuted(context: FlowExecutionContext, flowId: FlowId): boolean;
     static allPrerequisitesComplete(context: FlowExecutionContext, prerequisites: FlowId[]): boolean;
-    static hasImprovTool(context: FlowExecutionContext): boolean;
+    static hasEndowTool(context: FlowExecutionContext): boolean;
     static hasFigmaAccess(context: FlowExecutionContext): boolean;
     static canAccessComponentGallery(context: FlowExecutionContext): boolean;
     static determineRoute(context: FlowExecutionContext): FlowId | null;

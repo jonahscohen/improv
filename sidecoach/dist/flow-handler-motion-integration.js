@@ -16,6 +16,7 @@ const motion_stack_idioms_1 = require("./motion-stack-idioms");
 // `cubic-bezier(0.34, 1.56, 0.64, 1)` as the entrance easing - which is
 // literally the bounce curve Emil bans in the absorbed library.
 const reference_loader_1 = require("./reference-loader");
+const model_routing_1 = require("./model-routing");
 class FlowHMotionIntegrationHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowH_motion_integration');
@@ -25,6 +26,8 @@ class FlowHMotionIntegrationHandler extends flow_handler_1.BaseFlowHandler {
         return !!(context.projectContext?.product?.brandPersonality || context.projectContext?.product?.brand_personality);
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         const brandPersonality = context.projectContext?.product?.brandPersonality || context.projectContext?.product?.brand_personality;
         const register = context.projectContext?.register || 'product';

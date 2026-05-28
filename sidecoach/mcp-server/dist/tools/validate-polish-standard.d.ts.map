@@ -1,0 +1,1 @@
+{"version":3,"file":"validate-polish-standard.d.ts","sourceRoot":"","sources":["../../src/tools/validate-polish-standard.ts"],"names":[],"mappings":"AAQA,OAAO,EAAE,mBAAmB,EAAE,KAAK,oBAAoB,EAAE,MAAM,YAAY,CAAC;AAC5E,OAAO,KAAK,EAAE,cAAc,EAAE,WAAW,EAAE,MAAM,SAAS,CAAC;AAE3D,eAAO,MAAM,UAAU,EAAE,cAAc,CAAC,OAAO,mBAAmB,CAUjE,CAAC;AAcF,eAAO,MAAM,OAAO,EAAE,WAAW,CAAC,oBAAoB,CAqCrD,CAAC"}

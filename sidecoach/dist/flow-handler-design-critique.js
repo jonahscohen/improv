@@ -6,6 +6,8 @@ exports.FlowLDesignCritiqueHandler = void 0;
 exports.createFlowLHandler = createFlowLHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
+const model_routing_1 = require("./model-routing");
+const retry_control_1 = require("./retry-control");
 const CRITIQUE_LENSES = {
     heuristics: [
         'System visibility: Status, error messages, feedback',
@@ -41,7 +43,18 @@ class FlowLDesignCritiqueHandler extends flow_handler_1.BaseFlowHandler {
         return !!context.projectPath;
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         try {
+            // T-0009: Phase-gated retry control. Halt BEFORE doing work if the
+            // orchestrator has looped past maxCycles or against an identical-error
+            // signature.
+            const retryConfig = (0, retry_control_1.readRetryConfig)(context);
+            const retryState = (0, retry_control_1.readRetryState)(context);
+            const haltDecision = (0, retry_control_1.evaluateHaltConditions)(retryState, retryConfig);
+            if (haltDecision.halt) {
+                return (0, retry_control_1.buildHaltResult)(this.flowId, this.getFlowName(), haltDecision, 'design-critique', `[${this.flowId}]`);
+            }
             const checklist = this.createChecklist([
                 { label: 'Nielsen heuristics: 9 heuristics reviewed', required: true },
                 { label: 'AI-slop detection: 5 slop patterns identified', required: true },
@@ -91,7 +104,7 @@ class FlowLDesignCritiqueHandler extends flow_handler_1.BaseFlowHandler {
                 .addMetric('cognitive-dimensions', 5, 'pass')
                 .addValidation('Design critique', 'pass', 'Framework initialized')
                 .addArtifact('critique', 3);
-            return {
+            const critiqueResult = {
                 flowId: this.flowId,
                 flowName: this.getFlowName(),
                 status: 'success',
@@ -103,6 +116,20 @@ class FlowLDesignCritiqueHandler extends flow_handler_1.BaseFlowHandler {
                 ],
                 memory: memoryBuilder.build(),
             };
+            // T-0009: Phase-gated retry control. Design critique is a framework-
+            // initializer flow with no automated validator results today, so the
+            // "failed rules" set is intentionally empty - the signature still
+            // varies by file path, and the identical-error halt is what stops a
+            // critique loop that the orchestrator keeps re-firing against the
+            // same target without any change between iterations.
+            const errorSignature = (0, retry_control_1.computeErrorSignature)({
+                validator: 'design-critique',
+                failedRules: [],
+                filePath: context.projectPath || '',
+            });
+            const nextState = (0, retry_control_1.recordIteration)(retryState, errorSignature);
+            (0, retry_control_1.attachRetryStateToResult)(critiqueResult, nextState, retryConfig);
+            return critiqueResult;
         }
         catch (err) {
             const memory = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())

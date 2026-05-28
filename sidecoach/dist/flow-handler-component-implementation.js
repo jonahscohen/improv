@@ -10,6 +10,7 @@ const flow_memory_schema_1 = require("./flow-memory-schema");
 const extended_domain_validator_1 = require("./extended-domain-validator");
 const icon_source_reference_1 = require("./icon-source-reference");
 const design_md_parser_1 = require("./design-md-parser");
+const model_routing_1 = require("./model-routing");
 class FlowGComponentImplementationHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowG_component_implementation');
@@ -19,6 +20,8 @@ class FlowGComponentImplementationHandler extends flow_handler_1.BaseFlowHandler
         return !!(context.projectContext?.register || context.projectContext?.product?.register);
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         const componentName = context.metadata?.componentName || 'button';
         const register = context.projectContext?.register || 'product';

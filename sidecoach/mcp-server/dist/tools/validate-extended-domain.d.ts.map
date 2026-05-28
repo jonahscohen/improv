@@ -1,0 +1,1 @@
+{"version":3,"file":"validate-extended-domain.d.ts","sourceRoot":"","sources":["../../src/tools/validate-extended-domain.ts"],"names":[],"mappings":"AAQA,OAAO,EACL,2BAA2B,EAC3B,KAAK,4BAA4B,EAClC,MAAM,YAAY,CAAC;AACpB,OAAO,KAAK,EAAE,cAAc,EAAE,WAAW,EAAE,MAAM,SAAS,CAAC;AAE3D,eAAO,MAAM,UAAU,EAAE,cAAc,CAAC,OAAO,2BAA2B,CAWzE,CAAC;AAUF,eAAO,MAAM,OAAO,EAAE,WAAW,CAAC,4BAA4B,CAoD7D,CAAC"}

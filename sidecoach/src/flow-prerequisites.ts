@@ -170,21 +170,9 @@ const FLOW_DEPENDENCIES: Map<FlowId, FlowDependency> = new Map([
     ],
   }],
 
-  // Legacy flows - no dependencies
-  ['flow1_clone_match', { flowId: 'flow1_clone_match', prerequisites: [] }],
-  ['flow2_polish_enhance', { flowId: 'flow2_polish_enhance', prerequisites: [] }],
-  ['flow3_audit_page', { flowId: 'flow3_audit_page', prerequisites: [] }],
-  ['flow4_explore_discovery', { flowId: 'flow4_explore_discovery', prerequisites: [] }],
-  ['flow5_review_qa', { flowId: 'flow5_review_qa', prerequisites: [] }],
-  ['flow6_constraint_design', { flowId: 'flow6_constraint_design', prerequisites: [] }],
-  ['flow7_design_component', { flowId: 'flow7_design_component', prerequisites: [] }],
-  ['flow8_refactor_layout', { flowId: 'flow8_refactor_layout', prerequisites: [] }],
-  ['flow9_accessible', { flowId: 'flow9_accessible', prerequisites: [] }],
-  ['flow10_implement_design', { flowId: 'flow10_implement_design', prerequisites: [] }],
-  ['flow11_extract_tokens', { flowId: 'flow11_extract_tokens', prerequisites: [] }],
-  ['flow12_responsive_review', { flowId: 'flow12_responsive_review', prerequisites: [] }],
-  ['flow13_rapid_iteration', { flowId: 'flow13_rapid_iteration', prerequisites: [] }],
-  ['flow14_migration', { flowId: 'flow14_migration', prerequisites: [] }],
+  // Tier 7: Renamed legacy (T-0015) - no dependencies
+  ['flowY_explore_discovery', { flowId: 'flowY_explore_discovery', prerequisites: [] }],
+  ['flowZ_design_component', { flowId: 'flowZ_design_component', prerequisites: [] }],
 ]);
 
 export class FlowPrerequisiteValidator {

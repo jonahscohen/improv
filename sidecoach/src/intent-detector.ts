@@ -51,21 +51,9 @@ export class IntentDetector {
       // New: Landing & Copy
       this.createFlowWDetector(),
       this.createFlowXDetector(),
-      // Legacy flows
-      this.createFlow1Detector(),
-      this.createFlow2Detector(),
-      this.createFlow3Detector(),
-      this.createFlow4Detector(),
-      this.createFlow5Detector(),
-      this.createFlow6Detector(),
-      this.createFlow7Detector(),
-      this.createFlow8Detector(),
-      this.createFlow9Detector(),
-      this.createFlow10Detector(),
-      this.createFlow11Detector(),
-      this.createFlow12Detector(),
-      this.createFlow13Detector(),
-      this.createFlow14Detector(),
+      // Tier 7: Renamed legacy (T-0015) - unique flows preserved with letter prefix
+      this.createFlowYDetector(),
+      this.createFlowZDetector(),
     ];
   }
 
@@ -299,7 +287,17 @@ export class IntentDetector {
     return {
       flowId: 'flowG_component_implementation',
       score: (u) => {
-        if (this.hasAny(u, ['implement', 'component', 'code', 'variants', 'states', 'wire'])) {
+        // Direct implement/code keywords: high confidence
+        if (this.hasAny(u, ['implement', 'code'])) {
+          if (this.hasNone(u, ['clone', 'exact'])) {
+            return 0.9;
+          }
+        }
+        // Build from source (mockup/figma/design/reference): T-0015 absorbed from flow10
+        if (this.has(u, 'build') && this.hasAny(u, ['from', 'based on', 'mockup', 'figma', 'reference'])) {
+          return 0.85;
+        }
+        if (this.hasAny(u, ['component', 'variants', 'states', 'wire'])) {
           if (this.hasNone(u, ['design', 'clone', 'exact'])) {
             return 0.8;
           }
@@ -341,8 +339,16 @@ export class IntentDetector {
     return {
       flowId: 'flowJ_tactical_polish',
       score: (u) => {
-        if (this.hasAny(u, ['polish', 'feel better', 'tactical', 'refinement', 'micro-interaction'])) {
-          if (this.hasNone(u, ['audit', 'design', 'implement'])) {
+        // T-0015: absorbed flow2_polish_enhance matching (feel/animation/microinteraction/janky/life).
+        // Excludes layout/hierarchy/cluttered which route to flowR.
+        if (this.hasAny(u, ['polish', 'feel better', 'tactical', 'refinement', 'micro-interaction',
+                            'feel', 'animation', 'microinteraction', 'janky', 'life'])) {
+          if (this.hasNone(u, ['audit', 'design', 'implement', 'layout', 'hierarchy',
+                                'accessible', 'cluttered', 'reorganize', 'restructure'])) {
+            // Higher confidence for direct 'feel' keyword (specific to polish/enhance)
+            if (this.has(u, 'feel')) {
+              return 0.9;
+            }
             return 0.85;
           }
         }
@@ -435,9 +441,13 @@ export class IntentDetector {
     return {
       flowId: 'flowQ_migration_special',
       score: (u) => {
-        if (this.hasAny(u, ['migrate', 'breaking', 'refactor', 'api', 'migration', 'dependencies'])) {
-          // Special migration requires "breaking" or "migrate" keywords, not just "refactor api"
-          if (this.hasAny(u, ['breaking', 'migrate'])) {
+        // T-0015: absorbed flow14_migration matching. "refactor + api" routes here (the
+        // strongest delta: API-breaking changes vs cosmetic layout refactors).
+        if (this.has(u, 'refactor') && this.hasAny(u, ['api', 'breaking change'])) {
+          return 0.95;
+        }
+        if (this.hasAny(u, ['migrate', 'breaking', 'replace', 'upgrade', 'api', 'migration', 'dependencies'])) {
+          if (this.hasAny(u, ['breaking', 'migrate', 'api'])) {
             return 0.9;
           }
         }
@@ -452,6 +462,16 @@ export class IntentDetector {
     return {
       flowId: 'flowR_layout_optimization',
       score: (u) => {
+        // T-0015: absorbed flow8_refactor_layout matching (cluttered/hierarchy/restructure/reorganize/refactor-without-api).
+        if (this.hasAny(u, ['cluttered', 'restructure', 'reorganize', 'whitespace'])) {
+          if (this.hasNone(u, ['migrate', 'accessible'])) {
+            return 0.85;
+          }
+        }
+        // "refactor" without "api" routes here (api goes to flowQ).
+        if (this.has(u, 'refactor') && this.hasNone(u, ['api', 'breaking'])) {
+          return 0.85;
+        }
         if (this.hasAny(u, ['layout', 'spacing', 'rhythm', 'optimize', 'grid', 'hierarchy', 'refinement'])) {
           if (this.hasAny(u, ['layout', 'spacing', 'grid']) && this.hasNone(u, ['design', 'implement'])) {
             return 0.85;
@@ -490,55 +510,15 @@ export class IntentDetector {
     };
   }
 
-  private createFlow1Detector(): FlowDetector {
-    return {
-      flowId: 'flow1_clone_match',
-      score: (u) => {
-        if (this.hasAny(u, ['match', 'steal', 'clone', '1:1', 'exact', 'identical', 'copy precisely'])) {
-          if (this.hasNone(u, ['implement', 'build from', 'design'])) {
-            return 0.9;
-          }
-        }
-        return 0;
-      },
-    };
-  }
+  // T-0015 (2026-05-28): legacy flow1..flow14 detectors removed as duplicates.
+  // Their match conditions were folded into the canonical lettered detectors
+  // (flowO/flowJ/flowK/flowP/flowR/flowI/flowG/flowF/flowM/flowN/flowQ).
+  // The two unique flows (flow4 exploration, flow7 design-from-scratch) live on
+  // as flowY and flowZ below.
 
-  private createFlow2Detector(): FlowDetector {
+  private createFlowYDetector(): FlowDetector {
     return {
-      flowId: 'flow2_polish_enhance',
-      score: (u) => {
-        if (this.hasAny(u, ['feel', 'polish', 'animation', 'microinteraction', 'janky', 'life', 'experience'])) {
-          if (this.hasNone(u, ['layout', 'hierarchy', 'accessible', 'cluttered', 'reorganize', 'restructure'])) {
-            // Higher score for 'feel' keyword (more specific to polish/enhance)
-            if (this.has(u, 'feel')) {
-              return 0.9;
-            }
-            return 0.85;
-          }
-        }
-        return 0;
-      },
-    };
-  }
-
-  private createFlow3Detector(): FlowDetector {
-    return {
-      flowId: 'flow3_audit_page',
-      score: (u) => {
-        if (this.hasAny(u, ['audit', 'find issues', 'scan', 'what\'s wrong'])) {
-          if (this.hasNone(u, ['accessible', 'a11y', 'wcag'])) {
-            return 0.85;
-          }
-        }
-        return 0;
-      },
-    };
-  }
-
-  private createFlow4Detector(): FlowDetector {
-    return {
-      flowId: 'flow4_explore_discovery',
+      flowId: 'flowY_explore_discovery',
       score: (u) => {
         if (this.hasAny(u, ['explore', 'what if', 'experiment', 'discovery', 'brainstorm', 'try variations'])) {
           if (this.hasNone(u, ['iterate', 'round', 'feedback', 'criteria'])) {
@@ -550,36 +530,9 @@ export class IntentDetector {
     };
   }
 
-  private createFlow5Detector(): FlowDetector {
+  private createFlowZDetector(): FlowDetector {
     return {
-      flowId: 'flow5_review_qa',
-      score: (u) => {
-        if (this.hasAny(u, ['review', 'code review', 'comprehensive', 'QA'])) {
-          return 0.8;
-        }
-        return 0;
-      },
-    };
-  }
-
-  private createFlow6Detector(): FlowDetector {
-    return {
-      flowId: 'flow6_constraint_design',
-      score: (u) => {
-        if (this.hasAny(u, ['design for', 'design with', 'optimize given', 'under', 'respecting', 'constraint'])) {
-          // Make sure it's actually a constraint context
-          if (this.hasAny(u, ['mobile', 'performance', 'wcag', 'keyboard', 'limit', 'budget'])) {
-            return 0.8;
-          }
-        }
-        return 0;
-      },
-    };
-  }
-
-  private createFlow7Detector(): FlowDetector {
-    return {
-      flowId: 'flow7_design_component',
+      flowId: 'flowZ_design_component',
       score: (u) => {
         const hasDesignKeyword = this.hasAny(u, ['design', 'create', 'build', 'new']);
         const hasComponentContext = this.hasAny(u, ['component', 'button', 'picker', 'modal', 'card', 'form', 'widget', 'banner', 'tooltip', 'sidebar', 'nav']);
@@ -589,115 +542,6 @@ export class IntentDetector {
           if (this.hasNone(u, ['from', 'based on', 'implement', 'mockup', 'figma'])) {
             return 0.9;
           }
-        }
-        return 0;
-      },
-    };
-  }
-
-  private createFlow8Detector(): FlowDetector {
-    return {
-      flowId: 'flow8_refactor_layout',
-      score: (u) => {
-        if (this.hasAny(u, ['refactor', 'cluttered', 'hierarchy', 'layout', 'restructure', 'reorganize', 'clearer', 'whitespace'])) {
-          if (this.hasNone(u, ['migrate', 'accessible', 'responsive'])) {
-            // "refactor" without "api" keyword -> assume layout refactor
-            if (this.has(u, 'refactor') && this.hasNone(u, ['api'])) {
-              return 0.85;
-            }
-            // Other layout keywords
-            if (this.hasAny(u, ['cluttered', 'hierarchy', 'layout', 'restructure', 'reorganize', 'clearer'])) {
-              return 0.85;
-            }
-          }
-        }
-        return 0;
-      },
-    };
-  }
-
-  private createFlow9Detector(): FlowDetector {
-    return {
-      flowId: 'flow9_accessible',
-      score: (u) => {
-        if (this.hasAny(u, ['accessible', 'a11y', 'wcag', 'screen reader', 'keyboard', 'aria'])) {
-          return 0.9;
-        }
-        return 0;
-      },
-    };
-  }
-
-  private createFlow10Detector(): FlowDetector {
-    return {
-      flowId: 'flow10_implement_design',
-      score: (u) => {
-        const hasImplementKeyword = this.hasAny(u, ['implement', 'code', 'build']);
-        const hasSource = this.hasAny(u, ['from', 'based on', 'mockup', 'figma', 'design', 'reference']);
-
-        if (this.has(u, 'implement') || this.has(u, 'code')) {
-          return 0.9;
-        }
-        if (hasImplementKeyword && hasSource) {
-          return 0.85;
-        }
-        return 0;
-      },
-    };
-  }
-
-  private createFlow11Detector(): FlowDetector {
-    return {
-      flowId: 'flow11_extract_tokens',
-      score: (u) => {
-        if (this.hasAny(u, ['extract', 'token', 'reusable', 'standardize', 'repeating'])) {
-          return 0.8;
-        }
-        return 0;
-      },
-    };
-  }
-
-  private createFlow12Detector(): FlowDetector {
-    return {
-      flowId: 'flow12_responsive_review',
-      score: (u) => {
-        if (this.hasAny(u, ['responsive', 'breakpoint', 'mobile', 'tablet', 'desktop', 'screen sizes'])) {
-          return 0.85;
-        }
-        return 0;
-      },
-    };
-  }
-
-  private createFlow13Detector(): FlowDetector {
-    return {
-      flowId: 'flow13_rapid_iteration',
-      score: (u) => {
-        if (this.hasAny(u, ['iterate', 'refine', 'round', 'cycle', 'try variations'])) {
-          if (this.hasAny(u, ['feedback', 'criteria', 'round'])) {
-            return 0.9;
-          }
-          return 0.7;
-        }
-        return 0;
-      },
-    };
-  }
-
-  private createFlow14Detector(): FlowDetector {
-    return {
-      flowId: 'flow14_migration',
-      score: (u) => {
-        // High confidence if has strong migration keywords
-        if (this.hasAny(u, ['migrate', 'api', 'breaking change', 'replace', 'upgrade'])) {
-          if (this.hasAny(u, ['api', 'breaking change', 'migrate'])) {
-            return 0.9;
-          }
-        }
-        // "refactor" with API context -> migration/upgrade (highest confidence)
-        if (this.has(u, 'refactor') && this.hasAny(u, ['api', 'breaking change'])) {
-          return 0.95;
         }
         return 0;
       },

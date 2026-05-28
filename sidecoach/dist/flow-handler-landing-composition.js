@@ -7,6 +7,7 @@ exports.FlowWLandingCompositionHandler = void 0;
 const flow_handler_1 = require("./flow-handler");
 const landing_composition_data_1 = require("./landing-composition-data");
 const flow_memory_schema_1 = require("./flow-memory-schema");
+const model_routing_1 = require("./model-routing");
 class FlowWLandingCompositionHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowW_landing_composition');
@@ -16,6 +17,8 @@ class FlowWLandingCompositionHandler extends flow_handler_1.BaseFlowHandler {
         return register === 'brand' || register === 'product';
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const register = context.projectContext?.register || 'product';
         const taxonomy = (0, landing_composition_data_1.getSectionTaxonomy)(register);
         const rhythm = (0, landing_composition_data_1.getRhythmRules)(register);

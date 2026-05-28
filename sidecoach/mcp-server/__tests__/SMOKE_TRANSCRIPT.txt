@@ -1,0 +1,54 @@
+=========================================================
+SIDECOACH MCP SERVER - LIVE SUBPROCESS SMOKE TRANSCRIPT
+=========================================================
+Date: 2026-05-28
+Server binary: sidecoach/mcp-server/dist/index.js
+Transport: stdio (StdioServerTransport)
+Env: SIDECOACH_MCP_LOG_LEVEL=warn
+
+--- 1) initialize handshake ---
+
+CLIENT->SERVER: {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke-shell","version":"0.0.0"}}}
+
+SERVER->CLIENT: {"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"sidecoach-mcp-server","version":"0.1.0"}},"jsonrpc":"2.0","id":1}
+
+--- 2) initialized notification (one-way) ---
+CLIENT->SERVER: {"jsonrpc":"2.0","method":"notifications/initialized"}
+
+--- 3) tools/list (response truncated; shows tool count + names) ---
+CLIENT->SERVER: {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
+
+SERVER->CLIENT: (10 tool definitions returned, 10 distinct sidecoach_* names)
+"name":"sidecoach_get_cheatsheet"
+"name":"sidecoach_get_cost_ledger"
+"name":"sidecoach_get_flow_metadata"
+"name":"sidecoach_list_flows"
+"name":"sidecoach_list_modes"
+"name":"sidecoach_list_verbs"
+"name":"sidecoach_resolve_keyword"
+"name":"sidecoach_validate_extended_domain"
+"name":"sidecoach_validate_polish_standard"
+"name":"sidecoach_validate_taste"
+
+--- 4) tools/call sidecoach_list_modes (id=3) - SUCCESS ---
+CLIENT->SERVER: {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"sidecoach_list_modes","arguments":{}}}
+SERVER->CLIENT: (5 modes returned: forge, kiln, bloom, canvas, trim)
+
+--- 5) tools/call sidecoach_resolve_keyword (id=4) - SUCCESS ---
+CLIENT->SERVER: {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"sidecoach_resolve_keyword","arguments":{"phrase":"please polish the homepage"}}}
+SERVER->CLIENT: {"result":{"content":[{"type":"text","text":"sidecoach_resolve_keyword: matched verb=polish"},{"type":"text","text":"{\"match\":{\"kind\":\"verb\",\"name\":\"polish\",\"reason\":\"matched verb\"}}"}]},"jsonrpc":"2.0","id":4}
+
+--- 6) tools/call sidecoach_get_flow_metadata (id=5, valid flowId) - SUCCESS ---
+CLIENT->SERVER: {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"sidecoach_get_flow_metadata","arguments":{"flowId":"flowJ_tactical_polish"}}}
+SERVER->CLIENT: (flow metadata with name, description, triggers, tier=3, modelConfig preferredTier=opus)
+
+--- 7) tools/call sidecoach_get_flow_metadata (id=6, UNKNOWN flowId) - STRUCTURED ERROR ---
+CLIENT->SERVER: {"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"sidecoach_get_flow_metadata","arguments":{"flowId":"flowZZZ_unknown"}}}
+SERVER->CLIENT: {"result":{"content":[{"type":"text","text":"{\"code\":\"INVALID_INPUT\",\"message\":\"unknown flowId: \\"flowZZZ_unknown\\". Use sidecoach_list_flows to discover valid IDs.\",\"resource\":\"flowZZZ_unknown\"}"}],"isError":true},"jsonrpc":"2.0","id":6}
+
+STDERR log line for the same call (proves logger emits stderr, not stdout):
+{"ts":"2026-05-28T10:38:31.547Z","level":"warn","requestId":"05863adc-2389-48e5-9077-d8addb18337c","tool":"sidecoach_get_flow_metadata","durationMs":0,"code":"INVALID_INPUT","errMessage":"unknown flowId: \"flowZZZ_unknown\". Use sidecoach_list_flows to discover valid IDs.","msg":"tool call error"}
+
+=========================================================
+SHUTDOWN: process exited cleanly when stdin closed (EOF)
+=========================================================

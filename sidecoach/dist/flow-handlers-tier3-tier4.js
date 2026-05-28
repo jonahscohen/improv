@@ -42,6 +42,7 @@ const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const model_routing_1 = require("./model-routing");
 // TIER 3: POLISH/QA FLOWS
 /**
  * Flow J: 16-Point Tactical Polish
@@ -72,6 +73,8 @@ class FlowJTacticalPolishHandler extends flow_handler_1.BaseFlowHandler {
         return !!context.projectPath;
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         try {
             const appliedRules = Object.entries(TACTICAL_RULES).map(([key, rule]) => ({
@@ -198,6 +201,8 @@ class FlowKMultiLensAuditHandler extends flow_handler_1.BaseFlowHandler {
         super('flowK_multi_lens_audit');
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         const guidance = [
             'Dimension 1: Accessibility (WCAG compliance, semantic HTML, keyboard nav)',
@@ -308,6 +313,8 @@ class FlowLDesignCritiqueHandler extends flow_handler_1.BaseFlowHandler {
         super('flowL_design_critique');
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         const guidance = [
             'Nielsen 10 Usability Heuristics: visibility, match with real world, user control, consistency, error prevention, recognition vs recall, flexibility, aesthetic, error recovery, help & documentation',
@@ -428,6 +435,8 @@ class FlowMResponsiveValidationHandler extends flow_handler_1.BaseFlowHandler {
         super('flowM_responsive_validation');
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         const guidance = [
             'Extract breakpoints from DESIGN.md (canonical source)',
@@ -527,22 +536,24 @@ class FlowNRapidIterationHandler extends flow_handler_1.BaseFlowHandler {
         super('flowN_rapid_iteration_refined');
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
-        // Check if Improv is available for live browser iteration
-        const improveAvailable = process.env.IMPROV_AVAILABLE === 'true' ||
-            process.env.IMPROV_SOCKET_PATH !== undefined;
+        // Check if Endow is available for live browser iteration
+        const endowAvailable = process.env.ENDOW_AVAILABLE === 'true' ||
+            process.env.ENDOW_SOCKET_PATH !== undefined;
         const guidance = [];
-        if (improveAvailable) {
-            guidance.push('LIVE BROWSER ITERATION ENABLED via Improv');
+        if (endowAvailable) {
+            guidance.push('LIVE BROWSER ITERATION ENABLED via Endow');
             guidance.push('---');
             guidance.push('1. Open the design/component in browser');
-            guidance.push('2. Activate Improv overlay (CMD+SHIFT+.)');
+            guidance.push('2. Activate Endow overlay (CMD+SHIFT+.)');
             guidance.push('3. Select element to iterate on');
-            guidance.push('4. Review proposed changes from Improv');
+            guidance.push('4. Review proposed changes from Endow');
             guidance.push('5. Accept/reject each iteration (max 10 rounds)');
             guidance.push('6. Visual artifacts captured after each round');
             guidance.push('---');
-            guidance.push('Fallback: token-based variations if Improv not connected');
+            guidance.push('Fallback: token-based variations if Endow not connected');
         }
         else {
             guidance.push('Define success criteria upfront: what does a successful design look like?');
@@ -559,9 +570,9 @@ class FlowNRapidIterationHandler extends flow_handler_1.BaseFlowHandler {
         if (enhancedContext?.flowMetadata) {
             enhancedContext.flowMetadata.tags = ['flowN', 'rapid-iteration', 'token-based'];
             enhancedContext.flowMetadata.customData = {
-                'iteration-mode': improveAvailable ? 'live-browser' : 'token-based',
-                'improv-available': improveAvailable,
-                'max-rounds': improveAvailable ? 10 : 4,
+                'iteration-mode': endowAvailable ? 'live-browser' : 'token-based',
+                'endow-available': endowAvailable,
+                'max-rounds': endowAvailable ? 10 : 4,
                 'supported-properties': ['color-adjustments', 'spacing', 'typography', 'opacity', 'border-radius'].length,
             };
         }
@@ -620,29 +631,29 @@ class FlowNRapidIterationHandler extends flow_handler_1.BaseFlowHandler {
         catch (error) {
             guidance.push(`Note: Could not validate iteration anti-patterns (${error instanceof Error ? error.message : 'unknown error'})`);
         }
-        // Add Improv iteration artifact if available
-        if (improveAvailable) {
-            artifacts.push(this.createArtifact('reference', 'improv-iteration-session', JSON.stringify({
+        // Add Endow iteration artifact if available
+        if (endowAvailable) {
+            artifacts.push(this.createArtifact('reference', 'endow-iteration-session', JSON.stringify({
                 mode: 'live-browser-iteration',
                 improveStatus: 'connected',
                 maxRounds: 10,
                 supported: ['color-adjustments', 'spacing', 'typography', 'opacity', 'border-radius'],
                 captureMode: 'screenshot-per-round',
-            }), 'Live Improv iteration session - visual changes captured and compared'));
+            }), 'Live Endow iteration session - visual changes captured and compared'));
         }
         return {
             flowId: this.flowId,
             flowName: this.getFlowName(),
             status: 'success',
-            message: improveAvailable ?
-                'Rapid iteration with live browser iteration via Improv' :
+            message: endowAvailable ?
+                'Rapid iteration with live browser iteration via Endow' :
                 'Rapid iteration with token-based variations',
             guidance,
             checklist: this.createChecklist([
                 { label: 'Define success criteria for this element', required: true },
                 { label: 'List 2-3 token variations to test', required: true },
-                improveAvailable ?
-                    { label: 'Activate Improv overlay and select element', required: true } :
+                endowAvailable ?
+                    { label: 'Activate Endow overlay and select element', required: true } :
                     { label: 'Generate variations by adjusting DESIGN.md tokens', required: true },
                 { label: 'Validate iterations against anti-pattern baseline', required: true },
                 { label: 'Test variations against success criteria', required: true },
@@ -664,6 +675,8 @@ class FlowOCloneMatchHandler extends flow_handler_1.BaseFlowHandler {
         super('flowO_clone_match_special');
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         if (enhancedContext?.flowMetadata) {
             enhancedContext.flowMetadata.tags = ['flowO', 'clone-match', 'pixel-perfect'];
@@ -709,6 +722,8 @@ class FlowPConstraintDesignHandler extends flow_handler_1.BaseFlowHandler {
         super('flowP_constraint_design_special');
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         if (enhancedContext?.flowMetadata) {
             enhancedContext.flowMetadata.tags = ['flowP', 'constraint-design', 'creative-problem-solving'];
@@ -753,6 +768,8 @@ class FlowQMigrationHandler extends flow_handler_1.BaseFlowHandler {
         super('flowQ_migration_special');
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         if (enhancedContext?.flowMetadata) {
             enhancedContext.flowMetadata.tags = ['flowQ', 'migration', 'refactor'];

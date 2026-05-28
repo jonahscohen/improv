@@ -6,6 +6,8 @@ exports.FlowKMultiLensAuditHandler = void 0;
 exports.createFlowKHandler = createFlowKHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
+const model_routing_1 = require("./model-routing");
+const retry_control_1 = require("./retry-control");
 class FlowKMultiLensAuditHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowK_multi_lens_audit');
@@ -14,7 +16,18 @@ class FlowKMultiLensAuditHandler extends flow_handler_1.BaseFlowHandler {
         return !!context.projectPath;
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         try {
+            // T-0009: Phase-gated retry control. Halt BEFORE doing work if the
+            // orchestrator has looped past maxCycles or against an identical-error
+            // signature.
+            const retryConfig = (0, retry_control_1.readRetryConfig)(context);
+            const retryState = (0, retry_control_1.readRetryState)(context);
+            const haltDecision = (0, retry_control_1.evaluateHaltConditions)(retryState, retryConfig);
+            if (haltDecision.halt) {
+                return (0, retry_control_1.buildHaltResult)(this.flowId, this.getFlowName(), haltDecision, 'multi-lens-audit', `[${this.flowId}]`);
+            }
             const dimensions = [
                 {
                     name: 'Accessibility (a11y)',
@@ -140,7 +153,7 @@ class FlowKMultiLensAuditHandler extends flow_handler_1.BaseFlowHandler {
                 .addMetric('dimensions-pass', passCount, 'pass', 5)
                 .addValidation('Multi-lens audit', 'warning', 'Manual testing required for a11y, performance, theming, responsive')
                 .addArtifact('audit-checklist', 5);
-            return {
+            const auditResult = {
                 flowId: this.flowId,
                 flowName: this.getFlowName(),
                 status: 'success',
@@ -154,6 +167,21 @@ class FlowKMultiLensAuditHandler extends flow_handler_1.BaseFlowHandler {
                 ],
                 memory: memoryBuilder.build(),
             };
+            // T-0009: Phase-gated retry control. The audit's "failed rules" are the
+            // dimensions that did not pass (warning + fail). Hash the failure set
+            // into a signature so identical failure patterns across iterations
+            // trigger the halt.
+            const failedDimensionIds = dimensions
+                .filter((d) => d.status !== 'pass')
+                .map((d) => d.name);
+            const errorSignature = (0, retry_control_1.computeErrorSignature)({
+                validator: 'multi-lens-audit',
+                failedRules: failedDimensionIds,
+                filePath: context.projectPath || '',
+            });
+            const nextState = (0, retry_control_1.recordIteration)(retryState, errorSignature);
+            (0, retry_control_1.attachRetryStateToResult)(auditResult, nextState, retryConfig);
+            return auditResult;
         }
         catch (err) {
             const memory = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())

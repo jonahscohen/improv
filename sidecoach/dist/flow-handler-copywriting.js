@@ -8,6 +8,7 @@ const flow_handler_1 = require("./flow-handler");
 const landing_composition_data_1 = require("./landing-composition-data");
 const copywriting_templates_1 = require("./copywriting-templates");
 const flow_memory_schema_1 = require("./flow-memory-schema");
+const model_routing_1 = require("./model-routing");
 class FlowXCopywritingHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowX_copywriting');
@@ -17,6 +18,8 @@ class FlowXCopywritingHandler extends flow_handler_1.BaseFlowHandler {
         return register === 'brand' || register === 'product';
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const register = context.projectContext?.register || 'product';
         const explicitSectionIds = context.metadata?.sectionIds || [];
         const productName = context.metadata?.productName ||

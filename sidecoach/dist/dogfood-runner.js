@@ -1,7 +1,7 @@
 "use strict";
 // Dogfood runner: drives sidecoach end-to-end on the claude-dotfiles marketing site brief.
-// Brief: a brand-new marketing landing page for claude-dotfiles that advertises improv,
-// sidecoach, and memory tools, with links to two sub-pages (improv marketing + sidecoach
+// Brief: a brand-new marketing landing page for claude-dotfiles that advertises endow,
+// sidecoach, and memory tools, with links to two sub-pages (endow marketing + sidecoach
 // marketing). Use existing claude-dotfiles DESIGN.md tokens. New fonts selected by sidecoach.
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -41,7 +41,7 @@ const sidecoach_orchestrator_1 = require("./sidecoach-orchestrator");
 const fs = __importStar(require("fs"));
 const projectPath = '/Users/spare3/Documents/Github/claude-dotfiles';
 const outputFile = '/tmp/sidecoach-dogfood-output.md';
-const brief = `Build a brand new marketing landing page for claude-dotfiles. The page advertises three primary products - improv, sidecoach, and the memory tools - and mentions other tools (Discord chat agent, voice output, voice transcription, cmux browser pane, reflect, design references). The index page links to two sub-pages: one marketing improv specifically, one marketing sidecoach specifically. Use the existing claude-dotfiles DESIGN.md tokens for colors and brand materials. New typefaces should be selected by the system (fontshare). Aesthetic register: brand (not product). Tone: professional, technical, restrained.`;
+const brief = `Build a brand new marketing landing page for claude-dotfiles. The page advertises three primary products - endow, sidecoach, and the memory tools - and mentions other tools (Discord chat agent, voice output, voice transcription, cmux browser pane, reflect, design references). The index page links to two sub-pages: one marketing endow specifically, one marketing sidecoach specifically. Use the existing claude-dotfiles DESIGN.md tokens for colors and brand materials. New typefaces should be selected by the system (fontshare). Aesthetic register: brand (not product). Tone: professional, technical, restrained.`;
 const phases = [
     { flow: 'flowA_brand_verify', utterance: 'verify brand foundation for claude-dotfiles marketing site' },
     { flow: 'flowC_font_research', utterance: 'research typeface pairings via fontshare for restrained technical aesthetic' },

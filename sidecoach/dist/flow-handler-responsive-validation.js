@@ -14,6 +14,7 @@ exports.createFlowMHandler = createFlowMHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const reference_loader_1 = require("./reference-loader");
+const model_routing_1 = require("./model-routing");
 class FlowMResponsiveValidationHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowM_responsive_validation');
@@ -22,6 +23,8 @@ class FlowMResponsiveValidationHandler extends flow_handler_1.BaseFlowHandler {
         return !!context.projectPath;
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         try {
             // Load the canonical reference. Soft-fails to null if the file is
             // somehow missing on disk; the handler still produces useful guidance

@@ -12,21 +12,24 @@ export interface CommandMatch {
   reason: string;
 }
 
+// T-0015 (2026-05-28): legacy flow1..flow14 IDs removed from verb routing.
+// Duplicates were folded into their lettered canonicals (see CHEATSHEET.md);
+// flow4/flow7 are now flowY_explore_discovery / flowZ_design_component.
 const SLASH_COMMANDS: Record<string, FlowId[]> = {
-  research: ['flowA_brand_verify', 'flowB_component_research', 'flowC_font_research', 'flowD_reference_inspiration', 'flowE_motion_patterns', 'flow4_explore_discovery', 'flow7_design_component'],
-  craft: ['flowF_design_tokens', 'flowG_component_implementation', 'flowH_motion_integration', 'flowI_accessibility', 'flow9_accessible', 'flow10_implement_design', 'flow11_extract_tokens'],
-  implement: ['flowF_design_tokens', 'flowG_component_implementation', 'flowH_motion_integration', 'flowI_accessibility', 'flow9_accessible', 'flow10_implement_design', 'flow11_extract_tokens'],
-  review: ['flowJ_tactical_polish', 'flowK_multi_lens_audit', 'flowL_design_critique', 'flowM_responsive_validation', 'flowN_rapid_iteration_refined', 'flow2_polish_enhance', 'flow3_audit_page', 'flow5_review_qa', 'flow12_responsive_review', 'flow13_rapid_iteration'],
-  clone: ['flowO_clone_match_special', 'flow1_clone_match'],
-  constrain: ['flowP_constraint_design_special', 'flow6_constraint_design'],
-  migrate: ['flowQ_migration_special', 'flow14_migration'],
-  refactor: ['flowR_layout_optimization', 'flow8_refactor_layout'],
+  research: ['flowA_brand_verify', 'flowB_component_research', 'flowC_font_research', 'flowD_reference_inspiration', 'flowE_motion_patterns', 'flowY_explore_discovery', 'flowZ_design_component'],
+  craft: ['flowF_design_tokens', 'flowG_component_implementation', 'flowH_motion_integration', 'flowI_accessibility'],
+  implement: ['flowF_design_tokens', 'flowG_component_implementation', 'flowH_motion_integration', 'flowI_accessibility'],
+  review: ['flowJ_tactical_polish', 'flowK_multi_lens_audit', 'flowL_design_critique', 'flowM_responsive_validation', 'flowN_rapid_iteration_refined'],
+  clone: ['flowO_clone_match_special'],
+  constrain: ['flowP_constraint_design_special'],
+  migrate: ['flowQ_migration_special'],
+  refactor: ['flowR_layout_optimization'],
   type: ['flowS_typography_excellence'],
   motion: ['flowT_ambitious_motion'],
   reference: ['flowU_curate'],
   comprehensive: ['flowV_all_seven_qa'],
   teach: [],
-  rapid: ['flowN_rapid_iteration_refined', 'flow13_rapid_iteration'],
+  rapid: ['flowN_rapid_iteration_refined'],
   list: [],
 };
 
@@ -190,7 +193,7 @@ export function getAvailableCommands(): Record<string, CommandInfo> {
       phase: 'Special',
     },
     rapid: {
-      description: 'Live browser iteration with Improv or token-based variations',
+      description: 'Live browser iteration with Endow or token-based variations',
       flows: ['Rapid Iteration Refined', 'Rapid Iteration'],
       phase: 'Review',
     },

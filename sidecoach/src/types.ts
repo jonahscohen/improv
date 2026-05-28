@@ -30,21 +30,9 @@ export type FlowId =
   // Tier 6: Composition & Copy
   | 'flowW_landing_composition'
   | 'flowX_copywriting'
-  // Legacy flows
-  | 'flow1_clone_match'
-  | 'flow2_polish_enhance'
-  | 'flow3_audit_page'
-  | 'flow4_explore_discovery'
-  | 'flow5_review_qa'
-  | 'flow6_constraint_design'
-  | 'flow7_design_component'
-  | 'flow8_refactor_layout'
-  | 'flow9_accessible'
-  | 'flow10_implement_design'
-  | 'flow11_extract_tokens'
-  | 'flow12_responsive_review'
-  | 'flow13_rapid_iteration'
-  | 'flow14_migration';
+  // Tier 7: Renamed legacy (T-0015) - unique flows preserved with letter prefix
+  | 'flowY_explore_discovery'
+  | 'flowZ_design_component';
 
 export interface FlowTrigger {
   patterns: string[];

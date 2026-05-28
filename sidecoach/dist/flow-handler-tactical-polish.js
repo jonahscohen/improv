@@ -46,6 +46,8 @@ const extended_domain_validator_1 = require("./extended-domain-validator");
 const polish_standard_validator_1 = require("./polish-standard-validator");
 const linguistic_ban_validator_1 = require("./linguistic-ban-validator");
 const absolute_ban_detector_1 = require("./absolute-ban-detector");
+const model_routing_1 = require("./model-routing");
+const retry_control_1 = require("./retry-control");
 /**
  * Read CSS files in a project directory and return each rule as a string.
  * Used to feed PolishStandardValidator + ExtendedDomainValidator with real
@@ -201,7 +203,19 @@ class FlowJTacticalPolishHandler extends flow_handler_1.BaseFlowHandler {
         return !!context.projectPath;
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         try {
+            // T-0009: Phase-gated retry control. Check halt conditions BEFORE
+            // running validators. If the orchestrator has been hammering this
+            // handler past maxCycles or against an identical-error signature,
+            // bail out with a structured halt result.
+            const retryConfig = (0, retry_control_1.readRetryConfig)(context);
+            const retryState = (0, retry_control_1.readRetryState)(context);
+            const haltDecision = (0, retry_control_1.evaluateHaltConditions)(retryState, retryConfig);
+            if (haltDecision.halt) {
+                return (0, retry_control_1.buildHaltResult)(this.flowId, this.getFlowName(), haltDecision, 'polish-standard', `[${this.flowId}]`);
+            }
             // Build DomainCheckContext from execution context
             // Extract available data from metadata or use defaults.
             // Round 2 (R4): if metadata.cssRules is not provided, read the
@@ -399,6 +413,21 @@ class FlowJTacticalPolishHandler extends flow_handler_1.BaseFlowHandler {
                 summary: `Copy across ${linguisticScan.perFile.size} files: ${linguisticP0} P0 templates, ${linguisticP1} P1 slop words`,
             }));
             result.validationResults.push((0, absolute_ban_detector_1.absoluteBanToValidationResult)(absoluteBanScan));
+            // T-0009: Phase-gated retry control. Compute the error signature from
+            // the validator that drives this handler (Polish Standard is the
+            // primary signal; failed rule IDs identify the specific failure set).
+            // Append to retry state and ship it back via executionMetadata so the
+            // next invocation can decide whether to halt.
+            const failedRuleIds = polishReport.results
+                .filter((r) => !r.passed)
+                .map((r) => String(r.ruleId));
+            const errorSignature = (0, retry_control_1.computeErrorSignature)({
+                validator: 'polish-standard',
+                failedRules: failedRuleIds,
+                filePath: context.projectPath || '',
+            });
+            const nextState = (0, retry_control_1.recordIteration)(retryState, errorSignature);
+            (0, retry_control_1.attachRetryStateToResult)(result, nextState, retryConfig);
             return result;
         }
         catch (err) {

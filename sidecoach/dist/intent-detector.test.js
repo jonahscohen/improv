@@ -4,46 +4,48 @@ exports.runTests = runTests;
 const intent_detector_1 = require("./intent-detector");
 const detector = new intent_detector_1.IntentDetector();
 // Test cases from implementation checklist
+// T-0015 (2026-05-28): updated to use post-cull canonical flow IDs.
+// Legacy flow1..flow14 IDs are gone; lettered counterparts are now the targets.
 const testCases = [
     {
         utterance: 'Make the button feel better',
-        expectedFlow: 'flow2_polish_enhance',
-        reason: 'feel token + button context',
+        expectedFlow: 'flowJ_tactical_polish',
+        reason: 'feel + polish folded into flowJ tactical polish',
     },
     {
         utterance: 'The sidebar feels cluttered',
-        expectedFlow: 'flow8_refactor_layout',
-        reason: 'cluttered token + layout context',
+        expectedFlow: 'flowR_layout_optimization',
+        reason: 'cluttered + layout terms route to flowR layout optimization',
     },
     {
         utterance: 'Refactor the button component',
-        expectedFlow: 'flow8_refactor_layout',
-        reason: 'refactor + no API keyword = layout refactor by default',
+        expectedFlow: 'flowR_layout_optimization',
+        reason: 'refactor + no API keyword routes to layout (flowR) by default',
     },
     {
         utterance: 'Refactor button API',
-        expectedFlow: 'flow14_migration',
-        reason: 'refactor + API keyword = component migration',
+        expectedFlow: 'flowQ_migration_special',
+        reason: 'refactor + API keyword routes to migration (flowQ)',
     },
     {
         utterance: 'Build a date picker',
-        expectedFlow: 'flow7_design_component',
-        reason: 'new component context (no reference)',
+        expectedFlow: 'flowZ_design_component',
+        reason: 'design-from-scratch (no reference) preserved as flowZ',
     },
     {
         utterance: 'Build the date picker from the mockup',
-        expectedFlow: 'flow10_implement_design',
-        reason: 'build + from source context',
+        expectedFlow: 'flowG_component_implementation',
+        reason: 'build + from source routes to flowG implement-from-design',
     },
     {
         utterance: 'What if we tried blue?',
-        expectedFlow: 'flow4_explore_discovery',
-        reason: 'what if token + no criteria',
+        expectedFlow: 'flowY_explore_discovery',
+        reason: 'open-ended exploration preserved as flowY',
     },
     {
         utterance: 'Let\'s iterate round 2',
-        expectedFlow: 'flow13_rapid_iteration',
-        reason: 'iterate + round token',
+        expectedFlow: 'flowN_rapid_iteration_refined',
+        reason: 'iterate + round routes to flowN rapid iteration',
     },
 ];
 function runTests() {

@@ -11,6 +11,7 @@ const design_references_reference_1 = require("./design-references-reference");
 const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const extended_domain_validator_1 = require("./extended-domain-validator");
+const model_routing_1 = require("./model-routing");
 class FlowDReferenceSearchHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowD_reference_inspiration');
@@ -21,6 +22,8 @@ class FlowDReferenceSearchHandler extends flow_handler_1.BaseFlowHandler {
         return !!(context.projectContext?.register);
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const register = context.projectContext?.register || 'product';
         const designApproach = context.projectContext?.design?.visual?.approach || 'modern';
         try {

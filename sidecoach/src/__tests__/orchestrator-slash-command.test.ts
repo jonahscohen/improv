@@ -21,7 +21,8 @@ orchestrator.process('/sidecoach research Button').then((result: any) => {
   console.log(`  flowId: ${result.detectedFlow.flowId}`);
   console.log(`  flowName: ${result.detectedFlow.flowName}`);
   console.log(`  confidence: ${result.detectedFlow.confidence}`);
-  const implementFlows = ['flowF', 'flowG', 'flowH', 'flowI', 'flow9', 'flow10', 'flow11'];
+  // T-0015 (2026-05-28): legacy flow9/flow10/flow11 culled into flowI/flowG/flowF.
+  const implementFlows = ['flowF', 'flowG', 'flowH', 'flowI'];
   const isImplementFlow = implementFlows.some(f => result.detectedFlow.flowId.includes(f));
   console.log(`  Result: ${result.detectedFlow.confidence === 1.0 && isImplementFlow ? 'PASS' : 'FAIL'}`);
 

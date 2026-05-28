@@ -7,6 +7,7 @@ exports.createFlowTHandler = createFlowTHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const extended_domain_validator_1 = require("./extended-domain-validator");
+const model_routing_1 = require("./model-routing");
 class FlowTAmbitiousMotionHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowT_ambitious_motion');
@@ -15,6 +16,8 @@ class FlowTAmbitiousMotionHandler extends flow_handler_1.BaseFlowHandler {
         return !!context.projectPath;
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         try {
             const domainCheckContext = {

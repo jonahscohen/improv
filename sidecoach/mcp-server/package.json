@@ -1,0 +1,32 @@
+{
+  "name": "sidecoach-mcp-server",
+  "version": "0.1.0",
+  "description": "Hardened Model Context Protocol server exposing sidecoach's design-orchestration capabilities (validators, registries, keyword resolution, cost ledger, cheatsheet).",
+  "license": "MIT",
+  "author": "Jonah",
+  "bin": {
+    "sidecoach-mcp-server": "./dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && chmod +x dist/index.js",
+    "test": "ts-node __tests__/run-tests.ts",
+    "test:unit": "ts-node __tests__/run-tests.ts unit",
+    "test:integration": "ts-node __tests__/run-tests.ts integration",
+    "test:fault": "ts-node __tests__/run-tests.ts fault-injection",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

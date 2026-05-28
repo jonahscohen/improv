@@ -20,6 +20,7 @@ const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const extended_domain_validator_1 = require("./extended-domain-validator");
 const reference_loader_1 = require("./reference-loader");
+const model_routing_1 = require("./model-routing");
 class FlowEMotionPatternsHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowE_motion_patterns');
@@ -30,6 +31,8 @@ class FlowEMotionPatternsHandler extends flow_handler_1.BaseFlowHandler {
         return !!(context.projectContext?.product?.brandPersonality || context.projectContext?.product?.brand_personality);
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         const brandPersonality = context.projectContext?.product?.brandPersonality || context.projectContext?.product?.brand_personality;
         const register = context.projectContext?.register || 'product';

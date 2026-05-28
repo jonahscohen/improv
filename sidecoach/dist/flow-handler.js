@@ -49,21 +49,9 @@ class BaseFlowHandler {
             // Tier 6: Composition & Copy
             flowW_landing_composition: 'Landing Page Composition (sections + rhythm)',
             flowX_copywriting: 'Copywriting (per-slot draft options)',
-            // Legacy flows
-            flow1_clone_match: 'Clone/Match from Reference',
-            flow2_polish_enhance: 'Polish/Enhance Interaction',
-            flow3_audit_page: 'Audit Page/Section',
-            flow4_explore_discovery: 'Exploration/Discovery Mode',
-            flow5_review_qa: 'Review/QA Mode',
-            flow6_constraint_design: 'Constraint-Based Design',
-            flow7_design_component: 'Design a New Component',
-            flow8_refactor_layout: 'Refactor/Improve Section',
-            flow9_accessible: 'Make Accessible',
-            flow10_implement_design: 'Implement from Design',
-            flow11_extract_tokens: 'Extract Design Tokens',
-            flow12_responsive_review: 'Responsive Design Review',
-            flow13_rapid_iteration: 'Rapid Iteration/Refinement',
-            flow14_migration: 'Migration/API Changes',
+            // Tier 7: Renamed legacy (T-0015)
+            flowY_explore_discovery: 'Exploration/Discovery Mode',
+            flowZ_design_component: 'Design a New Component (from scratch)',
         };
         return flowNames[this.flowId] || 'Unknown Flow';
     }

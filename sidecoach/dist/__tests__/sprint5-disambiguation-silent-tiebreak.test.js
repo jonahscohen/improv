@@ -56,11 +56,13 @@ function assertTrue(cond, label) {
         matchedTokens: ['design.md'],
         reason: 'Rule-based match (confidence: 85%)',
     };
+    // T-0015 (2026-05-28): flow11_extract_tokens was culled into flowF; the
+    // disambiguation test now reuses flowS as a synthetic "other candidate".
     const otherCandidate = {
-        flowId: 'flow11_extract_tokens',
-        flowName: 'Extract Design Tokens',
+        flowId: 'flowS_typography_excellence',
+        flowName: 'Typography Excellence',
         confidence: 0.85,
-        matchedTokens: ['design.md'],
+        matchedTokens: ['typography'],
         reason: 'Rule-based match (confidence: 85%)',
     };
     const syntheticDisambig = {

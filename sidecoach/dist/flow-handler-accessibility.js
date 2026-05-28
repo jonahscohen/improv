@@ -7,6 +7,7 @@ exports.createFlowIHandler = createFlowIHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const extended_domain_validator_1 = require("./extended-domain-validator");
+const model_routing_1 = require("./model-routing");
 class FlowIAccessibilityHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowI_accessibility');
@@ -16,6 +17,8 @@ class FlowIAccessibilityHandler extends flow_handler_1.BaseFlowHandler {
         return !!(context.projectContext?.register || context.projectContext?.product?.register);
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         const register = context.projectContext?.register || 'product';
         try {

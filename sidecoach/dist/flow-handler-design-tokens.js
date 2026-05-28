@@ -15,6 +15,7 @@ const design_md_parser_1 = require("./design-md-parser");
 const typography_validator_1 = require("./typography-validator");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const model_routing_1 = require("./model-routing");
 class FlowFDesignTokensHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowF_design_tokens');
@@ -24,6 +25,8 @@ class FlowFDesignTokensHandler extends flow_handler_1.BaseFlowHandler {
         return !!(context.projectContext?.register || context.projectContext?.product?.register);
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         const projectPath = context.projectPath || process.cwd();
         const designMdPath = path_1.default.join(projectPath, 'DESIGN.md');

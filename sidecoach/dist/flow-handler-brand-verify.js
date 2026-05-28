@@ -9,6 +9,7 @@ const flow_handler_1 = require("./flow-handler");
 const project_context_1 = require("./project-context");
 const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
+const model_routing_1 = require("./model-routing");
 function nonEmptyStringOrNull(v) {
     if (typeof v === 'string' && v.trim().length > 0)
         return v;
@@ -24,6 +25,9 @@ class FlowABrandVerifyHandler extends flow_handler_1.BaseFlowHandler {
         return true;
     }
     async execute(context) {
+        // T-0012: per-flow model-tier routing. Stash the selected model into
+        // context.metadata so downstream LLM-call sites use the right tier.
+        (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const projectPath = context.projectPath || process.cwd();
         const enhancedContext = context;
         try {

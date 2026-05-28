@@ -1,5 +1,10 @@
 import { Flow, FlowId } from './types';
 
+// Flow registry. Post-T-0015 cull (2026-05-28):
+// - 12 legacy number-prefixed flows removed as duplicates of lettered canonicals.
+// - 2 unique legacy flows renamed with the next letter prefix (flow4 -> flowY, flow7 -> flowZ).
+// - Final count: 26 flows. See claude/skills/sidecoach/CHEATSHEET.md for the per-tier list.
+
 export const flows: Flow[] = [
   // TIER 1: STRATEGY/RESEARCH
   {
@@ -36,7 +41,7 @@ export const flows: Flow[] = [
         'component recommendations for [constraint]',
       ],
       intentMarkers: ['research', 'component', 'gallery', 'examples', 'patterns', 'baseline', 'recommendations'],
-      avoidCollisionWith: ['flowC_font_research', 'flow7_design_component'],
+      avoidCollisionWith: ['flowC_font_research', 'flowZ_design_component'],
       negativeFilters: ['design', 'implement', 'build'],
     },
   },
@@ -74,7 +79,7 @@ export const flows: Flow[] = [
         'inspiration for [design task]',
       ],
       intentMarkers: ['reference', 'inspiration', 'curate', 'search', 'catalog', 'examples', 'patterns'],
-      avoidCollisionWith: ['flowE_motion_patterns', 'flow7_design_component'],
+      avoidCollisionWith: ['flowE_motion_patterns', 'flowZ_design_component'],
       negativeFilters: ['implement', 'design', 'build'],
     },
   },
@@ -102,7 +107,7 @@ export const flows: Flow[] = [
   {
     id: 'flowF_design_tokens',
     name: 'Design System Tokens (DESIGN.md)',
-    description: 'Full DESIGN.md workflow - extract, manage, lint tokens (google-labs-code spec)',
+    description: 'Full DESIGN.md workflow - extract, manage, lint tokens (google-labs-code spec). Absorbed flow11_extract_tokens.',
     triggers: {
       patterns: [
         'extract design tokens',
@@ -112,16 +117,18 @@ export const flows: Flow[] = [
         'validate tokens against [standard]',
         'lint design.md',
         'token consistency check',
+        'extract [pattern] to token',
+        'standardize [pattern]',
       ],
-      intentMarkers: ['token', 'design.md', 'extract', 'manage', 'lint', 'consistency', 'validate'],
-      avoidCollisionWith: ['flowG_component_implementation', 'flow11_extract_tokens'],
+      intentMarkers: ['token', 'design.md', 'extract', 'manage', 'lint', 'consistency', 'validate', 'standardize', 'reusable'],
+      avoidCollisionWith: ['flowG_component_implementation'],
       negativeFilters: ['implement', 'build', 'component'],
     },
   },
   {
     id: 'flowG_component_implementation',
     name: 'Component Implementation',
-    description: 'Map design spec to implementation, wire variants, states, responsive behavior (replaces flow10)',
+    description: 'Map design spec to implementation, wire variants, states, responsive behavior. Absorbed flow10_implement_design.',
     triggers: {
       patterns: [
         'implement [component] from design',
@@ -131,9 +138,11 @@ export const flows: Flow[] = [
         'wire variants of [component]',
         'make [component] responsive',
         'component implementation checklist',
+        'build from [Figma/reference]',
+        '[component] from [design source]',
       ],
-      intentMarkers: ['implement', 'component', 'code', 'variants', 'states', 'responsive', 'wire'],
-      avoidCollisionWith: ['flow10_implement_design', 'flow7_design_component'],
+      intentMarkers: ['implement', 'component', 'code', 'variants', 'states', 'responsive', 'wire', 'build from'],
+      avoidCollisionWith: ['flowZ_design_component', 'flowO_clone_match_special'],
       negativeFilters: ['design', 'clone', 'exact'],
     },
   },
@@ -152,14 +161,14 @@ export const flows: Flow[] = [
         'production motion code',
       ],
       intentMarkers: ['motion', 'animation', 'GSAP', 'scroll', 'tweens', 'implement', 'integrate'],
-      avoidCollisionWith: ['flowE_motion_patterns', 'flow2_polish_enhance'],
+      avoidCollisionWith: ['flowE_motion_patterns', 'flowJ_tactical_polish'],
       negativeFilters: ['research', 'pattern', 'example'],
     },
   },
   {
     id: 'flowI_accessibility',
     name: 'Accessibility Compliance (WCAG 2.1 AA)',
-    description: 'WCAG 2.1 AA validation, screen reader testing, severity prioritization (same as flow9)',
+    description: 'WCAG 2.1 AA validation, screen reader testing, severity prioritization. Absorbed flow9_accessible.',
     triggers: {
       patterns: [
         'make [area] accessible',
@@ -169,9 +178,10 @@ export const flows: Flow[] = [
         'WCAG [AA/AAA] [area]',
         'fix a11y issues',
         'semantic HTML validation',
+        '[area] needs keyboard navigation',
       ],
       intentMarkers: ['accessible', 'a11y', 'screen reader', 'WCAG', 'semantic', 'keyboard', 'aria'],
-      avoidCollisionWith: ['flow9_accessible', 'flowK_multi_lens_audit'],
+      avoidCollisionWith: ['flowK_multi_lens_audit'],
       negativeFilters: ['audit [generic]', 'improve [generic]', 'layout'],
     },
   },
@@ -180,7 +190,7 @@ export const flows: Flow[] = [
   {
     id: 'flowJ_tactical_polish',
     name: '16-Point Tactical Polish',
-    description: 'All make-interfaces-feel-better rules: concentric radius, optical alignment, shadows, animations, hit areas, icons, numbers, wrapping, outlines, scale, motion, transitions, will-change',
+    description: 'All make-interfaces-feel-better rules: concentric radius, optical alignment, shadows, animations, hit areas, icons, numbers, wrapping, outlines, scale, motion, transitions, will-change. Absorbed flow2_polish_enhance.',
     triggers: {
       patterns: [
         'polish [element]',
@@ -191,16 +201,20 @@ export const flows: Flow[] = [
         'interface feel improvement',
         'micro-interaction polish',
         'apply make-interfaces-feel-better',
+        'add feeling to [element]',
+        'enhance interaction on [element]',
+        '[element] needs more life',
+        'make [element] less janky',
       ],
-      intentMarkers: ['polish', 'feel better', 'tactical', 'refinement', '16-point', 'micro-interaction'],
-      avoidCollisionWith: ['flow2_polish_enhance', 'flowK_multi_lens_audit'],
+      intentMarkers: ['polish', 'feel better', 'tactical', 'refinement', '16-point', 'micro-interaction', 'feel', 'life', 'janky', 'microinteraction'],
+      avoidCollisionWith: ['flowK_multi_lens_audit', 'flowH_motion_integration'],
       negativeFilters: ['audit', 'design', 'implement', 'layout'],
     },
   },
   {
     id: 'flowK_multi_lens_audit',
     name: 'Multi-Lens Audit (5 dimensions)',
-    description: 'Technical scan - accessibility, performance, theming, responsive, anti-patterns (addresses all Critical/High findings)',
+    description: 'Technical scan - accessibility, performance, theming, responsive, anti-patterns (addresses all Critical/High findings). Absorbed flow3_audit_page and flow5_review_qa.',
     triggers: {
       patterns: [
         'multi-lens audit [area]',
@@ -210,9 +224,15 @@ export const flows: Flow[] = [
         'find all issues in [area]',
         'detect anti-patterns in [area]',
         'performance/a11y/responsive audit',
+        'audit [page/section]',
+        'review [area] for issues',
+        'QA check [area]',
+        'review this PR',
+        'code review [area]',
+        'comprehensive check of [area]',
       ],
-      intentMarkers: ['multi-lens', 'audit', 'technical', '5-dimension', 'anti-pattern', 'comprehensive'],
-      avoidCollisionWith: ['flow3_audit_page', 'flowI_accessibility'],
+      intentMarkers: ['multi-lens', 'audit', 'technical', '5-dimension', 'anti-pattern', 'comprehensive', 'qa check', 'code review'],
+      avoidCollisionWith: ['flowI_accessibility', 'flowL_design_critique'],
       negativeFilters: ['design', 'polish', 'improvement'],
     },
   },
@@ -231,14 +251,14 @@ export const flows: Flow[] = [
         'independent design review',
       ],
       intentMarkers: ['critique', 'review', 'Nielsen', 'heuristics', 'cognitive', 'emotional', 'quality'],
-      avoidCollisionWith: ['flow5_review_qa', 'flowK_multi_lens_audit'],
+      avoidCollisionWith: ['flowK_multi_lens_audit'],
       negativeFilters: ['audit', 'implement', 'code'],
     },
   },
   {
     id: 'flowM_responsive_validation',
     name: 'Responsive Design Validation',
-    description: 'Breakpoint testing (from DESIGN.md), touch target verification (40x40px minimum), viewport behavior',
+    description: 'Breakpoint testing (from DESIGN.md), touch target verification (40x40px minimum), viewport behavior. Absorbed flow12_responsive_review.',
     triggers: {
       patterns: [
         'responsive validation [area]',
@@ -248,16 +268,19 @@ export const flows: Flow[] = [
         'mobile/tablet/desktop validation',
         'responsive review [area]',
         '40x40 hit area check',
+        'responsive check',
+        'mobile review',
+        'check [area] at different sizes',
       ],
-      intentMarkers: ['responsive', 'breakpoint', 'touch target', 'viewport', 'validation', '40x40'],
-      avoidCollisionWith: ['flow12_responsive_review', 'flowK_multi_lens_audit'],
+      intentMarkers: ['responsive', 'breakpoint', 'touch target', 'viewport', 'validation', '40x40', 'mobile', 'tablet', 'desktop'],
+      avoidCollisionWith: ['flowK_multi_lens_audit'],
       negativeFilters: ['design', 'layout', 'implement'],
     },
   },
   {
     id: 'flowN_rapid_iteration_refined',
     name: 'Rapid Iteration (Token-based)',
-    description: 'Goal-driven refinement with token-based variations, success criteria framework, decision criteria',
+    description: 'Goal-driven refinement with token-based variations, success criteria framework, decision criteria. Absorbed flow13_rapid_iteration.',
     triggers: {
       patterns: [
         'iterate on [element]',
@@ -267,9 +290,11 @@ export const flows: Flow[] = [
         'variation testing for [element]',
         'success criteria check',
         'iteration loop for [element]',
+        'refine [element] with feedback',
+        '[element] iteration round [N]',
       ],
-      intentMarkers: ['iterate', 'rapid', 'round', 'variations', 'token', 'success', 'criteria'],
-      avoidCollisionWith: ['flow13_rapid_iteration', 'flow4_explore_discovery'],
+      intentMarkers: ['iterate', 'rapid', 'round', 'variations', 'token', 'success', 'criteria', 'refine'],
+      avoidCollisionWith: ['flowY_explore_discovery'],
       negativeFilters: ['explore', 'open-ended', 'discovery'],
     },
   },
@@ -277,8 +302,8 @@ export const flows: Flow[] = [
   // TIER 4: SPECIAL WORKFLOWS
   {
     id: 'flowO_clone_match_special',
-    name: 'Clone/Match from Reference (Special)',
-    description: 'Pixel-perfect 1:1 replication - element tree, typography, interactions, exact spacing',
+    name: 'Clone/Match from Reference',
+    description: 'Pixel-perfect 1:1 replication - element tree, typography, interactions, exact spacing. Absorbed flow1_clone_match.',
     triggers: {
       patterns: [
         'pixel perfect match [element]',
@@ -287,16 +312,20 @@ export const flows: Flow[] = [
         'exact replication of [design]',
         'match [element] byte-for-byte',
         'identical copy [from reference]',
+        'match [element] from [source]',
+        'exact copy of [element]',
+        '[element] identical to [source]',
+        'copy [element] precisely',
       ],
-      intentMarkers: ['pixel perfect', 'clone', 'steal', '1:1', 'exact', 'identical', 'byte-for-byte'],
-      avoidCollisionWith: ['flow1_clone_match', 'flow7_design_component'],
-      negativeFilters: ['design', 'component', 'approximate'],
+      intentMarkers: ['pixel perfect', 'clone', 'steal', '1:1', 'exact', 'identical', 'byte-for-byte', 'copy precisely'],
+      avoidCollisionWith: ['flowZ_design_component', 'flowG_component_implementation'],
+      negativeFilters: ['design', 'component', 'approximate', 'implement', 'based on'],
     },
   },
   {
     id: 'flowP_constraint_design_special',
-    name: 'Constraint-Based Design (Special)',
-    description: 'Design under explicit limits - budget, scope, accessibility floor, creative problem-solving',
+    name: 'Constraint-Based Design',
+    description: 'Design under explicit limits - budget, scope, accessibility floor, creative problem-solving. Absorbed flow6_constraint_design.',
     triggers: {
       patterns: [
         'design under [constraint]',
@@ -305,16 +334,20 @@ export const flows: Flow[] = [
         'creative solution within [constraint]',
         'make [element] work with [rule]',
         'design given [accessibility floor]',
+        'design [element] for [constraint]',
+        'optimize [element] given [limit]',
+        '[element] under [constraint]',
+        '[element] respecting [rule]',
       ],
-      intentMarkers: ['constraint', 'under', 'limit', 'budget', 'scope', 'creative', 'given'],
-      avoidCollisionWith: ['flow6_constraint_design', 'flow7_design_component'],
+      intentMarkers: ['constraint', 'under', 'limit', 'budget', 'scope', 'creative', 'given', 'respecting'],
+      avoidCollisionWith: ['flowZ_design_component', 'flowR_layout_optimization'],
       negativeFilters: ['improve', 'refactor', 'layout'],
     },
   },
   {
     id: 'flowQ_migration_special',
     name: 'Migration/Refactor (Special)',
-    description: 'Component API refactoring - dependency mapping, pre/post signoff gates',
+    description: 'Component API refactoring - dependency mapping, pre/post signoff gates. Absorbed flow14_migration.',
     triggers: {
       patterns: [
         'migrate [component] to [new approach]',
@@ -323,10 +356,13 @@ export const flows: Flow[] = [
         'component migration with dependencies',
         'update [component] across codebase',
         'dependency mapping for [migration]',
+        'replace [old component] with [new]',
+        '[component] refactor/rewrite',
+        'upgrade [component]',
       ],
-      intentMarkers: ['migrate', 'breaking', 'refactor', 'API', 'migration', 'dependencies'],
-      avoidCollisionWith: ['flow14_migration', 'flow8_refactor_layout'],
-      negativeFilters: ['layout', 'design', 'polish'],
+      intentMarkers: ['migrate', 'breaking', 'refactor', 'API', 'migration', 'dependencies', 'rewrite', 'upgrade'],
+      avoidCollisionWith: ['flowR_layout_optimization'],
+      negativeFilters: ['layout', 'design', 'polish', 'section'],
     },
   },
 
@@ -334,7 +370,7 @@ export const flows: Flow[] = [
   {
     id: 'flowR_layout_optimization',
     name: 'Layout & Spacing Optimization',
-    description: 'Fix layout, spacing, and visual rhythm - grid optimization, spacing ratios, visual hierarchy',
+    description: 'Fix layout, spacing, and visual rhythm - grid optimization, spacing ratios, visual hierarchy. Absorbed flow8_refactor_layout.',
     triggers: {
       patterns: [
         'optimize layout for [element]',
@@ -344,10 +380,16 @@ export const flows: Flow[] = [
         'spacing grid optimization',
         'visual hierarchy adjustment',
         'fix layout issues in [area]',
+        'refactor [section]',
+        '[area] feels cluttered',
+        'improve layout of [area]',
+        'restructure [area]',
+        '[area] needs better hierarchy',
+        'reorganize [area]',
       ],
-      intentMarkers: ['layout', 'spacing', 'rhythm', 'optimize', 'grid', 'hierarchy', 'refinement'],
-      avoidCollisionWith: ['flowJ_tactical_polish', 'flow8_refactor_layout'],
-      negativeFilters: ['design', 'implement', 'code', 'responsive'],
+      intentMarkers: ['layout', 'spacing', 'rhythm', 'optimize', 'grid', 'hierarchy', 'refinement', 'refactor', 'cluttered', 'restructure', 'reorganize'],
+      avoidCollisionWith: ['flowJ_tactical_polish', 'flowQ_migration_special', 'flowM_responsive_validation'],
+      negativeFilters: ['design', 'implement', 'code', 'responsive', 'API', 'component migration', 'animation', 'make accessible'],
     },
   },
   {
@@ -390,276 +432,6 @@ export const flows: Flow[] = [
     },
   },
 
-  // Existing flows (legacy mapping)
-  {
-    id: 'flow1_clone_match',
-    name: 'Clone/Match from Reference',
-    description: 'Match element from design source exactly',
-    triggers: {
-      patterns: [
-        'match [element] from [source]',
-        'clone [component]',
-        'steal [element] from [reference]',
-        'exact copy of [element]',
-        '1:1 with [design]',
-        '[element] identical to [source]',
-        'copy [element] precisely',
-      ],
-      intentMarkers: ['match', 'steal', 'clone', '1:1', 'exact', 'identical', 'copy precisely'],
-      avoidCollisionWith: ['flow7_design_component', 'flow10_implement_design'],
-      negativeFilters: ['build from', 'implement', 'based on'],
-    },
-  },
-  {
-    id: 'flow2_polish_enhance',
-    name: 'Polish/Enhance Interaction',
-    description: 'Add feeling, animation, and microinteractions',
-    triggers: {
-      patterns: [
-        'add feeling to [element]',
-        'make this feel better',
-        'enhance interaction on [element]',
-        'polish [element]',
-        '[element] needs more life',
-        'make [element] less janky',
-        'improve the experience of [element]',
-        'add micro[interaction/animation]',
-      ],
-      intentMarkers: ['feel', 'polish', 'experience', 'life', 'janky', 'microinteraction', 'animation'],
-      avoidCollisionWith: ['flow8_refactor_layout', 'flow9_accessible'],
-      negativeFilters: ['improve layout', 'make accessible', 'hierarchy'],
-    },
-  },
-  {
-    id: 'flow3_audit_page',
-    name: 'Audit Page/Section',
-    description: 'Report issues without suggesting fixes',
-    triggers: {
-      patterns: [
-        'audit [page/section]',
-        'review [area] for issues',
-        'QA check [area]',
-        'what\'s wrong with [page]',
-        'find issues on [page]',
-        'scan [area] for problems',
-        'technical audit of [area]',
-      ],
-      intentMarkers: ['audit', 'review for issues', 'QA check', 'find issues', 'scan', 'what\'s wrong'],
-      avoidCollisionWith: ['flow5_review_qa', 'flow9_accessible'],
-      negativeFilters: ['code review', 'comprehensive', 'make accessible'],
-    },
-  },
-  {
-    id: 'flow4_explore_discovery',
-    name: 'Exploration/Discovery Mode',
-    description: 'Open-ended exploration without success criteria',
-    triggers: {
-      patterns: [
-        'explore [concept]',
-        'what if we [tried/changed] [element]',
-        'experiment with [area]',
-        'discovery mode for [element]',
-        'try [N] versions of [element]',
-        'brainstorm [design aspect]',
-        '[area] exploration',
-      ],
-      intentMarkers: ['explore', 'what if', 'experiment', 'discovery', 'try variations', 'brainstorm'],
-      avoidCollisionWith: ['flow13_rapid_iteration', 'flow8_refactor_layout'],
-      negativeFilters: ['iterate', 'improve', 'round', 'success criteria'],
-    },
-  },
-  {
-    id: 'flow5_review_qa',
-    name: 'Review/QA Mode',
-    description: 'Comprehensive multi-lens check with fix intent',
-    triggers: {
-      patterns: [
-        'review this PR',
-        'code review [area]',
-        'QA this',
-        'review [component] for quality',
-        'do a full review',
-        'comprehensive check of [area]',
-        'check for design/performance/a11y issues',
-      ],
-      intentMarkers: ['review', 'code review', 'comprehensive check', 'for quality', 'QA this'],
-      avoidCollisionWith: ['flow3_audit_page', 'flow8_refactor_layout'],
-      negativeFilters: ['audit', 'improve', 'report only'],
-    },
-  },
-  {
-    id: 'flow6_constraint_design',
-    name: 'Constraint-Based Design',
-    description: 'Design under explicit constraints or limits',
-    triggers: {
-      patterns: [
-        'design [element] for [constraint]',
-        'design with [constraint]',
-        'optimize [element] given [limit]',
-        '[element] under [constraint]',
-        'design [element] at [constraint]',
-        'make [element] work with [constraint]',
-        '[element] respecting [rule]',
-      ],
-      intentMarkers: ['design for', 'design with', 'optimize given', 'under', 'at', 'respecting', 'constraint'],
-      avoidCollisionWith: ['flow7_design_component', 'flow8_refactor_layout'],
-      negativeFilters: ['improve layout', 'refactor'],
-    },
-  },
-  {
-    id: 'flow7_design_component',
-    name: 'Design a New Component',
-    description: 'Create new component from scratch',
-    triggers: {
-      patterns: [
-        'design a [component]',
-        'create [element]',
-        'build [component]',
-        'new [component]',
-        'design [component] from scratch',
-        'need a [component]',
-        'design [element] with these states/features',
-      ],
-      intentMarkers: ['design', 'create', 'build', 'new', 'from scratch', 'need a'],
-      avoidCollisionWith: ['flow10_implement_design', 'flow1_clone_match'],
-      negativeFilters: ['implement', 'from [source]', 'based on', 'clone'],
-    },
-  },
-  {
-    id: 'flow8_refactor_layout',
-    name: 'Refactor/Improve Section',
-    description: 'Improve structure, hierarchy, and whitespace',
-    triggers: {
-      patterns: [
-        'refactor [section]',
-        '[area] feels cluttered',
-        'improve layout of [area]',
-        'restructure [area]',
-        '[area] needs better hierarchy',
-        'reorganize [area]',
-        'make [area] clearer',
-        'layout improvements for [area]',
-      ],
-      intentMarkers: ['refactor', 'cluttered', 'hierarchy', 'layout', 'restructure', 'reorganize', 'clearer'],
-      avoidCollisionWith: ['flow2_polish_enhance', 'flow14_migration', 'flow12_responsive_review'],
-      negativeFilters: ['make accessible', 'responsive', 'API', 'component migration', 'animation'],
-    },
-  },
-  {
-    id: 'flow9_accessible',
-    name: 'Make Accessible',
-    description: 'Ensure WCAG compliance and accessibility standards',
-    triggers: {
-      patterns: [
-        'make [area] accessible',
-        'a11y audit [area]',
-        'accessibility check',
-        'screen reader test [area]',
-        'WCAG [AA/AAA] [area]',
-        'improve a11y of [area]',
-        '[area] needs keyboard navigation',
-        'fix accessibility issues',
-      ],
-      intentMarkers: ['accessible', 'a11y', 'screen reader', 'WCAG', 'keyboard navigation', 'accessibility'],
-      avoidCollisionWith: ['flow3_audit_page', 'flow8_refactor_layout'],
-      negativeFilters: ['audit [generic]', 'improve [generic]', 'layout'],
-    },
-  },
-  {
-    id: 'flow10_implement_design',
-    name: 'Implement from Design',
-    description: 'Code implementation from existing design reference',
-    triggers: {
-      patterns: [
-        'implement [component]',
-        'code this design',
-        'build from [Figma/reference]',
-        '[component] from [design source]',
-        'code [element] from [reference]',
-        'build [component] based on [design]',
-        'implement design for [element]',
-      ],
-      intentMarkers: ['implement', 'code', 'build from', 'build based on', 'from [source]'],
-      avoidCollisionWith: ['flow7_design_component', 'flow1_clone_match'],
-      negativeFilters: ['design', 'clone', 'exact pixel'],
-    },
-  },
-  {
-    id: 'flow11_extract_tokens',
-    name: 'Extract Tokens/Create Variant',
-    description: 'Extract repeated patterns into reusable tokens',
-    triggers: {
-      patterns: [
-        'extract [pattern]',
-        'create a token for [pattern]',
-        'make [pattern] reusable',
-        'define [variant]',
-        'standardize [pattern]',
-        '[pattern] keeps repeating, extract it',
-        'convert [pattern] to token',
-      ],
-      intentMarkers: ['extract', 'token', 'reusable', 'standardize', 'variant', 'repeating'],
-      avoidCollisionWith: ['flow8_refactor_layout', 'flow7_design_component'],
-      negativeFilters: ['refactor', 'design', 'layout'],
-    },
-  },
-  {
-    id: 'flow12_responsive_review',
-    name: 'Responsive Design Review',
-    description: 'Test across screen sizes and breakpoints',
-    triggers: {
-      patterns: [
-        'responsive check',
-        'mobile review',
-        'test breakpoints',
-        'responsive [area]',
-        'tablet/mobile/desktop testing',
-        'breakpoint validation',
-        'check [area] at different sizes',
-      ],
-      intentMarkers: ['responsive', 'mobile', 'breakpoint', 'sizes', 'tablet', 'desktop'],
-      avoidCollisionWith: ['flow8_refactor_layout'],
-      negativeFilters: ['hierarchy', 'layout', 'structure'],
-    },
-  },
-  {
-    id: 'flow13_rapid_iteration',
-    name: 'Rapid Iteration Cycle',
-    description: 'Goal-driven refinement with success criteria',
-    triggers: {
-      patterns: [
-        'iterate on [element]',
-        'try variations',
-        'rapid iteration on [element]',
-        'cycle through ideas',
-        'refine [element] with feedback',
-        '[element] iteration round [N]',
-        'quick variations of [element]',
-      ],
-      intentMarkers: ['iterate', 'try variations', 'cycle through', 'refine', 'round', 'quick variations'],
-      avoidCollisionWith: ['flow4_explore_discovery', 'flow8_refactor_layout'],
-      negativeFilters: ['explore', 'open-ended', 'discovery'],
-    },
-  },
-  {
-    id: 'flow14_migration',
-    name: 'Migration/Refactor Existing Component',
-    description: 'API change or component replacement with dependencies',
-    triggers: {
-      patterns: [
-        'migrate [component] to [new approach]',
-        'update [component]',
-        'replace [old component] with [new]',
-        '[component] refactor/rewrite',
-        'upgrade [component]',
-        'refactor [component]\'s API',
-        'breaking change in [component]',
-      ],
-      intentMarkers: ['migrate', 'update', 'replace', 'refactor', 'rewrite', 'upgrade', 'API', 'breaking change'],
-      avoidCollisionWith: ['flow8_refactor_layout', 'flow7_design_component'],
-      negativeFilters: ['layout', 'design', 'section'],
-    },
-  },
   // SPECIAL: CURATE & QA
   {
     id: 'flowU_curate',
@@ -699,6 +471,7 @@ export const flows: Flow[] = [
       negativeFilters: [],
     },
   },
+
   // TIER 6: COMPOSITION & COPY
   {
     id: 'flowW_landing_composition',
@@ -714,7 +487,7 @@ export const flows: Flow[] = [
         'section taxonomy for [register]',
       ],
       intentMarkers: ['landing', 'sections', 'compose', 'structure', 'layout-plan', 'taxonomy'],
-      avoidCollisionWith: ['flowG_component_implementation', 'flow8_refactor_layout'],
+      avoidCollisionWith: ['flowG_component_implementation', 'flowR_layout_optimization'],
       negativeFilters: ['component', 'fix', 'audit', 'critique'],
     },
   },
@@ -734,6 +507,49 @@ export const flows: Flow[] = [
       intentMarkers: ['copy', 'headline', 'CTA', 'hero', 'tagline', 'draft', 'wording'],
       avoidCollisionWith: ['flowA_brand_verify', 'flowW_landing_composition'],
       negativeFilters: ['component', 'token', 'layout', 'critique'],
+    },
+  },
+
+  // TIER 7: RENAMED LEGACY (T-0015) - genuinely separate flows with no lettered counterpart
+  // KEEP-AS-IS rationale: flowY is the only "no success criteria, generate ideas" exploration flow.
+  // flowZ is the only "design new component from scratch with QA triad" flow - distinct from
+  // flowG (implement from existing design) and flowO (clone exactly).
+  {
+    id: 'flowY_explore_discovery',
+    name: 'Exploration/Discovery Mode',
+    description: 'Open-ended exploration without success criteria (renamed from flow4_explore_discovery, T-0015).',
+    triggers: {
+      patterns: [
+        'explore [concept]',
+        'what if we [tried/changed] [element]',
+        'experiment with [area]',
+        'discovery mode for [element]',
+        'try [N] versions of [element]',
+        'brainstorm [design aspect]',
+        '[area] exploration',
+      ],
+      intentMarkers: ['explore', 'what if', 'experiment', 'discovery', 'try variations', 'brainstorm'],
+      avoidCollisionWith: ['flowN_rapid_iteration_refined', 'flowR_layout_optimization'],
+      negativeFilters: ['iterate', 'improve', 'round', 'success criteria'],
+    },
+  },
+  {
+    id: 'flowZ_design_component',
+    name: 'Design a New Component (from scratch)',
+    description: 'Create new component from scratch with QA triad (audit -> critique -> polish). Distinct from flowG (implement-from-design) and flowO (clone-exactly). Renamed from flow7_design_component, T-0015.',
+    triggers: {
+      patterns: [
+        'design a [component]',
+        'create [element]',
+        'build [component]',
+        'new [component]',
+        'design [component] from scratch',
+        'need a [component]',
+        'design [element] with these states/features',
+      ],
+      intentMarkers: ['design', 'create', 'build', 'new', 'from scratch', 'need a'],
+      avoidCollisionWith: ['flowG_component_implementation', 'flowO_clone_match_special'],
+      negativeFilters: ['implement', 'from [source]', 'based on', 'clone'],
     },
   },
 ];

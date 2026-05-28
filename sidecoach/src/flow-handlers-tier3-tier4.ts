@@ -8,6 +8,7 @@ import { EnhancedFlowExecutionContext } from './flow-execution-context-enhanced'
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { applyModelSelection } from './model-routing';
 // TIER 3: POLISH/QA FLOWS
 
 /**
@@ -42,6 +43,9 @@ export class FlowJTacticalPolishHandler extends BaseFlowHandler {
   }
 
   async execute(context: FlowExecutionContext): Promise<FlowExecutionResult> {
+    // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+    applyModelSelection(this.flowId, context);
+
     const enhancedContext = context as EnhancedFlowExecutionContext;
     try {
       const appliedRules = Object.entries(TACTICAL_RULES).map(([key, rule]) => ({
@@ -179,6 +183,9 @@ export class FlowKMultiLensAuditHandler extends BaseFlowHandler {
   }
 
   async execute(context: FlowExecutionContext): Promise<FlowExecutionResult> {
+    // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+    applyModelSelection(this.flowId, context);
+
     const enhancedContext = context as EnhancedFlowExecutionContext;
     const guidance: string[] = [
       'Dimension 1: Accessibility (WCAG compliance, semantic HTML, keyboard nav)',
@@ -306,6 +313,9 @@ export class FlowLDesignCritiqueHandler extends BaseFlowHandler {
   }
 
   async execute(context: FlowExecutionContext): Promise<FlowExecutionResult> {
+    // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+    applyModelSelection(this.flowId, context);
+
     const enhancedContext = context as EnhancedFlowExecutionContext;
     const guidance: string[] = [
       'Nielsen 10 Usability Heuristics: visibility, match with real world, user control, consistency, error prevention, recognition vs recall, flexibility, aesthetic, error recovery, help & documentation',
@@ -443,6 +453,9 @@ export class FlowMResponsiveValidationHandler extends BaseFlowHandler {
   }
 
   async execute(context: FlowExecutionContext): Promise<FlowExecutionResult> {
+    // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+    applyModelSelection(this.flowId, context);
+
     const enhancedContext = context as EnhancedFlowExecutionContext;
     const guidance: string[] = [
       'Extract breakpoints from DESIGN.md (canonical source)',
@@ -560,24 +573,27 @@ export class FlowNRapidIterationHandler extends BaseFlowHandler {
   }
 
   async execute(context: FlowExecutionContext): Promise<FlowExecutionResult> {
+    // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+    applyModelSelection(this.flowId, context);
+
     const enhancedContext = context as EnhancedFlowExecutionContext;
-    // Check if Improv is available for live browser iteration
-    const improveAvailable = process.env.IMPROV_AVAILABLE === 'true' ||
-                           process.env.IMPROV_SOCKET_PATH !== undefined;
+    // Check if Endow is available for live browser iteration
+    const endowAvailable = process.env.ENDOW_AVAILABLE === 'true' ||
+                           process.env.ENDOW_SOCKET_PATH !== undefined;
 
     const guidance: string[] = [];
 
-    if (improveAvailable) {
-      guidance.push('LIVE BROWSER ITERATION ENABLED via Improv');
+    if (endowAvailable) {
+      guidance.push('LIVE BROWSER ITERATION ENABLED via Endow');
       guidance.push('---');
       guidance.push('1. Open the design/component in browser');
-      guidance.push('2. Activate Improv overlay (CMD+SHIFT+.)');
+      guidance.push('2. Activate Endow overlay (CMD+SHIFT+.)');
       guidance.push('3. Select element to iterate on');
-      guidance.push('4. Review proposed changes from Improv');
+      guidance.push('4. Review proposed changes from Endow');
       guidance.push('5. Accept/reject each iteration (max 10 rounds)');
       guidance.push('6. Visual artifacts captured after each round');
       guidance.push('---');
-      guidance.push('Fallback: token-based variations if Improv not connected');
+      guidance.push('Fallback: token-based variations if Endow not connected');
     } else {
       guidance.push('Define success criteria upfront: what does a successful design look like?');
       guidance.push('Use DESIGN.md tokens for quick variations (colors, spacing, typography)');
@@ -596,9 +612,9 @@ export class FlowNRapidIterationHandler extends BaseFlowHandler {
     if (enhancedContext?.flowMetadata) {
       enhancedContext.flowMetadata.tags = ['flowN', 'rapid-iteration', 'token-based'];
       enhancedContext.flowMetadata.customData = {
-        'iteration-mode': improveAvailable ? 'live-browser' : 'token-based',
-        'improv-available': improveAvailable,
-        'max-rounds': improveAvailable ? 10 : 4,
+        'iteration-mode': endowAvailable ? 'live-browser' : 'token-based',
+        'endow-available': endowAvailable,
+        'max-rounds': endowAvailable ? 10 : 4,
         'supported-properties': ['color-adjustments', 'spacing', 'typography', 'opacity', 'border-radius'].length,
       };
     }
@@ -672,12 +688,12 @@ export class FlowNRapidIterationHandler extends BaseFlowHandler {
       guidance.push(`Note: Could not validate iteration anti-patterns (${error instanceof Error ? error.message : 'unknown error'})`);
     }
 
-    // Add Improv iteration artifact if available
-    if (improveAvailable) {
+    // Add Endow iteration artifact if available
+    if (endowAvailable) {
       artifacts.push(
         this.createArtifact(
           'reference',
-          'improv-iteration-session',
+          'endow-iteration-session',
           JSON.stringify({
             mode: 'live-browser-iteration',
             improveStatus: 'connected',
@@ -685,7 +701,7 @@ export class FlowNRapidIterationHandler extends BaseFlowHandler {
             supported: ['color-adjustments', 'spacing', 'typography', 'opacity', 'border-radius'],
             captureMode: 'screenshot-per-round',
           }),
-          'Live Improv iteration session - visual changes captured and compared'
+          'Live Endow iteration session - visual changes captured and compared'
         )
       );
     }
@@ -694,15 +710,15 @@ export class FlowNRapidIterationHandler extends BaseFlowHandler {
       flowId: this.flowId,
       flowName: this.getFlowName(),
       status: 'success',
-      message: improveAvailable ?
-        'Rapid iteration with live browser iteration via Improv' :
+      message: endowAvailable ?
+        'Rapid iteration with live browser iteration via Endow' :
         'Rapid iteration with token-based variations',
       guidance,
       checklist: this.createChecklist([
         { label: 'Define success criteria for this element', required: true },
         { label: 'List 2-3 token variations to test', required: true },
-        improveAvailable ?
-          { label: 'Activate Improv overlay and select element', required: true } :
+        endowAvailable ?
+          { label: 'Activate Endow overlay and select element', required: true } :
           { label: 'Generate variations by adjusting DESIGN.md tokens', required: true },
         { label: 'Validate iterations against anti-pattern baseline', required: true },
         { label: 'Test variations against success criteria', required: true },
@@ -726,6 +742,9 @@ export class FlowOCloneMatchHandler extends BaseFlowHandler {
   }
 
   async execute(context: FlowExecutionContext): Promise<FlowExecutionResult> {
+    // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+    applyModelSelection(this.flowId, context);
+
     const enhancedContext = context as EnhancedFlowExecutionContext;
 
     if (enhancedContext?.flowMetadata) {
@@ -774,6 +793,9 @@ export class FlowPConstraintDesignHandler extends BaseFlowHandler {
   }
 
   async execute(context: FlowExecutionContext): Promise<FlowExecutionResult> {
+    // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+    applyModelSelection(this.flowId, context);
+
     const enhancedContext = context as EnhancedFlowExecutionContext;
 
     if (enhancedContext?.flowMetadata) {
@@ -821,6 +843,9 @@ export class FlowQMigrationHandler extends BaseFlowHandler {
   }
 
   async execute(context: FlowExecutionContext): Promise<FlowExecutionResult> {
+    // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
+    applyModelSelection(this.flowId, context);
+
     const enhancedContext = context as EnhancedFlowExecutionContext;
 
     if (enhancedContext?.flowMetadata) {

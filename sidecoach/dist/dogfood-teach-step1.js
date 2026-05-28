@@ -40,7 +40,7 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const projectPath = '/Users/spare3/Documents/Github/claude-dotfiles/marketing-site';
 // User's verbatim brief from the prior session, lightly rephrased only to flow as one paragraph.
-const brief = `Build a brand new marketing landing page for the claude-dotfiles repo, advertising improv, sidecoach, and memory tools, as well as mentions of our other tools. The page links to two other pages, one for improv and one for sidecoach. Both pages serve as marketing pages for each. Use the existing claude-dotfiles DESIGN.md for color tokens and brand materials. The system chooses the new fonts.`;
+const brief = `Build a brand new marketing landing page for the claude-dotfiles repo, advertising endow, sidecoach, and memory tools, as well as mentions of our other tools. The page links to two other pages, one for endow and one for sidecoach. Both pages serve as marketing pages for each. Use the existing claude-dotfiles DESIGN.md for color tokens and brand materials. The system chooses the new fonts.`;
 async function run() {
     if (!fs.existsSync(projectPath)) {
         fs.mkdirSync(projectPath, { recursive: true });

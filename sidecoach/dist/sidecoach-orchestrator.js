@@ -60,6 +60,7 @@ const flow_handler_component_research_1 = require("./flow-handler-component-rese
 const flow_handler_font_research_1 = require("./flow-handler-font-research");
 const flow_handler_design_references_1 = require("./flow-handler-design-references");
 const flow_handler_motion_patterns_1 = require("./flow-handler-motion-patterns");
+// T-0015: legacy number-prefixed handlers were culled (12 duplicates removed; flow7 -> flowZ, flow4 -> flowY).
 const flow_handlers_core_1 = require("./flow-handlers-core");
 const flow_handlers_extended_1 = require("./flow-handlers-extended");
 const flow_handler_design_tokens_1 = require("./flow-handler-design-tokens");
@@ -83,17 +84,14 @@ const build_report_aggregator_1 = require("./build-report-aggregator");
 const checkpoint_store_1 = require("./checkpoint-store");
 const verb_command_registry_1 = require("./verb-command-registry");
 // Flows that produce HTML output and must clear the taste gate before declaring success.
-// craft / clone-match / layout / polish families (both modern flowX_* and legacy flowN_* IDs).
+// craft / clone-match / layout / polish families. Post-T-0015 cull: legacy flowN_* IDs gone;
+// flow7_design_component renamed to flowZ_design_component.
 const HTML_PRODUCING_FLOWS = new Set([
     'flowG_component_implementation',
     'flowJ_tactical_polish',
     'flowO_clone_match_special',
     'flowR_layout_optimization',
-    'flow1_clone_match',
-    'flow2_polish_enhance',
-    'flow7_design_component',
-    'flow8_refactor_layout',
-    'flow10_implement_design',
+    'flowZ_design_component',
 ]);
 class FlowExecutionEngine {
     constructor() {
@@ -151,21 +149,9 @@ class FlowExecutionEngine {
             // Tier 6: Composition & Copy
             ['flowW_landing_composition', () => new flow_handler_landing_composition_1.FlowWLandingCompositionHandler()],
             ['flowX_copywriting', () => new flow_handler_copywriting_1.FlowXCopywritingHandler()],
-            // Legacy flows
-            ['flow1_clone_match', () => new flow_handlers_extended_1.Flow1CloneHandler()],
-            ['flow2_polish_enhance', () => new flow_handlers_core_1.Flow2PolishHandler()],
-            ['flow3_audit_page', () => new flow_handlers_extended_1.Flow3AuditHandler()],
-            ['flow4_explore_discovery', () => new flow_handlers_extended_1.Flow4ExploreHandler()],
-            ['flow5_review_qa', () => new flow_handlers_core_1.Flow5ReviewHandler()],
-            ['flow6_constraint_design', () => new flow_handlers_extended_1.Flow6ConstraintHandler()],
-            ['flow7_design_component', () => new flow_handlers_core_1.Flow7DesignHandler()],
-            ['flow8_refactor_layout', () => new flow_handlers_extended_1.Flow8RefactorHandler()],
-            ['flow9_accessible', () => new flow_handlers_extended_1.Flow9AccessibleHandler()],
-            ['flow10_implement_design', () => new flow_handlers_core_1.Flow10ImplementHandler()],
-            ['flow11_extract_tokens', () => new flow_handlers_extended_1.Flow11ExtractHandler()],
-            ['flow12_responsive_review', () => new flow_handlers_extended_1.Flow12ResponsiveHandler()],
-            ['flow13_rapid_iteration', () => new flow_handlers_extended_1.Flow13IterateHandler()],
-            ['flow14_migration', () => new flow_handlers_extended_1.Flow14MigrationHandler()],
+            // Tier 7: Renamed legacy (T-0015) - genuinely separate flows kept with letter prefix
+            ['flowY_explore_discovery', () => new flow_handlers_extended_1.FlowYExploreHandler()],
+            ['flowZ_design_component', () => new flow_handlers_core_1.FlowZDesignHandler()],
         ];
         for (const [flowId, createHandler] of handlerMap) {
             this.handlers.set(flowId, createHandler());
@@ -1461,21 +1447,9 @@ class FlowExecutionEngine {
             // Tier 6: Composition & Copy
             'flowW_landing_composition',
             'flowX_copywriting',
-            // Legacy flows
-            'flow1_clone_match',
-            'flow2_polish_enhance',
-            'flow3_audit_page',
-            'flow4_explore_discovery',
-            'flow5_review_qa',
-            'flow6_constraint_design',
-            'flow7_design_component',
-            'flow8_refactor_layout',
-            'flow9_accessible',
-            'flow10_implement_design',
-            'flow11_extract_tokens',
-            'flow12_responsive_review',
-            'flow13_rapid_iteration',
-            'flow14_migration',
+            // Tier 7: Renamed legacy (T-0015) - unique flows preserved
+            'flowY_explore_discovery',
+            'flowZ_design_component',
         ];
         return flowIds
             .map((flowId) => {
