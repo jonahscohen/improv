@@ -4,6 +4,9 @@
   "description": "Natural language intent detection for 14 Sidecoach design workflows",
   "main": "dist/intent-detector.js",
   "types": "dist/intent-detector.d.ts",
+  "bin": {
+    "sidecoach": "bin/sidecoach.js"
+  },
   "scripts": {
     "build": "tsc",
     "test": "ts-node src/intent-detector.test.ts",

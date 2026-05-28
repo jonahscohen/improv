@@ -112,7 +112,7 @@ FILES=(
   # reflect
   "~/.claude/skills/reflect/SKILL.md\n~/.claude/hooks/reflect-nudge.sh\n~/.claude/last-reflect-timestamp"
   # sidecoach
-  "~/.claude/hooks/sidecoach-sessionstart.sh\n~/.claude/hooks/sidecoach-postuserp.sh\n~/.claude/hooks/sidecoach-postresponse.sh\n~/.claude/sidecoach/ (compiled handlers + daemon)"
+  "~/.claude/hooks/sidecoach-sessionstart.sh\n~/.claude/hooks/sidecoach-postuserp.sh\n~/.claude/hooks/sidecoach-postresponse.sh\n~/.claude/sidecoach/ (compiled handlers + daemon)\n~/.local/bin/sidecoach (CLI symlink)"
   # task-list
   "~/.claude/skills/task-list/SKILL.md"
 )
@@ -2275,6 +2275,18 @@ if picked sidecoach; then
   for registry in sidecoach-verbs.json sidecoach-modes.json; do
     ln -sf "$REPO_DIR/claude/hooks/$registry" "$HOME/.claude/hooks/$registry"
   done
+
+  # Terminal CLI that mirrors the /sidecoach slash-command surface (T-0014).
+  # Symlinked onto PATH at ~/.local/bin so `sidecoach <verb>` works from any
+  # shell. The binary reads the compiled dist/ verb->flow registry - the same
+  # source of truth the hooks and MCP server use - so it never diverges.
+  chmod +x "$REPO_DIR/sidecoach/bin/sidecoach.js"
+  mkdir -p "$HOME/.local/bin"
+  ln -sf "$REPO_DIR/sidecoach/bin/sidecoach.js" "$HOME/.local/bin/sidecoach"
+  case ":$PATH:" in
+    *":$HOME/.local/bin:"*) : ;;
+    *) warn "~/.local/bin is not on PATH - add it to use the \`sidecoach\` CLI" ;;
+  esac
 
   node -e "
     const fs = require('fs');
