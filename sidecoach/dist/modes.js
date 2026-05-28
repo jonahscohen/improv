@@ -112,6 +112,29 @@ const CANVAS = {
         'flowK_multi_lens_audit',
     ],
 };
+// ralph - relentless cross-flow iteration to convergence (T-0020).
+// Name rationale: a direct callback to oh-my-claudecode's "Ralph" mode, which
+// is the recognizable industry term for "keep iterating until the validators
+// stop complaining." Sidecoach earns its design vocabulary by going DEEPER
+// (the chain runs polish/audit/critique design validators, not generic
+// code-correctness checks), and reuses the keyword so anyone coming from OMC
+// finds it where they expect. The mode is the user-facing trigger; the
+// actual loop algorithm (cap, stall, convergence) lives in
+// `sidecoach/src/ralph-loop.ts` per T-0020. Picked the OMC name verbatim
+// because every alternative ("loop", "iterate", "converge") either collides
+// with internal vocabulary or loses the connection to the established
+// pattern.
+const RALPH = {
+    name: 'ralph',
+    description: 'Relentless cross-flow iteration to convergence.',
+    oneLineExplanation: 'Runs polish, audit, and critique in a loop until validators all pass or a hard cap fires (convergence, stall, or maxIterations).',
+    verbChain: ['polish', 'audit', 'critique'],
+    chain: [
+        'flowJ_tactical_polish',
+        'flowK_multi_lens_audit',
+        'flowL_design_critique',
+    ],
+};
 // trim - strip a busy or overstimulated UI back to essentials.
 // Name rationale: "trim" is the bonsai/barber metaphor - you have something
 // real but it's grown too loud. The chain pairs the two existing "tone"
@@ -145,9 +168,10 @@ exports.MODES = {
     bloom: BLOOM,
     canvas: CANVAS,
     trim: TRIM,
+    ralph: RALPH,
 };
 /** Convenience: ordered list of modes (matches MODES declaration order). */
-exports.MODE_LIST = [FORGE, KILN, BLOOM, CANVAS, TRIM];
+exports.MODE_LIST = [FORGE, KILN, BLOOM, CANVAS, TRIM, RALPH];
 /** Returns the mode for the given name (case-insensitive), or undefined. */
 function getMode(name) {
     if (!name)

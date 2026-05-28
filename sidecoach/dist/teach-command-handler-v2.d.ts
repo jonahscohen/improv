@@ -5,6 +5,11 @@ export interface TeachExtraction {
     brandPersonality?: string;
     antiReferences?: string[];
     strategicPrinciples?: string[];
+    problem?: string;
+    successMetrics?: string[];
+    businessModel?: string;
+    technicalConstraints?: string[];
+    brandVoice?: string;
     confidence: {
         [field: string]: 'high' | 'low' | 'absent';
     };
@@ -29,6 +34,8 @@ export declare class TeachCommandHandlerV2 {
     execute(context: FlowExecutionContext): Promise<FlowExecutionResult>;
     private hasRealProductMd;
     private extractBrief;
+    private fieldsForDepth;
+    private demoteVagueAnswers;
     private parseBrief;
     private mergeFromBriefAndAnswers;
     private identifyGaps;
