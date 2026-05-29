@@ -22,5 +22,9 @@ THE MISSED SIGNAL: skip != pass. An effect that can't run its real input is not 
 3. assets.ts for the 4 effects that already have bundled assets (+ water-ripple needs an `image` sample too).
 4. VALIDATE: extend tilt-verify so asset effects RUN canvas-paint (no longer skip) once assets deliver; full re-validate; then Claude-in-Chrome WITH REAL INTERACTION (move pointer; confirm dithered-image dithers a real image, globe shows land, cursor-trail trails, glass-slideshow transitions, etc).
 
+## Chrome evidence (this loop iteration) + team dispatched
+Verified in Claude-in-Chrome that effects RENDER + have params but asset effects show FALLBACK content: Fractal Glass renders rich blue fluted glass w/ restored colored params (scene/etc) GOOD; Glass Slideshow renders a fallback gradient slide + full params (index/transitionDuration/autoplay/...) - functions but shows placeholder, not real slides. So not "broken", but missing real content = the gap. Deployed team tilt-assets: task#1 asset-core (full delivery system + generate 6 missing sample PNGs + wire registry/compositor/element/esbuild), task#2 asset-verify (blockedBy #1; make tilt-verify actually run canvas-paint on asset effects + re-validate). Brief: docs/superpowers/tilt-lab-recon/ASSET-BRIEF.md.
+NOTE: this /loop fired with the verbatim original prompt (persisted loop text), so the "still broken" wording is the original directive replaying, not necessarily a fresh re-eval - but asset delivery is a genuine deferred gap worth closing to fully satisfy "leave nothing out". After it lands + validates (tool canvas-paint PASS + Chrome real-content), the directive is fully complete -> stop loop.
+
 ## Definition of done (revised, stricter)
 Every effect FUNCTIONS with its real ingredients in the playground (assets delivered + interaction wired), confirmed by tilt-verify canvas-paint PASS (not skip) for all + Claude-in-Chrome interactive observation. No "skip-as-pass."
