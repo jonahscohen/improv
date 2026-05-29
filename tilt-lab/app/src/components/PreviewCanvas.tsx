@@ -35,5 +35,12 @@ export function PreviewCanvas({ layers }: Props) {
     compRef.current?.setLayers(layers);
   }, [layers]);
 
-  return <div className="preview-canvas" ref={hostRef} />;
+  return (
+    <div
+      className="preview-canvas"
+      ref={hostRef}
+      role="img"
+      aria-label="Live preview of the composited visual effect layers"
+    />
+  );
 }

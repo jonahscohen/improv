@@ -7,10 +7,34 @@
   --text: #e7e7ea;
   --muted: #9a9aa6;
   --accent: #5b8cff;
+
+  /* Surfaces */
+  --btn-bg: #1b1b22;
+  --btn-bg-hover: #232330;
+  --input-bg: #0e0e13;
+  --preview-bg: #000;
+
+  /* Text on accent fill */
+  --on-accent: #08080c;
+
+  /* Alert / warning */
+  --alert-text: #ff9a8c;
+  --alert-border: #5a2a2a;
+  --alert-bg: #2a1414;
+
+  /* Min interactive hit-target size (a11y) */
+  --hit-min: 40px;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* Focus ring (a11y) - keyboard-visible only, never removes default outlines */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 body {
@@ -51,7 +75,7 @@ body {
   padding: 0.4rem 0.85rem;
   border: 1px solid var(--line-2);
   border-radius: 7px;
-  background: #1b1b22;
+  background: var(--btn-bg);
   color: var(--text);
   cursor: pointer;
   transition: background 0.15s ease, transform 0.1s ease;
@@ -59,13 +83,13 @@ body {
 
 .top-bar__add:hover,
 .top-bar__send:not(:disabled):hover {
-  background: #232330;
+  background: var(--btn-bg-hover);
 }
 
 .top-bar__send {
   background: var(--accent);
   border-color: transparent;
-  color: #08080c;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -87,7 +111,7 @@ body {
 
 .project-picker select,
 .add-shader-modal__kinds button {
-  background: #1b1b22;
+  background: var(--btn-bg);
   color: var(--text);
   border: 1px solid var(--line-2);
   border-radius: 6px;
@@ -118,7 +142,7 @@ body {
 
 .app__preview {
   position: relative;
-  background: #000;
+  background: var(--preview-bg);
 }
 
 .preview-canvas {
@@ -136,7 +160,7 @@ body {
 .browse-grid__search {
   width: 100%;
   padding: 0.5rem 0.6rem;
-  background: #1b1b22;
+  background: var(--btn-bg);
   border: 1px solid var(--line-2);
   border-radius: 7px;
   color: var(--text);
@@ -152,18 +176,23 @@ body {
 
 .browse-grid__roles button {
   font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
+  padding: 0.25rem 0.7rem;
   border: 1px solid var(--line-2);
   border-radius: 999px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
+  /* 40x40 min hit target (a11y); pill stays visually compact via flex centering */
+  min-height: var(--hit-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .browse-grid__roles button[data-active='true'] {
   background: var(--accent);
   border-color: transparent;
-  color: #08080c;
+  color: var(--on-accent);
 }
 
 .browse-grid__cards {
@@ -215,9 +244,9 @@ body {
 }
 
 .layer-stack__hint {
-  color: #ff9a8c;
-  border: 1px solid #5a2a2a;
-  background: #2a1414;
+  color: var(--alert-text);
+  border: 1px solid var(--alert-border);
+  background: var(--alert-bg);
   border-radius: 7px;
   padding: 0.4rem 0.55rem;
 }
@@ -259,9 +288,15 @@ body {
   padding: 0.2rem 0.4rem;
   border: 1px solid var(--line-2);
   border-radius: 5px;
-  background: #1b1b22;
+  background: var(--btn-bg);
   color: var(--muted);
   cursor: pointer;
+  /* 40x40 min hit target (a11y); glyph stays compact via flex centering */
+  min-width: var(--hit-min);
+  min-height: var(--hit-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .layer-stack__actions button:disabled {
@@ -278,15 +313,25 @@ body {
 
 .param-controls__row {
   display: grid;
-  grid-template-columns: 5.5rem 1fr;
+  grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
   align-items: center;
   gap: 0.5rem;
   font-size: 0.8rem;
   color: var(--muted);
 }
 
+/* Label column: allow long param names (e.g. atmosphereCoefficient) to wrap
+   instead of clipping; min-width:0 lets the control column shrink rather than
+   force overflow. */
+.param-controls__row > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .param-controls__row input[type='range'] {
   width: 100%;
+  min-width: 0;
 }
 
 /* Add-shader modal */
@@ -328,7 +373,7 @@ body {
   width: 100%;
   min-height: 180px;
   resize: vertical;
-  background: #0e0e13;
+  background: var(--input-bg);
   border: 1px solid var(--line-2);
   border-radius: 8px;
   color: var(--text);
@@ -346,7 +391,7 @@ body {
   padding: 0.4rem 0.9rem;
   border: 1px solid var(--line-2);
   border-radius: 7px;
-  background: #1b1b22;
+  background: var(--btn-bg);
   color: var(--text);
   cursor: pointer;
 }
@@ -354,11 +399,63 @@ body {
 .add-shader-modal__actions button:last-child {
   background: var(--accent);
   border-color: transparent;
-  color: #08080c;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
 .add-shader-modal__actions button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* Responsive (P0) - the fixed 280/1fr/340 grid starves the preview below ~700px */
+
+/* Tablet: narrow the side rails so the preview keeps usable width */
+@media (max-width: 900px) {
+  .app__body {
+    grid-template-columns: 200px 1fr 240px;
+  }
+}
+
+/* Phone: stack into a single scrolling column; preview stays prominent on top */
+@media (max-width: 640px) {
+  .app {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .top-bar {
+    flex-wrap: wrap;
+  }
+
+  .app__body {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .app__preview {
+    order: -1;
+    min-height: 45vh;
+  }
+
+  .app__browse,
+  .app__layers {
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid var(--line);
+    overflow-y: visible;
+  }
+}
+
+/* Reduced motion (P2) - disable hover/press transforms + their transitions */
+@media (prefers-reduced-motion: reduce) {
+  .top-bar__add,
+  .top-bar__send,
+  .browse-grid__card {
+    transition: none;
+  }
+
+  .browse-grid__card:hover {
+    transform: none;
+  }
 }
