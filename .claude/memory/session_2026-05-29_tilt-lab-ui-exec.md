@@ -17,7 +17,7 @@ Collaborator: Jonah. 2026-05-29. User chose "execute Plan 3 (build the UI)" afte
 - [x] Task 7 LayerStack/TopBar/ProjectPicker/AddShaderModal views.
 - [x] Task 8 App shell (3-col grid) + main (registerBuiltins) + styles.css (dark theme, BEM, specific selectors). tsconfig: +jsx react-jsx, include app.
 - ALL GREEN: 122 tests / 35 files, tsc exit 0, vite build OK (166 modules, 948KB bundle - three+ogl heavy, code-split later).
-- [ ] Task 9 cmux visual verification + sidecoach QA gate (IN PROGRESS)
+- [~] Task 9 cmux visual verification: UI VERIFIED (layout, browse/filter/search, real-click add, layer stack, manifest param controls - all working, no console errors). Compositor BUG found + fixed (never sized canvas/called resize + shared one canvas) -> reworked to per-layer stacked sized canvases + pointer forwarding (see session_2026-05-29_tilt-lab-compositor-bug.md). Canvas2D effects RENDER (gradient confirmed). WebGL/OGL effects (Aurora/Lava Lamp) add + param-control fine + no errors but DON'T visibly paint - diagnosed as per-effect contract bug (effects create own renderer canvas instead of using the provided one). NOT claiming all effects render. sidecoach QA gate deferred until effects actually paint. NEXT = WebGL-render compliance pass (team, one agent/effect).
 
 ## Deviation from plan (improvement)
 loadCatalog will return runtime's exported builtinManifests (added during acquisition) rather than import.meta.glob - simpler, pre-validated, no glob. filterCatalog unchanged (the testable part).

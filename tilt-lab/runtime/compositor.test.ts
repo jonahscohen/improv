@@ -11,7 +11,9 @@ class RecordingEffect implements Effect {
   frame(_t: number) {
     RecordingEffect.log.push(`frame:${this.id}`);
   }
-  resize(_w: number, _h: number) {}
+  resize(_w: number, _h: number) {
+    RecordingEffect.log.push(`resize:${this.id}`);
+  }
   setParam() {}
   dispose() {
     RecordingEffect.log.push(`dispose:${this.id}`);
@@ -28,7 +30,25 @@ describe('Compositor', () => {
     const root = document.createElement('div');
     const c = new Compositor(root, (id) => new RecordingEffect(id));
     c.setLayers([layer('ascii', 'post'), layer('grad', 'background'), layer('globe', 'midground')]);
-    expect(RecordingEffect.log).toEqual(['init:grad', 'init:globe', 'init:ascii']);
+    const inits = RecordingEffect.log.filter((l) => l.startsWith('init:'));
+    expect(inits).toEqual(['init:grad', 'init:globe', 'init:ascii']);
+  });
+
+  it('sizes layers by calling resize after setLayers', () => {
+    RecordingEffect.log = [];
+    const root = document.createElement('div');
+    const c = new Compositor(root, (id) => new RecordingEffect(id));
+    c.setLayers([layer('grad', 'background')]);
+    expect(RecordingEffect.log).toContain('resize:grad');
+  });
+
+  it('appends one stacked surface per layer to the host', () => {
+    const root = document.createElement('div');
+    const c = new Compositor(root, (id) => new RecordingEffect(id));
+    c.setLayers([layer('grad', 'background'), layer('ascii', 'post')]);
+    const canvases = root.querySelectorAll('canvas');
+    expect(canvases.length).toBe(2);
+    expect(root.style.position).toBe('relative');
   });
 
   it('renders a frame for every layer in order', () => {
@@ -41,7 +61,7 @@ describe('Compositor', () => {
     expect(RecordingEffect.log).toEqual(['frame:grad', 'frame:ascii']);
   });
 
-  it('disposes all layers on clear', () => {
+  it('disposes all layers and removes their surfaces on clear', () => {
     RecordingEffect.log = [];
     const root = document.createElement('div');
     const c = new Compositor(root, (id) => new RecordingEffect(id));
@@ -49,12 +69,6 @@ describe('Compositor', () => {
     RecordingEffect.log = [];
     c.clear();
     expect(RecordingEffect.log).toEqual(['dispose:grad']);
-  });
-
-  it('reports which canvas the post layer samples', () => {
-    const root = document.createElement('div');
-    const c = new Compositor(root, (id) => new RecordingEffect(id));
-    c.setLayers([layer('grad', 'background'), layer('ascii', 'post')]);
-    expect(c.postInputCanvas()).toBe(c.compositeCanvas());
+    expect(root.querySelectorAll('canvas').length).toBe(0);
   });
 });
