@@ -74,10 +74,14 @@ export async function verifyEffect(page, manifest, opts = {}) {
   page.on('pageerror', onPageError);
 
   const isPost = manifest.layerRole === 'post';
+  const isPointer = manifest.layerRole === 'pointer';
   const requiredAssets = manifest.requiredAssets ?? [];
-  const assetsBlocked = requiredAssets.length > 0;
-  // Seed a base only for post effects that don't themselves need assets.
-  const needsBase = isPost && !assetsBlocked;
+  // The playground self-delivers every effect's bundled assets (effectAssets),
+  // so an effect declaring requiredAssets is no longer "blocked" - it paints
+  // with real content and canvas-paint must be attempted.
+  // Seed a neutral base only for post effects that bring no asset of their own;
+  // a post effect with its own image asset paints that asset directly.
+  const needsBase = isPost && requiredAssets.length === 0;
 
   try {
     await page.goto(opts.url, { waitUntil: 'domcontentloaded' });
@@ -112,10 +116,12 @@ export async function verifyEffect(page, manifest, opts = {}) {
     }
 
     // ---- Check 2: canvas actually paints (non-blank) ----------------------
+    // Pointer-driven effects (cursor trails) paint nothing until the cursor
+    // actually moves, so drive a REAL mouse path across the preview before
+    // sampling. This is genuine user input, not a synthetic event.
+    if (isPointer) await drivePointer(page);
     await settleFrames(page, opts.settleFrames ?? 40);
-    if (assetsBlocked) {
-      add('canvas-paint', 'skip', `requires assets not provided by add: [${requiredAssets.join(', ')}]`);
-    } else {
+    {
       const hasCanvas = (await page.locator(`${PREVIEW} canvas`).count()) > 0;
       const hasSurface = (await page.locator(`${PREVIEW} > *`).count()) > 0;
       if (!hasCanvas) {
@@ -130,6 +136,7 @@ export async function verifyEffect(page, manifest, opts = {}) {
           painted = stats.luminanceSpread > 8 || stats.distinctColors > 4;
           detail = `colors=${stats.distinctColors} lumSpread=${stats.luminanceSpread.toFixed(1)}`;
           if (needsBase) detail += ' (composited over base)';
+          if (requiredAssets.length) detail += ` [assets: ${requiredAssets.join(', ')}]`;
         } catch (e) {
           painted = false;
           detail = `png decode failed: ${e.message}`;
@@ -196,6 +203,18 @@ export async function verifyEffect(page, manifest, opts = {}) {
 }
 
 export { NavigationLost };
+
+/** Move the real mouse across the preview so pointer-driven effects spawn content. */
+async function drivePointer(page) {
+  const box = await page.locator(PREVIEW).boundingBox();
+  if (!box) return;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.3, { steps: 5 });
+  await page.mouse.move(cx, cy, { steps: 10 });
+  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.7, { steps: 10 });
+  await page.mouse.move(cx, cy, { steps: 10 });
+}
 
 /** Drive the first usable param control with a REAL input and confirm it reflects. */
 async function exerciseParam(page, effectName, params) {
