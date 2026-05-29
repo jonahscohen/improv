@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { LayerRole, Manifest } from '../../../runtime/types';
 import { filterCatalog } from '../state/catalog';
+import { Select } from './controls';
 
 interface Props {
   catalog: Manifest[];
@@ -30,14 +31,12 @@ export function BrowseGrid({ catalog, onPick }: Props) {
           onChange={(e) => setQuery(e.target.value)}
         />
         <div className="browse-grid__roles">
-          <button data-active={role === null} onClick={() => setRole(null)}>
-            all
-          </button>
-          {ROLES.map((r) => (
-            <button key={r} data-active={role === r} onClick={() => setRole(r)}>
-              {r}
-            </button>
-          ))}
+          <Select
+            value={role ?? 'all'}
+            options={['all', ...ROLES]}
+            onChange={(v) => setRole(v === 'all' ? null : (v as LayerRole))}
+            ariaLabel="Filter by role"
+          />
         </div>
       </div>
       {shown.length === 0 ? (
