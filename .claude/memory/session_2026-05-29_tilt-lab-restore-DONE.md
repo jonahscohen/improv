@@ -20,4 +20,7 @@ Collaborator: Jonah. 2026-05-29. Autonomous /loop complete. tilt-restore team (7
 - spell named presets (Prism/Lava/etc) not reproduced (recon only had value ranges; reproducing = fabrication) - the 16 atomic params are the full tunable surface.
 - A few inert-but-1:1 params kept for fidelity (fluid.curl, fractal-glass.fluidInfluence/glassAmount/bloomStrength, halftone.fluidInfluence) - present because the original exposes them though its render doesn't read them.
 
-## Loop can END - work complete. Report to Jonah with evidence.
+## Cleanup: swirl orphan removed
+fx-missing-2 deleted swirl's manifest+test but left swirl/index.ts (git-tracked, imported nowhere after deregistration). Found it as a 27th dir; `git rm`'d it. Now 26 dirs = 25 catalog + gradient fixture. tsc clean, tests pass.
+
+## Loop ENDED - work complete. Reported to Jonah with evidence.
