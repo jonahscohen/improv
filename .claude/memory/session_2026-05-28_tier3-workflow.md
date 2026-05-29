@@ -3,6 +3,7 @@ name: Tier 3 via dynamic workflow - shadcn opt-in cookbook reference
 description: Batch 2 of the skill-recon roll-in; Jonah chose a dynamic workflow (wedge-resilient) over a cmux team for the single small reference doc
 type: project
 relates_to: [session_2026-05-28_tier2-shipped.md, session_2026-05-28_skill-recon-synthesis.md, decision_orchestration_routing_cmux_vs_workflows.md]
+superseded_by: session_2026-05-28_tier3-shipped.md
 ---
 
 Collaborator: Jonah. 2026-05-28.
