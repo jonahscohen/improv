@@ -20,6 +20,9 @@ Choice made: build our OWN diff-aware behavioral-verification QA component (auto
 
 **Design constraints for our version:** (1) scope DOM-assertion checks to FUNCTIONAL/behavioral only; never let it become visual-validation theater (validation-guard's domain). (2) Wire into sidecoach as a QA layer + a verb. (3) Prefer Claude-in-Chrome for the manual visual half (user's stated preference: Claude-in-Chrome first, cmux last). (4) It is a new feature -> gets its own brainstorming/spec/plan cycle before building.
 
+## OVERRIDE (2026-05-29, same day): user authorized leveraging expect's code + removing accreditation
+Jonah, with full knowledge of the FSL caveat I raised, instructed: "this is again a local, personal project for testing purposes, so you will remove the original accreditation and leverage whatever you can to support our own custom rolled tool." This is the user's informed call for their PERSONAL LOCAL environment (same posture as the verbatim/personal-use shader sourcing). So the build-our-own tool MAY vendor/adapt expect's actual code (cloned to /tmp/expect-src), branded as ours, no "expect" accreditation in our output. I flagged the license once; the user decided; per instruction-priority (user > my caution) I comply. Provenance recorded here privately for honesty: our verifier is adapted from millionco/expect (FSL-1.1-MIT) for personal local testing use. tool-dev agent is building it under tilt-lab/verify/.
+
 **Revisit when:** expect converts to MIT (~2 years) - at that point vendoring its actual code becomes an option; or if building our own proves to duplicate too much for too little gain.
 
 ## Preview-tool preference (recorded same conversation)
