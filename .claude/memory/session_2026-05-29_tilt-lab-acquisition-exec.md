@@ -25,5 +25,20 @@ acquire-a flagged a second teammate concurrently writing lane-1 files (mesh-grad
 ## Shared blocker: three has no types (resolved)
 acquire-c escalated that `three` ships no type declarations (TS7016 repo-wide for three-based effects: mesh-gradient, particles, motion-core). Checked: ogl + cobe ship their own types (leave alone); three has none. FIX (team-lead owned): `npm i -D @types/three@^0.170.0` - real types incl addons, skipLibCheck on tolerates version drift. NOT a blanket `declare module 'three'` shim (would shadow to any). Resolved the TS7016s. Exposed 2 REAL lane-1 type errors in fractal-glass + halftone (Float32Array<ArrayBufferLike> not assignable to BufferSource/ArrayBuffer on gl uploads - TS5.7 typed-array generic strictness); those belong to the lane-1 builder to fix (cast/type the solver arrays as Float32Array<ArrayBuffer>). Will catch in Task 6 if not.
 
+## ACQUISITION COMPLETE (Task 5 + 6 done)
+All 9 lanes landed. 22 effects acquired + gradient = 23 registered in runtime/index.ts (manifest+factory pairs, validateManifest at registry build, builtinManifests exported for the UI catalog). Added runtime/integration.test.ts (every factory registers a tilt-{id} element; valid bg+mid+pointer+post stack composites without throwing). FINAL: 106 tests / 31 files PASS, tsc exit 0, build OK, bundle smoke = 23 factories + tilt-stack registered.
+
+Final roster by role: background(12) aurora/fake-3d-image/fluid/fractal-glass/grain-gradient/halo/lava-lamp/mesh-gradient/neural-noise/neuro-noise/plasma-grid/specular-band/swirl/gradient; midground(3) globe/interactive-grid/particles; pointer(2) cursor-trail/swarm; post(4) ascii/dithered-image/halftone/water-ripple. Renderers: Canvas2D, raw WebGL1/2, three(+addons), OGL, cobe, vanilla-DOM. neural-noise (CPPN) kept as distinct from neuro-noise.
+
+## Role corrections honored (builders followed recon over my brief - correct)
+swarm=pointer (not midground), halftone=post, interactive-grid=midground.
+
+## Carry-forward notes for Plan 3 (cmux visual pass)
+- fluid: GPU particle layer compiled but not wired; dye field carries the look.
+- Image effects ship PROCEDURAL FALLBACKS (no photo binaries): dithered-image, fake-3d-image, interactive-grid, water-ripple. Real sample assets can be dropped into their assets/ + added to requiredAssets later.
+- OGL effects pass dpr:1 (correctness over retina crispness; revisit).
+- vitest MUST run from inside tilt-lab/ (happy-dom env lost from repo root).
+
 ## Files
+- tilt-lab/runtime/index.ts (registers 23), runtime/integration.test.ts (new), runtime/effects/<22 dirs>/ (index.ts+manifest.json+index.test.ts each, some +assets/), runtime/lib/fluid-solver.ts(+test)
 - tilt-lab/runtime/types.ts (addendum), runtime/pointer.ts + .test.ts (new), runtime/element.ts (wiring), package.json (deps), runtime/effects/_TEMPLATE.test.ts.md (new)

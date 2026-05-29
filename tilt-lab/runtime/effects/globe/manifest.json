@@ -1,0 +1,27 @@
+{
+  "id": "globe",
+  "name": "Globe (cobe)",
+  "category": "object-3d",
+  "layerRole": "midground",
+  "params": [
+    { "name": "speed", "type": "range", "default": 0.3, "min": 0, "max": 2, "step": 0.05 },
+    { "name": "phi", "type": "range", "default": 0, "min": 0, "max": 6.283, "step": 0.01 },
+    { "name": "theta", "type": "range", "default": 0.3, "min": -1.57, "max": 1.57, "step": 0.01 },
+    { "name": "mapSamples", "type": "range", "default": 16000, "min": 1000, "max": 64000, "step": 1000 },
+    { "name": "mapBrightness", "type": "range", "default": 6, "min": 0, "max": 12, "step": 0.1 },
+    { "name": "mapBaseBrightness", "type": "range", "default": 0, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "diffuse", "type": "range", "default": 1.2, "min": 0, "max": 4, "step": 0.1 },
+    { "name": "dark", "type": "range", "default": 1, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "opacity", "type": "range", "default": 1, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "scale", "type": "range", "default": 1, "min": 0.1, "max": 4, "step": 0.05 },
+    { "name": "baseColor", "type": "color", "default": "#346df0" },
+    { "name": "markerColor", "type": "color", "default": "#ff7a00" },
+    { "name": "glowColor", "type": "color", "default": "#aab6ff" }
+  ],
+  "requiredAssets": [],
+  "origin": "https://github.com/shuding/cobe",
+  "license": "MIT",
+  "attribution": "Shu Ding (github.com/shuding/cobe)",
+  "redistribution": "ok",
+  "tags": ["webgl", "globe", "sphere", "dots", "fibonacci-lattice", "glow", "midground"]
+}

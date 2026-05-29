@@ -1,0 +1,17 @@
+{
+  "id": "fake-3d-image",
+  "name": "Fake 3D Image",
+  "category": "parallax",
+  "layerRole": "background",
+  "params": [
+    { "name": "xThreshold", "type": "range", "default": 8, "min": 1, "max": 40, "step": 1 },
+    { "name": "yThreshold", "type": "range", "default": 8, "min": 1, "max": 40, "step": 1 },
+    { "name": "sensitivity", "type": "range", "default": 0.25, "min": 0.01, "max": 1, "step": 0.01 }
+  ],
+  "requiredAssets": ["colorSrc", "depthSrc"],
+  "origin": "https://github.com/motion-core/motion-core",
+  "license": "MIT",
+  "attribution": "motion-core (github.com/motion-core/motion-core)",
+  "redistribution": "ok",
+  "tags": ["ogl", "webgl", "depth-map", "parallax", "pointer", "background"]
+}

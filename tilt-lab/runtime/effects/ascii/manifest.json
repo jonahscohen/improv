@@ -1,0 +1,29 @@
+{
+  "id": "ascii",
+  "name": "ASCII",
+  "category": "post-process",
+  "layerRole": "post",
+  "params": [
+    { "name": "renderMode", "type": "select", "default": "characters", "options": ["characters", "block-chars", "lines", "diagonal", "cross", "diamond", "mixed", "dots", "pixel", "mosaic", "braille"] },
+    { "name": "charSet", "type": "select", "default": "standard", "options": ["standard", "detailed", "minimal", "blocks"] },
+    { "name": "fontSize", "type": "range", "default": 11, "min": 4, "max": 40, "step": 1 },
+    { "name": "coverage", "type": "range", "default": 85, "min": 0, "max": 100, "step": 1 },
+    { "name": "edgeEmphasis", "type": "range", "default": 60, "min": 0, "max": 100, "step": 1 },
+    { "name": "darkThreshold", "type": "range", "default": 30, "min": 0, "max": 100, "step": 1 },
+    { "name": "brightness", "type": "range", "default": 0, "min": -100, "max": 100, "step": 1 },
+    { "name": "contrast", "type": "range", "default": 100, "min": 0, "max": 255, "step": 1 },
+    { "name": "invert", "type": "toggle", "default": false },
+    { "name": "randomChars", "type": "toggle", "default": false },
+    { "name": "charOpacity", "type": "range", "default": 100, "min": 0, "max": 100, "step": 1 },
+    { "name": "mosaicShape", "type": "select", "default": "square", "options": ["square", "circle"] },
+    { "name": "overlayColor", "type": "color", "default": "#ff0000" },
+    { "name": "overlayOpacity", "type": "range", "default": 0, "min": 0, "max": 100, "step": 1 },
+    { "name": "overlayBlend", "type": "select", "default": "multiply", "options": ["source-over", "multiply", "screen", "overlay", "lighten", "darken", "color-dodge", "color-burn"] }
+  ],
+  "requiredAssets": [],
+  "origin": "https://ascii-magic.com/app",
+  "license": "proprietary (all rights reserved); algorithm reimplemented clean",
+  "attribution": "ascii-magic",
+  "redistribution": "reimplemented",
+  "tags": ["canvas2d", "ascii", "post-process", "halftone", "luminance", "sobel", "text", "dither"]
+}

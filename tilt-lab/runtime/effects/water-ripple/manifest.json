@@ -1,0 +1,15 @@
+{
+  "id": "water-ripple",
+  "name": "Water Ripple",
+  "category": "image-distortion",
+  "layerRole": "post",
+  "params": [
+    { "name": "brushSize", "type": "range", "default": 100, "min": 1, "max": 400, "step": 1 }
+  ],
+  "requiredAssets": ["image", "water-ripple-brush"],
+  "origin": "https://github.com/motion-core/motion-core (motion-core.dev/docs/water-ripple)",
+  "license": "MIT",
+  "attribution": "Motion Core (github.com/motion-core/motion-core)",
+  "redistribution": "ok",
+  "tags": ["webgl", "ogl", "ripple", "displacement", "render-target", "pointer", "image", "post"]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "mesh-gradient",
+  "name": "Mesh Gradient",
+  "category": "gradient",
+  "layerRole": "background",
+  "params": [
+    { "name": "noiseFrequency", "type": "range", "default": 3, "min": 0, "max": 10, "step": 0.1 },
+    { "name": "noiseAmount", "type": "range", "default": 0.2, "min": 0, "max": 0.6, "step": 0.01 },
+    { "name": "noiseSpeed", "type": "range", "default": 0.02, "min": 0, "max": 0.3, "step": 0.001 },
+    { "name": "animFreeze", "type": "toggle", "default": false },
+    { "name": "grainIntensity", "type": "range", "default": 0.02, "min": 0, "max": 0.5, "step": 0.01 },
+    { "name": "ditherEnabled", "type": "toggle", "default": false },
+    { "name": "ditherStrength", "type": "range", "default": 0.3, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "wireframe", "type": "toggle", "default": false }
+  ],
+  "requiredAssets": [],
+  "origin": "https://github.com/regent (mesh-gradient); technique gradients.juangarcia.ch",
+  "license": "MIT",
+  "attribution": "regent",
+  "redistribution": "ok",
+  "tags": ["three", "webgl", "gradient", "mesh", "simplex-noise", "dither", "grain"]
+}

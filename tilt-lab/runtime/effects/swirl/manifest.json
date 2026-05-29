@@ -1,0 +1,30 @@
+{
+  "id": "swirl",
+  "name": "Swirl",
+  "category": "generative-gradient",
+  "layerRole": "background",
+  "params": [
+    { "name": "color1", "type": "color", "default": "#ffd1d1" },
+    { "name": "color2", "type": "color", "default": "#ff8a8a" },
+    { "name": "color3", "type": "color", "default": "#660000" },
+    { "name": "colorBack", "type": "color", "default": "#330000" },
+    { "name": "bandCount", "type": "range", "default": 4, "min": 0, "max": 15, "step": 1 },
+    { "name": "twist", "type": "range", "default": 0.1, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "center", "type": "range", "default": 0.2, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "proportion", "type": "range", "default": 0.5, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "softness", "type": "range", "default": 0, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "noise", "type": "range", "default": 0.2, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "noiseFrequency", "type": "range", "default": 0.4, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "speed", "type": "range", "default": 0.32, "min": -2, "max": 2, "step": 0.01 },
+    { "name": "scale", "type": "range", "default": 1, "min": 0.01, "max": 4, "step": 0.01 },
+    { "name": "rotation", "type": "range", "default": 0, "min": 0, "max": 360, "step": 1 },
+    { "name": "offsetX", "type": "range", "default": 0, "min": -1, "max": 1, "step": 0.01 },
+    { "name": "offsetY", "type": "range", "default": 0, "min": -1, "max": 1, "step": 0.01 }
+  ],
+  "requiredAssets": [],
+  "origin": "https://github.com/paper-design/shaders (@paper-design/shaders 0.0.76)",
+  "license": "PolyForm Shield License 1.0.0",
+  "attribution": "Paper Design (github.com/paper-design/shaders)",
+  "redistribution": "ok",
+  "tags": ["webgl2", "swirl", "spiral", "gradient", "noise", "animated", "background"]
+}

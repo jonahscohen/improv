@@ -1,0 +1,20 @@
+{
+  "id": "specular-band",
+  "name": "Specular Band",
+  "category": "generative",
+  "layerRole": "background",
+  "params": [
+    { "name": "color", "type": "color", "default": "#FF6900" },
+    { "name": "backgroundColor", "type": "color", "default": "#17181A" },
+    { "name": "speed", "type": "range", "default": 1, "min": 0, "max": 4, "step": 0.01 },
+    { "name": "distortion", "type": "range", "default": 0.2, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "hueShift", "type": "range", "default": 30, "min": 0, "max": 180, "step": 1 },
+    { "name": "intensity", "type": "range", "default": 1, "min": 0, "max": 3, "step": 0.01 }
+  ],
+  "requiredAssets": [],
+  "origin": "https://github.com/motion-core/motion-core (motion-core.dev/docs/specular-band)",
+  "license": "MIT",
+  "attribution": "Motion Core (github.com/motion-core/motion-core)",
+  "redistribution": "ok",
+  "tags": ["webgl", "ogl", "specular", "bands", "hue-shift", "lens-distortion", "background"]
+}

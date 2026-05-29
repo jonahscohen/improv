@@ -1,0 +1,30 @@
+{
+  "id": "swarm",
+  "name": "Swarm",
+  "category": "particles",
+  "layerRole": "pointer",
+  "params": [
+    { "name": "gridSpacing", "type": "range", "default": 18, "min": 8, "max": 40, "step": 1 },
+    { "name": "dotRadius", "type": "range", "default": 1, "min": 0.5, "max": 6, "step": 0.1 },
+    { "name": "dotShape", "type": "select", "default": "circle", "options": ["circle", "square", "diamond", "triangle", "sparkle", "cross"] },
+    { "name": "attractRadius", "type": "range", "default": 220, "min": 60, "max": 500, "step": 1 },
+    { "name": "attractStrength", "type": "range", "default": 0.035, "min": 0.005, "max": 0.1, "step": 0.001 },
+    { "name": "repelMode", "type": "toggle", "default": false },
+    { "name": "orbitRadius", "type": "range", "default": 30, "min": 0, "max": 100, "step": 1 },
+    { "name": "orbitJitter", "type": "range", "default": 0.6, "min": 0, "max": 2, "step": 0.01 },
+    { "name": "friction", "type": "range", "default": 0.92, "min": 0.8, "max": 0.99, "step": 0.01 },
+    { "name": "returnStrength", "type": "range", "default": 0.008, "min": 0.001, "max": 0.05, "step": 0.001 },
+    { "name": "idleColor", "type": "color", "default": "#ffffff" },
+    { "name": "swarmColor", "type": "color", "default": "#ffffff" },
+    { "name": "bgColor", "type": "color", "default": "#060608" },
+    { "name": "idleAlpha", "type": "range", "default": 0.08, "min": 0, "max": 0.5, "step": 0.01 },
+    { "name": "swarmAlpha", "type": "range", "default": 0.55, "min": 0.1, "max": 1, "step": 0.01 },
+    { "name": "glowAlpha", "type": "range", "default": 0.15, "min": 0, "max": 0.5, "step": 0.01 }
+  ],
+  "requiredAssets": [],
+  "origin": "https://github.com/regent (SwarmTuner)",
+  "license": "MIT",
+  "attribution": "regent",
+  "redistribution": "ok",
+  "tags": ["canvas2d", "particles", "pointer", "grid", "physics", "dots"]
+}

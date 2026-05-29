@@ -1,0 +1,20 @@
+{
+  "id": "lava-lamp",
+  "name": "Lava Lamp",
+  "category": "raymarch",
+  "layerRole": "background",
+  "params": [
+    { "name": "color", "type": "color", "default": "#17181A" },
+    { "name": "fresnelColor", "type": "color", "default": "#ff6900" },
+    { "name": "speed", "type": "range", "default": 1, "min": 0, "max": 4, "step": 0.01 },
+    { "name": "fresnelPower", "type": "range", "default": 3, "min": 0, "max": 8, "step": 0.1 },
+    { "name": "radius", "type": "range", "default": 1, "min": 0.1, "max": 3, "step": 0.01 },
+    { "name": "smoothness", "type": "range", "default": 0.1, "min": 0, "max": 0.5, "step": 0.01 }
+  ],
+  "requiredAssets": [],
+  "origin": "https://github.com/motion-core/motion-core (motion-core.dev/docs/lava-lamp)",
+  "license": "MIT",
+  "attribution": "Motion Core (github.com/motion-core/motion-core)",
+  "redistribution": "ok",
+  "tags": ["webgl", "ogl", "raymarch", "sdf", "metaball", "fresnel", "background"]
+}

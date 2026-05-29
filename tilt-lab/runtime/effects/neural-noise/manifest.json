@@ -1,0 +1,15 @@
+{
+  "id": "neural-noise",
+  "name": "Neural Noise",
+  "category": "generative",
+  "layerRole": "background",
+  "params": [
+    { "name": "speed", "type": "range", "default": 1, "min": 0, "max": 4, "step": 0.01 }
+  ],
+  "requiredAssets": [],
+  "origin": "https://github.com/motion-core/motion-core (motion-core.dev/docs/neural-noise)",
+  "license": "MIT",
+  "attribution": "Motion Core (github.com/motion-core/motion-core)",
+  "redistribution": "ok",
+  "tags": ["webgl", "ogl", "cppn", "generative", "neural", "organic", "background"]
+}
