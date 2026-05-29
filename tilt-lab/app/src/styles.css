@@ -1,0 +1,364 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0b0f;
+  --panel: #14141a;
+  --line: #23232b;
+  --line-2: #2a2a33;
+  --text: #e7e7ea;
+  --muted: #9a9aa6;
+  --accent: #5b8cff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* Top bar */
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.top-bar__brand {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.top-bar__spacer {
+  flex: 1;
+}
+
+.top-bar__add,
+.top-bar__send {
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  background: #1b1b22;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.top-bar__add:hover,
+.top-bar__send:not(:disabled):hover {
+  background: #232330;
+}
+
+.top-bar__send {
+  background: var(--accent);
+  border-color: transparent;
+  color: #08080c;
+  font-weight: 600;
+}
+
+.top-bar__send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.project-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.project-picker__label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.project-picker select,
+.add-shader-modal__kinds button {
+  background: #1b1b22;
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+}
+
+/* Three-column body */
+.app__body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 280px 1fr 340px;
+  min-height: 0;
+}
+
+.app__browse,
+.app__layers {
+  overflow-y: auto;
+  padding: 0.85rem;
+}
+
+.app__browse {
+  border-right: 1px solid var(--line);
+}
+
+.app__layers {
+  border-left: 1px solid var(--line);
+}
+
+.app__preview {
+  position: relative;
+  background: #000;
+}
+
+.preview-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.preview-canvas canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Browse grid */
+.browse-grid__search {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  background: #1b1b22;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  color: var(--text);
+  margin-bottom: 0.6rem;
+}
+
+.browse-grid__roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.browse-grid__roles button {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.browse-grid__roles button[data-active='true'] {
+  background: var(--accent);
+  border-color: transparent;
+  color: #08080c;
+}
+
+.browse-grid__cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.browse-grid__card {
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  background: var(--panel);
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.browse-grid__card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.browse-grid__card-role,
+.layer-stack__role {
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Layer stack */
+.layer-stack__title {
+  font-size: 0.95rem;
+  margin: 0 0 0.6rem;
+}
+
+.layer-stack__empty,
+.layer-stack__hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.layer-stack__hint {
+  color: #ff9a8c;
+  border: 1px solid #5a2a2a;
+  background: #2a1414;
+  border-radius: 7px;
+  padding: 0.4rem 0.55rem;
+}
+
+.layer-stack__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.layer-stack__item {
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  background: var(--panel);
+  padding: 0.55rem 0.65rem;
+}
+
+.layer-stack__item-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.layer-stack__name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.layer-stack__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.layer-stack__actions button {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  background: #1b1b22;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.layer-stack__actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Param controls */
+.param-controls {
+  margin-top: 0.55rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.param-controls__row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.param-controls__row input[type='range'] {
+  width: 100%;
+}
+
+/* Add-shader modal */
+.add-shader-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: grid;
+  place-items: center;
+  z-index: 10;
+}
+
+.add-shader-modal__panel {
+  width: min(560px, 92vw);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  padding: 1.1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.add-shader-modal__title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.add-shader-modal__kinds {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.add-shader-modal__kinds button[data-active='true'] {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.add-shader-modal__source {
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  background: #0e0e13;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 0.6rem;
+}
+
+.add-shader-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.add-shader-modal__actions button {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  background: #1b1b22;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.add-shader-modal__actions button:last-child {
+  background: var(--accent);
+  border-color: transparent;
+  color: #08080c;
+  font-weight: 600;
+}
+
+.add-shader-modal__actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
