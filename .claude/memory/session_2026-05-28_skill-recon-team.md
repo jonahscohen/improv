@@ -3,6 +3,7 @@ name: skill-recon team - gap analysis of 4 external UI skills vs sidecoach
 description: Deployed cmux team to research 4 external design/UI skills and identify gaps vs sidecoach's current taste/reference coverage; lead synthesizes + places
 type: project
 relates_to: [session_2026-05-28_task-queue-team-deploy.md, decision_orchestration_routing_cmux_vs_workflows.md]
+superseded_by: session_2026-05-28_skill-recon-synthesis.md
 ---
 
 Collaborator: Jonah. Deployed 2026-05-28.
