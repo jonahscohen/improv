@@ -86,6 +86,13 @@ body {
   background: var(--btn-bg-hover);
 }
 
+/* Tactile press feedback (16-point polish) - subtle, in keeping with the
+   utilitarian/fast register; activates the transform transition declared above. */
+.top-bar__add:active,
+.top-bar__send:not(:disabled):active {
+  transform: scale(0.97);
+}
+
 .top-bar__send {
   background: var(--accent);
   border-color: transparent;
@@ -223,6 +230,10 @@ body {
   transform: translateY(-1px);
 }
 
+.browse-grid__card:active {
+  transform: scale(0.98);
+}
+
 .browse-grid__card-role,
 .layer-stack__role {
   font-size: 0.68rem;
@@ -334,6 +345,30 @@ body {
   min-width: 0;
 }
 
+/* Range row: slider fills, numeric readout pinned right so the user can see and
+   reproduce the exact value they are tuning (the tool's core loop). */
+.param-controls__range {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.param-controls__range input[type='range'] {
+  flex: 1;
+  min-width: 0;
+}
+
+.param-controls__value {
+  flex: none;
+  min-width: 2.75rem;
+  text-align: right;
+  font-size: 0.7rem;
+  color: var(--text);
+  /* tabular-nums so the readout does not reflow as digits change while dragging */
+  font-variant-numeric: tabular-nums;
+}
+
 /* Add-shader modal */
 .add-shader-modal {
   position: fixed;
@@ -394,6 +429,11 @@ body {
   background: var(--btn-bg);
   color: var(--text);
   cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.add-shader-modal__actions button:not(:disabled):active {
+  transform: scale(0.97);
 }
 
 .add-shader-modal__actions button:last-child {
@@ -451,11 +491,16 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .top-bar__add,
   .top-bar__send,
-  .browse-grid__card {
+  .browse-grid__card,
+  .add-shader-modal__actions button {
     transition: none;
   }
 
-  .browse-grid__card:hover {
+  .browse-grid__card:hover,
+  .browse-grid__card:active,
+  .top-bar__add:active,
+  .top-bar__send:not(:disabled):active,
+  .add-shader-modal__actions button:not(:disabled):active {
     transform: none;
   }
 }

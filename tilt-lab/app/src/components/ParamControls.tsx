@@ -12,18 +12,24 @@ export function ParamControls({ specs, values, onChange }: Props) {
       {specs.map((spec) => {
         const value = values[spec.name];
         if (spec.type === 'range') {
+          const step = spec.step ?? 0.01;
+          const decimals = step < 1 ? (String(step).split('.')[1]?.length ?? 0) : 0;
+          const num = Number(value);
           return (
             <label key={spec.name} className="param-controls__row">
               <span>{spec.name}</span>
-              <input
-                aria-label={spec.name}
-                type="range"
-                min={spec.min ?? 0}
-                max={spec.max ?? 1}
-                step={spec.step ?? 0.01}
-                value={Number(value)}
-                onChange={(e) => onChange(spec.name, Number(e.target.value))}
-              />
+              <span className="param-controls__range">
+                <input
+                  aria-label={spec.name}
+                  type="range"
+                  min={spec.min ?? 0}
+                  max={spec.max ?? 1}
+                  step={step}
+                  value={num}
+                  onChange={(e) => onChange(spec.name, Number(e.target.value))}
+                />
+                <output className="param-controls__value">{num.toFixed(decimals)}</output>
+              </span>
             </label>
           );
         }

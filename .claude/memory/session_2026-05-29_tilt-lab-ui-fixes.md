@@ -19,5 +19,14 @@ Collaborator: Jonah. 2026-05-29. tilt-ui team, tasks 1-4 done (strict per-file o
 
 ## Next (Phase 2): task #5 /sidecoach critique + polish on tilt-lab/app (now with PRODUCT.md/DESIGN.md present) + Claude-in-Chrome visual verification: resize window for responsive, focus rings, param-label wrap on aurora/mc-globe, modal Escape/trap.
 
+## QA GATE done (ui-qa, task #5)
+/sidecoach critique + polish on the fixed UI. Critique HIGH: range sliders had NO visible value (against the "tune in real time" core loop + DESIGN.md's pre-spec'd tabular readout) -> ADDED a tabular-nums `<output>` per slider (decimals from step). MEDIUM: dead transform transition -> scale-on-press feedback (top-bar + modal + cards), reduced-motion extended to null the new transforms. Correctly SKIPPED shadows (flat tool per DESIGN.md) + text-wrap:balance (1-2 word headings). design.md lint 0/0, tsc clean, 137/137. ui-qa drag-verified the readout updates live. Touched ParamControls.tsx + styles.css only.
+
+## Visual verification (team-lead, Claude-in-Chrome)
+Desktop reload: no regression, role pills visibly taller (40x40). Resized to 560px: layout STACKS single-column, preview moves to top + stays prominent, browse+pills below, top-bar wraps, scrolls - P0 responsive CONFIRMED. (ParamControls readout verified by ui-qa via real drag.)
+
+## TODO queue
+design.md v0.2.0 linter nested-group crash -> marketing-site/ + reference/ DESIGN.md fail lint; refactor to flat tokens or fix the linter. Two dev servers running (:5180 mine, :5181 ui-qa's) - harmless, clean up.
+
 ## Files
 - app/src/styles.css, app/src/components/AddShaderModal.tsx, app/src/components/PreviewCanvas.tsx, app/vite.config.ts, PRODUCT.md (new), DESIGN.md (new)
