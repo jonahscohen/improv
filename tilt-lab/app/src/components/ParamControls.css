@@ -34,24 +34,31 @@
 .param-group {
   border: 1px solid var(--line);
   border-radius: var(--r-md);
-  background: var(--panel);
+  background: var(--surface-2);
   overflow: clip;
 }
 
+/* Section label reads as instrument meta: tracked uppercase mono. */
 .param-group__summary {
   display: flex;
   align-items: center;
   gap: var(--sp-sm);
   min-height: 2rem;
   padding: var(--sp-xs) var(--sp-sm);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
   cursor: pointer;
   user-select: none;
   list-style: none;
-  transition: background 120ms ease;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.param-group__summary:hover .param-group__title {
+  color: var(--text);
 }
 
 .param-group__summary:hover {

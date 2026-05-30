@@ -1,0 +1,104 @@
+/* ProjectPicker - centered contextual menu in the top strip. A quiet trigger
+   button opens a popover list. De-emphasized (server handoff is offline).
+   Tokens only; depth from surface + hairline, never shadow. */
+.project-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.project-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  min-height: 32px;
+  padding: 0.3rem 0.6rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.project-menu__trigger:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.project-menu__current {
+  font-size: 0.8125rem;
+  color: var(--text);
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-menu__caret {
+  flex: none;
+  color: var(--muted);
+  transition: transform 0.14s ease;
+}
+
+.project-menu__trigger[aria-expanded='true'] .project-menu__caret {
+  transform: rotate(180deg);
+}
+
+/* Popover: anchored under the centered trigger, hairline-framed surface. */
+.project-menu__popover {
+  position: absolute;
+  top: calc(100% + var(--sp-xs));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  min-width: 13rem;
+  max-width: 18rem;
+  padding: var(--sp-tight);
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  display: grid;
+  gap: 1px;
+}
+
+.project-menu__empty {
+  margin: 0;
+  padding: var(--sp-sm) var(--sp-card);
+  font-size: 0.8125rem;
+  color: var(--faint);
+  text-align: center;
+}
+
+.project-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-sm);
+  width: 100%;
+  padding: 0.4rem var(--sp-card);
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.project-menu__item:hover {
+  background: var(--surface-3);
+}
+
+.project-menu__item-check {
+  flex: none;
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-menu__trigger,
+  .project-menu__caret,
+  .project-menu__item {
+    transition: none;
+  }
+}

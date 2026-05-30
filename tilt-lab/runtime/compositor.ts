@@ -76,6 +76,13 @@ export class Compositor {
       if (config.blendMode && config.blendMode !== 'source-over') {
         surface.style.mixBlendMode = config.blendMode;
       }
+      // Per-layer composition: opacity dims the surface; a disabled layer is
+      // hidden so it contributes nothing. `enabled`/`opacity` are optional on
+      // LayerConfig, so undefined means the historical default (on, full).
+      surface.style.opacity = String(config.opacity ?? 1);
+      if (config.enabled === false) {
+        surface.style.display = 'none';
+      }
       this.root.appendChild(surface);
 
       // Deliver the effect's real assets (URLs resolved at build/dev time).
@@ -114,6 +121,9 @@ export class Compositor {
     const p = this.pointer.position();
     this.layers.forEach((layer, i) => {
       const { effect, config, canvas } = layer;
+      // A disabled layer contributes nothing: skip its frame entirely (its
+      // surface is already hidden). undefined enabled means on (legacy default).
+      if (config.enabled === false) return;
       // A Canvas2D post effect transforms "the scene beneath it": composite the
       // lower layers' canvases into its OWN canvas before frame() so it samples
       // real content (e.g. an uploaded Image/Video background). Guarded to 2D
@@ -124,9 +134,18 @@ export class Compositor {
         if (c2d) {
           c2d.clearRect(0, 0, canvas.width, canvas.height);
           for (let j = 0; j < i; j++) {
-            const below = this.layers[j].canvas;
-            if (below) c2d.drawImage(below, 0, 0, canvas.width, canvas.height);
+            const belowLayer = this.layers[j];
+            if (belowLayer.config.enabled === false) continue;
+            const below = belowLayer.canvas;
+            if (below) {
+              // Honor the lower layer's opacity when sampling it into the post
+              // canvas - the post path composites in 2D, so CSS opacity on the
+              // hidden source canvas does not apply here.
+              c2d.globalAlpha = belowLayer.config.opacity ?? 1;
+              c2d.drawImage(below, 0, 0, canvas.width, canvas.height);
+            }
           }
+          c2d.globalAlpha = 1;
         }
       }
       if (effect.onPointer) effect.onPointer(p.x, p.y);

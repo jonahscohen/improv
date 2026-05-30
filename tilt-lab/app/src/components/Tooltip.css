@@ -1,0 +1,67 @@
+/* Tooltip - on-brand replacement for the native `title` attribute, styled after
+   Justify's toolbar tooltips: a fully-rounded dark pill with a hairline border
+   and a single soft drop shadow that lifts it off the surface. Shows instantly
+   on hover/focus and fades in over 120ms with a small translateY slide. Portaled
+   to <body> and positioned fixed so panel overflow never clips it. Tokens only,
+   except the literal pill radius and the rgba drop-shadow. */
+
+/* The trigger wrapper sizes to its child so layout (flex rows, square icon
+   buttons) is unaffected; it carries the hover/focus listeners so even a
+   disabled <button> inside still surfaces its tooltip on hover. */
+.tooltip-trigger {
+  display: inline-flex;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 1000;
+  max-width: 16rem;
+  padding: 5px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  /* The one intentional shadow: Justify's tooltip lifts off the canvas. */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  /* Entrance start state: invisible, nudged off its resting spot. The
+     `.tooltip--visible` class (added a frame after mount) flips both. */
+  opacity: 0;
+}
+
+/* Motion only when the user allows it: the fade-in + translateY slide is a CSS
+   transition, mirroring Justify's `transition:opacity 120ms ease, transform
+   120ms ease`. The slide direction points toward the anchored edge. */
+@media (prefers-reduced-motion: no-preference) {
+  .tooltip {
+    transition: opacity 0.12s ease, transform 0.12s ease;
+  }
+
+  .tooltip[data-placement='bottom'] {
+    transform: translateY(-4px);
+  }
+
+  .tooltip[data-placement='top'],
+  .tooltip[data-placement='left'] {
+    transform: translateY(4px);
+  }
+
+  .tooltip--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Reduced motion: show instantly, no transform or fade. */
+@media (prefers-reduced-motion: reduce) {
+  .tooltip {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

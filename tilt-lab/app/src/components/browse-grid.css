@@ -1,0 +1,83 @@
+/* Browse catalog - a live-thumbnail grid. Each card is the effect made
+   legible at a glance: a mini stage + name + a tracked mono role tag. Cards
+   dissolve the boxed-card look (no fills, no shadow); structure comes from the
+   thumbnail's own hairline and from size/spacing. */
+
+.browse__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-sm);
+}
+.browse__count {
+  color: var(--muted);
+}
+
+.browse__filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+  margin-top: var(--sp-bar);
+}
+
+.browse__empty {
+  margin-top: var(--sp-bar);
+}
+
+/* Responsive: 2-up in the lean rail, collapsing to 1-up when space is tight. */
+.browse__grid {
+  list-style: none;
+  margin: var(--sp-bar) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: var(--sp-card);
+}
+.browse__cell {
+  min-width: 0;
+}
+
+.browse-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+  width: 100%;
+  min-height: var(--hit-min);
+  padding: var(--sp-xs);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, transform 0.1s ease;
+}
+.browse-card:hover {
+  background: var(--surface-2);
+  border-color: var(--line-2);
+}
+.browse-card:active {
+  transform: scale(0.97);
+}
+
+.browse-card__name {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  line-height: 1.25;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+/* All role tags are uniformly muted. The accent is reserved as a sparse
+   indicator (brand law: no color-only signaling, single-accent discipline) -
+   roles must not color-code, so no [data-role] accent rule here. */
+.browse-card__role {
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .browse-card {
+    transition: none;
+  }
+  .browse-card:active {
+    transform: none;
+  }
+}

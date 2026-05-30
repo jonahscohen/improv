@@ -64,4 +64,8 @@ export interface LayerConfig {
   layerRole: LayerRole;
   params: Record<string, unknown>;
   blendMode: string; // CSS/canvas globalCompositeOperation value
+  /** Whether the layer contributes to the composite. Default: true. */
+  enabled?: boolean;
+  /** Per-layer opacity, 0..1. Default: 1. */
+  opacity?: number;
 }

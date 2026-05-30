@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import './add-shader-modal.css';
 
 interface Props {
   open: boolean;
@@ -68,10 +69,12 @@ export function AddShaderModal({ open, onClose, onSubmit }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="add-shader-modal__title">Add a shader</h2>
+        <span className="meta">Type</span>
         <div className="add-shader-modal__kinds">
           {(['glsl', 'module', 'url'] as const).map((k, i) => (
             <button
               key={k}
+              className="add-shader-modal__kind"
               ref={i === 0 ? firstControlRef : undefined}
               data-active={kind === k}
               onClick={() => setKind(k)}
@@ -80,6 +83,7 @@ export function AddShaderModal({ open, onClose, onSubmit }: Props) {
             </button>
           ))}
         </div>
+        <span className="meta">Source</span>
         <textarea
           aria-label="shader source"
           className="add-shader-modal__source"
@@ -88,8 +92,14 @@ export function AddShaderModal({ open, onClose, onSubmit }: Props) {
           placeholder={kind === 'url' ? 'https://...' : 'paste source'}
         />
         <div className="add-shader-modal__actions">
-          <button onClick={onClose}>Cancel</button>
-          <button onClick={() => onSubmit({ kind, source })} disabled={!source.trim()}>
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="btn btn--accent"
+            onClick={() => onSubmit({ kind, source })}
+            disabled={!source.trim()}
+          >
             Add
           </button>
         </div>

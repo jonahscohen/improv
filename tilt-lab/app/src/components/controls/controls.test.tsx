@@ -18,6 +18,55 @@ describe('Slider', () => {
     render(<Slider ariaLabel="amt" value={0.25} min={0} max={1} step={0.01} onChange={() => {}} />);
     expect(screen.getByText('0.25')).toBeTruthy();
   });
+
+  it('nudges by one step on arrow key, and 10x with Shift (clamped to max)', () => {
+    const onChange = vi.fn();
+    render(<Slider ariaLabel="speed" value={1} min={0} max={5} step={0.5} onChange={onChange} />);
+    const readout = screen.getByText('1.0');
+    fireEvent.keyDown(readout, { key: 'ArrowUp' });
+    expect(onChange).toHaveBeenLastCalledWith(1.5);
+    fireEvent.keyDown(readout, { key: 'ArrowDown' });
+    expect(onChange).toHaveBeenLastCalledWith(0.5);
+    // Shift = 10x larger step: 1 + 0.5*10 = 6, clamped to max 5
+    fireEvent.keyDown(readout, { key: 'ArrowRight', shiftKey: true });
+    expect(onChange).toHaveBeenLastCalledWith(5);
+  });
+
+  it('double-click -> type -> Enter commits a clamped+stepped value', () => {
+    const onChange = vi.fn();
+    render(<Slider ariaLabel="speed" value={1} min={0} max={5} step={0.5} onChange={onChange} />);
+    fireEvent.doubleClick(screen.getByText('1.0'));
+    const edit = screen.getByLabelText('speed exact value');
+    fireEvent.change(edit, { target: { value: '9' } });
+    fireEvent.keyDown(edit, { key: 'Enter' });
+    expect(onChange).toHaveBeenLastCalledWith(5);
+  });
+
+  it('selects the value on entering edit mode so a typed number replaces (not merges)', () => {
+    const onChange = vi.fn();
+    // multi-digit start (mirrors the 1.10 repro) - without select-all the first
+    // keystroke would merge into the old digits.
+    render(<Slider ariaLabel="speed" value={1.1} min={0} max={5} step={0.5} onChange={onChange} />);
+    fireEvent.doubleClick(screen.getByText('1.1'));
+    const edit = screen.getByLabelText('speed exact value') as HTMLInputElement;
+    // entering edit mode selects the whole existing value
+    expect(edit.selectionStart).toBe(0);
+    expect(edit.selectionEnd).toBe(edit.value.length);
+    // typing a fresh number replaces it; 4.2 snaps to the nearest 0.5 step -> 4.0
+    fireEvent.change(edit, { target: { value: '4.2' } });
+    fireEvent.keyDown(edit, { key: 'Enter' });
+    expect(onChange).toHaveBeenLastCalledWith(4);
+  });
+
+  it('double-click -> type -> Escape cancels without emitting', () => {
+    const onChange = vi.fn();
+    render(<Slider ariaLabel="speed" value={1} min={0} max={5} step={0.5} onChange={onChange} />);
+    fireEvent.doubleClick(screen.getByText('1.0'));
+    const edit = screen.getByLabelText('speed exact value');
+    fireEvent.change(edit, { target: { value: '3' } });
+    fireEvent.keyDown(edit, { key: 'Escape' });
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });
 
 describe('Switch', () => {

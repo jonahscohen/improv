@@ -1,0 +1,108 @@
+/* Add-shader modal - re-homed from styles.css into the instrument language.
+   Surface-2 panel framed by a hairline (depth from surface + line, never
+   shadow), tight radius, mono micro-labels, .btn/.btn--accent actions. Tokens
+   only; the scrim is a token-derived dim of the base, not a hardcoded color. */
+
+.add-shader-modal {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  display: grid;
+  place-items: center;
+  z-index: 10;
+}
+
+.add-shader-modal__panel {
+  width: min(560px, 92vw);
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+  padding: var(--sp-panel);
+  display: grid;
+  gap: var(--sp-sm);
+}
+
+.add-shader-modal__title {
+  margin: 0 0 var(--sp-tight);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Kind selector - mono chips; the active one is marked by an accent hairline
+   (indicator, not fill). */
+.add-shader-modal__kinds {
+  display: flex;
+  gap: var(--sp-xs);
+}
+
+.add-shader-modal__kind {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.7rem;
+  min-height: 32px;
+  background: var(--surface-3);
+  color: var(--muted);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: color 0.14s ease, border-color 0.14s ease, background 0.14s ease,
+    transform 0.1s ease;
+}
+
+.add-shader-modal__kind:hover {
+  color: var(--text);
+}
+
+.add-shader-modal__kind:active {
+  transform: scale(0.97);
+}
+
+.add-shader-modal__kind[data-active='true'] {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.add-shader-modal__source {
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  background: var(--input-bg);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  padding: var(--sp-card);
+}
+
+.add-shader-modal__source::placeholder {
+  color: var(--faint);
+}
+
+.add-shader-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-sm);
+  margin-top: var(--sp-tight);
+}
+
+/* Subtle entrance, reduced-motion-safe. */
+@media (prefers-reduced-motion: no-preference) {
+  .add-shader-modal__panel {
+    animation: add-shader-modal-in 0.16s ease-out;
+  }
+  @keyframes add-shader-modal-in {
+    from {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+}

@@ -1,0 +1,69 @@
+/* Poster tile for a browse card. The thumbnail is the one luminous subject of
+   the card: true-black stage, hairline frame, no shadow. Every non-poster state
+   (loading, failure) is DARK - a white tile must never appear. */
+.thumb {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  overflow: hidden;
+  background: var(--preview-bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+
+/* Resolved poster image. Sits on the black stage; object-fit keeps it honest. */
+.thumb__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+/* Loading state: a quiet shimmer on the surface ladder while the poster for
+   this effect is generated. Never white. */
+.thumb__skeleton {
+  position: absolute;
+  inset: 0;
+  background-color: var(--surface-2);
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    var(--surface-3) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: thumb-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes thumb-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Failure / mount-only state: a dark engraved monogram - never a white or
+   broken-image tile. */
+.thumb__fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+}
+.thumb__fallback-glyph {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb__skeleton {
+    animation: none;
+    background-image: none;
+  }
+}

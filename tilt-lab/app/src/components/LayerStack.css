@@ -1,12 +1,271 @@
-/* LayerStack action row - icon-only reorder/remove controls.
-   IconButton owns its own appearance; this only scopes the row layout and
-   guarantees the icon centers tightly over any legacy global button rules. */
-.layer-stack__actions {
-  margin-left: auto;
-  display: flex;
-  gap: 0.25rem;
+/* LayerStack - instrument channel strips. Each layer is a "channel": a
+   hairline-ruled group with a drag handle, name, role, enable switch, an
+   opacity fader, keyboard reorder buttons, and its parameter controls.
+   Tokens come from styles.css (the CD owns it); this file only composes them. */
+
+.layer-stack__title {
+  margin: 0 0 var(--sp-sm);
 }
 
-.layer-stack__actions .icon-button {
+.layer-stack__hint {
+  margin: 0 0 var(--sp-sm);
+  font-size: 0.78rem;
+  color: var(--accent);
+}
+
+.layer-stack__empty {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--faint);
+}
+
+.layer-stack__list {
+  list-style: none;
+  margin: 0;
   padding: 0;
+  display: grid;
+  gap: var(--sp-bar);
+}
+
+/* A single channel strip ---------------------------------------------------- */
+.channel {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-1);
+  padding: var(--sp-card);
+  display: grid;
+  gap: var(--sp-sm);
+  transition:
+    opacity 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+/* Disabled channels dim but stay fully interactive (no pointer-events off). */
+.channel[data-enabled='false'] {
+  opacity: 0.55;
+}
+
+.channel[data-dragging='true'] {
+  opacity: 0.4;
+}
+
+/* Drop-line affordance: a 2px accent rule on the edge where the dragged channel
+   would land (above a target, or below the last channel). No shadow. */
+.channel[data-drop-before='true'] {
+  box-shadow: 0 -2px 0 0 var(--accent);
+}
+
+.channel[data-drop-after='true'] {
+  box-shadow: 0 2px 0 0 var(--accent);
+}
+
+.channel__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+
+/* Grip handle: a bare drag affordance (Lucide grip). No button chrome, no index
+   number - just the icon. touch-action:none lets the pointer drag own vertical
+   gestures so the rail does not scroll while reordering. Keyboard reorder lives
+   on the up/down IconButtons, so this non-focusable grip is fine. */
+.channel__handle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--hit-min);
+  min-width: 1.4rem;
+  color: var(--faint);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: color 140ms ease;
+}
+
+.channel__handle:hover {
+  color: var(--muted);
+}
+
+.channel__handle:active {
+  cursor: grabbing;
+}
+
+.channel__grip {
+  flex: none;
+}
+
+/* Disclosure: the stacked title block doubles as the collapse toggle. A plain
+   row-spanning button, no chrome, so it reads as text with an affordance. */
+.channel__disclosure {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  min-height: var(--hit-min);
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.channel__disclosure:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* Title block: name on top, role/type underneath (stacked). */
+.channel__title {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.channel__name {
+  min-width: 0;
+  font-size: 0.86rem;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.channel__role {
+  min-width: 0;
+}
+
+/* Chevron rotates to point up when expanded, down when collapsed. */
+.channel__chevron {
+  flex: none;
+  color: var(--faint);
+  transform: rotate(180deg);
+  transition: transform 140ms ease, color 140ms ease;
+}
+
+.channel[data-collapsed='true'] .channel__chevron {
+  transform: rotate(0deg);
+}
+
+.channel__disclosure:hover .channel__chevron {
+  color: var(--muted);
+}
+
+/* Opacity fader row --------------------------------------------------------- */
+.channel__opacity {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+
+.channel__opacity-label {
+  white-space: nowrap;
+}
+
+.channel__opacity-value {
+  font-size: 0.72rem;
+  text-align: right;
+  min-width: 2.6rem;
+}
+
+/* Native range styled as a flat instrument fader: a hairline track with an
+   accent fill driven by --channel-opacity-pct and a small square thumb. */
+.channel__opacity-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: var(--hit-min);
+  background: transparent;
+  cursor: pointer;
+  /* Muted fader fill at rest; the accent lights up only while actively engaged
+     (drag / keyboard focus), keeping red as a sparse indicator. */
+  --ch-fill: var(--muted);
+}
+
+.channel__opacity-input:active,
+.channel__opacity-input:focus-visible {
+  --ch-fill: var(--accent);
+}
+
+.channel__opacity-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+.channel__opacity-input::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: var(--r-full);
+  background: linear-gradient(
+    to right,
+    var(--ch-fill) 0,
+    var(--ch-fill) var(--channel-opacity-pct, 100%),
+    var(--line-2) var(--channel-opacity-pct, 100%),
+    var(--line-2) 100%
+  );
+}
+
+.channel__opacity-input::-moz-range-track {
+  height: 2px;
+  border-radius: var(--r-full);
+  background: var(--line-2);
+}
+
+.channel__opacity-input::-moz-range-progress {
+  height: 2px;
+  border-radius: var(--r-full);
+  background: var(--ch-fill);
+}
+
+.channel__opacity-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 14px;
+  margin-top: -6px;
+  border-radius: var(--r-sm);
+  background: var(--text);
+  border: 1px solid var(--line-2);
+  transition: transform 120ms ease;
+}
+
+.channel__opacity-input::-moz-range-thumb {
+  width: 10px;
+  height: 14px;
+  border-radius: var(--r-sm);
+  background: var(--text);
+  border: 1px solid var(--line-2);
+  transition: transform 120ms ease;
+}
+
+.channel__opacity-input:active::-webkit-slider-thumb {
+  transform: scale(0.96);
+}
+
+.channel__opacity-input:active::-moz-range-thumb {
+  transform: scale(0.96);
+}
+
+/* Keyboard reorder + remove actions ----------------------------------------- */
+.channel__actions {
+  display: flex;
+  gap: var(--sp-tight);
+}
+
+.channel__actions .icon-button {
+  padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .channel,
+  .channel__handle,
+  .channel__chevron,
+  .channel__opacity-input::-webkit-slider-thumb,
+  .channel__opacity-input::-moz-range-thumb {
+    transition: none;
+  }
 }

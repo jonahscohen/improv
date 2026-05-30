@@ -12,6 +12,8 @@ export interface StackStore {
   remove(index: number): void;
   reorder(from: number, to: number): void;
   setParam(index: number, key: string, value: unknown): void;
+  setEnabled(index: number, enabled: boolean): void;
+  setOpacity(index: number, opacity: number): void;
   subscribe(fn: () => void): () => void;
 }
 
@@ -34,6 +36,8 @@ export function createStackStore(): StackStore {
         layerRole: manifest.layerRole,
         params: defaultParams(manifest),
         blendMode: 'source-over',
+        enabled: true,
+        opacity: 1,
       };
       const validity = validateStack([...layers, candidate]);
       if (!validity.valid) return { ok: false, reason: validity.reason };
@@ -56,6 +60,15 @@ export function createStackStore(): StackStore {
       layers = layers.map((l, i) =>
         i === index ? { ...l, params: { ...l.params, [key]: value } } : l,
       );
+      notify();
+    },
+    setEnabled(index, enabled) {
+      layers = layers.map((l, i) => (i === index ? { ...l, enabled } : l));
+      notify();
+    },
+    setOpacity(index, opacity) {
+      const clamped = opacity < 0 ? 0 : opacity > 1 ? 1 : opacity;
+      layers = layers.map((l, i) => (i === index ? { ...l, opacity: clamped } : l));
       notify();
     },
     subscribe(fn) {

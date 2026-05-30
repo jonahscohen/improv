@@ -17,16 +17,24 @@
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
+  /* Fill is muted at rest - the accent is reserved as a sparse indicator and
+     lights up only while the control is actively engaged (drag / keyboard). */
+  --tl-fill: var(--muted);
 }
 
-/* WebKit track: line-2 base with an accent fill up to the current value */
+.tl-slider__input:active,
+.tl-slider__input:focus-visible {
+  --tl-fill: var(--accent);
+}
+
+/* WebKit track: line-2 base with a muted fill up to the current value */
 .tl-slider__input::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 999px;
   background: linear-gradient(
     to right,
-    var(--accent) 0%,
-    var(--accent) var(--tl-slider-pct, 0%),
+    var(--tl-fill) 0%,
+    var(--tl-fill) var(--tl-slider-pct, 0%),
     var(--line-2) var(--tl-slider-pct, 0%),
     var(--line-2) 100%
   );
@@ -53,7 +61,7 @@
 .tl-slider__input::-moz-range-progress {
   height: 4px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--tl-fill);
 }
 
 .tl-slider__input::-moz-range-thumb {
@@ -79,11 +87,41 @@
   }
 }
 
+/* Readout doubles as a scrub handle: mono + tabular so digits never reflow,
+   ew-resize to advertise the horizontal drag. Focusable for keyboard nudging
+   (global :focus-visible paints the accent ring). */
 .tl-slider__value {
   flex: none;
   min-width: 2.75rem;
   text-align: right;
+  font-family: var(--font-mono);
   font-size: 0.7rem;
   color: var(--text);
   font-variant-numeric: tabular-nums;
+  cursor: ew-resize;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none; /* let pointer-drag own horizontal gestures */
+  border-radius: var(--r-sm);
+}
+
+.tl-slider__value:hover {
+  color: var(--text);
+}
+
+/* Inline type-to-edit field: same footprint + mono metrics as the readout so
+   the swap does not shift layout. */
+.tl-slider__edit {
+  flex: none;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--input-bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  padding: 0 0.2rem;
 }

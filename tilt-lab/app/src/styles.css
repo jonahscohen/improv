@@ -1,206 +1,359 @@
+/* ============================================================================
+   tilt-lab - "instrument, not dashboard"
+   A precision console: warm matte near-black chrome wrapped around one luminous
+   subject (the preview). Depth from a surface ladder + 2-tier hairlines + size -
+   never shadow. The lone hue is Yes& red, used as an indicator, never as paint.
+   Type voice: JustifySans (body/labels) + JustifyMono (numerics, meta, wordmark).
+   ============================================================================ */
+
+/* --- Type: self-hosted Anthropic faces (bundled via justify) ----------------*/
+@font-face {
+  font-family: 'JustifySans';
+  src: url('/fonts/justifysans-400.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'JustifySans';
+  src: url('/fonts/justifysans-700.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'JustifyMono';
+  src: url('/fonts/justifymono-400.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
-  --bg: #0b0b0f;
-  --panel: #14141a;
-  --line: #23232b;
-  --line-2: #2a2a33;
-  --text: #e7e7ea;
-  --muted: #9a9aa6;
-  --accent: #5b8cff;
 
-  /* Surfaces */
-  --btn-bg: #1b1b22;
-  --btn-bg-hover: #232330;
-  --input-bg: #0e0e13;
-  --preview-bg: #000;
+  /* Surface ladder - warm-shifted near-black (a breath of warmth off cold gray,
+     so it reads "designed" not bootstrap-dark). Each step is the depth cue. */
+  --bg: #0c0b0a;        /* app base */
+  --surface-1: #131210; /* rails / quiet chrome */
+  --surface-2: #1b1916; /* raised module, card, control well */
+  --surface-3: #232019; /* hover / pressed well */
+  --preview-bg: #000;   /* the stage is true black so effects read honestly */
 
-  /* Text on accent fill */
-  --on-accent: #08080c;
+  /* Hairlines - two tiers (the other half of "depth without shadow") */
+  --line: #262320;
+  --line-2: #34302a;
 
-  /* Alert / warning */
-  --alert-text: #ff9a8c;
-  --alert-border: #5a2a2a;
-  --alert-bg: #2a1414;
+  /* Text - warm off-white, ties to the brand cream without going full cream */
+  --text: #f2efe9;
+  --muted: #9c968b;  /* warm gray for labels/meta */
+  --faint: #6c665d;  /* tertiary / disabled */
 
-  /* Min interactive hit-target size (a11y) */
+  /* Accent - Yes& brand red. The lone hue. Indicator (LED), never paint. */
+  --accent: #dc2618;
+  --accent-hover: #b01f15;
+  --on-accent: #fbf7f0;
+
+  /* Type */
+  --font-sans: 'JustifySans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JustifyMono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Control surfaces (derived from the ladder) */
+  --btn-bg: var(--surface-2);
+  --btn-bg-hover: var(--surface-3);
+  --input-bg: #0e0d0b;
+
+  /* Alert / warning (warm-tinted to sit in the palette, not a stock red box) */
+  --alert-text: #f0a99c;
+  --alert-border: #5a2c22;
+  --alert-bg: #241310;
+
+  /* a11y - minimum interactive hit target */
   --hit-min: 40px;
 
-  /* Spacing rhythm (DESIGN.md 4px-derived scale) - used by shell + browse so
-     panels share one vertical cadence instead of ad-hoc rem values. */
-  --sp-tight: 0.25rem; /* 4px  */
-  --sp-xs: 0.4rem;     /* ~6px */
-  --sp-sm: 0.5rem;     /* 8px  */
-  --sp-card: 0.6rem;   /* ~10px */
-  --sp-bar: 0.75rem;   /* 12px */
-  --sp-panel: 0.85rem; /* ~14px */
-  --sp-bar-x: 1rem;    /* 16px */
+  /* Spacing rhythm (4px-derived) */
+  --sp-tight: 0.25rem;
+  --sp-xs: 0.4rem;
+  --sp-sm: 0.5rem;
+  --sp-card: 0.6rem;
+  --sp-bar: 0.75rem;
+  --sp-panel: 0.85rem;
+  --sp-bar-x: 1rem;
 
-  /* Corner rounding (DESIGN.md scale) */
-  --r-md: 6px;
-  --r-lg: 7px;
-  --r-2xl: 9px;
+  /* Corner rounding - tight, instrument-like (not the soft 9-12px SaaS curve) */
+  --r-sm: 3px;
+  --r-md: 5px;
+  --r-lg: 6px;
   --r-full: 999px;
+
+  /* Rail widths (canvas-dominant: rails are lean) */
+  --rail-left: 248px;
+  --rail-right: 312px;
+  --rail-collapsed: 0px;
 }
 
 * {
   box-sizing: border-box;
 }
 
-/* Focus ring (a11y) - keyboard-visible only, never removes default outlines */
-:where(button, a, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 6px;
+html,
+body {
+  margin: 0;
+  height: 100%;
 }
 
 body {
-  margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
+  font-size: 14px;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
+/* Keyboard focus ring - the accent, since red IS the system's signal color */
+:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* ============================================================================
+   Shared instrument primitives (CD-owned; builders compose these)
+   ============================================================================ */
+
+/* Module: a hairline-ruled group with a tracked uppercase micro-label. This is
+   the unit that replaces the boxed card/dashboard-panel vocabulary. */
+.module {
+  border-top: 1px solid var(--line);
+  padding-top: var(--sp-bar);
+  margin-top: var(--sp-bar);
+}
+.module:first-child {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* Micro-label: tiny, tracked, uppercase, mono. The "engraved panel" label. */
+.meta,
+.module__label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem; /* 10px */
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 400;
+}
+.module__label {
+  display: block;
+  margin-bottom: var(--sp-sm);
+}
+
+/* Value readout: big-ish tabular mono. The number is a feature. */
+.value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--text);
+}
+
+/* Button primitive */
+.btn {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  padding: 0.4rem 0.8rem;
+  min-height: 32px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--btn-bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, transform 0.1s ease;
+}
+.btn:hover {
+  background: var(--btn-bg-hover);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn--accent {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--on-accent);
+  font-weight: 700;
+}
+.btn--accent:not(:disabled):hover {
+  background: var(--accent-hover);
+}
+
+/* Icon button - square, 40x40 hit target, glyph centered */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--hit-min);
+  min-height: var(--hit-min);
+  padding: 0;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease,
+    transform 0.1s ease;
+}
+.icon-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.icon-btn:active {
+  transform: scale(0.94);
+}
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Text input / search field */
+.field {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  padding: 0.45rem 0.6rem;
+  background: var(--input-bg);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  color: var(--text);
+}
+.field::placeholder {
+  color: var(--faint);
+}
+
+/* ============================================================================
+   App shell - canvas-dominant. The preview is the subject; the rails are lean
+   instrument strips that collapse, and fullscreen dismisses all chrome.
+   App.tsx drives layout via data attributes:
+     .app[data-fullscreen="true"]            -> hide topbar + both rails
+     .app__body[data-rail-left="collapsed"]  -> collapse left rail
+     .app__body[data-rail-right="collapsed"] -> collapse right rail
+   ============================================================================ */
 .app {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  overflow: hidden;
 }
 
-/* Top bar */
+/* Top bar - three zones (identity | project | actions) on a centered grid so
+   the project menu stays optically centered regardless of side widths. */
 .top-bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--sp-bar);
+  padding: 0 var(--sp-bar-x);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
+  min-height: 60px;
+}
+
+.top-bar__left {
   display: flex;
   align-items: center;
   gap: var(--sp-bar);
-  padding: var(--sp-card) var(--sp-bar-x);
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  justify-self: start;
+  min-width: 0;
+}
+
+.top-bar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  justify-self: end;
+}
+/* &dev brand mark - the Yes& dev wordmark (red ampersand + white "dev"), sourced
+   verbatim from marketing-site/assets. Sits left of the tool title. */
+.top-bar__logo {
+  height: 18px;
+  width: auto;
+  display: block;
+  flex: none;
 }
 
 .top-bar__brand {
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  font-size: 0.95rem;
-  /* small monospace caps wordmark reads as "instrument", not marketing logo */
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-/* Quiet divider between the wordmark and the project picker so the bar reads as
-   two zones (identity | controls) without adding chrome. */
-.top-bar__brand::after {
-  content: '';
-  display: inline-block;
-  width: 1px;
-  height: 0.9em;
-  margin-left: var(--sp-bar);
-  vertical-align: -0.1em;
-  background: var(--line-2);
-}
-
-.top-bar__spacer {
-  flex: 1;
-}
-
-.top-bar__add,
-.top-bar__send {
-  padding: 0.4rem 0.85rem;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-lg);
-  background: var(--btn-bg);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   color: var(--text);
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
+}
+/* The "&" of the wordmark glows the lone accent - the one place red is identity */
+.top-bar__brand b {
+  color: var(--accent);
+  font-weight: 400;
 }
 
-.top-bar__add:hover,
-.top-bar__send:not(:disabled):hover {
-  background: var(--btn-bg-hover);
-}
-
-/* Tactile press feedback (16-point polish) - subtle, in keeping with the
-   utilitarian/fast register; activates the transform transition declared above. */
-.top-bar__add:active,
-.top-bar__send:not(:disabled):active {
-  transform: scale(0.97);
-}
-
-.top-bar__send {
-  background: var(--accent);
-  border-color: transparent;
-  color: var(--on-accent);
-  font-weight: 600;
-}
-
-.top-bar__send:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.project-picker {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.project-picker__label {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.project-picker select,
-.add-shader-modal__kinds button {
-  background: var(--btn-bg);
-  color: var(--text);
-  border: 1px solid var(--line-2);
-  border-radius: 6px;
-  padding: 0.3rem 0.5rem;
-}
-
-/* Three-column body */
 .app__body {
   flex: 1;
   display: grid;
-  grid-template-columns: 280px 1fr 340px;
+  grid-template-columns: var(--rail-left) minmax(0, 1fr) var(--rail-right);
   min-height: 0;
+  transition: grid-template-columns 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.app__body[data-rail-left='collapsed'] {
+  grid-template-columns: var(--rail-collapsed) minmax(0, 1fr) var(--rail-right);
+}
+.app__body[data-rail-right='collapsed'] {
+  grid-template-columns: var(--rail-left) minmax(0, 1fr) var(--rail-collapsed);
+}
+.app__body[data-rail-left='collapsed'][data-rail-right='collapsed'] {
+  grid-template-columns: var(--rail-collapsed) minmax(0, 1fr) var(--rail-collapsed);
 }
 
 .app__browse,
 .app__layers {
   overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--sp-panel);
-  /* the side panels are quiet chrome that serve the preview */
-  background: var(--bg);
+  background: var(--surface-1);
+  min-width: 0;
 }
-
 .app__browse {
   border-right: 1px solid var(--line);
 }
-
 .app__layers {
   border-left: 1px solid var(--line);
 }
 
-/* The preview is the hero: pure-black stage, framed only by the column
-   hairlines (flat design - depth via surface + line, never shadow). */
+/* The preview is the hero: true-black stage framed only by hairlines. */
 .app__preview {
   position: relative;
   background: var(--preview-bg);
+  min-width: 0;
 }
-
 .preview-canvas {
   position: absolute;
   inset: 0;
 }
-
 .preview-canvas canvas {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-/* Empty preview: a quiet centered hint when no layers are stacked, so the hero
-   stage reads as "ready" rather than a dead black rectangle. Non-interactive
-   overlay; clears the moment a layer is added. */
+/* Fullscreen: drop the chrome, let the subject fill the frame */
+.app[data-fullscreen='true'] .top-bar,
+.app[data-fullscreen='true'] .app__browse,
+.app[data-fullscreen='true'] .app__layers {
+  display: none;
+}
+.app[data-fullscreen='true'] .app__body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Empty preview hint - quiet, centered, mono meta. Reads "armed and ready". */
 .app__preview-empty {
   position: absolute;
   inset: 0;
@@ -210,428 +363,69 @@ body {
   pointer-events: none;
   text-align: center;
 }
-
 .app__preview-empty p {
   margin: 0;
   color: var(--muted);
-  font-size: 0.85rem;
-  max-width: 22rem;
-  line-height: 1.5;
+  font-size: 0.8125rem;
+  max-width: 24rem;
+  line-height: 1.6;
 }
-
 .app__preview-empty strong {
   display: block;
-  margin-bottom: var(--sp-tight);
+  margin-bottom: var(--sp-xs);
   color: var(--text);
-  font-weight: 600;
-  font-size: 0.95rem;
+  font-weight: 700;
+  font-size: 0.9375rem;
 }
 
-/* Browse grid */
-
-/* Panel header - mirrors the Layers panel title so both rails read as labelled
-   sections, not loose stacks of controls. */
-.browse-grid__header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-sm);
-  margin-bottom: var(--sp-card);
-}
-
-.browse-grid__title {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.browse-grid__count {
-  font-size: 0.68rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-variant-numeric: tabular-nums;
-}
-
-.browse-grid__search {
-  width: 100%;
-  padding: 0.5rem 0.6rem;
-  background: var(--btn-bg);
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-lg);
-  color: var(--text);
-  margin-bottom: var(--sp-card);
-}
-
-.browse-grid__search::placeholder {
-  color: var(--muted);
-}
-
-.browse-grid__roles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-tight);
-  margin-bottom: var(--sp-bar);
-  /* hairline under the filter row separates "find" controls from the results */
-  padding-bottom: var(--sp-bar);
-  border-bottom: 1px solid var(--line);
-}
-
-.browse-grid__roles button {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.7rem;
-  border: 1px solid var(--line-2);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  /* 40x40 min hit target (a11y); pill stays visually compact via flex centering */
-  min-height: var(--hit-min);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.browse-grid__roles button[data-active='true'] {
-  background: var(--accent);
-  border-color: transparent;
-  color: var(--on-accent);
-}
-
-.browse-grid__cards {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--sp-sm);
-}
-
-.browse-grid__card {
-  width: 100%;
-  text-align: left;
-  padding: var(--sp-card) 0.7rem;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-2xl);
-  background: var(--panel);
-  color: inherit;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--sp-sm);
-  /* transition the exact properties (no `transition: all`) */
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
-}
-
-.browse-grid__card:hover {
-  border-color: var(--accent);
-  background: var(--btn-bg);
-  transform: translateY(-1px);
-}
-
-.browse-grid__card:active {
-  transform: scale(0.98);
-}
-
-.browse-grid__card-name {
-  font-weight: 600;
-  font-size: 0.85rem;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-/* Role chip on browse cards: a real bordered chip rather than loose text, kept
-   strictly neutral - the single accent is reserved for active filter / Send /
-   selected layer, so roles are differentiated by label, not by hue. */
-.browse-grid__card-role {
-  flex: none;
-  padding: 0.1rem 0.4rem;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-full);
-  font-size: 0.68rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  line-height: 1.4;
-}
-
-.layer-stack__role {
-  font-size: 0.68rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-/* Browse empty state: search/filter yields nothing. Quiet, centered, muted. */
-.browse-grid__empty {
-  margin: var(--sp-bar) 0 0;
-  padding: var(--sp-panel) var(--sp-card);
-  text-align: center;
-  color: var(--muted);
-  font-size: 0.85rem;
-  border: 1px dashed var(--line-2);
-  border-radius: var(--r-2xl);
-}
-
-/* Layer stack */
-.layer-stack__title {
-  font-size: 0.95rem;
-  margin: 0 0 0.6rem;
-}
-
-.layer-stack__empty,
-.layer-stack__hint {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.layer-stack__hint {
-  color: var(--alert-text);
-  border: 1px solid var(--alert-border);
-  background: var(--alert-bg);
-  border-radius: 7px;
-  padding: 0.4rem 0.55rem;
-}
-
-.layer-stack__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.5rem;
-}
-
-.layer-stack__item {
-  border: 1px solid var(--line-2);
-  border-radius: 9px;
-  background: var(--panel);
-  padding: 0.55rem 0.65rem;
-}
-
-.layer-stack__item-head {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.layer-stack__name {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.layer-stack__actions {
-  margin-left: auto;
-  display: flex;
-  gap: 0.25rem;
-}
-
-.layer-stack__actions button {
-  font-size: 0.7rem;
-  padding: 0.2rem 0.4rem;
-  border: 1px solid var(--line-2);
-  border-radius: 5px;
-  background: var(--btn-bg);
-  color: var(--muted);
-  cursor: pointer;
-  /* 40x40 min hit target (a11y); glyph stays compact via flex centering */
-  min-width: var(--hit-min);
-  min-height: var(--hit-min);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.layer-stack__actions button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Param controls */
-.param-controls {
-  margin-top: 0.55rem;
-  display: grid;
-  gap: 0.35rem;
-}
-
-.param-controls__row {
-  display: grid;
-  grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-/* Label column: allow long param names (e.g. atmosphereCoefficient) to wrap
-   instead of clipping; min-width:0 lets the control column shrink rather than
-   force overflow. */
-.param-controls__row > :first-child {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.param-controls__row input[type='range'] {
-  width: 100%;
-  min-width: 0;
-}
-
-/* Range row: slider fills, numeric readout pinned right so the user can see and
-   reproduce the exact value they are tuning (the tool's core loop). */
-.param-controls__range {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
-}
-
-.param-controls__range input[type='range'] {
-  flex: 1;
-  min-width: 0;
-}
-
-.param-controls__value {
-  flex: none;
-  min-width: 2.75rem;
-  text-align: right;
-  font-size: 0.7rem;
-  color: var(--text);
-  /* tabular-nums so the readout does not reflow as digits change while dragging */
-  font-variant-numeric: tabular-nums;
-}
-
-/* Add-shader modal */
-.add-shader-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: grid;
-  place-items: center;
-  z-index: 10;
-}
-
-.add-shader-modal__panel {
-  width: min(560px, 92vw);
-  background: var(--panel);
-  border: 1px solid var(--line-2);
-  border-radius: 12px;
-  padding: 1.1rem;
-  display: grid;
-  gap: 0.7rem;
-}
-
-.add-shader-modal__title {
-  margin: 0;
-  font-size: 1.05rem;
-}
-
-.add-shader-modal__kinds {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.add-shader-modal__kinds button[data-active='true'] {
-  border-color: var(--accent);
-  color: var(--text);
-}
-
-.add-shader-modal__source {
-  width: 100%;
-  min-height: 180px;
-  resize: vertical;
-  background: var(--input-bg);
-  border: 1px solid var(--line-2);
-  border-radius: 8px;
-  color: var(--text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  padding: 0.6rem;
-}
-
-.add-shader-modal__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-.add-shader-modal__actions button {
-  padding: 0.4rem 0.9rem;
-  border: 1px solid var(--line-2);
-  border-radius: 7px;
-  background: var(--btn-bg);
-  color: var(--text);
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
-}
-
-.add-shader-modal__actions button:not(:disabled):active {
-  transform: scale(0.97);
-}
-
-.add-shader-modal__actions button:last-child {
-  background: var(--accent);
-  border-color: transparent;
-  color: var(--on-accent);
-  font-weight: 600;
-}
-
-.add-shader-modal__actions button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-/* Responsive (P0) - the fixed 280/1fr/340 grid starves the preview below ~700px */
-
-/* Tablet: narrow the side rails so the preview keeps usable width */
+/* ============================================================================
+   Responsive - the rails must not starve the subject on small viewports
+   ============================================================================ */
 @media (max-width: 900px) {
-  .app__body {
-    grid-template-columns: 200px 1fr 240px;
+  :root {
+    --rail-left: 188px;
+    --rail-right: 224px;
   }
 }
-
-/* Phone: stack into a single scrolling column; preview stays prominent on top */
 @media (max-width: 640px) {
   .app {
     height: auto;
     min-height: 100vh;
+    overflow: visible;
   }
-
   .top-bar {
     flex-wrap: wrap;
   }
-
-  .app__body {
+  .app__body,
+  .app__body[data-rail-left='collapsed'],
+  .app__body[data-rail-right='collapsed'] {
     grid-template-columns: 1fr;
     min-height: 0;
   }
-
   .app__preview {
     order: -1;
-    min-height: 45vh;
+    min-height: 46vh;
   }
-
   .app__browse,
   .app__layers {
-    border-left: none;
-    border-right: none;
+    border-left: 0;
+    border-right: 0;
     border-top: 1px solid var(--line);
     overflow-y: visible;
   }
 }
 
-/* Reduced motion (P2) - disable hover/press transforms + their transitions */
+/* ============================================================================
+   Reduced motion
+   ============================================================================ */
 @media (prefers-reduced-motion: reduce) {
-  .top-bar__add,
-  .top-bar__send,
-  .browse-grid__card,
-  .add-shader-modal__actions button {
+  .app__body,
+  .btn,
+  .icon-btn {
     transition: none;
   }
-
-  .browse-grid__card:hover,
-  .browse-grid__card:active,
-  .top-bar__add:active,
-  .top-bar__send:not(:disabled):active,
-  .add-shader-modal__actions button:not(:disabled):active {
+  .btn:active,
+  .icon-btn:active {
     transform: none;
   }
 }
