@@ -22,6 +22,7 @@ Every effect green on all five functional checks:
 ## Chrome-verified live (tabId 1827119115), not just the headless tool
 - Globe (#3): renders dotted continents (map asset loads), SF+NYC markers, full 13-param surface; **drag-to-spin confirmed** (vertical drag tilted theta - landmasses redistributed, marker swung side to side); 0 console errors.
 - Earlier this overhaul: fluid drag (force+dye trail), fake-3d-image upright + labelled depthSrc, water-ripple post over a photo.
+- Post-overlay (#10/#11) visually verified: Aurora background + Fractal Glass (Post) -> the aurora is sliced into vertical glass slats with horizontal displacement (fractal-glass refraction applied to the layers BENEATH), confirming the post variant behaves as an overlay, not a standalone background.
 
 ## Roster reconciliation (the user's "verify matches the original task")
 Current 22 catalog effects + fractal-glass-post + halftone-post (user-requested #10/#11 post variants) + gradient (non-catalog test fixture) + media (base-image infra). = the authoritative 25-effect original list MINUS the 3 user-ordered deletions (particles #4, cursor-trail #6, plasma-grid #16, all confirmed gone). The "included some I didn't mention" was already reconciled (paper-swirl removed, globes de-duped per both-globes intent). MATCHES.
