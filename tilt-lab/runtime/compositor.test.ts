@@ -25,13 +25,16 @@ function layer(effectId: string, role: LayerConfig['layerRole']): LayerConfig {
 }
 
 describe('Compositor', () => {
-  it('inits layers in render order (background first, post last)', () => {
+  it("renders in the user's explicit stack order (not re-sorted by role)", () => {
     RecordingEffect.log = [];
     const root = document.createElement('div');
     const c = new Compositor(root, (id) => new RecordingEffect(id));
+    // Deliberately "out of role order": a post first, then background, then
+    // midground. The compositor must honor THIS order so reordering in the
+    // composition panel is meaningful - it must NOT shuffle to bg/mid/post.
     c.setLayers([layer('ascii', 'post'), layer('grad', 'background'), layer('globe', 'midground')]);
     const inits = RecordingEffect.log.filter((l) => l.startsWith('init:'));
-    expect(inits).toEqual(['init:grad', 'init:globe', 'init:ascii']);
+    expect(inits).toEqual(['init:ascii', 'init:grad', 'init:globe']);
   });
 
   it('sizes layers by calling resize after setLayers', () => {

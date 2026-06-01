@@ -1,5 +1,4 @@
 import type { Effect, LayerConfig } from './types';
-import { orderLayers } from './stack';
 import { PointerTracker } from './pointer';
 import { effectAssets } from './effect-assets';
 
@@ -58,7 +57,13 @@ export class Compositor {
 
   setLayers(configs: LayerConfig[]): void {
     this.clear();
-    const ordered = orderLayers(configs);
+    // Render in the user's EXPLICIT stack order (composition-panel order maps
+    // top -> bottom onto back -> front). The order the user sets IS the visual
+    // order - we deliberately do NOT re-sort by layerRole, so reordering a layer
+    // in the panel always changes the composite and the user keeps full agency.
+    // layerRole still governs compositing BEHAVIOUR (a 'post' effect samples the
+    // layers beneath its position via composeBeneath) - just not the order.
+    const ordered = configs;
     const w = this.root.clientWidth || 1;
     const h = this.root.clientHeight || 1;
     ordered.forEach((config, i) => {
