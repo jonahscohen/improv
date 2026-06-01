@@ -150,7 +150,7 @@ Corner rounding is tight and instrument-like, much smaller than the soft SaaS cu
 ### Channel strip (layer)
 - A module per layer: `{colors.surface_1}` fill, 1px `{colors.line}` border, `{rounded.md}`. Disabled channels drop to `opacity: 0.55` but stay interactive.
 - Head row: numbered drag handle (`{typography.scale.sizes.xs}` mono, doubles as compositing-order index), name, `{colors.muted}` role tag, and an enable toggle (Switch). The enable toggle is `{colors.accent}` when on - one of the few places red is intentional, as the enabled indicator.
-- Paint-order caption ("paint order / background to post") in `{typography.scale.sizes.micro}` mono so the user reads the compositing direction.
+- Stacking follows the Photoshop/Figma convention: the layer at the TOP of the list is the topmost (rendered last / highest z-order), the layer at the BOTTOM is behind everything (rendered first), and a newly added effect lands at the TOP of the list. The underlying paint-order array is the reverse of this displayed order (index 0 = bottommost); the panel reverses it for display and maps positions back when reordering. The drag handle and up/down buttons move a layer toward the top (more visual priority) or bottom accordingly.
 - Drag-to-reorder via native HTML5 drag (drop target gets a `{colors.accent}` edge + `{colors.surface_2}` fill); keyboard reorder via up/down icon buttons.
 - Opacity fader: a flat range with a `{colors.muted}` fill (`{colors.accent}` on `:active`/`:focus-visible`) and a tabular-mono % readout.
 
@@ -165,7 +165,7 @@ Corner rounding is tight and instrument-like, much smaller than the soft SaaS cu
 - Scrim `{colors.overlay}`; panel `{colors.surface_2}`, 1px `{colors.line_2}` border, padding, mono labels. Source textarea: `{colors.input}` fill, `{typography.mono}`. Actions right-aligned; primary uses `.btn--accent`.
 
 ### Preview canvas
-- `position: relative` host on `{colors.preview}`; per-layer canvases stack absolutely (`inset: 0`), composited bottom-up with per-layer enable + opacity. Accessible name describes the live composite.
+- `position: relative` host on `{colors.preview}`; per-layer canvases stack absolutely (`inset: 0`), composited bottom-up (the bottom of the layer list paints first; the top of the list paints last, on top) with per-layer enable + opacity. Accessible name describes the live composite.
 
 ## Do's and Don'ts
 

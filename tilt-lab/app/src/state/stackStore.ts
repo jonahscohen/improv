@@ -42,6 +42,9 @@ export function createStackStore(): StackStore {
       };
       const validity = validateStack([...layers, candidate]);
       if (!validity.valid) return { ok: false, reason: validity.reason };
+      // Append to the end of the paint-order array: the last element is the
+      // topmost (highest z), so a freshly added layer renders on top and shows
+      // at the TOP of the composition panel (Photoshop/Figma convention).
       layers = [...layers, candidate];
       notify();
       return { ok: true };

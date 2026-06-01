@@ -112,10 +112,14 @@ export class Compositor {
   /** Full teardown + re-create. Used only when the effect set or order changes. */
   private rebuild(configs: LayerConfig[]): void {
     this.clear();
-    // Render in the user's EXPLICIT stack order (composition-panel order maps
-    // top -> bottom onto back -> front). The order the user sets IS the visual
-    // order - we deliberately do NOT re-sort by layerRole, so reordering a layer
-    // in the panel always changes the composite and the user keeps full agency.
+    // Render in the user's EXPLICIT stack order. This `configs` array is PAINT
+    // order: index 0 is painted first (bottommost / lowest z), the last index is
+    // painted last (topmost / highest z). The composition panel displays this
+    // array reversed (top of the list == topmost == last array element, the
+    // Photoshop/Figma convention), and the store appends new layers to the end
+    // so they land on top. The order the user sets IS the visual order - we
+    // deliberately do NOT re-sort by layerRole, so reordering a layer in the
+    // panel always changes the composite and the user keeps full agency.
     // layerRole still governs compositing BEHAVIOUR (a 'post' effect samples the
     // layers beneath its position via composeBeneath) - just not the order.
     const ordered = configs;

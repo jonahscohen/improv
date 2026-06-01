@@ -24,6 +24,19 @@ describe('createStackStore', () => {
     expect(s.layers().map((l) => l.effectId)).toEqual(['grad']);
   });
 
+  it('appends a newly added layer to the end of the paint-order array (topmost z)', () => {
+    // The last element of the array is painted last == highest z == topmost.
+    // The composition panel reverses this for display, so a freshly added layer
+    // shows at the TOP of the list (Photoshop/Figma convention).
+    const s = createStackStore();
+    s.add(m('grad', 'background'));
+    s.add(m('globe', 'midground'));
+    s.add(m('ascii', 'post'));
+    expect(s.layers().map((l) => l.effectId)).toEqual(['grad', 'globe', 'ascii']);
+    // The most recently added layer is the last (topmost) array element.
+    expect(s.layers().at(-1)?.effectId).toBe('ascii');
+  });
+
   it('seeds default params on add', () => {
     const s = createStackStore();
     s.add(m('grad', 'background'));

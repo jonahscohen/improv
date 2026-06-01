@@ -31,7 +31,10 @@ interface ChannelCardProps {
   layer: LayerConfig;
   manifest: Manifest | undefined;
   name: string;
+  /** The layer's index in the store's data array (paint order: 0 = bottommost). */
   index: number;
+  /** This card's position in the DISPLAYED list (0 = top of the panel). */
+  displayIndex: number;
   count: number;
   enabled: boolean;
   opacity: number;
@@ -42,9 +45,9 @@ interface ChannelCardProps {
   onParam: (index: number, key: string, value: unknown) => void;
   onSetEnabled?: (index: number, enabled: boolean) => void;
   onSetOpacity?: (index: number, opacity: number) => void;
-  onHandleDown: (e: React.PointerEvent<HTMLElement>, i: number) => void;
+  onHandleDown: (e: React.PointerEvent<HTMLElement>, displayIndex: number) => void;
   onHandleMove: (e: React.PointerEvent<HTMLElement>) => void;
-  onHandleUp: (e: React.PointerEvent<HTMLElement>, i: number) => void;
+  onHandleUp: (e: React.PointerEvent<HTMLElement>, displayIndex: number) => void;
 }
 
 /** A single channel strip. Owns its collapse state so default-expanded resets
@@ -54,6 +57,7 @@ function ChannelCard({
   manifest,
   name,
   index: i,
+  displayIndex: d,
   count,
   enabled,
   opacity,
@@ -86,9 +90,9 @@ function ChannelCard({
       className="channel"
       data-enabled={enabled}
       data-collapsed={collapsed}
-      data-dragging={dragIndex === i}
-      data-drop-before={dragIndex !== null && dragIndex !== i && overIndex === i}
-      data-drop-after={dragIndex !== null && i === count - 1 && overIndex === count}
+      data-dragging={dragIndex === d}
+      data-drop-before={dragIndex !== null && dragIndex !== d && overIndex === d}
+      data-drop-after={dragIndex !== null && d === count - 1 && overIndex === count}
     >
       <div className="channel__bar">
         <span
@@ -96,9 +100,9 @@ function ChannelCard({
           role="button"
           aria-label={`Drag ${name} to reorder`}
           title="Drag to reorder"
-          onPointerDown={(e) => onHandleDown(e, i)}
+          onPointerDown={(e) => onHandleDown(e, d)}
           onPointerMove={onHandleMove}
-          onPointerUp={(e) => onHandleUp(e, i)}
+          onPointerUp={(e) => onHandleUp(e, d)}
         >
           <GripVerticalIcon className="channel__grip" width={14} height={14} />
         </span>
@@ -176,14 +180,14 @@ function ChannelCard({
             <IconButton
               label={`Move ${name} up`}
               icon={<ChevronUpIcon />}
-              disabled={i === 0}
-              onClick={() => onReorder(i, i - 1)}
+              disabled={d === 0}
+              onClick={() => onReorder(i, i + 1)}
             />
             <IconButton
               label={`Move ${name} down`}
               icon={<ChevronDownIcon />}
-              disabled={i === count - 1}
-              onClick={() => onReorder(i, i + 1)}
+              disabled={d === count - 1}
+              onClick={() => onReorder(i, i - 1)}
             />
             <IconButton
               label={enabled ? `Hide ${name}` : `Show ${name}`}
@@ -236,8 +240,16 @@ export function LayerStack({
   const listRef = useRef<HTMLOListElement>(null);
   // Pointer-based drag reorder. dragIndex is the channel being dragged;
   // overIndex is the slot it would drop into (drives the drop-line affordance).
+  // NOTE: both indices are DISPLAYED-list positions (0 = top of the panel),
+  // which is the reverse of the store's paint-order array. We convert to store
+  // indices only at the moment we call onReorder.
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  // The store array is paint order (index 0 = bottommost). The panel shows the
+  // topmost layer first, so the displayed list is the array reversed. This maps
+  // a displayed-list position back to its index in the store array.
+  const toStoreIndex = (displayIndex: number): number => layers.length - 1 - displayIndex;
 
   const resetDrag = () => {
     setDragIndex(null);
@@ -270,15 +282,19 @@ export function LayerStack({
     if (slot !== overIndex) setOverIndex(slot);
   };
 
-  const onHandleUp = (e: React.PointerEvent<HTMLElement>, i: number) => {
+  const onHandleUp = (e: React.PointerEvent<HTMLElement>, displayFrom: number) => {
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId);
     }
     if (dragIndex !== null && overIndex !== null) {
-      // Convert an insertion slot (0..n) into the store's target index.
-      const to = i < overIndex ? overIndex - 1 : overIndex;
-      const clamped = Math.max(0, Math.min(layers.length - 1, to));
-      if (clamped !== i) onReorder(i, clamped);
+      // Convert an insertion slot (0..n) into a displayed-list target position.
+      const displayTo = displayFrom < overIndex ? overIndex - 1 : overIndex;
+      const clampedDisplay = Math.max(0, Math.min(layers.length - 1, displayTo));
+      if (clampedDisplay !== displayFrom) {
+        // Both positions are displayed-list positions; map to store indices
+        // (reverse of the array) before handing off to the store's reorder.
+        onReorder(toStoreIndex(displayFrom), toStoreIndex(clampedDisplay));
+      }
     }
     resetDrag();
   };
@@ -295,7 +311,13 @@ export function LayerStack({
         <p className="layer-stack__empty">Pick an effect to start a composition.</p>
       )}
       <ol className="layer-stack__list" ref={listRef}>
-        {layers.map((layer, i) => {
+        {/* The panel shows the topmost layer first (Photoshop/Figma convention),
+            so we walk the store's paint-order array in reverse. `d` is the
+            displayed position; `i` is the layer's index in the store array. */}
+        {layers
+          .map((layer, i) => ({ layer, i }))
+          .reverse()
+          .map(({ layer, i }, d) => {
           const manifest = catalog.find((m) => m.id === layer.effectId);
           const name = manifest?.name ?? layer.effectId;
           const enabled = layer.enabled !== false;
@@ -307,6 +329,7 @@ export function LayerStack({
               manifest={manifest}
               name={name}
               index={i}
+              displayIndex={d}
               count={layers.length}
               enabled={enabled}
               opacity={opacity}
