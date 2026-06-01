@@ -107,7 +107,8 @@ export function ParamControls({ specs, values, onChange }: Props) {
           <FileDrop
             onChange={(url) => onChange(spec.name, url)}
             accept="image/*,video/*"
-            ariaLabel={spec.name}
+            ariaLabel={spec.label ?? spec.name}
+            placeholder={spec.placeholder}
           />
         );
       case 'text':
@@ -143,7 +144,7 @@ export function ParamControls({ specs, values, onChange }: Props) {
 
   const row = (spec: ParamSpec) => (
     <div key={spec.name} className="param-controls__row">
-      <span className="param-controls__name">{spec.name}</span>
+      <span className="param-controls__name">{spec.label ?? spec.name}</span>
       {control(spec)}
     </div>
   );

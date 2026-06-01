@@ -1,5 +1,42 @@
 import createGlobe from 'cobe';
 import type { Effect, EffectOpts } from '../../types';
+import { PRESETS } from './presets';
+
+// ---------------------------------------------------------------------------
+// cobe null-program guard (third-party compatibility shim, installed once).
+//
+// cobe v0.6.5 defers its world-map texture upload to an Image.onload that reads
+// `gl.getParameter(CURRENT_PROGRAM)` and calls `gl.getUniformLocation(program,
+// "H")`. When the globe is torn down before that async image load fires - the
+// browse-grid POSTER path inits a globe then disposes it synchronously, well
+// before the data-URI map decodes - CURRENT_PROGRAM is null, so cobe calls
+// getUniformLocation(null, ...), which fails WebGL's WebGLProgram type check and
+// throws an uncaught TypeError. That fired once per page load (the globe poster)
+// and polluted every effect's `console-clean` verification check. The WebGL spec
+// already defines a null/invalid program to yield a null location, so we make
+// getUniformLocation null-safe at the prototype level: only the degenerate null
+// case changes (every real call passes straight through). Idempotent.
+function installCobeNullProgramGuard(): void {
+  const patch = (proto: WebGLRenderingContextBase): void => {
+    const p = proto as unknown as {
+      getUniformLocation(program: WebGLProgram | null, name: string): WebGLUniformLocation | null;
+      __tiltNullSafe?: boolean;
+    };
+    if (p.__tiltNullSafe) return;
+    const orig = p.getUniformLocation;
+    p.getUniformLocation = function (
+      this: WebGLRenderingContextBase,
+      program: WebGLProgram | null,
+      name: string,
+    ): WebGLUniformLocation | null {
+      return program ? orig.call(this, program, name) : null;
+    };
+    p.__tiltNullSafe = true;
+  };
+  if (typeof WebGL2RenderingContext !== 'undefined') patch(WebGL2RenderingContext.prototype);
+  if (typeof WebGLRenderingContext !== 'undefined') patch(WebGLRenderingContext.prototype);
+}
+installCobeNullProgramGuard();
 
 /**
  * Globe (cobe) - an interactive dotted WebGL globe by Shu Ding.
@@ -11,6 +48,12 @@ import type { Effect, EffectOpts } from '../../types';
  * stop the internal loop, then drive a single `renderer.render()` pass from
  * `frame(t)`. Rotation is advanced from the external clock and pushed into the
  * uniforms through cobe's `onRender` bridge.
+ *
+ * Interaction: cobe's signature is POINTER DRAG to spin. The compositor forwards
+ * the unified pointer contract (onPointerDown / onPointer(x,y,pressed) /
+ * onPointerUp / onPointerLeave); a pure `GlobeRotation` controller maps drag
+ * deltas to phi (longitude) and theta (tilt), keeps auto-rotating when idle, and
+ * carries release momentum as decaying inertia - the cobe.vercel.app feel.
  *
  * Control surface (parity rebuild): exposes cobe's full COBEOptions set
  * (phi/theta/dark/diffuse/mapSamples/mapBrightness/mapBaseBrightness/opacity/
@@ -33,43 +76,9 @@ interface GlobeMarker {
   label?: string;
 }
 
-// ---------------------------------------------------------------------------
-// PRESET LIBRARY - reproduces the documented cobe demo "looks". Each preset is
-// a partial set of COBEOptions-shaped values applied on top of the live state.
-// Colors are hex (converted to cobe's [r,g,b] 0..1 triplets at apply time).
-// ---------------------------------------------------------------------------
-interface GlobePreset {
-  baseColor: string;
-  markerColor: string;
-  glowColor: string;
-  dark: number;
-  diffuse: number;
-  mapBrightness: number;
-  mapBaseBrightness: number;
-  theta: number;
-  scale: number;
-  opacity: number;
-}
-
-const PRESETS: Record<string, GlobePreset> = {
-  // cobe's TRUE library defaults (the createGlobe destructure defaults), not the
-  // README demo overrides: white base, orange markers, dark 0, diffuse 1,
-  // mapBrightness 1. This is the shipped default-selected preset, so the globe
-  // boots to cobe's stock look. (mapSamples 10000 is set via the manifest
-  // default since cobe bakes it at creation and it is not a live preset field.)
-  'Cobe Default': { baseColor: '#ffffff', markerColor: '#ff8000', glowColor: '#ffffff', dark: 0, diffuse: 1, mapBrightness: 1, mapBaseBrightness: 0, theta: 0.3, scale: 1, opacity: 1 },
-  'Day / Light': { baseColor: '#e6e6e6', markerColor: '#1f6feb', glowColor: '#ffffff', dark: 0, diffuse: 3, mapBrightness: 9, mapBaseBrightness: 0.12, theta: 0.25, scale: 1, opacity: 1 },
-  'Inverted Dark': { baseColor: '#1a1a2e', markerColor: '#00d4ff', glowColor: '#4361ee', dark: 1, diffuse: 3, mapBrightness: 1.2, mapBaseBrightness: 0, theta: 0.3, scale: 1, opacity: 1 },
-  'Tech Blue': { baseColor: '#0f172a', markerColor: '#60a5fa', glowColor: '#93c5fd', dark: 1, diffuse: 1.4, mapBrightness: 6, mapBaseBrightness: 0, theta: 0.35, scale: 1, opacity: 1 },
-  Emerald: { baseColor: '#0b3d2e', markerColor: '#34d399', glowColor: '#6ee7b7', dark: 1, diffuse: 1.5, mapBrightness: 5, mapBaseBrightness: 0, theta: 0.3, scale: 1, opacity: 1 },
-  Ocean: { baseColor: '#0a2540', markerColor: '#38bdf8', glowColor: '#7dd3fc', dark: 1, diffuse: 1.6, mapBrightness: 5, mapBaseBrightness: 0, theta: 0.3, scale: 1, opacity: 1 },
-  Aurora: { baseColor: '#10231f', markerColor: '#a3e635', glowColor: '#22d3ee', dark: 1, diffuse: 2.2, mapBrightness: 4, mapBaseBrightness: 0, theta: 0.4, scale: 1, opacity: 1 },
-  Magma: { baseColor: '#2b0a0a', markerColor: '#ff4422', glowColor: '#ff8855', dark: 1, diffuse: 2, mapBrightness: 4, mapBaseBrightness: 0, theta: 0.3, scale: 1, opacity: 1 },
-  Sunset: { baseColor: '#2a0e2e', markerColor: '#fb7185', glowColor: '#fbbf24', dark: 1, diffuse: 2, mapBrightness: 4, mapBaseBrightness: 0, theta: 0.35, scale: 1, opacity: 1 },
-  Gold: { baseColor: '#3a2e05', markerColor: '#fcd34d', glowColor: '#fde68a', dark: 1, diffuse: 1.8, mapBrightness: 5, mapBaseBrightness: 0, theta: 0.3, scale: 1, opacity: 1 },
-  'Neon Night': { baseColor: '#0d0221', markerColor: '#f000ff', glowColor: '#00f0ff', dark: 1, diffuse: 2.5, mapBrightness: 3, mapBaseBrightness: 0, theta: 0.4, scale: 1, opacity: 1 },
-  'Mono Wire': { baseColor: '#000000', markerColor: '#ffffff', glowColor: '#888888', dark: 1, diffuse: 0.6, mapBrightness: 8, mapBaseBrightness: 0, theta: 0.25, scale: 1, opacity: 1 },
-};
+// PRESETS (the cobe demo "looks") + the GlobePreset type live in ./presets
+// (single source of truth, shared with the central preset registry). Colors are
+// hex (converted to cobe's [r,g,b] 0..1 triplets at apply time).
 
 // ---------------------------------------------------------------------------
 // MARKER SETS - curated lat/long dot collections, selectable from a dropdown so
@@ -163,17 +172,159 @@ function hexToRgb(hex: string): [number, number, number] {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
 
+function clamp(v: number, lo: number, hi: number): number {
+  return v < lo ? lo : v > hi ? hi : v;
+}
+
+// ---------------------------------------------------------------------------
+// DRAG-TO-SPIN ROTATION CONTROLLER (cobe's hallmark interaction).
+//
+// Reproduces the canonical cobe demo feel (github.com/shuding/cobe website):
+// horizontal drag advances `phi` (longitude), vertical drag tilts `theta`
+// (latitude, clamped to avoid pole flips), the globe keeps auto-rotating when
+// idle, and releasing a flick carries momentum that decays (inertia). Kept as a
+// pure, WebGL-free object so the drag math is unit-testable without a GL context
+// (the effect itself is `dead` in headless test environments).
+//
+// Mapping (matches the demo, sign-isolated for a one-line flip after visual QA):
+//   dPhi   = dragDeltaX / DRAG_PHI_PER_PX_DIV     (right drag -> +phi)
+//   dTheta = dragDeltaY / DRAG_THETA_PER_PX_DIV   (down drag  -> +theta)
+// Per-frame increments sum to the same total as the demo's start-relative
+// deltaX/300, so total travel is identical; tracking per-frame deltas also
+// yields the release velocity for the inertia pass for free.
+// ---------------------------------------------------------------------------
+const DRAG_PHI_PER_PX = 1 / 250; // horizontal px -> phi radians
+const DRAG_THETA_PER_PX = 1 / 400; // vertical px -> theta radians
+const INERTIA_DECAY = 0.92; // per-frame velocity falloff after release
+const VEL_PHI_CLAMP = 0.12; // max carried phi velocity (rad/frame)
+const VEL_THETA_CLAMP = 0.06; // max carried theta velocity (rad/frame)
+const VEL_MIN = 0.0006; // below this, inertia stops
+const THETA_LIMIT = 1.4; // clamp effective theta so the poles never flip
+const MAX_DT = 100; // cap frame delta so a backgrounded tab does not lurch
+
+export interface GlobeRotation {
+  setBasePhi(v: number): void;
+  setBaseTheta(v: number): void;
+  setSpeed(v: number): void;
+  setAutoRotate(v: boolean): void;
+  /** Begin a drag at a canvas-relative point. */
+  pointerDown(x: number, y: number): void;
+  /** Continuous pointer update; only rotates while `pressed` and a drag is live. */
+  pointerMove(x: number, y: number, pressed: boolean): void;
+  /** End a drag; any residual velocity becomes inertia. */
+  pointerUp(): void;
+  /** Advance auto-rotation + inertia by `dtMs` milliseconds. */
+  tick(dtMs: number): void;
+  /** Current effective longitude (base + auto + drag/inertia offset). */
+  phi(): number;
+  /** Current effective latitude tilt (base + drag/inertia offset, clamped). */
+  theta(): number;
+  isDragging(): boolean;
+}
+
+export function createGlobeRotation(init?: {
+  basePhi?: number;
+  baseTheta?: number;
+  speed?: number;
+  autoRotate?: boolean;
+}): GlobeRotation {
+  let basePhi = init?.basePhi ?? 0;
+  let baseTheta = init?.baseTheta ?? 0.3;
+  let speed = init?.speed ?? 0.3; // radians/second of auto-rotation
+  let autoRotate = init?.autoRotate ?? true;
+
+  let clockPhi = 0; // accumulated auto-rotation
+  let phiOffset = 0; // accumulated drag/inertia longitude
+  let thetaOffset = 0; // accumulated drag/inertia tilt
+  let velPhi = 0;
+  let velTheta = 0;
+  let dragging = false;
+  let lastX = 0;
+  let lastY = 0;
+
+  // Keep `baseTheta + thetaOffset` inside the pole-safe band by absorbing any
+  // overflow back into the offset (so the offset cannot wind past the limit).
+  function clampThetaOffset(): void {
+    const eff = baseTheta + thetaOffset;
+    const clamped = clamp(eff, -THETA_LIMIT, THETA_LIMIT);
+    thetaOffset += clamped - eff;
+  }
+
+  return {
+    setBasePhi(v) {
+      basePhi = v;
+    },
+    setBaseTheta(v) {
+      baseTheta = v;
+      clampThetaOffset();
+    },
+    setSpeed(v) {
+      speed = v;
+    },
+    setAutoRotate(v) {
+      autoRotate = v;
+    },
+    pointerDown(x, y) {
+      dragging = true;
+      lastX = x;
+      lastY = y;
+      velPhi = 0;
+      velTheta = 0;
+    },
+    pointerMove(x, y, pressed) {
+      if (!pressed || !dragging) return;
+      const dPhi = (x - lastX) * DRAG_PHI_PER_PX;
+      const dTheta = (y - lastY) * DRAG_THETA_PER_PX;
+      phiOffset += dPhi;
+      thetaOffset += dTheta;
+      clampThetaOffset();
+      // Release velocity = the most recent per-frame movement, clamped so a fast
+      // flick spins fast but never uncontrollably.
+      velPhi = clamp(dPhi, -VEL_PHI_CLAMP, VEL_PHI_CLAMP);
+      velTheta = clamp(dTheta, -VEL_THETA_CLAMP, VEL_THETA_CLAMP);
+      lastX = x;
+      lastY = y;
+    },
+    pointerUp() {
+      dragging = false; // velPhi/velTheta persist -> inertia in tick()
+    },
+    tick(dtMs) {
+      const dt = clamp(dtMs, 0, MAX_DT);
+      if (dragging) return; // base motion is frozen while the user is dragging
+      if (Math.abs(velPhi) > VEL_MIN || Math.abs(velTheta) > VEL_MIN) {
+        phiOffset += velPhi;
+        thetaOffset += velTheta;
+        clampThetaOffset();
+        velPhi *= INERTIA_DECAY;
+        velTheta *= INERTIA_DECAY;
+      } else {
+        velPhi = 0;
+        velTheta = 0;
+      }
+      if (autoRotate) clockPhi += speed * (dt / 1000);
+    },
+    phi() {
+      return basePhi + clockPhi + phiOffset;
+    },
+    theta() {
+      return clamp(baseTheta + thetaOffset, -THETA_LIMIT, THETA_LIMIT);
+    },
+    isDragging() {
+      return dragging;
+    },
+  };
+}
+
 export function createGlobeEffect(): Effect {
   let globe: GlobeHandle | null = null;
   let dead = false;
   let dpr = 1;
 
-  // Rotation state (driven from the external clock, not cobe's RAF).
-  let speed = 0.3; // radians/second of auto-rotation
-  let autoRotate = true;
-  let basePhi = 0;
-  let clockPhi = 0;
-  let theta = 0.3;
+  // Rotation + drag-to-spin, driven from the external clock (not cobe's RAF).
+  // The controller is the single source of truth for the live phi/theta the
+  // globe (and the label overlay) render by.
+  const rot = createGlobeRotation();
+  let lastFrameT = 0;
 
   // cobe `offset` ([x, y] in backing-store pixels, default [0, 0]) and markers.
   let offsetX = 0;
@@ -200,7 +351,7 @@ export function createGlobeEffect(): Effect {
   function applyPreset(name: string): void {
     const preset = PRESETS[name];
     if (!preset) return; // "Custom" or unknown -> leave live values untouched.
-    theta = preset.theta;
+    rot.setBaseTheta(preset.theta);
     scale = preset.scale;
     pending.baseColor = hexToRgb(preset.baseColor);
     pending.markerColor = hexToRgb(preset.markerColor);
@@ -251,15 +402,15 @@ export function createGlobeEffect(): Effect {
   // Project a lat/long onto the 2D overlay using the same phi/theta the globe
   // spins by. Returns null for back-hemisphere points (hidden behind the globe).
   function project(lat: number, long: number): { x: number; y: number; front: number } | null {
-    const phiNow = (basePhi + clockPhi) * PHI_SIGN;
+    const phiNow = rot.phi() * PHI_SIGN;
     const latR = (lat * Math.PI) / 180;
     const lonR = (long * Math.PI) / 180 * LON_SIGN + phiNow;
     const x0 = Math.cos(latR) * Math.sin(lonR);
     const y0 = Math.sin(latR);
     const z0 = Math.cos(latR) * Math.cos(lonR);
-    // Tilt by theta around the X axis.
-    const ct = Math.cos(theta);
-    const st = Math.sin(theta);
+    // Tilt by the live theta around the X axis.
+    const ct = Math.cos(rot.theta());
+    const st = Math.sin(rot.theta());
     const y1 = y0 * ct - z0 * st;
     const z1 = y0 * st + z0 * ct;
     if (z1 <= 0.02) return null; // behind the globe / on the limb
@@ -305,8 +456,8 @@ export function createGlobeEffect(): Effect {
   // Bridge invoked by cobe each render pass. We mutate `state` in place; cobe
   // copies recognised keys into its GL uniforms.
   function onRenderBridge(state: Record<string, unknown>): void {
-    state.phi = basePhi + clockPhi;
-    state.theta = theta;
+    state.phi = rot.phi();
+    state.theta = rot.theta();
     for (const k in pending) {
       state[k] = pending[k];
       delete pending[k];
@@ -341,10 +492,10 @@ export function createGlobeEffect(): Effect {
             .map((m) => ({ location: [Number(m.location[0]), Number(m.location[1])] as [number, number], size: Number(m.size) }))
         : fromSet;
 
-      speed = Number(p.speed ?? 0.3);
-      autoRotate = p.autoRotate === undefined ? true : Boolean(p.autoRotate);
-      basePhi = Number(p.phi ?? 0);
-      theta = Number(p.theta ?? 0.3);
+      rot.setSpeed(Number(p.speed ?? 0.3));
+      rot.setAutoRotate(p.autoRotate === undefined ? true : Boolean(p.autoRotate));
+      rot.setBasePhi(Number(p.phi ?? 0));
+      rot.setBaseTheta(Number(p.theta ?? 0.3));
       offsetX = Number(p.offsetX ?? 0);
       offsetY = Number(p.offsetY ?? 0);
       scale = Number(p.scale ?? 1);
@@ -365,8 +516,8 @@ export function createGlobeEffect(): Effect {
         width: resW,
         height: resH,
         devicePixelRatio: dpr,
-        phi: basePhi,
-        theta,
+        phi: rot.phi(),
+        theta: rot.theta(),
         dark: Number(p.dark ?? 0),
         diffuse: Number(p.diffuse ?? 1),
         mapSamples: Number(p.mapSamples ?? 10000),
@@ -384,13 +535,21 @@ export function createGlobeEffect(): Effect {
 
       if (presetName !== 'Custom') applyPreset(presetName);
 
+      // Drag affordance: cobe globes are grabbable. The host canvas shows a grab
+      // cursor at rest and grabbing mid-drag (set in the pointer handlers).
+      c.style.cursor = 'grab';
+
       // Stop cobe's internal RAF loop; tilt-lab drives frame() instead.
       globe.toggle(false);
     },
 
     frame(t: number) {
       if (dead || !globe) return;
-      if (autoRotate) clockPhi = (t / 1000) * speed;
+      // Advance auto-rotation + inertia by the real elapsed time so a drag pause
+      // (or a backgrounded tab) does not make the globe jump on resume.
+      const dt = lastFrameT ? t - lastFrameT : 16;
+      lastFrameT = t;
+      rot.tick(dt);
       globe.render();
       drawLabels();
     },
@@ -430,16 +589,16 @@ export function createGlobeEffect(): Effect {
           break;
         }
         case 'autoRotate':
-          autoRotate = Boolean(value);
+          rot.setAutoRotate(Boolean(value));
           break;
         case 'speed':
-          speed = Number(value);
+          rot.setSpeed(Number(value));
           break;
         case 'phi':
-          basePhi = Number(value);
+          rot.setBasePhi(Number(value));
           break;
         case 'theta':
-          theta = Number(value);
+          rot.setBaseTheta(Number(value));
           break;
         case 'scale':
           scale = Number(value);
@@ -478,6 +637,30 @@ export function createGlobeEffect(): Effect {
         default:
           break;
       }
+    },
+
+    // --- Drag-to-spin (cobe's signature interaction) -----------------------
+    // Coords arrive canvas-relative from the compositor's PointerTracker, which
+    // unifies mouse + touch + pen. A press starts a drag; continuous moves while
+    // pressed rotate the globe; release carries inertia.
+    onPointerDown(x: number, y: number) {
+      rot.pointerDown(x, y);
+      if (hostCanvas) hostCanvas.style.cursor = 'grabbing';
+    },
+
+    onPointer(x: number, y: number, pressed?: boolean) {
+      rot.pointerMove(x, y, Boolean(pressed));
+    },
+
+    onPointerUp() {
+      rot.pointerUp();
+      if (hostCanvas) hostCanvas.style.cursor = 'grab';
+    },
+
+    onPointerLeave() {
+      // A drag that wanders off-host keeps spinning (window pointerup releases
+      // it); only reset the resting cursor when no drag is in flight.
+      if (!rot.isDragging() && hostCanvas) hostCanvas.style.cursor = 'grab';
     },
 
     dispose() {

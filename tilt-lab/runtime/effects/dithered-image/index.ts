@@ -7,10 +7,12 @@ import type { Effect, EffectOpts } from '../../types';
  * (fg/bg) output. Verbatim fragment shader from motion-core's DitheredImageScene
  * (lane-8a recon). OGL. MIT.
  *
- * post caveat (from recon): this dithers a SOURCE IMAGE bound to uTexture, not
- * the live framebuffer beneath it. As a tilt-lab `post` layer a host would swap
- * uTexture for the composited render target; here it dithers its `src` asset (or
- * a generated test pattern when no asset is supplied).
+ * As a tilt-lab `post` layer this dithers the LAYERS BENEATH it (the same role
+ * ascii plays): the compositor composites the beneath-scene and hands it to
+ * onBeneath() each frame, which we upload to uTexture - so the dither tracks
+ * whatever is stacked below. Standalone (<tilt-dithered-image>, no compositor)
+ * it falls back to its `src` upload / bundled sample image, or a generated test
+ * pattern, so the effect still works on its own.
  *
  * The threshold map (Bayer 4x4 / 8x8) is generated procedurally from the
  * canonical Bayer recurrence - no binary asset shipped.
@@ -463,6 +465,22 @@ export function createDitheredImageEffect(): Effect {
       // over the bundled default asset; fall back to the generated test pattern.
       const src = (typeof p.src === 'string' && p.src) || opts.assets.src;
       if (src) loadSource(src);
+    },
+
+    onBeneath(source: HTMLCanvasElement) {
+      // Dither the composited scene beneath this post layer. Upload it as the
+      // source texture with flipY so the canvas's top row maps to screen-top
+      // (the dither samples via gl_FragCoord, which is bottom-origin in GL).
+      if (dead || !sourceTexture) return;
+      const sw = source.width || viewW;
+      const sh = source.height || viewH;
+      if (sw < 1 || sh < 1) return;
+      sourceTexture.image = source;
+      sourceTexture.flipY = true;
+      sourceTexture.needsUpdate = true;
+      imgW = sw;
+      imgH = sh;
+      recomputeCover();
     },
 
     frame() {

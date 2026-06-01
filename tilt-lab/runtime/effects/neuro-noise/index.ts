@@ -1,4 +1,5 @@
 import type { Effect, EffectOpts } from '../../types';
+import { PRESETS } from './presets';
 
 // Ported verbatim from @paper-design/shaders (0.0.76), neuro-noise.
 // Original algorithm by @zozuar (x.com/zozuar/status/1625182758745128981).
@@ -215,18 +216,8 @@ void main() {
 // Paper's sizing `fit` enum maps the string to the shader's u_fit float.
 const FIT_MAP: Record<string, number> = { none: 0, contain: 1, cover: 2 };
 
-// Paper's 4 built-in neuroNoisePresets (verbatim from @paper-design/shaders-react).
-// The preset selector applies colorFront/Mid/Back + brightness + contrast + scale.
-interface NeuroNoisePreset {
-  colorFront: string; colorMid: string; colorBack: string;
-  brightness: number; contrast: number; scale: number;
-}
-const PRESETS: Record<string, NeuroNoisePreset> = {
-  Default: { colorFront: '#ffffff', colorMid: '#47a6ff', colorBack: '#000000', brightness: 0.05, contrast: 0.3, scale: 1 },
-  Sensation: { colorFront: '#00c8ff', colorMid: '#fbff00', colorBack: '#8b42ff', brightness: 0.19, contrast: 0.12, scale: 3 },
-  Bloodstream: { colorFront: '#ff0000', colorMid: '#ff0000', colorBack: '#ffffff', brightness: 0.24, contrast: 0.17, scale: 0.7 },
-  Ghost: { colorFront: '#ffffff', colorMid: '#000000', colorBack: '#ffffff', brightness: 0.0, contrast: 1.0, scale: 0.55 },
-};
+// PRESETS (paper's neuroNoisePresets) live in ./presets - single source of
+// truth, shared with the central preset registry.
 
 function hexToRgba(hex: string): [number, number, number, number] {
   let r = 0;

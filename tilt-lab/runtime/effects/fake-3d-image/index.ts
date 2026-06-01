@@ -146,19 +146,24 @@ export function createFake3DImageEffect(): Effect {
       viewW = Math.max(1, canvas.width || 1);
       viewH = Math.max(1, canvas.height || 1);
 
+      // flipY: true so screen-up samples image-up. With flipY:false the texture's
+      // first data row lands at v=0 (bottom) while the cover UV / vUv have v
+      // increasing upward, which renders the photo and its depth map upside down
+      // (the reported bug). Both textures must share the orientation or the
+      // parallax displacement pushes against an inverted depth field.
       colorTexture = new Texture(rgl, {
         image: fallbackColorData(256),
         width: 256,
         height: 256,
         generateMipmaps: false,
-        flipY: false,
+        flipY: true,
       });
       depthTexture = new Texture(rgl, {
         image: fallbackDepthData(256),
         width: 256,
         height: 256,
         generateMipmaps: false,
-        flipY: false,
+        flipY: true,
       });
 
       uniforms = {

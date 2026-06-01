@@ -1,4 +1,5 @@
 import type { Effect, EffectOpts } from '../../types';
+import { SWARM_PRESETS, SWARM_SCENE_NAMES } from './presets';
 
 /**
  * Swarm - a grid of spring-return dots that the pointer attracts (or repels)
@@ -41,22 +42,8 @@ interface SwarmParams {
   glowAlpha: number;
 }
 
-// The 5 built-in scene presets, verbatim from the regent original
-// (app/(app)/tools/swarm/presets.ts). scene selects color + alpha palette.
-const SWARM_PRESETS: {
-  idleColor: string;
-  swarmColor: string;
-  bgColor: string;
-  idleAlpha: number;
-  swarmAlpha: number;
-  glowAlpha: number;
-}[] = [
-  { idleColor: '#ffffff', swarmColor: '#ffffff', bgColor: '#060608', idleAlpha: 0.08, swarmAlpha: 0.55, glowAlpha: 0.15 }, // Ghost Grid
-  { idleColor: '#66bbdd', swarmColor: '#00d4ff', bgColor: '#010102', idleAlpha: 0.08, swarmAlpha: 0.6, glowAlpha: 0.2 }, // Regent
-  { idleColor: '#cc6644', swarmColor: '#ff4422', bgColor: '#0a0404', idleAlpha: 0.08, swarmAlpha: 0.55, glowAlpha: 0.18 }, // Ember
-  { idleColor: '#44cc66', swarmColor: '#00ff66', bgColor: '#020804', idleAlpha: 0.06, swarmAlpha: 0.55, glowAlpha: 0.2 }, // Phosphor
-  { idleColor: '#9966cc', swarmColor: '#cc44ff', bgColor: '#060410', idleAlpha: 0.07, swarmAlpha: 0.55, glowAlpha: 0.18 }, // Violet Haze
-];
+// SWARM_PRESETS / SWARM_SCENE_NAMES imported from ./presets (single source of
+// truth, shared with the central preset registry). Indexed by scene order.
 
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '');
@@ -279,10 +266,9 @@ export function createSwarmEffect(): Effect {
         case 'scene': {
           // Named presets apply the full color + alpha set (the original
           // selectScene). "Custom" keeps the current pickers/sliders.
-          const names = ['Ghost Grid', 'Regent', 'Ember', 'Phosphor', 'Violet Haze'];
           const sval = String(value);
           if (sval === 'Custom' || sval === '-1') break;
-          let idx = names.indexOf(sval);
+          let idx = SWARM_SCENE_NAMES.indexOf(sval as (typeof SWARM_SCENE_NAMES)[number]);
           if (idx < 0) idx = Number(sval); // numeric fallback
           const preset = SWARM_PRESETS[idx];
           if (preset) {

@@ -10,22 +10,22 @@ import { createAsciiEffect } from './effects/ascii/index';
 import asciiManifest from './effects/ascii/manifest.json';
 import { createAuroraEffect } from './effects/aurora/index';
 import auroraManifest from './effects/aurora/manifest.json';
-import { createCursorTrailEffect } from './effects/cursor-trail/index';
-import cursorTrailManifest from './effects/cursor-trail/manifest.json';
 import { createDitheredImageEffect } from './effects/dithered-image/index';
 import ditheredImageManifest from './effects/dithered-image/manifest.json';
 import { createFake3DImageEffect } from './effects/fake-3d-image/index';
 import fake3dImageManifest from './effects/fake-3d-image/manifest.json';
 import { createFluidEffect } from './effects/fluid/index';
 import fluidManifest from './effects/fluid/manifest.json';
-import { createFractalGlassEffect } from './effects/fractal-glass/index';
+import { createFractalGlassEffect, createFractalGlassPostEffect } from './effects/fractal-glass/index';
 import fractalGlassManifest from './effects/fractal-glass/manifest.json';
+import fractalGlassPostManifest from './effects/fractal-glass-post/manifest.json';
 import { createGlobeEffect } from './effects/globe/index';
 import globeManifest from './effects/globe/manifest.json';
 import { createGrainGradientEffect } from './effects/grain-gradient/index';
 import grainGradientManifest from './effects/grain-gradient/manifest.json';
-import { createHalftoneEffect } from './effects/halftone/index';
+import { createHalftoneEffect, createHalftonePostEffect } from './effects/halftone/index';
 import halftoneManifest from './effects/halftone/manifest.json';
+import halftonePostManifest from './effects/halftone-post/manifest.json';
 import { createHaloEffect } from './effects/halo/index';
 import haloManifest from './effects/halo/manifest.json';
 import { createInteractiveGridEffect } from './effects/interactive-grid/index';
@@ -38,10 +38,6 @@ import { createNeuralNoiseEffect } from './effects/neural-noise/index';
 import neuralNoiseManifest from './effects/neural-noise/manifest.json';
 import { createNeuroNoiseEffect } from './effects/neuro-noise/index';
 import neuroNoiseManifest from './effects/neuro-noise/manifest.json';
-import { createParticlesEffect } from './effects/particles/index';
-import particlesManifest from './effects/particles/manifest.json';
-import { createPlasmaGridEffect } from './effects/plasma-grid/index';
-import plasmaGridManifest from './effects/plasma-grid/manifest.json';
 import { createSpecularBandEffect } from './effects/specular-band/index';
 import specularBandManifest from './effects/specular-band/manifest.json';
 import { createSwarmEffect } from './effects/swarm/index';
@@ -65,22 +61,21 @@ const RAW: Array<[unknown, EffectFactory]> = [
   [gradientManifest, createGradientEffect],
   [asciiManifest, createAsciiEffect],
   [auroraManifest, createAuroraEffect],
-  [cursorTrailManifest, createCursorTrailEffect],
   [ditheredImageManifest, createDitheredImageEffect],
   [fake3dImageManifest, createFake3DImageEffect],
   [fluidManifest, createFluidEffect],
   [fractalGlassManifest, createFractalGlassEffect],
+  [fractalGlassPostManifest, createFractalGlassPostEffect],
   [globeManifest, createGlobeEffect],
   [grainGradientManifest, createGrainGradientEffect],
   [halftoneManifest, createHalftoneEffect],
+  [halftonePostManifest, createHalftonePostEffect],
   [haloManifest, createHaloEffect],
   [interactiveGridManifest, createInteractiveGridEffect],
   [lavaLampManifest, createLavaLampEffect],
   [meshGradientManifest, createMeshGradientEffect],
   [neuralNoiseManifest, createNeuralNoiseEffect],
   [neuroNoiseManifest, createNeuroNoiseEffect],
-  [particlesManifest, createParticlesEffect],
-  [plasmaGridManifest, createPlasmaGridEffect],
   [specularBandManifest, createSpecularBandEffect],
   [swarmManifest, createSwarmEffect],
   [waterRippleManifest, createWaterRippleEffect],

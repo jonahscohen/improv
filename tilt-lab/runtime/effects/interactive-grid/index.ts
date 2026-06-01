@@ -146,6 +146,9 @@ export function createInteractiveGridEffect(): Effect {
       mesh = new Mesh(gl, { geometry, program });
       mesh.setParent(scene);
     },
+    // Cursor drives the distortion exactly like the original: normalized cursor
+    // position + per-move velocity (vX/vY = delta since the previous sample).
+    // `pressed` is unused - the grid reacts to hover movement, as in the demo.
     onPointer(x: number, y: number) {
       if (dead) return;
       const nx = w > 0 ? x / w : 0;
@@ -160,17 +163,32 @@ export function createInteractiveGridEffect(): Effect {
       mouseY = ny;
       pointerSeen = true;
     },
+    // When the cursor leaves, drop the velocity and forget the last position so a
+    // re-entry computes a fresh delta (no phantom jump across the gap).
+    onPointerLeave() {
+      currentVX = 0;
+      currentVY = 0;
+      pointerSeen = false;
+    },
     frame(t: number) {
       if (dead || !renderer || !scene || !dataTexture) return;
+
+      // Verbatim two-pass update (canonical OGL grid distortion):
+      //   1) relax EVERY cell toward zero,
+      //   2) inject cursor velocity into cells within the brush radius.
+      const cells = gridSize * gridSize;
+      for (let k = 0; k < cells; k++) {
+        data[4 * k] *= relaxation;
+        data[4 * k + 1] *= relaxation;
+      }
 
       const gridMouseX = gridSize * mouseX;
       const gridMouseY = gridSize * (1 - mouseY);
       const maxDist = gridSize * mouseSize;
-      const aspect = w > 0 ? h / w : 1;
       const maxDistSq = maxDist * maxDist;
       for (let i = 0; i < gridSize; i++) {
         for (let j = 0; j < gridSize; j++) {
-          const distance = ((gridMouseX - i) ** 2) / aspect + (gridMouseY - j) ** 2;
+          const distance = (gridMouseX - i) ** 2 + (gridMouseY - j) ** 2;
           if (distance < maxDistSq) {
             const index = 4 * (i + gridSize * j);
             let power = maxDist / Math.sqrt(distance);
@@ -178,9 +196,6 @@ export function createInteractiveGridEffect(): Effect {
             data[index] += strength * 100 * currentVX * power;
             data[index + 1] -= strength * 100 * currentVY * power;
           }
-          const idx = 4 * (i + gridSize * j);
-          data[idx] *= relaxation;
-          data[idx + 1] *= relaxation;
         }
       }
       currentVX *= 0.9;

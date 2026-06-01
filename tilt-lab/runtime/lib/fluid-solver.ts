@@ -176,6 +176,27 @@ export function dist3(x: number, y: number, z: number): number {
   return Math.sqrt(x * x + y * y + z * z);
 }
 
+/**
+ * Map a canvas-relative pointer position (PIXELS, top-left origin - the units
+ * the compositor/PointerTracker deliver) into the fluid sim's pointer uniform:
+ * UV in [0,1] with y flipped to y-up, and z = the paint gate. The regent fluid
+ * `paintVelocity` shader applies the drag force when `z < 0.5`, so z encodes the
+ * ORIGINAL's hover-vs-press rule: hovering (not pressed) paints, pressing pauses
+ * the force - hence z = pressed ? 1 : 0. Pure + headless-safe so it can be unit
+ * tested without a GL context.
+ */
+export function pointerUVFromPixel(
+  px: number,
+  py: number,
+  w: number,
+  h: number,
+  pressed?: boolean,
+): { x: number; y: number; z: number } {
+  const cw = w > 0 ? w : 1;
+  const ch = h > 0 ? h : 1;
+  return { x: px / cw, y: 1 - py / ch, z: pressed ? 1 : 0 };
+}
+
 // ================================================================
 // Double-buffered render target (port of original Xm class) - verbatim
 // ================================================================

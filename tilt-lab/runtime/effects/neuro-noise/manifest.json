@@ -4,7 +4,7 @@
   "category": "generative-noise",
   "layerRole": "background",
   "params": [
-    { "name": "preset", "type": "select", "default": "Default", "options": ["Default", "Sensation", "Bloodstream", "Ghost"] },
+    { "name": "preset", "type": "select", "default": "Default", "options": ["Default", "Sensation", "Bloodstream", "Ghost", "Custom"] },
     { "name": "colorFront", "type": "color", "default": "#ffffff" },
     { "name": "colorMid", "type": "color", "default": "#47a6ff" },
     { "name": "colorBack", "type": "color", "default": "#000000" },

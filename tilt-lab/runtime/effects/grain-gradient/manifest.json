@@ -4,7 +4,7 @@
   "category": "generative-gradient",
   "layerRole": "background",
   "params": [
-    { "name": "preset", "type": "select", "default": "Default", "options": ["Default", "Wave", "Dots", "Truchet", "Ripple", "Blob"] },
+    { "name": "preset", "type": "select", "default": "Default", "options": ["Default", "Wave", "Dots", "Truchet", "Ripple", "Blob", "Custom"] },
     { "name": "color1", "type": "color", "default": "#7300ff" },
     { "name": "color2", "type": "color", "default": "#eba8ff" },
     { "name": "color3", "type": "color", "default": "#00bfff" },

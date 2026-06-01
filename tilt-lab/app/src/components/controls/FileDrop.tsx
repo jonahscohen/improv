@@ -6,6 +6,8 @@ export interface FileDropProps {
   ariaLabel: string;
   accept?: string;
   fileName?: string;
+  /** Hint shown in the empty drop zone (e.g. "color image", "depth map"). */
+  placeholder?: string;
 }
 
 /**
@@ -14,7 +16,7 @@ export interface FileDropProps {
  * The native input stays in the tree (visually hidden, still focusable) so the
  * control is keyboard operable and click-to-browse works.
  */
-export function FileDrop({ onChange, ariaLabel, accept = 'image/*,video/*', fileName }: FileDropProps) {
+export function FileDrop({ onChange, ariaLabel, accept = 'image/*,video/*', fileName, placeholder }: FileDropProps) {
   const [name, setName] = useState<string | null>(fileName ?? null);
   const [dragging, setDragging] = useState(false);
 
@@ -47,7 +49,7 @@ export function FileDrop({ onChange, ariaLabel, accept = 'image/*,video/*', file
         onChange={(e) => accept_(e.target.files?.[0])}
       />
       <span className="tl-filedrop__text">
-        {name ? name : 'Drop image / video or click'}
+        {name ? name : placeholder ? `Drop ${placeholder} or click` : 'Drop image / video or click'}
       </span>
     </label>
   );

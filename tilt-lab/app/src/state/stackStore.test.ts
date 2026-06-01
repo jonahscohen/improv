@@ -54,6 +54,35 @@ describe('createStackStore', () => {
     expect(s.layers()[0].params.speed).toBe(3);
   });
 
+  it('setParam expands a preset selector into its full value-set', () => {
+    // Real registered effect id so the preset registry kicks in.
+    const ag: Manifest = {
+      id: 'animated-gradient',
+      name: 'animated-gradient',
+      category: 'gradient',
+      layerRole: 'background',
+      params: [
+        { name: 'preset', type: 'select', default: 'custom', options: ['custom', 'Lava'] },
+        { name: 'color1', type: 'color', default: '#050505' },
+        { name: 'swirl', type: 'range', default: 80, min: 0, max: 100 },
+      ],
+      requiredAssets: [],
+      origin: 'x',
+      license: 'MIT',
+      attribution: 'x',
+      redistribution: 'ok',
+      tags: [],
+    };
+    const s = createStackStore();
+    s.add(ag);
+    expect(s.layers()[0].params.color1).toBe('#050505');
+    s.setParam(0, 'preset', 'Lava');
+    const params = s.layers()[0].params;
+    expect(params.preset).toBe('Lava');
+    expect(params.color1).toBe('#FF9F21'); // Lava's color, written by the expansion
+    expect(params.swirl).toBe(18);
+  });
+
   it('reorder moves a layer', () => {
     const s = createStackStore();
     s.add(m('grad', 'background'));

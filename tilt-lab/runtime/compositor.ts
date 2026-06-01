@@ -25,6 +25,11 @@ export class Compositor {
   private layers: MountedLayer[] = [];
   private pointer: PointerTracker;
   private ro?: ResizeObserver;
+  // Shared scratch surface for delivering the beneath-composite to WebGL `post`
+  // effects (which cannot receive the Canvas2D blit). Lazily created, reused
+  // across post layers and frames - effects must sample it synchronously.
+  private beneathCanvas: HTMLCanvasElement | null = null;
+  private beneathCtx: CanvasRenderingContext2D | null = null;
 
   constructor(private root: HTMLElement, private factory: FactoryById) {
     // Layers are absolutely positioned, so the host must be a positioning
@@ -119,38 +124,88 @@ export class Compositor {
 
   renderFrame(t: number): void {
     const p = this.pointer.position();
+    const pressed = this.pointer.isDown();
+    // Drain this frame's discrete events ONCE, then dispatch the snapshot to
+    // every layer (so each interactive effect sees the same clicks/scroll).
+    const ev = this.pointer.consumeFrame();
     this.layers.forEach((layer, i) => {
       const { effect, config, canvas } = layer;
       // A disabled layer contributes nothing: skip its frame entirely (its
       // surface is already hidden). undefined enabled means on (legacy default).
       if (config.enabled === false) return;
-      // A Canvas2D post effect transforms "the scene beneath it": composite the
-      // lower layers' canvases into its OWN canvas before frame() so it samples
-      // real content (e.g. an uploaded Image/Video background). Guarded to 2D
-      // surfaces - a WebGL post effect owns its own input and getContext('2d')
-      // returns null, so this no-ops for them.
+      // A post effect transforms "the scene beneath it": composite the lower
+      // layers' canvases so the effect samples real content (e.g. an uploaded
+      // Image/Video background, or a generative layer below it).
       if (config.layerRole === 'post' && canvas) {
-        const c2d = canvas.getContext('2d');
-        if (c2d) {
-          c2d.clearRect(0, 0, canvas.width, canvas.height);
-          for (let j = 0; j < i; j++) {
-            const belowLayer = this.layers[j];
-            if (belowLayer.config.enabled === false) continue;
-            const below = belowLayer.canvas;
-            if (below) {
-              // Honor the lower layer's opacity when sampling it into the post
-              // canvas - the post path composites in 2D, so CSS opacity on the
-              // hidden source canvas does not apply here.
-              c2d.globalAlpha = belowLayer.config.opacity ?? 1;
-              c2d.drawImage(below, 0, 0, canvas.width, canvas.height);
+        if (effect.onBeneath) {
+          // WebGL post path: the effect's own surface is a GL context, so the
+          // Canvas2D blit cannot reach it. Composite the beneath-layers into a
+          // compositor-owned 2D scratch canvas and hand it over as a texture
+          // source. Sampled synchronously inside frame() below.
+          const beneath = this.composeBeneath(i, canvas.width, canvas.height);
+          if (beneath) effect.onBeneath(beneath);
+        } else {
+          const c2d = canvas.getContext('2d');
+          if (c2d) {
+            c2d.clearRect(0, 0, canvas.width, canvas.height);
+            for (let j = 0; j < i; j++) {
+              const belowLayer = this.layers[j];
+              if (belowLayer.config.enabled === false) continue;
+              const below = belowLayer.canvas;
+              if (below) {
+                // Honor the lower layer's opacity when sampling it into the post
+                // canvas - the post path composites in 2D, so CSS opacity on the
+                // hidden source canvas does not apply here.
+                c2d.globalAlpha = belowLayer.config.opacity ?? 1;
+                c2d.drawImage(below, 0, 0, canvas.width, canvas.height);
+              }
             }
+            c2d.globalAlpha = 1;
           }
-          c2d.globalAlpha = 1;
         }
       }
-      if (effect.onPointer) effect.onPointer(p.x, p.y);
+      // Discrete press/release (clicks, touch starts) then continuous
+      // position+pressed, then scroll - the full interaction surface.
+      if (effect.onPointerDown) for (const d of ev.downs) effect.onPointerDown(d.x, d.y);
+      if (effect.onPointerUp) for (const u of ev.ups) effect.onPointerUp(u.x, u.y);
+      if (effect.onPointer) effect.onPointer(p.x, p.y, pressed);
+      if (effect.onWheel && ev.wheel !== 0) effect.onWheel(ev.wheel, p.x, p.y);
       effect.frame(t);
     });
+  }
+
+  /**
+   * Composite every enabled layer below index `upTo` into the shared 2D scratch
+   * canvas (sized w x h) and return it, or null if no 2D context is available
+   * (headless). Honors each beneath layer's opacity, mirroring the Canvas2D post
+   * path. The returned canvas is reused on the next call - sample it immediately.
+   */
+  private composeBeneath(upTo: number, w: number, h: number): HTMLCanvasElement | null {
+    if (typeof document === 'undefined') return null;
+    if (!this.beneathCanvas) {
+      this.beneathCanvas = document.createElement('canvas');
+      this.beneathCtx = this.beneathCanvas.getContext('2d');
+    }
+    const c2d = this.beneathCtx;
+    if (!this.beneathCanvas || !c2d) return null;
+    if (this.beneathCanvas.width !== w) this.beneathCanvas.width = w;
+    if (this.beneathCanvas.height !== h) this.beneathCanvas.height = h;
+    c2d.clearRect(0, 0, w, h);
+    for (let j = 0; j < upTo; j++) {
+      const belowLayer = this.layers[j];
+      if (belowLayer.config.enabled === false) continue;
+      const below = belowLayer.canvas;
+      if (below) {
+        c2d.globalAlpha = belowLayer.config.opacity ?? 1;
+        try {
+          c2d.drawImage(below, 0, 0, w, h);
+        } catch {
+          // A tainted/zero-size source canvas can throw; skip it.
+        }
+      }
+    }
+    c2d.globalAlpha = 1;
+    return this.beneathCanvas;
   }
 
   clear(): void {

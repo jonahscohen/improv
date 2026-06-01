@@ -1,4 +1,5 @@
 import type { Effect, EffectOpts } from '../../types';
+import { PRESETS } from './presets';
 
 // Ported verbatim from @paper-design/shaders (0.0.76), grain-gradient.
 // Paper's ShaderMount owns a RAF loop and drives u_time; tilt-lab drives
@@ -22,26 +23,8 @@ const SHAPES: Record<string, number> = {
   sphere: 7,
 };
 
-// Paper's 6 built-in grainGradientPresets (verbatim from @paper-design/shaders-react).
-// The preset selector applies the whole set: colors (variable length -> colorsCount),
-// colorBack, shape, softness, intensity, noise, scale.
-interface GrainGradientPreset {
-  colors: string[];
-  colorBack: string;
-  shape: string;
-  softness: number;
-  intensity: number;
-  noise: number;
-  scale: number;
-}
-const PRESETS: Record<string, GrainGradientPreset> = {
-  Default: { colors: ['#7300ff', '#eba8ff', '#00bfff', '#2a00ff'], colorBack: '#000000', shape: 'corners', softness: 0.5, intensity: 0.5, noise: 0.25, scale: 1 },
-  Wave: { colors: ['#c4730b', '#bdad5f', '#d8ccc7'], colorBack: '#000a0f', shape: 'wave', softness: 0.7, intensity: 0.15, noise: 0.5, scale: 1 },
-  Dots: { colors: ['#6f0000', '#0080ff', '#f2ebc9', '#33cc33'], colorBack: '#0a0000', shape: 'dots', softness: 1, intensity: 1, noise: 0.7, scale: 0.6 },
-  Truchet: { colors: ['#6f2200', '#eabb7c', '#39b523'], colorBack: '#0a0000', shape: 'truchet', softness: 0, intensity: 0.2, noise: 1, scale: 1 },
-  Ripple: { colors: ['#6f2d00', '#88ddae', '#2c0b1d'], colorBack: '#140a00', shape: 'ripple', softness: 0.5, intensity: 0.5, noise: 0.5, scale: 0.5 },
-  Blob: { colors: ['#3e6172', '#a49b74', '#568c50'], colorBack: '#0f0e18', shape: 'blob', softness: 0, intensity: 0.15, noise: 0.5, scale: 1.3 },
-};
+// PRESETS (paper's grainGradientPresets) live in ./presets - single source of
+// truth, shared with the central preset registry.
 
 // Shared sizing vertex shader (paper-design/shaders src/vertex-shader.ts, verbatim).
 const VERTEX_SHADER = `#version 300 es

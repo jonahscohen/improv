@@ -5,9 +5,14 @@ import {
   stepFluidSim,
   disposeFluidSim,
   createBackgroundTexture,
+  pointerUVFromPixel,
   type FluidSimState,
   type FluidConstants,
 } from '../../lib/fluid-solver';
+import {
+  HALFTONE_PRESETS as SCENE_PRESETS,
+  HALFTONE_SCENE_NAMES as SCENE_NAMES,
+} from './presets';
 
 /**
  * Halftone - the verbatim regent halftone tool. A Three.js GPU stable-fluid
@@ -147,23 +152,16 @@ interface HalftoneParams {
   baseColor4: string;
 }
 
-const SCENE_NAMES = ['Indicium', 'Violet Abyss', 'Emerald Depth', 'Crimson Forge', 'Regent'];
+// SCENE_NAMES / SCENE_PRESETS imported from ./presets (single source of truth,
+// shared with the central preset registry and the halftone-post variant).
 
-// The 5 built-in scene presets, verbatim from the regent original
-// (app/(app)/tools/halftone/presets.ts). baseColor1-4 drive the 4-stop radial
-// source field; envColor1-3 are carried verbatim (unused by the halftone renderer).
-const SCENE_PRESETS: {
-  baseColor1: string; baseColor2: string; baseColor3: string; baseColor4: string;
-  envColor1: string; envColor2: string; envColor3: string;
-}[] = [
-  { baseColor1: '#030618', baseColor2: '#1040a0', baseColor3: '#78b0dc', baseColor4: '#A0C4E8', envColor1: '#030620', envColor2: '#1248b0', envColor3: '#68a0d0' }, // Indicium
-  { baseColor1: '#0a0318', baseColor2: '#2d1054', baseColor3: '#6b2fa0', baseColor4: '#B8A8C8', envColor1: '#0f0520', envColor2: '#3a1570', envColor3: '#9b4dca' }, // Violet Abyss
-  { baseColor1: '#011a0a', baseColor2: '#0a4a2a', baseColor3: '#1a8a5a', baseColor4: '#A8C8B8', envColor1: '#021f0e', envColor2: '#0e5535', envColor3: '#2ecc71' }, // Emerald Depth
-  { baseColor1: '#1a0505', baseColor2: '#5a0a0a', baseColor3: '#b82020', baseColor4: '#C8B0A8', envColor1: '#200808', envColor2: '#701212', envColor3: '#ff4444' }, // Crimson Forge
-  { baseColor1: '#010102', baseColor2: '#061440', baseColor3: '#0c90d0', baseColor4: '#58c0f8', envColor1: '#010204', envColor2: '#062050', envColor3: '#00a0e8' }, // Regent
-];
-
-export function createHalftoneEffect(): Effect {
+export function createHalftoneEffect(options?: { post?: boolean }): Effect {
+  // Post-overlay variant (layerRole 'post'): the fluid decays toward the
+  // COMPOSITED SCENE BENEATH this layer (fed each frame via onBeneath) instead of
+  // a self-generated radial, so the halftone shader dots the live scene below,
+  // with the pointer still stirring the fluid. Falls back to the generated
+  // background until a beneath frame arrives (e.g. as a standalone single effect).
+  const postMode = options?.post === true;
   let dead = false;
   let renderer: THREE.WebGLRenderer | null = null;
   let scene: THREE.Scene | null = null;
@@ -186,6 +184,11 @@ export function createHalftoneEffect(): Effect {
   const pointerLatest = new THREE.Vector3(0.5, 0.5, 1);
   const pointerUV = new THREE.Vector3(0.5, 0.5, 1);
   const pointerUVLast = new THREE.Vector3(0.5, 0.5, 1);
+
+  // Live canvas (to normalize pixel pointer coords) + the beneath-scene texture
+  // sourced by the post-overlay variant.
+  let canvasEl: HTMLCanvasElement | null = null;
+  let beneathTex: THREE.CanvasTexture | null = null;
 
   let sceneIdx = 0;
 
@@ -235,6 +238,7 @@ export function createHalftoneEffect(): Effect {
         dead = true;
         return;
       }
+      canvasEl = canvas;
       try {
         renderer = new THREE.WebGLRenderer({
           canvas,
@@ -359,6 +363,14 @@ export function createHalftoneEffect(): Effect {
       const turbMult = 0.5 + p.turbulence * 1.5;
       sim.paintVelocityMat.uniforms.uCurlParameters.value.x = FLUID_CURL_STRENGTH * turbMult;
 
+      // Post-overlay: decay the fluid color toward the live scene beneath this
+      // layer instead of the generated radial. Re-asserted each frame because the
+      // drift/scene blocks above point uBackgroundTexture back at bgTex.
+      if (postMode && beneathTex) {
+        beneathTex.needsUpdate = true;
+        sim.paintColorMat.uniforms.uBackgroundTexture.value = beneathTex;
+      }
+
       stepFluidSim(renderer, sim, dt);
 
       material.uniforms.uSource.value = sim.color.getTexture();
@@ -398,7 +410,7 @@ export function createHalftoneEffect(): Effect {
             sceneDirty = true;
             break;
           }
-          let idx = SCENE_NAMES.indexOf(sval);
+          let idx = SCENE_NAMES.indexOf(sval as (typeof SCENE_NAMES)[number]);
           if (idx < 0) idx = Number(sval); // numeric fallback
           if (SCENE_PRESETS[idx]) {
             sceneIdx = idx;
@@ -455,17 +467,42 @@ export function createHalftoneEffect(): Effect {
       }
     },
 
-    onPointer(x: number, y: number) {
+    // Pointer drives the fluid sim. Coords arrive as canvas-relative PIXELS;
+    // normalize to [0,1] uPointer (y-up). z = pressed ? 1 : 0: the paintVelocity
+    // shader applies the drag force when z < 0.5, so hovering stirs the field and
+    // pressing pauses it - verbatim regent behavior.
+    onPointer(x: number, y: number, pressed?: boolean) {
       if (Number.isNaN(x) || Number.isNaN(y)) return;
-      // Wrapper passes canvas-relative normalized [0,1] (y down). The fluid sim
-      // wants y-up; z<0.5 means "apply drag force" (hover), matching the original.
-      pointerLatest.set(x, 1 - y, 0);
+      const w = canvasEl?.clientWidth || viewW;
+      const h = canvasEl?.clientHeight || viewH;
+      const uv = pointerUVFromPixel(x, y, w, h, pressed);
+      pointerLatest.set(uv.x, uv.y, uv.z);
+    },
+
+    // Post-overlay input: the composited scene beneath this layer as a 2D canvas
+    // each frame. Upload into a reused CanvasTexture; frame() points the fluid's
+    // background uniform at it so the halftone dots the live beneath scene.
+    onBeneath(source: HTMLCanvasElement) {
+      if (dead) return;
+      if (!beneathTex) {
+        beneathTex = new THREE.CanvasTexture(source);
+        beneathTex.colorSpace = THREE.SRGBColorSpace;
+        beneathTex.minFilter = THREE.LinearFilter;
+        beneathTex.magFilter = THREE.LinearFilter;
+        beneathTex.generateMipmaps = false;
+      } else {
+        beneathTex.image = source;
+      }
+      beneathTex.needsUpdate = true;
     },
 
     dispose() {
       geometry?.dispose();
       material?.dispose();
       bgTex?.dispose();
+      beneathTex?.dispose();
+      beneathTex = null;
+      canvasEl = null;
       if (sim) disposeFluidSim(sim);
       renderer?.dispose();
       geometry = null;
@@ -478,4 +515,14 @@ export function createHalftoneEffect(): Effect {
       dead = true;
     },
   };
+}
+
+/**
+ * Post-overlay variant: the halftone shader dots the COMPOSITED SCENE BENEATH
+ * this layer (fed each frame via onBeneath) instead of a self-generated fluid
+ * background. Registered as a separate 'halftone-post' effect (layerRole 'post').
+ * Pointer still stirs the fluid, so the beneath scene ripples under the dots live.
+ */
+export function createHalftonePostEffect(): Effect {
+  return createHalftoneEffect({ post: true });
 }

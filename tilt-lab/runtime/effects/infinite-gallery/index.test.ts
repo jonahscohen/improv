@@ -31,6 +31,30 @@ describe('infinite-gallery effect', () => {
     }).not.toThrow();
   });
 
+  it('exposes the scroll (onWheel) + drag handlers', () => {
+    const e = createInfiniteGalleryEffect();
+    expect(typeof e.onWheel).toBe('function');
+    expect(typeof e.onPointer).toBe('function');
+    expect(typeof e.onPointerLeave).toBe('function');
+  });
+
+  it('scrolls via wheel + drag without throwing', () => {
+    const e = createInfiniteGalleryEffect();
+    const canvas = document.createElement('canvas');
+    const params = Object.fromEntries(manifest.params.map((p) => [p.name, p.default]));
+    e.init(canvas, { params, assets: {} });
+    e.resize(64, 64);
+    expect(() => {
+      e.frame(0);
+      e.onWheel?.(100, 32, 32);
+      e.onPointer?.(32, 20, true);
+      e.onPointer?.(32, 40, true);
+      e.onPointer?.(32, 40, false);
+      e.onPointerLeave?.();
+      e.frame(16);
+    }).not.toThrow();
+  });
+
   it('dispose is idempotent', () => {
     const e = createInfiniteGalleryEffect();
     const canvas = document.createElement('canvas');

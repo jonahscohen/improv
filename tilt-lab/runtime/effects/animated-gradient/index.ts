@@ -1,4 +1,5 @@
 import type { Effect, EffectOpts } from '../../types';
+import { ANIMATED_GRADIENT_PRESETS, type PatternShape } from './presets';
 
 /**
  * Animated Gradient (spell) - a WebGL2 swirl/mesh gradient. Verbatim fragment
@@ -151,52 +152,11 @@ void main() {
 const NOISE_TILE =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwBAMAAAClLOS0AAAAElBMVEUAAAAAAAAAAAAAAAAAAAAAAADgKxmiAAAABnRSTlMCCgkGBAVJOAVJAAAASklEQVQ4y2NgGAWjYBSMglEwCgY/YGRgZBQUYmJiZGQEkYwMjIyMgoKCjIyMIJKBgRFIMjIyAklGRkYGRkFBYEcwMDIyMjAOUQAA1I4HwVwZAkYAAAAASUVORK5CYII=';
 
-type PatternShape = 'Checks' | 'Stripes' | 'Edge';
 const PatternShapes: Record<string, number> = { Checks: 0, Stripes: 1, Edge: 2 };
 
-// Spell's 6 built-in presets (verbatim from @spell/animated-gradient registry).
-// Each is a full config the preset selector applies wholesale. `lightColors`
-// is the spell light-theme palette variant - kept here so the full surface is
-// preserved; tilt-lab has no theme switch so the dark `color*` set is applied.
-interface AnimatedGradientPreset {
-  color1: string; color2: string; color3: string;
-  lightColors?: [string, string, string];
-  rotation: number; proportion: number; scale: number; speed: number;
-  distortion: number; swirl: number; swirlIterations: number; softness: number;
-  offset: number; shape: PatternShape; shapeSize: number;
-}
-const PRESETS: Record<string, AnimatedGradientPreset> = {
-  Prism: {
-    color1: '#050505', color2: '#66B3FF', color3: '#FFFFFF', lightColors: ['#FAFAFA', '#66B3FF', '#050505'],
-    rotation: -50, proportion: 1, scale: 0.01, speed: 30, distortion: 0,
-    swirl: 50, swirlIterations: 16, softness: 47, offset: -299, shape: 'Checks', shapeSize: 45,
-  },
-  Lava: {
-    color1: '#FF9F21', color2: '#FF0303', color3: '#000000', lightColors: ['#FF9F21', '#FF0303', '#FAFAFA'],
-    rotation: 114, proportion: 100, scale: 0.52, speed: 30, distortion: 7,
-    swirl: 18, swirlIterations: 20, softness: 100, offset: 717, shape: 'Edge', shapeSize: 12,
-  },
-  Plasma: {
-    color1: '#B566FF', color2: '#000000', color3: '#000000', lightColors: ['#B566FF', '#FAFAFA', '#FAFAFA'],
-    rotation: 0, proportion: 63, scale: 0.75, speed: 30, distortion: 5,
-    swirl: 61, swirlIterations: 5, softness: 100, offset: -168, shape: 'Checks', shapeSize: 28,
-  },
-  Pulse: {
-    color1: '#66FF85', color2: '#000000', color3: '#000000', lightColors: ['#66FF85', '#FAFAFA', '#FAFAFA'],
-    rotation: -167, proportion: 92, scale: 0, speed: 20, distortion: 54,
-    swirl: 75, swirlIterations: 3, softness: 28, offset: -813, shape: 'Checks', shapeSize: 79,
-  },
-  Vortex: {
-    color1: '#000000', color2: '#FFFFFF', color3: '#000000', lightColors: ['#FAFAFA', '#000000', '#FAFAFA'],
-    rotation: 50, proportion: 41, scale: 0.4, speed: 20, distortion: 0,
-    swirl: 100, swirlIterations: 3, softness: 5, offset: -744, shape: 'Stripes', shapeSize: 80,
-  },
-  Mist: {
-    color1: '#050505', color2: '#FF66B8', color3: '#050505', lightColors: ['#FAFAFA', '#FF66B8', '#FAFAFA'],
-    rotation: 0, proportion: 33, scale: 0.48, speed: 39, distortion: 4,
-    swirl: 65, swirlIterations: 5, softness: 100, offset: -235, shape: 'Edge', shapeSize: 48,
-  },
-};
+// Presets live in ./presets (single source, shared with the playground store's
+// preset-expansion). `applyPreset` reads them for the standalone JSON path.
+const PRESETS = ANIMATED_GRADIENT_PRESETS;
 
 function hexToRgba(hex: string): [number, number, number, number] {
   let r = 0;

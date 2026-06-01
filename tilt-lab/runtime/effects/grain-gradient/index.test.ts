@@ -28,10 +28,10 @@ describe('grain-gradient effect', () => {
     }).not.toThrow();
   });
 
-  it('exposes a preset selector with the 6 paper presets', () => {
+  it('exposes a preset selector with the 6 paper presets + a Custom sentinel', () => {
     const preset = manifest.params.find((p) => p.name === 'preset');
     expect(preset).toBeDefined();
-    expect(preset?.options).toEqual(['Default', 'Wave', 'Dots', 'Truchet', 'Ripple', 'Blob']);
+    expect(preset?.options).toEqual(['Default', 'Wave', 'Dots', 'Truchet', 'Ripple', 'Blob', 'Custom']);
   });
 
   it('applying each preset via setParam does not throw', () => {

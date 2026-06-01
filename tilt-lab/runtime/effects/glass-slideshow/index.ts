@@ -293,6 +293,17 @@ export function createGlassSlideshowEffect(): Effect {
   let started = false;
   let pendingTarget = -1; // a setParam('index') request awaiting the next frame clock
 
+  // Scroll / drag navigation (advance-through). The wheel and a horizontal drag
+  // both accumulate toward a one-slide threshold; crossing it queues a slide
+  // advance that frame() begins against the host clock. No internal listeners or
+  // RAF - the compositor forwards onWheel/onPointer and we drive from frame(t).
+  let wheelAccum = 0; // accumulated wheel deltaY toward the next advance
+  let dragAccum = 0; // accumulated horizontal drag (px) toward the next advance
+  let dragLastX = NaN; // last pointer x while pressed (NaN = not dragging)
+  let pendingDir = 0; // queued net slide advances (+ = forward, - = back)
+  const WHEEL_STEP = 120; // wheel deltaY for one slide (~one notch)
+  const DRAG_STEP = 130; // horizontal drag px for one slide
+
   // Widget params.
   let transitionDuration = 2000;
   let autoplay = true;
@@ -418,6 +429,15 @@ export function createGlassSlideshowEffect(): Effect {
         pendingTarget = -1;
       }
 
+      // A queued scroll/drag advance begins one slide transition per idle frame,
+      // anchored to the host clock. While transitioning we hold the queue so each
+      // gesture resolves as a clean one-slide glass transition.
+      if (pendingDir !== 0 && !transitioning && textures.length >= 2) {
+        const dir = pendingDir > 0 ? 1 : -1;
+        pendingDir -= dir;
+        beginTransition(current + dir, t);
+      }
+
       if (transitioning) {
         const raw = (t - transitionStart) / transitionDuration;
         if (raw >= 1) {
@@ -502,6 +522,61 @@ export function createGlassSlideshowEffect(): Effect {
       }
     },
 
+    // Scroll advances the slideshow: scroll down/forward -> next slide, up -> prev.
+    // Wheel deltas accumulate to a one-slide threshold so a single notch (or a
+    // trackpad flick) advances exactly one slide.
+    onWheel(deltaY: number) {
+      if (dead) return;
+      wheelAccum += deltaY;
+      while (wheelAccum >= WHEEL_STEP) {
+        pendingDir += 1;
+        wheelAccum -= WHEEL_STEP;
+      }
+      while (wheelAccum <= -WHEEL_STEP) {
+        pendingDir -= 1;
+        wheelAccum += WHEEL_STEP;
+      }
+    },
+
+    onPointerDown(x: number) {
+      if (dead) return;
+      dragLastX = x;
+      dragAccum = 0;
+    },
+
+    // Horizontal drag scrubs through slides: drag left -> next, right -> prev.
+    // Only an active press (pressed) advances; a bare hover does nothing.
+    onPointer(x: number, _y: number, pressed?: boolean) {
+      if (dead) return;
+      if (!pressed) {
+        dragLastX = NaN;
+        return;
+      }
+      if (Number.isNaN(dragLastX)) {
+        dragLastX = x;
+        return;
+      }
+      const dx = x - dragLastX;
+      dragLastX = x;
+      dragAccum -= dx; // drag left (dx<0) advances forward
+      while (dragAccum >= DRAG_STEP) {
+        pendingDir += 1;
+        dragAccum -= DRAG_STEP;
+      }
+      while (dragAccum <= -DRAG_STEP) {
+        pendingDir -= 1;
+        dragAccum += DRAG_STEP;
+      }
+    },
+
+    onPointerUp() {
+      dragLastX = NaN;
+    },
+
+    onPointerLeave() {
+      dragLastX = NaN;
+    },
+
     dispose() {
       if (renderer) {
         const lose = renderer.gl?.getExtension('WEBGL_lose_context');
@@ -515,6 +590,10 @@ export function createGlassSlideshowEffect(): Effect {
       transitioning = false;
       started = false;
       pendingTarget = -1;
+      wheelAccum = 0;
+      dragAccum = 0;
+      dragLastX = NaN;
+      pendingDir = 0;
       dead = true;
     },
   };

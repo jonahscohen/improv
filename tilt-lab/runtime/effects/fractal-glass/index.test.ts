@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createFractalGlassEffect } from './index';
+import { createFractalGlassEffect, createFractalGlassPostEffect } from './index';
 import manifest from './manifest.json';
 import { validateManifest } from '../../manifest';
 
@@ -14,8 +14,25 @@ describe('fractal-glass effect', () => {
     const params = Object.fromEntries(manifest.params.map((p) => [p.name, p.default]));
     e.init(canvas, { params, assets: {} });
     e.resize(64, 64);
-    e.onPointer?.(0.5, 0.5);
+    e.onPointer?.(32, 32, false);
     expect(() => e.frame(16)).not.toThrow();
+  });
+
+  it('post variant exposes onBeneath and survives a beneath -> frame cycle', () => {
+    const e = createFractalGlassPostEffect();
+    expect(typeof e.onBeneath).toBe('function');
+    const canvas = document.createElement('canvas');
+    const params = Object.fromEntries(manifest.params.map((p) => [p.name, p.default]));
+    e.init(canvas, { params, assets: {} });
+    e.resize(64, 64);
+    const beneath = document.createElement('canvas');
+    beneath.width = 64;
+    beneath.height = 64;
+    expect(() => {
+      e.onBeneath?.(beneath);
+      e.onPointer?.(20, 20, false);
+      e.frame(16);
+    }).not.toThrow();
   });
 
   it('dispose is idempotent', () => {

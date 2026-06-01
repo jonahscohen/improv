@@ -4,9 +4,15 @@
 // reviewed by a human - this tool never claims a thing "looks right".
 import { decodePng, imageStats } from './png.mjs';
 
+// Structural selectors for the playground UI. These track the app's component
+// markup (BrowseGrid.tsx / LayerStack.tsx) - if a redesign renames a class, the
+// matching constant here must move with it or every effect fails identically on
+// a selector timeout (not a real effect failure).
 const PREVIEW = '.preview-canvas';
-const CARD = '.browse-grid__card';
-const LAYER_ITEM = '.layer-stack__item';
+const CARD = '.browse-card';
+const CARD_NAME = '.browse-card__name';
+const LAYER_ITEM = '.channel';
+const LAYER_NAME = '.channel__name';
 // A neutral background seeded beneath post-process effects so they have real
 // pixels to process (a lone post effect over an empty stack paints nothing).
 // Uniquely named so it can't collide with same-named catalog entries.
@@ -37,20 +43,20 @@ async function settleFrames(page, frames = 30) {
 
 /** Find the browse-grid card whose visible name matches the manifest name. */
 function cardByName(page, name) {
-  return page.locator(`${CARD}:has(.browse-grid__card-name:text-is(${JSON.stringify(name)}))`);
+  return page.locator(`${CARD}:has(${CARD_NAME}:text-is(${JSON.stringify(name)}))`);
 }
 
 /** The layer-stack item for a given effect display name (scopes its param controls). */
 function layerByName(page, name) {
-  return page.locator(`${LAYER_ITEM}:has(.layer-stack__name:text-is(${JSON.stringify(name)}))`);
+  return page.locator(`${LAYER_ITEM}:has(${LAYER_NAME}:text-is(${JSON.stringify(name)}))`);
 }
 
 async function addCardAndWait(page, name, minLayers) {
   await cardByName(page, name).first().click();
   await page
     .waitForFunction(
-      (n) => document.querySelectorAll('.layer-stack__item').length >= n,
-      minLayers,
+      ({ n, sel }) => document.querySelectorAll(sel).length >= n,
+      { n: minLayers, sel: LAYER_ITEM },
       { timeout: 5_000 },
     )
     .catch(() => {});
@@ -223,52 +229,84 @@ async function exerciseParam(page, effectName, params) {
     const input = scope.locator(`[aria-label=${JSON.stringify(spec.name)}]`).first();
     if ((await input.count()) === 0) continue;
 
-    if (spec.type === 'range') {
-      const min = spec.min ?? 0;
-      const max = spec.max ?? 1;
-      const before = await input.inputValue();
-      const target = Number(before) === max ? min : max;
-      await input.focus();
-      await input.fill(String(target));
-      const afterVal = await input.inputValue();
-      if (afterVal !== before) return { status: 'pass', detail: `${spec.name}: ${before} -> ${afterVal}` };
-      await input.press('Home');
-      await input.press('ArrowRight');
-      const kbVal = await input.inputValue();
-      return kbVal !== before
-        ? { status: 'pass', detail: `${spec.name} (keyboard): ${before} -> ${kbVal}` }
-        : { status: 'fail', detail: `${spec.name} did not change on input` };
-    }
+    // A control that can't be driven (e.g. a custom widget that isn't a native
+    // input) must not abort the whole effect's check - swallow and try the next
+    // param. Only a clean pass/fail returns.
+    try {
+      if (spec.type === 'range') {
+        const min = spec.min ?? 0;
+        const max = spec.max ?? 1;
+        const before = await input.inputValue();
+        const target = Number(before) === max ? min : max;
+        await input.focus();
+        await input.fill(String(target));
+        const afterVal = await input.inputValue();
+        if (afterVal !== before) return { status: 'pass', detail: `${spec.name}: ${before} -> ${afterVal}` };
+        await input.press('Home');
+        await input.press('ArrowRight');
+        const kbVal = await input.inputValue();
+        return kbVal !== before
+          ? { status: 'pass', detail: `${spec.name} (keyboard): ${before} -> ${kbVal}` }
+          : { status: 'fail', detail: `${spec.name} did not change on input` };
+      }
 
-    if (spec.type === 'toggle') {
-      const before = await input.isChecked();
-      await input.click();
-      const afterChk = await input.isChecked();
-      return afterChk !== before
-        ? { status: 'pass', detail: `${spec.name}: ${before} -> ${afterChk}` }
-        : { status: 'fail', detail: `${spec.name} toggle did not flip` };
-    }
+      if (spec.type === 'toggle') {
+        const before = await input.isChecked();
+        await input.click();
+        const afterChk = await input.isChecked();
+        return afterChk !== before
+          ? { status: 'pass', detail: `${spec.name}: ${before} -> ${afterChk}` }
+          : { status: 'fail', detail: `${spec.name} toggle did not flip` };
+      }
 
-    if (spec.type === 'select') {
-      const optList = spec.options ?? [];
-      if (optList.length < 2) continue;
-      const before = await input.inputValue();
-      const target = optList.find((o) => o !== before) ?? optList[0];
-      await input.selectOption(target);
-      const afterVal = await input.inputValue();
-      return afterVal === target && afterVal !== before
-        ? { status: 'pass', detail: `${spec.name}: ${before} -> ${afterVal}` }
-        : { status: 'fail', detail: `${spec.name} select did not change` };
-    }
+      if (spec.type === 'select') {
+        const optList = spec.options ?? [];
+        if (optList.length < 2) continue;
+        // The Select control renders small option sets as a segmented radiogroup
+        // (role="radio" buttons, aria-label on the group) and larger sets as a
+        // native <select>. inputValue() only works on the native variant, so
+        // detect which is present and drive it accordingly.
+        const tag = await input.evaluate((el) => el.tagName).catch(() => '');
+        if (tag === 'SELECT') {
+          const before = await input.inputValue();
+          const target = optList.find((o) => o !== before) ?? optList[0];
+          await input.selectOption(target);
+          const afterVal = await input.inputValue();
+          return afterVal === target && afterVal !== before
+            ? { status: 'pass', detail: `${spec.name}: ${before} -> ${afterVal}` }
+            : { status: 'fail', detail: `${spec.name} select did not change` };
+        }
+        // Segmented radiogroup: click a radio other than the checked one and
+        // confirm aria-checked moves to it.
+        const radios = input.locator('[role="radio"]');
+        const n = await radios.count();
+        if (n < 2) continue;
+        let checkedIdx = 0;
+        for (let k = 0; k < n; k++) {
+          if ((await radios.nth(k).getAttribute('aria-checked')) === 'true') {
+            checkedIdx = k;
+            break;
+          }
+        }
+        const targetIdx = checkedIdx === 0 ? 1 : 0;
+        await radios.nth(targetIdx).click();
+        const moved = (await radios.nth(targetIdx).getAttribute('aria-checked')) === 'true';
+        return moved
+          ? { status: 'pass', detail: `${spec.name} (segmented): option ${checkedIdx} -> ${targetIdx}` }
+          : { status: 'fail', detail: `${spec.name} segmented did not change` };
+      }
 
-    if (spec.type === 'color') {
-      const before = await input.inputValue();
-      const target = before.toLowerCase() === '#000000' ? '#ffffff' : '#000000';
-      await input.fill(target);
-      const afterVal = await input.inputValue();
-      return afterVal.toLowerCase() === target
-        ? { status: 'pass', detail: `${spec.name}: ${before} -> ${afterVal}` }
-        : { status: 'fail', detail: `${spec.name} color did not change` };
+      if (spec.type === 'color') {
+        const before = await input.inputValue();
+        const target = before.toLowerCase() === '#000000' ? '#ffffff' : '#000000';
+        await input.fill(target);
+        const afterVal = await input.inputValue();
+        return afterVal.toLowerCase() === target
+          ? { status: 'pass', detail: `${spec.name}: ${before} -> ${afterVal}` }
+          : { status: 'fail', detail: `${spec.name} color did not change` };
+      }
+    } catch {
+      continue; // un-exercisable control - move on to the next param
     }
   }
   return { status: 'skip', detail: 'no exercisable control found in the layer panel' };

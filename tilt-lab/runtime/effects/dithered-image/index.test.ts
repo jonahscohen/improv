@@ -8,6 +8,27 @@ describe('dithered-image effect', () => {
     expect(() => validateManifest(manifest)).not.toThrow();
   });
 
+  it('is a post effect that dithers the layers beneath (onBeneath hook present)', () => {
+    expect(manifest.layerRole).toBe('post');
+    const e = createDitheredImageEffect();
+    expect(typeof e.onBeneath).toBe('function');
+  });
+
+  it('accepts a beneath-composite canvas via onBeneath without throwing', () => {
+    const e = createDitheredImageEffect();
+    const canvas = document.createElement('canvas');
+    const params = Object.fromEntries(manifest.params.map((p) => [p.name, p.default]));
+    e.init(canvas, { params, assets: {} });
+    e.resize(64, 64);
+    const beneath = document.createElement('canvas');
+    beneath.width = 64;
+    beneath.height = 64;
+    expect(() => {
+      e.onBeneath?.(beneath);
+      e.frame(16);
+    }).not.toThrow();
+  });
+
   it('init + resize + frame run without throwing', () => {
     const e = createDitheredImageEffect();
     const canvas = document.createElement('canvas');

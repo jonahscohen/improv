@@ -1,4 +1,5 @@
 import { validateStack } from '../../../runtime/stack';
+import { expandPresetParams } from '../../../runtime/effect-presets';
 import type { LayerConfig, Manifest } from '../../../runtime/types';
 
 export interface AddResult {
@@ -57,8 +58,13 @@ export function createStackStore(): StackStore {
       notify();
     },
     setParam(index, key, value) {
+      // Expand preset selectors into their full value-set so changing a preset
+      // actually changes the look (and every control reflects it). For effects
+      // without presets this is just `{ ...params, [key]: value }`.
       layers = layers.map((l, i) =>
-        i === index ? { ...l, params: { ...l.params, [key]: value } } : l,
+        i === index
+          ? { ...l, params: expandPresetParams(l.effectId, l.params, key, value) }
+          : l,
       );
       notify();
     },

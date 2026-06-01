@@ -51,8 +51,14 @@ export function defineEffectElement(manifest: Manifest, factory: EffectFactory):
       if (this.effect.mount) {
         this.effect.mount(this, { params, assets });
       }
-      // Pointer-driven effects get pointer moves relative to this element.
-      if (this.effect.onPointer) {
+      // Pointer-driven effects get the full pointer surface relative to this
+      // element: continuous position+pressed plus discrete press/release/wheel.
+      if (
+        this.effect.onPointer ||
+        this.effect.onPointerDown ||
+        this.effect.onPointerUp ||
+        this.effect.onWheel
+      ) {
         this.pointer = new PointerTracker(this);
       }
       if (this.effect.onPointerLeave) {
@@ -78,9 +84,16 @@ export function defineEffectElement(manifest: Manifest, factory: EffectFactory):
     }
 
     private loop = (t: number) => {
-      if (this.pointer && this.effect.onPointer) {
+      if (this.pointer) {
+        // Mirror the Compositor's dispatch order: drain discrete events once,
+        // then deliver continuous position + pressed, then scroll.
         const p = this.pointer.position();
-        this.effect.onPointer(p.x, p.y);
+        const pressed = this.pointer.isDown();
+        const ev = this.pointer.consumeFrame();
+        if (this.effect.onPointerDown) for (const d of ev.downs) this.effect.onPointerDown(d.x, d.y);
+        if (this.effect.onPointerUp) for (const u of ev.ups) this.effect.onPointerUp(u.x, u.y);
+        if (this.effect.onPointer) this.effect.onPointer(p.x, p.y, pressed);
+        if (this.effect.onWheel && ev.wheel !== 0) this.effect.onWheel(ev.wheel, p.x, p.y);
       }
       this.effect.frame(t);
       this.raf = requestAnimationFrame(this.loop);

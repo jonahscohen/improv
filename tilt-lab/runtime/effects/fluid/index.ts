@@ -1,4 +1,5 @@
 import type { Effect, EffectOpts } from '../../types';
+import { FLUID_PRESETS, FLUID_SCENE_NAMES } from './presets';
 
 /**
  * Fluid - raw WebGL1 stable-fluid sim (advect / mouse-force / divergence /
@@ -347,15 +348,8 @@ interface FluidParams {
   bgColor: string;
 }
 
-// The 5 built-in scene presets, verbatim from the regent original
-// (app/(app)/tools/fluid/presets.ts).
-const FLUID_PRESETS: { colorLow: string; colorHigh: string; colorGlow: string; bgColor: string }[] = [
-  { colorLow: '#3D1545', colorHigh: '#2299FF', colorGlow: '#BBECFF', bgColor: '#000000' }, // Cosmic
-  { colorLow: '#0D3050', colorHigh: '#00D4FF', colorGlow: '#FFFFFF', bgColor: '#010102' }, // Regent
-  { colorLow: '#401000', colorHigh: '#FF7722', colorGlow: '#FFEE99', bgColor: '#050000' }, // Inferno
-  { colorLow: '#2A1050', colorHigh: '#DD66FF', colorGlow: '#FFCCFF', bgColor: '#000005' }, // Void
-  { colorLow: '#252525', colorHigh: '#AAAAAA', colorGlow: '#FFFFFF', bgColor: '#000000' }, // Monochrome
-];
+// Scene presets live in ./presets (single source of truth, shared with the
+// central preset registry). FLUID_PRESETS is indexed by scene order.
 
 // Quality map: particleExp (1<<exp particles), fluidScale (sim-texture scale),
 // iterations (Jacobi default). Verbatim from the original QUALITY_MAP.
@@ -365,6 +359,25 @@ const QUALITY_MAP: Record<FluidQuality, { particleExp: number; fluidScale: numbe
   medium: { particleExp: 18, fluidScale: 0.25, iterations: 18 },
   low: { particleExp: 16, fluidScale: 0.2, iterations: 14 },
 };
+
+/**
+ * Map a canvas-relative pointer position (PIXELS, top-left origin - the units
+ * the compositor/PointerTracker now deliver) into the fluid sim's clip space
+ * [-1,1] with y flipped to y-up. This is exactly the regent original's
+ * windowToClipX/Y: `(x / clientWidth) * 2 - 1` and `((clientH - y) / clientH) *
+ * 2 - 1`. Pure + headless-safe so the coordinate mapping can be unit tested
+ * without a GL context.
+ */
+export function fluidClipFromPixel(
+  px: number,
+  py: number,
+  w: number,
+  h: number,
+): [number, number] {
+  const cw = w > 0 ? w : 1;
+  const ch = h > 0 ? h : 1;
+  return [(px / cw) * 2 - 1, ((ch - py) / ch) * 2 - 1];
+}
 
 function hexToVec3(hex: string): [number, number, number] {
   const h = hex.replace('#', '');
@@ -454,12 +467,21 @@ export function createFluidEffect(): Effect {
   let texType = 0; // resolved float/half-float/unsigned-byte
   let ready = false;
 
+  // The live canvas, kept so the pointer handlers can normalize pixel coords by
+  // the canvas's CSS size (matching the original's windowToClip using clientWidth).
+  let canvasEl: HTMLCanvasElement | null = null;
+
   // pointer state in clip space [-1,1]
   let mouseX = 0;
   let mouseY = 0;
   let lastMouseX = 0;
   let lastMouseY = 0;
   let mouseDown = false;
+  // The original gates injection on `(lastMousePointKnown && isMouseDown)` so a
+  // splat is never applied before a real pointer sample exists (avoids a velocity
+  // spike on the very first move/press). We mirror that here.
+  let mousePointKnown = false;
+  let lastMousePointKnown = false;
 
   const programs: Record<string, WebGLProgram | null> = {};
   let quadBuffer: WebGLBuffer | null = null;
@@ -596,6 +618,7 @@ export function createFluidEffect(): Effect {
         return;
       }
       gl = ctx;
+      canvasEl = canvas;
 
       // feature-detect float -> half-float -> unsigned-byte (matches original)
       const floatExt = gl.getExtension('OES_texture_float');
@@ -665,7 +688,10 @@ export function createFluidEffect(): Effect {
         bindTex(prog, 'velocity', velocity.read.tex, 0);
         gl.uniform1f(gl.getUniformLocation(prog, 'dt'), Math.max(dt, 0.001));
         gl.uniform1f(gl.getUniformLocation(prog, 'dx'), dx);
-        gl.uniform1i(gl.getUniformLocation(prog, 'isMouseDown'), mouseDown ? 1 : 0);
+        gl.uniform1i(
+          gl.getUniformLocation(prog, 'isMouseDown'),
+          lastMousePointKnown && mouseDown ? 1 : 0,
+        );
         gl.uniform2f(gl.getUniformLocation(prog, 'mouseClipSpace'), mouseX, mouseY);
         gl.uniform2f(gl.getUniformLocation(prog, 'lastMouseClipSpace'), lastMouseX, lastMouseY);
         gl.uniform1f(gl.getUniformLocation(prog, 'uVelDissipation'), p.velocityDissipation);
@@ -711,7 +737,10 @@ export function createFluidEffect(): Effect {
         bindTex(prog, 'dye', dye.read.tex, 0);
         gl.uniform1f(gl.getUniformLocation(prog, 'dt'), Math.max(dt, 0.001));
         gl.uniform1f(gl.getUniformLocation(prog, 'dx'), dx);
-        gl.uniform1i(gl.getUniformLocation(prog, 'isMouseDown'), mouseDown ? 1 : 0);
+        gl.uniform1i(
+          gl.getUniformLocation(prog, 'isMouseDown'),
+          lastMousePointKnown && mouseDown ? 1 : 0,
+        );
         gl.uniform2f(gl.getUniformLocation(prog, 'mouseClipSpace'), mouseX, mouseY);
         gl.uniform2f(gl.getUniformLocation(prog, 'lastMouseClipSpace'), lastMouseX, lastMouseY);
         gl.uniform1f(gl.getUniformLocation(prog, 'uDyeDissipation'), p.dyeDissipation);
@@ -810,9 +839,11 @@ export function createFluidEffect(): Effect {
         gl.disable(gl.BLEND);
       }
 
-      // last-mouse tracking for the next frame's segment force
+      // last-mouse tracking for the next frame's segment force (verbatim
+      // updateLastMouse(): clip coords + the known-flag the inject gate reads).
       lastMouseX = mouseX;
       lastMouseY = mouseY;
+      lastMousePointKnown = mousePointKnown;
     },
 
     resize(w: number, h: number) {
@@ -828,13 +859,12 @@ export function createFluidEffect(): Effect {
           // Named presets (Cosmic/Regent/Inferno/Void/Monochrome) apply the
           // full color set, exactly as the original FluidControls.selectScene.
           // "Custom" (scene = -1) leaves the color pickers in control.
-          const names = ['Cosmic', 'Regent', 'Inferno', 'Void', 'Monochrome'];
           const sval = String(value);
           if (sval === 'Custom' || sval === '-1') {
             p.scene = -1;
             break;
           }
-          let idx = names.indexOf(sval);
+          let idx = FLUID_SCENE_NAMES.indexOf(sval as (typeof FLUID_SCENE_NAMES)[number]);
           if (idx < 0) idx = Number(sval); // numeric fallback
           const preset = FLUID_PRESETS[idx];
           if (preset) {
@@ -905,15 +935,47 @@ export function createFluidEffect(): Effect {
       }
     },
 
-    onPointer(x: number, y: number) {
+    // Continuous pointer surface: position every frame + whether pressed. The
+    // original injects velocity/dye ONLY while the button is down (the shaders
+    // gate on `isMouseDown`); a hover just tracks position. So `pressed` IS the
+    // drag flag - hovering moves the cursor without splatting, dragging splats
+    // force + dye along the segment, exactly like the regent original.
+    onPointer(x: number, y: number, pressed?: boolean) {
       if (Number.isNaN(x) || Number.isNaN(y)) {
         mouseDown = false;
         return;
       }
-      // wrapper passes canvas-relative normalized [0,1]; map to clip space
-      mouseX = x * 2 - 1;
-      mouseY = (1 - y) * 2 - 1;
+      const w = canvasEl?.clientWidth || lastW;
+      const h = canvasEl?.clientHeight || lastH;
+      const [cx, cy] = fluidClipFromPixel(x, y, w, h);
+      mouseX = cx;
+      mouseY = cy;
+      mousePointKnown = true;
+      mouseDown = pressed === true;
+    },
+
+    // Discrete press: seed last = current so the drag starts from zero velocity
+    // (no force spike on the press frame) - verbatim onMouseDown -> updateLastMouse.
+    onPointerDown(x: number, y: number) {
+      if (Number.isNaN(x) || Number.isNaN(y)) return;
+      const w = canvasEl?.clientWidth || lastW;
+      const h = canvasEl?.clientHeight || lastH;
+      const [cx, cy] = fluidClipFromPixel(x, y, w, h);
+      mouseX = cx;
+      mouseY = cy;
+      mousePointKnown = true;
       mouseDown = true;
+      lastMouseX = mouseX;
+      lastMouseY = mouseY;
+      lastMousePointKnown = true;
+    },
+
+    onPointerUp() {
+      mouseDown = false;
+    },
+
+    onPointerLeave() {
+      mouseDown = false;
     },
 
     dispose() {
@@ -938,6 +1000,7 @@ export function createFluidEffect(): Effect {
       offscreen = null;
       ready = false;
       gl = null;
+      canvasEl = null;
       dead = true;
     },
   };

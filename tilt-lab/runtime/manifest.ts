@@ -27,6 +27,7 @@ function validateParam(raw: unknown, i: number): ParamSpec {
   }
   return {
     name,
+    label: typeof p.label === 'string' ? p.label : undefined,
     type,
     default: p.default,
     min: typeof p.min === 'number' ? p.min : undefined,

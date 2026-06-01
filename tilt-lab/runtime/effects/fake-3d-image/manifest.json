@@ -4,8 +4,8 @@
   "category": "parallax",
   "layerRole": "background",
   "params": [
-    { "name": "colorSrc", "type": "file", "default": "" },
-    { "name": "depthSrc", "type": "file", "default": "" },
+    { "name": "colorSrc", "label": "Color image", "type": "file", "default": "", "placeholder": "color image" },
+    { "name": "depthSrc", "label": "Depth map (grayscale)", "type": "file", "default": "", "placeholder": "depth map (grayscale, near = white)" },
     { "name": "xThreshold", "type": "range", "default": 8, "min": 1, "max": 40, "step": 1 },
     { "name": "yThreshold", "type": "range", "default": 8, "min": 1, "max": 40, "step": 1 },
     { "name": "sensitivity", "type": "range", "default": 0.25, "min": 0.01, "max": 1, "step": 0.01 }

@@ -15,7 +15,6 @@
 // compositor.ts / element.ts import it from here without a back-edge to the
 // effect registry. The construction still happens by importing each effect's
 // assets module, exactly as the convention prescribes.
-import { assets as cursorTrail } from './effects/cursor-trail/assets';
 import { assets as ditheredImage } from './effects/dithered-image/assets';
 import { assets as fake3dImage } from './effects/fake-3d-image/assets';
 import { assets as glassSlideshow } from './effects/glass-slideshow/assets';
@@ -27,7 +26,6 @@ import { assets as media } from './effects/media/assets';
 import { assets as waterRipple } from './effects/water-ripple/assets';
 
 export const effectAssets: Record<string, Record<string, string>> = {
-  'cursor-trail': cursorTrail,
   'dithered-image': ditheredImage,
   'fake-3d-image': fake3dImage,
   'glass-slideshow': glassSlideshow,

@@ -28,10 +28,10 @@ describe('neuro-noise effect', () => {
     }).not.toThrow();
   });
 
-  it('exposes a preset selector with the 4 paper presets', () => {
+  it('exposes a preset selector with the 4 paper presets + a Custom sentinel', () => {
     const preset = manifest.params.find((p) => p.name === 'preset');
     expect(preset).toBeDefined();
-    expect(preset?.options).toEqual(['Default', 'Sensation', 'Bloodstream', 'Ghost']);
+    expect(preset?.options).toEqual(['Default', 'Sensation', 'Bloodstream', 'Ghost', 'Custom']);
   });
 
   it('applying each preset via setParam does not throw', () => {

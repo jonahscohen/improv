@@ -1,4 +1,5 @@
 import type { Effect, EffectOpts } from '../../types';
+import { AURORA_PRESETS } from './presets';
 
 // Ported from unlumen UI's AuroraBlur (aurora-card), reconstructed from the public
 // demo bundle. Original ran on react-three-fiber; here it runs on a bare WebGL2
@@ -166,38 +167,10 @@ export function createAuroraEffect(): Effect {
     'layer1Color', 'layer2Color', 'layer3Color', 'layer4Color', 'skyColor1', 'skyColor2',
   ]);
 
-  // Preset "presentation styles" - each retints the four aurora bands + the two
-  // sky stops. Numerics (speed/noise/movement/etc.) keep their live values.
-  const PRESETS: Record<string, Partial<typeof p>> = {
-    'Blue Night': {
-      layer1Color: '#22d3ee', layer2Color: '#3b82f6', layer3Color: '#60a5fa', layer4Color: '#1d4ed8',
-      skyColor1: '#020617', skyColor2: '#0f172a',
-    },
-    'Borealis Green': {
-      layer1Color: '#34d399', layer2Color: '#10b981', layer3Color: '#6ee7b7', layer4Color: '#059669',
-      skyColor1: '#00120c', skyColor2: '#001b12',
-    },
-    Sunset: {
-      layer1Color: '#fb7185', layer2Color: '#f59e0b', layer3Color: '#fbbf24', layer4Color: '#ef4444',
-      skyColor1: '#1a0a1f', skyColor2: '#2a0e2e',
-    },
-    'Magenta Dream': {
-      layer1Color: '#e879f9', layer2Color: '#a855f7', layer3Color: '#f0abfc', layer4Color: '#7e22ce',
-      skyColor1: '#0d021a', skyColor2: '#1a0633',
-    },
-    Toxic: {
-      layer1Color: '#a3e635', layer2Color: '#84cc16', layer3Color: '#bef264', layer4Color: '#4d7c0f',
-      skyColor1: '#0a1500', skyColor2: '#0f1f00',
-    },
-    Mono: {
-      layer1Color: '#e5e7eb', layer2Color: '#9ca3af', layer3Color: '#d1d5db', layer4Color: '#6b7280',
-      skyColor1: '#000000', skyColor2: '#111111',
-    },
-    Crimson: {
-      layer1Color: '#f87171', layer2Color: '#dc2626', layer3Color: '#fca5a5', layer4Color: '#991b1b',
-      skyColor1: '#150202', skyColor2: '#220505',
-    },
-  };
+  // Preset "presentation styles" live in ./presets (single source, shared with
+  // the playground store's preset-expansion). Each retints the four aurora bands
+  // + the two sky stops; numerics keep their live values.
+  const PRESETS = AURORA_PRESETS;
 
   function applyPreset(name: string) {
     const preset = PRESETS[name];

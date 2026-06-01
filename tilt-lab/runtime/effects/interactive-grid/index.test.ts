@@ -18,6 +18,27 @@ describe('interactive-grid effect', () => {
     expect(() => e.frame(16)).not.toThrow();
   });
 
+  it('exposes the pointer interaction handlers', () => {
+    const e = createInteractiveGridEffect();
+    expect(typeof e.onPointer).toBe('function');
+    expect(typeof e.onPointerLeave).toBe('function');
+  });
+
+  it('handles pointer move + leave + frame without throwing', () => {
+    const e = createInteractiveGridEffect();
+    const canvas = document.createElement('canvas');
+    const params = Object.fromEntries(manifest.params.map((p) => [p.name, p.default]));
+    e.init(canvas, { params, assets: {} });
+    e.resize(64, 64);
+    expect(() => {
+      e.onPointer?.(10, 10);
+      e.onPointer?.(30, 25);
+      e.frame(16);
+      e.onPointerLeave?.();
+      e.frame(32);
+    }).not.toThrow();
+  });
+
   it('dispose is idempotent', () => {
     const e = createInteractiveGridEffect();
     const canvas = document.createElement('canvas');

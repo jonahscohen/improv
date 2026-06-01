@@ -1,0 +1,29 @@
+{
+  "id": "halftone-post",
+  "name": "Halftone (Post)",
+  "category": "post-process",
+  "layerRole": "post",
+  "params": [
+    { "name": "scene", "type": "select", "default": "Indicium", "options": ["Indicium", "Violet Abyss", "Emerald Depth", "Crimson Forge", "Regent", "Custom"] },
+    { "name": "baseColor1", "type": "color", "default": "#030618" },
+    { "name": "baseColor2", "type": "color", "default": "#1040a0" },
+    { "name": "baseColor3", "type": "color", "default": "#78b0dc" },
+    { "name": "baseColor4", "type": "color", "default": "#A0C4E8" },
+    { "name": "fluidInfluence", "type": "range", "default": 0.3, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "turbulence", "type": "range", "default": 0.1, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "highlight", "type": "range", "default": 1.2, "min": 0.1, "max": 2, "step": 0.01 },
+    { "name": "midtone", "type": "range", "default": 1.5, "min": 0.1, "max": 2, "step": 0.01 },
+    { "name": "shadow", "type": "range", "default": 1.0, "min": 0.1, "max": 2, "step": 0.01 },
+    { "name": "dotSize", "type": "range", "default": 12, "min": 4, "max": 60, "step": 1 },
+    { "name": "gridAngle", "type": "range", "default": 15, "min": 0, "max": 90, "step": 1 },
+    { "name": "contrast", "type": "range", "default": 1.0, "min": 0.2, "max": 3, "step": 0.01 },
+    { "name": "softness", "type": "range", "default": 0.4, "min": 0, "max": 1, "step": 0.01 },
+    { "name": "invert", "type": "toggle", "default": false }
+  ],
+  "requiredAssets": [],
+  "origin": "https://github.com/regent (halftone); post-overlay variant dots the composited layers beneath it",
+  "license": "MIT",
+  "attribution": "regent",
+  "redistribution": "ok",
+  "tags": ["three", "webgl", "halftone", "fluid", "post-process", "pointer", "dots", "post-overlay"]
+}

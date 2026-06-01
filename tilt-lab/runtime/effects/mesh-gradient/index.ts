@@ -1,5 +1,6 @@
 import type { Effect, EffectOpts } from '../../types';
 import * as THREE from 'three';
+import { MESH_SCENE_NAMES, MESH_SCENE_PALETTES, DEFAULT_MESH_COLORS } from './presets';
 
 /**
  * Mesh Gradient - a 200x200 subdivided plane displaced and colored in the
@@ -167,16 +168,11 @@ void main() {
 }
 `;
 
-// The 5 built-in scene presets, verbatim from the regent original
-// (app/(app)/tools/mesh-gradient/presets.ts). Each is a 5-stop palette.
-const SCENE_PRESETS: string[][] = [
-  ['#8ecae6', '#219ebc', '#023047', '#ffb703', '#fb8500'],
-  ['#1de9b6', '#0d6b4e', '#7c4dff', '#00e5ff', '#0a0f1a'],
-  ['#0e4d64', '#0d2f5c', '#1a6b7a', '#0a3d6b', '#020408'],
-  ['#00d4ff', '#003366', '#0088cc', '#66bbdd', '#010108'],
-  ['#e64a19', '#8b0000', '#ff8f00', '#ffeb3b', '#050000'],
-];
-const DEFAULT_COLORS = SCENE_PRESETS[0].slice();
+// Scene presets live in ./presets (single source, shared with the playground
+// store's preset-expansion). SCENE_PRESETS is the array-of-palettes form the
+// effect indexes by scene name/index.
+const SCENE_PRESETS = MESH_SCENE_PALETTES;
+const DEFAULT_COLORS = DEFAULT_MESH_COLORS;
 
 function toColorArray(stops: string[]): { colors: THREE.Vector3[]; count: number } {
   const count = Math.min(Math.max(stops.length, 1), 5);
@@ -227,7 +223,7 @@ export function createMeshGradientEffect(): Effect {
 
       // scene preset selects a palette by name (or numeric index); explicit
       // colorStops / colorN override it. "Custom" leaves DEFAULT_COLORS.
-      const sceneNames = ['Default', 'Aurora', 'Deep Ocean', 'Regent', 'Molten'];
+      const sceneNames: readonly string[] = MESH_SCENE_NAMES;
       const sceneVal = opts.params.scene;
       if (sceneVal != null && String(sceneVal) !== 'Custom') {
         let si = sceneNames.indexOf(String(sceneVal));
@@ -322,7 +318,7 @@ export function createMeshGradientEffect(): Effect {
           // Named presets apply the full 5-stop palette, exactly as the
           // original MeshGradientControls.selectScene. "Custom" leaves the
           // per-color pickers in control.
-          const names = ['Default', 'Aurora', 'Deep Ocean', 'Regent', 'Molten'];
+          const names: readonly string[] = MESH_SCENE_NAMES;
           const sval = String(value);
           if (sval === 'Custom' || sval === '-1') break;
           let idx = names.indexOf(sval);

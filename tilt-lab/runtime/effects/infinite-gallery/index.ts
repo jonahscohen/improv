@@ -465,19 +465,33 @@ export function createInfiniteGalleryEffect(): Effect {
       }
     },
 
-    onPointer(x: number, y: number) {
+    // Scroll is the primary input (verbatim original): wheel deltaY feeds the
+    // scroll velocity integrator that frame() advances. Scroll down -> tunnel
+    // moves forward. Decays by the same 0.95 friction inside frame().
+    onWheel(deltaY: number) {
       if (dead) return;
       lastInputT = prevT;
-      if (isNaN(x) || isNaN(y)) {
+      scrollVelocity += deltaY * 0.01;
+    },
+
+    // A click-drag also scrubs the tunnel; a bare hover does not. Drag down
+    // scrolls forward, mirroring wheel-fed scrollVelocity.
+    onPointer(x: number, y: number, pressed?: boolean) {
+      if (dead) return;
+      if (!pressed || isNaN(x) || isNaN(y)) {
         lastPointerY = NaN;
         return;
       }
+      lastInputT = prevT;
       if (!isNaN(lastPointerY)) {
         const dy = y - lastPointerY;
-        // Drag down scrolls the tunnel forward; mirrors wheel-fed scrollVelocity.
         scrollVelocity += dy * 0.02;
       }
       lastPointerY = y;
+    },
+
+    onPointerLeave() {
+      lastPointerY = NaN;
     },
 
     dispose() {

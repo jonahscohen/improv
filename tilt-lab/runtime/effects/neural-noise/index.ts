@@ -1,5 +1,27 @@
-import { Renderer, Transform, Triangle, Program, Mesh, Vec2 } from 'ogl';
+import { Renderer, Transform, Triangle, Program, Mesh, Vec2, Vec3 } from 'ogl';
 import type { Effect, EffectOpts } from '../../types';
+
+/** Parse '#rgb' / '#rrggbb' into a 0..1 rgb triple (defaults to white). */
+function hexToRgb(hex: string): [number, number, number] {
+  if (typeof hex === 'string' && hex.startsWith('#')) {
+    const c = hex.slice(1);
+    if (c.length === 3) {
+      return [
+        parseInt(c[0] + c[0], 16) / 255,
+        parseInt(c[1] + c[1], 16) / 255,
+        parseInt(c[2] + c[2], 16) / 255,
+      ];
+    }
+    if (c.length >= 6) {
+      return [
+        parseInt(c.slice(0, 2), 16) / 255,
+        parseInt(c.slice(2, 4), 16) / 255,
+        parseInt(c.slice(4, 6), 16) / 255,
+      ];
+    }
+  }
+  return [1, 1, 1];
+}
 
 // Ported verbatim from Motion Core (github.com/motion-core/motion-core), neural-noise.
 // A hardcoded Compositional Pattern Producing Network (CPPN): a fixed multi-layer
@@ -23,6 +45,18 @@ precision highp float;
 #endif
 uniform float uTime;
 uniform vec2 uResolution;
+// Interactivity + appearance customization (all wrap the verbatim CPPN core;
+// none of them touch cppn_fn). uPointer is in vUv space [0,1].
+uniform vec2 uPointer;
+uniform float uPointerActive;
+uniform float uPressed;
+uniform float uScale;
+uniform float uWarp;
+uniform float uPointerStrength;
+uniform float uBrightness;
+uniform float uContrast;
+uniform vec3 uTint;
+uniform float uTintStrength;
 varying vec2 vUv;
 
 vec4 buf[8];
@@ -65,9 +99,32 @@ void main() {
   vec2 uv = vUv * 2.0 - 1.0;
   uv.y *= -1.0;
 
-  vec4 color = cppn_fn(uv, 0.1 * sin(0.3 * uTime), 0.1 * sin(0.69 * uTime), 0.1 * sin(0.44 * uTime));
+  // Appearance: zoom around center (uScale > 1 magnifies the field).
+  uv /= max(uScale, 0.0001);
 
-  gl_FragColor = vec4(color.rgb, 1.0);
+  // Pointer mapped into the same space as uv.
+  vec2 ptr = uPointer * 2.0 - 1.0;
+  ptr.y *= -1.0;
+  vec2 toPtr = ptr - uv;
+  float dist = length(toPtr);
+
+  // Cursor warps the field toward itself (radial falloff), stronger while pressed.
+  float warpInfl = uPointerActive * uWarp * exp(-dist * dist * 3.0) * (1.0 + uPressed);
+  uv += toPtr * warpInfl;
+
+  // Cursor also brightens the network locally by nudging two CPPN inputs.
+  float glow = uPointerActive * uPointerStrength * exp(-dist * dist * 4.0) * (1.0 + uPressed);
+
+  vec4 color = cppn_fn(uv, 0.1 * sin(0.3 * uTime) + glow, 0.1 * sin(0.69 * uTime), 0.1 * sin(0.44 * uTime) + glow);
+
+  // Appearance: contrast about mid-grey, brightness, then tint toward uTint.
+  vec3 c = color.rgb;
+  c = (c - 0.5) * uContrast + 0.5;
+  c *= uBrightness;
+  c = mix(c, c * uTint, uTintStrength);
+  c = clamp(c, 0.0, 1.0);
+
+  gl_FragColor = vec4(c, 1.0);
 }`;
 
 export function createNeuralNoiseEffect(): Effect {
@@ -77,19 +134,70 @@ export function createNeuralNoiseEffect(): Effect {
   let program: Program | null = null;
   let dead = false;
   let speed = 1;
+  // Host-pixel dimensions, kept so the pointer can be normalized into vUv space.
+  let vw = 1;
+  let vh = 1;
   const uniforms: Record<string, { value: unknown }> = {
     uTime: { value: 0 },
     uResolution: { value: new Vec2(1, 1) },
+    uPointer: { value: new Vec2(0.5, 0.5) },
+    uPointerActive: { value: 0 },
+    uPressed: { value: 0 },
+    uScale: { value: 1 },
+    uWarp: { value: 0.4 },
+    uPointerStrength: { value: 0.6 },
+    uBrightness: { value: 1 },
+    uContrast: { value: 1 },
+    uTint: { value: new Vec3(1, 1, 1) },
+    uTintStrength: { value: 0 },
   };
+
+  // Apply a customization param to its uniform (shared by init + setParam).
+  function applyParam(key: string, value: unknown): void {
+    switch (key) {
+      case 'speed':
+        speed = Number(value);
+        break;
+      case 'scale':
+        uniforms.uScale.value = Number(value);
+        break;
+      case 'warp':
+        uniforms.uWarp.value = Number(value);
+        break;
+      case 'pointerStrength':
+        uniforms.uPointerStrength.value = Number(value);
+        break;
+      case 'brightness':
+        uniforms.uBrightness.value = Number(value);
+        break;
+      case 'contrast':
+        uniforms.uContrast.value = Number(value);
+        break;
+      case 'tintStrength':
+        uniforms.uTintStrength.value = Number(value);
+        break;
+      case 'tint': {
+        const [r, g, b] = hexToRgb(String(value));
+        (uniforms.uTint.value as Vec3).set(r, g, b);
+        break;
+      }
+      default:
+        break;
+    }
+  }
 
   return {
     init(canvas: HTMLCanvasElement, opts: EffectOpts) {
+      // Seed customization uniforms from params before the GL probe, so a
+      // headless context (no WebGL) still carries the resolved values.
+      for (const key of ['speed', 'scale', 'warp', 'pointerStrength', 'brightness', 'contrast', 'tintStrength', 'tint']) {
+        if (opts.params[key] != null) applyParam(key, opts.params[key]);
+      }
       const probe = canvas.getContext('webgl2') || canvas.getContext('webgl');
       if (!probe) {
         dead = true;
         return;
       }
-      if (opts.params.speed != null) speed = Number(opts.params.speed);
 
       const dpr = Math.min(2, (typeof globalThis !== 'undefined' && (globalThis as { devicePixelRatio?: number }).devicePixelRatio) || 1);
       renderer = new Renderer({ canvas, alpha: true, dpr });
@@ -107,13 +215,26 @@ export function createNeuralNoiseEffect(): Effect {
       renderer.render({ scene });
     },
     resize(w: number, h: number) {
+      // Record host size first so the pointer maps correctly regardless of GL state.
+      vw = w || 1;
+      vh = h || 1;
       if (dead || !renderer) return;
       renderer.setSize(w, h);
       const gl = renderer.gl;
       (uniforms.uResolution.value as Vec2).set(gl.drawingBufferWidth, gl.drawingBufferHeight);
     },
     setParam(key: string, value: unknown) {
-      if (key === 'speed') speed = Number(value);
+      applyParam(key, value);
+    },
+    onPointer(x: number, y: number, pressed?: boolean) {
+      // Normalize to vUv space [0,1] (y up); the shader re-applies uv's transform.
+      (uniforms.uPointer.value as Vec2).set(x / vw, 1 - y / vh);
+      uniforms.uPointerActive.value = 1;
+      uniforms.uPressed.value = pressed ? 1 : 0;
+    },
+    onPointerLeave() {
+      uniforms.uPointerActive.value = 0;
+      uniforms.uPressed.value = 0;
     },
     dispose() {
       if (mesh) mesh.setParent(null);

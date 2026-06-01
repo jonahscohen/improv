@@ -3,11 +3,16 @@ import type { Effect, EffectOpts } from '../../types';
 
 // Ported verbatim from Motion Core (github.com/motion-core/motion-core), water-ripple.
 // Original Svelte/OGL Scene owns a requestAnimationFrame tick; tilt-lab drives
-// frame(t) externally and forwards the cursor through onPointer(x, y).
+// frame(t) externally and forwards the cursor through onPointer / onPointerDown.
 // A pool of additive brush Planes is stamped at the cursor into an offscreen
-// displacement RenderTarget; the main pass reads it and offsets the image UV.
-// Needs a CORS-enabled image (assets.image) and a brush PNG (assets["water-ripple-brush"]).
-// MIT-licensed; ok here.
+// displacement RenderTarget; the main pass reads it and offsets the source UV.
+//
+// As a `post` layer this ripples the LAYERS BENEATH it: the compositor hands the
+// beneath-composite to onBeneath() every frame and we upload it as uTexture, so
+// moving/pressing the cursor distorts whatever is stacked below. With no compositor
+// (standalone <tilt-water-ripple>) it falls back to its bundled `image` asset, so
+// the effect still works on its own with an uploaded/sample image.
+// Needs a brush PNG (assets["water-ripple-brush"]). MIT-licensed; ok here.
 
 const MAX_WAVES = 100;
 
@@ -95,6 +100,26 @@ export function createWaterRippleEffect(): Effect {
     uTextureSize: { value: new Vec2(1, 1) },
   };
 
+  // Stamp a fresh brush wave at canvas-relative (x, y). Shared by the move path
+  // (onPointer, throttled by distance) and the discrete press path (onPointerDown).
+  function spawnWave(x: number, y: number) {
+    if (dead || !brushCamera) return;
+    // Centered, y-up coordinates in the brush camera space.
+    const cx = x - w / 2;
+    const cy = h / 2 - y;
+    const wave = waves[waveCursor];
+    waveCursor = (waveCursor + 1) % MAX_WAVES;
+    if (!wave) return;
+    wave.active = true;
+    wave.opacity = 1;
+    wave.scaleX = 0.1;
+    wave.mesh.visible = true;
+    wave.mesh.position.set(cx, cy, 0);
+    wave.mesh.rotation.z = (Math.random() * 2 - 1) * Math.PI;
+    wave.mesh.scale.set(brushSize * wave.scaleX, brushSize, 1);
+    lastPx = { x, y };
+  }
+
   return {
     init(canvas: HTMLCanvasElement, opts: EffectOpts) {
       const probe = canvas.getContext('webgl2') || canvas.getContext('webgl');
@@ -168,26 +193,29 @@ export function createWaterRippleEffect(): Effect {
     },
     onPointer(x: number, y: number) {
       if (dead || !brushCamera) return;
+      // Throttle to one wave per ~4px of travel (the original's move threshold).
       if (lastPx) {
         const dx = x - lastPx.x;
         const dy = y - lastPx.y;
         if (Math.sqrt(dx * dx + dy * dy) < 4) return;
       }
-      lastPx = { x, y };
-
-      // Centered, y-up coordinates in the brush camera space.
-      const cx = x - w / 2;
-      const cy = h / 2 - y;
-      const wave = waves[waveCursor];
-      waveCursor = (waveCursor + 1) % MAX_WAVES;
-      if (!wave) return;
-      wave.active = true;
-      wave.opacity = 1;
-      wave.scaleX = 0.1;
-      wave.mesh.visible = true;
-      wave.mesh.position.set(cx, cy, 0);
-      wave.mesh.rotation.z = (Math.random() * 2 - 1) * Math.PI;
-      wave.mesh.scale.set(brushSize * wave.scaleX, brushSize, 1);
+      spawnWave(x, y);
+    },
+    onPointerDown(x: number, y: number) {
+      // A discrete press always drops a ripple at the click, even when still.
+      spawnWave(x, y);
+    },
+    onBeneath(source: HTMLCanvasElement) {
+      // The compositor delivers the composited scene beneath this post layer.
+      // Upload it as the texture the ripple distorts; uTextureSize drives the
+      // cover-fit UV (the canvas is viewport-sized, so it maps ~1:1).
+      if (dead || !imageTexture) return;
+      const sw = source.width || w;
+      const sh = source.height || h;
+      if (sw < 1 || sh < 1) return;
+      imageTexture.image = source;
+      imageTexture.needsUpdate = true;
+      (mainUniforms.uTextureSize.value as Vec2).set(sw, sh);
     },
     frame(t: number) {
       if (dead || !renderer || !mainScene || !brushScene || !brushCamera || !target) return;
