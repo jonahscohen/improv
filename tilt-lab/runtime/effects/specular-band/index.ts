@@ -1,5 +1,6 @@
 import { Renderer, Transform, Triangle, Program, Mesh, Vec2, Vec3 } from 'ogl';
 import type { Effect, EffectOpts } from '../../types';
+import { parseHexColor } from '../../color';
 
 // Ported verbatim from Motion Core (github.com/motion-core/motion-core), specular-band.
 // Original Svelte/OGL Scene owns a requestAnimationFrame tick; tilt-lab drives
@@ -20,6 +21,7 @@ uniform float uTime;
 uniform vec2 uResolution;
 uniform vec3 uColor;
 uniform vec3 uBackgroundColor;
+uniform float uBackgroundAlpha;
 uniform float uSpeed;
 uniform float uDistortion;
 uniform float uHueShift;
@@ -78,7 +80,9 @@ void mainImage(out vec4 o, vec2 uv) {
   vec3 bands = col * uIntensity;
   float softMask = 1.0 - exp(-0.85 * edgeField * uIntensity);
   vec3 rgb = blendAdaptive(uBackgroundColor, bands, softMask);
-  o = vec4(rgb, 1.0);
+  // Bands stay opaque; the background fades to uBackgroundAlpha so a translucent
+  // background colour reveals the layer beneath.
+  o = vec4(rgb, mix(uBackgroundAlpha, 1.0, softMask));
 }
 void main() {
   vec4 fragColor;
@@ -121,6 +125,7 @@ export function createSpecularBandEffect(): Effect {
     uResolution: { value: new Vec2(1, 1) },
     uColor: { value: new Vec3(...hexToLinear('#FF6900')) },
     uBackgroundColor: { value: new Vec3(...hexToLinear('#17181A')) },
+    uBackgroundAlpha: { value: 1 },
     uSpeed: { value: 1 },
     uDistortion: { value: 0.2 },
     uHueShift: { value: 30 },
@@ -140,7 +145,10 @@ export function createSpecularBandEffect(): Effect {
         uniforms.uSpeed.value = speed;
       }
       if (pr.color != null) (uniforms.uColor.value as Vec3).set(...hexToLinear(String(pr.color)));
-      if (pr.backgroundColor != null) (uniforms.uBackgroundColor.value as Vec3).set(...hexToLinear(String(pr.backgroundColor)));
+      if (pr.backgroundColor != null) {
+        (uniforms.uBackgroundColor.value as Vec3).set(...hexToLinear(String(pr.backgroundColor)));
+        uniforms.uBackgroundAlpha.value = parseHexColor(pr.backgroundColor).a;
+      }
       if (pr.distortion != null) uniforms.uDistortion.value = Number(pr.distortion);
       if (pr.hueShift != null) uniforms.uHueShift.value = Number(pr.hueShift);
       if (pr.intensity != null) uniforms.uIntensity.value = Number(pr.intensity);
@@ -172,7 +180,10 @@ export function createSpecularBandEffect(): Effect {
         speed = Number(value);
         uniforms.uSpeed.value = speed;
       } else if (key === 'color') (uniforms.uColor.value as Vec3).set(...hexToLinear(String(value)));
-      else if (key === 'backgroundColor') (uniforms.uBackgroundColor.value as Vec3).set(...hexToLinear(String(value)));
+      else if (key === 'backgroundColor') {
+        (uniforms.uBackgroundColor.value as Vec3).set(...hexToLinear(String(value)));
+        uniforms.uBackgroundAlpha.value = parseHexColor(value).a;
+      }
       else if (key === 'distortion') uniforms.uDistortion.value = Number(value);
       else if (key === 'hueShift') uniforms.uHueShift.value = Number(value);
       else if (key === 'intensity') uniforms.uIntensity.value = Number(value);

@@ -24,8 +24,9 @@ Pattern: parse the bg color's alpha (parseHexColor(...).a), add a uBackgroundAlp
 
 DONE + Chrome-verified: **halo.backgroundColor**. Added uBackgroundAlpha; line 181 (pure bg) outputs vec4(bg, uBackgroundAlpha), the halo line outputs mix(uBackgroundAlpha, 1.0, softMask) so the glow stays solid but the dark background fades. Verified: stacked Globe(midground, back) + Halo(background, front); dropped Halo bg alpha to #17181A73 -> the dotted globe shows through Halo's dark background while the ring glows on top. (renderer already alpha:true.)
 
+DONE + Chrome-verified: **specular-band.backgroundColor** (same pattern as halo; output alpha = mix(uBackgroundAlpha, 1.0, softMask)). Stacked Globe + Specular Band, dropped bg alpha to #17181A73 -> globe shows through the dark background while the orange bands flow on top.
+
 REMAINING bg-color params, by tractability:
-- alpha:true, clean bg output -> specular-band.backgroundColor (same pattern as halo).
 - already output vec4(color, opacity) -> aurora.skyColor1/2, grain-gradient.colorBack, neuro-noise.colorBack (modulate output alpha where the bg colour dominates; more entangled - the whole field is "the colour").
 - context is alpha:FALSE (opaque) -> swarm (Canvas2D alpha:false), dithered-image (OGL alpha:false, and it's a POST effect that already composites over beneath) -> need a context-mode change; assess vs risk.
 - fluid.bgColor -> bg is mixed into the sim output, not a clean region; hardest.
