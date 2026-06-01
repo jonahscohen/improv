@@ -29,5 +29,8 @@ Current 22 catalog effects + fractal-glass-post + halftone-post (user-requested 
 ## Expect de-branding
 tilt-verify (verify/) is the de-branded expect-inspired harness; no expect branding present (grep clean). This is "our own custom rolled tool" per the directive.
 
-## NEXT (this turn)
-Commit + push the entire interactivity overhaul. Stand down idle agents (fid-mc-b live pane; fx-fluid/fx-mc-post/fx-mc-scroll/fx-globe/fx-presets/preset-registry idle) + TeamDelete tilt-deploy/tilt-tasks.
+## DONE (this turn)
+Committed + pushed: d05848e -> main (110 files; 3 deletions staged as D and gone from tree; no node_modules; tsc 0, 228 tests). Build gate green before commit.
+
+## NEXT
+Stand down idle agents (fid-mc-b live pane; fx-fluid/fx-mc-post/fx-mc-scroll/fx-globe/fx-presets/preset-registry idle) + TeamDelete tilt-deploy/tilt-tasks.

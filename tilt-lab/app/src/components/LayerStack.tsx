@@ -151,6 +151,19 @@ function ChannelCard({
             />
           </div>
 
+          {manifest?.interactions && manifest.interactions.length > 0 && (
+            <div className="channel__interactions">
+              <span className="channel__interactions-label meta">Interactions</span>
+              <ul className="channel__interactions-list">
+                {manifest.interactions.map((hint) => (
+                  <li key={hint} className="channel__interaction">
+                    {hint}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {manifest && manifest.params.length > 0 && (
             <ParamControls
               specs={manifest.params}

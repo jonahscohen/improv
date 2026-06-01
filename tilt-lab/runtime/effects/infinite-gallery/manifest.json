@@ -4,29 +4,152 @@
   "category": "gallery",
   "layerRole": "midground",
   "params": [
-    { "name": "image0", "type": "file", "default": "" },
-    { "name": "image1", "type": "file", "default": "" },
-    { "name": "image2", "type": "file", "default": "" },
-    { "name": "image3", "type": "file", "default": "" },
-    { "name": "image4", "type": "file", "default": "" },
-    { "name": "image5", "type": "file", "default": "" },
-    { "name": "speed", "type": "range", "default": 1, "min": 0, "max": 5, "step": 0.1 },
-    { "name": "visibleCount", "type": "range", "default": 8, "min": 2, "max": 16, "step": 1 },
-    { "name": "fadeInStart", "type": "range", "default": 0.05, "min": 0, "max": 1, "step": 0.01 },
-    { "name": "fadeInEnd", "type": "range", "default": 0.15, "min": 0, "max": 1, "step": 0.01 },
-    { "name": "fadeOutStart", "type": "range", "default": 0.85, "min": 0, "max": 1, "step": 0.01 },
-    { "name": "fadeOutEnd", "type": "range", "default": 0.95, "min": 0, "max": 1, "step": 0.01 },
-    { "name": "blurInStart", "type": "range", "default": 0, "min": 0, "max": 1, "step": 0.01 },
-    { "name": "blurInEnd", "type": "range", "default": 0.1, "min": 0, "max": 1, "step": 0.01 },
-    { "name": "blurOutStart", "type": "range", "default": 0.9, "min": 0, "max": 1, "step": 0.01 },
-    { "name": "blurOutEnd", "type": "range", "default": 1, "min": 0, "max": 1, "step": 0.01 },
-    { "name": "maxBlur", "type": "range", "default": 3, "min": 0, "max": 10, "step": 0.1 },
-    { "name": "autoplay", "type": "toggle", "default": true }
+    {
+      "name": "image0",
+      "type": "file",
+      "default": ""
+    },
+    {
+      "name": "image1",
+      "type": "file",
+      "default": ""
+    },
+    {
+      "name": "image2",
+      "type": "file",
+      "default": ""
+    },
+    {
+      "name": "image3",
+      "type": "file",
+      "default": ""
+    },
+    {
+      "name": "image4",
+      "type": "file",
+      "default": ""
+    },
+    {
+      "name": "image5",
+      "type": "file",
+      "default": ""
+    },
+    {
+      "name": "speed",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 5,
+      "step": 0.1
+    },
+    {
+      "name": "visibleCount",
+      "type": "range",
+      "default": 8,
+      "min": 2,
+      "max": 16,
+      "step": 1
+    },
+    {
+      "name": "fadeInStart",
+      "type": "range",
+      "default": 0.05,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "fadeInEnd",
+      "type": "range",
+      "default": 0.15,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "fadeOutStart",
+      "type": "range",
+      "default": 0.85,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "fadeOutEnd",
+      "type": "range",
+      "default": 0.95,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "blurInStart",
+      "type": "range",
+      "default": 0,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "blurInEnd",
+      "type": "range",
+      "default": 0.1,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "blurOutStart",
+      "type": "range",
+      "default": 0.9,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "blurOutEnd",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "maxBlur",
+      "type": "range",
+      "default": 3,
+      "min": 0,
+      "max": 10,
+      "step": 0.1
+    },
+    {
+      "name": "autoplay",
+      "type": "toggle",
+      "default": true
+    }
   ],
-  "requiredAssets": ["image0", "image1", "image2"],
+  "requiredAssets": [
+    "image0",
+    "image1",
+    "image2"
+  ],
   "origin": "https://github.com/motion-core/motion-core",
   "license": "MIT",
   "attribution": "motion-core (github.com/motion-core/motion-core)",
   "redistribution": "ok",
-  "tags": ["ogl", "webgl", "gallery", "3d", "scroll", "tunnel", "cloth", "blur", "midground", "widget"]
+  "tags": [
+    "ogl",
+    "webgl",
+    "gallery",
+    "3d",
+    "scroll",
+    "tunnel",
+    "cloth",
+    "blur",
+    "midground",
+    "widget"
+  ],
+  "interactions": [
+    "Scroll to travel through the gallery"
+  ]
 }

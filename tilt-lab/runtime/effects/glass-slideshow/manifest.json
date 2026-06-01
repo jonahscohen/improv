@@ -4,28 +4,148 @@
   "category": "slideshow",
   "layerRole": "midground",
   "params": [
-    { "name": "image0", "type": "file", "default": "" },
-    { "name": "image1", "type": "file", "default": "" },
-    { "name": "image2", "type": "file", "default": "" },
-    { "name": "image3", "type": "file", "default": "" },
-    { "name": "index", "type": "range", "default": 0, "min": 0, "max": 20, "step": 1 },
-    { "name": "transitionDuration", "type": "range", "default": 2000, "min": 200, "max": 8000, "step": 100 },
-    { "name": "autoplay", "type": "toggle", "default": true },
-    { "name": "autoplayInterval", "type": "range", "default": 5000, "min": 1000, "max": 15000, "step": 250 },
-    { "name": "intensity", "type": "range", "default": 1, "min": 0, "max": 3, "step": 0.05 },
-    { "name": "distortion", "type": "range", "default": 1, "min": 0, "max": 3, "step": 0.05 },
-    { "name": "speedMultiplier", "type": "range", "default": 1, "min": 0, "max": 4, "step": 0.05 },
-    { "name": "colorEnhancement", "type": "range", "default": 1, "min": 1, "max": 3, "step": 0.05 },
-    { "name": "refraction", "type": "range", "default": 1, "min": 0, "max": 3, "step": 0.05 },
-    { "name": "chromaticAberration", "type": "range", "default": 1, "min": 0, "max": 3, "step": 0.05 },
-    { "name": "bubbleClarity", "type": "range", "default": 1, "min": 0, "max": 3, "step": 0.05 },
-    { "name": "edgeGlow", "type": "range", "default": 1, "min": 0, "max": 3, "step": 0.05 },
-    { "name": "liquidFlow", "type": "range", "default": 1, "min": 0, "max": 3, "step": 0.05 }
+    {
+      "name": "image0",
+      "type": "file",
+      "default": ""
+    },
+    {
+      "name": "image1",
+      "type": "file",
+      "default": ""
+    },
+    {
+      "name": "image2",
+      "type": "file",
+      "default": ""
+    },
+    {
+      "name": "image3",
+      "type": "file",
+      "default": ""
+    },
+    {
+      "name": "index",
+      "type": "range",
+      "default": 0,
+      "min": 0,
+      "max": 20,
+      "step": 1
+    },
+    {
+      "name": "transitionDuration",
+      "type": "range",
+      "default": 2000,
+      "min": 200,
+      "max": 8000,
+      "step": 100
+    },
+    {
+      "name": "autoplay",
+      "type": "toggle",
+      "default": true
+    },
+    {
+      "name": "autoplayInterval",
+      "type": "range",
+      "default": 5000,
+      "min": 1000,
+      "max": 15000,
+      "step": 250
+    },
+    {
+      "name": "intensity",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 3,
+      "step": 0.05
+    },
+    {
+      "name": "distortion",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 3,
+      "step": 0.05
+    },
+    {
+      "name": "speedMultiplier",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 4,
+      "step": 0.05
+    },
+    {
+      "name": "colorEnhancement",
+      "type": "range",
+      "default": 1,
+      "min": 1,
+      "max": 3,
+      "step": 0.05
+    },
+    {
+      "name": "refraction",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 3,
+      "step": 0.05
+    },
+    {
+      "name": "chromaticAberration",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 3,
+      "step": 0.05
+    },
+    {
+      "name": "bubbleClarity",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 3,
+      "step": 0.05
+    },
+    {
+      "name": "edgeGlow",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 3,
+      "step": 0.05
+    },
+    {
+      "name": "liquidFlow",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 3,
+      "step": 0.05
+    }
   ],
-  "requiredAssets": ["image0", "image1"],
+  "requiredAssets": [
+    "image0",
+    "image1"
+  ],
   "origin": "https://github.com/motion-core/motion-core",
   "license": "MIT",
   "attribution": "motion-core (github.com/motion-core/motion-core)",
   "redistribution": "ok",
-  "tags": ["ogl", "webgl", "slideshow", "transition", "glass", "refraction", "chromatic-aberration", "midground", "widget"]
+  "tags": [
+    "ogl",
+    "webgl",
+    "slideshow",
+    "transition",
+    "glass",
+    "refraction",
+    "chromatic-aberration",
+    "midground",
+    "widget"
+  ],
+  "interactions": [
+    "Scroll or drag to move between slides"
+  ]
 }

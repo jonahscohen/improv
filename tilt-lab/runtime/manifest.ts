@@ -65,5 +65,9 @@ export function validateManifest(raw: unknown): Manifest {
     attribution: reqString(o, 'attribution'),
     redistribution,
     tags: Array.isArray(o.tags) ? (o.tags as string[]) : [],
+    interactions:
+      Array.isArray(o.interactions) && o.interactions.every((x) => typeof x === 'string')
+        ? (o.interactions as string[])
+        : undefined,
   };
 }

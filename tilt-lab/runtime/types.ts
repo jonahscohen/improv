@@ -42,6 +42,13 @@ export interface Manifest {
   attribution: string;
   redistribution: Redistribution;
   tags: string[];
+  /**
+   * Optional human-readable list of the pointer interactions this effect
+   * responds to (e.g. "Drag to spin", "Scroll to advance"). Surfaced in the
+   * composition panel so the user knows what each effect reacts to - most of
+   * these effects are interactive and that was previously invisible in the UI.
+   */
+  interactions?: string[];
 }
 
 /** Options passed to an effect at init: resolved param values + asset URLs. */

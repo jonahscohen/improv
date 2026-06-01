@@ -260,6 +260,44 @@
   padding: 0;
 }
 
+/* Interaction hints: how this effect responds to the pointer. Most effects are
+   interactive and that affordance was previously invisible in the UI - this
+   surfaces it per layer so the user knows what to drag / scroll / hover. */
+.channel__interactions {
+  display: grid;
+  gap: var(--sp-tight);
+  padding-top: var(--sp-sm);
+  border-top: 1px solid var(--line);
+}
+
+.channel__interactions-list {
+  display: grid;
+  gap: var(--sp-tight);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.channel__interaction {
+  position: relative;
+  padding-left: var(--sp-card);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+/* A small accent tick marks each line as a live affordance (red stays sparse). */
+.channel__interaction::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 5px;
+  height: 5px;
+  border-radius: var(--r-full);
+  background: var(--accent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .channel,
   .channel__handle,

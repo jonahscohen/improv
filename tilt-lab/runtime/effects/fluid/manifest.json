@@ -4,26 +4,134 @@
   "category": "simulation",
   "layerRole": "background",
   "params": [
-    { "name": "scene", "type": "select", "default": "Cosmic", "options": ["Cosmic", "Regent", "Inferno", "Void", "Monochrome", "Custom"] },
-    { "name": "quality", "type": "select", "default": "high", "options": ["ultra", "high", "medium", "low"] },
-    { "name": "solverIterations", "type": "range", "default": 20, "min": 5, "max": 40, "step": 1 },
-    { "name": "curl", "type": "range", "default": 0, "min": 0, "max": 50, "step": 1 },
-    { "name": "velocityDissipation", "type": "range", "default": 0.999, "min": 0.9, "max": 1, "step": 0.001 },
-    { "name": "splatRadius", "type": "range", "default": 0.015, "min": 0.001, "max": 0.02, "step": 0.001 },
-    { "name": "splatForce", "type": "range", "default": 1, "min": 0.1, "max": 5, "step": 0.1 },
-    { "name": "particleDrag", "type": "range", "default": 1, "min": 0.01, "max": 1, "step": 0.01 },
-    { "name": "showDye", "type": "toggle", "default": true },
-    { "name": "dyeAlpha", "type": "range", "default": 1, "min": 0, "max": 1, "step": 0.01 },
-    { "name": "dyeDissipation", "type": "range", "default": 0.97, "min": 0.9, "max": 1, "step": 0.001 },
-    { "name": "colorLow", "type": "color", "default": "#3D1545" },
-    { "name": "colorHigh", "type": "color", "default": "#2299FF" },
-    { "name": "colorGlow", "type": "color", "default": "#BBECFF" },
-    { "name": "bgColor", "type": "color", "default": "#000000" }
+    {
+      "name": "scene",
+      "type": "select",
+      "default": "Cosmic",
+      "options": [
+        "Cosmic",
+        "Regent",
+        "Inferno",
+        "Void",
+        "Monochrome",
+        "Custom"
+      ]
+    },
+    {
+      "name": "quality",
+      "type": "select",
+      "default": "high",
+      "options": [
+        "ultra",
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    {
+      "name": "solverIterations",
+      "type": "range",
+      "default": 20,
+      "min": 5,
+      "max": 40,
+      "step": 1
+    },
+    {
+      "name": "curl",
+      "type": "range",
+      "default": 0,
+      "min": 0,
+      "max": 50,
+      "step": 1
+    },
+    {
+      "name": "velocityDissipation",
+      "type": "range",
+      "default": 0.999,
+      "min": 0.9,
+      "max": 1,
+      "step": 0.001
+    },
+    {
+      "name": "splatRadius",
+      "type": "range",
+      "default": 0.015,
+      "min": 0.001,
+      "max": 0.02,
+      "step": 0.001
+    },
+    {
+      "name": "splatForce",
+      "type": "range",
+      "default": 1,
+      "min": 0.1,
+      "max": 5,
+      "step": 0.1
+    },
+    {
+      "name": "particleDrag",
+      "type": "range",
+      "default": 1,
+      "min": 0.01,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "showDye",
+      "type": "toggle",
+      "default": true
+    },
+    {
+      "name": "dyeAlpha",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "dyeDissipation",
+      "type": "range",
+      "default": 0.97,
+      "min": 0.9,
+      "max": 1,
+      "step": 0.001
+    },
+    {
+      "name": "colorLow",
+      "type": "color",
+      "default": "#3D1545"
+    },
+    {
+      "name": "colorHigh",
+      "type": "color",
+      "default": "#2299FF"
+    },
+    {
+      "name": "colorGlow",
+      "type": "color",
+      "default": "#BBECFF"
+    },
+    {
+      "name": "bgColor",
+      "type": "color",
+      "default": "#000000"
+    }
   ],
   "requiredAssets": [],
   "origin": "https://github.com/regent (fluid); upstream haxiomic/GPU-Fluid-Experiments",
   "license": "MIT",
   "attribution": "regent",
   "redistribution": "ok",
-  "tags": ["webgl", "fluid", "particles", "pointer", "generative", "additive"]
+  "tags": [
+    "webgl",
+    "fluid",
+    "particles",
+    "pointer",
+    "generative",
+    "additive"
+  ],
+  "interactions": [
+    "Drag to inject force and dye"
+  ]
 }

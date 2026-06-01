@@ -4,15 +4,58 @@
   "category": "image-distortion",
   "layerRole": "midground",
   "params": [
-    { "name": "grid", "type": "range", "default": 15, "min": 1, "max": 100, "step": 1 },
-    { "name": "mouseSize", "type": "range", "default": 0.15, "min": 0, "max": 1, "step": 0.01 },
-    { "name": "strength", "type": "range", "default": 0.35, "min": 0, "max": 2, "step": 0.01 },
-    { "name": "relaxation", "type": "range", "default": 0.9, "min": 0, "max": 0.99, "step": 0.01 }
+    {
+      "name": "grid",
+      "type": "range",
+      "default": 15,
+      "min": 1,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "name": "mouseSize",
+      "type": "range",
+      "default": 0.15,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "strength",
+      "type": "range",
+      "default": 0.35,
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "name": "relaxation",
+      "type": "range",
+      "default": 0.9,
+      "min": 0,
+      "max": 0.99,
+      "step": 0.01
+    }
   ],
-  "requiredAssets": ["image"],
+  "requiredAssets": [
+    "image"
+  ],
   "origin": "https://github.com/motion-core/motion-core (motion-core.dev/docs/interactive-grid)",
   "license": "MIT",
   "attribution": "Motion Core (github.com/motion-core/motion-core)",
   "redistribution": "ok",
-  "tags": ["webgl", "ogl", "image", "distortion", "pointer", "grid", "physics", "data-texture", "midground"]
+  "tags": [
+    "webgl",
+    "ogl",
+    "image",
+    "distortion",
+    "pointer",
+    "grid",
+    "physics",
+    "data-texture",
+    "midground"
+  ],
+  "interactions": [
+    "Move the cursor to distort the grid"
+  ]
 }
