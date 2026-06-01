@@ -1,5 +1,6 @@
 import type { Effect, EffectOpts } from '../../types';
 import { FLUID_PRESETS, FLUID_SCENE_NAMES } from './presets';
+import { rgb01 } from '../../color';
 
 /**
  * Fluid - raw WebGL1 stable-fluid sim (advect / mouse-force / divergence /
@@ -379,11 +380,10 @@ export function fluidClipFromPixel(
   return [(px / cw) * 2 - 1, ((ch - py) / ch) * 2 - 1];
 }
 
+// Shared parser handles 8-digit #rrggbbaa (a transparent colour from the picker)
+// without mis-shifting the channels; the sim uses RGB vec3, so alpha is dropped.
 function hexToVec3(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  const v = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
-  const n = parseInt(v, 16);
-  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+  return rgb01(hex);
 }
 
 function compile(gl: WebGLRenderingContext, type: number, src: string): WebGLShader | null {

@@ -17,6 +17,7 @@
  * until the consumer (which holds the renderer) calls createFluidSim/stepFluidSim.
  */
 import * as THREE from 'three';
+import { rgb01 } from '../color';
 
 /** Per-effect tuning constants (verbatim from each tool's MainScene constructor). */
 export interface FluidConstants {
@@ -153,10 +154,9 @@ vec3 curlNoise(vec3 p){
 // Helpers
 // ================================================================
 export function hexToLinearRGB(hex: string): [number, number, number] {
-  const c = parseInt(hex.replace('#', ''), 16);
-  const r = ((c >> 16) & 0xff) / 255;
-  const g = ((c >> 8) & 0xff) / 255;
-  const b = (c & 0xff) / 255;
+  // Shared parser handles 8-digit #rrggbbaa (transparent picker values) without
+  // mis-shifting; this returns linear RGB (alpha dropped) for the shaders.
+  const [r, g, b] = rgb01(hex);
   const toLinear = (v: number) =>
     v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
   return [toLinear(r), toLinear(g), toLinear(b)];

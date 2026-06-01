@@ -1,5 +1,6 @@
 import { Camera, Mesh, Program, Renderer, Texture, Transform, Triangle, Vec2, Vec3 } from 'ogl';
 import type { Effect, EffectOpts } from '../../types';
+import { rgb01 } from '../../color';
 
 /**
  * Globe (motion-core) - a Fresnel-lit dotted globe (Fibonacci lattice points
@@ -373,14 +374,13 @@ function srgbToLinearChannel(c: number): number {
 }
 
 function hexToLinearRgb(hex: string, fallback: [number, number, number]): [number, number, number] {
-  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
-  if (!m) return fallback;
-  const n = parseInt(m[1], 16);
-  return [
-    srgbToLinearChannel(((n >> 16) & 255) / 255),
-    srgbToLinearChannel(((n >> 8) & 255) / 255),
-    srgbToLinearChannel((n & 255) / 255),
-  ];
+  // Accept #rgb/#rrggbb/#rrggbbaa (the picker emits 8-digit for transparent
+  // values); fall back only on genuinely invalid input. Alpha is dropped (the
+  // shader takes linear RGB).
+  const s = String(hex).trim();
+  if (!/^#?[0-9a-f]{3,8}$/i.test(s)) return fallback;
+  const [r, g, b] = rgb01(s);
+  return [srgbToLinearChannel(r), srgbToLinearChannel(g), srgbToLinearChannel(b)];
 }
 
 function toBool(v: unknown, fallback: boolean): boolean {

@@ -1,5 +1,6 @@
 import type { Effect, EffectOpts } from '../../types';
 import * as THREE from 'three';
+import { rgb01 } from '../../color';
 import {
   createFluidSim,
   stepFluidSim,
@@ -112,10 +113,8 @@ interface GlassParams {
 // ---- Color derivation, ported verbatim from the regent original
 // (app/(app)/tools/fractal-glass/colorUtils.ts). ----
 function hexToHSL(hex: string): { h: number; s: number; l: number } {
-  const c = parseInt(hex.replace('#', ''), 16);
-  const r = ((c >> 16) & 0xff) / 255;
-  const g = ((c >> 8) & 0xff) / 255;
-  const b = (c & 0xff) / 255;
+  // Shared parser handles 8-digit #rrggbbaa (transparent picker values).
+  const [r, g, b] = rgb01(hex);
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   const l = (max + min) / 2;

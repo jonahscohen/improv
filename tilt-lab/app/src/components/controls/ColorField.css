@@ -1,5 +1,5 @@
-/* ColorField - styled native color input as a swatch + mono hex label.
-   Keeps 40px hit height; the inner swatch reads smaller via padding. */
+/* ColorField - alpha-aware swatch + alpha fader + mono hex label.
+   Keeps a 40px hit height; transparency reads against a checkerboard. */
 .tl-colorfield {
   display: inline-flex;
   align-items: center;
@@ -7,39 +7,105 @@
   min-height: var(--hit-min, 40px);
 }
 
-.tl-colorfield__swatch {
+/* Checkerboard backing so a translucent swatch reads as transparent, not as a
+   dark color. The native picker is overlaid on top, invisible but clickable. */
+.tl-colorfield__swatch-wrap {
+  position: relative;
   width: 44px;
   height: var(--hit-min, 40px);
-  padding: 4px;
-  margin: 0;
   border: 1px solid var(--line-2);
   border-radius: 6px;
-  background: var(--btn-bg);
+  overflow: hidden;
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #c9c9c9 25%, transparent 25%),
+    linear-gradient(-45deg, #c9c9c9 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #c9c9c9 75%),
+    linear-gradient(-45deg, transparent 75%, #c9c9c9 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+}
+
+.tl-colorfield__preview {
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+}
+
+/* The real <input type="color"> overlays the preview, invisible but clickable
+   and focusable so the OS picker still opens and a11y is preserved. */
+.tl-colorfield__swatch {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  opacity: 0;
   cursor: pointer;
 }
 
-.tl-colorfield__swatch::-webkit-color-swatch-wrapper {
-  padding: 0;
+.tl-colorfield__swatch-wrap:hover {
+  border-color: var(--accent);
 }
-
-.tl-colorfield__swatch::-webkit-color-swatch {
-  border: none;
-  border-radius: 3px;
-}
-
-.tl-colorfield__swatch::-moz-color-swatch {
-  border: none;
-  border-radius: 3px;
+.tl-colorfield__swatch-wrap:focus-within {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .tl-colorfield__swatch {
+  .tl-colorfield__swatch-wrap {
     transition: border-color 150ms ease;
   }
 }
 
-.tl-colorfield__swatch:hover {
-  border-color: var(--accent);
+/* Alpha fader: a hairline track that runs transparent -> the current color over
+   a checkerboard, so the slider itself previews the transparency range. */
+.tl-colorfield__alpha {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 56px;
+  height: var(--hit-min, 40px);
+  background: transparent;
+  cursor: pointer;
+}
+.tl-colorfield__alpha::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: var(--r-full, 999px);
+  background:
+    linear-gradient(to right, transparent, var(--cf-color, #fff)),
+    repeating-conic-gradient(#c9c9c9 0 25%, #fff 0 50%) 0 0 / 8px 8px;
+}
+.tl-colorfield__alpha::-moz-range-track {
+  height: 6px;
+  border-radius: var(--r-full, 999px);
+  background:
+    linear-gradient(to right, transparent, var(--cf-color, #fff)),
+    repeating-conic-gradient(#c9c9c9 0 25%, #fff 0 50%) 0 0 / 8px 8px;
+}
+.tl-colorfield__alpha::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 14px;
+  margin-top: -4px;
+  border-radius: 2px;
+  background: var(--text, #fff);
+  border: 1px solid var(--line-2);
+}
+.tl-colorfield__alpha::-moz-range-thumb {
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--text, #fff);
+  border: 1px solid var(--line-2);
+}
+.tl-colorfield__alpha:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm, 4px);
 }
 
 .tl-colorfield__hex {

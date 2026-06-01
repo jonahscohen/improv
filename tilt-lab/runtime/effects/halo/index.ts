@@ -1,5 +1,6 @@
 import { Renderer, Program, Mesh, Triangle, Vec2, Vec3 } from 'ogl';
 import type { Effect, EffectOpts } from '../../types';
+import { rgb01 } from '../../color';
 
 /**
  * Halo - procedural Rayleigh + Mie atmospheric-scattering halo with a rotating
@@ -201,14 +202,10 @@ function srgbToLinearChannel(c: number): number {
 }
 
 function hexToLinearRgb(hex: string): [number, number, number] {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return [0, 0, 0];
-  const n = parseInt(m[1], 16);
-  return [
-    srgbToLinearChannel(((n >> 16) & 255) / 255),
-    srgbToLinearChannel(((n >> 8) & 255) / 255),
-    srgbToLinearChannel((n & 255) / 255),
-  ];
+  // Shared parser handles 8-digit #rrggbbaa (transparent picker values); alpha
+  // is dropped here (the shader takes linear RGB).
+  const [r, g, b] = rgb01(hex, { r: 0, g: 0, b: 0, a: 1 });
+  return [srgbToLinearChannel(r), srgbToLinearChannel(g), srgbToLinearChannel(b)];
 }
 
 export function createHaloEffect(): Effect {

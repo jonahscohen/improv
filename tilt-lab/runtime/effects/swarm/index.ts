@@ -1,5 +1,6 @@
 import type { Effect, EffectOpts } from '../../types';
 import { SWARM_PRESETS, SWARM_SCENE_NAMES } from './presets';
+import { rgb255 } from '../../color';
 
 /**
  * Swarm - a grid of spring-return dots that the pointer attracts (or repels)
@@ -45,11 +46,10 @@ interface SwarmParams {
 // SWARM_PRESETS / SWARM_SCENE_NAMES imported from ./presets (single source of
 // truth, shared with the central preset registry). Indexed by scene order.
 
+// Shared parser handles 8-digit #rrggbbaa correctly (a transparent colour from
+// the picker). swarm works in 0..255 and uses RGB only, so alpha is dropped.
 function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  const v = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
-  const n = parseInt(v, 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return rgb255(hex);
 }
 
 // drawShape - verbatim Canvas2D path commands (regent drawShape()).

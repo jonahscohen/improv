@@ -1,6 +1,7 @@
 import createGlobe from 'cobe';
 import type { Effect, EffectOpts } from '../../types';
 import { PRESETS } from './presets';
+import { rgb01 } from '../../color';
 
 // ---------------------------------------------------------------------------
 // cobe null-program guard (third-party compatibility shim, installed once).
@@ -163,13 +164,11 @@ const DEFAULT_MARKERS: GlobeMarker[] = MARKER_SETS['SF + NYC (default)'];
 const LON_SIGN = 1;
 const PHI_SIGN = 1;
 
+// Delegates to the shared parser so 8-digit #rrggbbaa (from the transparent
+// color picker) yields the correct RGB instead of a mis-shifted value; cobe
+// takes an [r,g,b] triplet, so the alpha is dropped here.
 function hexToRgb(hex: string): [number, number, number] {
-  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return [1, 1, 1];
-  let h = m[1];
-  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
-  const n = parseInt(h, 16);
-  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+  return rgb01(hex);
 }
 
 function clamp(v: number, lo: number, hi: number): number {
