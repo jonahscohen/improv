@@ -40,6 +40,16 @@
   "hooks": {
     "PreToolUse": [
       {
+        "matcher": "mcp__claude_ai_ClickUp__clickup_",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/block-clickup-writes.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {
@@ -461,7 +471,10 @@
     },
     "peekaboo": {
       "command": "/opt/homebrew/bin/peekaboo",
-      "args": ["mcp", "serve"]
+      "args": [
+        "mcp",
+        "serve"
+      ]
     }
   }
 }
