@@ -91,4 +91,16 @@ My brand perl pass `(?<![/\w])claude-dotfiles(?![/\w]) -> Improv` wrongly capita
 5. KNOWN pre-existing issue (NOT from rename): sidecoach full build fails on `src/__tests__/t16-bench-ledger.test.ts` rootDir import. Fix the test/tsconfig, then `cd sidecoach && npm run build` for a clean dist.
 6. The install marker migration (`migrate_legacy_markers` in install.sh) handles pre-rename installs on next install/deactivate.
 
-Status: STAGE B complete except the folder move. Folder move executed last; session restart required.
+## RENAME COMPLETE (2026-06-08)
+- Folder moved: repo now at `~/Documents/Github/improv`.
+- Installed env re-pointed: `~/.claude.json` + `~/.zshrc` (0 old-path refs); ~70 `~/.claude` symlinks retargeted to /Github/improv. Fixed two retarget bugs: zsh `${x/a/b}` left a literal backslash (`Github\/improv`); lowercase `documents/github/claude-dotfiles` variant wasn't matched - both re-fixed via `sed 's#\\##g; s#/claude-dotfiles#/improv#g'`. Only 1 broken symlink left = `~/.claude/debug/latest` (pre-existing Claude Code debug pointer, unrelated).
+- Merged feat/rename-to-improv -> main (ff). main ahead of origin by 9, NOT pushed (consistent with this session's local-only pattern).
+- Figma title node retitled. gh repo renamed to jonahscohen/improv.
+
+### Remaining / for next session (clean restart in ~/Documents/Github/improv recommended - this session's cwd died on the move and fell back to /Users/spare3)
+1. `git push` when ready (remote = jonahscohen/improv; main ahead 9).
+2. PRE-EXISTING (not rename): sidecoach full build fails on t16-bench-ledger rootDir import; fix then `cd sidecoach && npm run build`.
+3. Cosmetic: Figma FILE NAME still "claude-dotfiles - Feature Tree" (rename in Figma UI).
+4. Re-running `./install.sh` from the new path will also re-point everything via migrate_legacy_markers + fresh symlinks if anything was missed.
+
+Status: DONE (local). Push pending user ask.
