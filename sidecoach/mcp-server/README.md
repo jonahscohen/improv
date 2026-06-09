@@ -62,7 +62,7 @@ version is portable across users.
     "sidecoach": {
       "command": "node",
       "args": [
-        "/Users/spare3/Documents/Github/claude-dotfiles/sidecoach/mcp-server/dist/index.js"
+        "/Users/spare3/Documents/Github/improv/sidecoach/mcp-server/dist/index.js"
       ],
       "env": {
         "SIDECOACH_MCP_LOG_LEVEL": "info"

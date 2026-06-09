@@ -2,7 +2,7 @@ import json, subprocess, os
 H = os.path.expanduser("~/.claude/hooks/justify-source-guard.sh")
 home = os.path.expanduser("~")
 inst = home + "/.claude/justify"
-dot = home + "/Documents/Github/claude-dotfiles/justify"
+dot = home + "/Documents/Github/improv/justify"
 
 # (label, tool, field, value, expect)
 cases = [

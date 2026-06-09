@@ -3,7 +3,7 @@
 # Spins up a temp HOME so tests don't touch the real ~/.claude state.
 
 set -e
-HOOK=/Users/spare3/Documents/Github/claude-dotfiles/claude/hooks/second-fix-gate.sh
+HOOK=/Users/spare3/Documents/Github/improv/claude/hooks/second-fix-gate.sh
 TMP=$(mktemp -d)
 mkdir -p "$TMP/.claude"
 export HOME="$TMP"

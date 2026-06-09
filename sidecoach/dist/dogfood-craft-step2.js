@@ -40,7 +40,7 @@ const sidecoach_orchestrator_1 = require("./sidecoach-orchestrator");
 const fs = __importStar(require("fs"));
 const os = __importStar(require("os"));
 const path = __importStar(require("path"));
-const projectPath = '/Users/spare3/Documents/Github/claude-dotfiles/marketing-site';
+const projectPath = '/Users/spare3/Documents/Github/improv/marketing-site';
 const outputFile = '/tmp/sidecoach-craft-output.md';
 const historyFile = path.join(os.homedir(), '.claude', 'sidecoach-flow-history.json');
 async function run() {
@@ -58,7 +58,7 @@ async function run() {
         metadata: { emitBuildReport: true },
     });
     const lines = [];
-    lines.push('# Sidecoach Craft Output - claude-dotfiles marketing-site');
+    lines.push('# Sidecoach Craft Output - Improv marketing-site');
     lines.push('');
     lines.push(`**Project:** \`${projectPath}\``);
     lines.push(`**Top-level success:** ${result.success}`);

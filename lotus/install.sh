@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Lotus installer - official claude-dotfiles component.
+# Lotus installer - official Improv component.
 # Lotus is a Figma plugin + MCP bridge (stdio MCP for Claude Code, WebSocket on
 # 9527 for the plugin running inside Figma). Unlike justify, the app is large and
 # is built IN PLACE in the repo (like tilt-lab) rather than copied to ~/.claude.

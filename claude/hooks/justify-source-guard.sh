@@ -1,7 +1,7 @@
 #!/bin/bash
 # PreToolUse guard. Prevents the 2026-06-08 incident: editing or building the
 # DEPLOYED Justify copy at ~/.claude/justify (a stale artifact) instead of the
-# source of truth at ~/Documents/Github/claude-dotfiles/justify. Rebuilding from
+# source of truth at ~/Documents/Github/improv/justify. Rebuilding from
 # the stale copy silently clobbers the served bundle (it was 543KB; a stale-source
 # rebuild produced 291KB, reverting the Manipulate-panel repair).
 #
@@ -12,7 +12,7 @@
 #   1. Write/Edit/MultiEdit whose file_path is under ~/.claude/justify/
 #   2. Bash that builds/deploys against ~/.claude/justify (node build.js /
 #      npm run build|deploy referencing that path, or `cd ~/.claude/justify` + a build)
-# Allows: the sanctioned dotfiles workflow (edit claude-dotfiles/justify, build there,
+# Allows: the sanctioned dotfiles workflow (edit improv/justify, build there,
 # run deploy.sh) and a manual recovery `cp` into the install dist.
 
 INPUT=$(cat)
@@ -32,7 +32,7 @@ tool = data.get("tool_name", "")
 inp  = data.get("tool_input", {})
 reason = ""
 
-POINTER = (" The source of truth is ~/Documents/Github/claude-dotfiles/justify/. "
+POINTER = (" The source of truth is ~/Documents/Github/improv/justify/. "
            "Edit the TS source there, run `node build.js --core-only`, then "
            "`bash deploy.sh --core-only` to sync into ~/.claude/justify. "
            "Never edit or rebuild ~/.claude/justify directly - it is a deployed "

@@ -1,8 +1,8 @@
 "use strict";
-// Dogfood runner: drives sidecoach end-to-end on the claude-dotfiles marketing site brief.
-// Brief: a brand-new marketing landing page for claude-dotfiles that advertises justify,
+// Dogfood runner: drives sidecoach end-to-end on the Improv marketing site brief.
+// Brief: a brand-new marketing landing page for Improv that advertises justify,
 // sidecoach, and memory tools, with links to two sub-pages (justify marketing + sidecoach
-// marketing). Use existing claude-dotfiles DESIGN.md tokens. New fonts selected by sidecoach.
+// marketing). Use existing Improv DESIGN.md tokens. New fonts selected by sidecoach.
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -39,11 +39,11 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const sidecoach_orchestrator_1 = require("./sidecoach-orchestrator");
 const fs = __importStar(require("fs"));
-const projectPath = '/Users/spare3/Documents/Github/claude-dotfiles';
+const projectPath = '/Users/spare3/Documents/Github/improv';
 const outputFile = '/tmp/sidecoach-dogfood-output.md';
-const brief = `Build a brand new marketing landing page for claude-dotfiles. The page advertises three primary products - justify, sidecoach, and the memory tools - and mentions other tools (Discord chat agent, voice output, voice transcription, cmux browser pane, reflect, design references). The index page links to two sub-pages: one marketing justify specifically, one marketing sidecoach specifically. Use the existing claude-dotfiles DESIGN.md tokens for colors and brand materials. New typefaces should be selected by the system (fontshare). Aesthetic register: brand (not product). Tone: professional, technical, restrained.`;
+const brief = `Build a brand new marketing landing page for Improv. The page advertises three primary products - justify, sidecoach, and the memory tools - and mentions other tools (Discord chat agent, voice output, voice transcription, cmux browser pane, reflect, design references). The index page links to two sub-pages: one marketing justify specifically, one marketing sidecoach specifically. Use the existing Improv DESIGN.md tokens for colors and brand materials. New typefaces should be selected by the system (fontshare). Aesthetic register: brand (not product). Tone: professional, technical, restrained.`;
 const phases = [
-    { flow: 'flowA_brand_verify', utterance: 'verify brand foundation for claude-dotfiles marketing site' },
+    { flow: 'flowA_brand_verify', utterance: 'verify brand foundation for Improv marketing site' },
     { flow: 'flowC_font_research', utterance: 'research typeface pairings via fontshare for restrained technical aesthetic' },
     { flow: 'flowB_component_research', utterance: 'research landing page hero + feature-grid + footer component patterns' },
     { flow: 'flowD_reference_inspiration', utterance: 'find design references for technical-product marketing pages' },
@@ -58,7 +58,7 @@ const phases = [
 async function run() {
     const engine = new sidecoach_orchestrator_1.FlowExecutionEngine();
     const lines = [];
-    lines.push('# Sidecoach Dogfood Output - claude-dotfiles marketing site');
+    lines.push('# Sidecoach Dogfood Output - Improv marketing site');
     lines.push('');
     lines.push(`**Brief:** ${brief}`);
     lines.push('');

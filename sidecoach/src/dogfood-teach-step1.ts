@@ -5,10 +5,10 @@ import { FlowExecutionEngine } from './sidecoach-orchestrator';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const projectPath = '/Users/spare3/Documents/Github/claude-dotfiles/marketing-site';
+const projectPath = '/Users/spare3/Documents/Github/improv/marketing-site';
 
 // User's verbatim brief from the prior session, lightly rephrased only to flow as one paragraph.
-const brief = `Build a brand new marketing landing page for the claude-dotfiles repo, advertising justify, sidecoach, and memory tools, as well as mentions of our other tools. The page links to two other pages, one for justify and one for sidecoach. Both pages serve as marketing pages for each. Use the existing claude-dotfiles DESIGN.md for color tokens and brand materials. The system chooses the new fonts.`;
+const brief = `Build a brand new marketing landing page for the Improv repo, advertising justify, sidecoach, and memory tools, as well as mentions of our other tools. The page links to two other pages, one for justify and one for sidecoach. Both pages serve as marketing pages for each. Use the existing Improv DESIGN.md for color tokens and brand materials. The system chooses the new fonts.`;
 
 async function run() {
   if (!fs.existsSync(projectPath)) {

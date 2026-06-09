@@ -109,7 +109,7 @@ async function run() {
     // T1.3: regression - existing sidecoach/PRODUCT.md still parses
     {
         const sandbox = mkSandbox();
-        const existing = fs.readFileSync('/Users/spare3/Documents/Github/claude-dotfiles/sidecoach/PRODUCT.md', 'utf-8');
+        const existing = fs.readFileSync('/Users/spare3/Documents/Github/improv/sidecoach/PRODUCT.md', 'utf-8');
         fs.writeFileSync(path.join(sandbox, 'PRODUCT.md'), existing, 'utf-8');
         const loader = new project_context_1.ContextLoader();
         const ctx = loader.load(sandbox);

@@ -892,7 +892,7 @@ deactivate_voice() {
 
 deactivate_discord() {
   if [ -f "$ZSHRC" ] && grep -Fq "discord-chat-launcher.sh" "$ZSHRC"; then
-    sed -i.bak '/# Discord Chat Agent launcher/d; /discord-chat-launcher\.sh.*claude-dotfiles/d' "$ZSHRC"
+    sed -i.bak '/# Discord Chat Agent launcher/d; /discord-chat-launcher\.sh.*improv/d' "$ZSHRC"
     rm -f "$ZSHRC.bak"
   fi
   local f
@@ -1085,7 +1085,7 @@ deactivate_design_skill() {
   [ -d "$CLAUDE_DIR/skills/$dir" ] && rm -rf "$CLAUDE_DIR/skills/$dir"
 }
 
-# 2026-06 rename migration (claude-dotfiles -> improv): pre-rename installs wrote
+# 2026-06 rename migration (improv -> improv): pre-rename installs wrote
 # marker tokens "claude-dotfiles:" into ~/.zshrc and ~/.claude/CLAUDE.md; the
 # renamed installer manages "improv:" markers, so rewrite any legacy tokens in
 # the user's installed files before detect/install/deactivate act on them.

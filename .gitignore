@@ -2,7 +2,7 @@
 .DS_Store
 **/.DS_Store
 claude/CLAUDE.local.md
-public/improv-core.js
+public/justify-core.js
 
 # transient / dependency dirs (added during tilt-lab work)
 node_modules/

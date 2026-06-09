@@ -135,8 +135,8 @@
           </p>
 
           <div class="install-block install-block--big" role="region" aria-label="Install command">
-            <pre class="install-block__cmd"><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash</code></pre>
-            <button class="install-block__copy" type="button" aria-label="Copy install command" data-copy="curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash">
+            <pre class="install-block__cmd"><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash</code></pre>
+            <button class="install-block__copy" type="button" aria-label="Copy install command" data-copy="curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash">
               <span class="install-block__copy-label">Copy</span>
             </button>
           </div>
@@ -171,7 +171,7 @@ ampersand --yes                 <span class="cm"># everything, non-interactive</
           <p>
             The dotfiles can live anywhere on disk. The Ghostty config uses a <code>__DOTFILES_DIR__</code> placeholder that the installer replaces at install time, so cloning to <code>~/code/dots</code>, <code>/opt/dots</code>, or anywhere else works.
           </p>
-          <pre class="codeblock"><code>CLAUDE_DOTFILES_DIR=~/code/dots curl -fsSL .../bootstrap.sh | bash    <span class="cm"># env var</span>
+          <pre class="codeblock"><code>IMPROV_DIR=~/code/dots curl -fsSL .../bootstrap.sh | bash    <span class="cm"># env var</span>
 curl -fsSL .../bootstrap.sh | bash -s -- --dir ~/code/dots             <span class="cm"># flag</span></code></pre>
           <p>
             Re-running <code>install.sh</code> from a new clone location refreshes the <code>ampersand</code> function's path automatically. No manual cleanup of the old <code>.zshrc</code> block required.
@@ -179,7 +179,7 @@ curl -fsSL .../bootstrap.sh | bash -s -- --dir ~/code/dots             <span cla
 
           <h3 id="install-onboarding" class="h3">Onboarding a new Yes&amp; dev</h3>
           <ol class="steplist">
-            <li><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash</code></li>
+            <li><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash</code></li>
             <li>TUI defaults, or <code>--preset all</code> to take everything.</li>
             <li>Open a new terminal (or <code>source ~/.zshrc</code>).</li>
             <li>Done. Same machine state as everyone else.</li>
@@ -860,14 +860,14 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
           </p>
 
           <h3 class="h3">Bootstrap-time flags</h3>
-          <pre class="codeblock"><code>curl -fsSL .../bootstrap.sh | bash                          <span class="cm"># default - clones to ~/Documents/Github/claude-dotfiles</span>
+          <pre class="codeblock"><code>curl -fsSL .../bootstrap.sh | bash                          <span class="cm"># default - clones to ~/Documents/Github/improv</span>
 curl -fsSL .../bootstrap.sh | bash -s -- --dir PATH         <span class="cm"># custom clone location</span>
 curl -fsSL .../bootstrap.sh | bash -s -- --yes              <span class="cm"># full non-interactive install after clone</span>
 curl -fsSL .../bootstrap.sh | bash -s -- --preset minimal   <span class="cm"># specific preset</span></code></pre>
 
           <p>Or with env vars:</p>
-          <pre class="codeblock"><code>CLAUDE_DOTFILES_DIR=~/code/dots \
-CLAUDE_DOTFILES_REPO=https://github.com/your-fork/claude-dotfiles.git \
+          <pre class="codeblock"><code>IMPROV_DIR=~/code/dots \
+IMPROV_REPO=https://github.com/your-fork/improv.git \
   curl -fsSL .../bootstrap.sh | bash</code></pre>
 
           <h3 class="h3">Installer flags</h3>
@@ -887,8 +887,8 @@ CLAUDE_DOTFILES_REPO=https://github.com/your-fork/claude-dotfiles.git \
             <table class="table">
               <thead><tr><th>Variable</th><th>Default</th><th>Purpose</th></tr></thead>
               <tbody>
-                <tr><td><code>CLAUDE_DOTFILES_DIR</code></td><td><code>~/Documents/Github/claude-dotfiles</code></td><td>Where the dotfiles repo lives on disk</td></tr>
-                <tr><td><code>CLAUDE_DOTFILES_REPO</code></td><td>github.com/jonahscohen/improv</td><td>Source repo for fresh clones</td></tr>
+                <tr><td><code>IMPROV_DIR</code></td><td><code>~/Documents/Github/improv</code></td><td>Where the dotfiles repo lives on disk</td></tr>
+                <tr><td><code>IMPROV_REPO</code></td><td>github.com/jonahscohen/improv</td><td>Source repo for fresh clones</td></tr>
                 <tr><td><code>REFLECT_THRESHOLD</code></td><td><code>15</code></td><td>New-memory count that triggers the <code>reflect-nudge</code> hook</td></tr>
                 <tr><td><code>CMUX_SOCKET_PASSWORD</code></td><td>(unset)</td><td>For cmux socket auth in scripted contexts</td></tr>
               </tbody>
@@ -1020,7 +1020,7 @@ CLAUDE_DOTFILES_REPO=https://github.com/your-fork/claude-dotfiles.git \
             <details class="faq__item">
               <summary class="faq__q">Fresh install on a new Mac, where do I start</summary>
               <div class="faq__a">
-                <pre class="codeblock"><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash</code></pre>
+                <pre class="codeblock"><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash</code></pre>
                 <p>Take TUI defaults. Open a new terminal. Done.</p>
               </div>
             </details>
@@ -1136,7 +1136,7 @@ CLAUDE_DOTFILES_REPO=https://github.com/your-fork/claude-dotfiles.git \
           <p>
             This reference goes deep. The <a href="../marketing/">marketing microsite</a> goes wide - the case for the system, not the inventory. The <a href="https://github.com/jonahscohen/improv/blob/main/README.md">README</a> is the canonical lookup. Pick the surface that matches your question.
           </p>
-          <pre class="codeblock"><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash</code></pre>
+          <pre class="codeblock"><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash</code></pre>
         </section>
 
       </article>

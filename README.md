@@ -36,7 +36,7 @@
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash
 ```
 
 One curl. One shortcut installed: `ampersand`. Type it from any terminal to launch the component picker.
@@ -236,7 +236,7 @@ ampersand --yes                 # everything, non-interactive
 The dotfiles can live anywhere. The Ghostty config uses a `__DOTFILES_DIR__` placeholder that the installer replaces at install time, so cloning to `~/code/dots`, `/opt/dots`, or anywhere else works:
 
 ```bash
-CLAUDE_DOTFILES_DIR=~/code/dots curl -fsSL .../bootstrap.sh | bash    # env var
+IMPROV_DIR=~/code/dots curl -fsSL .../bootstrap.sh | bash    # env var
 curl -fsSL .../bootstrap.sh | bash -s -- --dir ~/code/dots             # flag
 ```
 
@@ -244,7 +244,7 @@ Re-running `install.sh` from a new clone refreshes the `ampersand` function's pa
 
 ### Onboarding a new Yes& dev
 
-1. `curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash`
+1. `curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash`
 2. TUI defaults or `--preset all`
 3. New terminal or `source ~/.zshrc`
 
@@ -577,12 +577,12 @@ Connectors (ClickUp, Google Drive, etc.) are NOT in the dotfiles - they're accou
 **Bootstrap-time flags:**
 
 ```bash
-curl -fsSL .../bootstrap.sh | bash                          # default - clones to ~/Documents/Github/claude-dotfiles
+curl -fsSL .../bootstrap.sh | bash                          # default - clones to ~/Documents/Github/improv
 curl -fsSL .../bootstrap.sh | bash -s -- --dir PATH         # custom clone location
 curl -fsSL .../bootstrap.sh | bash -s -- --yes              # full non-interactive install
 curl -fsSL .../bootstrap.sh | bash -s -- --preset minimal   # specific preset
 
-CLAUDE_DOTFILES_DIR=~/code/dots CLAUDE_DOTFILES_REPO=https://github.com/your-fork/claude-dotfiles.git \
+IMPROV_DIR=~/code/dots IMPROV_REPO=https://github.com/your-fork/improv.git \
   curl -fsSL .../bootstrap.sh | bash
 ```
 
@@ -656,7 +656,7 @@ Valid component keys: `brain`, `config`, `memory`, `skills`, `statusline`, `cmux
 
 **Memory entries from a teammate on a different machine** - pull the project: `git pull`. Memory files are in `<project>/.claude/memory/` like any other source. Claude reads them at session start.
 
-**Fresh install on a new Mac** - `curl -fsSL https://raw.githubusercontent.com/jonahscohen/claude-dotfiles/main/bootstrap.sh | bash`. Take TUI defaults. New terminal. Done.
+**Fresh install on a new Mac** - `curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash`. Take TUI defaults. New terminal. Done.
 
 **Existing Claude Code config I don't want to overwrite** - every component is additive. `ampersand --pull --only brain,config,memory,skills` installs the team rules, hooks/plugins, memory subsystem, and skills - your existing content stays intact.
 

@@ -7,7 +7,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-const projectPath = '/Users/spare3/Documents/Github/claude-dotfiles/marketing-site';
+const projectPath = '/Users/spare3/Documents/Github/improv/marketing-site';
 const outputFile = '/tmp/sidecoach-craft-output.md';
 const historyFile = path.join(os.homedir(), '.claude', 'sidecoach-flow-history.json');
 
@@ -28,7 +28,7 @@ async function run() {
   } as any);
 
   const lines: string[] = [];
-  lines.push('# Sidecoach Craft Output - claude-dotfiles marketing-site');
+  lines.push('# Sidecoach Craft Output - Improv marketing-site');
   lines.push('');
   lines.push(`**Project:** \`${projectPath}\``);
   lines.push(`**Top-level success:** ${result.success}`);

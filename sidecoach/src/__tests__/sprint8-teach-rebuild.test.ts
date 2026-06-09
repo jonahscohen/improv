@@ -14,7 +14,7 @@ async function run() {
   {
     const sandbox = mkSandbox();
     const handler = new TeachCommandHandlerV2();
-    const utterance = `Build a marketing landing page. Register: brand. Users: developers using claude-dotfiles who already know Claude Code. Brand personality: professional, technical, restrained. Anti-references: generic SaaS marketing, screenshot-heavy product tours, corporate boilerplate. Strategic principles: every page gives something concrete; no funnel tricks; real screenshots not mockups.`;
+    const utterance = `Build a marketing landing page. Register: brand. Users: developers using Improv who already know Claude Code. Brand personality: professional, technical, restrained. Anti-references: generic SaaS marketing, screenshot-heavy product tours, corporate boilerplate. Strategic principles: every page gives something concrete; no funnel tricks; real screenshots not mockups.`;
     const result = await handler.execute({ utterance, projectPath: sandbox, metadata: {} } as any);
     checks.push(['S1: status success (full brief)', result.status === 'success']);
     const productPath = path.join(sandbox, 'PRODUCT.md');

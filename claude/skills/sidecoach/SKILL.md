@@ -40,7 +40,7 @@ Source of truth: `sidecoach/src/modes.ts` (TypeScript registry with FlowId chain
 **Before doing any design work**, run the Sidecoach engine and use its output as your implementation plan:
 
 ```bash
-node /Users/spare3/Documents/Github/claude-dotfiles/sidecoach/bin/sidecoach-monitor.js "/sidecoach <command> <target>"
+node /Users/spare3/Documents/Github/improv/sidecoach/bin/sidecoach-monitor.js "/sidecoach <command> <target>"
 ```
 
 Parse the JSON result and act on it:
@@ -52,7 +52,7 @@ Parse the JSON result and act on it:
 **Template for every invocation:**
 
 ```bash
-RESULT=$(node /Users/spare3/Documents/Github/claude-dotfiles/sidecoach/bin/sidecoach-monitor.js "$UTTERANCE")
+RESULT=$(node /Users/spare3/Documents/Github/improv/sidecoach/bin/sidecoach-monitor.js "$UTTERANCE")
 echo "$RESULT" | node -e "
   const r = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
   if (r.guidance) r.guidance.forEach((g,i) => console.log((i+1)+'. '+g));

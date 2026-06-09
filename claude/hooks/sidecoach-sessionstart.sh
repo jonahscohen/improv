@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Sidecoach SessionStart hook - starts daemon and writes state file
 
-SIDECOACH_ROOT="/Users/spare3/Documents/Github/claude-dotfiles/sidecoach"
+SIDECOACH_ROOT="/Users/spare3/Documents/Github/improv/sidecoach"
 STATE_FILE="$HOME/.claude/.sidecoach-state"
 
 # Check that dist is built

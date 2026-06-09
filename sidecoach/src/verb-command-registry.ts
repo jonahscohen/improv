@@ -35,7 +35,7 @@ export interface VerbCommandEntry {
 }
 
 const SKILL_REF =
-  '~/Documents/Github/claude-dotfiles/sidecoach/reference/_extracted/legacy-design-skill/reference';
+  '~/Documents/Github/improv/sidecoach/reference/_extracted/legacy-design-skill/reference';
 
 export const VERB_REGISTRY: Record<string, VerbCommandEntry> = {
   craft: {

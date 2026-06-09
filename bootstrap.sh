@@ -17,17 +17,17 @@ set -euo pipefail
 #   curl -fsSL .../bootstrap.sh | bash -s -- --preset minimal
 #
 # Choose where the repo lives on this machine (3 options, any one works):
-#   1. Set env var:  CLAUDE_DOTFILES_DIR=~/code/dots curl ... | bash
+#   1. Set env var:  IMPROV_DIR=~/code/dots curl ... | bash
 #   2. Pass --dir:   curl ... | bash -s -- --dir ~/code/dots
-#   3. Default:      ~/Documents/Github/claude-dotfiles
+#   3. Default:      ~/Documents/Github/improv
 #
 # Skip the auto-reload with --no-reload (useful in tmux/screen or for
 # anyone who'd rather source .zshrc themselves):
 #   curl -fsSL .../bootstrap.sh | bash -s -- --no-reload
 # ============================================================
 
-REPO_URL="${CLAUDE_DOTFILES_REPO:-https://github.com/jonahscohen/improv.git}"
-REPO_DIR="${CLAUDE_DOTFILES_DIR:-$HOME/Documents/Github/claude-dotfiles}"
+REPO_URL="${IMPROV_REPO:-https://github.com/jonahscohen/improv.git}"
+REPO_DIR="${IMPROV_DIR:-$HOME/Documents/Github/improv}"
 
 print_help() {
   cat <<'HELP'
@@ -49,8 +49,8 @@ Bootstrap-specific flags:
   --help, -h             show this help and exit (no side effects)
 
 Environment overrides:
-  CLAUDE_DOTFILES_REPO   git URL to clone (default: jonahscohen/claude-dotfiles)
-  CLAUDE_DOTFILES_DIR    target path (default: ~/Documents/Github/claude-dotfiles)
+  IMPROV_REPO   git URL to clone (default: jonahscohen/improv)
+  IMPROV_DIR    target path (default: ~/Documents/Github/improv)
 
 Examples:
   curl -fsSL .../bootstrap.sh | bash

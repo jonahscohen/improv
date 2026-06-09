@@ -48,7 +48,7 @@ test users
 function mkSandbox(content: string): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecoach-sprint11-personality-'));
   fs.writeFileSync(path.join(dir, 'PRODUCT.md'), content, 'utf-8');
-  const designSource = '/Users/spare3/Documents/Github/claude-dotfiles/reference/DESIGN.md';
+  const designSource = '/Users/spare3/Documents/Github/improv/reference/DESIGN.md';
   if (fs.existsSync(designSource)) fs.copyFileSync(designSource, path.join(dir, 'DESIGN.md'));
   return dir;
 }

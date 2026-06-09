@@ -90,7 +90,7 @@ professional, technical, restrained
 `, 'utf-8');
     // Copy the dotfiles' own DESIGN.md if present so design-token-aware flows
     // have a real surface to read.
-    const designSource = '/Users/spare3/Documents/Github/claude-dotfiles/reference/DESIGN.md';
+    const designSource = '/Users/spare3/Documents/Github/improv/reference/DESIGN.md';
     if (fs.existsSync(designSource)) {
         fs.copyFileSync(designSource, path.join(dir, 'DESIGN.md'));
     }

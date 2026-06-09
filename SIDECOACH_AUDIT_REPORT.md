@@ -32,7 +32,7 @@ Sidecoach is a sophisticated, well-engineered system built entirely in TypeScrip
 
 ### 1. Source Code (Complete & Compiling)
 
-**Root:** `/Users/spare3/Documents/Github/claude-dotfiles/sidecoach/`
+**Root:** `/Users/spare3/Documents/Github/improv/sidecoach/`
 
 ```
 src/
@@ -417,17 +417,17 @@ cd sidecoach && npm run build
 ## Files & Paths
 
 **Core Implementation:**
-- `/Users/spare3/Documents/Github/claude-dotfiles/sidecoach/src/` (87 files, 2.2MB)
-- `/Users/spare3/Documents/Github/claude-dotfiles/sidecoach/dist/` (236 files, compiled)
+- `/Users/spare3/Documents/Github/improv/sidecoach/src/` (87 files, 2.2MB)
+- `/Users/spare3/Documents/Github/improv/sidecoach/dist/` (236 files, compiled)
 
 **Hooks (Installed but Not Fully Wired):**
-- `~/.claude/hooks/sidecoach-sessionstart.sh` → `/Users/spare3/Documents/Github/claude-dotfiles/claude/hooks/sidecoach-sessionstart.sh`
-- `~/.claude/hooks/sidecoach-postuserp.sh` → `/Users/spare3/Documents/Github/claude-dotfiles/claude/hooks/sidecoach-postuserp.sh`
-- `~/.claude/hooks/sidecoach-postresponse.sh` → `/Users/spare3/Documents/Github/claude-dotfiles/claude/hooks/sidecoach-postresponse.sh`
+- `~/.claude/hooks/sidecoach-sessionstart.sh` → `/Users/spare3/Documents/Github/improv/claude/hooks/sidecoach-sessionstart.sh`
+- `~/.claude/hooks/sidecoach-postuserp.sh` → `/Users/spare3/Documents/Github/improv/claude/hooks/sidecoach-postuserp.sh`
+- `~/.claude/hooks/sidecoach-postresponse.sh` → `/Users/spare3/Documents/Github/improv/claude/hooks/sidecoach-postresponse.sh`
 
 **Daemon Infrastructure:**
-- `/Users/spare3/Documents/Github/claude-dotfiles/sidecoach/bin/sidecoach-daemon.sh`
-- `/Users/spare3/Documents/Github/claude-dotfiles/sidecoach/bin/sidecoach-monitor.js`
+- `/Users/spare3/Documents/Github/improv/sidecoach/bin/sidecoach-daemon.sh`
+- `/Users/spare3/Documents/Github/improv/sidecoach/bin/sidecoach-monitor.js`
 
 **Missing:**
 - `~/.claude/skills/sidecoach/SKILL.md` ← **Primary Gap**

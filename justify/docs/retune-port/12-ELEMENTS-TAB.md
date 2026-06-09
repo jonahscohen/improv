@@ -24,7 +24,7 @@ that the Design port had to manage.
 
 **Second finding:** `getDirectReactComponent` - the only cross-module symbol
 ElementTree imports - **already exists** in our ported
-`/Users/spare3/Documents/Github/claude-dotfiles/justify/core/selector/identifier.ts`
+`/Users/spare3/Documents/Github/improv/justify/core/selector/identifier.ts`
 (line 650), with identical signature and behavior to Retune's. No selector work is
 required. On a non-React page it returns `null` and the tree falls back to
 class/id/tag labels - exactly as in Retune.
@@ -146,12 +146,12 @@ Section 4.
 
 | # | Retune source | Justify target | Action |
 |---|---|---|---|
-| 1 | `retune/packages/overlay/src/overlay/ElementTree.tsx` | `claude-dotfiles/justify/core/manipulate/ui/ElementTree.tsx` | CREATE - port React->Preact |
-| 2 | `retune/.../selector/identifier.ts` `getDirectReactComponent` | `claude-dotfiles/justify/core/selector/identifier.ts` (line 650) | ALREADY EXISTS - import from here |
-| 3 | `retune/.../overlay/overlay.css` lines 665-817 (`.retune-tree*`) | `claude-dotfiles/justify/core/manipulate/styles/elements-tree.css` | CREATE - port CSS block verbatim |
-| 4 | n/a | `claude-dotfiles/justify/core/manipulate/PropertyPanel.tsx` (lines 301-305 stub) | MODIFY - replace stub with `<ElementTree/>`; thread new props |
-| 5 | n/a | `claude-dotfiles/justify/core/manipulate/index.ts` (`renderPanel`, `activate`) | MODIFY - pass tree callbacks; wire picker hover highlight; add reorder/reparent handlers |
-| 6 | `retune/.../__tests__/tree-drag.test.ts` | `claude-dotfiles/justify/core/manipulate/__tests__/tree-drag.test.ts` (or co-located) | PORT - import path `../ui/ElementTree`; behavior identical |
+| 1 | `retune/packages/overlay/src/overlay/ElementTree.tsx` | `improv/justify/core/manipulate/ui/ElementTree.tsx` | CREATE - port React->Preact |
+| 2 | `retune/.../selector/identifier.ts` `getDirectReactComponent` | `improv/justify/core/selector/identifier.ts` (line 650) | ALREADY EXISTS - import from here |
+| 3 | `retune/.../overlay/overlay.css` lines 665-817 (`.retune-tree*`) | `improv/justify/core/manipulate/styles/elements-tree.css` | CREATE - port CSS block verbatim |
+| 4 | n/a | `improv/justify/core/manipulate/PropertyPanel.tsx` (lines 301-305 stub) | MODIFY - replace stub with `<ElementTree/>`; thread new props |
+| 5 | n/a | `improv/justify/core/manipulate/index.ts` (`renderPanel`, `activate`) | MODIFY - pass tree callbacks; wire picker hover highlight; add reorder/reparent handlers |
+| 6 | `retune/.../__tests__/tree-drag.test.ts` | `improv/justify/core/manipulate/__tests__/tree-drag.test.ts` (or co-located) | PORT - import path `../ui/ElementTree`; behavior identical |
 
 **Import target for #1:** `import { getDirectReactComponent } from '../../selector/identifier.js'`
 (from `core/manipulate/ui/` to `core/selector/`). Note the `.js` extension

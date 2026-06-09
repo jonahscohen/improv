@@ -61,4 +61,18 @@ My brand perl pass `(?<![/\w])claude-dotfiles(?![/\w]) -> Improv` wrongly capita
 - sidecoach: edit src absolute paths + .mcp.json + REBUILD dist (never hand-edit dist).
 - Final: grep clean (no claude-dotfiles outside beats/docs-superpowers/.bak), re-verify install dry-run, Figma feature-tree retitle.
 
-Status: STAGE A committed on branch feat/rename-to-improv; STAGE B pending user go (session-breaking).
+## STAGE B IN PROGRESS (2026-06-08, user said "go now")
+- Stopped the running 8765/8766 http servers (folder is about to move).
+- FS-path + identifier sweep across all non-frozen, non-dist files: `/Github/claude-dotfiles` + `claude-dotfiles/` + bare paths -> improv; `CLAUDE_DOTFILES_DIR/REPO` -> `IMPROV_DIR/REPO`; brand stragglers in new files -> Improv. install.sh swept with `claude-dotfiles(?!:)` so the `migrate_legacy_markers` legacy token `claude-dotfiles:` is preserved (verified intact, lines ~1089/1096/1097).
+- Legacy improv->justify cleanup: `.gitignore` `public/improv-core.js` -> `public/justify-core.js` (actual built file is justify-core.js).
+- sidecoach/dist: restored from HEAD then path-string-renamed only (clean diff). FULL rebuild blocked by a PRE-EXISTING tsconfig rootDir error (`src/__tests__/t16-bench-ledger.test.ts` imports `benchmarks/runner/run-all.ts` outside rootDir) - NOT caused by the rename. Flag to fix separately; run `cd sidecoach && npm run build` after that's fixed.
+- Gotcha logged: `mapfile` is unavailable in zsh - the first two sweep loops were silent no-ops; use a pipe-fed `while IFS= read -r` loop (or a hardcoded array, as Stage A did) instead.
+- VERIFY: zero `claude-dotfiles` outside frozen (beats/docs-superpowers/.bak/.backups) except the intentional install.sh migration token. bash -n install.sh + bootstrap.sh OK.
+
+### STILL TO DO in Stage B (this session, then it breaks)
+1. commit Stage B.
+2. `gh repo rename improv` + `git remote set-url origin .../improv.git`.
+3. Figma feature-tree retitle claude-dotfiles -> Improv (file DdAztWiuZpXbmyrJutSfLw).
+4. FOLDER MOVE LAST: `mv ~/Documents/Github/claude-dotfiles ~/Documents/Github/improv` -> THIS session's cwd dies. User restarts Claude in `~/Documents/Github/improv`, then merges feat/rename-to-improv to main + verifies (install dry-run, sidecoach rebuild once the pre-existing tsconfig error is fixed).
+
+Status: STAGE B executing; folder move + restart imminent.

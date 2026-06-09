@@ -15,12 +15,12 @@ Resolve the target `TASKS.md` from the current working directory, then operate *
 that one file:
 
 1. **Project-local mode.** Run `git rev-parse --show-toplevel` from cwd. If it succeeds and
-   the repo root is **not** the dotfiles repo (`~/Documents/Github/claude-dotfiles`), the
+   the repo root is **not** the dotfiles repo (`~/Documents/Github/improv`), the
    target is `<repo-root>/TASKS.md`. This is the normal case when working inside any project
    repo (e.g. `yes-kaufmanrossin`). Tasks live with the project and travel with its git
    history, so teammates on that repo share them.
 2. **Global mode.** Otherwise - cwd is inside the dotfiles repo, or not inside any git repo -
-   the target is the global dotfiles list `~/Documents/Github/claude-dotfiles/TASKS.md`.
+   the target is the global dotfiles list `~/Documents/Github/improv/TASKS.md`.
 
 Never operate on a `TASKS.md` other than the resolved target. If the target file does not
 exist, create it from the matching template below before performing any verb.

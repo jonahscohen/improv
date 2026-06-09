@@ -40,7 +40,7 @@ const os = __importStar(require("os"));
 function mkSandbox() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecoach-sprint10-skip-'));
     fs.writeFileSync(path.join(dir, 'PRODUCT.md'), `# PRODUCT.md\n\n## Register\n\n**Brand**\n\n## Primary Users\n\ntest users\n\n## Anti-References\n\n- generic\n\n## Strategic Principles\n\n- concrete\n`, 'utf-8');
-    const designSource = '/Users/spare3/Documents/Github/claude-dotfiles/reference/DESIGN.md';
+    const designSource = '/Users/spare3/Documents/Github/improv/reference/DESIGN.md';
     if (fs.existsSync(designSource)) {
         fs.copyFileSync(designSource, path.join(dir, 'DESIGN.md'));
     }

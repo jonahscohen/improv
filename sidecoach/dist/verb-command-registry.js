@@ -25,7 +25,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.VERB_REGISTRY = void 0;
 exports.getVerbList = getVerbList;
 exports.getVerbEntry = getVerbEntry;
-const SKILL_REF = '~/Documents/Github/claude-dotfiles/sidecoach/reference/_extracted/legacy-design-skill/reference';
+const SKILL_REF = '~/Documents/Github/improv/sidecoach/reference/_extracted/legacy-design-skill/reference';
 exports.VERB_REGISTRY = {
     craft: {
         command: 'craft',
