@@ -4,6 +4,7 @@ description: Third review verified and folded into spec v4; transition contract,
 type: decision
 relates_to: [session_2026-06-12_lane-design-v3-action-model.md]
 supersedes: session_2026-06-12_lane-design-v3-action-model.md
+superseded_by: session_2026-06-12_lane-design-v5-complete.md
 ---
 
 Spec revised to v4 after the third independent review. Every claim verified
