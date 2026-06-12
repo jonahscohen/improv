@@ -1,16 +1,15 @@
-# Sidecoach Lane Intent Detection - Design (v3)
+# Sidecoach Lane Intent Detection - Design (v4)
 
 Date: 2026-06-12
 Collaborator: Jonah
-Status: revised after second independent review; resolves all v2 P0/P1/P2
+Status: revised after third independent review; resolves all v3 P0/P1/P2
 findings. Reviews at `docs/superpowers/reviews/`.
 
 ## Problem
 
 The six sidecoach mode words (forge, kiln, bloom, canvas, trim, ralph) fail the
-say-it-out-loud test. They were optimized for hook detectability, not natural
-conversation (Jonah, 2026-06-12: "I hate all of those mode words"). The verb
-chains behind the words are good. The names are the problem.
+say-it-out-loud test (Jonah, 2026-06-12: "I hate all of those mode words").
+The verb chains behind the words are good. The names are the problem.
 
 ## Decisions made with Jonah (2026-06-12)
 
@@ -19,18 +18,19 @@ chains behind the words are good. The names are the problem.
 3. Hybrid architecture: hook scores deterministically, model decides.
 4. Thresholds conservative, calibrated against a labeled corpus.
 5. `lane_converge` wired this release; `/sidecoach <phrase>` is a real engine
-   feature; `runLane()` built now.
-6. **Action model: model-driven lane state machine** (v3). The engine serves
-   guidance and validates; the model does the work between steps. Lanes are
-   stepped operations, not one blocking engine call.
+   feature; the lane execution API (`startLane` / `advanceLane` /
+   `laneStatus`) is built now.
+6. Action model: model-driven lane state machine. The engine serves guidance
+   and validates; the model does the work between steps.
 
 ## Constraints
 
 - model-router-guard (non-negotiable, 2026-06-11): no LLM calls from hooks.
-- Sidecoach scope: design/UI work only - never backend, infrastructure, or
-  non-UI refactors. The lane tier enforces this itself (section 4).
-- Engine flows emit guidance/checklists/findings/artifacts; they do not
-  modify the product. Any contract claiming otherwise is false (v2 lesson).
+- Sidecoach scope: design/UI work only. The lane tier enforces this itself.
+- Engine flows emit guidance/checklists/findings/artifacts; they never modify
+  the product. Step completion is model work, attested with evidence and
+  engine-validated where a flow defines validators (stated plainly; v2's
+  invented "engine fix-application path" remains rejected).
 
 ## 1. Lane model
 
@@ -52,12 +52,9 @@ Canonical lane record (`sidecoach-lanes.json`):
   "description": "Audits, critiques, hardens errors and i18n, validates responsive, finishes with polish.",
   "interviewLabel": "Get it ship-ready",
   "executionKind": "sequence",
-  "verbChain": [
-    { "verb": "audit", "flowIds": ["flowK_multi_lens_audit", "flowI_accessibility"] },
-    { "verb": "critique", "flowIds": ["flowL_design_critique"] },
-    { "verb": "harden", "flowIds": ["flowV_all_seven_qa"] },
-    { "verb": "adapt", "flowIds": ["flowM_responsive_validation"] },
-    { "verb": "polish", "flowIds": ["flowJ_tactical_polish"] }
+  "verbChain": ["audit", "critique", "harden", "adapt", "polish"],
+  "prereqWaivers": [
+    { "flowId": "flowJ_tactical_polish", "reason": "refinement lane operates on an existing UI; component implementation history not required" }
   ],
   "lexicon": [
     { "pattern": "production[- ]ready", "weight": 3, "group": "release" }
@@ -65,394 +62,396 @@ Canonical lane record (`sidecoach-lanes.json`):
 }
 ```
 
-`verbChain` entries keep the verb-to-flow mapping (v2 lost it by storing only
-a flat deduped flowChain). The executed flow sequence is derived: flows in
-verb order, each flow run ONCE (first owning verb wins); guidance for EVERY
-verb is appended exactly once in chain order (section 7). FlowId sets carry
-over from `modes.ts` verbatim.
+**`verbChain` is a plain string list.** The verb-to-flow mapping is NOT
+duplicated here (v3's hand-written mapping had already drifted from
+`verb-command-registry.ts`, where critique owns [flowL, flowK] and polish owns
+[flowJ, flowM]). Generation derives each lane's executed flow sequence from
+the canonical verb registry: flows in verb order, each flow run once (first
+owning verb), guidance appended once per verb in chain order. `--check`
+validates this cross-registry derivation, not just JSON-to-file drift.
 
-## 2. Canonical registry - exact strategy
+## 2. Canonical registry - generation strategy
 
 `claude/hooks/sidecoach-lanes.json` owns ids, labels, descriptions, interview
-labels, execution kind, verb chains, lexicons, scope policy, scoring config,
-`schemaVersion`.
+labels, execution kind, verb chains, prereq waivers, lexicons, scope policy,
+scoring config, `schemaVersion`.
 
-- **Generation, not runtime loading:** a build script
-  (`sidecoach/scripts/generate-lanes.ts`) emits
-  `sidecoach/src/lanes.generated.ts` from the JSON. It runs before the parent
-  `tsc` (`npm run build` = generate + tsc), so the MCP server's dependency on
-  the compiled parent package keeps working. The generated file is checked
-  in; `generate-lanes.ts --check` fails when it is stale and runs in
-  `test-all.sh`.
-- SKILL.md and CHEATSHEET.md lane tables live between generated-section
-  markers (`<!-- lanes:generated:start/end -->`), regenerated by the same
-  script, checked in, verified by `--check`.
-- No silent fallback anywhere: missing/invalid JSON fails the build; at hook
-  runtime it disables the lane tier loudly (section 12).
+- `sidecoach/scripts/generate-lanes.ts` emits `sidecoach/src/lanes.generated.ts`
+  (lane records + derived flow sequences + verb guidance map) before the
+  parent `tsc` (`npm run build` = generate + tsc). Checked in. Exact check
+  command: `npx ts-node sidecoach/scripts/generate-lanes.ts --check` - fails
+  on JSON drift, derivation drift against `verb-command-registry.ts`, OR a
+  prerequisite violation (section 8).
+- SKILL.md / CHEATSHEET.md lane tables live between
+  `<!-- lanes:generated:start/end -->` markers, regenerated by the same
+  script, verified by `--check`.
+- No silent fallback: missing/invalid JSON fails the build; at hook runtime
+  it disables the lane tier loudly (section 13).
 
 ## 3. Lexicons and evidence-group scoring
 
-Entries are `{pattern, weight, group}`; hyphen-aware word-boundary regex
-fragments. Score per lane = sum over groups of (max matched weight per
-group). "ready for production" + "production-ready" = one `release` idea =
-3, not 6. Representative lexicons stand as in v1/v2 (build: "from scratch";
-ship: "production-ready"; delight: "feels flat", "bring it to life"; live:
-"tweak it live"; calm: "calm it down", "too busy"; converge: "keep iterating
-until", "don't stop until ... passes"). Calibration against the labeled
-corpus reports precision, false-route rate, interview rate, fallthrough rate
+Unchanged from v3: `{pattern, weight, group}` entries, hyphen-aware
+boundaries, score = sum over groups of max matched weight per group,
+calibration report (precision, false-route, interview, fallthrough rates)
 before thresholds are final.
 
-Sanitization (code fences, backticks, URLs, XML bodies, transcript markers)
-unchanged. **Informational suppression becomes occurrence-aware with a
-concrete algorithm:** (1) run every informational-frame regex against the
-sanitized text; (2) replace each matched span with spaces (length-preserving
-blanking); (3) score lane/verb patterns against the blanked text. "What does
-production-ready mean? Make this page production-ready." blanks the first
-occurrence, scores the second. Frames never extend past sentence boundaries.
-Python and TypeScript implementations run the same edge-case fixtures
+Occurrence-aware informational suppression, concrete algorithm: match every
+informational-frame regex, blank matched spans with spaces
+(length-preserving), score lane/verb patterns against the blanked text;
+frames never cross sentence boundaries. Shared Python/TS edge-case fixtures
 (multiple occurrences, punctuation, multiline, quoted text, mixed
-informational + imperative) in the shared parity corpus. Motivation: the
-keyword hook false-fired twice during this session's design review - pasted
-review documents routed the `shape` and then `polish` verbs.
+informational + imperative). Motivation: the keyword hook false-fired twice
+during this design's own review cycle (pasted documents routed `shape`, then
+`polish`).
 
-## 4. Lane-scope policy (replaces v2's borrowed eligibility gate)
+## 4. Scope policy - three states, clause-bound
 
-v2 reused the advisory nudge's `substantive_targets`, which include
-`table`, `view`, `form`, `grid`, `component`, `screen` - ambiguous terms that
-admit "build a database table from scratch" into `lane_build`. The nudge
-registry was designed for a low-authority suggestion, not multi-flow routing.
+Scope evaluation returns one of THREE states (v3's two-state design conflated
+"positive backend evidence" with "no domain evidence", breaking natural
+follow-ups like "bring it to life" whose context lives in conversation
+history the hook cannot see):
 
-v3 defines a dedicated `scope` section in `sidecoach-lanes.json`:
+```text
+IN_SCOPE      - UI evidence present, bound to the lane evidence
+OUT_OF_SCOPE  - negative evidence bound to the lane evidence
+SCOPE_UNKNOWN - lane evidence present, no domain evidence either way
+```
 
-- `ui_evidence`: unambiguous design-domain patterns (curated, narrower than
-  the nudge targets): "landing page", "home ?page", "hero(?: section)?",
-  "nav(?:bar|igation)?", "header", "footer", "modal", "dialog", "drawer",
-  "sidebar", "dashboard", "ui", "interface", "front[- ]?end", "web ?(?:site|page)",
-  "design ?system", "style ?guide", "typography", "color ?palette",
-  "hover state", "animation", "micro-?interaction", "responsive", "dark mode",
-  "css", "layout", plus look/feel phrasing ("looks? (?:off|bland|dated|...)",
-  "make it (?:look|feel|pop)").
-- `negative_filters`: context that VETOES lane action even when ui_evidence
-  matches: "database", "\\bdb\\b", "\\bapi\\b", "backend", "server[- ]side",
-  "endpoint", "migration", "schema", "unit test", "integration test",
-  "\\bci\\b", "pipeline", "deploy(?:ment)?", "infra(?:structure)?",
-  "kubernetes", "docker", "data model", "query", "essay", "blog post",
-  "article", "prose". A negative filter adjacent to the matched target term
-  (same sentence) forces `OUT_OF_SCOPE`.
-- Outcome `OUT_OF_SCOPE` exists at every layer (hook decision, phrase
-  resolution, MCP result): lane evidence detected but domain check failed -
-  log it, take no lane action.
+Registry sections (`scope` in `sidecoach-lanes.json`):
 
-Rules:
+- `ui_evidence`: curated design-domain patterns. Ambiguous tokens
+  (`interface`, `header`, `layout`) count ONLY with a design qualifier in the
+  same clause (e.g. "user interface", "page header", "responsive layout") -
+  bare occurrences (TypeScript `interface`, packet `header`, memory `layout`)
+  never prove scope.
+- `negative_filters`: backend/infra/data/CI/prose context ("database",
+  "\\bapi\\b", "migration", "endpoint", "unit test", "pipeline", "deploy",
+  "schema", ...).
 
-- ROUTE and CLASSIFY both require scope to pass. Acceptance asserts zero
-  ROUTE **and zero CLASSIFY** on the non-design negative corpus, which
-  includes the ambiguous-target cases: database `table`, database `view`,
-  validation `form`, compute `grid`, backend `component`, non-UI `screen`.
-- **`/sidecoach <phrase>` does NOT bypass scope.** Explicit address raises
-  confidence (it can lower the route margin), but `/sidecoach build the API
-  from scratch` returns `OUT_OF_SCOPE` with a one-line redirect ("sidecoach
-  owns design/UI work; this looks like backend work").
-- Cooldown state never grants scope.
-- The advisory nudge tier keeps its own registry and behavior, untouched.
+**Clause binding:** lane evidence, UI evidence, and negative evidence must
+co-occur in the same sentence/clause to interact. "The landing page is done.
+Make the migration production-ready." - the ship-lane evidence binds to
+`migration` (negative, same sentence), NOT to `landing page` (different
+sentence): OUT_OF_SCOPE. A look/feel phrase that doubles as lane evidence
+cannot also serve as the sole UI evidence for itself.
+
+Behavior by state:
+
+- Natural prompts: IN_SCOPE proceeds to lane decision; OUT_OF_SCOPE is
+  logged, no lane action (verb/nudge tiers proceed on their own merits);
+  SCOPE_UNKNOWN never auto-routes - the hook injects a light CONTEXT-CHECK
+  directive instead: "lane evidence ({labels}) without domain evidence; if
+  the conversation is clearly about UI/design work, classify per the lane
+  table; otherwise ignore." The model decides with the context the hook
+  lacks. Failure-proof: evidence is never silently dropped.
+- `/sidecoach <phrase>`: explicit address. SCOPE_UNKNOWN with no negative
+  evidence proceeds to ROUTE/CLASSIFY (the user chose sidecoach);
+  OUT_OF_SCOPE (positive negative evidence) still refuses with a one-line
+  redirect. `/sidecoach make this production-ready` therefore works;
+  `/sidecoach build the API from scratch` does not.
+- Cooldown never grants scope.
 
 ## 5. Decision flow and outcome table
 
 ```text
 1.  Sanitize; validate registries (schema + regex compile).
 2.  Known explicit /sidecoach command -> route that exact command. Always wins.
-3.  Evaluate lane-scope policy (section 4) -> in-scope | out-of-scope.
-4.  Score lanes (grouped evidence, occurrence-aware suppression).
+3.  Score lanes (grouped evidence, occurrence-aware suppression).
+4.  Evaluate scope (section 4) with clause binding against the lane evidence.
 5.  Detect explicit natural-language verb (existing verb tier).
-6.  Out-of-scope + lane evidence -> OUT_OF_SCOPE (logged; no lane action;
-    verb tier and nudge still apply on their own merits).
-7.  In-scope, route-grade lane (top >= route_floor, top - second >=
+6.  OUT_OF_SCOPE + lane evidence -> OUT_OF_SCOPE (logged; no lane action;
+    verb/nudge tiers proceed on their own merits).
+7.  SCOPE_UNKNOWN + lane evidence -> CONTEXT-CHECK directive (no auto-route).
+8.  IN_SCOPE, route-grade lane (top >= route_floor, top - second >=
     route_margin), no explicit-verb conflict -> ROUTE.
-8.  In-scope, route-grade lane + explicit verb -> CLASSIFY (interview offers
-    the verb, the lane, and "just handle it directly"; never silent
-    expansion).
-9.  Explicit verb (no route-grade lane) -> verb route (existing behavior).
-10. In-scope, top >= 1 -> CLASSIFY.
-11. Advisory nudge per its existing rules -> NUDGE.
-12. Otherwise -> SILENT.
+9.  IN_SCOPE, route-grade lane + explicit verb -> CLASSIFY (offers the verb,
+    the lane, and "just handle it directly").
+10. Explicit verb (no route-grade lane) -> verb route (existing behavior).
+11. IN_SCOPE, top >= 1 -> CLASSIFY.
+12. Advisory nudge per its existing rules -> NUDGE.
+13. Otherwise -> SILENT.
 ```
 
-Outcome table for in-scope prompts (`route_floor 3`, `route_margin 2`):
+Outcome table for IN_SCOPE prompts (`route_floor 3`, `route_margin 2`):
+(0,0) nudge rules; (1,0)/(2,0) CLASSIFY; (3,0)/(3,1) ROUTE (CLASSIFY on verb
+conflict); (3,2)/ties CLASSIFY.
 
-| (top, second) | Outcome |
-|---|---|
-| (0, 0) | no lane action; nudge rules apply |
-| (1, 0) / (2, 0) | CLASSIFY |
-| (3, 0) / (3, 1) | ROUTE (CLASSIFY if explicit verb also matched) |
-| (3, 2) / ties | CLASSIFY |
-
-Out-of-scope prompts: OUT_OF_SCOPE regardless of scores. Invariant: on an
-in-scope prompt, lane evidence (top >= 1) always reaches ROUTE or CLASSIFY;
-out-of-scope lane evidence is logged as OUT_OF_SCOPE, never silently lost.
-
-Cooldown: ROUTE and CLASSIFY touch the cooldown file; neither is suppressed.
+Cooldown: ROUTE, CLASSIFY, and CONTEXT-CHECK touch the cooldown file; none is
+suppressed by it.
 
 ## 6. Directives
 
-Registry-owned evidence labels only (never raw user substrings); max 3
-evidence items; directive capped ~1500 chars.
+Registry-owned evidence labels only; max 3 evidence items; ~1500 char cap.
+ROUTE and CLASSIFY shapes as v3 (announce-then-start; one-question interview;
+selected lane dispatches identically to ROUTE), with dispatch via the monitor
+lane surface (section 7). CONTEXT-CHECK shape per section 4. User
+correction/cancellation always stops the lane (directive text + SKILL.md +
+the `interrupt` transition).
 
-ROUTE shape:
-
-> Lane read: this prompt reads as {label} (evidence: {group labels}).
-> Protocol: announce the read in ONE conversational sentence naming the work
-> and the verbs, then start the lane:
-> `sidecoach-monitor lane start --lane {lane} --target "<target>"` and follow
-> the stepped contract (work each step, then advance). Do not ask for
-> confirmation. If conversation context makes this read clearly wrong,
-> downgrade to a single AskUserQuestion interview. If the user corrects or
-> cancels at any point, stop advancing immediately - the checkpoint preserves
-> progress.
-
-CLASSIFY shape:
-
-> Lane read: design-shaped prompt without a single confident lane. Scores:
-> {per-lane scores + evidence labels}. Lane table: {labels, descriptions,
-> verb chains}. Protocol: if context makes one candidate obviously right,
-> announce and run it (same lane start command). Otherwise ask ONE
-> AskUserQuestion: top 2-3 candidates (interviewLabel + description), any
-> explicitly-matched verb as its own option, plus "Just handle it directly".
-> A selected lane dispatches exactly like a ROUTE. Never chain a second
-> question.
-
-## 7. Lane execution - model-driven state machine
-
-The engine plans and validates; the model performs the work. A lane is a
-stepped operation, never one blocking engine call.
+## 7. Lane execution - the full state machine contract
 
 **Engine API** (on `FlowExecutionEngine`):
 
 ```text
-startLane(laneId, target, context) -> LaneStepResult   // serves step 1
-advanceLane(checkpointId, stepReport?) -> LaneStepResult // validate, next step
+startLane(laneId, target, context) -> LaneStepResult
+advanceLane(checkpointId, transition) -> LaneStepResult
 laneStatus(checkpointId) -> LaneState
+listLanes() -> LaneInfo[]
 ```
-
-`LaneStepResult` = `{ lane: {id, label, executionKind}, step: {index, verb,
-flowIds, guidance, checklist, artifacts}, progress: {completed, total},
-status: 'in_progress' | 'completed' | 'partial' | 'failed' | 'interrupted',
-checkpointId }`. `SidecoachResult` gains the same `lane` block for
-monitor-mediated calls.
-
-**Dispatch surface** (resolves the v2 gap that `runLane` was not callable):
-`sidecoach-monitor` gains a `lane` subcommand - `lane start --lane <id>
---target "<t>"`, `lane advance --checkpoint <id> [--report <path|json>]`,
-`lane status --checkpoint <id>`, `lane list`. The ROUTE directive and a
-post-CLASSIFY selection both dispatch through it (identical path, e2e
-tested from hook output to engine call). The MCP server mirrors it with a
-`sidecoach_lane` tool (same operations; section 10).
-
-**Sequence semantics:**
-
-- Prerequisite history is refreshed at every step (porting the Sprint-12 T4
-  fix into the lane path; the current `runCompositeLoop` single-snapshot
-  behavior is a known bug source and is NOT inherited).
-- Flows run once each (verb order, first owning verb); guidance is appended
-  once per VERB in chain order using the preserved verb-to-flow mapping.
-- Step failure: the step result says so; the model decides with the user
-  whether to retry, skip (recorded as skipped), or stop. No silent skips.
-- Status mapping: `completed` = all steps succeeded; `partial` = at least one
-  succeeded, at least one failed/skipped; `failed` = none succeeded;
-  `interrupted` = stopped before the last step. The v2-inherited composite
-  rule (success = any one flow passed) is explicitly NOT used for lanes.
-
-**Checkpoints + interruption:**
-
-- `SidecoachCheckpoint` schemaVersion 2: adds `operationKind: 'composite' |
-  'lane'`, `laneId?`, `stepReports[]`. v1 checkpoints still resolve preset
-  composites (migration shim); lane resume resolves against the lane
-  registry, not `PRESET_COMPOSITE_FLOWS`. `checkpoint-store.ts` and the
-  resume dispatch are in the blast radius.
-- Interruption needs no cancellation transport: between steps there is no
-  running engine call - the model simply stops advancing. The checkpoint is
-  PRESERVED with status `interrupted`; `lane advance` resumes it. The model
-  reports honest status ("lane interrupted at step 3 of 5; resumable").
-
-## 8. lane_converge - stepped convergence
-
-`ralph-loop.ts` renames to `convergence-loop.ts` (`Ralph*` ->
-`Convergence*`). Its progress machinery (`computeProgressSignature`,
-stall/cap detection, `converged | stalled | capped | error` statuses) is
-reused, but the blocking `runRalphLoop(opts.applyFixes)` shape is NOT the
-production path - **there is no engine fix-application path, and v3 stops
-pretending otherwise. The model is the fix applier.**
-
-Stepped loop per iteration: `advanceLane` runs the validator flows (polish,
-audit, critique) and returns findings; the model applies fixes (real work in
-the conversation); the next `advanceLane` revalidates, computes the progress
-signature, and either continues, declares `converged` (no findings), or
-exits `stalled` (no-progress cap) / `capped` (max iterations). Exit status
-is always truthful in `LaneStepResult.status` + a closing summary; the lane
-never claims convergence it did not measure. End-to-end tests drive a real
-mutation step (a fixture project the test actually edits), not a
-state-changing mock.
-
-## 9. /sidecoach <phrase> - resolution union
-
-Unknown first token after `/sidecoach` triggers phrase resolution with FOUR
-outcomes:
 
 ```text
-ROUTE | CLASSIFY | OUT_OF_SCOPE | UNKNOWN
+transition = {
+  action: 'complete' | 'retry' | 'skip' | 'interrupt' | 'stop',
+  report?: StepReport,        // REQUIRED for 'complete'
+  expectedRevision: number    // compare-and-swap; stale revision = error,
+}                             // two concurrent advances cannot run one step twice
+
+StepReport = {
+  verb: string,
+  summary: string,                          // what was actually done
+  evidence: { kind: 'files' | 'screenshot' | 'validation' | 'note',
+              detail: string }[],           // at least one entry
+  checklistResults?: { itemId: string, done: boolean }[]
+}
 ```
 
-- `ROUTE` / `CLASSIFY`: lane evidence present AND scope passes (explicit
-  address raises confidence but never bypasses scope - section 4).
-- `OUT_OF_SCOPE`: lane evidence present, scope fails ("/sidecoach build the
-  API from scratch") - polite one-line redirect, no interview.
-- `UNKNOWN`: no lane evidence ("/sidecoach foo", "/sidecoach polsih
-  button") - preserve the existing helpful unknown-command behavior,
-  including near-miss verb suggestions ("did you mean /sidecoach polish?").
-  Typos never become interviews or routes.
+**Step success is model-attested with evidence, engine-validated where
+possible** - stated explicitly, not implied. A flow handler's
+`status: 'success'` means the handler produced its guidance, NOT that the
+work happened (`flow-handler.ts` creates checklist items `completed: false`).
+So: `complete` without a valid StepReport is REJECTED (the step stays
+current); where the step's flows define validators, `advanceLane` re-runs
+them and a hard validation failure converts the attempted `complete` into a
+step result of `validation_failed` (step stays current, findings returned).
+Multiple flows within one verb step aggregate: all flows' guidance served
+together at step start; validators evaluated together at completion.
 
-Parser unit tests + end-to-end tests cover all four. SKILL.md documents the
-behavior the engine actually has.
+**Transitions:** `retry` re-serves the current step (report optional,
+recorded); `skip` records the step skipped-with-reason (report.summary
+required) and serves the next; `interrupt` is an EXPLICIT transition that
+persists status `interrupted` (resumable - it is how "user said stop" becomes
+durable state; a process that dies without calling it leaves `in_progress`,
+equally resumable); `stop` is terminal: lane closes with `completed` (all
+steps succeeded), `partial` (some succeeded), or `failed` (none).
 
-## 10. MCP migration
+**Status precedence:** `interrupted` reflects an open, resumable lane
+regardless of completed-step count; terminal statuses are only set by `stop`
+or by completing the final step. The composite rule "success = any one flow
+passed" is NOT used for lanes.
 
-- `registries.ts`: lane types + loader for `sidecoach-lanes.json` INCLUDING
-  the scope policy (the eligibility input is part of decision parity); no
-  silent TS fallback - missing/invalid JSON yields explicit error states.
-- `keyword-resolver.ts`: weighted grouped-evidence scoring + occurrence-aware
-  suppression, decision-identical to the hook on the shared fixture corpus.
-- **Public API decided:** `sidecoach_resolve_keyword` is REPLACED by
-  `sidecoach_classify_intent` (clean rename; the server has no external
-  clients - consistent with the no-aliases posture). Result: `{decision:
-  ROUTE|CLASSIFY|OUT_OF_SCOPE|UNKNOWN|VERB, laneScores, evidenceIds,
-  winningLane?, verbMatch?, schemaVersion}`.
-- New `sidecoach_lane` tool mirroring the monitor lane subcommands (start /
-  advance / status).
-- `list-modes.ts` -> `list-lanes.ts` (`sidecoach_list_lanes`); `schemas.ts`,
-  `tools/index.ts`, `get-cheatsheet.ts` ("modes" section -> "lanes");
-  README.md, DESIGN.md; unit, integration, fault-injection, smoke tests and
-  transcripts; `mcp-server/dist/*` rebuilt.
+`LaneState` = `{ lane, target, projectPath, currentStep, steps: [{verb,
+flowIds, status: 'pending' | 'current' | 'completed' | 'skipped' |
+'validation_failed'}], stepReports, revision, status, convergence? }`.
 
-## 11. Hardening
+**Checkpoints:** `SidecoachCheckpoint` schemaVersion 2 adds `operationKind:
+'composite' | 'lane'`, `laneId?`, `projectPath`, `revision`, `stepReports`,
+`convergence?`. Lane resume resolves against the lane registry (not
+`PRESET_COMPOSITE_FLOWS`); v1 checkpoints still resolve presets (migration
+shim). Checkpoint lookup: ids resolve within the project's checkpoint
+directory; monitor/MCP calls accept `--project <path>` and default to cwd -
+documented and tested, never implicit-only.
 
-- `schemaVersion` + registry validator; all regexes compiled at hook startup
-  and in tests; per-pattern failures caught and skipped (verbs + nudge keep
-  working); unsafe/unbounded constructs rejected; sanitized prompt length
-  capped before scoring.
-- One structured debug line per prompt (stderr): decision, lane scores,
-  evidence ids, fallthrough reason. Registry ids only - never prompt text -
-  doubling as the privacy-safe false-route collection mechanism.
-- User override: any correction/cancellation stops the lane (directive text +
-  SKILL.md + the interruption contract in section 7).
+**Report-input hardening:** structured JSON only - inline or a file path
+restricted to within the project root; 256KB cap; schema-validated before
+use.
 
-## 12. Operational behavior
+**Dispatch surface:** `sidecoach-monitor lane start|advance|status|list`
+(flags: `--lane`, `--target`, `--checkpoint`, `--project`, `--action`,
+`--report`, `--revision`); MCP `sidecoach_lane` tool mirrors ALL FOUR
+operations. ROUTE directives and post-CLASSIFY selections dispatch through
+the identical path, e2e tested from hook output to engine call.
 
-- AskUserQuestion unavailable: ask the interview as one concise plain
-  question. Same one-question contract.
-- Lane registry missing/invalid at hook runtime: lane tier disabled with a
-  loud stderr line; verb tier and nudge unaffected; MCP tools return explicit
-  errors; build-time `--check` makes this state hard to reach.
-- Model non-compliance: mitigated by acceptance transcripts (directive in,
-  expected behavior shape out) and the announce-always rule.
+## 8. Prerequisites - lane preflight policy (global history is out)
 
-## 13. Blast radius
+Verified incompatibilities: `flowK` hard-requires `flowJ`, `flowJ`/`flowI`/
+`flowM` hard-require `flowG`, `flowF` hard-requires `flowA`
+(`flow-prerequisites.ts:54-112`) - so `lane_ship`, `lane_delight`, and
+`lane_converge` cannot start on a clean history. And history is GLOBAL
+(`~/.claude/sidecoach-flow-history.json`, session key defaulting to
+`"default"`), so separate monitor calls see empty or cross-project-
+contaminated history.
+
+Policy:
+
+- **Intra-lane ordering** is satisfied by CHECKPOINT-LOCAL completed steps,
+  never global history.
+- **History-only prerequisites** at lane entry are WAIVED per lane via
+  `prereqWaivers` (with reasons) for refinement lanes (`lane_ship`,
+  `lane_calm`, `lane_live`, `lane_converge`, and `lane_delight`'s
+  brand-verify requirement) - an existing UI is valid input to a validation/
+  refinement pass without prior sidecoach flow history. In place of waived
+  history, lane preflight checks PROJECT STATE (project path exists, has UI
+  source; DESIGN.md presence noted in the step-1 guidance, not required).
+- **Generation-time enforcement:** `generate-lanes.ts --check` FAILS if any
+  required prerequisite of any flow in a lane's derived sequence is neither
+  satisfied earlier in the lane nor explicitly waived. No lane can ship
+  unexecutable.
+- **History scoping:** where flow history remains an input (verb-tier
+  behavior, advisory uses), it becomes project-scoped (keyed by project
+  path, not a global default session). `flow-history.ts` joins the blast
+  radius.
+- Per-lane expected-outcome tests run from BOTH a fresh-build fixture and an
+  existing-UI-with-no-history fixture.
+
+## 9. lane_converge - persisted, truthful convergence
+
+`ralph-loop.ts` -> `convergence-loop.ts` (`Ralph*` -> `Convergence*`), with
+two semantic fixes, not just a rename:
+
+- **Validator failure can no longer converge.** Current behavior records a
+  runner throw as zero findings and converges (`ralph-loop.ts:265-303`;
+  t20 asserts it). New rule: any validator error, skip, or unsupported/
+  unparseable result marks the iteration `inconclusive`; convergence requires
+  a FULLY CLEAN iteration (all validators ran, zero findings). The t20
+  expectation is updated as part of this work.
+- **One canonical finding adapter:** `FlowExecutionResult ->
+  ConvergenceFinding[]` reading structured `validationResults` AND
+  memory-stored validations (audit/critique store there). A flow whose
+  results the adapter cannot interpret is `unsupported` = inconclusive,
+  never clean.
+
+**Persisted convergence state** (in the checkpoint, so every iteration
+survives process boundaries):
+
+```text
+convergence: {
+  status: 'running' | 'converged' | 'stalled' | 'capped' | 'error' | 'interrupted',
+  iteration, signatures[], consecutiveNoProgress,
+  limits: { maxIterations, maxNoProgress },
+  findings[], validatorErrors[]
+}
+```
+
+Stall/cap detection reuses `computeProgressSignature` + the existing
+counters, now fed from persisted state. `LaneStepResult.status` keeps the
+lane-level union; convergence detail lives in the `convergence` sub-state
+(v3's status collision resolved). Stepped iteration: `advanceLane` runs
+validators -> findings returned -> model fixes (real work) -> next
+`advanceLane` revalidates and updates signatures. E2e tests drive a real
+mutation on a fixture project and prove: state survives a fresh process per
+iteration; stall and cap fire; validator failure yields `error`/inconclusive,
+never `converged`.
+
+## 10. /sidecoach <phrase> - resolution union
+
+`ROUTE | CLASSIFY | OUT_OF_SCOPE | UNKNOWN` as v3, with scope per section 4
+(SCOPE_UNKNOWN + no negatives proceeds; positive negatives refuse). UNKNOWN
+preserves unknown-command behavior including near-miss suggestions
+(`/sidecoach polsih button` -> "did you mean /sidecoach polish?"). Typos
+never become interviews or routes.
+
+## 11. MCP migration
+
+- `registries.ts`: lane + scope-policy loader (eligibility input included in
+  parity); no silent TS fallback.
+- `keyword-resolver.ts`: full classifier - grouped scoring, clause binding,
+  occurrence-aware suppression.
+- `sidecoach_classify_intent` REPLACES `sidecoach_resolve_keyword`. Natural-
+  classification result union matches the hook COMPLETELY:
+  `ROUTE | CLASSIFY | OUT_OF_SCOPE | CONTEXT_CHECK | VERB | NUDGE | SILENT`
+  (+ laneScores, evidenceIds, winningLane?, verbMatch?, schemaVersion).
+  Phrase-parser resolution is a separate result kind with its own union
+  (section 10) - parser UNKNOWN is never conflated with classifier SILENT.
+  Parity acceptance covers every shared outcome.
+- `sidecoach_lane` tool mirrors all four monitor lane operations.
+- `list-modes.ts` -> `list-lanes.ts`; `schemas.ts`, `tools/index.ts`,
+  `get-cheatsheet.ts`; README/DESIGN; all test tiers + transcripts; dist.
+
+## 12. Hardening
+
+As v3 (validator + compiled regexes + per-pattern failure isolation + length
+caps + one structured debug line per prompt with registry ids only), plus the
+checkpoint/report hardening in section 7.
+
+## 13. Operational behavior
+
+As v3: AskUserQuestion unavailable -> one concise plain question; registry
+missing/invalid -> lane tier disabled loudly, verbs + nudge unaffected, MCP
+returns explicit errors; model non-compliance mitigated by acceptance
+transcripts + announce-always.
+
+## 14. Blast radius
 
 Hook layer: `sidecoach-keyword.sh`, `sidecoach-lanes.json` (new; replaces
-`sidecoach-modes.json`; includes scope policy), `test-sidecoach-keyword.sh`,
-`install.sh:1048` + `install.sh:2613`.
+`sidecoach-modes.json`; includes scope policy + waivers),
+`test-sidecoach-keyword.sh`, `install.sh:1048` + `install.sh:2613`.
 
 Engine: `modes.ts` removed -> `lanes.generated.ts` + `scripts/generate-lanes.ts`;
-`ralph-loop.ts` -> `convergence-loop.ts` (+ t20 test rename);
-`sidecoach-orchestrator.ts` (startLane/advanceLane/laneStatus, per-step
-history refresh, status mapping, verb-guidance aggregation, lane resume
-dispatch); `checkpoint-store.ts` (schema v2 + migration);
-`slash-command-router.ts` (+ tests); shared classifier module;
-`bin/sidecoach-monitor.js` (lane subcommands); `sidecoach/dist/*`.
+`ralph-loop.ts` -> `convergence-loop.ts` (+ t20 rename AND expectation fix);
+`sidecoach-orchestrator.ts` (lane API, per-step history refresh, status
+mapping, verb-guidance aggregation, lane resume dispatch);
+`checkpoint-store.ts` (schema v2 + migration); `flow-history.ts`
+(project scoping); `slash-command-router.ts` (+ tests); shared classifier
+module; `bin/sidecoach-monitor.js` (lane subcommands);
+**`sidecoach/package.json`** (`npm test` becomes an enumerating runner over
+`src/__tests__/` - today it runs ONLY `intent-detector.test.ts`, so the gate
+could pass while every new lane suite never executes); `sidecoach/dist/*`.
 
-MCP server: `registries.ts`, `keyword-resolver.ts`,
-`tools/resolve-keyword.ts` -> `classify-intent`, new `lane` tool,
-`tools/list-modes.ts` -> `list-lanes.ts`, `schemas.ts`, `tools/index.ts`,
-`get-cheatsheet.ts`, README.md, DESIGN.md, all test tiers + transcripts,
-`mcp-server/dist/*`.
+MCP server: `registries.ts`, `keyword-resolver.ts`, `resolve-keyword` ->
+`classify-intent`, new `lane` tool, `list-modes` -> `list-lanes`,
+`schemas.ts`, `tools/index.ts`, `get-cheatsheet.ts`, README, DESIGN, all
+test tiers + transcripts, `mcp-server/dist/*`.
 
-Docs/skill/marketing: SKILL.md + CHEATSHEET.md (generated lane sections,
-stepped-lane protocol, phrase routing docs, modes removed);
-`marketing-site/cheatsheet.html` (12 hits) + `sidecoach.html` (5 hits), via
-the visual verification gate.
+Read-only generation input: `verb-command-registry.ts` (derivation source).
 
-OUT of scope (false-positive hits, do not touch): visual-effects "bloom"
-(shader); `ralph-loop@claude-plugins-official` in settings.json (CC plugin);
-`sidecoach/reference/_extracted/*` (vendored); `.claude/memory/*` (record).
+Docs/skill/marketing: SKILL.md + CHEATSHEET.md (generated sections, stepped
+protocol, phrase docs); `marketing-site/cheatsheet.html` + `sidecoach.html`
+via the visual verification gate.
 
-## 14. Testing
+OUT of scope (do not touch): visual-effects "bloom" (shader);
+`ralph-loop@claude-plugins-official` (CC plugin); `reference/_extracted/*`;
+`.claude/memory/*`.
 
-Aggregate runner `sidecoach/test-all.sh` wraps:
+## 15. Testing
+
+`sidecoach/test-all.sh` wraps (exact commands):
 
 ```text
 bash claude/hooks/test-sidecoach-keyword.sh
-node sidecoach/scripts/generate-lanes.js --check   (or ts-node)
-cd sidecoach && npm run build && npm test
-cd sidecoach && npx ts-node src/__tests__/t20-convergence-loop.test.ts
+npx ts-node sidecoach/scripts/generate-lanes.ts --check
+cd sidecoach && npm run build && npm test     # npm test = enumerating runner
 cd sidecoach/mcp-server && npm run build && npm test
 ```
 
-Shared fixture corpus (Python hook + TS MCP classifier, identical
-decisions):
+The enumerating runner self-tests: it fails if a required lane suite file
+(state machine, checkpoint, scope binding, convergence) is absent from its
+manifest.
 
-- One strong-signal prompt per lane -> ROUTE with the right lane.
-- Non-design negatives for all six lanes (backend, tests, CI, release
-  engineering, infrastructure, data, prose) -> zero ROUTE, zero CLASSIFY.
-- Ambiguous-target negatives: database `table`, database `view`, validation
-  `form`, compute `grid`, backend `component`, non-UI `screen` ->
-  OUT_OF_SCOPE or silent, never ROUTE/CLASSIFY.
-- Explicit-address negatives: `/sidecoach build the API from scratch`,
-  `/sidecoach don't stop until unit tests pass` -> OUT_OF_SCOPE.
-- Unknown/typo phrases: `/sidecoach foo`, `/sidecoach polsih button` ->
-  UNKNOWN with suggestions.
-- Explicit verb + route-grade lane conflicts for every lane and every verb in
-  its chain -> CLASSIFY.
-- Overlapping same-group evidence -> max-per-group scoring.
-- Mixed informational + imperative occurrences -> imperative scores (plus
-  the suppression algorithm's edge cases: multiline, quotes, punctuation).
-- Ties/near-ties -> CLASSIFY. Old mode words as plain English ("trim the
-  whitespace", "canvas element", "bloom effect") -> never lane-route.
-- Invalid/missing JSON, invalid regex, extreme length -> graceful
-  degradation per section 12.
-- Cooldown after ROUTE, CLASSIFY, "Just handle it directly", and failed
-  interview tooling.
+Classifier corpus (hook + MCP, identical decisions on every shared outcome):
+all v3 cases, plus:
 
-Execution tests:
+- `make this production-ready` (natural) -> CONTEXT-CHECK, not OUT_OF_SCOPE.
+- `/sidecoach make this production-ready` -> proceeds (SCOPE_UNKNOWN, no
+  negatives).
+- `The landing page is done. Make the migration production-ready.` -> never
+  routes (clause binding).
+- Bare TypeScript `interface`, packet `header`, memory `layout` -> never
+  prove scope; qualified forms ("user interface", "page header") do.
 
-- Hook ROUTE -> monitor lane dispatch -> engine call (end to end); CLASSIFY
-  selection -> the same dispatch path.
-- Every sequence lane from a CLEAN project/history - proving per-step
-  prerequisite refresh (no reliance on pre-populated histories).
-- Status mapping: completed / partial / failed / interrupted per lane.
-- Checkpoint write, interruption, resume for sequence AND loop lanes;
-  v1-checkpoint migration shim.
-- One verb-guidance block per verb in lane order; deduplicated flows run
-  once.
-- Convergence e2e with a real mutation step on a fixture project: fixes
-  applied, truthful converged/stalled/capped/error/interruption statuses.
-- Install wiring, generated-artifact `--check`, registry mirror parity,
-  checked-in dist verification.
+Execution acceptance: all v3 cases, plus:
 
-Release acceptance targets:
+- `advanceLane complete` without a valid StepReport is rejected; the step
+  cannot silently complete.
+- Explicit retry, skip, interrupt, resume, and stop transitions persist and
+  return documented statuses; status precedence verified.
+- Two concurrent advances against one checkpoint: exactly one wins
+  (expectedRevision CAS).
+- Convergence state survives a fresh process per iteration; stall and cap
+  still fire.
+- Any validator error/skip/unsupported result prevents `converged`
+  (replacing the current t20 expectation that enshrines the opposite).
+- Ship, delight, live, calm, and converge lanes each have defined, tested
+  behavior on an existing UI with NO prior sidecoach history (waiver +
+  preflight path) AND on a fresh-build fixture.
+- Checkpoint resolution with explicit `--project` and with cwd default.
 
-- Zero ROUTE and zero CLASSIFY on the non-design negative corpus.
-- Zero lane overrides of explicit `/sidecoach <verb>` commands.
-- Hook and MCP classifier decisions identical on the full fixture corpus.
-- Every mirror validated against canonical JSON (`--check` green).
-- `lane_converge` demonstrably loops and converges against a real fixture
-  mutation, with truthful exit statuses.
-- Calibration report (precision, false-route, interview, fallthrough rates)
-  on the labeled corpus before thresholds are final.
+Release acceptance targets: as v3 (zero ROUTE/CLASSIFY on negatives, zero
+overrides of explicit verbs, full-corpus hook/MCP parity, `--check` green,
+convergence proven against real fixture mutation, calibration report), plus:
+the aggregate runner's manifest self-test proves the lane suites executed.
 
-## 15. Out of scope
+## 16. Out of scope
 
-- The 22 verbs stay as direct triggers (they pass say-it-out-loud).
-- No new magic keywords of any kind.
-- The advisory intent-nudge tier keeps its current registry and behavior.
-- Lane membership and verb chains are not redesigned; trigger + execution
-  plumbing only.
-- Engine-owned mutation (the engine editing product code itself) is
-  explicitly rejected, not deferred - it inverts the architecture.
+- The 22 verbs stay as direct triggers; the advisory nudge tier unchanged.
+- No new magic keywords. Lane membership/verb chains not redesigned.
+- Engine-owned mutation remains rejected, not deferred.

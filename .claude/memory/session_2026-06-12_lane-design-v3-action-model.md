@@ -4,6 +4,7 @@ description: Second review verified and folded into spec v3; Jonah chose the mod
 type: decision
 relates_to: [session_2026-06-12_lane-design-v2-review-revision.md]
 supersedes: session_2026-06-12_lane-design-v2-review-revision.md
+superseded_by: session_2026-06-12_lane-design-v4-execution-truthfulness.md
 ---
 
 Spec revised to v3 after the second independent review. All v2 P0/P1/P2
