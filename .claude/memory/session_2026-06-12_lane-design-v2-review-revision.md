@@ -3,6 +3,7 @@ name: lane intent detection design v2 - review revision
 description: Independent review (3 P0 / 5 P1 / 3 P2) verified and folded into spec v2; Jonah chose wire-converge-now, engine phrase feature, build runLane now
 type: decision
 relates_to: [session_2026-06-12_lane-intent-detection-design.md]
+superseded_by: session_2026-06-12_lane-design-v3-action-model.md
 ---
 
 Spec revised to v2 after the independent review at
