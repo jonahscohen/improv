@@ -4,6 +4,7 @@ description: v5 = Option A convergence contract (Jonah's edit) + remaining v4-re
 type: decision
 relates_to: [session_2026-06-12_lane-design-v4-execution-truthfulness.md, reference_convergence_validator_capability_inventory.md]
 supersedes: session_2026-06-12_lane-design-v4-execution-truthfulness.md
+superseded_by: session_2026-06-12_lane-design-v6-release-floor.md
 ---
 
 Spec v5 finalized (2026-06-12). Two parts:

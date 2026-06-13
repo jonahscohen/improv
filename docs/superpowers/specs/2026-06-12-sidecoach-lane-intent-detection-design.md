@@ -1,12 +1,15 @@
-# Sidecoach Lane Intent Detection - Design (v5)
+# Sidecoach Lane Intent Detection - Design (v6)
 
 Date: 2026-06-12
 Collaborator: Jonah
-Status: revised after fourth independent review; selects the truthful
-convergence-capability contract (Option A: product validators gate,
-audit/critique advise) and resolves the remaining v4-review P0/P1/P2 findings
-(three-gate preflight, edge waivers, resume, CAS, NUDGE parity, clause
-segmentation, containment, retention). Reviews at `docs/superpowers/reviews/`.
+Status: revised after fifth independent review. Capability architecture
+(product validators gate, advisory flows coach) retained with a BOUNDED
+PRODUCT-VALIDATION RELEASE FLOOR for `lane_converge` (Jonah, 2026-06-12):
+coverage-aware Flow J plus static theming, anti-pattern, and accessibility
+validator slices; browser-dependent and judgment-heavy validation stays
+advisory. Also resolves v4-review P0/P1/P2 findings (three-gate preflight,
+edge waivers, resume, CAS, NUDGE parity, clause segmentation, containment,
+retention). Reviews at `docs/superpowers/reviews/`.
 
 ## Problem
 
@@ -26,10 +29,18 @@ The verb chains behind the words are good. The names are the problem.
 6. Action model: model-driven lane state machine. The engine serves guidance
    and validates; the model does the work between steps.
 7. **Convergence capability model: product validators gate; advisory flows
-   coach.** `lane_converge` keeps polish, audit, and critique in the loop, but
-   only target-derived product validators decide clean. Today tactical polish
-   is the sole gate; audit and critique remain advisory until each earns
-   product-validator capability in a separately reviewed change.
+   coach - with a bounded product-validation release floor** (Jonah,
+   2026-06-12, fifth review). `lane_converge` keeps polish, audit, and
+   critique in the loop, but only target-derived product validators decide
+   clean. `lane_converge` is ENABLED only when the release floor is met:
+   Flow J hardened into a coverage-aware product validator AND the static
+   theming/token-consistency, CSS anti-pattern, and reliable static
+   accessibility slices producing target-derived findings as independent
+   product validators (section 9). Rendered responsive behavior, Core Web
+   Vitals, screen-reader behavior, and Nielsen/cognitive-load critique remain
+   advisory until their harnesses and confidence policies exist as separately
+   reviewed features. The five sequence lanes and the classifier do not wait
+   on the floor.
 
 ## Constraints
 
@@ -276,17 +287,54 @@ capability: 'none' | 'advisory' | 'product_validator'
 
 product_validator additionally declares:
   validatorId
-  measuredScope[]        // user-facing, concrete claims this validator proves
-  cleanPolicy            // exact threshold for status='clean'
+  registryScope[]        // the validator's MAXIMUM capability (what it can
+                         // prove when evidence is complete)
+  cleanPolicy            // structured, testable - schema below
   validateProduct(context) -> ProductValidationResult
+
+ProductRuleResult = {
+  ruleId,
+  status: 'pass' | 'fail' | 'not_applicable' | 'inconclusive',
+  evidenceKind,           // what evidence the rule actually inspected
+  evidenceLocations[],    // files/selectors the evidence came from
+  message, remediation?
+}
 
 ProductValidationResult = {
   status: 'clean' | 'findings' | 'inconclusive' | 'error',
+  rules: ProductRuleResult[],
   findings: ProductFinding[],
-  measuredScope: string[],
+  coverage: {             // RUN-derived, not registry-declared
+    inspectedFiles[], skippedFiles[],
+    supportedSourceKinds[], unsupportedSourceKinds[],
+    ruleCounts: { pass, fail, notApplicable, inconclusive },
+    measuredScope[],      // what this run actually proved
+    unverifiedScope[]     // registryScope minus what this run proved
+  },
   error?: string
 }
+
+cleanPolicy = {
+  requiredRuleIds[],
+  blockingSeverities[],
+  toleratedFindingCountsByClass,
+  minimumCoverageByScope,
+  inconclusiveBehavior: 'block',
+  notApplicableBehavior: 'exclude_and_report'
+}
 ```
+
+Four-status rule semantics are mandatory: `clean` requires every required
+applicable rule to be `pass` with NO required rule `inconclusive`;
+`not_applicable` is reported separately and never inflates a pass count or
+rate; missing, skipped, unreadable, or unsupported evidence makes the
+affected rules `inconclusive`, never `pass` (the current code's
+absence-passes - `undefined !== '0px'` - and N/A-as-`passed: true`
+conventions are explicitly replaced). `measuredScope` in every result and
+summary is derived from the run's coverage record - registry scope says what
+the validator COULD prove; run scope says what it DID. The `cleanPolicy` is
+persisted with each validation run and included in the closing summary;
+tests prove policy changes deterministically change outcomes.
 
 `product_validator` entry points inspect the target/project, not Sidecoach's
 own guidance/checklist output. General memory validations, framework-
@@ -415,18 +463,50 @@ Policy:
 `ralph-loop.ts` -> `convergence-loop.ts` (`Ralph*` -> `Convergence*`), with
 semantic fixes and an explicit capability boundary, not just a rename.
 
-**Option A selected for this release: product validators gate; audit/critique
-advise.** Lane membership stays `polish -> audit -> critique`, so every
-iteration still receives all three verbs' coaching. Only flows declared
-`product_validator` decide whether the target is clean.
+**Capability architecture with a bounded product-validation release floor
+(Jonah, 2026-06-12, fifth review).** Lane membership stays `polish -> audit ->
+critique`, so every iteration still receives all three verbs' coaching. Only
+flows declared `product_validator` decide whether the target is clean - and
+`lane_converge` is ENABLED only once the release floor below is met. Full
+Option B (browser harness, CWV, calibrated judgment) is explicitly rejected
+as a release dependency; those validators arrive as separately reviewed
+follow-ups and widen the gate via the registry.
 
-Initial capability registry for `lane_converge`:
+Release floor for enabling `lane_converge`:
 
-| Flow | Capability now | Role in iteration | Enters clean/stall signature? |
-|---|---|---|---|
-| `flowJ_tactical_polish` | `product_validator` | Runs the project-derived polish matrix + linguistic-ban + absolute-ban scans | yes |
-| `flowK_multi_lens_audit` | `advisory` | Serves the five-dimension manual audit framework and findings guidance | no |
-| `flowL_design_critique` | `advisory` | Serves Nielsen/AI-slop/cognitive-load critique lenses | no |
+| Validator slice | Capability | Release requirement |
+|---|---|---|
+| Flow J coverage-aware static polish/copy/bans | `product_validator` | REQUIRED |
+| Static theming/token consistency | `product_validator` | REQUIRED |
+| Static CSS anti-pattern checks | `product_validator` | REQUIRED |
+| Reliable static accessibility checks (source-evidence: semantic markup, label/ARIA presence, focus/reduced-motion) | `product_validator` | REQUIRED |
+| `flowK_multi_lens_audit` (manual five-dimension framework) | `advisory` | coaching only |
+| `flowL_design_critique` (Nielsen/AI-slop/cognitive-load lenses) | `advisory` | coaching only |
+| Rendered responsive/device validation | `advisory` | follow-up feature |
+| Browser performance / Core Web Vitals | `advisory` | follow-up feature |
+| Nielsen/cognitive-load/design-director judgment | `advisory` | follow-up feature |
+
+The three static slices are independent product validators with their own
+`validatorId`, `registryScope`, and `cleanPolicy` - NOT inferred from audit
+handler output. Their rule logic largely exists (extended-domain validator,
+taste validator, anti-pattern validator - see
+`reference_convergence_validator_capability_inventory.md`); the work is
+honest evidence collection feeding them.
+
+**Flow J hardening (required, and obligatory under this spec's own
+missing-inputs-are-inconclusive rule regardless of the floor):**
+
+- Project discovery becomes RECURSIVE over supported source types with
+  explicit exclusions (node_modules, dot-dirs, dist) and size limits - the
+  current collector walks one level deep and reads only CSS-family files for
+  rules and root-level HTML/MD for copy.
+- Every rule returns the four-status `ProductRuleResult`; absence-passes
+  (`undefined !== '0px'`) and N/A-as-`passed: true` are eliminated.
+- Unsupported source systems (e.g. CSS-in-JS the collector cannot read) and
+  unreadable/size-skipped files make the affected scope `inconclusive`, never
+  clean, and appear in the coverage record.
+- A shallow clean-CSS fixture cannot claim the full extended-domain matrix as
+  measured - run coverage decides the claim.
 
 This is deliberately narrow and honest. Audit's permanent "manual testing
 required" warning cannot make convergence impossible; critique's "framework
@@ -444,15 +524,19 @@ does NOT infer clean from its message, generic memory validation text, or
 output-shape domain validators:
 
 ```text
-measuredScope:
+registryScope (maximum capability):
   - tactical polish matrix (22 rules)
   - extended design-domain matrix (90 rules)
   - linguistic-ban scan
   - absolute-ban scan
 
-status: clean only when all required measured checks ran and produced zero
-        unresolved findings under the declared cleanPolicy;
-        missing/skipped inputs = inconclusive
+measuredScope: derived PER RUN from the coverage record - only checks that
+        actually ran with sufficient evidence. unverifiedScope = registry
+        scope minus run-proven scope, merged into the summary.
+
+status: clean only when every required applicable rule passed with no
+        required rule inconclusive, under the persisted cleanPolicy;
+        missing/skipped/unsupported inputs = inconclusive
 ```
 
 The capability registry is self-widening for lane members: when audit,
@@ -498,11 +582,23 @@ sub-state. Stepped iteration: `advanceLane` runs product validators and
 advisory flows -> findings + coaching returned -> model fixes (real work) ->
 next `advanceLane` revalidates and updates signatures.
 
-Every converged result and closing summary MUST state the boundary:
+Every converged result and closing summary MUST state the boundary, and the
+summary is GENERATED FROM THE RUN COVERAGE RECORD, never from registry
+declarations alone - it discloses files/source kinds not inspected, rules
+lacking evidence, not-applicable rules, and actual measured-rule coverage:
 
-> Converged (machine-measured): {measuredScope} clean after {N} iterations.
-> Not machine-verified: {unverifiedScope}. Advisory audit/critique guidance
-> was {completed | partially unavailable}; manual verification remains advised.
+> Converged (machine-measured): {run measuredScope} clean after {N}
+> iterations under {cleanPolicy}. Coverage: {inspected}/{discovered} files;
+> not inspected: {unsupportedSourceKinds, skippedFiles}. Not machine-verified:
+> {run unverifiedScope}. Advisory audit/critique guidance was
+> {completed | partially unavailable}; manual verification remains advised.
+
+**Advisory failure qualification:** advisory flow errors never block the
+product gate, but they change the user-facing terminal label. The persisted
+convergence status remains `converged`; the DISPLAYED result becomes
+`machine_checks_clean_with_advisory_warnings`, with the incomplete coaching
+prominent in the summary. A bare "converged" is never shown when the
+requested coaching loop did not fully execute.
 
 E2e tests drive a real mutation on a fixture project and prove: state survives
 a fresh process per iteration; stall and cap fire; product-validator failure
@@ -565,9 +661,16 @@ Hook layer: `sidecoach-keyword.sh`, `sidecoach-lanes.json` (new; replaces
 Engine: `modes.ts` removed -> `lanes.generated.ts` + `scripts/generate-lanes.ts`;
 `ralph-loop.ts` -> `convergence-loop.ts` (+ t20 rename AND expectation fix);
 new `flow-validation-capabilities.ts` (canonical capability registry);
-`flow-handler.ts` (typed `ProductValidationResult` / finding contracts);
-`flow-handler-tactical-polish.ts` (pure product-validation entry point exposing
-the matrix + linguistic/absolute-ban findings);
+`flow-handler.ts` (typed `ProductRuleResult` / `ProductValidationResult` /
+coverage / cleanPolicy contracts);
+`flow-handler-tactical-polish.ts` (recursive coverage-aware collector +
+pure product-validation entry point exposing the matrix +
+linguistic/absolute-ban findings);
+`polish-standard-validator.ts` + `extended-domain-validator.ts` +
+`domains/*` (four-status rule results; absence-passes and
+N/A-as-`passed: true` eliminated);
+new static validator slice modules (theming/token consistency, CSS
+anti-patterns, static accessibility - the release floor);
 `sidecoach-orchestrator.ts` (lane API, per-step history refresh, status
 mapping, verb-guidance aggregation, lane resume dispatch);
 `checkpoint-store.ts` (schema v2 + migration); `flow-history.ts`
@@ -643,6 +746,25 @@ Execution acceptance: all v3 cases, plus:
 - Capability-registry checks prove every loop lane has at least one product
   validator and that promoting an existing lane member automatically widens
   the required gate.
+- Release-floor truthfulness suite (fifth review):
+  - a nested TSX/CSS-in-JS fixture cannot report unsupported checks as pass;
+  - removing required evidence flips affected rules from pass/fail to
+    `inconclusive`;
+  - not-applicable rules are excluded from pass rates and listed separately;
+  - missing metadata cannot silently pass genericity, contrast, performance,
+    or accessibility checks;
+  - unreadable and size-skipped files appear in coverage and make affected
+    scopes inconclusive;
+  - a shallow clean-CSS-only fixture cannot claim the full extended-domain
+    matrix as measured;
+  - static theming, anti-pattern, and accessibility mutations each produce
+    stable target-derived findings that block convergence;
+  - the closing summary is generated from run coverage and changes when
+    inspected evidence changes;
+  - advisory flow failure produces the visibly qualified
+    `machine_checks_clean_with_advisory_warnings` display result;
+  - `lane_converge` cannot be enabled (registry check) until every
+    release-floor validator is present and green.
 - Ship, delight, live, calm, and converge lanes each have defined, tested
   behavior on an existing UI with NO prior sidecoach history (waiver +
   preflight path) AND on a fresh-build fixture.
@@ -678,5 +800,9 @@ manifest self-test proves the lane suites executed.
 - The 22 verbs stay as direct triggers; the advisory nudge tier unchanged.
 - No new magic keywords. Lane membership/verb chains not redesigned.
 - Engine-owned mutation remains rejected, not deferred.
-- Upgrading audit or critique into product validators is a separate follow-up
-  feature, landed dimension-by-dimension with its own evidence and review.
+- Browser-dependent validation (rendered responsive, Core Web Vitals,
+  screen-reader behavior) and judgment-heavy critique (Nielsen,
+  cognitive-load) remain advisory; each lands as a separately reviewed
+  follow-up with its own harness/confidence policy and widens the gate via
+  the registry. The static validator slices in the release floor are IN
+  scope for this release.
