@@ -68,3 +68,42 @@ def segment_clauses(text):
         i += 1
     bounds = sorted({0, n, *[c for c in cuts if 0 < c < n]})
     return [(a, b) for a, b in zip(bounds, bounds[1:]) if b > a]
+
+
+def _blank(match):
+    return " " * (match.end() - match.start())
+
+
+def sanitize(text):
+    """Length-preserving strip of non-intent regions (code fences, inline
+    backticks, URLs, XML bodies, transcript markers). Each region becomes
+    same-length spaces so downstream offsets are preserved."""
+    text = re.sub(r"```[\s\S]*?```", _blank, text)
+    text = re.sub(r"`[^`\n]*`", _blank, text)
+    text = re.sub(r"\b(?:https?|file|ftp)://\S+", _blank, text, flags=re.IGNORECASE)
+    text = re.sub(r"<([a-zA-Z][\w:-]*)[^>]*>[\s\S]*?</\1\s*>", _blank, text)
+    text = re.sub(r"<[a-zA-Z!/][^>]*>", _blank, text)
+    text = re.sub(r"\[(?:MAGIC KEYWORD|TURN\s+(?:\d+|N))[^\]]*\]", _blank, text,
+                  flags=re.IGNORECASE)
+    return text
+
+
+# Informational frames consume from the frame head to the clause end
+# (terminators stop them, so a frame never crosses a sentence boundary).
+_INFO_FRAMES = [
+    r"\bwhat(?:['’]s| is| are| was| were| does| did)\s+[^.!?;\n]*",
+    r"\bhow\s+(?:to|do\s+(?:i|you|we))\s+[^.!?;\n]*",
+    r"\btell\s+me\s+about\s+[^.!?;\n]*",
+    r"\bexplain\s+[^.!?;\n]*",
+    r"\bdefine\s+[^.!?;\n]*",
+]
+_QUOTE_FRAME = r"[\"“][^\"”\n]{0,400}[\"”]"
+
+
+def blank_informational(text):
+    """Length-preserving blanking of informational framings and quoted spans,
+    so lane evidence quoted/described (not invoked) does not score."""
+    for pat in _INFO_FRAMES:
+        text = re.sub(pat, _blank, text, flags=re.IGNORECASE)
+    text = re.sub(_QUOTE_FRAME, _blank, text)
+    return text

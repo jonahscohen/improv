@@ -91,6 +91,65 @@ def test_conjunction_boundary_is_word_not_prefix():
     assert len(sl.segment_clauses("ship it, and call it done")) == 2
 
 
+# --- Task 3: sanitize + occurrence-aware informational blanking ---
+
+def test_sanitize_strips_code_and_transcript():
+    t = "polish the `nav` here\n```\nfunction polish(){}\n```\n[TURN 3: build a page]"
+    out = sl.sanitize(t)
+    assert "function polish" not in out
+    assert "TURN 3" not in out
+    assert len(out) == len(t)  # length-preserving
+
+
+def test_blank_informational_blanks_only_the_frame_span():
+    t = "what is production-ready mean. make this production-ready"
+    out = sl.blank_informational(t)
+    # the informational clause is blanked, the imperative clause survives
+    first, second = out.split(".", 1)
+    assert "production-ready" not in first
+    assert "production-ready" in second
+    assert len(out) == len(t)
+
+
+def test_blank_informational_blanks_quoted_text():
+    t = 'the doc said "make it production-ready" but ignore that'
+    out = sl.blank_informational(t)
+    assert "production-ready" not in out
+    assert len(out) == len(t)
+
+
+# --- Task 3 adversarial edges (carry the prefix-collision lesson: a boundary
+# that could over-consume real intent). The quoted-span frame is the analogue. ---
+
+def test_blank_informational_quote_does_not_eat_following_intent():
+    # the quoted span is blanked, but real intent AFTER the closing quote survives
+    t = 'the brief said "make it production-ready" - now polish the hero from scratch'
+    out = sl.blank_informational(t)
+    assert "production-ready" not in out            # quoted evidence blanked
+    assert "polish the hero from scratch" in out    # intent after the close survives
+    assert len(out) == len(t)
+
+
+def test_blank_informational_unclosed_quote_preserves_intent():
+    # an opening quote with no close must NOT blank real downstream intent to EOL
+    t = 'make the dashboard production-ready, the memo said "ship it'
+    out = sl.blank_informational(t)
+    assert "production-ready" in out                # survives: the quote never closes
+    assert len(out) == len(t)
+
+
+def test_sanitize_length_preserving_on_combined_regions():
+    # code fence + inline code + URL + XML + transcript marker in one string;
+    # every region blanked, real trailing intent survives, offsets preserved.
+    t = ("check `code` and ```\nblock\n``` at https://x.io/y?z=1 "
+         '<div class="x">body</div> [TURN 12: paste] then polish the hero')
+    out = sl.sanitize(t)
+    assert len(out) == len(t)
+    for gone in ("code", "block", "x.io", "body", "TURN 12"):
+        assert gone not in out, f"{gone!r} should be stripped"
+    assert "polish the hero" in out                 # real intent outside regions survives
+
+
 if __name__ == "__main__":
     try:
         import pytest
