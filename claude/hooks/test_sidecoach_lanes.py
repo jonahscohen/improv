@@ -320,6 +320,15 @@ def test_result_dict_shape_matches_ts_mirror_contract():
         assert set(s.keys()) == {"lane", "label", "score", "scope", "evidenceIds"}
 
 
+def test_route_margin_boundary_exactly_two_routes():
+    # Real-registry boundary guard: lane_build scores 5 (greenfield 3 +
+    # build_verb 2, two groups), lane_ship 3 -> margin is EXACTLY 2 == route_margin,
+    # so `>=` ROUTES. A `>=`->`>` regression would flip this to CLASSIFY.
+    r = _ci("build me a dashboard from scratch and make it production-ready")
+    assert r["outcome"] == "ROUTE"
+    assert r["winningLane"] == "lane_build"
+
+
 if __name__ == "__main__":
     try:
         import pytest
