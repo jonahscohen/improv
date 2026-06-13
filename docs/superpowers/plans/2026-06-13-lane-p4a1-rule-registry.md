@@ -1,4 +1,14 @@
-# Product Rule Registry + Clean-Evaluation Model (Phase 4a-1) Implementation Plan
+# Product Rule Registry + Clean-Evaluation Model (Phase 4a-1) Implementation Plan - v2
+
+## What changed in v2 (Codex review `task-mqcyq1jw` - no P0; folds 8 P1 + 3 P2). BINDING:
+
+- **Evaluator (P1-1/2/3):** `evaluateCleanPolicy` now materializes a `ProductFinding` for every effective FAIL (preserved for EVERY status, incl. clean), iterates EVERY `policy.requiredRuleIds` so a MISSING or coverage-gapped required rule becomes `inconclusive` (never silently clean), returns the EFFECTIVE rule set, and consumes a run-derived `coverageSatisfiedRuleIds` keyed to `requiredCoverageByScope`. (Rewritten in Task 5.)
+- **Types (P1-4/5):** `ProductRuleDefinition` gains `sourceVocabulary` + `sourceSeverity` (so the `--check` severity-divergence guard is implementable) and an OPTIONAL `checkProduct?` (attached in P4a-2). `ProductValidatorRegistration` gains an OPTIONAL `validateProduct?` (attached P4a-2). `FlowValidationCapability.capability` is GENERATED in P4a-1 (Task 4 emits it from `productValidatorIds`), not authored - the authored array in `flow-validation-capabilities.ts` is consistency-checked against the generated value by `--check`.
+- **Generator derivation, EXACT (P1-6, P2-3):** Task 4 must implement these PURE functions: `requiredRuleIds` = owned rules where `evidenceRequirements.every(e => !['dom','computed-style','contrast'].includes(e))` (DOM/computed/contrast-only -> owned-but-non-required); per required rule, `requiredCoverageByScope` record = `{ruleId, scope, supportedEvidenceAlternatives: supportedSourceKinds.filter(s=>s.level!=='none').map(s=>s.kind), requireAllDiscoveredApplicableFiles: scope==='file'||scope==='project'}`; `toleratedFindingCounts` emits an EXPLICIT `0` for every owned blocking `(severity,findingClass)` pair (not `{}`); `blockingSeverities=['blocker','major']`.
+- **Generator guards + negative tests (P1-7):** expose pure `validateRegistry()` + `deriveValidator()` functions; Task 4's test has FAILING-FIRST fixtures for EACH rejection: empty `requiredRuleIds`, a gating rule missing metadata, a `canonicalRuleKey` with two owners, a source alias mapped to two canonical keys, a coverage record whose alternatives can't satisfy a required rule's `evidenceRequirements`, and a rule whose `SEVERITY_TABLE[sourceSeverity]` != `severity` WITHOUT `severityOverrideReason`.
+- **Full seed, NO placeholder (P1-8, P2-1):** Task 2 spells out all 6 seed `ProductRuleDefinition`s completely (no 'author the rest in the same shape'). Alias semantics CORRECTED: the 22 POLISH rules are 22 SEMANTIC rules; each canonical rule's `sourceRuleAliases` are the cross-registry duplicate ids for the SAME semantic (polish-standard id + extended-domain `POLISH_0NN`) -> 22 canonical rules, ~2 aliases each (NOT all-22 -> one). Tests assert representative cross-registry aliasing AND conflicting-alias rejection.
+- **Capability test rigor (P2-2):** assert EXACT generated `capability` equality (`product_validator` iff `productValidatorIds` non-empty, else `advisory`/`none` as authored), verify a registration exists for EVERY `ownerValidatorId` in the rule registry, and verify every lane-policy member validator is classified required-or-excluded.
+
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
 
@@ -84,8 +94,13 @@ export interface ProductRuleDefinition {
   sourceRuleAliases: string[];
   canonicalRuleKey: string;
   ownerValidatorId: string;
-  severity: CanonicalSeverity;
-  severityOverrideReason?: string;   // REQUIRED by --check when severity != table default
+  // Source vocabulary + severity ENABLE the --check divergence guard: --check
+  // normalizes sourceSeverity via SEVERITY_TABLE and REQUIRES severityOverrideReason
+  // when the normalized default != the declared canonical `severity`.
+  sourceVocabulary: 'polish-extended-antipattern' | 'p012' | 'taste';   // which source scale sourceSeverity uses
+  sourceSeverity: string;            // raw source value, e.g. 'critical' | 'P1' | 'error'
+  severity: CanonicalSeverity;       // canonical, per-rule AUTHORITATIVE (evaluator reads only this)
+  severityOverrideReason?: string;   // REQUIRED by --check when SEVERITY_TABLE[sourceSeverity] != severity
   findingClass: string;              // 'a11y' | 'theming' | 'anti-pattern' | 'copy' | 'polish' | ...
   registryScope: string;             // the user-facing claim this rule contributes to
   evidenceRequirements: EvidenceKind[];
@@ -93,7 +108,9 @@ export interface ProductRuleDefinition {
   scope: RuleScope;
   narrowTargetBehavior: 'evaluate_expanded_context' | 'exclude_and_disclose' | 'reject_target';
   applicability: 'not_applicable' | 'inconclusive';   // when not applicable vs inconclusive
-  // checkProduct is attached in P4a-2 (validator adaptation); the registry here is declarative.
+  // checkProduct(context) -> ProductRuleResult is OPTIONAL here and ATTACHED in
+  // P4a-2 (validator adaptation). The P4a-1 registry is purely declarative.
+  checkProduct?: (context: unknown) => ProductRuleResult;
 }
 
 export interface ProductRuleResult {
@@ -409,35 +426,56 @@ run();
 
 ```typescript
 // sidecoach/src/clean-evaluator.ts
-import type { ProductRuleResult, CleanPolicy, ProductValidationResult, CanonicalSeverity } from './product-rule-types';
+import type { ProductRuleResult, ProductFinding, CleanPolicy, ProductValidationResult, RuleStatus } from './product-rule-types';
 
 export interface CleanEvalInput {
-  rules: ProductRuleResult[];
-  inspectedRequiredRuleIds: string[];       // required rules whose supported+discovered source was inspected
+  validatorId: string;                       // for materialized findings
+  rules: ProductRuleResult[];                // results actually produced this run (may be MISSING some required rules)
+  coverageSatisfiedRuleIds: string[];        // required ruleIds whose requiredCoverageByScope record was satisfied this run
   validatorError?: { category: any; message: string };   // step 1: validator could not run at all
 }
 
+// Materialize a ProductFinding for every effective FAIL (blocking or not), so a
+// clean result can still carry tolerated/non-blocking findings (spec 490-500).
+function toFinding(validatorId: string, r: ProductRuleResult): ProductFinding {
+  return { validatorId, ruleId: r.ruleId, canonicalRuleKey: r.canonicalRuleKey, severity: r.severity, findingClass: r.findingClass, evidenceLocations: r.evidenceLocations, message: r.message, remediation: r.remediation };
+}
+
 export function evaluateCleanPolicy(input: CleanEvalInput, policy: CleanPolicy): ProductValidationResult {
-  const base = (status: ProductValidationResult['status'], extra?: Partial<ProductValidationResult>): ProductValidationResult => ({
-    status, rules: input.rules, findings: [],
-    coverage: { inspectedFiles: [], skippedFiles: [], supportedSourceKinds: [], unsupportedSourceKinds: [],
-      ruleCounts: { pass: 0, fail: 0, notApplicable: 0, inconclusive: 0 },
-      findingCounts: { blockingExcess: 0, withinTolerance: 0, nonBlocking: 0 },
-      measuredScope: [], unverifiedScope: [] },
-    ...extra,
-  });
-  // 1. validator-level error
-  if (input.validatorError) return base('error', { normalizedErrorCategory: input.validatorError.category, error: input.validatorError.message });
+  const emptyCoverage = () => ({ inspectedFiles: [], skippedFiles: [], supportedSourceKinds: [], unsupportedSourceKinds: [],
+    ruleCounts: { pass: 0, fail: 0, notApplicable: 0, inconclusive: 0 },
+    findingCounts: { blockingExcess: 0, withinTolerance: 0, nonBlocking: 0 }, measuredScope: [], unverifiedScope: [] });
+
+  // 1. validator-level error -> STOP.
+  if (input.validatorError) return { status: 'error', rules: input.rules, findings: [], coverage: emptyCoverage(), normalizedErrorCategory: input.validatorError.category, error: input.validatorError.message };
+
   const required = new Set(policy.requiredRuleIds);
-  const applicable = input.rules.filter((r) => r.status !== 'not_applicable');
-  // 2. non-vacuity: at least one required measurable rule after exclusions
-  if (!applicable.some((r) => required.has(r.ruleId))) return base('inconclusive');
-  // 3. coverage: each required rule's source inspected; gap -> that rule inconclusive
-  const inspected = new Set(input.inspectedRequiredRuleIds);
-  const effective = input.rules.map((r) => (required.has(r.ruleId) && !inspected.has(r.ruleId) && r.status !== 'not_applicable') ? { ...r, status: 'inconclusive' as const } : r);
-  // 4. block on any required inconclusive
-  if (effective.some((r) => required.has(r.ruleId) && r.status === 'inconclusive')) return base('inconclusive');
-  // 5/6. count blocking fails by (severity, class) vs tolerance
+  const coverageOk = new Set(input.coverageSatisfiedRuleIds);
+  const byId = new Map(input.rules.map((r) => [r.ruleId, r]));
+
+  // Build the EFFECTIVE rule set over EVERY required rule (missing or
+  // coverage-gapped required rules are synthesized as inconclusive, NOT ignored),
+  // plus the present non-required rules.
+  const effective: ProductRuleResult[] = [];
+  for (const reqId of policy.requiredRuleIds) {
+    const r = byId.get(reqId);
+    if (!r) { effective.push({ ruleId: reqId, canonicalRuleKey: reqId, status: 'inconclusive', severity: 'major', findingClass: 'unknown', evidenceLocations: [], message: `required rule ${reqId} produced no result` }); continue; }
+    if (r.status !== 'not_applicable' && !coverageOk.has(reqId)) { effective.push({ ...r, status: 'inconclusive', message: `coverage gap for required rule ${reqId}` }); continue; }
+    effective.push(r);
+  }
+  for (const r of input.rules) if (!required.has(r.ruleId)) effective.push(r);
+
+  // 2. non-vacuity: at least one required APPLICABLE rule after exclusions.
+  const requiredApplicable = effective.filter((r) => required.has(r.ruleId) && r.status !== 'not_applicable');
+  if (requiredApplicable.length === 0) return { status: 'inconclusive', rules: effective, findings: [], coverage: emptyCoverage() };
+
+  // 3/4. any required rule inconclusive -> inconclusive.
+  if (requiredApplicable.some((r) => r.status === 'inconclusive')) {
+    return { status: 'inconclusive', rules: effective, findings: [], coverage: { ...emptyCoverage(), ruleCounts: ruleCounts(effective, input.rules) } };
+  }
+
+  // 5/6. materialize findings + count blocking by (severity,class) vs tolerance.
+  const findings: ProductFinding[] = effective.filter((r) => r.status === 'fail').map((r) => toFinding(input.validatorId, r));
   let blockingExcess = 0, withinTolerance = 0, nonBlocking = 0;
   const counts = new Map<string, number>();
   for (const r of effective) {
@@ -447,18 +485,19 @@ export function evaluateCleanPolicy(input: CleanEvalInput, policy: CleanPolicy):
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   for (const [key, n] of counts) { const T = policy.toleratedFindingCounts[key] ?? 0; withinTolerance += Math.min(n, T); blockingExcess += Math.max(0, n - T); }
-  const status = blockingExcess > 0 ? 'findings' : 'clean';
-  const r = base(status);
-  r.coverage.findingCounts = { blockingExcess, withinTolerance, nonBlocking };
-  r.coverage.ruleCounts = {
-    pass: effective.filter((x) => x.status === 'pass').length,
-    fail: effective.filter((x) => x.status === 'fail').length,
-    notApplicable: input.rules.filter((x) => x.status === 'not_applicable').length,
-    inconclusive: effective.filter((x) => x.status === 'inconclusive').length,
-  };
-  return r;
+
+  // 7. clean unless blockingExcess > 0; findings PRESERVED for every status.
+  const status: ProductValidationResult['status'] = blockingExcess > 0 ? 'findings' : 'clean';
+  return { status, rules: effective, findings, coverage: { ...emptyCoverage(), ruleCounts: ruleCounts(effective, input.rules), findingCounts: { blockingExcess, withinTolerance, nonBlocking } } };
+}
+
+function ruleCounts(effective: ProductRuleResult[], raw: ProductRuleResult[]) {
+  return { pass: effective.filter((x) => x.status === 'pass').length, fail: effective.filter((x) => x.status === 'fail').length,
+    notApplicable: raw.filter((x) => x.status === 'not_applicable').length, inconclusive: effective.filter((x) => x.status === 'inconclusive').length };
 }
 ```
+
+The test (5.1) must add: a MISSING required rule (in policy.requiredRuleIds but absent from `rules`) -> inconclusive (not clean); a coverage-gapped required rule (present + pass but NOT in `coverageSatisfiedRuleIds`) -> inconclusive; a blocking fail -> `findings.length === 1` with the right `validatorId`; a clean-with-tolerated-finding -> status clean AND `findings.length === 1` (findings preserved).
 
 - [ ] **Step 5.4: Run PASS + register + commit** - `git commit -m "feat(lane-p4a1): deterministic clean-evaluation algorithm (7-step, four-status)"`.
 

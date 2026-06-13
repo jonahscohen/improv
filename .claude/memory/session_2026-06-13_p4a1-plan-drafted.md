@@ -3,6 +3,7 @@ name: P4a-1 plan drafted (rule registry + clean-eval model) - to Codex
 description: P4a-1 plan written - four-status types, canonical product-rule-registry (seed + alias canonicalization), 3-registry capability model, generated clean policies + --check, deterministic 7-step clean-evaluation algorithm; validator adaptation -> P4a-2
 type: project
 relates_to: [session_2026-06-13_p4-decomposition.md, feedback_autonomous_phases_codex_partner.md]
+superseded_by: session_2026-06-13_p4a1-plan-v2.md
 ---
 
 First P4 sub-plan drafted: docs/superpowers/plans/2026-06-13-lane-p4a1-rule-registry.md

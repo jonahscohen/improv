@@ -1,3 +1,4 @@
+- [P4a-1 plan v2 (Codex fixes) - PROJECT (2026-06-13)](session_2026-06-13_p4a1-plan-v2.md): evaluator rewrite (findings/missing-rule/coverage), sourceSeverity+checkProduct? types, generated capability, exact generator+negative tests+full seed; re-Codex
 - [P4a-1 plan drafted (rule registry + clean-eval) - PROJECT (2026-06-13)](session_2026-06-13_p4a1-plan-drafted.md): four-status types, canonical rule registry, 3-registry model, generated clean policies + --check, 7-step clean-eval algorithm; to Codex
 - [P4 decomposition (durability folded in) - DECISION (2026-06-13)](session_2026-06-13_p4-decomposition.md): Jonah chose fold-P3-into-P4; P4 split into P4a validators / P4b async-exec+durability / P4c loops+convergence / P4d MCP+cleanup
 - [Lane P3 plan v2 (Codex fixes) - PROJECT (2026-06-13)](session_2026-06-13_lane-p3-plan-v2.md): race-safe lock, all-writes-under-lock, full lease identity, barrier-seam concurrency tests, locked start mapping, outbox seed; re-Codex
