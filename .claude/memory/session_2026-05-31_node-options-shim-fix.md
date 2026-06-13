@@ -2,6 +2,7 @@
 name: fix - cmux NODE_OPTIONS restore shim deleted by temp cleanup
 description: macOS temp-cleaned /var/folders/.../T/cmux-claude-node-options/restore-node-options.cjs, so every node/npx/MCP-hook process inheriting NODE_OPTIONS crashed with MODULE_NOT_FOUND on the --require preload. Recreated the shim (strips its own --require for children, preserves --max-old-space-size, never throws). Verified node/npx work.
 type: reference
+superseded_by: session_2026-06-11_node-shim-self-heal.md
 ---
 
 Collaborator: Jonah. 2026-05-31. Symptom: "node:internal/modules/cjs/loader:1210 ... Cannot find module '.../cmux-claude-node-options/restore-node-options.cjs'" breaking npx tsc, npm test, and an MCP hook.
