@@ -554,16 +554,31 @@ advanceLane:
      lease, write the step result, clear the lease, bump revision.
 ```
 
-Rules: a second `advanceLane` that finds a live lease (heartbeat within the
-liveness window) for the same step is REJECTED, not allowed to re-execute -
-this is what makes a step run once. A lease is reclaimable only when its
-heartbeat is older than the liveness window (stale = crashed mid-advance),
-and reclaim is logged. `validateProduct` and flow handlers receive the
-`AbortSignal`; on timeout the caller aborts and the lease/heartbeat decides
-liveness, so a timed-out-but-running operation is never double-claimed. The
-MCP server propagates the abort signal into tool handlers (today it does not).
-Tested: concurrent double-advance, timeout-then-retry, and crash-mid-advance
-all execute the step exactly once or leave a cleanly reclaimable lease.
+The guarantee is AT-MOST-ONE COMMITTED LANE TRANSITION, not exactly-once
+execution (v8 review correction). `AbortSignal` is cooperative: a timed-out
+handler can ignore it and keep running, so if its heartbeat goes stale a
+replacement may reclaim the lease and begin overlapping work. The lease can
+only fence which result COMMITS, not prevent two bodies from running. So:
+
+- A second `advanceLane` finding a live lease (heartbeat within the window)
+  for the same step is REJECTED. A stale lease (dead heartbeat = crashed or
+  runaway) is reclaimable and logged.
+- FINALIZE accepts a result only if the SAME lease identity still owns the
+  checkpoint - `{operationId, stepId, iteration, claimedCheckpointRevision}` -
+  so a superseded operation's commit is rejected even if it finished late.
+- Because overlap is possible, validators and flow handlers invoked during
+  advancement MUST be pure or idempotent, and any unavoidable persistent
+  side effect (flow-history, session memory - which today write OUTSIDE the
+  fenced commit) MUST carry the claimed checkpoint revision as a FENCING
+  TOKEN, so a superseded operation's writes are rejected downstream too.
+- `validateProduct`/handlers receive the `AbortSignal`; the MCP server
+  propagates it into tool handlers (today it does not).
+
+Tested: concurrent double-advance, timeout-then-retry (replacement acquires
+the lease while the original ignores abort), and crash-mid-advance all yield
+AT MOST ONE committed transition and one authoritative set of side effects -
+the superseded operation cannot commit state OR persistent side effects after
+its lease is fenced. (We do NOT claim exactly-once execution.)
 Read-only reads (`laneStatus`, `listLanes`) never take the lock.
 
 **Status precedence:** `interrupted` reflects an open, resumable lane
@@ -788,17 +803,31 @@ fixture (a CSS/SCSS + HTML project) must reach `clean` end to end - proving
 the gate is not permanently-inconclusive by construction. Widening source
 support (Vue/Svelte/CSS-in-JS parsers) is a registry-widening follow-up.
 
-**Unsupported sources block SEQUENCE lanes too, not just `lane_converge`
-(v7 review).** Every sequence lane has a polish step bound to Flow J, so an
-unsupported-source project would otherwise leave that step permanently
-`validation_inconclusive` with no explanation. v8 rule: lane preflight (for
-ALL lanes, sequence and loop) checks Flow J source support against the target
-BEFORE work starts. If no supported source exists, the lane is
-REJECTED-AT-PREFLIGHT with an actionable message ("this project's UI is in
-{Vue/Svelte/CSS-in-JS}, which the static validators don't yet parse; the lane
-cannot prove clean"). The user can override with an explicit recorded bypass
-that runs the polish step as advisory. A lane never silently appears stuck at
-a step the engine can't evaluate.
+**Unsupported sources block sequence and convergence lanes - but the gate is
+PHASE-AWARE, not universal (v8 review correction).** Every refinement/loop
+lane has a polish step bound to Flow J, so an unsupported-source project would
+otherwise leave that step permanently `validation_inconclusive` with no
+explanation. But a UNIVERSAL preflight (the over-broad rule v8 first wrote)
+would reject `lane_build` on a fresh, empty project - whose whole purpose is
+to CREATE the UI source that does not exist yet - and the own-acceptance "every
+lane passes a fresh-build fixture" makes that contradiction visible. So the
+gate is phase-aware:
+
+- Refinement/convergence lanes (`lane_ship`, `lane_calm`, `lane_live`,
+  `lane_converge`; `lane_delight` is refinement) check Flow J source support
+  at lane START and reject-at-preflight when no supported source exists, with
+  an actionable message ("this project's UI is in {Vue/Svelte/CSS-in-JS},
+  which the static validators don't yet parse").
+- Build lanes (`lane_build`) DEFER the Flow J source-support gate to the first
+  step that requires product/visual validation (its polish step). The lane
+  starts, creates source, and only at the polish gate is support evaluated; if
+  source is still unsupported there, it blocks at that step (not at start)
+  unless an explicit recorded bypass runs polish as advisory.
+
+Either way a lane never silently appears stuck at a step the engine can't
+evaluate; the difference is only WHEN the gate fires. A fresh-empty-project
+acceptance test proves `lane_build` starts, creates supported source, and
+passes the deferred gate.
 
 **Validator target scope (Codex P1).** `startLane(laneId, target, ...)` takes
 a free-form `target`, but Flow J currently scans the whole project, so a lane
@@ -1094,14 +1123,18 @@ Execution acceptance: all v3 cases, plus:
     double-count);
   - changing only a coverage gap (not a finding) changes the progress
     signature; a required inconclusive/error identity participates in it;
-  - concurrent `advanceLane` with a LIVE lease runs the step exactly once;
-    timeout-then-retry and crash-mid-advance leave a cleanly reclaimable lease;
-    a duplicate `reportId` is a no-op;
+  - AT-MOST-ONE COMMITTED TRANSITION (not exactly-once execution): a timed-out
+    operation that ignores abort while a replacement acquires the lease cannot
+    commit state OR persistent side effects after fencing; a superseded
+    operation's fencing-token writes are rejected downstream; a duplicate
+    `reportId` is a no-op; a stale lease between two iterations of the same
+    loop step is cleanly reclaimable;
   - an explicit verb + SCOPE_UNKNOWN/OUT_OF_SCOPE lane evidence resolves to
     `VERB` primary (zero explicit-verb overrides), lane scope diagnostic-only;
-  - a sequence lane on a Vue/Svelte/CSS-in-JS-only target is rejected at
-    preflight with an actionable message (not stuck inconclusive); explicit
-    bypass runs Flow J advisory;
+  - PHASE-AWARE source preflight: a refinement/convergence lane on a
+    Vue/Svelte/CSS-in-JS-only target is rejected at lane start; `lane_build`
+    on a fresh EMPTY project STARTS, creates supported source, and passes the
+    deferred Flow J gate (the review's lane_build contradiction);
   - the per-lane no-PRODUCT/no-DESIGN/no-tokens/no-history matrix outcome holds
     for every lane (esp. `lane_delight`'s flowF+flowH preconditions);
   - a path/glob `target` scopes coverage to matching files; `measuredScope`
