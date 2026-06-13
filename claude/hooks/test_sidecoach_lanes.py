@@ -153,6 +153,67 @@ def test_sanitize_length_preserving_on_combined_regions():
     assert "polish the hero" in out                 # real intent outside regions survives
 
 
+# --- Task 4: grouped-evidence scoring + clause-bound 3-state scope ---
+
+def _eval(prompt, lane_id):
+    lane = next(l for l in REG["lanes"] if l["lane"] == lane_id)
+    return sl.evaluate_lane(lane, prompt, REG)
+
+
+def test_in_scope_when_ui_evidence_shares_clause():
+    r = _eval("make the landing page production-ready", "lane_ship")
+    assert r["scope"] == "IN_SCOPE"
+    assert r["score"] >= 3
+
+
+def test_out_of_scope_when_negative_filter_shares_clause():
+    # ship evidence bound to "migration" in its own sentence
+    r = _eval("The landing page is done. Make the migration production-ready.", "lane_ship")
+    assert r["scope"] == "OUT_OF_SCOPE"
+    assert r["score"] == 0
+
+
+def test_scope_unknown_when_no_domain_evidence():
+    r = _eval("make this production-ready", "lane_ship")
+    assert r["scope"] == "SCOPE_UNKNOWN"
+    assert r["score"] >= 3  # still scores from the unknown occurrence
+
+
+def test_negator_discards_occurrence_then_routes_second():
+    p = "Don't make the API production-ready; make the landing page production-ready."
+    r = _eval(p, "lane_ship")
+    assert r["scope"] == "IN_SCOPE"  # second clause binds to landing page
+
+
+def test_grouped_max_weight_not_sum_within_group():
+    # two release-group matches in one in-scope clause -> max weight, not sum
+    r = _eval("the dashboard must be production-ready and ship-ready", "lane_ship")
+    assert r["score"] == 3  # max(3,3) within group "release", not 6
+
+
+# --- Task 4 adversarial edges (carry the lesson: test what the spec calls out) ---
+
+def test_bare_ui_noun_does_not_prove_scope_but_qualified_does():
+    # bare interface/header/layout are NOT in the registry's ui_evidence ->
+    # an in-clause lexicon hit with only a bare noun is SCOPE_UNKNOWN, not IN_SCOPE
+    for bare in ("interface", "header", "layout"):
+        r = _eval(f"make the {bare} production-ready", "lane_ship")
+        assert r["scope"] == "SCOPE_UNKNOWN", f"bare {bare!r} must not prove scope"
+    # the qualified phrases ARE ui_evidence -> IN_SCOPE
+    for qualified in ("user interface", "page header", "page layout"):
+        r = _eval(f"make the {qualified} production-ready", "lane_ship")
+        assert r["scope"] == "IN_SCOPE", f"{qualified!r} must prove scope"
+
+
+def test_negator_alone_discards_to_not_in_scope():
+    # a single negated occurrence with no other hit -> truly discarded:
+    # NOT IN_SCOPE and zero score (guards the pure-discard path, not the
+    # "a later clause saved it" path covered above)
+    r = _eval("don't make the landing page production-ready", "lane_ship")
+    assert r["scope"] != "IN_SCOPE"
+    assert r["score"] == 0
+
+
 if __name__ == "__main__":
     try:
         import pytest

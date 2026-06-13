@@ -107,3 +107,74 @@ def blank_informational(text):
         text = re.sub(pat, _blank, text, flags=re.IGNORECASE)
     text = re.sub(_QUOTE_FRAME, _blank, text)
     return text
+
+
+_NEGATORS = ["don't", "do not", "never", "not", "stop"]
+
+
+def _wb(pattern):
+    return re.compile(rf"(?<![\w-]){pattern}(?![\w-])", re.IGNORECASE)
+
+
+def _compile_all(patterns):
+    out = []
+    for p in patterns:
+        try:
+            out.append(_wb(p))  # one bad regex is isolated (spec section 12)
+        except re.error:
+            continue
+    return out
+
+
+def _clause_bounds(pos, spans):
+    for a, b in spans:
+        if a <= pos < b:
+            return a, b
+    return spans[-1] if spans else (0, 0)
+
+
+def _has_negator(prefix):
+    return any(_wb(re.escape(neg)).search(prefix) for neg in _NEGATORS)
+
+
+def evaluate_lane(lane, prompt, reg):
+    """Score one lane and resolve its scope state by clause binding.
+    Returns {lane, label, score, scope, evidenceIds}."""
+    text = blank_informational(sanitize(prompt))
+    spans = segment_clauses(text)
+    ui = _compile_all(reg["scope"]["ui_evidence"])
+    negs = _compile_all(reg["scope"]["negative_filters"])
+
+    groups, ev_ids = {}, []
+    n_in = n_unknown = n_oos = 0
+    for entry in lane["lexicon"]:
+        try:
+            rx = _wb(entry["pattern"])
+        except re.error:
+            continue
+        for m in rx.finditer(text):
+            a, b = _clause_bounds(m.start(), spans)
+            clause = text[a:b]
+            prefix = text[a:m.start()]
+            if _has_negator(prefix):
+                continue  # negated -> discarded entirely
+            if any(r.search(clause) for r in negs):
+                n_oos += 1
+                continue  # out-of-scope occurrence, discarded from score
+            if any(r.search(clause) for r in ui):
+                n_in += 1
+            else:
+                n_unknown += 1
+            g = entry.get("group", entry["pattern"])
+            groups[g] = max(groups.get(g, 0), int(entry.get("weight", 1)))
+            ev_ids.append(entry["pattern"])
+
+    score = sum(groups.values())
+    if n_in > 0:
+        scope = "IN_SCOPE"
+    elif n_unknown == 0 and n_oos > 0:
+        scope, score = "OUT_OF_SCOPE", 0
+    else:
+        scope = "SCOPE_UNKNOWN"
+    return {"lane": lane["lane"], "label": lane["label"],
+            "score": score, "scope": scope, "evidenceIds": ev_ids[:3]}
