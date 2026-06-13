@@ -3,6 +3,7 @@
 
 import { FlowId } from './types';
 import { getVerbEntry, VERB_REGISTRY } from './verb-command-registry';
+import { loadRegistry, evaluateLane } from './lane-classifier';
 
 export interface CommandMatch {
   isCommand: boolean;
@@ -242,4 +243,107 @@ export function getCommandsByPhase(): CommandsByPhase {
   }
 
   return byPhase;
+}
+
+// ===========================================================================
+// /sidecoach <phrase> resolution union (P1, spec section 10)
+//
+// ROUTE | CLASSIFY | OUT_OF_SCOPE | UNKNOWN. Because the user explicitly
+// addressed sidecoach, a SCOPE_UNKNOWN lane (no negative evidence) PROCEEDS to
+// ROUTE/CLASSIFY; positive negative evidence still refuses (OUT_OF_SCOPE); a
+// phrase with NO lane evidence at all is UNKNOWN and returns a typo/near-miss
+// suggestion. The near-miss machinery (matchKnownCommand / levenshtein /
+// nearMissSuggestion) is NET-NEW - none existed before this task.
+// ===========================================================================
+
+export interface PhraseResolution {
+  kind: 'ROUTE' | 'CLASSIFY' | 'OUT_OF_SCOPE' | 'UNKNOWN';
+  command?: string;     // when the phrase is a known verb/phase command
+  lane?: string;        // when routed/classified to a lane
+  suggestion?: string;  // UNKNOWN near-miss ("did you mean /sidecoach polish?")
+  redirect?: string;    // OUT_OF_SCOPE one-line redirect
+}
+
+// First word of the phrase (the bit a user would type as a command), lowercased.
+function firstToken(phrase: string): string {
+  const m = phrase.trim().match(/^([a-z][\w-]*)/i);
+  return m ? m[1].toLowerCase() : '';
+}
+
+// Known command vocabulary = the 22 verb-registry keys + the phase SLASH_COMMANDS
+// keys. Lanes are reached by the classifier (evaluateLane), not by name here.
+function knownCommandNames(): string[] {
+  return [...Object.keys(VERB_REGISTRY), ...Object.keys(SLASH_COMMANDS)];
+}
+
+// Exact known-command fast path: if the phrase opens with a known verb/phase
+// command, treat it as a direct command (the user typed a real command word).
+function matchKnownCommand(phrase: string): string | null {
+  const tok = firstToken(phrase);
+  if (!tok) return null;
+  if (getVerbEntry(tok)) return tok;
+  if (Object.prototype.hasOwnProperty.call(SLASH_COMMANDS, tok)) return tok;
+  return null;
+}
+
+// Standard iterative Levenshtein edit distance (two-row, O(m*n) time, O(n) space).
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const row: number[] = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    let prev = row[0];
+    row[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const tmp = row[j];
+      row[j] = Math.min(
+        row[j] + 1,                                   // deletion
+        row[j - 1] + 1,                               // insertion
+        prev + (a[i - 1] === b[j - 1] ? 0 : 1),       // substitution
+      );
+      prev = tmp;
+    }
+  }
+  return row[n];
+}
+
+// Closest known command/verb/lane-label to the phrase's first token, returned
+// only when it is a plausible typo (<= 2 edits). undefined means "no good guess".
+function nearMissSuggestion(phrase: string, laneLabels: string[] = []): string | undefined {
+  const tok = firstToken(phrase);
+  if (!tok) return undefined;
+  const candidates = [...knownCommandNames(), ...laneLabels];
+  let best: string | undefined;
+  let bestDist = Infinity;
+  for (const c of candidates) {
+    const dist = levenshtein(tok, c.toLowerCase());
+    if (dist < bestDist) { bestDist = dist; best = c; }
+  }
+  if (best !== undefined && bestDist <= 2) return `did you mean /sidecoach ${best}?`;
+  return undefined;
+}
+
+export function resolveSidecoachPhrase(phrase: string, lanesPath: string): PhraseResolution {
+  const known = matchKnownCommand(phrase);            // a typed command word wins outright
+  if (known) return { kind: 'ROUTE', command: known };
+
+  const reg = loadRegistry(lanesPath);
+  const scores = reg.lanes.map((l: any) => evaluateLane(l, phrase, reg));
+  const ranked = [...scores].sort((a, b) => b.score - a.score);
+  const top = ranked[0]; const second = ranked[1] ? ranked[1].score : 0;
+  const hasRoutableEvidence = scores.some((s: any) =>
+    (s.scope === 'IN_SCOPE' || s.scope === 'SCOPE_UNKNOWN') && s.score > 0);
+  const hasOos = scores.some((s: any) => s.scope === 'OUT_OF_SCOPE');
+
+  if (!hasRoutableEvidence) {
+    if (hasOos) {
+      return { kind: 'OUT_OF_SCOPE',
+        redirect: 'That reads as backend/infrastructure work. Sidecoach covers UI/design only.' };
+    }
+    // No lane evidence at all -> typo guess over verbs/phase commands/lane labels.
+    return { kind: 'UNKNOWN', suggestion: nearMissSuggestion(phrase, reg.lanes.map((l: any) => l.label)) };
+  }
+  const { route_floor: rf, route_margin: rm } = reg.scoring;
+  const routeGrade = top.score >= rf && (top.score - second) >= rm;  // explicit address: scope_unknown counts
+  return routeGrade ? { kind: 'ROUTE', lane: top.lane } : { kind: 'CLASSIFY', lane: top.lane };
 }
