@@ -5,7 +5,7 @@ import * as assert from 'assert';
 // (outside rootDir ./src) breaks `tsc` with TS6059, and Step 7 wires tsc into
 // the build. The generator imports the same function from this module, so the
 // derivation under test is identical.
-import { deriveFlowSequence } from '../lane-derivation';
+import { deriveFlowSequence, deriveVerbSteps, deriveVerbGuidance } from '../lane-derivation';
 
 const GOLDEN: Record<string, string[]> = {
   lane_build: ['flowA_brand_verify','flowB_component_research','flowE_motion_patterns','flowF_design_tokens','flowG_component_implementation','flowH_motion_integration','flowI_accessibility','flowM_responsive_validation','flowJ_tactical_polish'],
@@ -49,4 +49,21 @@ import { LANES } from '../lanes.generated';
   const polish = vs.find((s: any) => s.verb === 'polish');
   if (polish && polish.flowIds.length === 0 && polish.guidance.length === 0) throw new Error('empty-flow step must still carry guidance');
   console.log('lane-derivation verbSteps: OK');
+}
+
+// --- P2-2: deriveVerbSteps unknown-verb guard (but empty first-owner steps stay legal) ---
+{
+  // an UNKNOWN verb in the chain must THROW (not silently yield an empty step)
+  let threw = false;
+  try { deriveVerbSteps(['definitely_not_a_verb'], [], []); } catch { threw = true; }
+  if (!threw) throw new Error('deriveVerbSteps must throw on an unknown verb');
+
+  // a KNOWN verb whose flows were all claimed by an earlier verb (first-owner)
+  // legitimately yields an EMPTY-flow step - this must NOT throw.
+  const seq = deriveFlowSequence(['shape']);                 // [flowA_brand_verify]
+  const steps = deriveVerbSteps(['shape', 'shape'], seq, deriveVerbGuidance(['shape', 'shape']));
+  if (steps.length !== 2) throw new Error('one step per verb (including repeats)');
+  if (steps[0].flowIds.length === 0) throw new Error('first owner of a flow keeps it');
+  if (steps[1].flowIds.length !== 0) throw new Error('second (claimed) owner must be an empty-flow step, not throw');
+  console.log('lane-derivation verbSteps-guard: OK');
 }

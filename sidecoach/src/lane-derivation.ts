@@ -45,7 +45,11 @@ export function deriveVerbSteps(
   const guidanceByVerb = new Map(verbGuidance.map((g) => [g.verb, g.guidance]));
   return verbChain.map((verb) => {
     const entry = (VERB_REGISTRY as any)[verb];
-    const verbFlows: FlowId[] = entry ? (entry.flowIds as FlowId[]) : [];
+    // Unknown verb -> hard error (a malformed chain). This is distinct from a
+    // KNOWN verb whose flows were all claimed by an earlier verb: that yields a
+    // legal EMPTY-flow guidance-only step (first-owner assignment), NOT an error.
+    if (!entry) throw new Error(`deriveVerbSteps: unknown verb in chain: ${verb}`);
+    const verbFlows: FlowId[] = entry.flowIds as FlowId[];
     const flowIds = flowSequence.filter((f) => verbFlows.includes(f) && !claimed.has(f));
     flowIds.forEach((f) => claimed.add(f));
     return { verb, flowIds, guidance: guidanceByVerb.get(verb) ?? [] };
