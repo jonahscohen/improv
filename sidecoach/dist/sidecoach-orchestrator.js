@@ -48,10 +48,15 @@ const project_context_1 = require("./project-context");
 const context_loader_1 = require("./context-loader");
 const session_memory_writer_1 = require("./session-memory-writer");
 const slash_command_router_1 = require("./slash-command-router");
+const lanes_generated_1 = require("./lanes.generated");
+const path = __importStar(require("path"));
+const crypto_1 = require("crypto");
 const sidecoach_entry_point_1 = require("./sidecoach-entry-point");
 const teach_command_handler_v2_1 = require("./teach-command-handler-v2");
 const document_command_handler_1 = require("./document-command-handler");
 const flow_prerequisites_1 = require("./flow-prerequisites");
+const laneRunner = __importStar(require("./lane-runner"));
+const lane_checkpoint_store_1 = require("./lane-checkpoint-store");
 const flow_composition_1 = require("./flow-composition");
 const flow_domain_validators_1 = require("./flow-domain-validators");
 const flow_execution_context_enhanced_1 = require("./flow-execution-context-enhanced");
@@ -970,6 +975,35 @@ class FlowExecutionEngine {
                 buildReport: chainBuildReport,
             };
         }
+        // Step 2.5: /sidecoach <phrase> live wiring. Known verbs/phase commands were
+        // handled above (commandMatch.isCommand). Only an unrecognized `/sidecoach
+        // <phrase>` reaches the classifier here; everything else (bare /sidecoach,
+        // non-/sidecoach utterances) is 'not-addressed' and falls through unchanged.
+        const laneResolution = (0, slash_command_router_1.resolveSidecoachInput)(utterance, path.resolve(__dirname, '..', '..', 'claude', 'hooks', 'sidecoach-lanes.json'));
+        if (laneResolution.source === 'phrase' && laneResolution.phrase) {
+            const pr = laneResolution.phrase;
+            if (pr.kind === 'ROUTE' && pr.lane) {
+                // deterministic id: a literal retry of the same phrase+project does NOT
+                // double-start (startLane dedups on startRequestId).
+                const startReq = laneStartRequestId(utterance, projectPath);
+                const lane = await this.startLane(pr.lane, utterance, { projectPath, userId: context.userId, metadata: context.metadata }, startReq);
+                return { success: true, message: `Routed to ${lane.laneLabel}: ${lane.message}`, detectedFlow: null, flowResults: [], guidance: lane.guidance, checklist: lane.checklist, lane };
+            }
+            if (pr.kind === 'CLASSIFY' && pr.lane) {
+                // One-question interview: surface the candidate so the model can confirm.
+                // Confirmation dispatches IDENTICALLY to ROUTE - the model calls
+                // engine.startLane(classify.laneId, ...), the same terminal path ROUTE uses.
+                // (The AskUserQuestion surface itself is a P4 hook/MCP concern; P2 exposes
+                // the candidate + the dispatch path so CLASSIFY is not a dead end.)
+                const cand = lanes_generated_1.LANES.find((l) => l.lane === pr.lane);
+                return { success: true, message: `That reads like the "${cand?.interviewLabel ?? pr.lane}" direction. Confirm to start it, or rephrase for a different lane.`, detectedFlow: null, flowResults: [], guidance: [], checklist: [], classify: { laneId: pr.lane, label: cand?.label ?? pr.lane, interviewLabel: cand?.interviewLabel ?? pr.lane } };
+            }
+            if (pr.kind === 'OUT_OF_SCOPE') {
+                return { success: true, message: pr.redirect || 'That reads as non-UI work. Sidecoach covers UI/design only.', detectedFlow: null, flowResults: [], guidance: [], checklist: [] };
+            }
+            // UNKNOWN
+            return { success: true, message: pr.suggestion ? `Unrecognized - ${pr.suggestion}` : 'Unrecognized /sidecoach phrase.', detectedFlow: null, flowResults: [], guidance: [], checklist: [] };
+        }
         // Step 1: Detect intent (falls back to intent detection if not a slash command).
         // metadata.forceFlowId bypass: skip intent detection and route directly to the
         // named flow. Used by the disambiguation UI to re-invoke after the user picks
@@ -1404,6 +1438,54 @@ class FlowExecutionEngine {
     getHandlers() {
         return this.handlers;
     }
+    // ---- Lane execution (P2) -------------------------------------------------
+    // The engine's runFlow reuses the SAME private path process() uses: enrich
+    // context, check the REAL prerequisite graph + canExecute (degraded guidance
+    // if either fails), then execute (wrapped in try/catch). So lane guidance
+    // matches normal flow guidance, and a throwing/degraded flow is NEVER attested.
+    laneDeps(projectPath) {
+        return {
+            store: new lane_checkpoint_store_1.LaneCheckpointStore(projectPath),
+            runFlow: async (flowId, context) => {
+                const handler = this.getHandlers().get(flowId);
+                if (!handler)
+                    return { flowId, flowName: String(flowId), status: 'skipped', message: `no handler for ${flowId}`, guidance: [], checklist: [] };
+                // Honor the REAL prerequisite graph (same posture as process():917-948):
+                // treat the lane's waived edges for THIS flow as satisfied, then check
+                // against the flows completed so far in this lane run.
+                const completed = Array.isArray(context.completedFlowIds) ? context.completedFlowIds : [];
+                const waivedForFlow = (Array.isArray(context.waivers) ? context.waivers : [])
+                    .filter((w) => w.dependentFlowId === flowId).map((w) => w.prerequisiteFlowId);
+                const history = [...new Set([...completed, ...waivedForFlow])].map((f) => ({ flowId: f, status: 'success' }));
+                const prereq = flow_prerequisites_1.FlowPrerequisiteValidator.canExecute(flowId, history);
+                const enriched = this.enrichContextForHandler({ utterance: '', projectPath, ...context }, flowId);
+                if (!prereq.canExecute || !handler.canExecute(enriched)) {
+                    const why = prereq.reason || 'context not fully ready';
+                    // degraded: coach, but do NOT let the model attest this flow's work as run
+                    return { flowId, flowName: String(flowId), status: 'needs_input', message: `coaching-only: ${flowId} (${why})`, guidance: [`(${flowId}) ${why} - coaching guidance only; this flow's work is not attested as done.`], checklist: [] };
+                }
+                // Mirror process()'s exception posture: a throwing handler degrades to an
+                // 'error' result (NOT a success), so it is never attested into completedFlowIds.
+                try {
+                    return await handler.execute(enriched);
+                }
+                catch (e) {
+                    return { flowId, flowName: String(flowId), status: 'error', message: `handler ${flowId} threw: ${e.message}`, guidance: [`(${flowId}) the flow handler errored; coaching only - not attested as done.`], checklist: [] };
+                }
+            },
+            now: () => new Date().toISOString(),
+            newCheckpointId: () => `lane-${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+        };
+    }
+    async startLane(laneId, target, context, startRequestId) {
+        const projectPath = context.projectPath || process.cwd();
+        return laneRunner.startLane(laneId, target, { ...context, projectPath }, startRequestId, this.laneDeps(projectPath));
+    }
+    async advanceLane(projectPath, checkpointId, transition) {
+        return laneRunner.advanceLane(projectPath, checkpointId, transition, this.laneDeps(projectPath));
+    }
+    laneStatus(projectPath, checkpointId) { return laneRunner.laneStatus(projectPath, checkpointId, this.laneDeps(projectPath)); }
+    listLanes(projectPath, options) { return laneRunner.listLanes(projectPath, this.laneDeps(projectPath), options); }
     /**
      * Union of all known flow ids - single handlers + composite preset ids.
      * Used by the metadata.forceFlowId bypass to validate caller-supplied flow ids
@@ -1466,6 +1548,19 @@ class FlowExecutionEngine {
     }
 }
 exports.FlowExecutionEngine = FlowExecutionEngine;
+// module-level helper: deterministic start-request id from phrase + project so a
+// literal retry of the same phrase does not create a second lane. Canonicalize the
+// project path (realpath) so it keys on the SAME canonical path the checkpoint
+// store uses - otherwise a symlinked vs real spelling of the same dir would hash
+// to different ids and defeat dedup against the (realpath-scoped) store.
+function laneStartRequestId(utterance, projectPath) {
+    let canon = projectPath;
+    try {
+        canon = fs.realpathSync(projectPath);
+    }
+    catch { /* unresolvable path -> hash the raw spelling */ }
+    return 'proc-' + (0, crypto_1.createHash)('sha256').update(`${canon}\n${utterance.trim()}`).digest('hex').slice(0, 24);
+}
 function createExecutionEngine() {
     return new FlowExecutionEngine();
 }

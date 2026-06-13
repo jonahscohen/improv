@@ -6,7 +6,10 @@ exports.parseSlashCommand = parseSlashCommand;
 exports.getAvailableCommands = getAvailableCommands;
 exports.getVerbCommandInfo = getVerbCommandInfo;
 exports.getCommandsByPhase = getCommandsByPhase;
+exports.resolveSidecoachPhrase = resolveSidecoachPhrase;
+exports.resolveSidecoachInput = resolveSidecoachInput;
 const verb_command_registry_1 = require("./verb-command-registry");
+const lane_classifier_1 = require("./lane-classifier");
 // T-0015 (2026-05-28): legacy flow1..flow14 IDs removed from verb routing.
 // Duplicates were folded into their lettered canonicals (see CHEATSHEET.md);
 // flow4/flow7 are now flowY_explore_discovery / flowZ_design_component.
@@ -209,5 +212,102 @@ function getCommandsByPhase() {
         }
     }
     return byPhase;
+}
+// First word of the phrase (the bit a user would type as a command), lowercased.
+function firstToken(phrase) {
+    const m = phrase.trim().match(/^([a-z][\w-]*)/i);
+    return m ? m[1].toLowerCase() : '';
+}
+// Known command vocabulary = the 22 verb-registry keys + the phase SLASH_COMMANDS
+// keys. Lanes are reached by the classifier (evaluateLane), not by name here.
+function knownCommandNames() {
+    return [...Object.keys(verb_command_registry_1.VERB_REGISTRY), ...Object.keys(SLASH_COMMANDS)];
+}
+// Exact known-command fast path: if the phrase opens with a known verb/phase
+// command, treat it as a direct command (the user typed a real command word).
+function matchKnownCommand(phrase) {
+    const tok = firstToken(phrase);
+    if (!tok)
+        return null;
+    if ((0, verb_command_registry_1.getVerbEntry)(tok))
+        return tok;
+    if (Object.prototype.hasOwnProperty.call(SLASH_COMMANDS, tok))
+        return tok;
+    return null;
+}
+// Standard iterative Levenshtein edit distance (two-row, O(m*n) time, O(n) space).
+function levenshtein(a, b) {
+    const m = a.length;
+    const n = b.length;
+    const row = Array.from({ length: n + 1 }, (_, j) => j);
+    for (let i = 1; i <= m; i++) {
+        let prev = row[0];
+        row[0] = i;
+        for (let j = 1; j <= n; j++) {
+            const tmp = row[j];
+            row[j] = Math.min(row[j] + 1, // deletion
+            row[j - 1] + 1, // insertion
+            prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+            prev = tmp;
+        }
+    }
+    return row[n];
+}
+// Closest known command/verb/lane-label to the phrase's first token, returned
+// only when it is a plausible typo (<= 2 edits). undefined means "no good guess".
+function nearMissSuggestion(phrase, laneLabels = []) {
+    const tok = firstToken(phrase);
+    if (!tok)
+        return undefined;
+    const candidates = [...knownCommandNames(), ...laneLabels];
+    let best;
+    let bestDist = Infinity;
+    for (const c of candidates) {
+        const dist = levenshtein(tok, c.toLowerCase());
+        if (dist < bestDist) {
+            bestDist = dist;
+            best = c;
+        }
+    }
+    if (best !== undefined && bestDist <= 2)
+        return `did you mean /sidecoach ${best}?`;
+    return undefined;
+}
+function resolveSidecoachPhrase(phrase, lanesPath) {
+    const known = matchKnownCommand(phrase); // a typed command word wins outright
+    if (known)
+        return { kind: 'ROUTE', command: known };
+    const reg = (0, lane_classifier_1.loadRegistry)(lanesPath);
+    const scores = reg.lanes.map((l) => (0, lane_classifier_1.evaluateLane)(l, phrase, reg));
+    const ranked = [...scores].sort((a, b) => b.score - a.score);
+    const top = ranked[0];
+    const second = ranked[1] ? ranked[1].score : 0;
+    const hasRoutableEvidence = scores.some((s) => (s.scope === 'IN_SCOPE' || s.scope === 'SCOPE_UNKNOWN') && s.score > 0);
+    const hasOos = scores.some((s) => s.scope === 'OUT_OF_SCOPE');
+    if (!hasRoutableEvidence) {
+        if (hasOos) {
+            return { kind: 'OUT_OF_SCOPE',
+                redirect: 'That reads as backend/infrastructure work. Sidecoach covers UI/design only.' };
+        }
+        // No lane evidence at all -> typo guess over verbs/phase commands/lane labels.
+        return { kind: 'UNKNOWN', suggestion: nearMissSuggestion(phrase, reg.lanes.map((l) => l.label)) };
+    }
+    const { route_floor: rf, route_margin: rm } = reg.scoring;
+    const routeGrade = top.score >= rf && (top.score - second) >= rm; // explicit address: scope_unknown counts
+    return routeGrade ? { kind: 'ROUTE', lane: top.lane } : { kind: 'CLASSIFY', lane: top.lane };
+}
+const SIDECOACH_PHRASE_RE = /^\/sidecoach\s+(.+)$/i;
+// Live entrypoint. Known verbs/phase commands keep their exact parseSlashCommand
+// behavior. Only a `/sidecoach <phrase>` that is NOT a known command resolves via
+// the classifier. Anything not /sidecoach-addressed (or bare /sidecoach) returns
+// 'not-addressed' so the caller preserves existing behavior (menu / intent tier).
+function resolveSidecoachInput(utterance, lanesPath) {
+    const cmd = parseSlashCommand(utterance);
+    if (cmd.isCommand)
+        return { source: 'command', command: cmd };
+    const m = utterance.trim().match(SIDECOACH_PHRASE_RE);
+    if (!m)
+        return { source: 'not-addressed' };
+    return { source: 'phrase', phrase: resolveSidecoachPhrase(m[1].trim(), lanesPath) };
 }
 //# sourceMappingURL=slash-command-router.js.map

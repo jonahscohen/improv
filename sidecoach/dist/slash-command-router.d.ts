@@ -29,4 +29,18 @@ export declare function getAvailableCommands(): Record<string, CommandInfo>;
  */
 export declare function getVerbCommandInfo(): Record<string, CommandInfo>;
 export declare function getCommandsByPhase(): CommandsByPhase;
+export interface PhraseResolution {
+    kind: 'ROUTE' | 'CLASSIFY' | 'OUT_OF_SCOPE' | 'UNKNOWN';
+    command?: string;
+    lane?: string;
+    suggestion?: string;
+    redirect?: string;
+}
+export declare function resolveSidecoachPhrase(phrase: string, lanesPath: string): PhraseResolution;
+export interface SidecoachInputResolution {
+    source: 'command' | 'phrase' | 'not-addressed';
+    command?: CommandMatch;
+    phrase?: PhraseResolution;
+}
+export declare function resolveSidecoachInput(utterance: string, lanesPath: string): SidecoachInputResolution;
 //# sourceMappingURL=slash-command-router.d.ts.map

@@ -1,5 +1,6 @@
 import { FlowHandler, FlowExecutionContext, FlowExecutionResult } from './flow-handler';
 import { FlowId } from './types';
+import type { LaneTransition, LaneStepResult } from './lane-types';
 import { BuildReport } from './build-report-types';
 export declare class FlowExecutionEngine {
     private intentDetector;
@@ -52,6 +53,15 @@ export declare class FlowExecutionEngine {
      * enumerate or dispatch by FlowId. Caller must not mutate.
      */
     getHandlers(): ReadonlyMap<FlowId, FlowHandler>;
+    private laneDeps;
+    startLane(laneId: string, target: string, context: {
+        projectPath?: string;
+    } & Record<string, any>, startRequestId: string): Promise<LaneStepResult>;
+    advanceLane(projectPath: string, checkpointId: string, transition: LaneTransition): Promise<LaneStepResult>;
+    laneStatus(projectPath: string, checkpointId: string): import("./lane-types").LaneState;
+    listLanes(projectPath: string, options?: {
+        all?: boolean;
+    }): import("./lane-types").LaneInfo[];
     /**
      * Union of all known flow ids - single handlers + composite preset ids.
      * Used by the metadata.forceFlowId bypass to validate caller-supplied flow ids
@@ -85,6 +95,12 @@ export interface SidecoachResult {
     buildReport?: BuildReport;
     needsDisambiguation?: boolean;
     disambiguationPrompt?: string;
+    lane?: LaneStepResult;
+    classify?: {
+        laneId: string;
+        label: string;
+        interviewLabel: string;
+    };
 }
 export declare function createExecutionEngine(): FlowExecutionEngine;
 //# sourceMappingURL=sidecoach-orchestrator.d.ts.map
