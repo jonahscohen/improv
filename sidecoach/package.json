@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "ts-node src/intent-detector.test.ts",
+    "test": "ts-node scripts/run-tests.ts",
     "test:compiled": "node dist/intent-detector.test.js",
     "bench": "ts-node --project benchmarks/tsconfig.bench.json benchmarks/runner/run-all.ts --save",
     "bench:compare": "ts-node --project benchmarks/tsconfig.bench.json benchmarks/runner/run-all.ts --compare",
