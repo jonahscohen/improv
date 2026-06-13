@@ -39,6 +39,39 @@ def test_only_converge_is_loop():
     assert loops == ["lane_converge"]
 
 
+# --- Task 2: clause segmentation ---
+
+def test_segments_split_on_sentence_terminators():
+    text = "The landing page is done. Make the migration production-ready."
+    spans = sl.segment_clauses(text)
+    clauses = [text[a:b].strip() for a, b in spans]
+    assert clauses[0].startswith("The landing page is done")
+    assert any(c.startswith("Make the migration") for c in clauses)
+
+
+def test_segments_split_on_comma_conjunction_only():
+    text = "polish the hero, but build the API from scratch"
+    spans = sl.segment_clauses(text)
+    clauses = [text[a:b].strip() for a, b in spans]
+    assert any("polish the hero" in c for c in clauses)
+    assert any("build the API from scratch" in c for c in clauses)
+    # a plain comma list does NOT split
+    text2 = "color, motion, delight"
+    assert len(sl.segment_clauses(text2)) == 1
+
+
+def test_abbreviations_do_not_split():
+    text = "ship it, e.g. the dashboard, to production"
+    spans = sl.segment_clauses(text)
+    assert len(spans) == 1  # "e.g." period is not a sentence terminator
+
+
+def test_spans_are_length_preserving():
+    text = "make it pop; tone it down"
+    spans = sl.segment_clauses(text)
+    assert "".join(text[a:b] for a, b in spans) == text
+
+
 if __name__ == "__main__":
     try:
         import pytest
