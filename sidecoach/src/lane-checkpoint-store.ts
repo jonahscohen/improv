@@ -53,8 +53,13 @@ export class LaneCheckpointStore {
   }
   exists(id: string): boolean { try { return fs.existsSync(this.filePath(id)); } catch { return false; } }
   findByStartRequestId(reqId: string): LaneCheckpoint | null {
-    for (const s of this.list()) { const cp = this.read(s.checkpointId); if (cp.startRequestId === reqId) return cp; }
-    return null;
+    // Prefer an ACTIVE (in_progress/interrupted) match over a closed one so a
+    // closed+active pair sharing an id (closed run + closed-restart) never aliases
+    // dedup to the finished run - even on an updatedAt tie where list() order is
+    // unstable. Fall back to the most-recent match (list() is updatedAt-desc).
+    const matches = this.list().map((s) => this.read(s.checkpointId)).filter((cp) => cp.startRequestId === reqId);
+    if (matches.length === 0) return null;
+    return matches.find((cp) => cp.lifecycle === 'in_progress' || cp.lifecycle === 'interrupted') ?? matches[0];
   }
   list(): LaneCheckpointSummary[] {
     const dir = this.dir();
