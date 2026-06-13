@@ -4,6 +4,7 @@ description: Sixth review folded in; product validators decoupled from verb-flow
 type: decision
 relates_to: [session_2026-06-12_lane-design-v6-release-floor.md, reference_convergence_validator_capability_inventory.md]
 supersedes: session_2026-06-12_lane-design-v6-release-floor.md
+superseded_by: session_2026-06-13_lane-design-v8-declarative-rule-registry.md
 ---
 
 Spec revised to v7 after the sixth independent review (the cleanest yet:
