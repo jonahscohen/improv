@@ -114,6 +114,19 @@ export function pushAudit(cp: LaneCheckpoint, e: Omit<LaneAuditEntry, 'revision'
   cp.audit.push({ ...e, revision: cp.revision, at: d.now() });
 }
 
+export function laneStatus(projectPath: string, checkpointId: string, d: LaneRunnerDeps): LaneState {
+  const cp = d.store.read(checkpointId);
+  const l = resolveLane(cp.laneId);
+  const step = cp.lifecycle === 'in_progress' && cp.cursor < l.verbSteps.length ? l.verbSteps[cp.cursor] : undefined;
+  return {
+    checkpointId: cp.checkpointId, laneId: cp.laneId, target: cp.target,
+    lifecycle: cp.lifecycle, outcome: cp.outcome, executionKind: cp.executionKind,
+    iteration: cp.iteration, stepIndex: cp.cursor, totalSteps: l.verbSteps.length, currentVerb: step?.verb,
+    completedStepIds: [...cp.completedStepIds], skippedStepIds: [...cp.skippedStepIds], completedFlowIds: [...cp.completedFlowIds],
+    stepReports: [...cp.stepReports], audit: [...cp.audit], revision: cp.revision, createdAt: cp.createdAt, updatedAt: cp.updatedAt,
+  };
+}
+
 function bump(cp: LaneCheckpoint, d: LaneRunnerDeps): void {
   // Best-effort in-process guard: re-read the persisted revision and abort if it
   // moved since this checkpoint was loaded. True cross-process CAS (lease +
@@ -179,5 +192,39 @@ export async function advanceLane(projectPath: string, checkpointId: string, tra
 }
 
 async function transitionNonComplete(cp: LaneCheckpoint, l: GeneratedLane, projectPath: string, t: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
-  throw new Error(`transitionNonComplete not implemented (Tasks 6-7): ${t.action}`);
+  switch (t.action) {
+    case 'retry': {
+      if (t.report) { cp.stepReports.push(t.report); if (t.report.reportId) cp.seenReportIds.push(t.report.reportId); }
+      pushAudit(cp, { action: 'retry', stepId: l.verbSteps[cp.cursor]?.verb, iteration: cp.iteration, reason: t.reason, reportId: t.report?.reportId }, d);
+      bump(cp, d);
+      return serveStep(cp, l, { projectPath }, d);     // served cache -> no handler re-run
+    }
+    case 'interrupt': {
+      pushAudit(cp, { action: 'interrupt', stepId: l.verbSteps[cp.cursor]?.verb, iteration: cp.iteration, reason: t.reason }, d);
+      cp.lifecycle = 'interrupted';
+      bump(cp, d);
+      return closedResult(cp, l);                       // paused state; NO serveStep
+    }
+    case 'resume': {
+      if (cp.lifecycle !== 'interrupted') throw new Error('advanceLane: resume is only valid on an interrupted lane');
+      cp.lifecycle = 'in_progress';
+      pushAudit(cp, { action: 'resume', stepId: l.verbSteps[cp.cursor]?.verb, iteration: cp.iteration }, d);
+      bump(cp, d);
+      return serveStep(cp, l, { projectPath }, d);      // re-serve from cache
+    }
+    case 'stop': {
+      pushAudit(cp, { action: 'stop', stepId: l.verbSteps[cp.cursor]?.verb, iteration: cp.iteration, reason: t.reason }, d);
+      cp.lifecycle = 'closed'; cp.outcome = 'stopped';
+      bump(cp, d);
+      return closedResult(cp, l);
+    }
+    case 'skip':
+      return skipStep(cp, l, projectPath, t, d);        // Task 7
+    default:
+      throw new Error(`advanceLane: unknown action "${(t as any).action}"`);
+  }
+}
+
+async function skipStep(cp: LaneCheckpoint, l: GeneratedLane, projectPath: string, t: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  throw new Error('skipStep not implemented (Task 7)');
 }
