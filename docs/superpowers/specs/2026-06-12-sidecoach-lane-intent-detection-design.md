@@ -1,24 +1,22 @@
-# Sidecoach Lane Intent Detection - Design (v8)
+# Sidecoach Lane Intent Detection - Design (v9)
 
 Date: 2026-06-13
 Collaborator: Jonah
-Status: revised after the seventh review and an independent eighth
-CROSS-MODEL review (Codex / GPT-5.4). Both converged on the same two top
-blockers: the clean-policy evaluator cannot be built from the v7 result
-schema, and deterministic policy generation had no declarative rule metadata
-(only prose over arbitrary `checkFunction` bodies). v8 adds the unifying fix
-both reviews prescribe: a CANONICAL DECLARATIVE `ProductRuleDefinition`
-REGISTRY from which ownership, required-rule policies, source coverage, clean
-decisions, and progress signatures are all derived (no `checkFunction`-body
-inspection), plus a defined `ProductFinding` + canonical-severity +
-clean-evaluation algorithm. v8 also resolves the Codex-only async-lease
-finding (once-only execution under the async MCP model), removes the
-explicit-policy-vs-automatic-widening contradiction, includes blocking
-inconclusive/error state in the progress signature, and defines Flow J's
-unsupported-source behavior for sequence lanes. Architecture (classifier,
-model-driven state machine, checkpoint/resume, three-gate preflight + the new
-fourth gate, bounded release floor) has been stable since v3 and remains
-approved by both reviewers. Reviews at `docs/superpowers/reviews/`.
+Status: v9 is a SELF-AUDIT REPAIR pass over v8. v8 (the declarative
+`ProductRuleDefinition` registry + defined `ProductFinding`/canonical-severity/
+evaluation algorithm) resolved the two convergent cross-model P0s; the v8
+review then found two contradictions v8 itself introduced (an exactly-once
+overclaim - corrected to AT-MOST-ONE COMMITTED LANE TRANSITION with
+idempotent/fenced side effects; and a universal source preflight that blocked
+`lane_build` - corrected to a phase-aware gate). v9 fixes those AND a full
+internal-consistency sweep that caught defects no prior review had: the
+registration/rule-registry two-sources-of-truth, the per-rule-vs-global
+severity ambiguity, the lease-struct/finalization-identity mismatch, the
+lifecycle-vs-outcome status conflict with retention, Flow J's registryScope
+overclaiming rules the partition delegates, an undefined rule-level error
+status, and clean-with-findings semantics. Architecture (classifier,
+model-driven state machine, checkpoint/resume, four-gate preflight, bounded
+release floor) has been stable since v3. Reviews at `docs/superpowers/reviews/`.
 
 ## Problem
 
@@ -278,7 +276,8 @@ transition = {
   action: 'complete' | 'retry' | 'skip' | 'resume' | 'interrupt' | 'stop',
   report?: StepReport,        // REQUIRED for 'complete'
   expectedRevision: number    // compare-and-swap; stale revision = error,
-}                             // two concurrent advances cannot run one step twice
+}                             // two concurrent advances cannot both COMMIT one step
+                              // (they may overlap in execution - see lease protocol)
 
 StepReport = {
   stepId,                                   // which step this reports on
@@ -333,25 +332,36 @@ identity from attachment across three registries in
 
 ```text
 ProductValidatorRegistration = {     // WHO a validator is (identity)
+  // AUTHORED fields (the only hand-written ones):
   validatorId
-  registryScope[]        // MAXIMUM capability (what it can prove with full evidence)
-  cleanPolicy            // structured, testable - schema below
-  ownedRuleIds[]         // the gating rules this validator (and ONLY this one) owns
-  supportedSourceKinds[] // see source-support matrix, section 9
-  validateProduct(context) -> ProductValidationResult
+  label                  // human-facing name for summaries
+  validateProduct(context) -> ProductValidationResult   // the entry point
+  // GENERATED (read-only) - derived from product-rule-registry.ts, NOT authored:
+  ownedRuleIds[]         // = rules whose ownerValidatorId === this validatorId
+  registryScope[]        // = union of owned rules' registryScope
+  supportedSourceKinds[] // = union of owned rules' per-rule supportedSourceKinds
+  cleanPolicy            // = generated per section "Concrete initial clean policies"
 }
 
 FlowValidationCapability = {          // how a FLOW relates to validators
   flowId
-  capability: 'none' | 'advisory' | 'product_validator'
-  productValidatorIds[]  // validators bound to this flow's step (may be empty)
+  productValidatorIds[]  // AUTHORED: validators bound to this flow's step (may be empty)
+  capability             // GENERATED: 'product_validator' iff productValidatorIds
+                         //   non-empty, else 'advisory'/'none' (never authored)
 }
 
 LaneValidationPolicy = {              // what a LANE requires to gate
   laneId
-  requiredProductValidatorIds[]       // resolved + invoked once per iteration
+  requiredProductValidatorIds[]       // AUTHORED: resolved + invoked once per iteration
+  excludedProductValidatorIds[]       // AUTHORED: member-flow validators intentionally not gating
 }
 ```
+
+Single source of truth: the per-validator derived fields (`ownedRuleIds`,
+`registryScope`, `supportedSourceKinds`, `cleanPolicy`) are GENERATED from
+`product-rule-registry.ts` and checked in; `--check` fails if an authored copy
+diverges from the generated value, so the registration can never drift from
+the rule registry.
 
 A lane's required validator IDs resolve DIRECTLY against the registration
 table and are invoked once per iteration regardless of which verb-flow (if
@@ -386,6 +396,7 @@ ProductRuleDefinition = {
   registryScope          // the user-facing claim this rule contributes to
   evidenceRequirements[] // e.g. 'css-rule' | 'computed-style' | 'dom' | 'markup' | 'contrast'
   supportedSourceKinds[] // PER RULE, with a support level (full | partial | none)
+  scope                  // 'file' | 'component' | 'page' | 'project' - context the rule needs
   applicability          // when the rule is not_applicable vs inconclusive
   checkProduct(context) -> ProductRuleResult
 }
@@ -410,7 +421,12 @@ CanonicalSeverity = 'blocker' | 'major' | 'minor' | 'advisory'
 ProductRuleResult = {
   ruleId, canonicalRuleKey,
   status: 'pass' | 'fail' | 'not_applicable' | 'inconclusive',
-  severity: CanonicalSeverity,     // from the rule definition (normalized)
+  // NOTE: no rule-level 'error'. A rule's checkProduct() throwing is CAUGHT
+  // and recorded as status 'inconclusive' with normalizedErrorCategory set
+  // (the rule could not be evaluated). Validator-level 'error' (cannot run at
+  // all - unreadable input, registry fault) lives on ProductValidationResult.
+  normalizedErrorCategory?,        // set when an inconclusive came from a caught throw
+  severity: CanonicalSeverity,     // from the rule definition (per-rule authoritative)
   findingClass,                    // from the rule definition
   evidenceKind, evidenceLocations[],
   message, remediation?
@@ -424,37 +440,56 @@ ProductFinding = {                 // emitted for every fail/blocking rule resul
 
 ProductValidationResult = {
   status: 'clean' | 'findings' | 'inconclusive' | 'error',
+  // 'clean' means ACCEPTED UNDER THE ACTIVE POLICY, NOT "findings is empty":
+  // a clean result MAY carry tolerated/non-blocking findings. Downstream
+  // consumers must read `status`, not `findings.length`.
   rules: ProductRuleResult[],
   findings: ProductFinding[],
   coverage: {             // RUN-derived, not registry-declared
     inspectedFiles[], skippedFiles[],
     supportedSourceKinds[], unsupportedSourceKinds[],
     ruleCounts: { pass, fail, notApplicable, inconclusive },
+    findingCounts: { blocking, tolerated },  // why a clean result can hold findings
     measuredScope[],      // what this run actually proved
     unverifiedScope[]     // registryScope minus what this run proved
   },
-  error?: string
+  error?: string          // set only when status === 'error' (validator-level)
 }
 
 cleanPolicy = {
   requiredRuleIds[],                       // generated from the rule registry
-  blockingSeverities: CanonicalSeverity[], // e.g. ['blocker','major']
-  toleratedFindingCountsByClass,           // keyed by findingClass
+  blockingSeverities: CanonicalSeverity[], // e.g. ['blocker','major']; minor/advisory never block
+  toleratedFindingCounts,                  // keyed by (canonicalSeverity, findingClass)
   minimumCoverageByScope,                  // generated from required rules' evidence
   inconclusiveBehavior: 'block',
   notApplicableBehavior: 'exclude_and_report'
 }
 ```
 
-**Canonical severity normalization.** The source validators use three
-incompatible vocabularies - polish/extended/anti-pattern `critical|high|
-medium|low`, linguistic/absolute-ban `P0|P1|P2`, taste `error`
-(`polish-standard-validator.ts:5-16`, `absolute-ban-detector.ts:28-38`,
-`linguistic-ban-validator.ts:33-42`, `taste-validator.ts:8-19`). A single
-normalization table in the rule registry maps every source severity to one
-`CanonicalSeverity` (`critical`/`P0`/`error` -> `blocker`; `high`/`P1` ->
-`major`; `medium`/`P2` -> `minor`; `low` -> `advisory`). Policies are written
-ONLY in canonical severities; no evaluator ever sees a source vocabulary.
+Tolerance is keyed by `(severity, class)`, matching the dimensions the
+evaluator counts on; it only ever matters for a `blockingSeverities` entry
+(a `minor`/`advisory` finding is non-blocking already, so tolerating it is a
+no-op). The default for every blocking `(severity, class)` is 0.
+
+**Canonical severity - per-rule authoritative, table is a generation default
+only (v8 review).** The source validators use three incompatible vocabularies
+- polish/extended/anti-pattern `critical|high|medium|low`, linguistic/
+absolute-ban `P0|P1|P2`, taste `error` (`polish-standard-validator.ts:5-16`,
+`absolute-ban-detector.ts:28-38`, `linguistic-ban-validator.ts:33-42`,
+`taste-validator.ts:8-19`). The normalization table (`critical`/`P0`/`error`
+-> `blocker`; `high`/`P1` -> `major`; `medium`/`P2` -> `minor`; `low` ->
+`advisory`) is used ONCE, at registry-authoring time, to seed each rule's
+`ProductRuleDefinition.severity`. After that the PER-RULE `severity` is
+authoritative - the evaluator reads only it, never the source vocabulary or
+the global table. This matters where rule semantics intentionally differ from
+the default: the absolute-ban detector emits `P1` (which the table would seed
+as `major`/blocking), but its findings are heuristic "pattern shapes, not
+certainties" (`absolute-ban-detector.ts:20`), so those rules DECLARE
+`severity: minor` in the registry, overriding the default. Because `minor` is
+not in `blockingSeverities`, they are non-blocking by construction - no
+tolerance entry needed. `--check` flags any rule whose declared severity
+differs from the table default WITHOUT a stated override reason, so divergence
+is always deliberate and reviewable.
 
 **Deterministic clean-evaluation algorithm** (one ordered function, persisted
 inputs so a clean decision is reproducible after serialize/reload):
@@ -462,14 +497,16 @@ inputs so a clean decision is reproducible after serialize/reload):
 ```text
 1. coverage: every required rule's supported-and-discovered source inspected?
    any gap -> that rule is inconclusive.
-2. block on required-rule inconclusive or error (inconclusiveBehavior: block).
-3. count findings by (canonicalSeverity, findingClass).
-4. any finding whose severity is in blockingSeverities AND exceeds its
-   toleratedFindingCountsByClass -> status = findings.
-5. else if any required rule inconclusive/error remained -> inconclusive/error.
-6. else -> clean.
-notApplicable rules are excluded from counts and reported separately; a
-tolerated finding still appears in `findings` but does not flip status.
+2. if the validator could not run at all (unreadable input, registry fault)
+   -> status = error (validator-level). STOP.
+3. block on any REQUIRED rule that is inconclusive (incl. a caught rule throw,
+   which is inconclusive + normalizedErrorCategory) -> status = inconclusive.
+4. count findings (fail results) by (canonicalSeverity, findingClass).
+5. any finding whose severity is in blockingSeverities AND whose
+   (severity, class) count exceeds toleratedFindingCounts -> status = findings.
+6. else -> clean (MAY still carry minor/advisory or tolerated findings;
+   findingCounts.tolerated records them; findingCounts.blocking == 0).
+notApplicable rules are excluded from all counts and reported separately.
 ```
 
 Four-status rule semantics remain mandatory: `clean` requires every required
@@ -498,11 +535,12 @@ construction:
   satisfiable (no `dom`/`computed-style`/`contrast`-only requirement); DOM-only
   rules are owned but non-required and surface as `inconclusive` until a
   browser-evidence collector exists.
-- `blockingSeverities` = `['blocker','major']` (canonical).
-- `toleratedFindingCountsByClass` = 0 for every blocking class except the
-  heuristic absolute-ban `minor` class (the detector itself flags these as
-  "pattern shapes, not certainties", `absolute-ban-detector.ts:20`), which is
-  reported-not-blocking.
+- `blockingSeverities` = `['blocker','major']` (canonical); `minor`/`advisory`
+  never block.
+- `toleratedFindingCounts` = 0 for every blocking `(severity, class)`. The
+  heuristic absolute-ban rules do not need a tolerance carve-out because they
+  DECLARE `severity: minor` (per the per-rule override above), so they are
+  reported-not-blocking by construction.
 - `minimumCoverageByScope` = generated from the union of each required rule's
   `supportedSourceKinds`, so coverage and support can never disagree (fixes
   the v7 LESS/TSX mismatch where a policy said "all CSS/SCSS" while the matrix
@@ -518,18 +556,19 @@ clean/findings/inconclusive fixture manifest entry (the generator checks
 MANIFEST PRESENCE; the test suite EXECUTES the fixtures - section 15 keeps
 these responsibilities separate).
 
-**Transitions:** `retry` re-serves the current step (report optional,
-recorded); `skip` records the step skipped-with-reason (report.summary
-required) and serves the next; `interrupt` is an EXPLICIT transition that
-persists status `interrupted` (resumable - it is how "user said stop" becomes
-durable state; a process that dies without calling it leaves `in_progress`,
-equally resumable); `resume` is the ONLY action valid against an
-`interrupted` checkpoint - it atomically transitions `interrupted ->
-in_progress` (revision increments, audit entry recorded) and re-serves the
-current step; every other action against an interrupted checkpoint is
-rejected with a directive to resume first; `stop` is terminal: lane closes
-with `completed` (all steps succeeded), `partial` (some succeeded), or
-`failed` (none).
+**Transitions** (all phrased in the lifecycle/outcome axes above): `retry`
+re-serves the current step (report optional, recorded); `skip` records the
+step skipped-with-reason (report.summary required) and serves the next;
+`interrupt` sets `lifecycle: interrupted` (resumable - it is how "user said
+stop here" becomes durable state; a process that dies without calling it
+leaves `lifecycle: in_progress`, equally resumable); `resume` is the ONLY
+action valid against an `interrupted` checkpoint - it atomically transitions
+`interrupted -> in_progress` (revision increments, audit entry recorded) and
+re-serves the current step; every other action against an interrupted
+checkpoint is rejected with a directive to resume first; `stop` sets
+`lifecycle: closed` with `outcome: stopped`. A lane also reaches
+`lifecycle: closed` by completing its final sequence step (`outcome:
+completed | partial`) or reaching `converged` (loop, `outcome: converged`).
 
 **Once-only execution under async - lease protocol, not bare CAS (Codex
 cross-model finding).** A bare read-check-write CAS is insufficient because
@@ -544,10 +583,13 @@ step execution. v8 uses an operation-lease protocol:
 
 ```text
 advanceLane:
-  1. CLAIM under O_EXCL CAS: verify expectedRevision, write an in-flight
-     lease {operationId, stepIndex, startedAt, heartbeatAt} into the
-     checkpoint, bump revision, release the file lock. The lease - not a held
-     file lock - marks the step in-flight across the async body.
+  1. CLAIM under O_EXCL CAS: verify expectedRevision, write an in-flight lease
+     {operationId, stepId, iteration, claimedCheckpointRevision, startedAt,
+     heartbeatAt} into the checkpoint, bump revision, release the file lock.
+     The lease carries exactly the identity FINALIZE validates (below), and
+     `iteration` distinguishes repeated executions of the same loop step. The
+     lease - not a held file lock - marks the step in-flight across the async
+     body.
   2. EXECUTE the (async) validators with an AbortSignal derived from the
      lease. Refresh heartbeatAt periodically.
   3. FINALIZE under O_EXCL CAS: verify the SAME operationId still owns the
@@ -581,28 +623,40 @@ the superseded operation cannot commit state OR persistent side effects after
 its lease is fenced. (We do NOT claim exactly-once execution.)
 Read-only reads (`laneStatus`, `listLanes`) never take the lock.
 
-**Status precedence:** `interrupted` reflects an open, resumable lane
-regardless of completed-step count; terminal statuses are only set by `stop`
-or by completing the final step. The composite rule "success = any one flow
-passed" is NOT used for lanes.
+**Lifecycle and outcome are SEPARATE axes (v8 review).** v8 conflated them -
+mapping a stalled loop to `partial` (which retention treats as terminal) while
+also calling it resumable, a contradiction. v9 splits:
 
-**Loop-lane status mapping (P1).** A loop lane's `convergence.status`
-(`running | converged | stalled | capped | error | interrupted`) maps to the
-lane-level terminal union so callers see a consistent status:
-`converged -> completed`; `stalled | capped -> partial` (real progress made,
-gate not reached - the summary names which); `error -> failed`;
-`interrupted -> interrupted` (resumable). `stalled`/`capped`/`error` loop
-lanes are RESUMABLE (a later `advanceLane` re-runs validators) until the user
-`stop`s them; the convergence sub-state carries the detail.
+```text
+lifecycle: 'in_progress' | 'interrupted' | 'closed'   // governs listing + retention
+outcome?:  'converged' | 'stalled' | 'capped' | 'error' | 'stopped' | 'completed'
+                                                       // the result, recorded separately
+```
+
+- `lifecycle` is the ONLY thing retention and listing key off.
+- A lane is `closed` ONLY by an explicit `stop` or by completing its final
+  step (sequence) / reaching `converged` (loop). `closed` lanes carry a
+  terminal `outcome`.
+- A loop that `stalls`/`caps`/`errors` stays `lifecycle: in_progress` with the
+  matching `outcome` recorded - it is RESUMABLE (a later `advanceLane` re-runs
+  validators); it is NOT terminal and NOT GC-eligible as terminal.
+- `interrupted` is its own lifecycle (resumable via `resume`).
+- The composite rule "success = any one flow passed" is NOT used for lanes.
+
+A sequence lane's `outcome` on close is `completed` (all steps succeeded),
+`partial` (some succeeded, some skipped/failed), or `stopped` (user stop). A
+loop lane's `outcome` is its convergence result. Listing/retention never read
+`outcome`.
 
 `LaneState` = `{ lane, target, projectPath, currentStep, steps: [{verb,
 flowIds, status: 'pending' | 'current' | 'completed' | 'skipped' |
 'validation_failed' | 'validation_inconclusive' | 'validation_error'}],
-stepReports, revision, status, convergence? }`.
+stepReports, revision, lifecycle, outcome?, convergence? }`.
 
 **Checkpoints:** `SidecoachCheckpoint` schemaVersion 2 adds `operationKind:
-'composite' | 'lane'`, `laneId?`, `projectPath`, `revision`, `stepReports`,
-`lease?` (the in-flight `{operationId, stepIndex, startedAt, heartbeatAt}`),
+'composite' | 'lane'`, `laneId?`, `projectPath`, `revision`, `lifecycle`,
+`outcome?`, `stepReports`, `lease?` (the in-flight `{operationId, stepId,
+iteration, claimedCheckpointRevision, startedAt, heartbeatAt}`),
 `seenReportIds[]` (idempotency), and `convergence?`. Lane resume resolves
 against the lane registry (not `PRESET_COMPOSITE_FLOWS`); v1 checkpoints still
 resolve presets (migration shim). Checkpoint lookup: ids resolve within the
@@ -618,12 +672,15 @@ the RESOLVED project root (a lexical prefix check alone follows symlinks out
 of the project); regular files only, no-follow semantics where the platform
 supports them; 256KB cap; schema-validated before use.
 
-**Retention and listing:** terminal checkpoints (`completed` / `partial` /
-`failed`) are retained 30 days, then garbage-collected; `interrupted` and
-`in_progress` checkpoints are retained until stopped or 30 days idle, and GC
-of a non-terminal checkpoint is logged loudly. `lane list` shows active and
-interrupted lanes by default; `--all` includes terminal ones within
-retention.
+**Retention and listing (lifecycle-keyed only).** `closed` checkpoints
+(lifecycle, regardless of `outcome`) are retained 30 days then
+garbage-collected. `in_progress` and `interrupted` checkpoints - INCLUDING a
+loop lane whose outcome is `stalled`/`capped`/`error` (still `in_progress`,
+still resumable) - are retained until they close or go 30 days idle; GC of a
+non-`closed` checkpoint is logged loudly. `lane list` shows `in_progress` and
+`interrupted` lanes by default (with their recorded `outcome`, if any);
+`--all` adds `closed` lanes within retention. Nothing reads `outcome` for
+retention/listing decisions.
 
 **Dispatch surface:** `sidecoach-monitor lane start|advance|status|list`
 (flags: `--lane`, `--target`, `--checkpoint`, `--project`, `--action`,
@@ -666,10 +723,14 @@ Policy:
   three gates. (Also `flowF` errors without `DESIGN.md`/staged tokens and its
   `canExecute` requires a project register; `flowH.canExecute` requires brand
   personality.) So `flow-validation-capabilities.ts` carries a machine-readable
-  PRECONDITION declaration per flow covering all four gates, each precondition
-  given a stable ID that the HANDLER references (so the declaration cannot
-  drift from the code that enforces it) - the generator never statically
-  interprets `canExecute` or handler bodies. Each declared precondition names
+  PRECONDITION declaration per flow covering all four gates, each with a stable
+  ID. The handler DECLARES the precondition IDs it enforces in its registration
+  (an authored `enforcesPreconditionIds[]` field), NOT inside its function
+  body - so `--check` validates the declaration against lane requirements
+  without ever parsing handler source (consistent with the
+  generator-never-reads-bodies principle). A runtime assertion in the handler
+  can self-check the same IDs, but the generator relies only on the
+  declaration. Each declared precondition names
   its handling when unmet: `synthesize_from_project_state` (flowF autoloads
   tokens from DESIGN.md when present) | `convert_to_step_guidance` (no
   DESIGN.md -> the step guidance opens with "no DESIGN.md found - extract
@@ -695,8 +756,9 @@ Policy:
   required prerequisite EDGE of any flow in a lane's derived sequence is
   neither satisfied earlier in the lane nor explicitly waived; if any declared
   precondition (any of the four gates) of a lane flow lacks a declared
-  unmet-handling; or if a declared precondition ID is not referenced by its
-  handler. No lane can ship unexecutable at any of the four gates.
+  unmet-handling; or if a precondition required by a lane is absent from the
+  flow's authored `enforcesPreconditionIds[]` (a declaration check, no source
+  parsing). No lane can ship unexecutable at any of the four gates.
 - **History scoping:** where flow history remains an input (verb-tier
   behavior, advisory uses), it becomes project-scoped (keyed by project
   path, not a global default session). `flow-history.ts` joins the blast
@@ -829,15 +891,29 @@ evaluate; the difference is only WHEN the gate fires. A fresh-empty-project
 acceptance test proves `lane_build` starts, creates supported source, and
 passes the deferred gate.
 
-**Validator target scope (Codex P1).** `startLane(laneId, target, ...)` takes
-a free-form `target`, but Flow J currently scans the whole project, so a lane
-aimed at one component could be blocked by unrelated project-wide findings.
-v8 fixes the target grammar: `target` is either a path/glob under the project
-root (validation scopes coverage to matching files) or the sentinel `project`
-(project-wide). v1 validators honor path/glob targets by restricting
-discovery to the matched files; coverage and `measuredScope` then describe
-only the targeted subset. The target is persisted in the checkpoint and shown
-in the summary so the scope of any clean claim is explicit.
+**Validator target scope.** `startLane(laneId, target, ...)` takes a free-form
+`target`, but Flow J currently scans the whole project, so a lane aimed at one
+component could be blocked by unrelated project-wide findings. The target
+grammar: `target` is either a path/glob under the project root (validation
+scopes coverage to matching files) or the sentinel `project` (project-wide).
+A canonical target resolver:
+
+- resolves the target and the project root with `realpath` and rejects any
+  match that escapes the resolved root (symlink-safe, same rule as report-input
+  hardening); rejects non-regular matched files;
+- defines glob semantics explicitly (shared Python/TS): `**` recursive, `*`
+  single-segment, no negation in v1; a glob matching ZERO files is a
+  preflight error ("target matched no files"), never a silent clean.
+
+`ProductRuleDefinition` carries a `scope` field (`file | component | page |
+project`) declaring the context a rule needs. A required rule whose declared
+scope cannot be validly evaluated against the selected target (e.g. a
+project-scope rule under a single-file target that can't supply enough
+context) returns a DISCLOSED `inconclusive` for that target, never `clean` -
+so a narrow target can never produce a falsely-clean project-wide claim.
+Coverage and `measuredScope` describe only the targeted subset; the target is
+persisted in the checkpoint and shown in the summary so the scope of any clean
+claim is explicit.
 
 This is deliberately narrow and honest. Audit's permanent "manual testing
 required" warning cannot make convergence impossible; critique's "framework
@@ -855,11 +931,16 @@ does NOT infer clean from its message, generic memory validation text, or
 output-shape domain validators:
 
 ```text
-registryScope (maximum capability):
+registryScope (maximum capability) - Flow J owns ONLY the rules left after the
+canonical-key partition delegates theming/anti-pattern/a11y to their slice
+validators (single-owner by canonicalRuleKey, so no rule is double-owned):
   - tactical polish matrix (22 rules)
-  - extended design-domain matrix (90 rules)
+  - extended design-domain rules NOT delegated to theming/anti-pattern/a11y
+    (e.g. typography, spacing, motion-timing, copy domains)
   - linguistic-ban scan
-  - absolute-ban scan
+  - absolute-ban scan (heuristic rules declared `minor` = non-blocking)
+The theming/token, CSS-anti-pattern, and static-a11y rules in the extended
+matrix are owned by the three slice validators, not Flow J.
 
 measuredScope: derived PER RUN from the coverage record - only checks that
         actually ran with sufficient evidence. unverifiedScope = registry
@@ -899,7 +980,10 @@ survives process boundaries):
 
 ```text
 convergence: {
-  status: 'running' | 'converged' | 'stalled' | 'capped' | 'error' | 'interrupted',
+  outcome: 'running' | 'converged' | 'stalled' | 'capped' | 'error',
+           // the loop result; the lane's lifecycle (in_progress/interrupted/
+           // closed) lives on LaneState, NOT here. running/stalled/capped/error
+           // all sit under lifecycle in_progress (resumable); converged closes.
   iteration, signatures[], consecutiveNoProgress,
   limits: { maxIterations, maxNoProgress },
   productValidationRuns[], findings[], validatorErrors[],
@@ -919,8 +1003,10 @@ inconclusiveRuleIds[], coverageGapIdentities[], normalizedErrorCategory}` -
 stable identities only (rule keys, gap identities, error category), never
 free-text messages or stack traces (which would make the signature unstable
 and defeat stall detection). Advisory guidance changes never enter the
-signature or reset the no-progress counter. `LaneStepResult.status` keeps the
-lane-level union; convergence detail lives in the `convergence` sub-state.
+signature or reset the no-progress counter. Each `LaneStepResult` carries the
+step-level result (the `clean/findings/inconclusive/error -> step status`
+mapping from section 7's completion contract) plus the lane's `lifecycle` and
+`outcome?`; the convergence detail lives in the `convergence` sub-state.
 Stepped iteration: `advanceLane` runs product validators and advisory flows
 -> findings + coaching returned -> model fixes (real work) -> next
 `advanceLane` revalidates and updates signatures.
@@ -937,11 +1023,11 @@ lacking evidence, not-applicable rules, and actual measured-rule coverage:
 > {completed | partially unavailable}; manual verification remains advised.
 
 **Advisory failure qualification:** advisory flow errors never block the
-product gate, but they change the user-facing terminal label. The persisted
-convergence status remains `converged`; the DISPLAYED result becomes
-`machine_checks_clean_with_advisory_warnings`, with the incomplete coaching
-prominent in the summary. A bare "converged" is never shown when the
-requested coaching loop did not fully execute.
+product gate, but they change the user-facing label. The persisted
+`convergence.outcome` remains `converged` (and lifecycle `closed`); the
+DISPLAYED result becomes `machine_checks_clean_with_advisory_warnings`, with
+the incomplete coaching prominent in the summary. A bare "converged" is never
+shown when the requested coaching loop did not fully execute.
 
 E2e tests drive a real mutation on a fixture project and prove: state survives
 a fresh process per iteration; stall and cap fire; product-validator failure
@@ -1089,8 +1175,9 @@ Execution acceptance: all v3 cases, plus:
   cannot silently complete.
 - Explicit retry, skip, interrupt, resume, and stop transitions persist and
   return documented statuses; status precedence verified.
-- Two concurrent advances against one checkpoint: exactly one wins
-  (expectedRevision CAS).
+- Two concurrent advances against one checkpoint: exactly one COMMITS
+  (expectedRevision CAS + lease finalization); the other is rejected even if
+  it finished.
 - Convergence state survives a fresh process per iteration; stall and cap
   still fire.
 - Any REQUIRED PRODUCT-validator error/skip/unsupported result prevents
@@ -1162,9 +1249,10 @@ Execution acceptance: all v3 cases, plus:
     fixtures (a static release condition - distinct from a given project's
     runtime cleanliness).
   - every required lane validator ID resolves to exactly one registration and
-    executes exactly once per convergence iteration; a registered
-    release-floor validator with no lane attachment fails generation; a
-    ruleId owned by two validators fails generation.
+    is INVOKED once per convergence iteration (scheduling - distinct from the
+    async at-most-one-committed guarantee above); a registered release-floor
+    validator with no lane attachment fails generation; a canonicalRuleKey
+    owned by two validators fails generation.
   - empty required-rule sets and zero/vacuous coverage policies fail
     generation; each initial clean policy has fixtures proving clean,
     findings, AND inconclusive outcomes.

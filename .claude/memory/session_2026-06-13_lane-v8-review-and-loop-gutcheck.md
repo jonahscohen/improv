@@ -3,6 +3,7 @@ name: v8 review + spec-review-loop gut check
 description: 9th review round; both P0s were v8-introduced regressions (3rd straight revision to self-introduce P0s); fixed the 2 contradictions, parked the P1s, and put a redirect-to-implementation gut-check to Jonah rather than folding a v9
 type: decision
 relates_to: [session_2026-06-13_lane-design-v8-declarative-rule-registry.md, feedback_shortcuts_are_lies.md]
+superseded_by: session_2026-06-13_lane-v9-self-audit-repair.md
 ---
 
 The v8 review (`reviews/2026-06-13-...-v8-review.md`) is the NINTH review round
