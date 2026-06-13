@@ -44,6 +44,19 @@ async function run() {
   if (st.lifecycle !== 'closed' || st.outcome !== 'stopped') throw new Error('stop -> closed/stopped');
   const state = laneStatus(proj, start.checkpointId, d);
   if (!state.audit.some((a) => a.action === 'stop' && a.reason === 'parking it')) throw new Error('stop must be audited with reason');
+
+  // P1-2: an INTERRUPTED lane + a DUPLICATE reportId + a non-resume action must
+  // REJECT (resume-only), not silently no-op via the dedup short-circuit. (Same
+  // bug class as dup-on-closed; the dedup short-circuit must fire only on an
+  // in_progress lane.)
+  const rep = (verb: string) => ({ stepId: verb, iteration: 0, reportId: `r2:${verb}`, verb, summary: 's', evidence: [{ kind: 'note' as const, detail: 'x' }] });
+  const l2 = await startLane('lane_build', 'hero2', { projectPath: proj }, 'req-2', d);
+  const c2 = await advanceLane(proj, l2.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: l2.revision }, d); // craft; r2:shape now seen
+  const i2 = await advanceLane(proj, l2.checkpointId, { action: 'interrupt', expectedRevision: c2.revision }, d);                      // interrupted
+  let threw2 = false;
+  try { await advanceLane(proj, l2.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: i2.revision }, d); } catch { threw2 = true; }
+  if (!threw2) throw new Error('interrupted lane + duplicate reportId + complete must reject (resume-only), not no-op');
+
   console.log('lane-runner-transitions: OK');
 }
 run();

@@ -164,9 +164,11 @@ export async function advanceLane(projectPath: string, checkpointId: string, tra
   const l = resolveLane(cp.laneId);
 
   // duplicate report -> no-op (before CAS, so a retried transport call is idempotent).
-  // Guard on a non-closed lane: a closed lane must REJECT any further advance even
-  // if the report was already seen, so it falls through to the closed-check below.
-  if (transition.report && cp.lifecycle !== 'closed' && cp.seenReportIds.includes(transition.report.reportId)) return serveStep(cp, l, { projectPath }, d);
+  // Guard on an IN_PROGRESS lane ONLY: a closed lane must REJECT any further
+  // advance, and an interrupted lane must REJECT every non-resume action - both
+  // must fall through to their checks below rather than be masked by the dedup
+  // short-circuit (P1-2: same bug class as dup-on-closed, for interrupted).
+  if (transition.report && cp.lifecycle === 'in_progress' && cp.seenReportIds.includes(transition.report.reportId)) return serveStep(cp, l, { projectPath }, d);
 
   // interrupted: ONLY resume is valid (spec 640-646). Checked before CAS so the
   // directive is returned regardless of revision drift.
