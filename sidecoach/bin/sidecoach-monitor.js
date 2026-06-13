@@ -36,11 +36,17 @@ async function main() {
         if (reportRaw) {
           if (reportRaw.length > 64 * 1024) { console.error('--report exceeds 64KB cap'); process.exit(2); }
           let parsed; try { parsed = JSON.parse(reportRaw); } catch { console.error('--report is not valid JSON'); process.exit(2); }
+          const ALLOWED_KINDS = ['files', 'screenshot', 'validation', 'note'];
+          const nonEmpty = (s) => typeof s === 'string' && s.trim().length > 0;
+          // evidence[>=1], each {kind in ALLOWED_KINDS, non-empty detail string}
           const okEvidence = Array.isArray(parsed && parsed.evidence) && parsed.evidence.length >= 1 &&
-            parsed.evidence.every((ev) => ev && typeof ev.kind === 'string' && typeof ev.detail === 'string');
-          if (!parsed || typeof parsed.stepId !== 'string' || typeof parsed.reportId !== 'string' || typeof parsed.verb !== 'string' ||
-              typeof parsed.summary !== 'string' || typeof parsed.iteration !== 'number' || !okEvidence) {
-            console.error('--report must be a StepReport: stepId, reportId, verb, summary (strings), iteration (number), evidence[>=1] of {kind,detail} strings'); process.exit(2);
+            parsed.evidence.every((ev) => ev && ALLOWED_KINDS.includes(ev.kind) && nonEmpty(ev.detail));
+          // checklistResults is optional; if present it must be {itemId:string, done:boolean}[]
+          const okChecklist = parsed && (parsed.checklistResults === undefined || (Array.isArray(parsed.checklistResults) &&
+            parsed.checklistResults.every((c) => c && typeof c.itemId === 'string' && typeof c.done === 'boolean')));
+          if (!parsed || !nonEmpty(parsed.stepId) || !nonEmpty(parsed.reportId) || !nonEmpty(parsed.verb) ||
+              typeof parsed.summary !== 'string' || typeof parsed.iteration !== 'number' || !okEvidence || !okChecklist) {
+            console.error('--report must be a StepReport: non-empty stepId/reportId/verb (strings), summary (string), iteration (number), evidence[>=1] of {kind in [files|screenshot|validation|note], non-empty detail}, optional checklistResults of {itemId:string, done:boolean}'); process.exit(2);
           }
           transition.report = parsed;
         }
