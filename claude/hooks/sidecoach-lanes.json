@@ -1,0 +1,129 @@
+{
+  "_meta": {
+    "purpose": "Canonical sidecoach LANE registry. Replaces sidecoach-modes.json. Lanes are named by plain user-facing labels (no magic words); routing is by natural-language scoring, not keyword match. Owns lane records, lexicons, scope policy, prereq waivers, scoring config, schemaVersion.",
+    "matching": "Lexicon/scope patterns are regex fragments, case-insensitive, matched with hyphen-aware word boundaries (?<![\\w-])PATTERN(?![\\w-]). Score = sum over groups of the max matched weight per group. Scope is clause-bound (see scope.algorithm).",
+    "thresholds": "route_floor/route_margin are spec-fixed (3/2); weights are provisional pending the calibration report (spec section 3)."
+  },
+  "schemaVersion": 1,
+  "scoring": { "route_floor": 3, "route_margin": 2, "classify_floor": 1 },
+  "scope": {
+    "ui_evidence": [
+      "button", "modal", "dialog", "drawer", "dropdown", "tooltip", "popover",
+      "card", "hero", "banner", "carousel", "navbar", "sidebar", "footer", "menu",
+      "landing[- ]?page", "home ?page", "dashboard", "form", "table", "grid",
+      "typography", "type ?scale", "font pairing", "color ?(?:palette|scheme)",
+      "spacing", "hover state", "focus ring", "responsive", "breakpoints?",
+      "design ?system", "style ?guide", "component(?:s| library)?", "wireframe",
+      "mockup", "figma", "css", "scss", "tailwind", "ui/ux", "user experience",
+      "accessibility", "a11y", "wcag", "contrast ratio", "animation", "transition",
+      "gradient", "drop ?shadow", "border[- ]radius", "dark mode", "theming",
+      "user interface", "page header", "site header", "nav header", "hero header",
+      "responsive layout", "page layout", "grid layout", "mobile layout"
+    ],
+    "negative_filters": [
+      "database", "\\bapi\\b", "migration", "endpoint", "unit test",
+      "integration test", "pipeline", "deploy(?:ment)?", "schema", "backend",
+      "server[- ]side", "\\bsql\\b", "query", "cron", "webhook", "kubernetes",
+      "docker", "\\bci\\b", "\\bcd\\b", "auth(?:entication)?", "oauth", "\\bjwt\\b",
+      "\\borm\\b", "graphql", "grpc", "kafka", "redis", "lambda", "terraform"
+    ]
+  },
+  "lanes": [
+    {
+      "lane": "lane_build", "label": "a ground-up build",
+      "description": "Shapes the design, crafts the implementation, then polishes the result.",
+      "interviewLabel": "Build it from the ground up", "executionKind": "sequence",
+      "verbChain": ["shape", "craft", "polish"], "prereqWaivers": [],
+      "lexicon": [
+        { "pattern": "from scratch", "weight": 3, "group": "greenfield" },
+        { "pattern": "ground[- ]up", "weight": 3, "group": "greenfield" },
+        { "pattern": "greenfield", "weight": 3, "group": "greenfield" },
+        { "pattern": "net[- ]new", "weight": 2, "group": "greenfield" },
+        { "pattern": "brand[- ]new", "weight": 2, "group": "greenfield" },
+        { "pattern": "build (?:me |out )?a", "weight": 2, "group": "build_verb" }
+      ]
+    },
+    {
+      "lane": "lane_ship", "label": "a release-readiness pass",
+      "description": "Audits, critiques, hardens errors and i18n, validates responsive, finishes with polish.",
+      "interviewLabel": "Get it ship-ready", "executionKind": "sequence",
+      "verbChain": ["audit", "critique", "harden", "adapt", "polish"],
+      "prereqWaivers": [
+        { "dependentFlowId": "flowJ_tactical_polish", "prerequisiteFlowId": "flowG_component_implementation", "reason": "existing UI satisfies the implementation-history assumption" }
+      ],
+      "lexicon": [
+        { "pattern": "production[- ]ready", "weight": 3, "group": "release" },
+        { "pattern": "ship[- ]ready", "weight": 3, "group": "release" },
+        { "pattern": "release[- ]read(?:y|iness)", "weight": 3, "group": "release" },
+        { "pattern": "ready (?:to ship|for production)", "weight": 3, "group": "release" },
+        { "pattern": "get it shipped", "weight": 2, "group": "release" }
+      ]
+    },
+    {
+      "lane": "lane_delight", "label": "a personality pass - color, motion, delight",
+      "description": "Applies color, adds delightful micro-interactions, integrates motion, finishes with polish.",
+      "interviewLabel": "Give it personality", "executionKind": "sequence",
+      "verbChain": ["colorize", "delight", "animate", "polish"],
+      "prereqWaivers": [
+        { "dependentFlowId": "flowA_brand_verify", "prerequisiteFlowId": "flowG_component_implementation", "reason": "brand-verify on existing UI does not require prior implementation history" }
+      ],
+      "lexicon": [
+        { "pattern": "bring it to life", "weight": 3, "group": "personality" },
+        { "pattern": "make it pop", "weight": 2, "group": "personality" },
+        { "pattern": "personality", "weight": 2, "group": "personality" },
+        { "pattern": "more (?:fun|playful|joyful)", "weight": 2, "group": "personality" },
+        { "pattern": "color and motion", "weight": 2, "group": "personality" },
+        { "pattern": "delightful", "weight": 2, "group": "personality" }
+      ]
+    },
+    {
+      "lane": "lane_live", "label": "live in-browser iteration",
+      "description": "Loops the design inside the browser: live iteration, color refinement, polish, then a critique pass.",
+      "interviewLabel": "Iterate live in the browser", "executionKind": "sequence",
+      "verbChain": ["live", "colorize", "polish", "critique"],
+      "prereqWaivers": [
+        { "dependentFlowId": "flowJ_tactical_polish", "prerequisiteFlowId": "flowG_component_implementation", "reason": "existing UI satisfies the implementation-history assumption" }
+      ],
+      "lexicon": [
+        { "pattern": "in[- ]browser", "weight": 2, "group": "live" },
+        { "pattern": "live iterat(?:e|ion)", "weight": 3, "group": "live" },
+        { "pattern": "iterate in the browser", "weight": 3, "group": "live" },
+        { "pattern": "tweak (?:it )?live", "weight": 3, "group": "live" },
+        { "pattern": "hot[- ]swap", "weight": 2, "group": "live" }
+      ]
+    },
+    {
+      "lane": "lane_calm", "label": "a tone-down pass - quiet it to essentials",
+      "description": "Quiets visual noise, distills to essentials, clarifies copy and labels, then polishes.",
+      "interviewLabel": "Quiet it down to essentials", "executionKind": "sequence",
+      "verbChain": ["quieter", "distill", "clarify", "polish"],
+      "prereqWaivers": [
+        { "dependentFlowId": "flowJ_tactical_polish", "prerequisiteFlowId": "flowG_component_implementation", "reason": "existing UI satisfies the implementation-history assumption" }
+      ],
+      "lexicon": [
+        { "pattern": "tone (?:it )?down", "weight": 3, "group": "calm" },
+        { "pattern": "too (?:busy|loud|noisy|cluttered)", "weight": 3, "group": "calm" },
+        { "pattern": "strip (?:it )?back", "weight": 3, "group": "calm" },
+        { "pattern": "back to essentials", "weight": 3, "group": "calm" },
+        { "pattern": "declutter", "weight": 2, "group": "calm" }
+      ]
+    },
+    {
+      "lane": "lane_converge", "label": "iterate-until-it-passes looping",
+      "description": "Runs polish, audit, and critique in a loop until the product validators pass or a cap fires.",
+      "interviewLabel": "Loop until it passes", "executionKind": "loop",
+      "verbChain": ["polish", "audit", "critique"],
+      "prereqWaivers": [
+        { "dependentFlowId": "flowJ_tactical_polish", "prerequisiteFlowId": "flowG_component_implementation", "reason": "existing UI satisfies the implementation-history assumption" }
+      ],
+      "lexicon": [
+        { "pattern": "until it passes", "weight": 3, "group": "converge" },
+        { "pattern": "iterate until", "weight": 3, "group": "converge" },
+        { "pattern": "loop until", "weight": 3, "group": "converge" },
+        { "pattern": "keep iterating", "weight": 3, "group": "converge" },
+        { "pattern": "until (?:the )?validators? pass", "weight": 3, "group": "converge" },
+        { "pattern": "converge", "weight": 2, "group": "converge" }
+      ]
+    }
+  ]
+}
