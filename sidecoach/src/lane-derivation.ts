@@ -32,3 +32,22 @@ export function deriveVerbGuidance(verbChain: string[]): { verb: string; guidanc
     return { verb: v, guidance: entry.guidanceAppend as string[] };
   });
 }
+
+// First-owner assignment: a flow shared by two verbs is assigned to the FIRST
+// verb in verbChain that owns it (so the union of nonempty step flows == the
+// already-derived flowSequence). A verb whose flows were all claimed earlier
+// yields an EMPTY-flow guidance-only step - that is legal and intentional.
+export function deriveVerbSteps(
+  verbChain: string[], flowSequence: FlowId[],
+  verbGuidance: { verb: string; guidance: string[] }[],
+): { verb: string; flowIds: FlowId[]; guidance: string[] }[] {
+  const claimed = new Set<FlowId>();
+  const guidanceByVerb = new Map(verbGuidance.map((g) => [g.verb, g.guidance]));
+  return verbChain.map((verb) => {
+    const entry = (VERB_REGISTRY as any)[verb];
+    const verbFlows: FlowId[] = entry ? (entry.flowIds as FlowId[]) : [];
+    const flowIds = flowSequence.filter((f) => verbFlows.includes(f) && !claimed.has(f));
+    flowIds.forEach((f) => claimed.add(f));
+    return { verb, flowIds, guidance: guidanceByVerb.get(verb) ?? [] };
+  });
+}

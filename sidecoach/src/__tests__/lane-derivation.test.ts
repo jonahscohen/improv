@@ -27,3 +27,26 @@ for (const lane of Object.keys(GOLDEN)) {
   assert.deepStrictEqual(deriveFlowSequence(CHAINS[lane]), GOLDEN[lane], `derivation for ${lane}`);
 }
 console.log('lane-derivation: OK');
+
+// --- P2: verbSteps derivation (empty-flow steps are LEGAL) ---
+import { LANES } from '../lanes.generated';
+{
+  const build = LANES.find((l) => l.lane === 'lane_build')!;
+  const vs = (build as any).verbSteps;
+  if (!Array.isArray(vs)) throw new Error('verbSteps not emitted');
+  if (vs.length !== build.verbChain.length) throw new Error('one verbStep per verb');
+  if (vs[0].verb !== build.verbChain[0]) throw new Error('order matches verbChain');
+  // every verb appears once, guidance preserved (incl. for empty-flow steps)
+  for (const step of vs) {
+    if (typeof step.verb !== 'string') throw new Error('verbStep.verb missing');
+    if (!Array.isArray(step.guidance)) throw new Error(`guidance missing for ${step.verb}`);
+    for (const f of step.flowIds) if (!build.flowSequence.includes(f)) throw new Error(`flow ${f} not in flowSequence`);
+  }
+  // union of NONEMPTY step flows == flowSequence exactly (no flow dropped/invented)
+  const union = new Set(vs.flatMap((s: any) => s.flowIds));
+  if (union.size !== build.flowSequence.length) throw new Error('nonempty verbStep flows must cover flowSequence exactly');
+  // a guidance-only empty-flow step is allowed and must keep its guidance
+  const polish = vs.find((s: any) => s.verb === 'polish');
+  if (polish && polish.flowIds.length === 0 && polish.guidance.length === 0) throw new Error('empty-flow step must still carry guidance');
+  console.log('lane-derivation verbSteps: OK');
+}
