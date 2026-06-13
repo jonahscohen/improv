@@ -55,6 +55,11 @@ checkpoint/verified-plan commits on top).
 - CALIBRATION (P1-later, spec sec 3): single-word verbs layout/live/audit
   double as common English -> verb-tier false-fire surface; harden the verb
   lexicon (design-context qualifier or drop riskiest bare verbs).
+- MINOR cleanup (vfy-t1 sign-off #5): test-sidecoach-keyword.sh has two
+  now-unused helper defs (assert_mode_fires line 97, assert_tiebreak line 115)
+  left from the mode-word era - harmless dead code, drop on next touch.
+  (vfy-t1 sign-off #1 "route_margin boundary unpinned" was a STALE note - the
+  boundary IS pinned: test_route_margin_boundary_exactly_two_routes line 323.)
 - P2: resolveSidecoachPhrase is built+tested but NOT wired into
   parseSlashCommand - a real user typing `/sidecoach <phrase>` won't resolve
   end-to-end until P2 wires the dispatch.
