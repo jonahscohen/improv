@@ -4,6 +4,7 @@ description: P3 v2 folds the 6 P1 + 3 P2 (race-safe lock, all-writes-under-lock 
 type: project
 relates_to: [session_2026-06-13_lane-p3-codex-review.md, feedback_autonomous_phases_codex_partner.md]
 supersedes: session_2026-06-13_lane-p3-plan-drafted.md
+superseded_by: session_2026-06-13_p4-decomposition.md
 ---
 
 Revised P3 to v2 (same file, git has v1 at daa36c2), folding all of Codex's

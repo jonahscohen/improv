@@ -1,3 +1,5 @@
+- [P4a-1 plan drafted (rule registry + clean-eval) - PROJECT (2026-06-13)](session_2026-06-13_p4a1-plan-drafted.md): four-status types, canonical rule registry, 3-registry model, generated clean policies + --check, 7-step clean-eval algorithm; to Codex
+- [P4 decomposition (durability folded in) - DECISION (2026-06-13)](session_2026-06-13_p4-decomposition.md): Jonah chose fold-P3-into-P4; P4 split into P4a validators / P4b async-exec+durability / P4c loops+convergence / P4d MCP+cleanup
 - [Lane P3 plan v2 (Codex fixes) - PROJECT (2026-06-13)](session_2026-06-13_lane-p3-plan-v2.md): race-safe lock, all-writes-under-lock, full lease identity, barrier-seam concurrency tests, locked start mapping, outbox seed; re-Codex
 - [Lane P3 durability plan drafted - PROJECT (2026-06-13)](session_2026-06-13_lane-p3-plan-drafted.md): lease/fencing/schema-v2 at-most-one-committed-transition core; outbox/AbortSignal/heartbeat->P4; to Codex
 - [Lane P2 COMPLETE (merged) - PROJECT (2026-06-13)](session_2026-06-13_lane-p2-COMPLETE.md): sequence execution + phrase wiring built (19 commits), 3-leg verified, Codex SHIP after 1 fix round; loop lanes->P4
