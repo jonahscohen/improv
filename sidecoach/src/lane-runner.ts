@@ -113,3 +113,71 @@ export { serveStep, resolveLane, closedResult };
 export function pushAudit(cp: LaneCheckpoint, e: Omit<LaneAuditEntry, 'revision' | 'at'>, d: LaneRunnerDeps): void {
   cp.audit.push({ ...e, revision: cp.revision, at: d.now() });
 }
+
+function bump(cp: LaneCheckpoint, d: LaneRunnerDeps): void {
+  // Best-effort in-process guard: re-read the persisted revision and abort if it
+  // moved since this checkpoint was loaded. True cross-process CAS (lease +
+  // fencing token) is P3. `cp.revision` is the pre-bump value here; serveStep's
+  // incremental writes do NOT bump revision, so the on-disk value still matches.
+  if (d.store.exists(cp.checkpointId)) {
+    const onDisk = d.store.read(cp.checkpointId);
+    if (onDisk.revision !== cp.revision) throw new Error(`lane runner: concurrent modification (disk revision ${onDisk.revision} != in-memory ${cp.revision})`);
+  }
+  cp.revision += 1; cp.updatedAt = d.now(); d.store.write(cp);
+}
+
+// Advance the cursor after a completed/skipped step. Sequence final step closes
+// the lane: outcome 'completed' if no step was skipped, else 'partial'. (Loop
+// lanes never reach here - they are rejected at startLane in P2.)
+async function advanceCursor(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  const last = l.verbSteps.length - 1;
+  if (cp.cursor < last) { cp.cursor += 1; bump(cp, d); return serveStep(cp, l, context, d); }
+  cp.lifecycle = 'closed';
+  cp.outcome = cp.skippedStepIds.length > 0 ? 'partial' : 'completed';
+  bump(cp, d);
+  return closedResult(cp, l);
+}
+
+export async function advanceLane(projectPath: string, checkpointId: string, transition: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  const cp = d.store.read(checkpointId);
+  const l = resolveLane(cp.laneId);
+
+  // duplicate report -> no-op (before CAS, so a retried transport call is idempotent).
+  // Guard on a non-closed lane: a closed lane must REJECT any further advance even
+  // if the report was already seen, so it falls through to the closed-check below.
+  if (transition.report && cp.lifecycle !== 'closed' && cp.seenReportIds.includes(transition.report.reportId)) return serveStep(cp, l, { projectPath }, d);
+
+  // interrupted: ONLY resume is valid (spec 640-646). Checked before CAS so the
+  // directive is returned regardless of revision drift.
+  if (cp.lifecycle === 'interrupted' && transition.action !== 'resume') {
+    throw new Error(`advanceLane: lane is interrupted - the only valid action is "resume" (got "${transition.action}")`);
+  }
+  if (cp.lifecycle === 'closed') throw new Error(`advanceLane: lane already closed (outcome ${cp.outcome})`);
+  if (transition.expectedRevision !== cp.revision) throw new Error(`advanceLane: stale expectedRevision ${transition.expectedRevision} (current ${cp.revision})`);
+
+  switch (transition.action) {
+    case 'complete': {
+      const r = transition.report;
+      if (!r) throw new Error('advanceLane: complete requires a StepReport');
+      if (!r.evidence || r.evidence.length < 1) throw new Error('advanceLane: StepReport needs >=1 evidence');
+      const step = l.verbSteps[cp.cursor];
+      if (r.stepId !== step.verb || r.iteration !== cp.iteration) throw new Error(`advanceLane: report (${r.stepId}/${r.iteration}) != current step (${step.verb}/${cp.iteration})`);
+      cp.seenReportIds.push(r.reportId); cp.stepReports.push(r); cp.completedStepIds.push(step.verb);
+      // Attest ONLY the flows that actually ran successfully this step (from the
+      // served cache) - never blindly all step.flowIds. Degraded/skipped/errored
+      // flows must not be promoted into completedFlowIds, or they would falsely
+      // satisfy a later step's prerequisite (lane_ship's DAG-violating order).
+      const succ = cp.servedSteps[`${cp.cursor}:${cp.iteration}`]?.successfulFlowIds ?? [];
+      for (const f of succ) if (!cp.completedFlowIds.includes(f)) cp.completedFlowIds.push(f);
+      pushAudit(cp, { action: 'complete', stepId: step.verb, iteration: cp.iteration, reportId: r.reportId }, d);
+      return advanceCursor(cp, l, { projectPath }, d);
+    }
+    // retry / skip / interrupt / resume / stop -> Tasks 6 & 7
+    default:
+      return transitionNonComplete(cp, l, projectPath, transition, d);
+  }
+}
+
+async function transitionNonComplete(cp: LaneCheckpoint, l: GeneratedLane, projectPath: string, t: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  throw new Error(`transitionNonComplete not implemented (Tasks 6-7): ${t.action}`);
+}
