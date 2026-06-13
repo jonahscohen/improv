@@ -27,6 +27,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/slash-phrase.test.ts', required: true },                          // /sidecoach phrase union + near-miss (Task 8)
   { rel: 'mcp-server/src/__tests__/classifier-parity.test.ts', cwd: 'mcp-server', required: true }, // mcp-server classifier copy guard (separate package)
   { rel: 'src/__tests__/lane-derivation.test.ts' },                                       // Task 10 (created AFTER this task) - skip-with-warning until then
+  { rel: 'src/__tests__/lane-types.test.ts', required: true },
 ];
 
 let ran = 0;
