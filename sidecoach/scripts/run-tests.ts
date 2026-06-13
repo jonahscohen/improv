@@ -29,6 +29,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/lane-derivation.test.ts', required: true },                       // verbSteps derivation (Task 2)
   { rel: 'src/__tests__/lane-types.test.ts', required: true },
   { rel: 'src/__tests__/lane-checkpoint-store.test.ts', required: true },
+  { rel: 'src/__tests__/lane-runner-start.test.ts', required: true },
 ];
 
 let ran = 0;
