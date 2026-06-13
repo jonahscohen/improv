@@ -1132,7 +1132,7 @@ Expected: FAIL - `loadRegistry`/`classifyIntent` not exported from keyword-resol
 
 First add `import * as fs from 'fs';` to the TOP of the file, alongside the existing `import type { ModeEntry, VerbEntry } from './registries';` line (imports belong at module top, not mid-file). Then append the rest of this block:
 
-> **Parity note (conjunction boundary - REQUIRED):** `segmentClauses` MUST treat a comma-conjunction boundary as the conjunction WORD followed by a non-word char (or EOL), NOT the `startsWith` prefix shown in the fence below - mirror the Python `_CONJUNCTION_RE` fix (`^(?:, but|, and|, or|, yet|, so)(?![\w])` anchored at the comma). Otherwise ", butter" wrongly splits where ", but" never should, and the Python/TS parity corpus diverges (this was the Task 2 over-segmentation bug).
+> **Parity note (conjunction boundary - REQUIRED):** `segmentClauses` detects a comma-conjunction boundary as the conjunction WORD followed by a non-word char (or EOL), NOT a bare prefix - via the sticky `CONJUNCTION_RE` anchored at the comma in the fence below, which mirrors the Python `_CONJUNCTION_RE.match(masked, i)`. Both sides MUST stay built from the same conjunction list; otherwise ", butter" wrongly splits where ", but" never should (the Task 2 over-segmentation bug) and the Python/TS parity corpus diverges.
 
 ```typescript
 // NOTE: `import * as fs from 'fs';` goes at the TOP of the file (see above) - do not place it here.
@@ -1141,6 +1141,15 @@ export const SCHEMA_VERSION = 1;
 const NEGATORS = ["don't", 'do not', 'never', 'not', 'stop'];
 const ABBREVIATIONS = ['e.g.', 'i.e.', 'vs.', 'etc.', 'Dr.', 'Mr.', 'Ms.'];
 const CONJUNCTION_BOUNDARIES = [', but', ', and', ', or', ', yet', ', so'];
+// Comma-conjunction boundary = the conjunction WORD followed by a non-word char
+// (or EOL), NOT a bare prefix - so ", butter" must NOT split while ", and " does.
+// Built from CONJUNCTION_BOUNDARIES (single source of truth); sticky ('y') so
+// .test() is anchored at the comma index, mirroring Python's
+// _CONJUNCTION_RE.match(masked, i). 'i' = case-insensitive (= Python re.IGNORECASE).
+const CONJUNCTION_RE = new RegExp(
+  '(?:' + CONJUNCTION_BOUNDARIES.map(cb => cb.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![\\w])',
+  'iy',
+);
 const TERMINATORS = new Set(['.', '!', '?', ';', '\n']);
 
 export interface LaneScore { lane: string; label: string; score: number; scope: string; evidenceIds: string[]; }
@@ -1188,8 +1197,11 @@ export function segmentClauses(text: string): Array<[number, number]> {
     const ch = masked[i];
     if (TERMINATORS.has(ch)) { if (i + 1 < text.length) cuts.add(i + 1); continue; }
     if (ch === ',') {
-      const w = masked.slice(i, i + 6).toLowerCase();
-      if (CONJUNCTION_BOUNDARIES.some(cb => w.startsWith(cb))) { if (i + 1 < text.length) cuts.add(i + 1); }
+      // Anchor the conjunction-word match at this comma (sticky lastIndex = i);
+      // the (?![\w]) lookahead sees the real following char/EOL, so ", butter"
+      // does not split but ", and " does. Mirrors Python _CONJUNCTION_RE.match(masked, i).
+      CONJUNCTION_RE.lastIndex = i;
+      if (CONJUNCTION_RE.test(masked)) { if (i + 1 < text.length) cuts.add(i + 1); }
     }
   }
   const b = Array.from(cuts).sort((x, y) => x - y);
