@@ -8,7 +8,8 @@
     "sidecoach": "bin/sidecoach.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "ts-node scripts/generate-lanes.ts && tsc",
+    "generate-lanes": "ts-node scripts/generate-lanes.ts",
     "test": "ts-node scripts/run-tests.ts",
     "test:compiled": "node dist/intent-detector.test.js",
     "bench": "ts-node --project benchmarks/tsconfig.bench.json benchmarks/runner/run-all.ts --save",
