@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "note": "Shared Python/TS classifier fixtures. Both sides MUST return identical outcome (+ winningLane/verbMatch where given). Run against BOTH claude/hooks/sidecoach_lanes.py (test_classifier_parity.py) AND sidecoach/mcp-server/src/keyword-resolver.ts (classifier-parity.test.ts). NUDGE_ELIGIBLE cases set eligible=true. The hook-only cooldown -> NUDGE/SILENT mapping is NOT covered here (see test-sidecoach-keyword.sh).",
+  "parityNotes": [
+    "ABBREVIATION MASKING IS NOT A DIVERGENCE: Python segment_clauses masks abbreviation periods (e.g. / i.e. / etc.) with \\x00; the TS segmentClauses masks them with a space. Both are length-preserving and proven span-identical across this corpus and the unit suites. Do NOT 'fix' one side to match the other assuming a bug.",
+    "Expected values are the ACTUAL verified behavior of both classifiers in P1, not aspirational. Lexicon weight calibration is out of P1 scope (spec section 3).",
+    "Adversarial cases included so any Python/TS divergence is caught: prefix-trap (', butter' must not split), cross-sentence OUT_OF_SCOPE, bare-vs-qualified UI noun, grouped MAX-not-sum, route_margin==2 ROUTE, and a quoted-verb-suppressed SILENT."
+  ],
+  "cases": [
+    { "prompt": "make this production-ready", "expect": "CONTEXT_CHECK", "winningLane": "lane_ship" },
+    { "prompt": "make the landing page production-ready", "expect": "ROUTE", "winningLane": "lane_ship" },
+    { "prompt": "The landing page is done. Make the migration production-ready.", "expect": "OUT_OF_SCOPE" },
+    { "prompt": "Don't make the API production-ready; make the landing page production-ready.", "expect": "ROUTE", "winningLane": "lane_ship" },
+    { "prompt": "audit this and make it production-ready", "expect": "VERB", "verbMatch": "audit" },
+    { "prompt": "the dashboard should feel more fun", "expect": "CLASSIFY", "winningLane": "lane_delight" },
+    { "prompt": "refactor the database migration script", "expect": "SILENT" },
+    { "prompt": "I have a TypeScript interface I need to refactor", "expect": "SILENT" },
+    { "prompt": "fix the packet header parsing in the network layer", "expect": "SILENT" },
+    { "prompt": "tone the hero down, it's too busy", "expect": "ROUTE", "winningLane": "lane_calm" },
+    { "prompt": "keep iterating on the dashboard until it passes", "expect": "ROUTE", "winningLane": "lane_converge" },
+    { "prompt": "restyle the navbar", "expect": "NUDGE_ELIGIBLE", "eligible": true },
+    { "prompt": "/sidecoach make this production-ready", "expect": "SILENT" },
+    { "prompt": "make it production-ready, butter the migration aside", "expect": "OUT_OF_SCOPE" },
+    { "prompt": "make the interface production-ready", "expect": "CONTEXT_CHECK", "winningLane": "lane_ship" },
+    { "prompt": "make the user interface production-ready", "expect": "ROUTE", "winningLane": "lane_ship" },
+    { "prompt": "the dashboard must be production-ready and ship-ready", "expect": "ROUTE", "winningLane": "lane_ship" },
+    { "prompt": "build me a dashboard from scratch and make it production-ready", "expect": "ROUTE", "winningLane": "lane_build" },
+    { "prompt": "the spec said \"polish it\"", "expect": "SILENT" }
+  ]
+}
