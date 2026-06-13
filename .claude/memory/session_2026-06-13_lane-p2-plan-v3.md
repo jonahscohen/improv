@@ -3,6 +3,7 @@ name: Lane P2 plan v3 - all v2-review findings folded; confirming Codex pass the
 description: v3 folds Codex's 8 v2-review findings (prereq-aware dispatch, best-effort CAS, incremental persist, CLASSIFY dispatch path, deterministic id, CLI/id hardening, realpath, test phrase); one confirming Codex pass then execute per autonomous mandate
 type: project
 relates_to: [session_2026-06-13_lane-p2-codex-review-v2.md, feedback_autonomous_phases_codex_partner.md]
+superseded_by: session_2026-06-13_lane-p2-plan-v4-and-execute.md
 ---
 
 Revised the P2 plan to v3 (same file, git has v2 at 01ec4e5), folding all 8 of

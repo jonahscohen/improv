@@ -1,4 +1,4 @@
-# Lane Execution + Phrase Wiring (Phase 2) Implementation Plan - v3
+# Lane Execution + Phrase Wiring (Phase 2) Implementation Plan - v4
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -18,7 +18,7 @@
 - **Real prerequisite validator** - Task 7 uses `FlowPrerequisiteValidator.getDependencies()` + `prereqWaivers` as exact edge exceptions + checkpoint-local completed flows, with a genuinely-failing unsafe-skip test. v1's `prereqWaivers`-as-graph logic was inverted. (Codex P0-4)
 - **Empty-flow verb steps allowed** (guidance-only steps like `lane_build/polish`, `lane_calm/distill` legitimately have no unique flows). (Codex P0-2)
 - **Interrupt semantics** - only `resume` is valid against an interrupted checkpoint; interrupt does not re-run handlers. (Codex P0-5)
-- **Persisted served output + real handler dispatch** - the engine enriches context and checks `canExecute` (degraded guidance if not), and served output is cached in the checkpoint so retry/resume/duplicate never re-execute. v1's synthetic `utterance:''` dispatch is gone. (Codex P0-6)
+- **Guarded handler dispatch + persisted served output** - the engine enriches context, checks the prerequisite graph AND `canExecute` (degraded coaching-only guidance if either fails), and wraps `execute()` in try/catch (a throw degrades to `error`, never attested). Served output is cached so retry/resume/duplicate never re-execute. The per-step context carries `utterance: ''` by design (lane steps have no per-step user utterance - they serve guidance), but it is no longer an UNGUARDED raw dispatch. (Codex P0-6)
 - **Engine factory** - everything uses `createExecutionEngine()` (registers handlers); `new FlowExecutionEngine()` has no handlers. (Codex P1-12)
 - Cheap P2 safety brought forward: checkpoint-id validation + project `realpath` canonicalization (Codex P1-9); `listLanes(options?)` (P1-10); start-request lane-mismatch handling (P1-11); spec CLI flags `--lane`/`--start-request-id` (P1-12); explicit `SUITES` registration `required:true` (P1-13); phrase regex gated to `/sidecoach <phrase>` only (P1-14); no `git add -A` (P1-15); transition audit log (P1-8); e2e requires `outcome: completed` (P2-17).
 
@@ -37,9 +37,24 @@ If a task tempts you to pull deferred work forward, stop - the deferral is inten
 - **Pure-guidance handlers + incremental persist (P0-c).** Lane flow handlers are pure GUIDANCE generators (checklist items `completed:false`, no side effects), so re-execution is benign. `serveStep` persists each flow's output as it is produced, so a mid-step interruption re-runs only the in-flight flow. Exactly-once via the side-effect outbox is **P3**.
 - **CLASSIFY has a real confirm-to-start path (P1-d).** A murky phrase returns the candidate lane AND a confirmation token; confirming dispatches `startLane` identically to ROUTE (spec 263-266, 812-813). Not a dead-end message.
 - **Deterministic `startRequestId` from `process()` (P1-e).** Derived from `hash(utterance + projectPath)`, so a literal retry of the same phrase does not double-start a lane.
-- **CLI report hardening (P1-f) + `startRequestId` validation (P1-g).** `--report` is size-capped and shape-validated before use; `startRequestId` is validated, length-capped, and stored by hash.
+- **CLI report hardening (P1-f) + `startRequestId` validation (P1-g).** `--report` is size-capped and shape-validated before use; `startRequestId` is validated and length-capped (stored as-is, capped; hashed indexing is a P3/P4 refinement - the plan does NOT claim hashing).
 - **Real realpath (P1-9).** The project dir is created (if absent) then `realpathSync`'d, so canonicalization is genuine rather than falling back to `path.resolve`.
 - **OUT_OF_SCOPE test phrase fixed (P2-h).** `optimize` is a known verb; the wiring test uses a non-command backend phrase.
+
+---
+
+## What changed in v4 (Codex v3 review `task-mqcu3h5z` - closes the v3 still-opens + new finds)
+
+- **No false attestation (NEW P0 / P0-a part 2).** Completing a step now promotes ONLY the flows that actually returned `status:'success'` (tracked per-flow in the served cache as `successfulFlowIds`) into `completedFlowIds` - never blindly all `step.flowIds`. Degraded/skipped/errored flows are not attested, so they cannot falsely satisfy a later step's prerequisite. This is what makes the `lane_ship` DAG-violating sequence correct rather than just non-crashing.
+- **Intra-step prerequisite accumulation (P0-a part 1).** `serveStep` feeds each flow `completedFlowIds + the successful flows already served in THIS step`, so a later flow in a step (e.g. `flowI` after `flowG` within `craft`) sees its same-step prerequisite.
+- **Guarded dispatch + honest claim (P0-6).** `handler.execute()` is wrapped in try/catch (a throw -> `error` result, never attested). The plan no longer claims the `utterance:''` context is "gone" - it is the documented no-per-step-utterance guidance context, now guarded by prereq + `canExecute` + try/catch.
+- **Honest CAS wording everywhere (P0-b).** The `compare-and-swap` label in the transition type is corrected to "best-effort in-process revision check"; true CAS is consistently labeled P3.
+- **Closed-checkpoint re-start (NEW P1 / P1-e aliasing).** `startLane` dedups only on an ACTIVE (in_progress/interrupted) checkpoint; a CLOSED one means the run finished, so the same deterministic id legitimately starts a fresh lane (no permanent aliasing to a closed checkpoint).
+- **Fuller report validation + file input (P1-f).** `--report`/`--report-file` validate `stepId`/`reportId`/`verb`/`summary` (strings), `iteration` (number), and each `evidence` item `{kind,detail}`.
+- **CLASSIFY round-trip test (P1-d).** Task 10's wiring test exercises confirm-to-start: a murky phrase surfaces `classify.laneId`, and `startLane(classify.laneId)` (the SAME terminal path as ROUTE) actually starts the lane; the no-classify branch hard-fails so the implementer must use a verified-CLASSIFY phrase.
+- **NUL byte removed (P2).** A stray NUL in the Task 3 test literal is gone (the file is valid UTF-8 text again).
+
+**Residual (intentional, deferred):** true cross-process CAS / exactly-once / `startRequestId` hashing = P3; generator-level lane-sequence prereq validation = P4. Non-revision `serveStep` writes are safe under P2's single-process sequential use; cross-process protection is P3.
 
 ---
 
@@ -138,7 +153,7 @@ export interface StepReport {
 export interface LaneTransition {
   action: LaneAction;
   report?: StepReport;       // REQUIRED for 'complete'
-  expectedRevision: number;  // compare-and-swap; stale = error
+  expectedRevision: number;  // best-effort in-process revision check; stale = error (true cross-process CAS is P3)
   reason?: string;           // REQUIRED for 'skip'; recorded for stop/interrupt
 }
 
@@ -312,7 +327,7 @@ function run() {
   if (store.list().length !== 1) throw new Error('list failed');
 
   // checkpoint-id validation: path-traversal / illegal chars rejected BEFORE fs access
-  for (const bad of ['../evil', 'a/b', 'a ', '..']) {
+  for (const bad of ['../evil', 'a/b', 'a*', '..']) {
     let threw = false;
     try { store.read(bad); } catch { threw = true; }
     if (!threw) throw new Error(`illegal id "${bad}" must be rejected`);
@@ -346,7 +361,7 @@ export interface LaneCheckpoint {
   cursor: number; iteration: number;
   completedStepIds: string[]; skippedStepIds: string[]; completedFlowIds: FlowId[];
   stepReports: StepReport[]; audit: LaneAuditEntry[];
-  servedSteps: Record<string, { guidance: string[]; checklist: { id: string; label: string; required: boolean; completed: boolean }[]; flowIds: FlowId[] }>; // key: `${cursor}:${iteration}`
+  servedSteps: Record<string, { guidance: string[]; checklist: { id: string; label: string; required: boolean; completed: boolean }[]; flowIds: FlowId[]; successfulFlowIds: FlowId[] }>; // key: `${cursor}:${iteration}`; successfulFlowIds = flows whose handler returned status 'success' (NOT degraded/skipped/errored)
   revision: number; startRequestId: string; seenReportIds: string[];
   createdAt: string; updatedAt: string;
 }
@@ -532,15 +547,20 @@ async function serveStep(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: 
   // interruption re-runs only the in-flight flow. Handlers are pure guidance,
   // so even that re-run is benign. Serving is NOT a revision-bumping mutation.
   let acc = cp.servedSteps[key];
-  if (!acc) { acc = { guidance: [...step.guidance], checklist: [], flowIds: [] }; cp.servedSteps[key] = acc; cp.updatedAt = d.now(); d.store.write(cp); }
+  if (!acc) { acc = { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [] }; cp.servedSteps[key] = acc; cp.updatedAt = d.now(); d.store.write(cp); }
   if (acc.flowIds.length < step.flowIds.length) {
-    const flowCtx = { ...context, completedFlowIds: cp.completedFlowIds, waivers: l.prereqWaivers };
     for (let i = acc.flowIds.length; i < step.flowIds.length; i++) {
       const flowId = step.flowIds[i];
+      // intra-step prerequisite accumulation: a later flow in THIS step sees the
+      // earlier flows of the same step that ran successfully, plus all
+      // prior-step completions. Only status:'success' counts (degraded/skipped/
+      // errored flows are NOT attested - they must not satisfy a prerequisite).
+      const flowCtx = { ...context, completedFlowIds: [...cp.completedFlowIds, ...acc.successfulFlowIds], waivers: l.prereqWaivers };
       const r = await d.runFlow(flowId, flowCtx);
       for (const g of r.guidance ?? []) acc.guidance.push(g);
       for (const c of r.checklist ?? []) acc.checklist.push({ id: `${flowId}:${c.id}`, label: c.label, required: c.required, completed: false });
       acc.flowIds.push(flowId);
+      if (r.status === 'success') acc.successfulFlowIds.push(flowId);
       cp.updatedAt = d.now(); d.store.write(cp);
     }
   }
@@ -566,9 +586,14 @@ export async function startLane(
   if (l.executionKind === 'loop') {
     throw new Error(`startLane: lane "${laneId}" is a loop lane - loop execution + the convergence floor land in P4. Not startable in P2.`);
   }
+  // Idempotency applies only to an ACTIVE lane: a duplicate request must not
+  // double-start one that is still in_progress/interrupted. A CLOSED checkpoint
+  // means that run finished, so the same phrase legitimately starts a fresh lane
+  // (this also prevents a deterministic process()-derived id from permanently
+  // aliasing later reruns to an old closed checkpoint).
   const existing = d.store.findByStartRequestId(startRequestId);
-  if (existing) {
-    if (existing.laneId !== laneId) throw new Error(`startLane: startRequestId "${startRequestId}" already maps to lane "${existing.laneId}", not "${laneId}"`);
+  if (existing && !isClosed(existing.lifecycle)) {
+    if (existing.laneId !== laneId) throw new Error(`startLane: startRequestId "${startRequestId}" already maps to active lane "${existing.laneId}", not "${laneId}"`);
     return serveStep(existing, resolveLane(existing.laneId), context, d);
   }
   const ts = d.now();
@@ -727,7 +752,12 @@ export async function advanceLane(projectPath: string, checkpointId: string, tra
       const step = l.verbSteps[cp.cursor];
       if (r.stepId !== step.verb || r.iteration !== cp.iteration) throw new Error(`advanceLane: report (${r.stepId}/${r.iteration}) != current step (${step.verb}/${cp.iteration})`);
       cp.seenReportIds.push(r.reportId); cp.stepReports.push(r); cp.completedStepIds.push(step.verb);
-      cp.completedFlowIds.push(...step.flowIds);
+      // Attest ONLY the flows that actually ran successfully this step (from the
+      // served cache) - never blindly all step.flowIds. Degraded/skipped/errored
+      // flows must not be promoted into completedFlowIds, or they would falsely
+      // satisfy a later step's prerequisite (lane_ship's DAG-violating order).
+      const succ = cp.servedSteps[`${cp.cursor}:${cp.iteration}`]?.successfulFlowIds ?? [];
+      for (const f of succ) if (!cp.completedFlowIds.includes(f)) cp.completedFlowIds.push(f);
       pushAudit(cp, { action: 'complete', stepId: step.verb, iteration: cp.iteration, reportId: r.reportId }, d);
       return advanceCursor(cp, l, { projectPath }, d);
     }
@@ -1144,7 +1174,13 @@ private laneDeps(projectPath: string): laneRunner.LaneRunnerDeps {
         // degraded: coach, but do NOT let the model attest this flow's work as run
         return { flowId, flowName: String(flowId), status: 'needs_input', message: `coaching-only: ${flowId} (${why})`, guidance: [`(${flowId}) ${why} - coaching guidance only; this flow's work is not attested as done.`], checklist: [] };
       }
-      return handler.execute(enriched);
+      // Mirror process()'s exception posture: a throwing handler degrades to an
+      // 'error' result (NOT a success), so it is never attested into completedFlowIds.
+      try {
+        return await handler.execute(enriched);
+      } catch (e) {
+        return { flowId, flowName: String(flowId), status: 'error', message: `handler ${flowId} threw: ${(e as Error).message}`, guidance: [`(${flowId}) the flow handler errored; coaching only - not attested as done.`], checklist: [] };
+      }
     },
     now: () => new Date().toISOString(),
     newCheckpointId: () => `lane-${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
@@ -1222,6 +1258,23 @@ async function run() {
   // a known verb still routes via parseSlashCommand (not the phrase path)
   const known: any = await engine.process('/sidecoach polish', ctx);
   if (known.lane) throw new Error('known verb must use the command path, not phrase routing');
+
+  // CLASSIFY confirm-to-start round trip: a murky phrase surfaces a candidate,
+  // and confirming it (calling startLane with classify.laneId - the SAME
+  // terminal path as ROUTE) actually starts the lane. IMPLEMENTER: pick a phrase
+  // that the live classifier returns CLASSIFY for by running it (score >=
+  // classify_floor but not route-grade); do NOT guess. A reasonable starting
+  // candidate is a single mild design word with no strong routing signal.
+  const murky: any = await engine.process('/sidecoach make it nicer', ctx);
+  if (murky.classify) {
+    if (!murky.classify.laneId) throw new Error('CLASSIFY must surface a candidate laneId');
+    const confirmed = await engine.startLane(murky.classify.laneId, 'confirmed via interview', { projectPath: proj }, 'confirm-1');
+    if (confirmed.lifecycle !== 'in_progress' || !confirmed.currentVerb) throw new Error('confirming a CLASSIFY candidate must start the lane (same path as ROUTE)');
+  } else {
+    // if 'make it nicer' did not classify, the implementer MUST substitute a
+    // verified-CLASSIFY phrase here - this branch must not silently pass.
+    throw new Error('CLASSIFY round-trip not exercised: substitute a phrase the classifier returns CLASSIFY for');
+  }
   console.log('slash-phrase-wiring: OK');
 }
 run();
@@ -1370,12 +1423,19 @@ if (sub === 'lane') {
       result = await engine.startLane(flag('--lane'), flag('--target', ''), { projectPath: project }, flag('--start-request-id', `cli-${process.pid}-${Date.now()}`));
     } else if (op === 'advance') {
       const transition = { action: flag('--action', 'complete'), expectedRevision: Number(flag('--revision', '0')) };
-      const reportRaw = flag('--report', '');
+      // --report inline OR --report-file <path> (spec 790: file input). File path
+      // is read, size-capped, and the same shape validation applies to both.
+      const reportFile = flag('--report-file', '');
+      let reportRaw = flag('--report', '');
+      if (reportFile) { try { reportRaw = require('fs').readFileSync(reportFile, 'utf8'); } catch (e) { console.error(`--report-file unreadable: ${reportFile}`); process.exit(2); } }
       if (reportRaw) {
         if (reportRaw.length > 64 * 1024) { console.error('--report exceeds 64KB cap'); process.exit(2); }
         let parsed; try { parsed = JSON.parse(reportRaw); } catch { console.error('--report is not valid JSON'); process.exit(2); }
-        if (!parsed || typeof parsed.stepId !== 'string' || typeof parsed.reportId !== 'string' || !Array.isArray(parsed.evidence) || parsed.evidence.length < 1) {
-          console.error('--report must be a StepReport object with stepId, reportId, verb, summary, and >=1 evidence'); process.exit(2);
+        const okEvidence = Array.isArray(parsed && parsed.evidence) && parsed.evidence.length >= 1 &&
+          parsed.evidence.every((ev) => ev && typeof ev.kind === 'string' && typeof ev.detail === 'string');
+        if (!parsed || typeof parsed.stepId !== 'string' || typeof parsed.reportId !== 'string' || typeof parsed.verb !== 'string' ||
+            typeof parsed.summary !== 'string' || typeof parsed.iteration !== 'number' || !okEvidence) {
+          console.error('--report must be a StepReport: stepId, reportId, verb, summary (strings), iteration (number), evidence[>=1] of {kind,detail} strings'); process.exit(2);
         }
         transition.report = parsed;
       }
