@@ -29,17 +29,17 @@
 
 HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
 VERB_FILE="$HOOK_DIR/sidecoach-verbs.json"
-MODE_FILE="$HOOK_DIR/sidecoach-modes.json"
+LANE_FILE="$HOOK_DIR/sidecoach-lanes.json"
 INTENT_FILE="$HOOK_DIR/sidecoach-intent.json"
 
-if [[ ! -f "$VERB_FILE" && ! -f "$MODE_FILE" && ! -f "$INTENT_FILE" ]]; then
+if [[ ! -f "$VERB_FILE" && ! -f "$LANE_FILE" && ! -f "$INTENT_FILE" ]]; then
   # No registries, nothing to do. Stay out of the prompt path.
   exit 0
 fi
 
 INPUT="$(cat)"
 
-VERB_FILE_PATH="$VERB_FILE" MODE_FILE_PATH="$MODE_FILE" INTENT_FILE_PATH="$INTENT_FILE" PROMPT_RAW="$INPUT" python3 <<'PYEOF'
+VERB_FILE_PATH="$VERB_FILE" LANE_FILE_PATH="$LANE_FILE" INTENT_FILE_PATH="$INTENT_FILE" HOOK_DIR_PATH="$HOOK_DIR" PROMPT_RAW="$INPUT" python3 <<'PYEOF'
 import json
 import os
 import re
@@ -87,20 +87,21 @@ if verb_file:
     except Exception:
         verbs = []
 
-# Load mode registry. Modes are higher-level than verbs - each mode names a
-# curated chain of verbs (analog of oh-my-claudecode's autopilot/ralph/
-# ultrawork) and on match the hook emits the chain so the receiving session
-# knows what sequence of flows to run.
-modes = []
-if mode_file:
-    try:
-        with open(mode_file, "r", encoding="utf-8") as fh:
-            mode_registry = json.load(fh)
-        m = mode_registry.get("modes", [])
-        if isinstance(m, list):
-            modes = m
-    except Exception:
-        modes = []
+# Import the shared lane classifier (pure regex/Python, no LLM - model-router-guard).
+hook_dir = os.environ.get("HOOK_DIR_PATH", "")
+if hook_dir and hook_dir not in sys.path:
+    sys.path.insert(0, hook_dir)
+lane_file = os.environ.get("LANE_FILE_PATH", "")
+lane_registry = None
+sidecoach_lanes = None
+try:
+    import sidecoach_lanes as sidecoach_lanes  # noqa: PLC0414
+    if lane_file:
+        lane_registry = sidecoach_lanes.load_registry(lane_file)
+except Exception:
+    # Structure-invalid registry disables the lane tier loudly but does not
+    # break the verb/intent tiers (spec sections 12-13).
+    lane_registry = None
 
 # Load the intent registry (third tier). Fires a light, advisory self-question
 # on NATURAL front-end/design requests that carry no explicit sidecoach verb.
@@ -149,7 +150,7 @@ def in_cooldown():
         return False
 
 
-if not verbs and not modes and not intent:
+if not verbs and not lane_registry and not intent:
     sys.exit(0)
 
 
@@ -248,134 +249,124 @@ def match_entries(entries, key_name):
     return out
 
 
-# Modes are checked first because they carry the higher-level shape-of-work
-# signal. If a prompt contains both a mode and a verb (e.g. "forge the
-# homepage with polish"), the mode wins; its chain already names the verbs.
-matched_modes = match_entries(modes, "mode")
+# --- Lane classifier tier (replaces the mode tier) -------------------------
+# Compute advisory nudge eligibility exactly as the legacy intent tier did, so
+# we can hand it to classify_intent. (The classifier never reads cooldown.)
+def _intent_eligible():
+    if not intent:
+        return False
+    actions = intent.get("actions", []) or []
+    targets = intent.get("substantive_targets", []) or []
+    standalone = intent.get("standalone", []) or []
+    exempt = intent.get("exempt", []) or []
+    new_build = intent.get("new_build", []) or []
+
+    def mlist(pats):
+        out = []
+        for p in pats:
+            if not isinstance(p, str) or not p:
+                continue
+            try:
+                rx = re.compile(rf"(?<![\w-]){p}(?![\w-])", re.IGNORECASE)
+            except re.error:
+                continue
+            if rx.search(sanitized):
+                out.append(p)
+        return out
+
+    def subst(pats):
+        return [p for p in mlist(pats) if not is_informational(sanitized, p)]
+
+    has_action = len(mlist(actions)) > 0
+    has_target = len(subst(targets)) > 0
+    has_standalone = len(subst(standalone)) > 0
+    has_exempt = len(mlist(exempt)) > 0
+    has_new_build = len(mlist(new_build)) > 0
+    fires = has_standalone or (has_action and has_target)
+    if has_exempt and not has_new_build and not has_standalone:
+        fires = False
+    return fires
+
+if lane_registry is not None and sidecoach_lanes is not None:
+    eligible = _intent_eligible()
+    decision = sidecoach_lanes.classify_intent(prompt, lane_registry, verbs, intent_eligible=eligible)
+    outcome = decision["outcome"]
+    label = ""
+    win = decision.get("winningLane")
+    if win:
+        label = next((l["label"] for l in lane_registry["lanes"] if l["lane"] == win), win)
+    ev = ", ".join(decision.get("laneScores") and
+                   next((s["evidenceIds"] for s in decision["laneScores"] if s["lane"] == win), []) or [])
+
+    context = None
+    if outcome == "ROUTE":
+        context = (
+            f"User intent classified as the sidecoach lane <lane>{label}</lane>. "
+            f"Announce in one sentence that you are taking the '{label}' approach, then begin its first step. "
+            f"The classification is confident; do not ask which mode. Evidence: {ev}."
+        )
+        touch_cooldown()
+    elif outcome == "CLASSIFY":
+        verb = decision.get("verbMatch")
+        verb_opt = f"(2) the single verb /sidecoach {verb}; " if verb else ""
+        context = (
+            "User intent is design work with competing signals. Offer in one short prompt: "
+            f"(1) the sidecoach lane '{label}'; {verb_opt}"
+            f"({'3' if verb else '2'}) just handle it directly. "
+            "Do not silently expand a verb into a full lane."
+        )
+        touch_cooldown()
+    elif outcome == "CONTEXT_CHECK":
+        context = (
+            f"Lane evidence ({label}) appeared without domain evidence. If the conversation is clearly "
+            "about UI/design work, classify per the sidecoach lane table and proceed; otherwise ignore "
+            "this and answer normally."
+        )
+        touch_cooldown()
+    elif outcome == "VERB":
+        verb = decision.get("verbMatch")
+        # The VERB outcome leaves winningLane None on purpose; the strongest lane
+        # signal arrives as decision["diagnosticLane"] and must be resolved to a
+        # label HERE (the shared `label`/`win` above is None for VERB).
+        diag_lane = decision.get("diagnosticLane")
+        diag_label = next((l["label"] for l in lane_registry["lanes"]
+                           if l["lane"] == diag_lane), "") if diag_lane else ""
+        diag = (f" (Lane signal '{diag_label}' noted as a non-routing diagnostic; "
+                f"do not auto-expand it into a lane.)") if diag_label else ""
+        context = (
+            f"User intends to invoke the sidecoach <verb>{verb}</verb> flow. Route accordingly.{diag}"
+        )
+        touch_cooldown()
+    elif outcome == "NUDGE_ELIGIBLE":
+        if not in_cooldown():
+            nudge = intent.get("nudge") or "This prompt reads as front-end / design work; consider a sidecoach lane."
+            touch_cooldown()
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": nudge}}))
+        sys.exit(0)
+    elif outcome == "OUT_OF_SCOPE":
+        print(f"sidecoach-keyword: lane evidence bound out-of-scope; no lane action", file=sys.stderr)
+        sys.exit(0)
+    # SILENT -> fall through to the legacy verb-only path below (no lane match)
+
+    if context is not None:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": context}}))
+        sys.exit(0)
+
+# If the lane tier is disabled (structure-invalid registry), fall back to the
+# legacy verb tier so explicit verbs still route.
 matched_verbs = match_entries(verbs, "verb")
-
-if matched_modes or matched_verbs:
-    if matched_modes:
-        if len(matched_modes) > 1:
-            names = [m.get("mode") for m in matched_modes]
-            print(
-                f"sidecoach-keyword: multiple modes matched {names}; "
-                f"tie-breaking to first in registry: {names[0]}",
-                file=sys.stderr,
-            )
-        chosen = matched_modes[0]
-        chosen_name = chosen.get("mode", "")
-        chain = chosen.get("chain", []) or []
-        chain_str = ",".join(str(c) for c in chain) if isinstance(chain, list) else ""
-        one_line = chosen.get("oneLineExplanation") or chosen.get("description") or ""
-        context = (
-            f"User intends to invoke the sidecoach <mode>{chosen_name}</mode>. "
-            f"This mode runs the curated chain <chain>{chain_str}</chain>. "
-            f"{one_line} Execute the verbs in order; do not compress the chain."
-        )
-    else:
-        if len(matched_verbs) > 1:
-            names = [v.get("verb") for v in matched_verbs]
-            print(
-                f"sidecoach-keyword: multiple verbs matched {names}; "
-                f"tie-breaking to first in registry: {names[0]}",
-                file=sys.stderr,
-            )
-        chosen = matched_verbs[0]
-        chosen_name = chosen.get("verb", "")
-        context = (
-            f"User intends to invoke the sidecoach <verb>{chosen_name}</verb> flow. "
-            f"Route accordingly."
-        )
-
-    # Explicit sidecoach use quiets the intent nudge for the cooldown window.
+if matched_verbs:
+    if len(matched_verbs) > 1:
+        names = [v.get("verb") for v in matched_verbs]
+        print(f"sidecoach-keyword: multiple verbs matched {names}; using {names[0]}", file=sys.stderr)
+    chosen_name = matched_verbs[0].get("verb", "")
     touch_cooldown()
-    print(
-        json.dumps(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "UserPromptSubmit",
-                    "additionalContext": context,
-                }
-            }
-        )
-    )
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
+        "additionalContext": f"User intends to invoke the sidecoach <verb>{chosen_name}</verb> flow. Route accordingly."}}))
     sys.exit(0)
 
-# ---------------------------------------------------------------------------
-# Intent tier: no explicit verb/mode matched. Fire a light, ADVISORY
-# self-question on natural front-end/design requests - unless we are inside the
-# cooldown window (active build / recently engaged) or the prompt is a trivial
-# tweak. Everything here is driven by sidecoach-intent.json (tune it freely).
-# ---------------------------------------------------------------------------
-if not intent or in_cooldown():
-    sys.exit(0)
-
-actions = intent.get("actions", []) or []
-targets = intent.get("substantive_targets", []) or []
-standalone = intent.get("standalone", []) or []
-exempt = intent.get("exempt", []) or []
-new_build = intent.get("new_build", []) or []
-
-
-def matched_list(patterns):
-    out = []
-    for p in patterns:
-        if not isinstance(p, str) or not p:
-            continue
-        try:
-            rx = re.compile(rf"(?<![\w-]){p}(?![\w-])", re.IGNORECASE)
-        except re.error:
-            continue
-        if rx.search(sanitized):
-            out.append(p)
-    return out
-
-
-def any_match(patterns):
-    return len(matched_list(patterns)) > 0
-
-
-# Drop matches that only appear inside an informational framing (what is X /
-# how to X / explain X / ...), reusing the verb tier's suppression logic.
-def substantive_match(patterns):
-    return [p for p in matched_list(patterns) if not is_informational(sanitized, p)]
-
-
-has_action = any_match(actions)
-has_target = len(substantive_match(targets)) > 0
-has_standalone = len(substantive_match(standalone)) > 0
-has_exempt = any_match(exempt)
-has_new_build = any_match(new_build)
-
-# Fire when a build/design ACTION co-occurs with a SUBSTANTIVE target, or when a
-# STANDALONE design signal appears on its own.
-intent_fires = has_standalone or (has_action and has_target)
-
-# Trivial-tweak suppression: a small-modify framing, with no clear new-build
-# signal and no standalone design signal, is a tweak - stay silent.
-if has_exempt and not has_new_build and not has_standalone:
-    intent_fires = False
-
-if not intent_fires:
-    sys.exit(0)
-
-nudge = intent.get("nudge") or (
-    "This prompt reads as front-end / design work. Before hand-coding, ask "
-    "yourself whether a sidecoach flow or mode would help (see /sidecoach list). "
-    "Use it for substantive UI work; skip trivial tweaks."
-)
-touch_cooldown()
-print(
-    json.dumps(
-        {
-            "hookSpecificOutput": {
-                "hookEventName": "UserPromptSubmit",
-                "additionalContext": nudge,
-            }
-        }
-    )
-)
+# NOTE: the legacy intent tier was folded into the lane-classifier dispatch
+# above (the NUDGE_ELIGIBLE branch + _intent_eligible()). Nothing follows here.
 PYEOF
 
 exit 0
