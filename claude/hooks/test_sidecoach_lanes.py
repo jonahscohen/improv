@@ -131,10 +131,13 @@ def test_blank_informational_quote_does_not_eat_following_intent():
 
 
 def test_blank_informational_unclosed_quote_preserves_intent():
-    # an opening quote with no close must NOT blank real downstream intent to EOL
-    t = 'make the dashboard production-ready, the memo said "ship it'
+    # an opening quote with no close must NOT blank real downstream intent to EOL.
+    # The protected token sits AFTER the opening quote, so a blank-to-EOL bug
+    # would wrongly eat it - making this a real guard (token before the quote
+    # would survive even a buggy impl and prove nothing).
+    t = 'the memo said "ship it then polish the hero from scratch'
     out = sl.blank_informational(t)
-    assert "production-ready" in out                # survives: the quote never closes
+    assert "polish the hero from scratch" in out    # survives: the quote never closes
     assert len(out) == len(t)
 
 
