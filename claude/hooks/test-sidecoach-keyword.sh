@@ -246,6 +246,17 @@ assert_fires  "prose harden, URL polish"  "harden the API and ignore https://exa
 assert_fires  "what is polish + audit"    "what is polish? Also, audit this page."             "audit"
 
 echo ""
+echo "===== sidecoach-keyword: lane-active quoted-verb does NOT fire (P2-b) ====="
+
+# When the lane tier is active, classify_intent is authoritative: a verb that
+# appears only inside a blanked/quoted region returns SILENT and the hook must
+# NOT fall through to the legacy verb tier (which matches on un-blanked text).
+# This is the quoted/pasted false-fire the whole feature exists to prevent.
+assert_silent "quoted polish stays silent" "the spec said \"polish it\""
+# A genuine unquoted verb still routes (no regression in real-verb coverage).
+assert_fires  "real polish still fires"    "polish the hero"                                    "polish"
+
+echo ""
 echo "===== sidecoach-keyword: T-0011 modes fire with chains ====="
 
 # Every mode fires in invocation context and emits the right verb chain.

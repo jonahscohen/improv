@@ -47,7 +47,6 @@ import sys
 import time
 
 verb_file = os.environ.get("VERB_FILE_PATH", "")
-mode_file = os.environ.get("MODE_FILE_PATH", "")
 intent_file = os.environ.get("INTENT_FILE_PATH", "")
 raw_input = os.environ.get("PROMPT_RAW", "")
 
@@ -351,6 +350,13 @@ if lane_registry is not None and sidecoach_lanes is not None:
     if context is not None:
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": context}}))
         sys.exit(0)
+    # Lane tier is AUTHORITATIVE when active: a SILENT outcome means no lane and
+    # no real (properly-blanked) verb. Do NOT fall through to the legacy verb
+    # tier below - it matches on sanitize() WITHOUT blank_informational and would
+    # re-fire a verb that only appeared in a blanked/quoted region (the exact
+    # quoted/pasted false-fire this feature exists to prevent). classify_intent
+    # already ran verb detection with proper blanking.
+    sys.exit(0)
 
 # If the lane tier is disabled (structure-invalid registry), fall back to the
 # legacy verb tier so explicit verbs still route.
