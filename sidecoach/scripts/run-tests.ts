@@ -28,6 +28,7 @@ const SUITES: Suite[] = [
   { rel: 'mcp-server/src/__tests__/classifier-parity.test.ts', cwd: 'mcp-server', required: true }, // mcp-server classifier copy guard (separate package)
   { rel: 'src/__tests__/lane-derivation.test.ts', required: true },                       // verbSteps derivation (Task 2)
   { rel: 'src/__tests__/lane-types.test.ts', required: true },
+  { rel: 'src/__tests__/lane-checkpoint-store.test.ts', required: true },
 ];
 
 let ran = 0;
