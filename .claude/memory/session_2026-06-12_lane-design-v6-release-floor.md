@@ -4,6 +4,7 @@ description: Fifth review verified; Jonah adopted the bounded product-validation
 type: decision
 relates_to: [session_2026-06-12_lane-design-v5-complete.md, reference_convergence_validator_capability_inventory.md]
 supersedes: session_2026-06-12_lane-design-v5-complete.md
+superseded_by: session_2026-06-13_lane-design-v7-first-class-validators.md
 ---
 
 Spec revised to v6 after the fifth independent review. Jonah's decision
