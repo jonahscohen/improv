@@ -1732,9 +1732,14 @@ export interface SidecoachResult {
 }
 
 // module-level helper: deterministic start-request id from phrase + project so a
-// literal retry of the same phrase does not create a second lane.
+// literal retry of the same phrase does not create a second lane. Canonicalize the
+// project path (realpath) so it keys on the SAME canonical path the checkpoint
+// store uses - otherwise a symlinked vs real spelling of the same dir would hash
+// to different ids and defeat dedup against the (realpath-scoped) store.
 function laneStartRequestId(utterance: string, projectPath: string): string {
-  return 'proc-' + createHash('sha256').update(`${projectPath}\n${utterance.trim()}`).digest('hex').slice(0, 24);
+  let canon = projectPath;
+  try { canon = fs.realpathSync(projectPath); } catch { /* unresolvable path -> hash the raw spelling */ }
+  return 'proc-' + createHash('sha256').update(`${canon}\n${utterance.trim()}`).digest('hex').slice(0, 24);
 }
 
 export function createExecutionEngine(): FlowExecutionEngine {
