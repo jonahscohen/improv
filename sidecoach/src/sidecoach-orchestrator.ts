@@ -19,6 +19,9 @@ import { SidecoachEntryPoint, globalEntryPoint, EntryPointRequest } from './side
 import { TeachCommandHandlerV2 } from './teach-command-handler-v2';
 import { DocumentCommandHandler } from './document-command-handler';
 import { FlowPrerequisiteValidator } from './flow-prerequisites';
+import * as laneRunner from './lane-runner';
+import { LaneCheckpointStore } from './lane-checkpoint-store';
+import type { LaneTransition, LaneStepResult } from './lane-types';
 import { FlowCompositionEngine, PRESET_COMPOSITE_FLOWS, CompositeFlowDefinition } from './flow-composition';
 import { registerFlowDomainValidators, getValidatorsForFlow } from './flow-domain-validators';
 import { EnhancedContextManager, EnhancedFlowExecutionContext, COMMON_PROPAGATION_RULES } from './flow-execution-context-enhanced';
@@ -1555,6 +1558,53 @@ export class FlowExecutionEngine {
   getHandlers(): ReadonlyMap<FlowId, FlowHandler> {
     return this.handlers;
   }
+
+  // ---- Lane execution (P2) -------------------------------------------------
+  // The engine's runFlow reuses the SAME private path process() uses: enrich
+  // context, check the REAL prerequisite graph + canExecute (degraded guidance
+  // if either fails), then execute (wrapped in try/catch). So lane guidance
+  // matches normal flow guidance, and a throwing/degraded flow is NEVER attested.
+  private laneDeps(projectPath: string): laneRunner.LaneRunnerDeps {
+    return {
+      store: new LaneCheckpointStore(projectPath),
+      runFlow: async (flowId, context) => {
+        const handler = this.getHandlers().get(flowId);
+        if (!handler) return { flowId, flowName: String(flowId), status: 'skipped', message: `no handler for ${flowId}`, guidance: [], checklist: [] };
+        // Honor the REAL prerequisite graph (same posture as process():917-948):
+        // treat the lane's waived edges for THIS flow as satisfied, then check
+        // against the flows completed so far in this lane run.
+        const completed: string[] = Array.isArray(context.completedFlowIds) ? context.completedFlowIds : [];
+        const waivedForFlow = (Array.isArray(context.waivers) ? context.waivers : [])
+          .filter((w: any) => w.dependentFlowId === flowId).map((w: any) => w.prerequisiteFlowId);
+        const history = [...new Set<string>([...completed, ...waivedForFlow])].map((f) => ({ flowId: f, status: 'success' } as any));
+        const prereq = FlowPrerequisiteValidator.canExecute(flowId, history);
+        const enriched = this.enrichContextForHandler({ utterance: '', projectPath, ...context }, flowId);
+        if (!prereq.canExecute || !handler.canExecute(enriched)) {
+          const why = prereq.reason || 'context not fully ready';
+          // degraded: coach, but do NOT let the model attest this flow's work as run
+          return { flowId, flowName: String(flowId), status: 'needs_input', message: `coaching-only: ${flowId} (${why})`, guidance: [`(${flowId}) ${why} - coaching guidance only; this flow's work is not attested as done.`], checklist: [] };
+        }
+        // Mirror process()'s exception posture: a throwing handler degrades to an
+        // 'error' result (NOT a success), so it is never attested into completedFlowIds.
+        try {
+          return await handler.execute(enriched);
+        } catch (e) {
+          return { flowId, flowName: String(flowId), status: 'error', message: `handler ${flowId} threw: ${(e as Error).message}`, guidance: [`(${flowId}) the flow handler errored; coaching only - not attested as done.`], checklist: [] };
+        }
+      },
+      now: () => new Date().toISOString(),
+      newCheckpointId: () => `lane-${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+    };
+  }
+  async startLane(laneId: string, target: string, context: { projectPath?: string } & Record<string, any>, startRequestId: string): Promise<LaneStepResult> {
+    const projectPath = context.projectPath || process.cwd();
+    return laneRunner.startLane(laneId, target, { ...context, projectPath }, startRequestId, this.laneDeps(projectPath));
+  }
+  async advanceLane(projectPath: string, checkpointId: string, transition: LaneTransition): Promise<LaneStepResult> {
+    return laneRunner.advanceLane(projectPath, checkpointId, transition, this.laneDeps(projectPath));
+  }
+  laneStatus(projectPath: string, checkpointId: string) { return laneRunner.laneStatus(projectPath, checkpointId, this.laneDeps(projectPath)); }
+  listLanes(projectPath: string, options?: { all?: boolean }) { return laneRunner.listLanes(projectPath, this.laneDeps(projectPath), options); }
 
   /**
    * Union of all known flow ids - single handlers + composite preset ids.
