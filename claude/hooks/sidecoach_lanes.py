@@ -178,3 +178,96 @@ def evaluate_lane(lane, prompt, reg):
         scope = "SCOPE_UNKNOWN"
     return {"lane": lane["lane"], "label": lane["label"],
             "score": score, "scope": scope, "evidenceIds": ev_ids[:3]}
+
+
+def is_informational(text, pattern):
+    """A verb/pattern appearing only inside an informational framing is not an
+    invocation. Mirrors the verb-tier suppression in sidecoach-keyword.sh."""
+    frames = [
+        rf"\bwhat\s+(?:is|are|was|were|does|did)\s+(?:the\s+|a\s+|an\s+)?{pattern}(?![\w-])",
+        rf"\bwhat['’]s\s+(?:the\s+|a\s+|an\s+)?{pattern}(?![\w-])",
+        rf"\bhow\s+to\s+(?:use\s+)?(?:the\s+)?{pattern}(?![\w-])",
+        rf"\bhow\s+do\s+(?:i|you|we)\s+(?:use\s+)?(?:the\s+)?{pattern}(?![\w-])",
+        rf"\bexplain\s+(?:the\s+|how\s+|what\s+)?{pattern}(?![\w-])",
+        rf"\bdefine\s+{pattern}(?![\w-])",
+        rf"(?<![\w-]){pattern}\s+is\s+(?:a|an|the)\b",
+    ]
+    return any(re.search(f, text, re.IGNORECASE) for f in frames)
+
+
+def detect_verb(text, verbs):
+    for v in verbs:
+        name = v.get("verb") if isinstance(v, dict) else v
+        patt = (v.get("pattern") or name) if isinstance(v, dict) else v
+        if not name or not patt:
+            continue
+        try:
+            rx = _wb(patt)
+        except re.error:
+            continue
+        if rx.search(text) and not is_informational(text, patt):
+            return name
+    return None
+
+
+def classify_intent(prompt, reg, verbs, intent_eligible=False):
+    """Top-level decision flow (spec section 5). Returns a dict with keys
+    outcome, winningLane, verbMatch, laneScores, schemaVersion."""
+    result = {"outcome": "SILENT", "winningLane": None, "verbMatch": None,
+              "diagnosticLane": None, "laneScores": [], "schemaVersion": SCHEMA_VERSION}
+    if not prompt or not prompt.strip():
+        return result
+    # 2. explicit /sidecoach command is owned by the slash router, not the hook
+    if re.match(r"\s*/sidecoach\b", prompt, re.IGNORECASE):
+        return result
+
+    text = blank_informational(sanitize(prompt))
+    scores = [evaluate_lane(l, prompt, reg) for l in reg["lanes"]]
+    result["laneScores"] = scores
+    ranked = sorted(scores, key=lambda r: r["score"], reverse=True)
+    top = ranked[0]
+    second = ranked[1]["score"] if len(ranked) > 1 else 0
+    verb = detect_verb(text, verbs)
+    result["verbMatch"] = verb
+
+    rf, rm, cf = (reg["scoring"]["route_floor"], reg["scoring"]["route_margin"],
+                  reg["scoring"]["classify_floor"])
+    route_grade = (top["scope"] == "IN_SCOPE" and top["score"] >= rf
+                   and (top["score"] - second) >= rm)
+
+    # 5/8. explicit verb evaluated before inferred-lane scope outcomes.
+    # A route-grade IN_SCOPE lane competing with the verb -> CLASSIFY (lane wins
+    # the routing slot). Otherwise the verb is primary (VERB) and the strongest
+    # lane signal (any scope, score>0) rides along as a NON-ROUTING diagnostic
+    # so the hook can surface "lane X noted, do not auto-expand" without routing.
+    if verb:
+        if route_grade:
+            result["outcome"] = "CLASSIFY"
+            result["winningLane"] = top["lane"]
+        else:
+            result["outcome"] = "VERB"
+            diag = next((r for r in ranked if r["score"] > 0), None)
+            result["diagnosticLane"] = diag["lane"] if diag else None
+        return result
+
+    # 6/9. IN_SCOPE branch
+    if top["scope"] == "IN_SCOPE" and top["score"] > 0:
+        result["winningLane"] = top["lane"]
+        result["outcome"] = "ROUTE" if route_grade else (
+            "CLASSIFY" if top["score"] >= cf else "SILENT")
+        if result["outcome"] != "SILENT":
+            return result
+    # 10. SCOPE_UNKNOWN + lane evidence -> CONTEXT-CHECK (no auto-route)
+    unknown = next((r for r in ranked if r["scope"] == "SCOPE_UNKNOWN" and r["score"] > 0), None)
+    if unknown:
+        result["outcome"] = "CONTEXT_CHECK"
+        result["winningLane"] = unknown["lane"]
+        return result
+    # 11. OUT_OF_SCOPE + lane evidence -> logged, no lane action
+    oos = any(r["scope"] == "OUT_OF_SCOPE" for r in scores)
+    # 12. advisory nudge eligibility (intent tier, evaluated by caller)
+    if intent_eligible:
+        result["outcome"] = "NUDGE_ELIGIBLE"
+        return result
+    result["outcome"] = "OUT_OF_SCOPE" if oos else "SILENT"
+    return result

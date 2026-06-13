@@ -214,6 +214,112 @@ def test_negator_alone_discards_to_not_in_scope():
     assert r["score"] == 0
 
 
+# --- Task 5: decision flow (classify_intent) ---
+
+VERBS = [{"verb": v} for v in [
+    "shape","craft","polish","audit","critique","harden","adapt","colorize",
+    "delight","animate","live","quieter","distill","clarify","layout","bolder",
+    "overdrive","typeset","optimize","extract","onboard","document"]]
+
+
+def _ci(prompt, intent_eligible=False):
+    return sl.classify_intent(prompt, REG, VERBS, intent_eligible=intent_eligible)
+
+
+def test_production_ready_natural_is_context_check_not_oos():
+    r = _ci("make this production-ready")
+    assert r["outcome"] == "CONTEXT_CHECK"
+    assert r["winningLane"] == "lane_ship"
+
+
+def test_clause_binding_never_routes_migration():
+    r = _ci("The landing page is done. Make the migration production-ready.")
+    assert r["outcome"] in ("NUDGE_ELIGIBLE", "SILENT", "OUT_OF_SCOPE")
+    assert r["outcome"] != "ROUTE" and r["outcome"] != "CLASSIFY"
+
+
+def test_in_scope_route_grade_routes():
+    r = _ci("make the landing page production-ready")  # (3,0) IN_SCOPE
+    assert r["outcome"] == "ROUTE"
+    assert r["winningLane"] == "lane_ship"
+
+
+def test_explicit_verb_beats_scope_outcome():
+    # explicit verb + SCOPE_UNKNOWN lane language -> VERB primary, lane diagnostic only
+    r = _ci("audit this and make it production-ready")
+    assert r["outcome"] == "VERB"
+    assert r["verbMatch"] == "audit"
+    assert any(s["lane"] == "lane_ship" for s in r["laneScores"])
+    # the strongest lane signal rides along as a non-routing diagnostic (NOT winningLane)
+    assert r["diagnosticLane"] == "lane_ship"
+    assert r["winningLane"] is None
+
+
+def test_explicit_verb_plus_route_grade_in_scope_is_classify():
+    r = _ci("audit the landing page production-ready release-readiness pass")
+    # route-grade IN_SCOPE lane competes with the verb -> CLASSIFY (step 7)
+    assert r["outcome"] == "CLASSIFY"
+
+
+def test_classify_when_in_scope_low_score():
+    r = _ci("the dashboard should feel more fun")  # lane_delight (2,0) IN_SCOPE
+    assert r["outcome"] == "CLASSIFY"
+    assert r["winningLane"] == "lane_delight"
+
+
+def test_silent_when_nothing_and_not_eligible():
+    # a non-design backend prompt with no lane lexicon match and no eligibility
+    r = _ci("fix a flaky backend test")
+    assert r["outcome"] in ("SILENT", "OUT_OF_SCOPE")
+
+
+def test_nudge_eligible_passthrough():
+    r = _ci("restyle the navbar", intent_eligible=True)
+    assert r["outcome"] in ("ROUTE", "CLASSIFY", "CONTEXT_CHECK", "NUDGE_ELIGIBLE")
+
+
+def test_slash_prefix_is_silent_for_classifier():
+    assert _ci("/sidecoach make this production-ready")["outcome"] == "SILENT"
+
+
+# --- Task 5 adversarial edges (spec section 5 precedence + outcome table) ---
+
+def test_explicit_verb_beats_out_of_scope_evidence():
+    # verb present + lane evidence binding OUT_OF_SCOPE (migration) -> still VERB,
+    # never preempted by OUT_OF_SCOPE; winningLane stays None (the v8-review fix).
+    r = _ci("audit the migration to make it production-ready")
+    assert r["outcome"] == "VERB"
+    assert r["verbMatch"] == "audit"
+    assert r["winningLane"] is None
+
+
+def test_within_margin_competing_lane_is_classify_not_route():
+    # top IN_SCOPE=3 (ship) with a competing IN_SCOPE=2 (delight) -> margin 1 < 2,
+    # so NOT route-grade -> CLASSIFY (the no-silent-expand rule), winner = top.
+    r = _ci("make the landing page production-ready with more personality")
+    assert r["outcome"] == "CLASSIFY"
+    assert r["winningLane"] == "lane_ship"
+
+
+def test_tie_top_lanes_is_classify_not_route():
+    # two IN_SCOPE lanes tied at 3 -> margin 0 < 2 -> CLASSIFY, not ROUTE
+    r = _ci("make the landing page production-ready and bring it to life")
+    assert r["outcome"] == "CLASSIFY"
+
+
+def test_result_dict_shape_matches_ts_mirror_contract():
+    # the dict shape is a parity contract with the TS mirror (Task 7)
+    r = _ci("make the landing page production-ready")
+    assert set(r.keys()) == {
+        "outcome", "winningLane", "verbMatch",
+        "diagnosticLane", "laneScores", "schemaVersion",
+    }
+    assert r["schemaVersion"] == sl.SCHEMA_VERSION
+    assert len(r["laneScores"]) == len(REG["lanes"])
+    for s in r["laneScores"]:
+        assert set(s.keys()) == {"lane", "label", "score", "scope", "evidenceIds"}
+
+
 if __name__ == "__main__":
     try:
         import pytest
