@@ -128,6 +128,13 @@ export function laneStatus(projectPath: string, checkpointId: string, d: LaneRun
   };
 }
 
+export function listLanes(projectPath: string, d: LaneRunnerDeps, options?: { all?: boolean }): LaneInfo[] {
+  const all = !!options?.all;
+  return d.store.list()
+    .filter((s) => all || s.lifecycle === 'in_progress' || s.lifecycle === 'interrupted')
+    .map((s) => { const l = resolveLane(s.laneId); return { checkpointId: s.checkpointId, laneId: s.laneId, lifecycle: s.lifecycle, outcome: s.outcome, stepIndex: s.cursor, totalSteps: l.verbSteps.length, updatedAt: s.updatedAt }; });
+}
+
 function bump(cp: LaneCheckpoint, d: LaneRunnerDeps): void {
   // Best-effort in-process guard: re-read the persisted revision and abort if it
   // moved since this checkpoint was loaded. True cross-process CAS (lease +
