@@ -36,6 +36,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/lane-runner-status-list.test.ts', required: true },
   { rel: 'src/__tests__/lane-engine-methods.test.ts', required: true },
   { rel: 'src/__tests__/slash-phrase-wiring.test.ts', required: true },
+  { rel: 'src/__tests__/lane-cli.test.ts', required: true },
 ];
 
 let ran = 0;
