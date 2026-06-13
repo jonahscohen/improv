@@ -1,3 +1,4 @@
+- [Lane P2 plan v3 (v2-review fixes) - PROJECT (2026-06-13)](session_2026-06-13_lane-p2-plan-v3.md): folds Codex v2 findings (prereq-aware dispatch, best-effort CAS, CLASSIFY dispatch path, deterministic id, hardening); confirming pass then execute
 - [Lane P2 plan v2 (all Codex fixes folded) - PROJECT (2026-06-13)](session_2026-06-13_lane-p2-plan-v2.md): v2 addresses all 7 P0/8 P1/2 P2; sequence-only, lifecycle/outcome, live process() wiring, real prereq validator; re-sent to Codex
 - [Lane P2 plan Codex review NEEDS-FIXES - PROJECT (2026-06-13)](session_2026-06-13_lane-p2-codex-review.md): Codex secondary returned NEEDS-FIXES (7 P0/8 P1/2 P2), load-bearing findings verified; key = P2 should be sequence-only (lane_converge is the only loop)
 - [Lane P2 execution plan DRAFTED - PROJECT (2026-06-13)](session_2026-06-13_lane-p2-plan-drafted.md): Phase 2 plan written (lane execution state machine + /sidecoach phrase wiring); scoped one slice…

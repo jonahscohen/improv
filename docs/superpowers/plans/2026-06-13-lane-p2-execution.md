@@ -1,4 +1,4 @@
-# Lane Execution + Phrase Wiring (Phase 2) Implementation Plan - v2
+# Lane Execution + Phrase Wiring (Phase 2) Implementation Plan - v3
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -27,6 +27,19 @@
 - **P4 - validators + loops + MCP + cleanup:** `product-rule-registry.ts`, `flow-validation-capabilities.ts`, validator gating, **loop execution + `lane_converge` + the convergence floor**, `ralph-loop.ts` -> `convergence-loop.ts`, MCP `classify-intent`/`list-lanes`/`sidecoach_lane`, `modes.ts`/`dist` deletion, SKILL/CHEATSHEET/marketing regen.
 
 If a task tempts you to pull deferred work forward, stop - the deferral is intentional.
+
+---
+
+## What changed in v3 (Codex v2 review `task-mqctksof` - 14/17 closed; these close the rest)
+
+- **Prereq-aware dispatch (P0-a / P0-6).** `runFlow` now consults the REAL `FlowPrerequisiteValidator` against the checkpoint's `completedFlowIds` plus the lane's waived edges, and serves **degraded (coaching-only) guidance** when a required prerequisite is unmet - the same posture `process()` takes (`sidecoach-orchestrator.ts:917-948`). This matters because some lane sequences legitimately violate the prereq DAG (e.g. `lane_ship` = `[flowK, flowI, flowL, flowV, flowM, flowJ]`, where `flowK` requires the last step `flowJ` and `flowI` requires the absent `flowG`). P2 coaches through those steps honestly instead of pretending the flow ran; generator-level sequence/prereq validation is a P4 note.
+- **Honest concurrency claims + best-effort guard (P0-b).** v2 overclaimed "CAS"/"idempotency guarantees." P2 provides a **best-effort in-process** revision check: `bump()` re-reads the checkpoint immediately before writing and aborts on a revision mismatch. True cross-process compare-and-swap (lease + fencing token) is **P3**. The plan no longer claims a hard guarantee.
+- **Pure-guidance handlers + incremental persist (P0-c).** Lane flow handlers are pure GUIDANCE generators (checklist items `completed:false`, no side effects), so re-execution is benign. `serveStep` persists each flow's output as it is produced, so a mid-step interruption re-runs only the in-flight flow. Exactly-once via the side-effect outbox is **P3**.
+- **CLASSIFY has a real confirm-to-start path (P1-d).** A murky phrase returns the candidate lane AND a confirmation token; confirming dispatches `startLane` identically to ROUTE (spec 263-266, 812-813). Not a dead-end message.
+- **Deterministic `startRequestId` from `process()` (P1-e).** Derived from `hash(utterance + projectPath)`, so a literal retry of the same phrase does not double-start a lane.
+- **CLI report hardening (P1-f) + `startRequestId` validation (P1-g).** `--report` is size-capped and shape-validated before use; `startRequestId` is validated, length-capped, and stored by hash.
+- **Real realpath (P1-9).** The project dir is created (if absent) then `realpathSync`'d, so canonicalization is genuine rather than falling back to `path.resolve`.
+- **OUT_OF_SCOPE test phrase fixed (P2-h).** `optimize` is a known verb; the wiring test uses a non-command backend phrase.
 
 ---
 
@@ -348,9 +361,11 @@ function assertId(id: string): void {
 export class LaneCheckpointStore {
   private projectPath: string;
   constructor(projectPath: string) {
-    // Canonicalize the project root (cheap boundary protection; lease/outbox is P3).
-    try { this.projectPath = fs.realpathSync(projectPath); }
-    catch { this.projectPath = path.resolve(projectPath); }
+    // Genuine canonicalization: ensure the root exists, then realpath it so
+    // symlinks/.. collapse to one canonical key (cheap boundary protection;
+    // lease/fencing/outbox is P3). A truly unusable path throws loudly.
+    try { fs.mkdirSync(projectPath, { recursive: true }); } catch { /* ignore - realpath will throw if still bad */ }
+    this.projectPath = fs.realpathSync(projectPath);
   }
   private dir(): string { return path.join(this.projectPath, '.claude', 'lane-checkpoints'); }
   private filePath(id: string): string { assertId(id); return path.join(this.dir(), `${id}.json`); }
@@ -513,20 +528,23 @@ async function serveStep(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: 
   }
   const step = l.verbSteps[cp.cursor];
   const key = `${cp.cursor}:${cp.iteration}`;
-  let served = cp.servedSteps[key];
-  if (!served) {
-    const guidance: string[] = [...step.guidance];
-    const checklist: LaneStepResult['checklist'] = [];
-    for (const flowId of step.flowIds) {
-      const r = await d.runFlow(flowId, context);
-      for (const g of r.guidance ?? []) guidance.push(g);
-      for (const c of r.checklist ?? []) checklist.push({ id: `${flowId}:${c.id}`, label: c.label, required: c.required, completed: false });
+  // Resumable incremental serve: persist after EACH flow so a mid-step
+  // interruption re-runs only the in-flight flow. Handlers are pure guidance,
+  // so even that re-run is benign. Serving is NOT a revision-bumping mutation.
+  let acc = cp.servedSteps[key];
+  if (!acc) { acc = { guidance: [...step.guidance], checklist: [], flowIds: [] }; cp.servedSteps[key] = acc; cp.updatedAt = d.now(); d.store.write(cp); }
+  if (acc.flowIds.length < step.flowIds.length) {
+    const flowCtx = { ...context, completedFlowIds: cp.completedFlowIds, waivers: l.prereqWaivers };
+    for (let i = acc.flowIds.length; i < step.flowIds.length; i++) {
+      const flowId = step.flowIds[i];
+      const r = await d.runFlow(flowId, flowCtx);
+      for (const g of r.guidance ?? []) acc.guidance.push(g);
+      for (const c of r.checklist ?? []) acc.checklist.push({ id: `${flowId}:${c.id}`, label: c.label, required: c.required, completed: false });
+      acc.flowIds.push(flowId);
+      cp.updatedAt = d.now(); d.store.write(cp);
     }
-    served = { guidance, checklist, flowIds: step.flowIds };
-    cp.servedSteps[key] = served;
-    cp.updatedAt = d.now();
-    d.store.write(cp);   // persist the cache (no revision bump - serving is not a mutation)
   }
+  const served = acc;
   return {
     checkpointId: cp.checkpointId, laneId: l.lane, laneLabel: l.label,
     lifecycle: cp.lifecycle, outcome: cp.outcome, executionKind: l.executionKind,
@@ -541,6 +559,9 @@ export async function startLane(
   laneId: string, target: string, context: { projectPath?: string } & Record<string, any>,
   startRequestId: string, d: LaneRunnerDeps,
 ): Promise<LaneStepResult> {
+  if (!startRequestId || typeof startRequestId !== 'string' || startRequestId.length > 256) {
+    throw new Error('startLane: startRequestId must be a non-empty string <= 256 chars');
+  }
   const l = resolveLane(laneId);
   if (l.executionKind === 'loop') {
     throw new Error(`startLane: lane "${laneId}" is a loop lane - loop execution + the convergence floor land in P4. Not startable in P2.`);
@@ -659,7 +680,17 @@ Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-advance-sequence.tes
 Add to `lane-runner.ts`:
 
 ```typescript
-function bump(cp: LaneCheckpoint, d: LaneRunnerDeps): void { cp.revision += 1; cp.updatedAt = d.now(); d.store.write(cp); }
+function bump(cp: LaneCheckpoint, d: LaneRunnerDeps): void {
+  // Best-effort in-process guard: re-read the persisted revision and abort if it
+  // moved since this checkpoint was loaded. True cross-process CAS (lease +
+  // fencing token) is P3. `cp.revision` is the pre-bump value here; serveStep's
+  // incremental writes do NOT bump revision, so the on-disk value still matches.
+  if (d.store.exists(cp.checkpointId)) {
+    const onDisk = d.store.read(cp.checkpointId);
+    if (onDisk.revision !== cp.revision) throw new Error(`lane runner: concurrent modification (disk revision ${onDisk.revision} != in-memory ${cp.revision})`);
+  }
+  cp.revision += 1; cp.updatedAt = d.now(); d.store.write(cp);
+}
 
 // Advance the cursor after a completed/skipped step. Sequence final step closes
 // the lane: outcome 'completed' if no step was skipped, else 'partial'. (Loop
@@ -1099,9 +1130,19 @@ private laneDeps(projectPath: string): laneRunner.LaneRunnerDeps {
     runFlow: async (flowId, context) => {
       const handler = this.getHandlers().get(flowId);
       if (!handler) return { flowId, flowName: String(flowId), status: 'skipped', message: `no handler for ${flowId}`, guidance: [], checklist: [] };
+      // Honor the REAL prerequisite graph (same posture as process():917-948):
+      // treat the lane's waived edges for THIS flow as satisfied, then check
+      // against the flows completed so far in this lane run.
+      const completed: string[] = Array.isArray(context.completedFlowIds) ? context.completedFlowIds : [];
+      const waivedForFlow = (Array.isArray(context.waivers) ? context.waivers : [])
+        .filter((w: any) => w.dependentFlowId === flowId).map((w: any) => w.prerequisiteFlowId);
+      const history = [...new Set<string>([...completed, ...waivedForFlow])].map((f) => ({ flowId: f, status: 'success' } as any));
+      const prereq = FlowPrerequisiteValidator.canExecute(flowId, history);
       const enriched = this.enrichContextForHandler({ utterance: '', projectPath, ...context }, flowId);
-      if (!handler.canExecute(enriched)) {
-        return { flowId, flowName: String(flowId), status: 'needs_input', message: `degraded: ${flowId} not currently executable`, guidance: [`(${flowId}) prerequisites/context not fully ready - coaching only.`], checklist: [] };
+      if (!prereq.canExecute || !handler.canExecute(enriched)) {
+        const why = prereq.reason || 'context not fully ready';
+        // degraded: coach, but do NOT let the model attest this flow's work as run
+        return { flowId, flowName: String(flowId), status: 'needs_input', message: `coaching-only: ${flowId} (${why})`, guidance: [`(${flowId}) ${why} - coaching guidance only; this flow's work is not attested as done.`], checklist: [] };
       }
       return handler.execute(enriched);
     },
@@ -1161,8 +1202,11 @@ async function run() {
   if (!routed.lane || !routed.lane.checkpointId) throw new Error('ROUTE phrase must start a lane via process()');
   if (routed.lane.currentVerb !== 'shape') throw new Error('started lane should be on its first verb');
 
-  // OUT_OF_SCOPE phrase -> refusal, NOT a lane
-  const oos: any = await engine.process('/sidecoach optimize the database query planner', ctx);
+  // OUT_OF_SCOPE phrase -> refusal, NOT a lane. NB: the first word must NOT be a
+  // known verb/phase command ("optimize"/"migrate" ARE commands and would route
+  // before phrase classification). Use a backend phrase opening with a
+  // non-command word that trips a negative_filter.
+  const oos: any = await engine.process('/sidecoach the postgres query planner keeps picking bad indexes', ctx);
   if (oos.lane) throw new Error('backend phrase must not start a lane');
   if (!/UI|design|scope/i.test(oos.message || '')) throw new Error('OUT_OF_SCOPE should explain the scope');
 
@@ -1219,19 +1263,35 @@ In `sidecoach-orchestrator.ts`, right AFTER the `if (commandMatch.isCommand) { .
 
 ```typescript
 import { resolveSidecoachInput } from './slash-command-router';
+import { LANES } from './lanes.generated';
 import * as path from 'path';
+import { createHash } from 'crypto';
+
+// module-level helper: deterministic start-request id from phrase + project so a
+// literal retry of the same phrase does not create a second lane.
+function laneStartRequestId(utterance: string, projectPath: string): string {
+  return 'proc-' + createHash('sha256').update(`${projectPath}\n${utterance.trim()}`).digest('hex').slice(0, 24);
+}
 
 // after the commandMatch.isCommand block, before intent detection:
 const laneResolution = resolveSidecoachInput(utterance, path.resolve(__dirname, '..', '..', 'claude', 'hooks', 'sidecoach-lanes.json'));
 if (laneResolution.source === 'phrase' && laneResolution.phrase) {
   const pr = laneResolution.phrase;
   if (pr.kind === 'ROUTE' && pr.lane) {
-    const startReq = `proc-${process.pid}-${Date.now()}`;
+    // deterministic id: a literal retry of the same phrase+project does NOT
+    // double-start (startLane dedups on startRequestId).
+    const startReq = laneStartRequestId(utterance, projectPath);
     const lane = await this.startLane(pr.lane, utterance, { projectPath, userId: context.userId, metadata: context.metadata }, startReq);
     return { success: true, message: `Routed to ${lane.laneLabel}: ${lane.message}`, detectedFlow: null, flowResults: [], guidance: lane.guidance, checklist: lane.checklist, lane };
   }
   if (pr.kind === 'CLASSIFY' && pr.lane) {
-    return { success: true, message: `Which direction - did you mean the "${pr.lane}" lane? Confirm to start, or rephrase.`, detectedFlow: null, flowResults: [], guidance: [], checklist: [] };
+    // One-question interview: surface the candidate so the model can confirm.
+    // Confirmation dispatches IDENTICALLY to ROUTE - the model calls
+    // engine.startLane(classify.laneId, ...), the same terminal path ROUTE uses.
+    // (The AskUserQuestion surface itself is a P4 hook/MCP concern; P2 exposes
+    // the candidate + the dispatch path so CLASSIFY is not a dead end.)
+    const cand = LANES.find((l) => l.lane === pr.lane);
+    return { success: true, message: `That reads like the "${cand?.interviewLabel ?? pr.lane}" direction. Confirm to start it, or rephrase for a different lane.`, detectedFlow: null, flowResults: [], guidance: [], checklist: [], classify: { laneId: pr.lane, label: cand?.label ?? pr.lane, interviewLabel: cand?.interviewLabel ?? pr.lane } };
   }
   if (pr.kind === 'OUT_OF_SCOPE') {
     return { success: true, message: pr.redirect || 'That reads as non-UI work. Sidecoach covers UI/design only.', detectedFlow: null, flowResults: [], guidance: [], checklist: [] };
@@ -1241,12 +1301,13 @@ if (laneResolution.source === 'phrase' && laneResolution.phrase) {
 }
 ```
 
-Add an OPTIONAL `lane?: LaneStepResult` field to the `SidecoachResult` interface (`sidecoach-orchestrator.ts:1629`), importing the type:
+Add OPTIONAL fields to the `SidecoachResult` interface (`sidecoach-orchestrator.ts:1629`), importing the type:
 
 ```typescript
 import type { LaneStepResult } from './lane-types';
 // in SidecoachResult:
 lane?: LaneStepResult;
+classify?: { laneId: string; label: string; interviewLabel: string };
 ```
 
 - [ ] **Step 10.5: Run + register**
@@ -1309,7 +1370,15 @@ if (sub === 'lane') {
       result = await engine.startLane(flag('--lane'), flag('--target', ''), { projectPath: project }, flag('--start-request-id', `cli-${process.pid}-${Date.now()}`));
     } else if (op === 'advance') {
       const transition = { action: flag('--action', 'complete'), expectedRevision: Number(flag('--revision', '0')) };
-      const reportRaw = flag('--report', ''); if (reportRaw) transition.report = JSON.parse(reportRaw);
+      const reportRaw = flag('--report', '');
+      if (reportRaw) {
+        if (reportRaw.length > 64 * 1024) { console.error('--report exceeds 64KB cap'); process.exit(2); }
+        let parsed; try { parsed = JSON.parse(reportRaw); } catch { console.error('--report is not valid JSON'); process.exit(2); }
+        if (!parsed || typeof parsed.stepId !== 'string' || typeof parsed.reportId !== 'string' || !Array.isArray(parsed.evidence) || parsed.evidence.length < 1) {
+          console.error('--report must be a StepReport object with stepId, reportId, verb, summary, and >=1 evidence'); process.exit(2);
+        }
+        transition.report = parsed;
+      }
       const reason = flag('--reason', ''); if (reason) transition.reason = reason;
       result = await engine.advanceLane(project, flag('--checkpoint'), transition);
     } else if (op === 'status') {
@@ -1439,12 +1508,16 @@ git commit -m "chore(lane-p2): final integration green" || echo "nothing to comm
 
 ---
 
-## Self-Review (v2)
+## Self-Review (v3)
 
-**Codex findings closed:** P0-1 lifecycle/outcome (Task 1, used everywhere); P0-2 empty-flow steps (Task 2); P0-3 live wiring through `process()` + tested through it (Task 10); P0-4 real `FlowPrerequisiteValidator` + failing unsafe-skip test (Task 7); P0-5 interrupt = resume-only, no re-run (Task 6); P0-6 persisted serve + enrich/canExecute dispatch (Tasks 4, 9); P0-7 loop lanes rejected, sequence closes completed/partial (Tasks 4, 5). P1-8 audit log (every transition, Tasks 5-7); P1-9 id validation + realpath (Task 3); P1-10 `listLanes(options?)` (Task 8); P1-11 start-request lane-mismatch reject (Task 4); P1-12 spec CLI flags + factory (Task 11); P1-13 explicit `SUITES` required registration (every task); P1-14 phrase gated to `^/sidecoach\s+(.+)$` + bare-`/sidecoach` menu preserved (Task 10); P1-15 no `git add -A` + cleanliness check (Tasks 0.1, 13). P2-16 lane_calm is sequence (Task 2 scope); P2-17 e2e requires completed (Task 12).
+**v2-review closures (Codex `task-mqctksof`):** P0-a prereq-aware degraded dispatch (Task 9 `runFlow` now USES `FlowPrerequisiteValidator` + waived edges); P0-b honest best-effort revision guard, true CAS labeled P3 (Task 5 `bump` re-read); P0-c pure-guidance handlers + resumable incremental persist (Task 4 `serveStep`); P1-d CLASSIFY surfaces candidate + dispatches via `startLane` like ROUTE (Task 10); P1-e deterministic `startRequestId` from `hash(utterance+project)` (Task 10); P1-f CLI `--report` size-cap + shape-validate (Task 11); P1-g `startRequestId` validated/capped (Task 4); P1-9 genuine realpath after ensure-exists (Task 3); P2-h OUT_OF_SCOPE test uses a non-command phrase (Task 10). P0-6 and P1-9 (the two v2 still-opens) close here.
+
+**v1-review closures:** P0-1 lifecycle/outcome (Task 1, used everywhere); P0-2 empty-flow steps (Task 2); P0-3 live wiring through `process()` + tested through it (Task 10); P0-4 real `FlowPrerequisiteValidator` + failing unsafe-skip test (Task 7); P0-5 interrupt = resume-only, no re-run (Task 6); P0-6 persisted serve + enrich/canExecute dispatch (Tasks 4, 9); P0-7 loop lanes rejected, sequence closes completed/partial (Tasks 4, 5). P1-8 audit log (every transition, Tasks 5-7); P1-9 id validation + realpath (Task 3); P1-10 `listLanes(options?)` (Task 8); P1-11 start-request lane-mismatch reject (Task 4); P1-12 spec CLI flags + factory (Task 11); P1-13 explicit `SUITES` required registration (every task); P1-14 phrase gated to `^/sidecoach\s+(.+)$` + bare-`/sidecoach` menu preserved (Task 10); P1-15 no `git add -A` + cleanliness check (Tasks 0.1, 13). P2-16 lane_calm is sequence (Task 2 scope); P2-17 e2e requires completed (Task 12).
 
 **Placeholder scan:** all code concrete. Two intentional stubs (`transitionNonComplete` Task 5 -> Task 6; `skipStep` Task 6 -> Task 7) throw with task-naming messages and are replaced in the very next task.
 
 **Type consistency:** lifecycle/outcome types defined once (Task 1) and used in `LaneCheckpoint`, runner, engine, CLI, e2e. `verbSteps {verb,flowIds,guidance}` consistent generator->runner. Engine uses `createExecutionEngine` in every caller (Tasks 9, 11, 12).
 
-**Residual reviewer flags:** (1) Task 9 depends on the private `enrichContextForHandler` name at `:241` - confirm before editing; fallback wrapper noted inline. (2) Task 10's CLASSIFY response is a plain confirm prompt (P2 has no AskUserQuestion surface in the engine); the spec's one-question interview UI is a hook/MCP concern (P4). (3) `process()` returning a `lane` field is an additive `SidecoachResult` change - confirm no consumer asserts exact key sets.
+**Residual flags (Codex-adjudicated):** (1) `enrichContextForHandler` confirmed to exist at `sidecoach-orchestrator.ts:507-510` with a compatible signature - callable from the new engine methods. (2) CLASSIFY is no longer a dead end: it surfaces the candidate lane and the model confirms by calling `engine.startLane(classify.laneId, ...)` - the same terminal path as ROUTE; the AskUserQuestion interview UI remains a P4 hook/MCP concern. (3) The additive `lane?`/`classify?` fields on `SidecoachResult` are safe - no consumer asserts exact key sets, and `CommandRoutingAdapter` preserves unknown fields via object spread (`command-routing-adapter.ts:113-116`).
+
+**Known P2 limitations (intentional, documented for the implementer):** the in-process revision guard is best-effort, not a hard CAS (true cross-process safety = P3); some lane flow sequences violate the prerequisite DAG (a P1 derivation artifact) and are handled at runtime by degraded coaching-only guidance - generator-level sequence/prereq validation is a P4 note.
