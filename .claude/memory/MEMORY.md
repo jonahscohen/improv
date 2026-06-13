@@ -1,3 +1,4 @@
+- [Lane P3 plan v2 (Codex fixes) - PROJECT (2026-06-13)](session_2026-06-13_lane-p3-plan-v2.md): race-safe lock, all-writes-under-lock, full lease identity, barrier-seam concurrency tests, locked start mapping, outbox seed; re-Codex
 - [Lane P3 durability plan drafted - PROJECT (2026-06-13)](session_2026-06-13_lane-p3-plan-drafted.md): lease/fencing/schema-v2 at-most-one-committed-transition core; outbox/AbortSignal/heartbeat->P4; to Codex
 - [Lane P2 COMPLETE (merged) - PROJECT (2026-06-13)](session_2026-06-13_lane-p2-COMPLETE.md): sequence execution + phrase wiring built (19 commits), 3-leg verified, Codex SHIP after 1 fix round; loop lanes->P4
 - [Lane P2 code review (Codex SHIP) - PROJECT (2026-06-13)](session_2026-06-13_lane-p2-code-review.md): independent verify green; Codex found 6 defects (3 P1/3 P2) all fixed+confirmed

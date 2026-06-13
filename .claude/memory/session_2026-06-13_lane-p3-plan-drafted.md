@@ -3,6 +3,7 @@ name: Lane P3 durability plan drafted (lease/fencing/schema-v2) - to Codex
 description: P3 plan written - at-most-one-committed-transition core (O_EXCL lock, lease CLAIM/FINALIZE, fencing token, schema v2 migration); outbox/AbortSignal/heartbeat deferred to P4; sending to Codex
 type: project
 relates_to: [session_2026-06-13_lane-p2-COMPLETE.md, feedback_autonomous_phases_codex_partner.md]
+superseded_by: session_2026-06-13_lane-p3-plan-v2.md
 ---
 
 P2 merged; moving the autonomous loop to P3. Drafted

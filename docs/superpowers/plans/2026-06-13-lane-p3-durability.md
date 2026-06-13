@@ -1,6 +1,19 @@
-# Lane Durability - Lease / Fencing / Schema-v2 (Phase 3) Implementation Plan
+# Lane Durability - Lease / Fencing / Schema-v2 (Phase 3) Implementation Plan - v2
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
+
+## What changed in v2 (Codex review `task-mqcx5yfz` - no P0; folds 6 P1 + 3 P2)
+
+These are BINDING requirements; the per-task code below already reflects them where shown, and the rest are enforced here:
+- **Race-safe lock (P1-1):** unique owner token; unparseable/empty lock is NOT immediately stale (mtime-fallback grace for the create->write window); release unlinks ONLY if this owner still holds it; `checkpointId` validated. The lock test adds a create-window case and a reclaimed-owner-release case.
+- **All checkpoint writes under the lock (P1-2):** ordinary transitions (`complete`/`skip`/`retry`/`resume`) are REJECTED while a live lease exists; only `interrupt`/`stop` proceed over a live lease. `serveStep` persists via a LOCKED re-read+merge of just its `servedSteps[key]` (never writing a whole stale snapshot). A test proves a `serveStep` write cannot revert a committed `complete`.
+- **Full lease identity on FINALIZE (P1-3):** `finalizeLease` matches the full `{operationId,stepId,iteration,claimedCheckpointRevision,fencingToken}` captured from `claimLease`'s return (not a re-read outside the lock, not operationId alone).
+- **Real concurrency proof (P1-4):** an injectable `__claimBarrier?: () => Promise<void>` seam in `LaneRunnerDeps` (awaited in `advanceLane` AFTER the early-guard read, BEFORE `claimLease`) lets a test force two callers past their initial read at the same revision, then race the claim: exactly one commits, the other rejects (stale revision or live lease). Plus: stale-reclaim-then-rejected-late-FINALIZE; interrupt leases built via `claimLease`; `retry`-vs-live-lease.
+- **Locked start mapping (P1-5):** `startLane`'s `findByStartRequestId`+create runs under a lock keyed by `sha256(startRequestId)` so concurrent starts map one `startRequestId` to exactly one checkpoint (Task 3 step below).
+- **Schema-v2 outbox seed (P1-6):** migration seeds `sideEffectOutbox: []` so P4 needs no third migration.
+- **Build/tests green after each task (P2-1):** every contract-changing task updates ALL affected fixtures/tests IN THAT TASK. Concretely: (a) the existing `lane-checkpoint-store.test.ts` writes a v1 literal and expects v2-rejection - update it to write v2 (`schemaVersion:2, fencingCounter:0, lease:null, sideEffectOutbox:[]`) and expect v3-rejection; (b) EVERY `LaneRunnerDeps` fixture across the lane-runner test suites gains `newOperationId: () => 'op-' + (n++)`; (c) every in-test v2 checkpoint literal includes `fencingCounter`, `lease`, `sideEffectOutbox`.
+- **`leaseIsLive` NaN guard (P2-2):** malformed `heartbeatAt` -> not-live (reclaimable) + logged; `staleMs` validated.
+- **Concrete tests + no dup import (P2-3):** skip-wrap, priority transitions (`interrupt` AND `stop`), crash recovery, engine round-trip, hook regression, and CLI verification each have an executable test/command. `createHash` is ALREADY imported in `sidecoach-orchestrator.ts` - do NOT add a duplicate import in Task 6.
 
 **Goal:** Replace P2's best-effort in-process revision guard with a real cross-process at-most-one-committed-transition guarantee for `advanceLane`, via an O_EXCL checkpoint lock + an operation lease + a monotonic fencing token, on a migrated schema-v2 lane checkpoint.
 
@@ -107,14 +120,15 @@ export interface LeaseRecord {
 
 - [ ] **Step 1.4: Schema v2 + migration in `lane-checkpoint-store.ts`**
 
-Change `LaneCheckpoint` to `schemaVersion: 2;` and add `fencingCounter: number; lease: LeaseRecord | null;` (import `LeaseRecord`). Replace `read()`/`write()`:
+Change `LaneCheckpoint` to `schemaVersion: 2;` and add `fencingCounter: number; lease: LeaseRecord | null; sideEffectOutbox: unknown[];` (import `LeaseRecord`). The `sideEffectOutbox` is seeded `[]` and UNUSED in P3 - it exists so P4 (which fills it with typed entries per spec line 770) does NOT need a third migration. Replace `read()`/`write()`:
 
 ```typescript
 import type { StepReport, LaneLifecycle, LaneOutcome, LaneAuditEntry, LeaseRecord } from './lane-types';
+// interface: ... fencingCounter: number; lease: LeaseRecord | null; sideEffectOutbox: unknown[]; // P4 types the entries
 
 private migrate(raw: any): LaneCheckpoint {
-  if (raw.schemaVersion === 2) return raw as LaneCheckpoint;
-  if (raw.schemaVersion === 1) return { ...raw, schemaVersion: 2, fencingCounter: 0, lease: null } as LaneCheckpoint;
+  if (raw.schemaVersion === 2) return { ...raw, sideEffectOutbox: Array.isArray(raw.sideEffectOutbox) ? raw.sideEffectOutbox : [] } as LaneCheckpoint;
+  if (raw.schemaVersion === 1) return { ...raw, schemaVersion: 2, fencingCounter: 0, lease: null, sideEffectOutbox: [] } as LaneCheckpoint;
   throw new Error(`LaneCheckpointStore: unsupported schemaVersion ${raw.schemaVersion}`);
 }
 write(cp: LaneCheckpoint): void {
@@ -189,41 +203,56 @@ run();
 import * as fs from 'fs';
 import * as path from 'path';
 
-export interface LockOpts { retries?: number; retryDelayMs?: number; staleMs?: number; }
+export interface LockOpts { retries?: number; retryDelayMs?: number; staleMs?: number; ownerToken?: string; }
+const LOCK_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
+// O_EXCL lock with a UNIQUE owner token. Two correctness properties (Codex P1-1):
+// (a) a newly-created lock mid-write (unparseable/empty content) is NOT treated as
+//     immediately stale - staleness for unparseable content falls back to FILE
+//     MTIME, so a concurrent reader in the create->write window waits (grace) while
+//     a genuinely crashed-mid-write lock (old mtime) is still reclaimable;
+// (b) release unlinks ONLY if THIS owner still holds the lock - a reclaimed owner
+//     never deletes its replacement's lock.
 export async function withCheckpointLock<T>(
   dir: string, checkpointId: string, fn: () => Promise<T> | T, opts: LockOpts = {},
 ): Promise<T> {
+  if (!LOCK_ID_RE.test(checkpointId) || checkpointId.includes('..')) throw new Error(`withCheckpointLock: illegal checkpointId "${checkpointId}"`);
   const retries = opts.retries ?? 50;
   const delay = opts.retryDelayMs ?? 20;
   const staleMs = opts.staleMs ?? 30000;
+  const myToken = opts.ownerToken ?? `${process.pid}-${process.hrtime.bigint().toString()}-${Math.random().toString(36).slice(2)}`;
   const lockPath = path.join(dir, `${checkpointId}.lock`);
   fs.mkdirSync(dir, { recursive: true });
   let attempt = 0;
   for (;;) {
     try {
-      const fd = fs.openSync(lockPath, 'wx');
-      fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, at: nowIso() }));
-      fs.closeSync(fd);
+      const fd = fs.openSync(lockPath, 'wx');                 // O_EXCL atomic create
+      try { fs.writeFileSync(fd, JSON.stringify({ owner: myToken, pid: process.pid, at: nowIso() })); } finally { fs.closeSync(fd); }
       break;
     } catch (e: any) {
       if (e.code !== 'EEXIST') throw e;
-      let stale = false;
-      try { const info = JSON.parse(fs.readFileSync(lockPath, 'utf8')); stale = (Date.parse(nowIso()) - Date.parse(info.at)) > staleMs; }
-      catch { stale = true; }
+      let info: any = null;
+      try { info = JSON.parse(fs.readFileSync(lockPath, 'utf8')); } catch { info = null; }
+      const ts = info && typeof info.at === 'string' ? Date.parse(info.at) : NaN;
+      let stale: boolean;
+      if (!Number.isNaN(ts)) stale = (Date.now() - ts) > staleMs;       // parseable content: content age
+      else { try { stale = (Date.now() - fs.statSync(lockPath).mtimeMs) > staleMs; } catch { stale = true; } } // unparseable: mtime (grace for mid-write)
       if (stale) { try { fs.unlinkSync(lockPath); } catch { /* raced */ } continue; }
       if (attempt++ >= retries) throw new Error(`withCheckpointLock: could not acquire "${checkpointId}" after ${retries} retries`);
       await sleep(delay);
     }
   }
   try { return await fn(); }
-  finally { try { fs.unlinkSync(lockPath); } catch { /* already gone */ } }
+  finally {
+    try { const cur = JSON.parse(fs.readFileSync(lockPath, 'utf8')); if (cur && cur.owner === myToken) fs.unlinkSync(lockPath); }
+    catch { /* gone or unparseable - leave for stale reclaim; do NOT unlink a non-owned lock */ }
+  }
 }
 function nowIso(): string { return new Date(Date.now()).toISOString(); }
 function sleep(ms: number): Promise<void> { return new Promise((r) => setTimeout(r, ms)); }
 ```
 
-`Date.now()` is fine in production code (banned only in workflow scripts/test modules).
+`Date.now()`/`Math.random()`/`hrtime` are fine in production code (banned only in workflow scripts/test modules). The lock test (2.1) MUST add: a create-window case (a second acquirer seeing an empty lock waits, does not reclaim) and a reclaimed-owner-release case (the original owner's `finally` does NOT delete the replacement's lock).
 
 - [ ] **Step 2.4: Run PASS + register + commit** - add suite `required:true`; `git commit -m "feat(lane-p3): O_EXCL checkpoint lock with stale-lock reclaim"`.
 
@@ -289,8 +318,13 @@ import type { LeaseRecord } from './lane-types';
 
 export function leaseIsLive(lease: LeaseRecord | null, nowMs: number, staleMs = 30000): boolean {
   if (!lease) return false;
-  return (nowMs - Date.parse(lease.heartbeatAt)) <= staleMs;
+  const hb = Date.parse(lease.heartbeatAt);
+  if (Number.isNaN(hb)) { process.stderr.write('[lane] malformed lease heartbeatAt; treating as not-live (reclaimable)\n'); return false; }
+  return (nowMs - hb) <= staleMs;
 }
+
+// The FULL identity FINALIZE must match (spec line 709) - not just operationId.
+export type LeaseIdentity = Pick<LeaseRecord, 'operationId' | 'stepId' | 'iteration' | 'claimedCheckpointRevision' | 'fencingToken'>;
 
 export interface ClaimOpts { expectedRevision: number; stepId: string; iteration: number; operationId: string; now?: () => string; staleMs?: number; }
 
@@ -311,11 +345,14 @@ export async function claimLease(store: LaneCheckpointStore, checkpointId: strin
   });
 }
 
-export async function finalizeLease(store: LaneCheckpointStore, checkpointId: string, operationId: string, mutate: (cp: LaneCheckpoint) => void, now?: () => string): Promise<LaneCheckpoint> {
+export async function finalizeLease(store: LaneCheckpointStore, checkpointId: string, identity: LeaseIdentity, mutate: (cp: LaneCheckpoint) => void, now?: () => string): Promise<LaneCheckpoint> {
   const clock = now ?? (() => new Date(Date.now()).toISOString());
   return withCheckpointLock(store.dir(), checkpointId, () => {
     const cp = store.read(checkpointId);
-    if (!cp.lease || cp.lease.operationId !== operationId) throw new Error(`finalizeLease: operation ${operationId} no longer owns the lease (current ${cp.lease?.operationId ?? 'none'})`);
+    const L = cp.lease;
+    const owns = !!L && L.operationId === identity.operationId && L.stepId === identity.stepId && L.iteration === identity.iteration
+      && L.claimedCheckpointRevision === identity.claimedCheckpointRevision && L.fencingToken === identity.fencingToken;
+    if (!owns) throw new Error(`finalizeLease: lease identity mismatch (current op ${L?.operationId ?? 'none'}, fencing ${L?.fencingToken ?? 'n/a'})`);
     mutate(cp);
     cp.lease = null;
     cp.revision += 1; cp.updatedAt = clock();
@@ -325,7 +362,33 @@ export async function finalizeLease(store: LaneCheckpointStore, checkpointId: st
 }
 ```
 
-Update `startLane` (lane-runner.ts) to create `schemaVersion: 2, fencingCounter: 0, lease: null`.
+`claimLease` returns the checkpoint with its written `lease`; callers capture the FULL identity (`const claimed = await claimLease(...); const id = claimed.lease!;`) and pass `id` to `finalizeLease`. Update the Task 3.1 test's `finalizeLease` calls to pass the identity object (e.g. `await finalizeLease(store, 'cp1', c1.lease!, (cp) => {...})`); the superseded-op case passes a stale identity and expects rejection.
+
+Update `startLane` (lane-runner.ts): (a) wrap the ENTIRE `findByStartRequestId`-check-then-create sequence under a lock keyed by the start-request so concurrent starts map one `startRequestId` to exactly one checkpoint (Codex P1-5):
+
+```typescript
+import { createHash } from 'crypto';
+import { withCheckpointLock } from './lane-lock';
+// in startLane, after validating startRequestId and resolving the lane:
+const startLockId = 'start-' + createHash('sha256').update(startRequestId).digest('hex').slice(0, 40);
+return withCheckpointLock(d.store.dir(), startLockId, () => {
+  const existing = d.store.findByStartRequestId(startRequestId);
+  if (existing && !isClosed(existing.lifecycle)) {
+    if (existing.laneId !== laneId) throw new Error(`startLane: startRequestId already maps to active lane "${existing.laneId}"`);
+    return serveStep(existing, resolveLane(existing.laneId), context, d);
+  }
+  const ts = d.now();
+  const cp: LaneCheckpoint = { schemaVersion: 2, checkpointId: d.newCheckpointId(), laneId, target,
+    executionKind: l.executionKind, lifecycle: 'in_progress', cursor: 0, iteration: 0,
+    completedStepIds: [], skippedStepIds: [], completedFlowIds: [], stepReports: [], audit: [],
+    servedSteps: {}, revision: 0, startRequestId, seenReportIds: [], fencingCounter: 0, lease: null,
+    sideEffectOutbox: [], createdAt: ts, updatedAt: ts };
+  d.store.write(cp);
+  return serveStep(cp, l, context, d);
+});
+```
+
+(b) since `serveStep` now also takes the checkpoint lock for its persistence (P1-2), and `startLane` holds the start-lock - NOT the checkpoint lock - these are different lock keys (`start-<hash>` vs `<checkpointId>`), so no self-deadlock. Confirm the two key spaces never collide (a `checkpointId` is `lane-...`; a start-lock is `start-...`).
 
 - [ ] **Step 3.4: Run PASS + register + commit** - `git commit -m "feat(lane-p3): lease CLAIM/FINALIZE under O_EXCL lock (fencing token, owner-checked commit)"`.
 
@@ -364,9 +427,17 @@ async function run() {
   const d = deps(proj);
   const start = await startLane('lane_build', 'hero', { projectPath: proj }, 'req-1', d);
 
+  // barrier: release BOTH callers only after BOTH have passed their early-guard
+  // read at the SAME revision, then race the claim. (Without this, the first
+  // caller writes before yielding and the second just rejects on revision - which
+  // would also pass on P2's best-effort guard and prove nothing. Codex P1-4.)
+  let arrived = 0; let release!: () => void;
+  const gate = new Promise<void>((r) => { release = r; });
+  const barrier = async () => { if (++arrived >= 2) release(); await gate; };
+  const d2 = { ...d, __claimBarrier: barrier } as any;   // advanceLane awaits this after the early read, before claimLease
   const both = await Promise.allSettled([
-    advanceLane(proj, start.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: start.revision }, d),
-    advanceLane(proj, start.checkpointId, { action: 'complete', report: { ...rep('shape'), reportId: 'r:shape2' }, expectedRevision: start.revision }, d),
+    advanceLane(proj, start.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: start.revision }, d2),
+    advanceLane(proj, start.checkpointId, { action: 'complete', report: { ...rep('shape'), reportId: 'r:shape2' }, expectedRevision: start.revision }, d2),
   ]);
   const ok = both.filter((r) => r.status === 'fulfilled');
   if (ok.length !== 1) throw new Error(`exactly one concurrent advance must commit, got ${ok.length}`);
@@ -393,9 +464,9 @@ const step = l.verbSteps[cp.cursor];
 const servedKey = `${cp.cursor}:${cp.iteration}`;
 const served = cp.servedSteps[servedKey];
 if (!served || served.flowIds.length !== step.flowIds.length) throw new Error('advanceLane: step not fully served');
-await claimLease(d.store, checkpointId, { expectedRevision: transition.expectedRevision, stepId: step.verb, iteration: cp.iteration, operationId: d.newOperationId(), now: d.now });
-const opId = d.store.read(checkpointId).lease!.operationId;
-const final = await finalizeLease(d.store, checkpointId, opId, (c) => {
+const claimed = await claimLease(d.store, checkpointId, { expectedRevision: transition.expectedRevision, stepId: step.verb, iteration: cp.iteration, operationId: d.newOperationId(), now: d.now });
+const id = claimed.lease!;   // FULL identity captured from the claim (do NOT re-read outside the lock)
+const final = await finalizeLease(d.store, checkpointId, id, (c) => {
   c.seenReportIds.push(r.reportId); c.stepReports.push(r); c.completedStepIds.push(step.verb);
   for (const f of served.successfulFlowIds) if (!c.completedFlowIds.includes(f)) c.completedFlowIds.push(f);
   c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: c.revision, at: d.now() });
@@ -404,7 +475,15 @@ const final = await finalizeLease(d.store, checkpointId, opId, (c) => {
 return buildStepResult(final, l, { projectPath }, d);
 ```
 
-The dup/interrupted/closed/revision guards stay BEFORE the claim (they read the current cp). Note `claimLease` re-verifies `expectedRevision` under the lock (TOCTOU-safe). Apply the same claim/finalize wrap to `skip` (mutation: push skippedStepId + advanceCursorInPlace). Delete the old `bump()` if now unused.
+The dup/interrupted/closed/revision guards stay BEFORE the claim (they read the current cp). `claimLease` re-verifies `expectedRevision` under the lock (TOCTOU-safe) AND rejects a live lease. The full identity is captured from `claimed.lease` (NOT re-read outside the lock - a priority transition could clear it between).
+
+**ALL checkpoint writes must be under the lock (Codex P1-2):**
+- `retry` mutates revision/report/audit, so it MUST also run under the lock (claim a lease, finalize) OR be rejected while a live lease exists - do NOT mutate a checkpoint that has a live lease outside the protocol. Simplest: in `advanceLane`, after the early guards, if `leaseIsLive(cp.lease, Date.parse(d.now()))` and the action is an ORDINARY transition (`complete`/`skip`/`retry`/`resume`), REJECT with "an operation holds this checkpoint"; only `interrupt`/`stop` may proceed over a live lease (Task 5).
+- `serveStep` currently writes a checkpoint snapshot (the served cache) WITHOUT the lock and WITHOUT bumping revision. A concurrent committed transition can be clobbered by that stale snapshot. FIX: `serveStep`'s persistence must run under `withCheckpointLock`, RE-READING the current checkpoint, MERGING only the `servedSteps[key]` it produced into the fresh copy, and writing that - never writing a whole stale `cp` it captured earlier. (It still does not bump the semantic revision.) Add a test: a `serveStep` write interleaved after a committed `complete` does not revert the commit.
+
+Apply the same claim/finalize wrap to `skip` (mutation: push skippedStepId + advanceCursorInPlace). Delete the old `bump()` once unused.
+
+Add `__claimBarrier?: () => Promise<void>` to `LaneRunnerDeps` (optional test seam). In `advanceLane`, immediately AFTER the early-guard read and BEFORE `claimLease`, call `await d.__claimBarrier?.()`. Production passes no barrier (no-op); the concurrency test (4.1) uses it to force two callers past their read at the same revision before either claims.
 
 - [ ] **Step 4.4: Run PASS** - the concurrency suite AND existing `lane-runner-advance-sequence`/`-transitions`/`-skip-prereq` stay green (observable behavior unchanged; only the commit mechanism changed). Register concurrency suite `required:true`.
 
