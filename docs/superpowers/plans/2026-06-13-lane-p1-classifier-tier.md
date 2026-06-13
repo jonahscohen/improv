@@ -355,6 +355,14 @@ Expected: FAIL - `AttributeError: module 'sidecoach_lanes' has no attribute 'seg
 ABBREVIATIONS = ["e.g.", "i.e.", "vs.", "etc.", "Dr.", "Mr.", "Ms."]
 CONJUNCTION_BOUNDARIES = [", but", ", and", ", or", ", yet", ", so"]
 _TERMINATORS = ".!?;\n"
+# A comma-conjunction boundary requires the conjunction WORD followed by a
+# non-word character (whitespace / EOL), NOT a bare prefix - so ", butter"
+# (which starts with ", but") must NOT split, while ", and " does. Built from
+# CONJUNCTION_BOUNDARIES so the word list stays the single source of truth.
+_CONJUNCTION_RE = re.compile(
+    "(?:" + "|".join(re.escape(cb) for cb in CONJUNCTION_BOUNDARIES) + r")(?![\w])",
+    re.IGNORECASE,
+)
 
 
 def segment_clauses(text):
@@ -374,8 +382,10 @@ def segment_clauses(text):
             i += 1
             continue
         if ch == ",":
-            window = masked[i:i + 6].lower()
-            if any(window.startswith(cb) for cb in CONJUNCTION_BOUNDARIES):
+            # Match the conjunction WORD anchored at this comma; the lookahead
+            # in _CONJUNCTION_RE sees the real following char/EOL, so ", butter"
+            # does not split but ", and " does.
+            if _CONJUNCTION_RE.match(masked, i):
                 cuts.append(i + 1)
                 i += 1
                 continue
@@ -1121,6 +1131,8 @@ Expected: FAIL - `loadRegistry`/`classifyIntent` not exported from keyword-resol
 - [ ] **Step 4: Add the TS classifier mirror to `sidecoach/mcp-server/src/keyword-resolver.ts`** (append these exports; they mirror `sidecoach_lanes.py` exactly)
 
 First add `import * as fs from 'fs';` to the TOP of the file, alongside the existing `import type { ModeEntry, VerbEntry } from './registries';` line (imports belong at module top, not mid-file). Then append the rest of this block:
+
+> **Parity note (conjunction boundary - REQUIRED):** `segmentClauses` MUST treat a comma-conjunction boundary as the conjunction WORD followed by a non-word char (or EOL), NOT the `startsWith` prefix shown in the fence below - mirror the Python `_CONJUNCTION_RE` fix (`^(?:, but|, and|, or|, yet|, so)(?![\w])` anchored at the comma). Otherwise ", butter" wrongly splits where ", but" never should, and the Python/TS parity corpus diverges (this was the Task 2 over-segmentation bug).
 
 ```typescript
 // NOTE: `import * as fs from 'fs';` goes at the TOP of the file (see above) - do not place it here.

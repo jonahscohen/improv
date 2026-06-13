@@ -31,6 +31,14 @@ def load_registry(path):
 ABBREVIATIONS = ["e.g.", "i.e.", "vs.", "etc.", "Dr.", "Mr.", "Ms."]
 CONJUNCTION_BOUNDARIES = [", but", ", and", ", or", ", yet", ", so"]
 _TERMINATORS = ".!?;\n"
+# A comma-conjunction boundary requires the conjunction WORD followed by a
+# non-word character (whitespace / EOL), NOT a bare prefix - so ", butter"
+# (which starts with ", but") must NOT split, while ", and " does. Built from
+# CONJUNCTION_BOUNDARIES so the word list stays the single source of truth.
+_CONJUNCTION_RE = re.compile(
+    "(?:" + "|".join(re.escape(cb) for cb in CONJUNCTION_BOUNDARIES) + r")(?![\w])",
+    re.IGNORECASE,
+)
 
 
 def segment_clauses(text):
@@ -50,8 +58,10 @@ def segment_clauses(text):
             i += 1
             continue
         if ch == ",":
-            window = masked[i:i + 6].lower()
-            if any(window.startswith(cb) for cb in CONJUNCTION_BOUNDARIES):
+            # Match the conjunction WORD anchored at this comma; the lookahead
+            # in _CONJUNCTION_RE sees the real following char/EOL, so ", butter"
+            # does not split but ", and " does.
+            if _CONJUNCTION_RE.match(masked, i):
                 cuts.append(i + 1)
                 i += 1
                 continue

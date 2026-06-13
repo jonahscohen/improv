@@ -72,6 +72,25 @@ def test_spans_are_length_preserving():
     assert "".join(text[a:b] for a, b in spans) == text
 
 
+def test_conjunction_boundary_is_word_not_prefix():
+    # Regression: a comma followed by a word that merely STARTS with a
+    # conjunction (", butter" starts with ", but") must NOT split. Only the
+    # conjunction WORD (", and " here, followed by a non-word char) splits.
+    text = "add salt, butter, and pepper to the gradient"
+    spans = sl.segment_clauses(text)
+    clauses = [text[a:b] for a, b in spans]
+    # ", butter" did NOT split -> "salt, butter" stays inside one clause
+    assert any("salt, butter" in c for c in clauses)
+    # ", and" DID split -> a clause begins with "and pepper"
+    assert any(c.strip().startswith("and pepper") for c in clauses)
+    # exactly one split (the ", and"), so two clauses
+    assert len(spans) == 2
+    # still length-preserving
+    assert "".join(text[a:b] for a, b in spans) == text
+    # do not over-correct: a real ", and " still splits on its own
+    assert len(sl.segment_clauses("ship it, and call it done")) == 2
+
+
 if __name__ == "__main__":
     try:
         import pytest
