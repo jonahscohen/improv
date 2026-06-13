@@ -1,100 +1,98 @@
-# Lane Execution + Phrase Wiring (Phase 2) Implementation Plan
+# Lane Execution + Phrase Wiring (Phase 2) Implementation Plan - v2
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make lanes actually *run* - a step-by-step lane execution state machine on `FlowExecutionEngine` - and connect the already-built `/sidecoach <phrase>` resolver so natural language reaches a running lane end to end.
+**Goal:** Make **sequence** lanes actually *run* - a step-by-step lane execution state machine on `FlowExecutionEngine` - and wire the already-built `/sidecoach <phrase>` resolver into the live `process()` entrypoint so natural language reaches a running lane end to end.
 
-**Architecture:** P1 gave us understanding (a classifier that picks a lane) and the data (`lanes.generated.ts` exposing each lane's `verbChain`, `verbGuidance`, `flowSequence`, `executionKind`). P2 adds *doing*: a new `LaneCheckpoint` persisted per run, four engine methods (`startLane` / `advanceLane` / `laneStatus` / `listLanes`) that walk a lane's **verb steps** (each verb step serves its member flows' handler guidance plus the verb's coaching guidance), and a model-attested `StepReport` contract to advance. The existing one-shot `engine.process()` and the flow `CheckpointStore` (schemaVersion 1) are left untouched; lane state lives in a separate `LaneCheckpointStore`. The P1 `resolveSidecoachPhrase` (built, unit-tested, currently caller-less) gets wired into the live command path, and a thin monitor CLI surface exposes the four operations so the model can drive a lane without waiting on the P4 MCP migration.
+**Architecture:** P1 gave understanding (the classifier) and data (`lanes.generated.ts`: each lane's `verbChain`, `verbGuidance`, `flowSequence`, `executionKind`). P2 adds *doing* for sequence lanes only: a new `LaneCheckpoint` (separate from the pinned flow `CheckpointStore`), four engine methods (`startLane`/`advanceLane`/`laneStatus`/`listLanes`) that walk a lane's **verb steps**, and a model-attested `StepReport` contract. Lane state uses the spec's **two-axis** model - `lifecycle` (`in_progress` | `interrupted` | `closed`) and `outcome` (`completed` | `partial` | `stopped` | `converged`) - never a collapsed `status`. Served step guidance is **persisted** so idempotent transitions never re-run handlers. The live entrypoint is `FlowExecutionEngine.process()` (the same method the monitor already calls), gated on `^/sidecoach\s+(.+)$`. The CLI/tests use the existing `createExecutionEngine()` factory (the only constructor that registers flow handlers).
 
-**Tech Stack:** TypeScript (engine, `sidecoach/src/`), Node CLI (`sidecoach/bin/`), ts-node test runner via the P1 enumerating runner (`sidecoach/scripts/run-tests.ts` over `sidecoach/src/__tests__/*.test.ts`). No pytest, no new deps.
+**Tech Stack:** TypeScript (`sidecoach/src/`), Node CLI (`sidecoach/bin/`), ts-node test runner via the explicit `SUITES` array in `sidecoach/scripts/run-tests.ts`. No pytest, no new deps.
 
-**Scope discipline (read before starting):** This plan is ONE coherent subsystem. It deliberately does NOT build:
-- **Durability hardening (-> P3):** cross-process leases, `operationId`, fencing tokens, the side-effect outbox, checkpoint schema migration, realpath project canonicalization, `AbortSignal` propagation, full concurrent-advance safety. P2 implements only the *cheap in-process* idempotency that keeps the API shape stable: `startRequestId` dedup, `expectedRevision` compare-and-swap, and `reportId` dedup via `seenReportIds`. The method signatures match the spec (section 7) so P3 adds machinery without changing them.
-- **Validators + convergence floor (-> P4):** `product-rule-registry.ts`, `flow-validation-capabilities.ts`, validator gating at step/iteration boundaries, the release floor, and `lane_converge`'s truthful convergence. In P2, step completion is purely **model-attested** (a valid `StepReport` advances; no validator can block). Loop lanes iterate until an explicit `stop`. P4 layers the gates on top of this contract.
-- **MCP migration + cleanup (-> P4):** `sidecoach_classify_intent` / `list-lanes` / `sidecoach_lane` tools, `modes.ts` + `dist/modes.js` deletion, `ralph-loop.ts` -> `convergence-loop.ts` rename, SKILL/CHEATSHEET/marketing regeneration. P2 ships a monitor-CLI surface instead.
+---
 
-If any task below tempts you to pull P3/P4 work forward, stop and leave it - the deferral is intentional.
+## What changed from v1 (Codex review `task-mqcsq8ko`, NEEDS-FIXES - all folded here)
+
+- **Sequence-only scope.** `lane_converge` is the ONLY loop lane (verified: `lanes.generated.ts` - the other five, including `lane_calm`, are `sequence`), and its convergence floor is P4 validator work. So P2 executes sequence lanes only, **rejects** starting a loop lane, and defers ALL loop execution to P4. v1's loop-boundary task is deleted. (Codex P0-7, P2-16)
+- **Two-axis lifecycle/outcome** replaces the single `status` field; sequence completion closes `lifecycle: closed` with `outcome: completed | partial`; only validated loops (P4) reach `converged`. (Codex P0-1)
+- **Live wiring into `process()`** - the resolver is called from the real entrypoint and routed (`ROUTE` -> `startLane`), tested through `process()`. v1 left it caller-less. (Codex P0-3)
+- **Real prerequisite validator** - Task 7 uses `FlowPrerequisiteValidator.getDependencies()` + `prereqWaivers` as exact edge exceptions + checkpoint-local completed flows, with a genuinely-failing unsafe-skip test. v1's `prereqWaivers`-as-graph logic was inverted. (Codex P0-4)
+- **Empty-flow verb steps allowed** (guidance-only steps like `lane_build/polish`, `lane_calm/distill` legitimately have no unique flows). (Codex P0-2)
+- **Interrupt semantics** - only `resume` is valid against an interrupted checkpoint; interrupt does not re-run handlers. (Codex P0-5)
+- **Persisted served output + real handler dispatch** - the engine enriches context and checks `canExecute` (degraded guidance if not), and served output is cached in the checkpoint so retry/resume/duplicate never re-execute. v1's synthetic `utterance:''` dispatch is gone. (Codex P0-6)
+- **Engine factory** - everything uses `createExecutionEngine()` (registers handlers); `new FlowExecutionEngine()` has no handlers. (Codex P1-12)
+- Cheap P2 safety brought forward: checkpoint-id validation + project `realpath` canonicalization (Codex P1-9); `listLanes(options?)` (P1-10); start-request lane-mismatch handling (P1-11); spec CLI flags `--lane`/`--start-request-id` (P1-12); explicit `SUITES` registration `required:true` (P1-13); phrase regex gated to `/sidecoach <phrase>` only (P1-14); no `git add -A` (P1-15); transition audit log (P1-8); e2e requires `outcome: completed` (P2-17).
+
+**Still deferred (do NOT build here):**
+- **P3 - durability:** cross-process leases/`operationId`, fencing tokens, side-effect outbox, checkpoint schema migration, `AbortSignal`. (P2 keeps only in-process idempotency: `startRequestId` dedup, `expectedRevision` CAS, `reportId` dedup, persisted served output.)
+- **P4 - validators + loops + MCP + cleanup:** `product-rule-registry.ts`, `flow-validation-capabilities.ts`, validator gating, **loop execution + `lane_converge` + the convergence floor**, `ralph-loop.ts` -> `convergence-loop.ts`, MCP `classify-intent`/`list-lanes`/`sidecoach_lane`, `modes.ts`/`dist` deletion, SKILL/CHEATSHEET/marketing regen.
+
+If a task tempts you to pull deferred work forward, stop - the deferral is intentional.
 
 ---
 
 ## File Structure
 
 **Create:**
-- `sidecoach/src/lane-types.ts` - the lane execution contract types (`LaneTransition`, `StepReport`, `StepEvidence`, `LaneStepResult`, `LaneState`, `LaneInfo`). One file, types only, so every later task imports a single source.
-- `sidecoach/src/lane-checkpoint-store.ts` - `LaneCheckpoint` record + `LaneCheckpointStore` (project-scoped, atomic write, `.claude/lane-checkpoints/`). Separate from the flow `CheckpointStore` so the pinned schemaVersion-1 flow checkpoint is never disturbed.
-- `sidecoach/src/lane-runner.ts` - the lane state machine (`startLane` / `advanceLane` / `laneStatus` / `listLanes`) as standalone functions taking the engine + stores as args. Kept out of the 1648-line orchestrator for focus; `FlowExecutionEngine` gets thin delegating methods (Task 9).
-- `sidecoach/src/__tests__/lane-checkpoint-store.test.ts`
-- `sidecoach/src/__tests__/lane-runner-start.test.ts`
-- `sidecoach/src/__tests__/lane-runner-advance-sequence.test.ts`
-- `sidecoach/src/__tests__/lane-runner-advance-loop.test.ts`
-- `sidecoach/src/__tests__/lane-runner-transitions.test.ts`
-- `sidecoach/src/__tests__/lane-runner-status-list.test.ts`
-- `sidecoach/src/__tests__/slash-phrase-wiring.test.ts`
-- `sidecoach/src/__tests__/lane-execution-e2e.test.ts`
+- `sidecoach/src/lane-types.ts` - contract types (`LaneLifecycle`, `LaneOutcome`, `LaneTransition`, `StepReport`, `StepEvidence`, `LaneAuditEntry`, `LaneStepResult`, `LaneState`, `LaneInfo`).
+- `sidecoach/src/lane-checkpoint-store.ts` - `LaneCheckpoint` + `LaneCheckpointStore` (project-realpath-scoped, checkpoint-id validated, atomic write, `.claude/lane-checkpoints/`).
+- `sidecoach/src/lane-runner.ts` - the sequence state machine + the prerequisite-safe skip + served-output persistence.
+- Test files: `lane-types.test.ts`, `lane-checkpoint-store.test.ts`, `lane-runner-start.test.ts`, `lane-runner-advance-sequence.test.ts`, `lane-runner-transitions.test.ts`, `lane-runner-skip-prereq.test.ts`, `lane-runner-status-list.test.ts`, `lane-engine-methods.test.ts`, `slash-phrase-wiring.test.ts`, `lane-cli.test.ts`, `lane-execution-e2e.test.ts` (all under `sidecoach/src/__tests__/`).
 
 **Modify:**
-- `sidecoach/src/lane-derivation.ts` + `sidecoach/scripts/generate-lanes.ts` + `sidecoach/src/lanes.generated.ts` - emit a derived `verbSteps: { verb, flowIds, guidance }[]` per lane (Task 2). Regenerated, `--check`-guarded.
-- `sidecoach/src/slash-command-router.ts` - wire `resolveSidecoachPhrase` into a live `resolveSidecoachInput()` entrypoint (Task 10). `parseSlashCommand` stays byte-stable for known commands; only the previously-dead unknown branch gains phrase resolution.
-- `sidecoach/src/sidecoach-orchestrator.ts` - add four thin delegating methods on `FlowExecutionEngine` (Task 9).
-- `sidecoach/bin/sidecoach-monitor.js` - add `lane` subcommands (Task 11), mirroring the existing `engine.process()` instantiation at line 53.
-- `sidecoach/scripts/run-tests.ts` - register the new test files if the runner enumerates explicitly (verify in Setup).
+- `sidecoach/src/lane-derivation.ts` + `sidecoach/scripts/generate-lanes.ts` + `sidecoach/src/lanes.generated.ts` - emit `verbSteps` (Task 2).
+- `sidecoach/src/slash-command-router.ts` - `resolveSidecoachInput()` (Task 10).
+- `sidecoach/src/sidecoach-orchestrator.ts` - four engine methods (Task 9) + `process()` phrase wiring (Task 10).
+- `sidecoach/bin/sidecoach-monitor.js` - `lane` subcommands (Task 11).
+- `sidecoach/scripts/run-tests.ts` - register each new suite in `SUITES` with `required: true` (every task that adds a test).
 
-**Read-only references (do not modify):**
-- `sidecoach/src/checkpoint-store.ts` - `SidecoachCheckpoint` (schemaVersion 1) is the *pattern* to copy (atomic tmp+rename, project-scoped dir), NOT the store to extend.
-- `sidecoach/src/flow-handler.ts` - `FlowExecutionContext`, `FlowExecutionResult` (`{ flowId, flowName, status, message, guidance?, checklist? }`), `FlowHandler.execute()`.
-- `sidecoach/src/lanes.generated.ts` - `GeneratedLane` (`lane, label, executionKind, verbChain, flowSequence, verbGuidance, prereqWaivers`).
-- `sidecoach/src/verb-command-registry.ts` - `getVerbEntry(verb) -> { flowIds, description }`.
+**Read-only references:** `checkpoint-store.ts` (atomic-write pattern), `flow-handler.ts` (`FlowExecutionResult`), `flow-prerequisites.ts` (`FlowPrerequisiteValidator`), `lanes.generated.ts` (`GeneratedLane`), `sidecoach-orchestrator.ts:1629` (`SidecoachResult`), `:1646` (`createExecutionEngine`), `:230-260` (enrich -> canExecute -> execute pattern).
 
 ---
 
 ## Setup
 
-- [ ] **Step 0.1: Branch off main**
+- [ ] **Step 0.1: Branch + cleanliness check**
 
 ```bash
 cd /Users/spare3/Documents/Github/improv
-git checkout main && git pull --ff-only 2>/dev/null; git checkout -b lane-p2-execution
+git checkout main && git checkout -b lane-p2-execution
 git branch --show-current   # expect: lane-p2-execution
+# The worktree is dirty with UNRELATED workstreams. Record the pre-existing dirty
+# set so the final scope check (Task 13) can prove this plan added nothing to it:
+git status --porcelain | grep -v '^??' | sort > /tmp/lane-p2-preexisting-dirty.txt
+wc -l /tmp/lane-p2-preexisting-dirty.txt
 ```
 
-- [ ] **Step 0.2: Confirm the test runner enumerates `src/__tests__/`**
-
-Run: `cd sidecoach && cat scripts/run-tests.ts`
-Confirm whether it globs `src/__tests__/*.test.ts` or lists files explicitly. If explicit, every new test file below must be added to its list in the same task that creates it (note it inline). If it globs, no runner edits are needed. Record which it is before proceeding.
-
-- [ ] **Step 0.3: Baseline green**
+- [ ] **Step 0.2: Baseline green**
 
 Run: `cd sidecoach && npm run build && npm test`
-Expected: build exit 0; `run-tests: N suite(s) passed` (the P1 surface - intent-detector, engine+mcp parity, slash-phrase, lane-derivation). If not green on a fresh main, STOP and escalate - do not build on a red baseline.
+Expected: build exit 0; `run-tests: N suite(s) passed`. The runner is the explicit `SUITES` array in `scripts/run-tests.ts` (NOT a glob) - every new suite below must be appended to it with `required: true` in the task that creates it. If red on fresh main, STOP.
 
 ---
 
-## Task 1: Lane execution contract types
+## Task 1: Lane execution contract types (lifecycle/outcome two-axis)
 
-**Files:**
-- Create: `sidecoach/src/lane-types.ts`
-- Test: `sidecoach/src/__tests__/lane-types.test.ts`
+**Files:** Create `sidecoach/src/lane-types.ts`; Test `sidecoach/src/__tests__/lane-types.test.ts`
 
 - [ ] **Step 1.1: Write the failing test**
 
 ```typescript
 // sidecoach/src/__tests__/lane-types.test.ts
-import { makeStepReport, isTerminalLaneStatus } from '../lane-types';
+import { makeStepReport, isClosed, LaneLifecycle } from '../lane-types';
 
 function run() {
-  const r = makeStepReport({
-    stepId: 'shape', iteration: 0, reportId: 'r1', verb: 'shape',
-    summary: 'did the thing', evidence: [{ kind: 'note', detail: 'x' }],
-  });
+  const r = makeStepReport({ stepId: 'shape', iteration: 0, reportId: 'r1', verb: 'shape', summary: 'did it', evidence: [{ kind: 'note', detail: 'x' }] });
   if (r.evidence.length !== 1) throw new Error('evidence not preserved');
-  if (!isTerminalLaneStatus('converged')) throw new Error('converged should be terminal');
-  if (isTerminalLaneStatus('in_progress')) throw new Error('in_progress is not terminal');
+  const closed: LaneLifecycle = 'closed';
+  if (!isClosed(closed)) throw new Error('closed must be terminal');
+  if (isClosed('in_progress')) throw new Error('in_progress is not terminal');
+  if (isClosed('interrupted')) throw new Error('interrupted is not terminal (resumable)');
   console.log('lane-types: OK');
 }
 run();
 ```
 
-- [ ] **Step 1.2: Run it, verify it fails**
+- [ ] **Step 1.2: Run, verify it fails**
 
 Run: `cd sidecoach && npx ts-node src/__tests__/lane-types.test.ts`
 Expected: FAIL - `Cannot find module '../lane-types'`.
@@ -103,159 +101,135 @@ Expected: FAIL - `Cannot find module '../lane-types'`.
 
 ```typescript
 // sidecoach/src/lane-types.ts
-// The lane execution contract. Mirrors spec section 7, scoped to P2:
-// idempotency KEYS are present (startRequestId, expectedRevision, reportId)
-// but distributed-safety machinery (leases, fencing, outbox) is P3.
+// Lane execution contract. Two-axis lifecycle/outcome per spec section 7
+// (lines 636-649). P2 carries idempotency KEYS (startRequestId, expectedRevision,
+// reportId) but not P3 distributed-safety machinery.
 import type { FlowId } from './types';
 
 export type LaneAction = 'complete' | 'retry' | 'skip' | 'resume' | 'interrupt' | 'stop';
+export type LaneLifecycle = 'in_progress' | 'interrupted' | 'closed';
+export type LaneOutcome = 'completed' | 'partial' | 'stopped' | 'converged';
 
-export type LaneStatus = 'in_progress' | 'converged' | 'stopped' | 'interrupted';
-
-export interface StepEvidence {
-  kind: 'files' | 'screenshot' | 'validation' | 'note';
-  detail: string;
-}
+export interface StepEvidence { kind: 'files' | 'screenshot' | 'validation' | 'note'; detail: string; }
 
 export interface StepReport {
-  stepId: string;          // the verb step this reports on (the verb name)
-  iteration: number;       // loop lanes: which pass (0 for sequence lanes)
-  reportId: string;        // idempotency key; a re-sent reportId is a no-op
+  stepId: string;        // the verb step (verb name)
+  iteration: number;     // 0 for sequence lanes (P2 is sequence-only)
+  reportId: string;      // idempotency key; re-sent reportId is a no-op
   verb: string;
   summary: string;
-  evidence: StepEvidence[];          // at least one entry (validated in advanceLane)
+  evidence: StepEvidence[];          // >= 1 entry (enforced in advanceLane)
   checklistResults?: { itemId: string; done: boolean }[];
 }
 
 export interface LaneTransition {
   action: LaneAction;
   report?: StepReport;       // REQUIRED for 'complete'
-  expectedRevision: number;  // compare-and-swap; stale revision = error
-  reason?: string;           // for skip/stop/interrupt audit
+  expectedRevision: number;  // compare-and-swap; stale = error
+  reason?: string;           // REQUIRED for 'skip'; recorded for stop/interrupt
 }
 
-// What a step serves to the model.
+export interface LaneAuditEntry {
+  revision: number; action: LaneAction; stepId?: string; iteration: number;
+  reason?: string; reportId?: string; at: string;
+}
+
 export interface LaneStepResult {
-  checkpointId: string;
-  laneId: string;
-  laneLabel: string;
-  status: LaneStatus;
-  executionKind: 'sequence' | 'loop';
-  iteration: number;
-  stepIndex: number;          // cursor over the lane's verb steps
-  totalSteps: number;
-  currentVerb?: string;       // undefined when status is terminal
-  guidance: string[];         // verb coaching guidance + each member flow's handler guidance
+  checkpointId: string; laneId: string; laneLabel: string;
+  lifecycle: LaneLifecycle; outcome?: LaneOutcome;
+  executionKind: 'sequence' | 'loop'; iteration: number;
+  stepIndex: number; totalSteps: number;
+  currentVerb?: string;                 // undefined when closed
+  guidance: string[];
   checklist: { id: string; label: string; required: boolean; completed: boolean }[];
-  flowIds: FlowId[];          // the member flows of the current verb step
-  revision: number;           // pass back as expectedRevision on the next advance
+  flowIds: FlowId[];
+  revision: number;                     // pass as expectedRevision next advance
   message: string;
 }
 
 export interface LaneState {
-  checkpointId: string;
-  laneId: string;
-  status: LaneStatus;
-  executionKind: 'sequence' | 'loop';
-  iteration: number;
-  stepIndex: number;
-  totalSteps: number;
-  completedStepIds: string[];
-  revision: number;
-  createdAt: string;
-  updatedAt: string;
+  checkpointId: string; laneId: string; target: string;
+  lifecycle: LaneLifecycle; outcome?: LaneOutcome;
+  executionKind: 'sequence' | 'loop'; iteration: number;
+  stepIndex: number; totalSteps: number; currentVerb?: string;
+  completedStepIds: string[]; skippedStepIds: string[]; completedFlowIds: FlowId[];
+  stepReports: StepReport[]; audit: LaneAuditEntry[];
+  revision: number; createdAt: string; updatedAt: string;
 }
 
 export interface LaneInfo {
-  checkpointId: string;
-  laneId: string;
-  status: LaneStatus;
-  stepIndex: number;
-  totalSteps: number;
-  updatedAt: string;
+  checkpointId: string; laneId: string;
+  lifecycle: LaneLifecycle; outcome?: LaneOutcome;
+  stepIndex: number; totalSteps: number; updatedAt: string;
 }
 
-export function makeStepReport(r: StepReport): StepReport {
-  return { ...r, evidence: [...r.evidence] };
-}
-
-export function isTerminalLaneStatus(s: LaneStatus): boolean {
-  return s === 'converged' || s === 'stopped';
-}
+export function makeStepReport(r: StepReport): StepReport { return { ...r, evidence: [...r.evidence] }; }
+export function isClosed(l: LaneLifecycle): boolean { return l === 'closed'; }
 ```
 
-- [ ] **Step 1.4: Run it, verify it passes**
+- [ ] **Step 1.4: Run, verify it passes; register suite**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-types.test.ts`
-Expected: `lane-types: OK`. If the runner is explicit (Step 0.2), add this file to it now.
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-types.test.ts` -> `lane-types: OK`.
+Add to `scripts/run-tests.ts` `SUITES`: `{ rel: 'src/__tests__/lane-types.test.ts', required: true },`
 
 - [ ] **Step 1.5: Commit**
 
 ```bash
 git add sidecoach/src/lane-types.ts sidecoach/src/__tests__/lane-types.test.ts sidecoach/scripts/run-tests.ts
-git commit -m "feat(lane-p2): lane execution contract types"
+git commit -m "feat(lane-p2): lane contract types (lifecycle/outcome two-axis)"
 ```
 
 ---
 
-## Task 2: Derive per-lane verb steps (generator change)
+## Task 2: Derive per-lane verb steps (empty-flow steps ALLOWED)
 
-The execution cursor walks **verb steps**, and each verb step must serve its member flows plus the verb's coaching guidance. The generated lane has `verbChain` + `verbGuidance` + `flowSequence`, but no per-verb flow grouping. Derive `verbSteps: { verb, flowIds, guidance }[]` so the runner does zero registry lookups at execution time and parity/`--check` guards it.
+**Files:** Modify `lane-derivation.ts`, `generate-lanes.ts`, `lanes.generated.ts`; Test extend `lane-derivation.test.ts`
 
-**Files:**
-- Modify: `sidecoach/src/lane-derivation.ts`
-- Modify: `sidecoach/src/lanes.generated.ts` (regenerated, not hand-edited)
-- Test: `sidecoach/src/__tests__/lane-derivation.test.ts` (extend existing)
-
-- [ ] **Step 2.1: Write the failing test (extend the existing derivation test)**
-
-Append a new assertion block to `sidecoach/src/__tests__/lane-derivation.test.ts`:
+- [ ] **Step 2.1: Write the failing test (append to existing derivation test)**
 
 ```typescript
-// --- P2: verbSteps derivation ---
+// --- P2: verbSteps derivation (empty-flow steps are LEGAL) ---
 import { LANES } from '../lanes.generated';
 {
-  const build = LANES.find((l) => l.lane === 'lane_build');
-  if (!build) throw new Error('lane_build missing');
-  if (!Array.isArray((build as any).verbSteps)) throw new Error('verbSteps not emitted');
+  const build = LANES.find((l) => l.lane === 'lane_build')!;
   const vs = (build as any).verbSteps;
-  if (vs.length !== build.verbChain.length) throw new Error('one verbStep per verb expected');
-  if (vs[0].verb !== build.verbChain[0]) throw new Error('verbSteps order must match verbChain');
-  // every verbStep flow must appear in the lane's flowSequence (lane-scoped, ordered)
+  if (!Array.isArray(vs)) throw new Error('verbSteps not emitted');
+  if (vs.length !== build.verbChain.length) throw new Error('one verbStep per verb');
+  if (vs[0].verb !== build.verbChain[0]) throw new Error('order matches verbChain');
+  // every verb appears once, guidance preserved (incl. for empty-flow steps)
   for (const step of vs) {
-    if (step.flowIds.length === 0) throw new Error(`verb ${step.verb} has no flows`);
-    for (const f of step.flowIds) {
-      if (!build.flowSequence.includes(f)) throw new Error(`flow ${f} not in flowSequence`);
-    }
+    if (typeof step.verb !== 'string') throw new Error('verbStep.verb missing');
+    if (!Array.isArray(step.guidance)) throw new Error(`guidance missing for ${step.verb}`);
+    for (const f of step.flowIds) if (!build.flowSequence.includes(f)) throw new Error(`flow ${f} not in flowSequence`);
   }
-  // union of verbStep flows == flowSequence (no flow dropped or invented)
+  // union of NONEMPTY step flows == flowSequence exactly (no flow dropped/invented)
   const union = new Set(vs.flatMap((s: any) => s.flowIds));
-  if (union.size !== build.flowSequence.length) throw new Error('verbStep flows must cover flowSequence exactly');
+  if (union.size !== build.flowSequence.length) throw new Error('nonempty verbStep flows must cover flowSequence exactly');
+  // a guidance-only empty-flow step is allowed and must keep its guidance
+  const polish = vs.find((s: any) => s.verb === 'polish');
+  if (polish && polish.flowIds.length === 0 && polish.guidance.length === 0) throw new Error('empty-flow step must still carry guidance');
   console.log('lane-derivation verbSteps: OK');
 }
 ```
 
-- [ ] **Step 2.2: Run it, verify it fails**
+- [ ] **Step 2.2: Run, verify it fails**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-derivation.test.ts`
-Expected: FAIL - `verbSteps not emitted`.
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-derivation.test.ts` -> FAIL `verbSteps not emitted`.
 
 - [ ] **Step 2.3: Add `verbSteps` to the derivation**
 
-In `sidecoach/src/lane-derivation.ts`, locate where each lane object is assembled (the function that produces the `GeneratedLane`-shaped objects from `sidecoach-lanes.json` + the verb registry). Add a derived `verbSteps` field. Insert this helper and call it when building each lane:
+In `lane-derivation.ts`, add and call:
 
 ```typescript
 import { getVerbEntry } from './verb-command-registry';
 import type { FlowId } from './types';
 
-// Each verb step carries ONLY the flows that (a) belong to that verb in the
-// registry AND (b) appear in the lane's already-derived flowSequence, in
-// flowSequence order. A flow shared by two verbs is assigned to the FIRST verb
-// in verbChain that owns it, so the union of verbStep flows equals flowSequence
-// exactly (no flow dropped, none run twice).
+// First-owner assignment: a flow shared by two verbs is assigned to the FIRST
+// verb in verbChain that owns it (so the union of nonempty step flows == the
+// already-derived flowSequence). A verb whose flows were all claimed earlier
+// yields an EMPTY-flow guidance-only step - that is legal and intentional.
 function deriveVerbSteps(
-  verbChain: string[],
-  flowSequence: FlowId[],
+  verbChain: string[], flowSequence: FlowId[],
   verbGuidance: { verb: string; guidance: string[] }[],
 ): { verb: string; flowIds: FlowId[]; guidance: string[] }[] {
   const claimed = new Set<FlowId>();
@@ -270,32 +244,32 @@ function deriveVerbSteps(
 }
 ```
 
-Then, in the lane assembly, add `verbSteps: deriveVerbSteps(verbChain, flowSequence, verbGuidance),` to the emitted object, and add the field to the `GeneratedLane` interface in `sidecoach/src/lanes.generated.ts`'s source-of-truth interface (the generator writes the interface too - update the generator's interface-emitting string, do not hand-edit the generated file):
+Add `verbSteps: deriveVerbSteps(verbChain, flowSequence, verbGuidance),` to each emitted lane, and add to the generated `GeneratedLane` interface (edit the generator's interface-emitting string, not the generated file by hand):
 
 ```typescript
-// GeneratedLane interface gains:
 verbSteps: { verb: string; flowIds: FlowId[]; guidance: string[] }[];
 ```
 
-- [ ] **Step 2.4: Regenerate and verify drift guard**
+- [ ] **Step 2.4: Regenerate + drift guard + test**
 
-Run: `cd sidecoach && npx ts-node scripts/generate-lanes.ts && npx ts-node scripts/generate-lanes.ts --check`
-Expected: file rewritten; `--check` exits 0 (no drift). Then `npx ts-node src/__tests__/lane-derivation.test.ts` -> `lane-derivation verbSteps: OK`.
+Run:
+```bash
+cd sidecoach && npx ts-node scripts/generate-lanes.ts && npx ts-node scripts/generate-lanes.ts --check && npx ts-node src/__tests__/lane-derivation.test.ts
+```
+Expected: regenerated; `--check` exit 0; `lane-derivation verbSteps: OK`. (`lane-derivation.test.ts` is already in `SUITES`; bump it to `required: true` now that it exists.)
 
 - [ ] **Step 2.5: Commit**
 
 ```bash
-git add sidecoach/src/lane-derivation.ts sidecoach/scripts/generate-lanes.ts sidecoach/src/lanes.generated.ts sidecoach/src/__tests__/lane-derivation.test.ts
-git commit -m "feat(lane-p2): derive per-lane verbSteps for execution"
+git add sidecoach/src/lane-derivation.ts sidecoach/scripts/generate-lanes.ts sidecoach/src/lanes.generated.ts sidecoach/src/__tests__/lane-derivation.test.ts sidecoach/scripts/run-tests.ts
+git commit -m "feat(lane-p2): derive verbSteps (empty-flow guidance steps allowed)"
 ```
 
 ---
 
-## Task 3: LaneCheckpoint + LaneCheckpointStore
+## Task 3: LaneCheckpoint + LaneCheckpointStore (validated id, realpath scope)
 
-**Files:**
-- Create: `sidecoach/src/lane-checkpoint-store.ts`
-- Test: `sidecoach/src/__tests__/lane-checkpoint-store.test.ts`
+**Files:** Create `lane-checkpoint-store.ts`; Test `lane-checkpoint-store.test.ts`
 
 - [ ] **Step 3.1: Write the failing test**
 
@@ -306,172 +280,134 @@ import * as os from 'os';
 import * as path from 'path';
 import { LaneCheckpointStore, LaneCheckpoint } from '../lane-checkpoint-store';
 
-function tmpProject(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'lane-ckpt-'));
-}
-
-function run() {
-  const proj = tmpProject();
-  const store = new LaneCheckpointStore(proj);
-  const cp: LaneCheckpoint = {
-    schemaVersion: 1, checkpointId: 'cp1', laneId: 'lane_build',
-    executionKind: 'sequence', target: 'the hero', status: 'in_progress',
-    cursor: 0, iteration: 0, completedStepIds: [], stepReports: [],
-    revision: 0, startRequestId: 'req1', seenReportIds: [],
-    createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+function fresh(): LaneCheckpoint {
+  return {
+    schemaVersion: 1, checkpointId: 'lane-abc123', laneId: 'lane_build', target: 'hero',
+    executionKind: 'sequence', lifecycle: 'in_progress', outcome: undefined,
+    cursor: 0, iteration: 0, completedStepIds: [], skippedStepIds: [], completedFlowIds: [],
+    stepReports: [], audit: [], servedSteps: {}, revision: 0, startRequestId: 'req1',
+    seenReportIds: [], createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
   };
-  store.write(cp);
-  const back = store.read('cp1');
-  if (back.laneId !== 'lane_build') throw new Error('round-trip laneId mismatch');
-  if (back.revision !== 0) throw new Error('round-trip revision mismatch');
+}
+function run() {
+  const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-ckpt-'));
+  const store = new LaneCheckpointStore(proj);
+  store.write(fresh());
+  if (store.read('lane-abc123').laneId !== 'lane_build') throw new Error('round-trip failed');
+  if (store.findByStartRequestId('req1')!.checkpointId !== 'lane-abc123') throw new Error('findByStartRequestId failed');
+  if (store.findByStartRequestId('nope') !== null) throw new Error('unknown req -> null');
+  if (store.list().length !== 1) throw new Error('list failed');
 
-  // idempotency lookup by startRequestId
-  const found = store.findByStartRequestId('req1');
-  if (!found || found.checkpointId !== 'cp1') throw new Error('findByStartRequestId failed');
-  if (store.findByStartRequestId('nope') !== null) throw new Error('unknown req should be null');
-
-  const list = store.list();
-  if (list.length !== 1 || list[0].checkpointId !== 'cp1') throw new Error('list failed');
-
-  // unsupported schema rejected
+  // checkpoint-id validation: path-traversal / illegal chars rejected BEFORE fs access
+  for (const bad of ['../evil', 'a/b', 'a ', '..']) {
+    let threw = false;
+    try { store.read(bad); } catch { threw = true; }
+    if (!threw) throw new Error(`illegal id "${bad}" must be rejected`);
+  }
   let threw = false;
-  try { store.write({ ...cp, schemaVersion: 2 as any }); } catch { threw = true; }
-  if (!threw) throw new Error('schemaVersion 2 should be rejected in P2');
-
+  try { store.write({ ...fresh(), schemaVersion: 2 as any }); } catch { threw = true; }
+  if (!threw) throw new Error('schemaVersion 2 rejected in P2');
   console.log('lane-checkpoint-store: OK');
 }
 run();
 ```
 
-- [ ] **Step 3.2: Run it, verify it fails**
+- [ ] **Step 3.2: Run, verify it fails**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-checkpoint-store.test.ts`
-Expected: FAIL - `Cannot find module '../lane-checkpoint-store'`.
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-checkpoint-store.test.ts` -> FAIL `Cannot find module`.
 
-- [ ] **Step 3.3: Write the store (copy the flow CheckpointStore atomic-write pattern)**
+- [ ] **Step 3.3: Write the store**
 
 ```typescript
 // sidecoach/src/lane-checkpoint-store.ts
-// Lane execution persistence. One file per lane run under
-// <projectPath>/.claude/lane-checkpoints/. Atomic tmp+rename, mirroring
-// checkpoint-store.ts. Separate store so the flow checkpoint (schemaVersion 1,
-// pinned) is never touched. P2 is schemaVersion 1; P3 adds migration.
 import * as fs from 'fs';
 import * as path from 'path';
 import type { FlowId } from './types';
-import type { StepReport, LaneStatus } from './lane-types';
+import type { StepReport, LaneLifecycle, LaneOutcome, LaneAuditEntry } from './lane-types';
 
 export interface LaneCheckpoint {
   schemaVersion: 1;
-  checkpointId: string;
-  laneId: string;
+  checkpointId: string; laneId: string; target: string;
   executionKind: 'sequence' | 'loop';
-  target: string;
-  status: LaneStatus;
-  cursor: number;             // index into the lane's verbSteps
-  iteration: number;          // loop pass (0 for sequence)
-  completedStepIds: string[]; // verb step ids completed in the CURRENT iteration
-  stepReports: StepReport[];  // append-only audit of accepted reports
-  revision: number;           // bumped on every committed mutation (compare-and-swap)
-  startRequestId: string;     // transport idempotency for startLane
-  seenReportIds: string[];    // reportId dedup
-  createdAt: string;
-  updatedAt: string;
+  lifecycle: LaneLifecycle; outcome?: LaneOutcome;
+  cursor: number; iteration: number;
+  completedStepIds: string[]; skippedStepIds: string[]; completedFlowIds: FlowId[];
+  stepReports: StepReport[]; audit: LaneAuditEntry[];
+  servedSteps: Record<string, { guidance: string[]; checklist: { id: string; label: string; required: boolean; completed: boolean }[]; flowIds: FlowId[] }>; // key: `${cursor}:${iteration}`
+  revision: number; startRequestId: string; seenReportIds: string[];
+  createdAt: string; updatedAt: string;
 }
 
-export interface LaneCheckpointSummary {
-  checkpointId: string;
-  laneId: string;
-  status: LaneStatus;
-  cursor: number;
-  updatedAt: string;
+export interface LaneCheckpointSummary { checkpointId: string; laneId: string; lifecycle: LaneLifecycle; outcome?: LaneOutcome; cursor: number; updatedAt: string; }
+
+const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+function assertId(id: string): void {
+  if (!ID_RE.test(id) || id.includes('..')) throw new Error(`LaneCheckpointStore: illegal checkpointId "${id}"`);
 }
 
 export class LaneCheckpointStore {
-  constructor(private projectPath: string) {}
-
-  private dir(): string {
-    return path.join(this.projectPath, '.claude', 'lane-checkpoints');
+  private projectPath: string;
+  constructor(projectPath: string) {
+    // Canonicalize the project root (cheap boundary protection; lease/outbox is P3).
+    try { this.projectPath = fs.realpathSync(projectPath); }
+    catch { this.projectPath = path.resolve(projectPath); }
   }
-  private filePath(id: string): string {
-    return path.join(this.dir(), `${id}.json`);
-  }
+  private dir(): string { return path.join(this.projectPath, '.claude', 'lane-checkpoints'); }
+  private filePath(id: string): string { assertId(id); return path.join(this.dir(), `${id}.json`); }
 
   write(cp: LaneCheckpoint): void {
-    if (cp.schemaVersion !== 1) {
-      throw new Error(`LaneCheckpointStore.write: schemaVersion ${cp.schemaVersion} unsupported (this build writes 1)`);
-    }
-    fs.mkdirSync(this.dir(), { recursive: true });
+    if (cp.schemaVersion !== 1) throw new Error(`LaneCheckpointStore.write: schemaVersion ${cp.schemaVersion} unsupported`);
     const target = this.filePath(cp.checkpointId);
+    fs.mkdirSync(this.dir(), { recursive: true });
     const tmp = `${target}.tmp-${process.pid}-${Date.now()}`;
     fs.writeFileSync(tmp, JSON.stringify(cp, null, 2));
     fs.renameSync(tmp, target);
   }
-
   read(id: string): LaneCheckpoint {
     const target = this.filePath(id);
     if (!fs.existsSync(target)) throw new Error(`LaneCheckpointStore.read: not found "${id}"`);
     const parsed = JSON.parse(fs.readFileSync(target, 'utf8')) as LaneCheckpoint;
-    if (parsed.schemaVersion !== 1) {
-      throw new Error(`LaneCheckpointStore.read: schemaVersion ${parsed.schemaVersion} unsupported`);
-    }
+    if (parsed.schemaVersion !== 1) throw new Error(`LaneCheckpointStore.read: schemaVersion ${parsed.schemaVersion} unsupported`);
     return parsed;
   }
-
-  exists(id: string): boolean {
-    return fs.existsSync(this.filePath(id));
-  }
-
+  exists(id: string): boolean { try { return fs.existsSync(this.filePath(id)); } catch { return false; } }
   findByStartRequestId(reqId: string): LaneCheckpoint | null {
-    for (const s of this.list()) {
-      const cp = this.read(s.checkpointId);
-      if (cp.startRequestId === reqId) return cp;
-    }
+    for (const s of this.list()) { const cp = this.read(s.checkpointId); if (cp.startRequestId === reqId) return cp; }
     return null;
   }
-
   list(): LaneCheckpointSummary[] {
     const dir = this.dir();
     if (!fs.existsSync(dir)) return [];
     const out: LaneCheckpointSummary[] = [];
     for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.json'))) {
-      try {
-        const cp = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) as LaneCheckpoint;
-        out.push({ checkpointId: cp.checkpointId, laneId: cp.laneId, status: cp.status, cursor: cp.cursor, updatedAt: cp.updatedAt });
-      } catch { /* skip unparseable */ }
+      try { const cp = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) as LaneCheckpoint;
+        out.push({ checkpointId: cp.checkpointId, laneId: cp.laneId, lifecycle: cp.lifecycle, outcome: cp.outcome, cursor: cp.cursor, updatedAt: cp.updatedAt });
+      } catch { /* skip */ }
     }
     out.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0));
     return out;
   }
-
-  delete(id: string): void {
-    const target = this.filePath(id);
-    if (fs.existsSync(target)) fs.unlinkSync(target);
-  }
+  delete(id: string): void { const t = this.filePath(id); if (fs.existsSync(t)) fs.unlinkSync(t); }
 }
 ```
 
-- [ ] **Step 3.4: Run it, verify it passes**
+- [ ] **Step 3.4: Run + register**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-checkpoint-store.test.ts`
-Expected: `lane-checkpoint-store: OK`.
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-checkpoint-store.test.ts` -> `lane-checkpoint-store: OK`.
+Add `{ rel: 'src/__tests__/lane-checkpoint-store.test.ts', required: true },` to `SUITES`.
 
 - [ ] **Step 3.5: Commit**
 
 ```bash
 git add sidecoach/src/lane-checkpoint-store.ts sidecoach/src/__tests__/lane-checkpoint-store.test.ts sidecoach/scripts/run-tests.ts
-git commit -m "feat(lane-p2): LaneCheckpoint + LaneCheckpointStore (schema v1, in-process idempotency keys)"
+git commit -m "feat(lane-p2): LaneCheckpoint store (validated id, realpath scope, served-step cache)"
 ```
 
 ---
 
-## Task 4: `startLane` - create checkpoint, serve step 0
+## Task 4: `startLane` - sequence-only, idempotent, persisted serve
 
-The runner functions take their dependencies explicitly (lane data lookup, the checkpoint store, a clock, and a checkpoint-id factory) so tests are deterministic without `Date.now()`/random in the module (the workflow/test convention bans them at module scope).
-
-**Files:**
-- Create: `sidecoach/src/lane-runner.ts`
-- Test: `sidecoach/src/__tests__/lane-runner-start.test.ts`
+**Files:** Create `lane-runner.ts`; Test `lane-runner-start.test.ts`
 
 - [ ] **Step 4.1: Write the failing test**
 
@@ -484,65 +420,62 @@ import { LaneCheckpointStore } from '../lane-checkpoint-store';
 import { startLane, LaneRunnerDeps } from '../lane-runner';
 
 function deps(proj: string): LaneRunnerDeps {
-  let n = 0;
-  let t = 0;
+  let n = 0, t = 0;
   return {
     store: new LaneCheckpointStore(proj),
-    // serveStep is stubbed: returns deterministic guidance for the verb's flows
-    runFlow: async (flowId) => ({
-      flowId, flowName: String(flowId), status: 'success', message: 'ok',
-      guidance: [`guidance for ${flowId}`],
-      checklist: [{ id: 'c0', label: `check ${flowId}`, required: true, completed: false }],
-    }),
+    runFlow: async (flowId) => ({ flowId, flowName: String(flowId), status: 'success', message: 'ok', guidance: [`g:${flowId}`], checklist: [{ id: 'c0', label: `chk ${flowId}`, required: true, completed: false }] }),
     now: () => { t += 1000; return new Date(t).toISOString(); },
-    newCheckpointId: () => `cp${++n}`,
+    newCheckpointId: () => `lane-cp${++n}`,
   };
 }
-
 async function run() {
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-start-'));
   const d = deps(proj);
-
-  const res = await startLane('lane_build', 'the hero', { projectPath: proj }, 'req-1', d);
-  if (res.laneId !== 'lane_build') throw new Error('laneId wrong');
-  if (res.stepIndex !== 0) throw new Error('should start at step 0');
-  if (res.currentVerb !== 'shape') throw new Error('lane_build first verb is shape');
+  const res = await startLane('lane_build', 'hero', { projectPath: proj }, 'req-1', d);
+  if (res.lifecycle !== 'in_progress') throw new Error('starts in_progress');
+  if (res.currentVerb !== 'shape') throw new Error('first verb is shape');
   if (!res.guidance.some((g) => g.includes('Discovery interview'))) throw new Error('verb coaching guidance missing');
-  if (!res.guidance.some((g) => g.includes('guidance for flowA_brand_verify'))) throw new Error('flow handler guidance missing');
-  if (res.revision !== 0) throw new Error('initial revision is 0');
+  if (!res.guidance.some((g) => g.includes('g:flowA_brand_verify'))) throw new Error('flow handler guidance missing');
 
-  // idempotent retry: same startRequestId returns the SAME checkpoint, no second lane
-  const res2 = await startLane('lane_build', 'the hero', { projectPath: proj }, 'req-1', d);
+  // idempotent retry returns the SAME checkpoint, no second lane
+  const res2 = await startLane('lane_build', 'hero', { projectPath: proj }, 'req-1', d);
   if (res2.checkpointId !== res.checkpointId) throw new Error('retry must return same checkpoint');
   if (d.store.list().length !== 1) throw new Error('retry must not create a second lane');
 
-  // unknown lane errors
+  // retry that supplies a DIFFERENT lane for the same requestId is rejected
   let threw = false;
-  try { await startLane('lane_nope', 't', { projectPath: proj }, 'req-2', d); } catch { threw = true; }
-  if (!threw) throw new Error('unknown laneId must throw');
+  try { await startLane('lane_ship', 'hero', { projectPath: proj }, 'req-1', d); } catch { threw = true; }
+  if (!threw) throw new Error('startRequestId reuse with a different lane must reject');
 
+  // loop lane is rejected in P2
+  threw = false;
+  try { await startLane('lane_converge', 't', { projectPath: proj }, 'req-2', d); } catch (e: any) { threw = /loop|P4|converge/i.test(String(e.message)); }
+  if (!threw) throw new Error('loop lane must be rejected in P2');
+
+  // unknown lane errors
+  threw = false;
+  try { await startLane('lane_nope', 't', { projectPath: proj }, 'req-3', d); } catch { threw = true; }
+  if (!threw) throw new Error('unknown laneId must throw');
   console.log('lane-runner-start: OK');
 }
 run();
 ```
 
-- [ ] **Step 4.2: Run it, verify it fails**
+- [ ] **Step 4.2: Run, verify it fails**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-start.test.ts`
-Expected: FAIL - `Cannot find module '../lane-runner'`.
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-start.test.ts` -> FAIL `Cannot find module '../lane-runner'`.
 
-- [ ] **Step 4.3: Write `lane-runner.ts` (start + shared step-assembly helper)**
+- [ ] **Step 4.3: Write `lane-runner.ts` (start + persisted serve)**
 
 ```typescript
 // sidecoach/src/lane-runner.ts
-// Lane execution state machine (P2: model-attested, in-process idempotency).
+// Sequence-lane execution state machine (P2). Loop lanes are rejected here and
+// handled in P4 with the convergence floor.
 import type { FlowId } from './types';
 import type { FlowExecutionResult } from './flow-handler';
 import { LANES, GeneratedLane } from './lanes.generated';
 import { LaneCheckpoint, LaneCheckpointStore } from './lane-checkpoint-store';
-import {
-  LaneStepResult, LaneState, LaneInfo, LaneTransition, isTerminalLaneStatus,
-} from './lane-types';
+import { LaneStepResult, LaneState, LaneInfo, LaneTransition, LaneAuditEntry, isClosed } from './lane-types';
 
 export interface LaneRunnerDeps {
   store: LaneCheckpointStore;
@@ -551,43 +484,56 @@ export interface LaneRunnerDeps {
   newCheckpointId: () => string;
 }
 
-function lane(laneId: string): GeneratedLane {
+function resolveLane(laneId: string): GeneratedLane {
   const l = LANES.find((x) => x.lane === laneId);
-  if (!l) throw new Error(`startLane: unknown laneId "${laneId}"`);
+  if (!l) throw new Error(`lane runner: unknown laneId "${laneId}"`);
   return l;
 }
 
-// Assemble the step result for the verb step at `cursor`: that verb's coaching
-// guidance first, then each member flow's handler guidance + checklist.
-async function serveStep(
-  cp: LaneCheckpoint, l: GeneratedLane, context: any, d: LaneRunnerDeps,
-): Promise<LaneStepResult> {
-  const steps = l.verbSteps;
-  if (isTerminalLaneStatus(cp.status) || cp.cursor >= steps.length) {
-    return {
-      checkpointId: cp.checkpointId, laneId: l.lane, laneLabel: l.label,
-      status: cp.status, executionKind: l.executionKind, iteration: cp.iteration,
-      stepIndex: cp.cursor, totalSteps: steps.length, currentVerb: undefined,
-      guidance: [], checklist: [], flowIds: [], revision: cp.revision,
-      message: cp.status === 'converged' ? 'Lane complete.' : `Lane ${cp.status}.`,
-    };
+function closedResult(cp: LaneCheckpoint, l: GeneratedLane): LaneStepResult {
+  return {
+    checkpointId: cp.checkpointId, laneId: l.lane, laneLabel: l.label,
+    lifecycle: cp.lifecycle, outcome: cp.outcome, executionKind: l.executionKind,
+    iteration: cp.iteration, stepIndex: cp.cursor, totalSteps: l.verbSteps.length,
+    currentVerb: undefined, guidance: [], checklist: [], flowIds: [], revision: cp.revision,
+    message: cp.lifecycle === 'closed'
+      ? `Lane ${cp.outcome}.`
+      : cp.lifecycle === 'interrupted'
+        ? 'Lane interrupted - resume to continue.'
+        : 'Lane has no current step.',
+  };
+}
+
+// Serve the verb step at cursor. Uses the PERSISTED cache if present (so retry/
+// resume/duplicate never re-run handlers); otherwise runs each member flow once,
+// caches, and persists. Empty-flow steps serve guidance only.
+async function serveStep(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  if (isClosed(cp.lifecycle) || cp.lifecycle === 'interrupted' || cp.cursor >= l.verbSteps.length) {
+    return closedResult(cp, l);
   }
-  const step = steps[cp.cursor];
-  const guidance: string[] = [...step.guidance];
-  const checklist: LaneStepResult['checklist'] = [];
-  for (const flowId of step.flowIds) {
-    const r = await d.runFlow(flowId, context);
-    for (const g of r.guidance ?? []) guidance.push(g);
-    for (const c of r.checklist ?? []) {
-      checklist.push({ id: `${flowId}:${c.id}`, label: c.label, required: c.required, completed: false });
+  const step = l.verbSteps[cp.cursor];
+  const key = `${cp.cursor}:${cp.iteration}`;
+  let served = cp.servedSteps[key];
+  if (!served) {
+    const guidance: string[] = [...step.guidance];
+    const checklist: LaneStepResult['checklist'] = [];
+    for (const flowId of step.flowIds) {
+      const r = await d.runFlow(flowId, context);
+      for (const g of r.guidance ?? []) guidance.push(g);
+      for (const c of r.checklist ?? []) checklist.push({ id: `${flowId}:${c.id}`, label: c.label, required: c.required, completed: false });
     }
+    served = { guidance, checklist, flowIds: step.flowIds };
+    cp.servedSteps[key] = served;
+    cp.updatedAt = d.now();
+    d.store.write(cp);   // persist the cache (no revision bump - serving is not a mutation)
   }
   return {
     checkpointId: cp.checkpointId, laneId: l.lane, laneLabel: l.label,
-    status: cp.status, executionKind: l.executionKind, iteration: cp.iteration,
-    stepIndex: cp.cursor, totalSteps: steps.length, currentVerb: step.verb,
-    guidance, checklist, flowIds: step.flowIds, revision: cp.revision,
-    message: `Step ${cp.cursor + 1}/${steps.length}: ${step.verb}`,
+    lifecycle: cp.lifecycle, outcome: cp.outcome, executionKind: l.executionKind,
+    iteration: cp.iteration, stepIndex: cp.cursor, totalSteps: l.verbSteps.length,
+    currentVerb: step.verb, guidance: served.guidance, checklist: served.checklist,
+    flowIds: served.flowIds, revision: cp.revision,
+    message: `Step ${cp.cursor + 1}/${l.verbSteps.length}: ${step.verb}`,
   };
 }
 
@@ -595,44 +541,51 @@ export async function startLane(
   laneId: string, target: string, context: { projectPath?: string } & Record<string, any>,
   startRequestId: string, d: LaneRunnerDeps,
 ): Promise<LaneStepResult> {
-  const l = lane(laneId);
+  const l = resolveLane(laneId);
+  if (l.executionKind === 'loop') {
+    throw new Error(`startLane: lane "${laneId}" is a loop lane - loop execution + the convergence floor land in P4. Not startable in P2.`);
+  }
   const existing = d.store.findByStartRequestId(startRequestId);
-  if (existing) return serveStep(existing, l, context, d);
-
+  if (existing) {
+    if (existing.laneId !== laneId) throw new Error(`startLane: startRequestId "${startRequestId}" already maps to lane "${existing.laneId}", not "${laneId}"`);
+    return serveStep(existing, resolveLane(existing.laneId), context, d);
+  }
   const ts = d.now();
   const cp: LaneCheckpoint = {
-    schemaVersion: 1, checkpointId: d.newCheckpointId(), laneId,
-    executionKind: l.executionKind, target, status: 'in_progress',
-    cursor: 0, iteration: 0, completedStepIds: [], stepReports: [],
-    revision: 0, startRequestId, seenReportIds: [], createdAt: ts, updatedAt: ts,
+    schemaVersion: 1, checkpointId: d.newCheckpointId(), laneId, target,
+    executionKind: l.executionKind, lifecycle: 'in_progress', outcome: undefined,
+    cursor: 0, iteration: 0, completedStepIds: [], skippedStepIds: [], completedFlowIds: [],
+    stepReports: [], audit: [], servedSteps: {}, revision: 0, startRequestId,
+    seenReportIds: [], createdAt: ts, updatedAt: ts,
   };
   d.store.write(cp);
   return serveStep(cp, l, context, d);
 }
 
-// (advanceLane / laneStatus / listLanes added in Tasks 5-8; serveStep is shared.)
-export { serveStep, lane as resolveLane };
+// helpers shared with advance (Task 5)
+export { serveStep, resolveLane, closedResult };
+export function pushAudit(cp: LaneCheckpoint, e: Omit<LaneAuditEntry, 'revision' | 'at'>, d: LaneRunnerDeps): void {
+  cp.audit.push({ ...e, revision: cp.revision, at: d.now() });
+}
 ```
 
-- [ ] **Step 4.4: Run it, verify it passes**
+- [ ] **Step 4.4: Run + register**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-start.test.ts`
-Expected: `lane-runner-start: OK`.
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-start.test.ts` -> `lane-runner-start: OK`.
+Add `{ rel: 'src/__tests__/lane-runner-start.test.ts', required: true },` to `SUITES`.
 
 - [ ] **Step 4.5: Commit**
 
 ```bash
 git add sidecoach/src/lane-runner.ts sidecoach/src/__tests__/lane-runner-start.test.ts sidecoach/scripts/run-tests.ts
-git commit -m "feat(lane-p2): startLane + shared verb-step assembly"
+git commit -m "feat(lane-p2): startLane (sequence-only, loop rejected, idempotent, persisted serve)"
 ```
 
 ---
 
-## Task 5: `advanceLane` - sequence completion (model-attested)
+## Task 5: `advanceLane` - sequence completion (lifecycle/outcome)
 
-**Files:**
-- Modify: `sidecoach/src/lane-runner.ts`
-- Test: `sidecoach/src/__tests__/lane-runner-advance-sequence.test.ts`
+**Files:** Modify `lane-runner.ts`; Test `lane-runner-advance-sequence.test.ts`
 
 - [ ] **Step 5.1: Write the failing test**
 
@@ -646,275 +599,141 @@ import { startLane, advanceLane, LaneRunnerDeps } from '../lane-runner';
 import { StepReport } from '../lane-types';
 
 function deps(proj: string): LaneRunnerDeps {
-  let n = 0; let t = 0;
-  return {
-    store: new LaneCheckpointStore(proj),
-    runFlow: async (flowId) => ({ flowId, flowName: String(flowId), status: 'success', message: 'ok', guidance: [`g:${flowId}`], checklist: [] }),
-    now: () => { t += 1000; return new Date(t).toISOString(); },
-    newCheckpointId: () => `cp${++n}`,
-  };
+  let n = 0, t = 0;
+  return { store: new LaneCheckpointStore(proj),
+    runFlow: async (flowId) => ({ flowId, flowName: String(flowId), status: 'success', message: 'ok', guidance: [], checklist: [] }),
+    now: () => { t += 1000; return new Date(t).toISOString(); }, newCheckpointId: () => `lane-cp${++n}` };
 }
-const report = (verb: string, iteration = 0): StepReport => ({
-  stepId: verb, iteration, reportId: `r:${verb}:${iteration}`, verb,
-  summary: 'done', evidence: [{ kind: 'note', detail: 'x' }],
-});
+const rep = (verb: string): StepReport => ({ stepId: verb, iteration: 0, reportId: `r:${verb}`, verb, summary: 'done', evidence: [{ kind: 'note', detail: 'x' }] });
 
 async function run() {
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-adv-'));
   const d = deps(proj);
-  const start = await startLane('lane_build', 'hero', { projectPath: proj }, 'req-1', d); // verbs: shape, craft, polish
+  const start = await startLane('lane_build', 'hero', { projectPath: proj }, 'req-1', d); // shape, craft, polish
 
-  // complete without a report is REJECTED, step stays current
   let threw = false;
   try { await advanceLane(proj, start.checkpointId, { action: 'complete', expectedRevision: 0 }, d); } catch { threw = true; }
-  if (!threw) throw new Error('complete without report must reject');
+  if (!threw) throw new Error('complete without report rejects');
 
-  // stale revision rejected
   threw = false;
-  try { await advanceLane(proj, start.checkpointId, { action: 'complete', report: report('shape'), expectedRevision: 99 }, d); } catch { threw = true; }
-  if (!threw) throw new Error('stale expectedRevision must reject');
+  try { await advanceLane(proj, start.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: 99 }, d); } catch { threw = true; }
+  if (!threw) throw new Error('stale revision rejects');
 
-  // valid complete advances to craft, bumps revision
-  const r1 = await advanceLane(proj, start.checkpointId, { action: 'complete', report: report('shape'), expectedRevision: 0 }, d);
-  if (r1.currentVerb !== 'craft') throw new Error('should advance to craft');
-  if (r1.revision !== 1) throw new Error('revision should bump to 1');
-
-  // duplicate reportId is a no-op returning current state (still craft)
-  const dup = await advanceLane(proj, start.checkpointId, { action: 'complete', report: report('shape'), expectedRevision: 1 }, d);
-  if (dup.currentVerb !== 'craft') throw new Error('duplicate reportId must be a no-op');
-
-  // wrong stepId rejected (reporting 'polish' while on 'craft')
   threw = false;
-  try { await advanceLane(proj, start.checkpointId, { action: 'complete', report: report('polish'), expectedRevision: dup.revision }, d); } catch { threw = true; }
-  if (!threw) throw new Error('mismatched stepId must reject');
+  try { await advanceLane(proj, start.checkpointId, { action: 'complete', report: { ...rep('shape'), evidence: [] }, expectedRevision: 0 }, d); } catch { threw = true; }
+  if (!threw) throw new Error('report with no evidence rejects');
 
-  // finish craft, then polish -> converged
-  const r2 = await advanceLane(proj, start.checkpointId, { action: 'complete', report: report('craft'), expectedRevision: dup.revision }, d);
-  if (r2.currentVerb !== 'polish') throw new Error('should advance to polish');
-  const r3 = await advanceLane(proj, start.checkpointId, { action: 'complete', report: report('polish'), expectedRevision: r2.revision }, d);
-  if (r3.status !== 'converged') throw new Error('sequence lane should converge after last step');
-  if (r3.currentVerb !== undefined) throw new Error('terminal step has no currentVerb');
+  const r1 = await advanceLane(proj, start.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: 0 }, d);
+  if (r1.currentVerb !== 'craft') throw new Error('advance to craft');
+  if (r1.revision !== 1) throw new Error('revision bumps to 1');
 
+  // duplicate reportId is a no-op (still craft) regardless of revision
+  const dup = await advanceLane(proj, start.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: 1 }, d);
+  if (dup.currentVerb !== 'craft') throw new Error('duplicate reportId is no-op');
+
+  // wrong stepId rejected
+  threw = false;
+  try { await advanceLane(proj, start.checkpointId, { action: 'complete', report: rep('polish'), expectedRevision: dup.revision }, d); } catch { threw = true; }
+  if (!threw) throw new Error('mismatched stepId rejects');
+
+  const r2 = await advanceLane(proj, start.checkpointId, { action: 'complete', report: rep('craft'), expectedRevision: dup.revision }, d);
+  const r3 = await advanceLane(proj, start.checkpointId, { action: 'complete', report: rep('polish'), expectedRevision: r2.revision }, d);
+  if (r3.lifecycle !== 'closed' || r3.outcome !== 'completed') throw new Error('sequence with no skips closes completed');
+  if (r3.currentVerb !== undefined) throw new Error('closed lane has no currentVerb');
+
+  // advancing a closed lane rejects
+  threw = false;
+  try { await advanceLane(proj, start.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: r3.revision }, d); } catch { threw = true; }
+  if (!threw) throw new Error('advancing a closed lane rejects');
   console.log('lane-runner-advance-sequence: OK');
 }
 run();
 ```
 
-- [ ] **Step 5.2: Run it, verify it fails**
+- [ ] **Step 5.2: Run, verify it fails**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-advance-sequence.test.ts`
-Expected: FAIL - `advanceLane is not a function` (not yet exported).
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-advance-sequence.test.ts` -> FAIL `advanceLane is not a function`.
 
-- [ ] **Step 5.3: Implement `advanceLane` (sequence path) in `lane-runner.ts`**
+- [ ] **Step 5.3: Implement `advanceLane` (sequence path + completion)**
 
 Add to `lane-runner.ts`:
 
 ```typescript
-function bump(cp: LaneCheckpoint, d: LaneRunnerDeps): void {
-  cp.revision += 1;
-  cp.updatedAt = d.now();
-  d.store.write(cp);
+function bump(cp: LaneCheckpoint, d: LaneRunnerDeps): void { cp.revision += 1; cp.updatedAt = d.now(); d.store.write(cp); }
+
+// Advance the cursor after a completed/skipped step. Sequence final step closes
+// the lane: outcome 'completed' if no step was skipped, else 'partial'. (Loop
+// lanes never reach here - they are rejected at startLane in P2.)
+async function advanceCursor(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  const last = l.verbSteps.length - 1;
+  if (cp.cursor < last) { cp.cursor += 1; bump(cp, d); return serveStep(cp, l, context, d); }
+  cp.lifecycle = 'closed';
+  cp.outcome = cp.skippedStepIds.length > 0 ? 'partial' : 'completed';
+  bump(cp, d);
+  return closedResult(cp, l);
 }
 
-export async function advanceLane(
-  projectPath: string, checkpointId: string, transition: LaneTransition, d: LaneRunnerDeps,
-): Promise<LaneStepResult> {
+export async function advanceLane(projectPath: string, checkpointId: string, transition: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
   const cp = d.store.read(checkpointId);
   const l = resolveLane(cp.laneId);
 
-  // duplicate report -> no-op returning current state (checked before revision CAS,
-  // so a retried transport call is idempotent regardless of revision drift).
-  if (transition.report && cp.seenReportIds.includes(transition.report.reportId)) {
-    return serveStep(cp, l, { projectPath }, d);
+  // duplicate report -> no-op (before CAS, so a retried transport call is idempotent)
+  if (transition.report && cp.seenReportIds.includes(transition.report.reportId)) return serveStep(cp, l, { projectPath }, d);
+
+  // interrupted: ONLY resume is valid (spec 640-646). Checked before CAS so the
+  // directive is returned regardless of revision drift.
+  if (cp.lifecycle === 'interrupted' && transition.action !== 'resume') {
+    throw new Error(`advanceLane: lane is interrupted - the only valid action is "resume" (got "${transition.action}")`);
   }
-  if (transition.expectedRevision !== cp.revision) {
-    throw new Error(`advanceLane: stale expectedRevision ${transition.expectedRevision} (current ${cp.revision})`);
-  }
-  if (isTerminalLaneStatus(cp.status)) {
-    throw new Error(`advanceLane: lane already ${cp.status}`);
-  }
+  if (cp.lifecycle === 'closed') throw new Error(`advanceLane: lane already closed (outcome ${cp.outcome})`);
+  if (transition.expectedRevision !== cp.revision) throw new Error(`advanceLane: stale expectedRevision ${transition.expectedRevision} (current ${cp.revision})`);
 
   switch (transition.action) {
-    case 'stop':
-      cp.status = 'stopped'; bump(cp, d); return serveStep(cp, l, { projectPath }, d);
-    case 'interrupt':
-      cp.status = 'interrupted'; bump(cp, d); return serveStep(cp, l, { projectPath }, d);
-    case 'resume':
-      if (cp.status === 'interrupted') cp.status = 'in_progress';
-      bump(cp, d); return serveStep(cp, l, { projectPath }, d);
-    case 'retry':
-      bump(cp, d); return serveStep(cp, l, { projectPath }, d); // re-serve same step
-    case 'skip':
-      return advanceCursor(cp, l, { projectPath }, d, undefined); // see Task 7
     case 'complete': {
-      const rep = transition.report;
-      if (!rep) throw new Error('advanceLane: complete requires a StepReport');
-      if (!rep.evidence || rep.evidence.length < 1) throw new Error('advanceLane: StepReport needs >=1 evidence');
+      const r = transition.report;
+      if (!r) throw new Error('advanceLane: complete requires a StepReport');
+      if (!r.evidence || r.evidence.length < 1) throw new Error('advanceLane: StepReport needs >=1 evidence');
       const step = l.verbSteps[cp.cursor];
-      if (rep.stepId !== step.verb || rep.iteration !== cp.iteration) {
-        throw new Error(`advanceLane: report (${rep.stepId}/${rep.iteration}) does not match current step (${step.verb}/${cp.iteration})`);
-      }
-      cp.seenReportIds.push(rep.reportId);
-      cp.stepReports.push(rep);
-      cp.completedStepIds.push(step.verb);
-      return advanceCursor(cp, l, { projectPath }, d, rep);
+      if (r.stepId !== step.verb || r.iteration !== cp.iteration) throw new Error(`advanceLane: report (${r.stepId}/${r.iteration}) != current step (${step.verb}/${cp.iteration})`);
+      cp.seenReportIds.push(r.reportId); cp.stepReports.push(r); cp.completedStepIds.push(step.verb);
+      cp.completedFlowIds.push(...step.flowIds);
+      pushAudit(cp, { action: 'complete', stepId: step.verb, iteration: cp.iteration, reportId: r.reportId }, d);
+      return advanceCursor(cp, l, { projectPath }, d);
     }
+    // retry / skip / interrupt / resume / stop -> Tasks 6 & 7
     default:
-      throw new Error(`advanceLane: unknown action "${(transition as any).action}"`);
+      return transitionNonComplete(cp, l, projectPath, transition, d);
   }
 }
 ```
 
-Add the cursor-advance helper (sequence path now; loop branch filled in Task 6, skip-prereq in Task 7 - leave the marked TODO comments exactly so later tasks find them):
+Add a stub for the non-complete transitions so the file compiles; Tasks 6-7 replace it:
 
 ```typescript
-async function advanceCursor(
-  cp: LaneCheckpoint, l: GeneratedLane, context: any, d: LaneRunnerDeps, _rep: any,
-): Promise<LaneStepResult> {
-  const last = l.verbSteps.length - 1;
-  if (cp.cursor < last) {
-    cp.cursor += 1;
-    bump(cp, d);
-    return serveStep(cp, l, context, d);
-  }
-  // at last step:
-  if (l.executionKind === 'sequence') {
-    cp.status = 'converged';
-    bump(cp, d);
-    return serveStep(cp, l, context, d);
-  }
-  // LOOP lane iteration boundary -> Task 6
-  return loopBoundary(cp, l, context, d);
+async function transitionNonComplete(cp: LaneCheckpoint, l: GeneratedLane, projectPath: string, t: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  throw new Error(`transitionNonComplete not implemented (Tasks 6-7): ${t.action}`);
 }
 ```
 
-For this task only, add a temporary `loopBoundary` stub so the file compiles; Task 6 replaces it:
+- [ ] **Step 5.4: Run + register**
 
-```typescript
-async function loopBoundary(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: LaneRunnerDeps): Promise<LaneStepResult> {
-  // Replaced in Task 6. Sequence lanes never reach here.
-  throw new Error('loopBoundary not implemented (Task 6)');
-}
-```
-
-- [ ] **Step 5.4: Run it, verify it passes**
-
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-advance-sequence.test.ts`
-Expected: `lane-runner-advance-sequence: OK`.
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-advance-sequence.test.ts` -> `lane-runner-advance-sequence: OK`.
+Add `{ rel: 'src/__tests__/lane-runner-advance-sequence.test.ts', required: true },` to `SUITES`.
 
 - [ ] **Step 5.5: Commit**
 
 ```bash
 git add sidecoach/src/lane-runner.ts sidecoach/src/__tests__/lane-runner-advance-sequence.test.ts sidecoach/scripts/run-tests.ts
-git commit -m "feat(lane-p2): advanceLane sequence completion (model-attested, CAS, report dedup)"
+git commit -m "feat(lane-p2): advanceLane completion (lifecycle/outcome, CAS, dedup, audit)"
 ```
 
 ---
 
-## Task 6: `advanceLane` - loop lanes (iteration boundary)
+## Task 6: Transitions - retry / interrupt / resume / stop (audited, no re-run)
 
-`lane_calm` and `lane_converge` are `executionKind: 'loop'`. After the last verb step of an iteration, the loop increments `iteration`, resets the cursor, and re-serves the first step. P2 has NO validator gate, so the loop continues until an explicit `stop`. (P4 adds the validator-gated convergence floor that can auto-close the loop as `converged`.)
-
-**Files:**
-- Modify: `sidecoach/src/lane-runner.ts` (replace the `loopBoundary` stub)
-- Test: `sidecoach/src/__tests__/lane-runner-advance-loop.test.ts`
+**Files:** Modify `lane-runner.ts`; Test `lane-runner-transitions.test.ts`
 
 - [ ] **Step 6.1: Write the failing test**
-
-```typescript
-// sidecoach/src/__tests__/lane-runner-advance-loop.test.ts
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
-import { LANES } from '../lanes.generated';
-import { LaneCheckpointStore } from '../lane-checkpoint-store';
-import { startLane, advanceLane, LaneRunnerDeps } from '../lane-runner';
-import { StepReport } from '../lane-types';
-
-function deps(proj: string): LaneRunnerDeps {
-  let n = 0; let t = 0;
-  return {
-    store: new LaneCheckpointStore(proj),
-    runFlow: async (flowId) => ({ flowId, flowName: String(flowId), status: 'success', message: 'ok', guidance: [], checklist: [] }),
-    now: () => { t += 1000; return new Date(t).toISOString(); },
-    newCheckpointId: () => `cp${++n}`,
-  };
-}
-
-async function run() {
-  const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-loop-'));
-  const d = deps(proj);
-  // pick a real loop lane from the generated data, fail loudly if none
-  const loopLane = LANES.find((l) => l.executionKind === 'loop');
-  if (!loopLane) throw new Error('expected at least one loop lane (lane_calm/lane_converge)');
-
-  let res = await startLane(loopLane.lane, 't', { projectPath: proj }, 'req-1', d);
-  if (res.iteration !== 0) throw new Error('starts at iteration 0');
-
-  // complete every verb step of iteration 0
-  for (let i = 0; i < loopLane.verbSteps.length; i++) {
-    const verb = res.currentVerb!;
-    const rep: StepReport = { stepId: verb, iteration: 0, reportId: `r0:${verb}`, verb, summary: 's', evidence: [{ kind: 'note', detail: 'x' }] };
-    res = await advanceLane(proj, res.checkpointId, { action: 'complete', report: rep, expectedRevision: res.revision }, d);
-  }
-  // loop boundary: NOT converged, iteration incremented, cursor reset
-  if (res.status !== 'in_progress') throw new Error('loop must not converge without stop in P2');
-  if (res.iteration !== 1) throw new Error('iteration should be 1 after first boundary');
-  if (res.stepIndex !== 0) throw new Error('cursor resets to 0 at boundary');
-
-  // an explicit stop ends the loop
-  const stopped = await advanceLane(proj, res.checkpointId, { action: 'stop', expectedRevision: res.revision, reason: 'good enough' }, d);
-  if (stopped.status !== 'stopped') throw new Error('stop must end the loop');
-
-  console.log('lane-runner-advance-loop: OK');
-}
-run();
-```
-
-- [ ] **Step 6.2: Run it, verify it fails**
-
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-advance-loop.test.ts`
-Expected: FAIL - `loopBoundary not implemented (Task 6)`.
-
-- [ ] **Step 6.3: Replace the `loopBoundary` stub**
-
-```typescript
-async function loopBoundary(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: LaneRunnerDeps): Promise<LaneStepResult> {
-  // P2: no validator gate. Increment the iteration, reset for the next pass,
-  // keep the lane in_progress. The user/model ends the loop with an explicit
-  // 'stop'. (P4 will invoke requiredProductValidatorIds here and close the lane
-  // as 'converged' when they all return clean.)
-  cp.iteration += 1;
-  cp.cursor = 0;
-  cp.completedStepIds = [];
-  bump(cp, d);
-  return serveStep(cp, l, context, d);
-}
-```
-
-- [ ] **Step 6.4: Run it, verify it passes**
-
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-advance-loop.test.ts`
-Expected: `lane-runner-advance-loop: OK`.
-
-- [ ] **Step 6.5: Commit**
-
-```bash
-git add sidecoach/src/lane-runner.ts sidecoach/src/__tests__/lane-runner-advance-loop.test.ts sidecoach/scripts/run-tests.ts
-git commit -m "feat(lane-p2): loop-lane iteration boundary (stop-terminated; validator gate deferred to P4)"
-```
-
----
-
-## Task 7: `skip` with prerequisite safety
-
-A `skip` advances the cursor without a report, BUT must not strand a later step whose hard prerequisite (from the lane's `prereqWaivers` - a waiver means the dependency is intentionally satisfiable) is left unmet. P2 implements the spec's reject-unsafe-skip rule using the generated `prereqWaivers` as the waiver source: a skip is rejected if a not-yet-completed, non-waived prerequisite of any remaining step is the step being skipped.
-
-**Files:**
-- Modify: `sidecoach/src/lane-runner.ts`
-- Test: `sidecoach/src/__tests__/lane-runner-transitions.test.ts`
-
-- [ ] **Step 7.1: Write the failing test**
 
 ```typescript
 // sidecoach/src/__tests__/lane-runner-transitions.test.ts
@@ -922,107 +741,233 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { LaneCheckpointStore } from '../lane-checkpoint-store';
-import { startLane, advanceLane, LaneRunnerDeps } from '../lane-runner';
+import { startLane, advanceLane, laneStatus, LaneRunnerDeps } from '../lane-runner';
 
 function deps(proj: string): LaneRunnerDeps {
-  let n = 0; let t = 0;
-  return {
-    store: new LaneCheckpointStore(proj),
-    runFlow: async (flowId) => ({ flowId, flowName: String(flowId), status: 'success', message: 'ok', guidance: [], checklist: [] }),
-    now: () => { t += 1000; return new Date(t).toISOString(); },
-    newCheckpointId: () => `cp${++n}`,
-  };
+  let n = 0, t = 0, calls = 0;
+  const d: any = { store: new LaneCheckpointStore(proj),
+    runFlow: async (flowId: any) => { calls++; return { flowId, flowName: String(flowId), status: 'success', message: 'ok', guidance: [`g:${flowId}`], checklist: [] }; },
+    now: () => { t += 1000; return new Date(t).toISOString(); }, newCheckpointId: () => `lane-cp${++n}` };
+  d.calls = () => calls;
+  return d;
 }
-
 async function run() {
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-trans-'));
-  const d = deps(proj);
+  const d = deps(proj) as any;
   const start = await startLane('lane_build', 'hero', { projectPath: proj }, 'req-1', d);
+  const callsAfterStart = d.calls();
 
-  // skip the first verb step -> advances to craft, records the skip
-  const r = await advanceLane(proj, start.checkpointId, { action: 'skip', expectedRevision: start.revision, reason: 'already shaped' }, d);
-  if (r.currentVerb !== 'craft') throw new Error('skip should advance to craft');
+  // retry re-serves the SAME step from cache (no handler re-run), report optional but recorded
+  const rt = await advanceLane(proj, start.checkpointId, { action: 'retry', expectedRevision: start.revision, reason: 'redo' }, d);
+  if (rt.currentVerb !== 'shape') throw new Error('retry stays on shape');
+  if (d.calls() !== callsAfterStart) throw new Error('retry must NOT re-run handlers (served cache)');
 
-  // interrupt then resume returns to the same step
-  const ir = await advanceLane(proj, r.checkpointId, { action: 'interrupt', expectedRevision: r.revision }, d);
-  if (ir.status !== 'interrupted') throw new Error('interrupt sets interrupted');
-  const rr = await advanceLane(proj, r.checkpointId, { action: 'resume', expectedRevision: ir.revision }, d);
-  if (rr.status !== 'in_progress' || rr.currentVerb !== 'craft') throw new Error('resume returns to craft, in_progress');
+  // interrupt -> interrupted, no handler re-run, returns paused state
+  const ir = await advanceLane(proj, start.checkpointId, { action: 'interrupt', expectedRevision: rt.revision }, d);
+  if (ir.lifecycle !== 'interrupted' || ir.currentVerb !== undefined) throw new Error('interrupt -> interrupted/paused');
+  if (d.calls() !== callsAfterStart) throw new Error('interrupt must not re-run handlers');
 
-  // retry re-serves the same step without advancing
-  const rt = await advanceLane(proj, r.checkpointId, { action: 'retry', expectedRevision: rr.revision }, d);
-  if (rt.currentVerb !== 'craft') throw new Error('retry stays on craft');
+  // any non-resume action while interrupted is rejected
+  let threw = false;
+  try { await advanceLane(proj, start.checkpointId, { action: 'retry', expectedRevision: ir.revision }, d); } catch { threw = true; }
+  if (!threw) throw new Error('only resume valid while interrupted');
 
+  // resume -> in_progress, re-serves shape from cache
+  const rr = await advanceLane(proj, start.checkpointId, { action: 'resume', expectedRevision: ir.revision }, d);
+  if (rr.lifecycle !== 'in_progress' || rr.currentVerb !== 'shape') throw new Error('resume -> in_progress on shape');
+  if (d.calls() !== callsAfterStart) throw new Error('resume must not re-run handlers');
+
+  // stop -> closed/stopped, audited
+  const st = await advanceLane(proj, start.checkpointId, { action: 'stop', expectedRevision: rr.revision, reason: 'parking it' }, d);
+  if (st.lifecycle !== 'closed' || st.outcome !== 'stopped') throw new Error('stop -> closed/stopped');
+  const state = laneStatus(proj, start.checkpointId, d);
+  if (!state.audit.some((a) => a.action === 'stop' && a.reason === 'parking it')) throw new Error('stop must be audited with reason');
   console.log('lane-runner-transitions: OK');
 }
 run();
 ```
 
-- [ ] **Step 7.2: Run it, verify it fails**
+- [ ] **Step 6.2: Run, verify it fails**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-transitions.test.ts`
-Expected: FAIL - the `skip` path currently calls `advanceCursor(..., undefined)` which records nothing / may mis-handle; assertion fails (or skip throws). Confirm the specific failure before implementing.
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-transitions.test.ts` -> FAIL (`transitionNonComplete not implemented` and `laneStatus` not yet present - Task 8 adds laneStatus; add a minimal `laneStatus` export now if needed, or land Task 8 first. The plan order is fine because Step 6.3 implements the transitions and Task 8 adds laneStatus; if running 6 before 8, temporarily import laneStatus will fail - so implement laneStatus in Task 8 and re-run this suite after Task 8. Mark this suite SKIP-until-8 in SUITES, flip to required in Task 8.)
 
-- [ ] **Step 7.3: Implement safe `skip`**
+Note: to keep TDD honest, register this suite as NON-required in Task 6 and flip to `required: true` in Task 8 (when `laneStatus` exists). The transition assertions (excluding the final `laneStatus` lines) still drive 6.3.
 
-Replace the `case 'skip':` line in `advanceLane` with a guarded version, and add the prereq helper:
+- [ ] **Step 6.3: Implement the non-complete transitions**
+
+Replace `transitionNonComplete` in `lane-runner.ts`:
 
 ```typescript
-    case 'skip': {
-      const step = l.verbSteps[cp.cursor];
-      const blocked = remainingHardDependentsOf(step.verb, cp, l);
-      if (blocked.length > 0) {
-        throw new Error(`advanceLane: cannot skip "${step.verb}" - remaining steps depend on it: ${blocked.join(', ')}. Retry it or stop the lane.`);
-      }
-      cp.stepReports.push({ stepId: step.verb, iteration: cp.iteration, reportId: `skip:${step.verb}:${cp.iteration}`, verb: step.verb, summary: `SKIPPED: ${transition.reason ?? 'no reason given'}`, evidence: [{ kind: 'note', detail: 'skipped' }] });
-      return advanceCursor(cp, l, { projectPath }, d, undefined);
+async function transitionNonComplete(cp: LaneCheckpoint, l: GeneratedLane, projectPath: string, t: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  switch (t.action) {
+    case 'retry': {
+      if (t.report) { cp.stepReports.push(t.report); if (t.report.reportId) cp.seenReportIds.push(t.report.reportId); }
+      pushAudit(cp, { action: 'retry', stepId: l.verbSteps[cp.cursor]?.verb, iteration: cp.iteration, reason: t.reason, reportId: t.report?.reportId }, d);
+      bump(cp, d);
+      return serveStep(cp, l, { projectPath }, d);     // served cache -> no handler re-run
     }
-```
-
-```typescript
-// A remaining (not-yet-passed) verb step "hard-depends" on `verb` when a
-// prereqWaiver maps one of its member flows to a flow owned by `verb` AND that
-// waiver is NOT present (waived deps are satisfiable, so they don't block).
-// In P2 the prereqWaivers list enumerates the *waived* (safe-to-skip) edges;
-// any dependency not waived blocks the skip.
-function remainingHardDependentsOf(verb: string, cp: LaneCheckpoint, l: GeneratedLane): string[] {
-  const step = l.verbSteps[cp.cursor];
-  const waivedFrom = new Set(l.prereqWaivers.map((w) => w.prerequisiteFlowId));
-  const skippedFlowsUnwaived = step.flowIds.filter((f) => !waivedFrom.has(f));
-  if (skippedFlowsUnwaived.length === 0) return [];
-  const blocked: string[] = [];
-  for (let i = cp.cursor + 1; i < l.verbSteps.length; i++) {
-    const later = l.verbSteps[i];
-    const dependsOnSkipped = later.flowIds.some((lf) =>
-      l.prereqWaivers.some((w) => w.dependentFlowId === lf && skippedFlowsUnwaived.includes(w.prerequisiteFlowId as any)),
-    );
-    if (dependsOnSkipped) blocked.push(later.verb);
+    case 'interrupt': {
+      pushAudit(cp, { action: 'interrupt', stepId: l.verbSteps[cp.cursor]?.verb, iteration: cp.iteration, reason: t.reason }, d);
+      cp.lifecycle = 'interrupted';
+      bump(cp, d);
+      return closedResult(cp, l);                       // paused state; NO serveStep
+    }
+    case 'resume': {
+      if (cp.lifecycle !== 'interrupted') throw new Error('advanceLane: resume is only valid on an interrupted lane');
+      cp.lifecycle = 'in_progress';
+      pushAudit(cp, { action: 'resume', stepId: l.verbSteps[cp.cursor]?.verb, iteration: cp.iteration }, d);
+      bump(cp, d);
+      return serveStep(cp, l, { projectPath }, d);      // re-serve from cache
+    }
+    case 'stop': {
+      pushAudit(cp, { action: 'stop', stepId: l.verbSteps[cp.cursor]?.verb, iteration: cp.iteration, reason: t.reason }, d);
+      cp.lifecycle = 'closed'; cp.outcome = 'stopped';
+      bump(cp, d);
+      return closedResult(cp, l);
+    }
+    case 'skip':
+      return skipStep(cp, l, projectPath, t, d);        // Task 7
+    default:
+      throw new Error(`advanceLane: unknown action "${(t as any).action}"`);
   }
-  return blocked;
 }
 ```
 
-Note: `lane_build` has empty `prereqWaivers`, so `remainingHardDependentsOf` returns `[]` and the skip succeeds - matching the test. The guard only bites on lanes that declare prerequisite edges. (This is the P2 approximation; P4's validator/prereq model is richer.)
+Add a `skipStep` stub (Task 7 replaces it):
 
-- [ ] **Step 7.4: Run it, verify it passes**
+```typescript
+async function skipStep(cp: LaneCheckpoint, l: GeneratedLane, projectPath: string, t: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  throw new Error('skipStep not implemented (Task 7)');
+}
+```
+
+- [ ] **Step 6.4: Run (transition assertions)**
 
 Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-transitions.test.ts`
-Expected: `lane-runner-transitions: OK`.
+Expected: passes through the transition assertions; the trailing `laneStatus` lines pass once Task 8 lands. Register NON-required for now: `{ rel: 'src/__tests__/lane-runner-transitions.test.ts' },`.
 
-- [ ] **Step 7.5: Commit**
+- [ ] **Step 6.5: Commit**
 
 ```bash
 git add sidecoach/src/lane-runner.ts sidecoach/src/__tests__/lane-runner-transitions.test.ts sidecoach/scripts/run-tests.ts
-git commit -m "feat(lane-p2): skip with prerequisite safety + interrupt/resume/retry transitions"
+git commit -m "feat(lane-p2): retry/interrupt/resume/stop transitions (audited, no handler re-run)"
 ```
 
 ---
 
-## Task 8: `laneStatus` + `listLanes`
+## Task 7: `skip` with REAL prerequisite safety
 
-**Files:**
-- Modify: `sidecoach/src/lane-runner.ts`
-- Test: `sidecoach/src/__tests__/lane-runner-status-list.test.ts`
+Uses `FlowPrerequisiteValidator.getDependencies()` (the real dependency graph), the lane's `prereqWaivers` as exact waived edges, and the checkpoint's `completedFlowIds`. A skip is rejected when skipping the current verb's flows would strand a later step's **required, unwaived, not-yet-completed** prerequisite.
+
+**Files:** Modify `lane-runner.ts`; Test `lane-runner-skip-prereq.test.ts`
+
+- [ ] **Step 7.1: Write the failing test (genuinely fails before impl)**
+
+```typescript
+// sidecoach/src/__tests__/lane-runner-skip-prereq.test.ts
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { LaneCheckpointStore } from '../lane-checkpoint-store';
+import { startLane, advanceLane, LaneRunnerDeps } from '../lane-runner';
+
+function deps(proj: string): LaneRunnerDeps {
+  let n = 0, t = 0;
+  return { store: new LaneCheckpointStore(proj),
+    runFlow: async (flowId) => ({ flowId, flowName: String(flowId), status: 'success', message: 'ok', guidance: [], checklist: [] }),
+    now: () => { t += 1000; return new Date(t).toISOString(); }, newCheckpointId: () => `lane-cp${++n}` };
+}
+async function run() {
+  const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-skip-'));
+  const d = deps(proj);
+  // lane_build verb 'shape' owns flowA_brand_verify; later flowF_design_tokens
+  // REQUIRES flowA (flow-prerequisites.ts). Skipping shape must be REJECTED.
+  const start = await startLane('lane_build', 'hero', { projectPath: proj }, 'req-1', d);
+  let threw = false;
+  try { await advanceLane(proj, start.checkpointId, { action: 'skip', expectedRevision: start.revision, reason: 'skip shape' }, d); }
+  catch (e: any) { threw = /depend|prerequisite|flowA|strand/i.test(String(e.message)); }
+  if (!threw) throw new Error('skipping shape must be rejected (flowF requires flowA)');
+
+  // skip requires a reason
+  threw = false;
+  try { await advanceLane(proj, start.checkpointId, { action: 'skip', expectedRevision: start.revision }, d); } catch { threw = true; }
+  if (!threw) throw new Error('skip requires a reason');
+
+  // A safe skip: complete shape+craft, then the LAST step (polish) has no
+  // dependents, so skipping it is allowed and closes the lane 'partial'.
+  let r = await advanceLane(proj, start.checkpointId, { action: 'complete', report: { stepId: 'shape', iteration: 0, reportId: 'r-shape', verb: 'shape', summary: 's', evidence: [{ kind: 'note', detail: 'x' }] }, expectedRevision: start.revision }, d);
+  r = await advanceLane(proj, r.checkpointId, { action: 'complete', report: { stepId: 'craft', iteration: 0, reportId: 'r-craft', verb: 'craft', summary: 's', evidence: [{ kind: 'note', detail: 'x' }] }, expectedRevision: r.revision }, d);
+  const skipped = await advanceLane(proj, r.checkpointId, { action: 'skip', expectedRevision: r.revision, reason: 'no polish needed' }, d);
+  if (skipped.lifecycle !== 'closed' || skipped.outcome !== 'partial') throw new Error('skipping last step closes lane partial');
+  console.log('lane-runner-skip-prereq: OK');
+}
+run();
+```
+
+- [ ] **Step 7.2: Run, verify it fails**
+
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-skip-prereq.test.ts` -> FAIL `skipStep not implemented (Task 7)`.
+
+- [ ] **Step 7.3: Implement `skipStep`**
+
+```typescript
+import { FlowPrerequisiteValidator } from './flow-prerequisites';
+
+// remaining (cursor+1..end) verb steps whose member flows have a REQUIRED
+// prerequisite that is among the skipped flows, not already completed, and whose
+// exact edge is not waived in the lane's prereqWaivers.
+function strandedBySkipping(cp: LaneCheckpoint, l: GeneratedLane): string[] {
+  const skipFlows = new Set(l.verbSteps[cp.cursor].flowIds);
+  if (skipFlows.size === 0) return [];
+  const completed = new Set(cp.completedFlowIds);
+  const waived = new Set(l.prereqWaivers.map((w) => `${w.dependentFlowId}<-${w.prerequisiteFlowId}`));
+  const blocked = new Set<string>();
+  for (let i = cp.cursor + 1; i < l.verbSteps.length; i++) {
+    const later = l.verbSteps[i];
+    for (const depFlow of later.flowIds) {
+      const deps = FlowPrerequisiteValidator.getDependencies(depFlow);
+      if (!deps) continue;
+      for (const p of deps.prerequisites) {
+        if (!p.required) continue;
+        if (skipFlows.has(p.flowId) && !completed.has(p.flowId) && !waived.has(`${depFlow}<-${p.flowId}`)) {
+          blocked.add(later.verb);
+        }
+      }
+    }
+  }
+  return [...blocked];
+}
+
+async function skipStep(cp: LaneCheckpoint, l: GeneratedLane, projectPath: string, t: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  if (!t.reason || !t.reason.trim()) throw new Error('advanceLane: skip requires a reason');
+  const blocked = strandedBySkipping(cp, l);
+  if (blocked.length > 0) {
+    throw new Error(`advanceLane: cannot skip "${l.verbSteps[cp.cursor].verb}" - later steps require its prerequisites: ${blocked.join(', ')}. Complete it or stop the lane.`);
+  }
+  const step = l.verbSteps[cp.cursor];
+  cp.skippedStepIds.push(step.verb);
+  pushAudit(cp, { action: 'skip', stepId: step.verb, iteration: cp.iteration, reason: t.reason }, d);
+  return advanceCursor(cp, l, { projectPath }, d);
+}
+```
+
+- [ ] **Step 7.4: Run + register**
+
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-skip-prereq.test.ts` -> `lane-runner-skip-prereq: OK`.
+Add `{ rel: 'src/__tests__/lane-runner-skip-prereq.test.ts', required: true },` to `SUITES`.
+
+- [ ] **Step 7.5: Commit**
+
+```bash
+git add sidecoach/src/lane-runner.ts sidecoach/src/__tests__/lane-runner-skip-prereq.test.ts sidecoach/scripts/run-tests.ts
+git commit -m "feat(lane-p2): skip with real prerequisite safety (getDependencies + waived edges)"
+```
+
+---
+
+## Task 8: `laneStatus` + `listLanes(options?)`
+
+**Files:** Modify `lane-runner.ts`; Test `lane-runner-status-list.test.ts`
 
 - [ ] **Step 8.1: Write the failing test**
 
@@ -1032,84 +977,83 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { LaneCheckpointStore } from '../lane-checkpoint-store';
-import { startLane, laneStatus, listLanes, LaneRunnerDeps } from '../lane-runner';
+import { startLane, advanceLane, laneStatus, listLanes, LaneRunnerDeps } from '../lane-runner';
 
 function deps(proj: string): LaneRunnerDeps {
-  let n = 0; let t = 0;
-  return {
-    store: new LaneCheckpointStore(proj),
+  let n = 0, t = 0;
+  return { store: new LaneCheckpointStore(proj),
     runFlow: async (flowId) => ({ flowId, flowName: String(flowId), status: 'success', message: 'ok', guidance: [], checklist: [] }),
-    now: () => { t += 1000; return new Date(t).toISOString(); },
-    newCheckpointId: () => `cp${++n}`,
-  };
+    now: () => { t += 1000; return new Date(t).toISOString(); }, newCheckpointId: () => `lane-cp${++n}` };
 }
-
 async function run() {
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-stat-'));
   const d = deps(proj);
   const a = await startLane('lane_build', 'hero', { projectPath: proj }, 'req-a', d);
-  await startLane('lane_ship', 'site', { projectPath: proj }, 'req-b', d);
+  const b = await startLane('lane_ship', 'site', { projectPath: proj }, 'req-b', d);
+  await advanceLane(proj, b.checkpointId, { action: 'stop', expectedRevision: b.revision, reason: 'x' }, d); // close b
 
   const st = laneStatus(proj, a.checkpointId, d);
-  if (st.laneId !== 'lane_build' || st.status !== 'in_progress') throw new Error('status wrong');
-  if (st.totalSteps !== 3) throw new Error('lane_build has 3 verb steps');
+  if (st.laneId !== 'lane_build' || st.lifecycle !== 'in_progress') throw new Error('status wrong');
+  if (st.totalSteps !== 3 || st.currentVerb !== 'shape') throw new Error('status step info wrong');
 
-  const all = listLanes(proj, d);
-  if (all.length !== 2) throw new Error('expected 2 lanes');
-
+  // default: only active (in_progress/interrupted) lanes
+  const active = listLanes(proj, d);
+  if (active.length !== 1 || active[0].checkpointId !== a.checkpointId) throw new Error('default listLanes shows only active');
+  // all: includes the closed one
+  const all = listLanes(proj, d, { all: true });
+  if (all.length !== 2) throw new Error('listLanes({all:true}) includes closed');
   console.log('lane-runner-status-list: OK');
 }
 run();
 ```
 
-- [ ] **Step 8.2: Run it, verify it fails**
+- [ ] **Step 8.2: Run, verify it fails**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-status-list.test.ts`
-Expected: FAIL - `laneStatus is not a function`.
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-status-list.test.ts` -> FAIL `laneStatus is not a function`.
 
-- [ ] **Step 8.3: Implement `laneStatus` + `listLanes`**
+- [ ] **Step 8.3: Implement**
 
 ```typescript
 export function laneStatus(projectPath: string, checkpointId: string, d: LaneRunnerDeps): LaneState {
   const cp = d.store.read(checkpointId);
   const l = resolveLane(cp.laneId);
+  const step = cp.lifecycle === 'in_progress' && cp.cursor < l.verbSteps.length ? l.verbSteps[cp.cursor] : undefined;
   return {
-    checkpointId: cp.checkpointId, laneId: cp.laneId, status: cp.status,
-    executionKind: cp.executionKind, iteration: cp.iteration, stepIndex: cp.cursor,
-    totalSteps: l.verbSteps.length, completedStepIds: [...cp.completedStepIds],
-    revision: cp.revision, createdAt: cp.createdAt, updatedAt: cp.updatedAt,
+    checkpointId: cp.checkpointId, laneId: cp.laneId, target: cp.target,
+    lifecycle: cp.lifecycle, outcome: cp.outcome, executionKind: cp.executionKind,
+    iteration: cp.iteration, stepIndex: cp.cursor, totalSteps: l.verbSteps.length, currentVerb: step?.verb,
+    completedStepIds: [...cp.completedStepIds], skippedStepIds: [...cp.skippedStepIds], completedFlowIds: [...cp.completedFlowIds],
+    stepReports: [...cp.stepReports], audit: [...cp.audit], revision: cp.revision, createdAt: cp.createdAt, updatedAt: cp.updatedAt,
   };
 }
 
-export function listLanes(projectPath: string, d: LaneRunnerDeps): LaneInfo[] {
-  return d.store.list().map((s) => {
-    const l = resolveLane(s.laneId);
-    return { checkpointId: s.checkpointId, laneId: s.laneId, status: s.status, stepIndex: s.cursor, totalSteps: l.verbSteps.length, updatedAt: s.updatedAt };
-  });
+export function listLanes(projectPath: string, d: LaneRunnerDeps, options?: { all?: boolean }): LaneInfo[] {
+  const all = !!options?.all;
+  return d.store.list()
+    .filter((s) => all || s.lifecycle === 'in_progress' || s.lifecycle === 'interrupted')
+    .map((s) => { const l = resolveLane(s.laneId); return { checkpointId: s.checkpointId, laneId: s.laneId, lifecycle: s.lifecycle, outcome: s.outcome, stepIndex: s.cursor, totalSteps: l.verbSteps.length, updatedAt: s.updatedAt }; });
 }
 ```
 
-- [ ] **Step 8.4: Run it, verify it passes**
+- [ ] **Step 8.4: Run + flip Task 6 suite to required**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-runner-status-list.test.ts`
-Expected: `lane-runner-status-list: OK`.
+Run both: `cd sidecoach && npx ts-node src/__tests__/lane-runner-status-list.test.ts && npx ts-node src/__tests__/lane-runner-transitions.test.ts`
+Expected: both OK. Add `{ rel: 'src/__tests__/lane-runner-status-list.test.ts', required: true },` and flip the Task 6 entry to `required: true`.
 
 - [ ] **Step 8.5: Commit**
 
 ```bash
 git add sidecoach/src/lane-runner.ts sidecoach/src/__tests__/lane-runner-status-list.test.ts sidecoach/scripts/run-tests.ts
-git commit -m "feat(lane-p2): laneStatus + listLanes"
+git commit -m "feat(lane-p2): laneStatus + listLanes(options?{all})"
 ```
 
 ---
 
-## Task 9: Engine delegation methods
+## Task 9: Engine methods (via `createExecutionEngine`, real handler dispatch)
 
-Expose the four operations on `FlowExecutionEngine` so callers use one object. The engine wires real dependencies: a `LaneCheckpointStore` scoped to the project path, a `runFlow` that dispatches to the registered handler, a real clock, and a checkpoint-id factory.
+The engine's `runFlow` reuses the SAME private path `process()` uses: enrich context, check `canExecute` (degraded guidance if not), then `execute`. So lane guidance matches normal flow guidance, and prerequisite/executability rules are honored.
 
-**Files:**
-- Modify: `sidecoach/src/sidecoach-orchestrator.ts`
-- Test: `sidecoach/src/__tests__/lane-engine-methods.test.ts`
+**Files:** Modify `sidecoach-orchestrator.ts`; Test `lane-engine-methods.test.ts`
 
 - [ ] **Step 9.1: Write the failing test**
 
@@ -1118,51 +1062,53 @@ Expose the four operations on `FlowExecutionEngine` so callers use one object. T
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { FlowExecutionEngine } from '../sidecoach-orchestrator';
+import { createExecutionEngine } from '../sidecoach-orchestrator';
 
 async function run() {
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-eng-'));
-  const engine = new FlowExecutionEngine();   // match the existing constructor; adjust if it requires args
+  const engine = createExecutionEngine();               // factory registers handlers
   const res = await engine.startLane('lane_build', 'hero', { projectPath: proj }, 'req-1');
   if (res.laneId !== 'lane_build' || res.currentVerb !== 'shape') throw new Error('startLane via engine failed');
+  if (!Array.isArray(res.guidance) || res.guidance.length === 0) throw new Error('engine must serve real guidance');
   const st = engine.laneStatus(proj, res.checkpointId);
   if (st.totalSteps !== 3) throw new Error('laneStatus via engine failed');
+  if (engine.listLanes(proj).length !== 1) throw new Error('listLanes via engine failed');
   console.log('lane-engine-methods: OK');
 }
 run();
 ```
 
-- [ ] **Step 9.2: Run it, verify it fails**
+- [ ] **Step 9.2: Run, verify it fails**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-engine-methods.test.ts`
-Expected: FAIL - `engine.startLane is not a function`. (If `new FlowExecutionEngine()` needs args, read the constructor around `sidecoach-orchestrator.ts:77` and match it in the test first.)
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-engine-methods.test.ts` -> FAIL `engine.startLane is not a function`.
 
-- [ ] **Step 9.3: Add delegating methods**
+- [ ] **Step 9.3: Add the engine methods**
 
-In `sidecoach-orchestrator.ts`, import the runner and add methods to the `FlowExecutionEngine` class. `runFlow` reuses the registered handler map (`getHandlers()`):
+In `sidecoach-orchestrator.ts`, import and add methods to `FlowExecutionEngine`. Reuse the existing private `enrichContextForHandler` + the handler map. (Confirm the private method name at `:241` - it is `enrichContextForHandler`; if it differs, match the actual name.)
 
 ```typescript
 import * as laneRunner from './lane-runner';
 import { LaneCheckpointStore } from './lane-checkpoint-store';
 import type { LaneTransition } from './lane-types';
+import { FlowPrerequisiteValidator } from './flow-prerequisites';
 
-// ... inside class FlowExecutionEngine:
-
+// inside class FlowExecutionEngine:
 private laneDeps(projectPath: string): laneRunner.LaneRunnerDeps {
   return {
     store: new LaneCheckpointStore(projectPath),
     runFlow: async (flowId, context) => {
       const handler = this.getHandlers().get(flowId);
-      if (!handler) {
-        return { flowId, flowName: String(flowId), status: 'skipped', message: `no handler for ${flowId}` };
+      if (!handler) return { flowId, flowName: String(flowId), status: 'skipped', message: `no handler for ${flowId}`, guidance: [], checklist: [] };
+      const enriched = this.enrichContextForHandler({ utterance: '', projectPath, ...context }, flowId);
+      if (!handler.canExecute(enriched)) {
+        return { flowId, flowName: String(flowId), status: 'needs_input', message: `degraded: ${flowId} not currently executable`, guidance: [`(${flowId}) prerequisites/context not fully ready - coaching only.`], checklist: [] };
       }
-      return handler.execute({ utterance: '', projectPath, ...context });
+      return handler.execute(enriched);
     },
     now: () => new Date().toISOString(),
     newCheckpointId: () => `lane-${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
   };
 }
-
 async startLane(laneId: string, target: string, context: { projectPath?: string } & Record<string, any>, startRequestId: string) {
   const projectPath = context.projectPath || process.cwd();
   return laneRunner.startLane(laneId, target, { ...context, projectPath }, startRequestId, this.laneDeps(projectPath));
@@ -1170,130 +1116,159 @@ async startLane(laneId: string, target: string, context: { projectPath?: string 
 async advanceLane(projectPath: string, checkpointId: string, transition: LaneTransition) {
   return laneRunner.advanceLane(projectPath, checkpointId, transition, this.laneDeps(projectPath));
 }
-laneStatus(projectPath: string, checkpointId: string) {
-  return laneRunner.laneStatus(projectPath, checkpointId, this.laneDeps(projectPath));
-}
-listLanes(projectPath: string) {
-  return laneRunner.listLanes(projectPath, this.laneDeps(projectPath));
-}
+laneStatus(projectPath: string, checkpointId: string) { return laneRunner.laneStatus(projectPath, checkpointId, this.laneDeps(projectPath)); }
+listLanes(projectPath: string, options?: { all?: boolean }) { return laneRunner.listLanes(projectPath, this.laneDeps(projectPath), options); }
 ```
 
-Note: `Date.now()`/`Math.random()` are fine in the *engine* (production code); they are banned only in workflow scripts and test modules. Tests inject deterministic `now`/`newCheckpointId` via `laneDeps`-style stubs as in Tasks 4-8.
+(`Date.now()`/`Math.random()` are production-code-fine; tests inject deterministic versions via `laneDeps`-style stubs as in Tasks 4-8. If `enrichContextForHandler` is not accessible/typed for a synthetic context, add a small `laneGuidanceContext(flowId, ctx)` private wrapper rather than calling `execute` raw.)
 
-- [ ] **Step 9.4: Run it, verify it passes**
+- [ ] **Step 9.4: Run + register**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-engine-methods.test.ts`
-Expected: `lane-engine-methods: OK`.
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-engine-methods.test.ts` -> `lane-engine-methods: OK`.
+Add `{ rel: 'src/__tests__/lane-engine-methods.test.ts', required: true },` to `SUITES`.
 
 - [ ] **Step 9.5: Commit**
 
 ```bash
 git add sidecoach/src/sidecoach-orchestrator.ts sidecoach/src/__tests__/lane-engine-methods.test.ts sidecoach/scripts/run-tests.ts
-git commit -m "feat(lane-p2): FlowExecutionEngine lane delegation methods"
+git commit -m "feat(lane-p2): engine lane methods via createExecutionEngine (real handler dispatch)"
 ```
 
 ---
 
-## Task 10: Wire `/sidecoach <phrase>` into the live command path
+## Task 10: Wire `/sidecoach <phrase>` into `process()`
 
-`resolveSidecoachPhrase` (P1) is built and unit-tested but has zero callers. Add `resolveSidecoachInput()` that tries the existing `parseSlashCommand` first (known verbs/phase commands keep byte-stable behavior), and only when that returns the "unknown command" result for a `/sidecoach`-addressed phrase falls through to the phrase resolver.
+`resolveSidecoachInput` (router) + wiring into `process()` at the point right after the existing `parseSlashCommand` known-command branch, gated to `^/sidecoach\s+(.+)$`. Bare `/sidecoach` and empty input already hit `showInteractiveMenu` (orchestrator:664) - that stays. Non-`/sidecoach` utterances are untouched (they fall through to intent detection as today).
 
-**Files:**
-- Modify: `sidecoach/src/slash-command-router.ts`
-- Test: `sidecoach/src/__tests__/slash-phrase-wiring.test.ts`
+**Files:** Modify `slash-command-router.ts`, `sidecoach-orchestrator.ts`; Test `slash-phrase-wiring.test.ts`
 
-- [ ] **Step 10.1: Write the failing test**
+- [ ] **Step 10.1: Write the failing test (through `process()`)**
 
 ```typescript
 // sidecoach/src/__tests__/slash-phrase-wiring.test.ts
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
-import { resolveSidecoachInput } from '../slash-command-router';
+import { createExecutionEngine } from '../sidecoach-orchestrator';
 
-const LANES_JSON = path.join(__dirname, '..', '..', '..', 'claude', 'hooks', 'sidecoach-lanes.json');
+async function run() {
+  const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-wire-'));
+  const engine = createExecutionEngine();
+  const ctx = { projectPath: proj, userId: 'test' };
 
-function run() {
-  // a known verb still routes as a direct command (parseSlashCommand wins)
-  const known = resolveSidecoachInput('/sidecoach polish the hero', LANES_JSON);
-  if (known.source !== 'command') throw new Error('known verb should resolve via command path');
+  // ROUTE phrase -> a lane is actually STARTED through process()
+  const routed: any = await engine.process('/sidecoach build me a dashboard from scratch and make it production-ready', ctx);
+  if (!routed.lane || !routed.lane.checkpointId) throw new Error('ROUTE phrase must start a lane via process()');
+  if (routed.lane.currentVerb !== 'shape') throw new Error('started lane should be on its first verb');
 
-  // a natural phrase with no command word resolves via the classifier
-  const phrase = resolveSidecoachInput('/sidecoach build me a dashboard from scratch and make it production-ready', LANES_JSON);
-  if (phrase.source !== 'phrase') throw new Error('phrase should resolve via classifier');
-  if (phrase.phrase!.kind !== 'ROUTE') throw new Error('strong phrase should ROUTE');
+  // OUT_OF_SCOPE phrase -> refusal, NOT a lane
+  const oos: any = await engine.process('/sidecoach optimize the database query planner', ctx);
+  if (oos.lane) throw new Error('backend phrase must not start a lane');
+  if (!/UI|design|scope/i.test(oos.message || '')) throw new Error('OUT_OF_SCOPE should explain the scope');
 
-  // backend phrase refuses
-  const oos = resolveSidecoachInput('/sidecoach optimize the database query planner', LANES_JSON);
-  if (oos.source !== 'phrase' || oos.phrase!.kind !== 'OUT_OF_SCOPE') throw new Error('backend phrase should be OUT_OF_SCOPE');
+  // typo -> near-miss suggestion, no lane
+  const typo: any = await engine.process('/sidecoach polsih', ctx);
+  if (typo.lane) throw new Error('typo must not start a lane');
+  if (!/did you mean/i.test(typo.message || '')) throw new Error('typo should suggest');
 
-  // a typo suggests
-  const typo = resolveSidecoachInput('/sidecoach polsih', LANES_JSON);
-  if (typo.source !== 'phrase' || typo.phrase!.kind !== 'UNKNOWN' || !typo.phrase!.suggestion) throw new Error('typo should produce a near-miss suggestion');
+  // bare /sidecoach still shows the menu (unchanged)
+  const menu: any = await engine.process('/sidecoach', ctx);
+  if (menu.lane) throw new Error('bare /sidecoach must not start a lane');
 
+  // a known verb still routes via parseSlashCommand (not the phrase path)
+  const known: any = await engine.process('/sidecoach polish', ctx);
+  if (known.lane) throw new Error('known verb must use the command path, not phrase routing');
   console.log('slash-phrase-wiring: OK');
 }
 run();
 ```
 
-- [ ] **Step 10.2: Run it, verify it fails**
+- [ ] **Step 10.2: Run, verify it fails**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/slash-phrase-wiring.test.ts`
-Expected: FAIL - `resolveSidecoachInput is not a function`.
+Run: `cd sidecoach && npx ts-node src/__tests__/slash-phrase-wiring.test.ts` -> FAIL (`routed.lane` undefined - phrase not wired).
 
-- [ ] **Step 10.3: Add `resolveSidecoachInput`**
+- [ ] **Step 10.3: Add `resolveSidecoachInput` to the router**
 
 Append to `slash-command-router.ts`:
 
 ```typescript
 export interface SidecoachInputResolution {
-  source: 'command' | 'phrase';
-  command?: CommandMatch;        // set when source === 'command'
-  phrase?: PhraseResolution;     // set when source === 'phrase'
+  source: 'command' | 'phrase' | 'not-addressed';
+  command?: CommandMatch;
+  phrase?: PhraseResolution;
 }
 
-// Live entrypoint for /sidecoach input. Known verbs/phase commands keep their
-// exact existing behavior (parseSlashCommand). Only a /sidecoach-addressed
-// utterance that parseSlashCommand cannot map to a known command falls through
-// to the natural-language phrase resolver (P1 resolveSidecoachPhrase).
+const SIDECOACH_PHRASE_RE = /^\/sidecoach\s+(.+)$/i;
+
+// Live entrypoint. Known verbs/phase commands keep their exact parseSlashCommand
+// behavior. Only a `/sidecoach <phrase>` that is NOT a known command resolves via
+// the classifier. Anything not /sidecoach-addressed (or bare /sidecoach) returns
+// 'not-addressed' so the caller preserves existing behavior (menu / intent tier).
 export function resolveSidecoachInput(utterance: string, lanesPath: string): SidecoachInputResolution {
   const cmd = parseSlashCommand(utterance);
   if (cmd.isCommand) return { source: 'command', command: cmd };
-
-  // Not a known command. Strip a leading /sidecoach (or /) and resolve the rest
-  // as a natural phrase. If it was not /sidecoach-addressed at all, still resolve
-  // the raw utterance (callers gate on the leading slash upstream).
-  const phraseText = utterance.trim().replace(/^\/(?:sidecoach\s+)?/i, '');
-  return { source: 'phrase', phrase: resolveSidecoachPhrase(phraseText, lanesPath) };
+  const m = utterance.trim().match(SIDECOACH_PHRASE_RE);
+  if (!m) return { source: 'not-addressed' };
+  return { source: 'phrase', phrase: resolveSidecoachPhrase(m[1].trim(), lanesPath) };
 }
 ```
 
-- [ ] **Step 10.4: Run it, verify it passes**
+- [ ] **Step 10.4: Wire into `process()`**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/slash-phrase-wiring.test.ts`
-Expected: `slash-phrase-wiring: OK`. If the OUT_OF_SCOPE case fails, confirm `sidecoach-lanes.json` has a negative_filter matching "database/query planner"; adjust the test phrase to a known backend negative rather than weakening the assertion.
+In `sidecoach-orchestrator.ts`, right AFTER the `if (commandMatch.isCommand) { ... }` block (the long block ending before the intent-detection fall-through), insert phrase handling. Import `resolveSidecoachInput` and the lanes path resolver:
 
-- [ ] **Step 10.5: Commit**
+```typescript
+import { resolveSidecoachInput } from './slash-command-router';
+import * as path from 'path';
+
+// after the commandMatch.isCommand block, before intent detection:
+const laneResolution = resolveSidecoachInput(utterance, path.resolve(__dirname, '..', '..', 'claude', 'hooks', 'sidecoach-lanes.json'));
+if (laneResolution.source === 'phrase' && laneResolution.phrase) {
+  const pr = laneResolution.phrase;
+  if (pr.kind === 'ROUTE' && pr.lane) {
+    const startReq = `proc-${process.pid}-${Date.now()}`;
+    const lane = await this.startLane(pr.lane, utterance, { projectPath, userId: context.userId, metadata: context.metadata }, startReq);
+    return { success: true, message: `Routed to ${lane.laneLabel}: ${lane.message}`, detectedFlow: null, flowResults: [], guidance: lane.guidance, checklist: lane.checklist, lane };
+  }
+  if (pr.kind === 'CLASSIFY' && pr.lane) {
+    return { success: true, message: `Which direction - did you mean the "${pr.lane}" lane? Confirm to start, or rephrase.`, detectedFlow: null, flowResults: [], guidance: [], checklist: [] };
+  }
+  if (pr.kind === 'OUT_OF_SCOPE') {
+    return { success: true, message: pr.redirect || 'That reads as non-UI work. Sidecoach covers UI/design only.', detectedFlow: null, flowResults: [], guidance: [], checklist: [] };
+  }
+  // UNKNOWN
+  return { success: true, message: pr.suggestion ? `Unrecognized - ${pr.suggestion}` : 'Unrecognized /sidecoach phrase.', detectedFlow: null, flowResults: [], guidance: [], checklist: [] };
+}
+```
+
+Add an OPTIONAL `lane?: LaneStepResult` field to the `SidecoachResult` interface (`sidecoach-orchestrator.ts:1629`), importing the type:
+
+```typescript
+import type { LaneStepResult } from './lane-types';
+// in SidecoachResult:
+lane?: LaneStepResult;
+```
+
+- [ ] **Step 10.5: Run + register**
+
+Run: `cd sidecoach && npx ts-node src/__tests__/slash-phrase-wiring.test.ts` -> `slash-phrase-wiring: OK`.
+Add `{ rel: 'src/__tests__/slash-phrase-wiring.test.ts', required: true },` to `SUITES`.
+(If the OUT_OF_SCOPE phrase doesn't trip a negative filter, pick a phrase that matches a real `negative_filter` in `sidecoach-lanes.json` rather than weakening the assertion.)
+
+- [ ] **Step 10.6: Commit**
 
 ```bash
-git add sidecoach/src/slash-command-router.ts sidecoach/src/__tests__/slash-phrase-wiring.test.ts sidecoach/scripts/run-tests.ts
-git commit -m "feat(lane-p2): wire resolveSidecoachPhrase into live resolveSidecoachInput"
+git add sidecoach/src/slash-command-router.ts sidecoach/src/sidecoach-orchestrator.ts sidecoach/src/__tests__/slash-phrase-wiring.test.ts sidecoach/scripts/run-tests.ts
+git commit -m "feat(lane-p2): wire /sidecoach <phrase> into process() (ROUTE starts a lane)"
 ```
 
 ---
 
-## Task 11: Monitor CLI lane subcommands
+## Task 11: Monitor CLI lane subcommands (spec flags, factory engine)
 
-Give the model a runtime surface without the P4 MCP migration. Add a `lane` subcommand group to `bin/sidecoach-monitor.js`, mirroring the existing `engine.process()` instantiation.
+**Files:** Modify `bin/sidecoach-monitor.js`; Test `lane-cli.test.ts`
 
-**Files:**
-- Modify: `sidecoach/bin/sidecoach-monitor.js`
-- Test: `sidecoach/src/__tests__/lane-cli.test.ts` (spawns the CLI as a child process - real input, no internal-method shortcut)
-
-- [ ] **Step 11.1: Read the current monitor entry**
-
-Run: `cd sidecoach && sed -n '1,60p' bin/sidecoach-monitor.js`
-Note how it imports the compiled engine (from `dist/`) and instantiates it at line ~53. The lane subcommands must use the SAME import + build assumption. If the monitor runs from `dist/`, this task depends on `npm run build` having compiled the new lane modules - add a build step to the test.
-
-- [ ] **Step 11.2: Write the failing test**
+- [ ] **Step 11.1: Write the failing test (real child process, after build)**
 
 ```typescript
 // sidecoach/src/__tests__/lane-cli.test.ts
@@ -1301,91 +1276,77 @@ import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 const MONITOR = path.join(__dirname, '..', '..', 'bin', 'sidecoach-monitor.js');
-
 function run() {
-  // requires a prior `npm run build`; the runner step (11.4) builds first.
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-cli-'));
-  const out = execFileSync('node', [MONITOR, 'lane', 'start', 'lane_build', '--project', proj, '--target', 'hero'], { encoding: 'utf8' });
-  if (!/lane_build/.test(out)) throw new Error('CLI start did not report the lane');
-  if (!/shape/.test(out)) throw new Error('CLI start did not serve the first verb step');
-  const list = execFileSync('node', [MONITOR, 'lane', 'list', '--project', proj], { encoding: 'utf8' });
-  if (!/lane_build/.test(list)) throw new Error('CLI list did not show the started lane');
+  const start = execFileSync('node', [MONITOR, 'lane', 'start', '--lane', 'lane_build', '--project', proj, '--target', 'hero', '--start-request-id', 'cli-1'], { encoding: 'utf8' });
+  const startObj = JSON.parse(start);
+  if (startObj.laneId !== 'lane_build' || startObj.currentVerb !== 'shape') throw new Error('CLI start failed');
+  const list = JSON.parse(execFileSync('node', [MONITOR, 'lane', 'list', '--project', proj], { encoding: 'utf8' }));
+  if (!Array.isArray(list) || list.length !== 1) throw new Error('CLI list failed');
+  const status = JSON.parse(execFileSync('node', [MONITOR, 'lane', 'status', '--project', proj, '--checkpoint', startObj.checkpointId], { encoding: 'utf8' }));
+  if (status.lifecycle !== 'in_progress') throw new Error('CLI status failed');
   console.log('lane-cli: OK');
 }
 run();
 ```
 
-- [ ] **Step 11.3: Implement the `lane` subcommands**
+- [ ] **Step 11.2: Read the monitor, then implement the `lane` branch**
 
-In `bin/sidecoach-monitor.js`, before the existing utterance path, branch on `process.argv[2] === 'lane'`. Parse `--project`, `--target`, `--request`, `--checkpoint`, `--action`, `--report` (JSON) flags. Dispatch:
+Confirm: `bin/sidecoach-monitor.js:14-15` requires `createExecutionEngine` from `../dist/sidecoach-orchestrator`; `main()` reads `process.argv[2]` as the utterance. Add a `lane` branch at the TOP of `main()`, before the utterance logic:
 
 ```javascript
-// near the top of the dispatch, after engine import:
 const sub = process.argv[2];
 if (sub === 'lane') {
   const args = process.argv.slice(3);
-  const getFlag = (name, dflt) => {
-    const i = args.indexOf(name);
-    return i >= 0 && i + 1 < args.length ? args[i + 1] : dflt;
-  };
   const op = args[0];
-  const project = getFlag('--project', process.cwd());
-  const engine = buildEngine(); // same factory the utterance path uses; extract if inline
-  (async () => {
+  const flag = (name, dflt) => { const i = args.indexOf(name); return i >= 0 && i + 1 < args.length ? args[i + 1] : dflt; };
+  const project = flag('--project', process.cwd());
+  const engine = createExecutionEngine();
+  try {
     let result;
     if (op === 'start') {
-      const laneId = args[1];
-      const target = getFlag('--target', '');
-      const request = getFlag('--request', `cli-${process.pid}-${Date.now()}`);
-      result = await engine.startLane(laneId, target, { projectPath: project }, request);
+      result = await engine.startLane(flag('--lane'), flag('--target', ''), { projectPath: project }, flag('--start-request-id', `cli-${process.pid}-${Date.now()}`));
     } else if (op === 'advance') {
-      const checkpoint = getFlag('--checkpoint', args[1]);
-      const action = getFlag('--action', 'complete');
-      const reportRaw = getFlag('--report', '');
-      const expectedRevision = Number(getFlag('--revision', '0'));
-      const transition = { action, expectedRevision };
-      if (reportRaw) transition.report = JSON.parse(reportRaw);
-      const reason = getFlag('--reason', '');
-      if (reason) transition.reason = reason;
-      result = await engine.advanceLane(project, checkpoint, transition);
+      const transition = { action: flag('--action', 'complete'), expectedRevision: Number(flag('--revision', '0')) };
+      const reportRaw = flag('--report', ''); if (reportRaw) transition.report = JSON.parse(reportRaw);
+      const reason = flag('--reason', ''); if (reason) transition.reason = reason;
+      result = await engine.advanceLane(project, flag('--checkpoint'), transition);
     } else if (op === 'status') {
-      result = engine.laneStatus(project, getFlag('--checkpoint', args[1]));
+      result = engine.laneStatus(project, flag('--checkpoint'));
     } else if (op === 'list') {
-      result = engine.listLanes(project);
+      result = engine.listLanes(project, { all: args.includes('--all') });
     } else {
-      console.error('usage: sidecoach-monitor lane <start|advance|status|list> [flags]');
+      console.error('usage: sidecoach-monitor lane <start|advance|status|list> [--lane --project --target --start-request-id --checkpoint --action --revision --report --reason --all]');
       process.exit(2);
     }
     console.log(JSON.stringify(result, null, 2));
-  })().catch((e) => { console.error(String(e && e.message || e)); process.exit(1); });
-  return; // do not fall through to the utterance path
+    process.exit(0);
+  } catch (e) { console.error(String((e && e.message) || e)); process.exit(1); }
 }
 ```
 
-If the engine instantiation at line ~53 is inline rather than a `buildEngine()` factory, extract it into a small factory function first (refactor-only, no behavior change) so both the utterance path and the lane path share it.
+(Place this inside `main()` before the `let utterance = process.argv[2]` line, and ensure `main()` is `async` - it already is.)
 
-- [ ] **Step 11.4: Build, then run the test**
+- [ ] **Step 11.3: Build, then run**
 
 Run: `cd sidecoach && npm run build && npx ts-node src/__tests__/lane-cli.test.ts`
-Expected: build exit 0; `lane-cli: OK`.
+Expected: build exit 0; `lane-cli: OK`. The CLI runs from `dist/`, so this suite REQUIRES a prior build - the integration runner (Task 13) always builds before `npm test`.
 
-- [ ] **Step 11.5: Commit**
+- [ ] **Step 11.4: Register + commit**
+
+Add `{ rel: 'src/__tests__/lane-cli.test.ts', required: true },` to `SUITES`.
 
 ```bash
 git add sidecoach/bin/sidecoach-monitor.js sidecoach/src/__tests__/lane-cli.test.ts sidecoach/scripts/run-tests.ts
-git commit -m "feat(lane-p2): monitor CLI lane subcommands (start/advance/status/list)"
+git commit -m "feat(lane-p2): monitor CLI lane subcommands (spec flags, createExecutionEngine)"
 ```
 
 ---
 
-## Task 12: End-to-end - phrase to converged lane
+## Task 12: End-to-end through `process()` (routed sequence -> completed)
 
-Prove the whole path with real inputs: resolve a phrase, start the routed lane on the engine, advance through every verb step, reach `converged`.
-
-**Files:**
-- Test: `sidecoach/src/__tests__/lane-execution-e2e.test.ts`
+**Files:** Test `lane-execution-e2e.test.ts`
 
 - [ ] **Step 12.1: Write the test**
 
@@ -1394,104 +1355,96 @@ Prove the whole path with real inputs: resolve a phrase, start the routed lane o
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { resolveSidecoachInput } from '../slash-command-router';
-import { FlowExecutionEngine } from '../sidecoach-orchestrator';
+import { createExecutionEngine } from '../sidecoach-orchestrator';
 import { StepReport } from '../lane-types';
-
-const LANES_JSON = path.join(__dirname, '..', '..', '..', 'claude', 'hooks', 'sidecoach-lanes.json');
 
 async function run() {
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-e2e-'));
-  const reso = resolveSidecoachInput('/sidecoach build me a dashboard from scratch and make it production-ready', LANES_JSON);
-  if (reso.source !== 'phrase' || reso.phrase!.kind !== 'ROUTE') throw new Error('expected a ROUTE phrase');
-  const laneId = reso.phrase!.lane!;
-
-  const engine = new FlowExecutionEngine();
-  let step = await engine.startLane(laneId, 'dashboard', { projectPath: proj }, 'e2e-1');
+  const engine = createExecutionEngine();
+  const routed: any = await engine.process('/sidecoach build me a dashboard from scratch and make it production-ready', { projectPath: proj, userId: 't' });
+  if (!routed.lane) throw new Error('phrase did not start a lane through process()');
+  let step = routed.lane;
   let guard = 0;
-  while (step.status === 'in_progress' && guard++ < 50) {
-    const verb = step.currentVerb!;
-    const rep: StepReport = { stepId: verb, iteration: step.iteration, reportId: `e2e:${verb}:${step.iteration}`, verb, summary: 'done', evidence: [{ kind: 'note', detail: 'x' }] };
+  while (step.lifecycle === 'in_progress' && guard++ < 50) {
+    const verb = step.currentVerb;
+    const rep: StepReport = { stepId: verb, iteration: step.iteration, reportId: `e2e:${verb}`, verb, summary: 'done', evidence: [{ kind: 'note', detail: 'x' }] };
     step = await engine.advanceLane(proj, step.checkpointId, { action: 'complete', report: rep, expectedRevision: step.revision });
-    if (step.executionKind === 'loop' && step.iteration >= 2) { // loop lanes: stop after 2 passes
-      step = await engine.advanceLane(proj, step.checkpointId, { action: 'stop', expectedRevision: step.revision });
-    }
   }
-  if (!['converged', 'stopped'].includes(step.status)) throw new Error(`lane did not finish (status=${step.status})`);
+  if (step.lifecycle !== 'closed' || step.outcome !== 'completed') throw new Error(`routed sequence lane must finish completed (got ${step.lifecycle}/${step.outcome})`);
   console.log('lane-execution-e2e: OK');
 }
 run();
 ```
 
-- [ ] **Step 12.2: Run it, verify it passes**
+- [ ] **Step 12.2: Run + register + commit**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-execution-e2e.test.ts`
-Expected: `lane-execution-e2e: OK`.
-
-- [ ] **Step 12.3: Commit**
+Run: `cd sidecoach && npx ts-node src/__tests__/lane-execution-e2e.test.ts` -> `lane-execution-e2e: OK`.
+Add `{ rel: 'src/__tests__/lane-execution-e2e.test.ts', required: true },` to `SUITES`.
 
 ```bash
 git add sidecoach/src/__tests__/lane-execution-e2e.test.ts sidecoach/scripts/run-tests.ts
-git commit -m "test(lane-p2): end-to-end phrase -> startLane -> advance -> finished"
+git commit -m "test(lane-p2): e2e /sidecoach phrase -> routed sequence lane -> completed"
 ```
 
 ---
 
-## Task 13: Final integration check
+## Task 13: Final integration + scope check
 
-- [ ] **Step 13.1: Full build + test surface**
+- [ ] **Step 13.1: Full surface**
 
-Run:
 ```bash
 cd /Users/spare3/Documents/Github/improv/sidecoach
-npx ts-node scripts/generate-lanes.ts --check   # no drift after the verbSteps change
-npm run build                                     # exit 0
-npm test                                          # enumerating runner: all suites pass
+npx ts-node scripts/generate-lanes.ts --check     # no drift
+npm run build                                       # exit 0 (CLI needs dist)
+npm test                                            # all SUITES required:true pass
 ```
-Expected: `--check` exit 0; build exit 0; `run-tests: N suite(s) passed` where N includes every new lane suite (lane-types, lane-checkpoint-store, lane-runner-*, lane-engine-methods, slash-phrase-wiring, lane-cli, lane-execution-e2e) plus the P1 suites. If any new suite is MISSING from the count, the runner did not pick it up (Step 0.2) - fix registration, do not hand-wave the count.
+Expected: `--check` exit 0; build exit 0; `run-tests: N suite(s) passed` with EVERY new lane suite present (lane-types, lane-checkpoint-store, lane-runner-start/advance-sequence/transitions/skip-prereq/status-list, lane-engine-methods, slash-phrase-wiring, lane-cli, lane-execution-e2e). A SKIP line for any of these means it was never registered required - fix it.
 
-- [ ] **Step 13.2: Hook regression (must stay green - P1 surface untouched)**
-
-Run: `cd /Users/spare3/Documents/Github/improv && bash claude/hooks/test-sidecoach-keyword.sh && python3 claude/hooks/test_sidecoach_lanes.py`
-Expected: `110 passed, 0 failed` and `35 passed, 0 failed`. P2 does not touch the hook or the Python classifier; a regression here means an accidental cross-edit.
-
-- [ ] **Step 13.3: Confirm deferrals did NOT leak in**
-
-Run: `cd /Users/spare3/Documents/Github/improv && git diff --name-only main..lane-p2-execution`
-Expected: NO changes to `modes.ts`, `ralph-loop.ts`, any `mcp-server/` file, or any new `product-rule-registry.ts`/`flow-validation-capabilities.ts`. If any appear, P3/P4 work leaked into P2 - revert it.
-
-- [ ] **Step 13.4: Final commit (if any cleanup)**
+- [ ] **Step 13.2: P1 hook surface still green (untouched)**
 
 ```bash
-git add -A && git commit -m "chore(lane-p2): final integration check green" || echo "nothing to commit"
+cd /Users/spare3/Documents/Github/improv && bash claude/hooks/test-sidecoach-keyword.sh && python3 claude/hooks/test_sidecoach_lanes.py
+```
+Expected: `110 passed, 0 failed`; `35 passed, 0 failed`.
+
+- [ ] **Step 13.3: Deferral + worktree scope check**
+
+```bash
+cd /Users/spare3/Documents/Github/improv
+# no P3/P4 work leaked in:
+git diff --name-only main..lane-p2-execution | grep -E 'modes\.ts|ralph-loop|mcp-server/|product-rule-registry|flow-validation-capabilities|convergence-loop' && echo "LEAK - revert" || echo "no deferred-scope leak"
+# this plan added nothing to the pre-existing dirty set:
+git status --porcelain | grep -v '^??' | sort > /tmp/lane-p2-now-dirty.txt
+diff /tmp/lane-p2-preexisting-dirty.txt /tmp/lane-p2-now-dirty.txt && echo "worktree dirty set unchanged" || echo "REVIEW: dirty set changed (expected: only committed files differ)"
+```
+
+- [ ] **Step 13.4: Final commit (owned files only - NO `git add -A`)**
+
+```bash
+# stage ONLY files this plan owns; never `git add -A` (the worktree has unrelated drift)
+git add sidecoach/src/lane-*.ts sidecoach/src/__tests__/lane-*.test.ts sidecoach/src/__tests__/slash-phrase-wiring.test.ts \
+        sidecoach/src/lanes.generated.ts sidecoach/src/lane-derivation.ts sidecoach/scripts/generate-lanes.ts \
+        sidecoach/src/slash-command-router.ts sidecoach/src/sidecoach-orchestrator.ts sidecoach/bin/sidecoach-monitor.js \
+        sidecoach/scripts/run-tests.ts
+git commit -m "chore(lane-p2): final integration green" || echo "nothing to commit"
 ```
 
 ---
 
-## Deferred to later phases (record, do not build here)
+## Deferred to later phases (unchanged from v1 scope intent)
 
-**Phase 3 - durability hardening** (makes lane execution crash- and concurrency-safe):
-- Cross-process lease + `operationId` (EXECUTE/FINALIZE/committed-outbox protocol), fencing tokens.
-- Side-effect outbox so initial guidance / step effects publish only after the operation finalizes.
-- `LaneCheckpoint` schemaVersion 2 + migration; realpath project canonicalization.
-- `AbortSignal` propagation into `runFlow`.
-- Concurrent-advance correctness beyond the in-process CAS (two processes).
+**P3 - durability:** leases/`operationId`/fencing, side-effect outbox, checkpoint schema migration, `AbortSignal`. (P2 has in-process idempotency + persisted serve only.)
 
-**Phase 4 - validators, convergence, MCP, cleanup:**
-- `product-rule-registry.ts` (canonical `ProductRuleDefinition`s + severity table) and `flow-validation-capabilities.ts` (registration / flow binding / lane policy), all `--check`-generated.
-- Validator gating: sequence-step validators + loop iteration-boundary `requiredProductValidatorIds`; worst-status-wins mapping (`clean`/`findings`/`inconclusive`/`error`); the release floor (theming/anti-pattern/static-a11y slices).
-- `lane_converge` truthful, persisted convergence (the floor that closes a loop as `converged` instead of waiting for `stop`); `ralph-loop.ts` -> `convergence-loop.ts` (rename + t20 expectation fix).
-- MCP migration: `sidecoach_classify_intent` (replaces `resolve_keyword`), `list-modes` -> `list-lanes`, new `sidecoach_lane` tool mirroring the four ops, `registries.ts` lane loader + NUDGE parity, schemas/tools/get-cheatsheet, transcripts, `mcp-server/dist`.
-- Cleanup: delete `modes.ts` + stale `dist/modes.js`; SKILL.md/CHEATSHEET.md generated sections (stepped lane protocol + phrase docs) + `marketing-site` regen via the visual verification gate.
+**P4 - validators, loops, MCP, cleanup:** `product-rule-registry.ts` + `flow-validation-capabilities.ts` + validator gating; **loop execution + `lane_converge` + the convergence floor** (P2 rejects starting loop lanes); `ralph-loop.ts` -> `convergence-loop.ts`; MCP `classify-intent`/`list-lanes`/`sidecoach_lane`; `modes.ts`/`dist` deletion; SKILL/CHEATSHEET/marketing regen.
 
 ---
 
-## Self-Review (completed during authoring)
+## Self-Review (v2)
 
-**Spec coverage (section 7 + 10):** `startLane`/`advanceLane`/`laneStatus`/`listLanes` signatures match section 7; `StepReport` shape (stepId/iteration/reportId/verb/summary/evidence/checklistResults) matches; `transition` union (complete/retry/skip/resume/interrupt/stop + expectedRevision + report) matches; model-attested completion with >=1 evidence enforced (Task 5); loop iteration boundary resets cursor and increments iteration (Task 6); skip-prereq-safety reject (Task 7); `/sidecoach <phrase>` ROUTE/CLASSIFY/OUT_OF_SCOPE/UNKNOWN wired (Task 10). DELIBERATELY deferred and labeled: validator gating, convergence floor, leases/outbox/fencing, schema migration, MCP migration - each mapped to P3 or P4 above.
+**Codex findings closed:** P0-1 lifecycle/outcome (Task 1, used everywhere); P0-2 empty-flow steps (Task 2); P0-3 live wiring through `process()` + tested through it (Task 10); P0-4 real `FlowPrerequisiteValidator` + failing unsafe-skip test (Task 7); P0-5 interrupt = resume-only, no re-run (Task 6); P0-6 persisted serve + enrich/canExecute dispatch (Tasks 4, 9); P0-7 loop lanes rejected, sequence closes completed/partial (Tasks 4, 5). P1-8 audit log (every transition, Tasks 5-7); P1-9 id validation + realpath (Task 3); P1-10 `listLanes(options?)` (Task 8); P1-11 start-request lane-mismatch reject (Task 4); P1-12 spec CLI flags + factory (Task 11); P1-13 explicit `SUITES` required registration (every task); P1-14 phrase gated to `^/sidecoach\s+(.+)$` + bare-`/sidecoach` menu preserved (Task 10); P1-15 no `git add -A` + cleanliness check (Tasks 0.1, 13). P2-16 lane_calm is sequence (Task 2 scope); P2-17 e2e requires completed (Task 12).
 
-**Placeholder scan:** every code step contains full code; no "TBD"/"add error handling"/"similar to Task N". The one intentional stub (`loopBoundary`, Task 5) is explicitly replaced in Task 6, with its throw message naming the task.
+**Placeholder scan:** all code concrete. Two intentional stubs (`transitionNonComplete` Task 5 -> Task 6; `skipStep` Task 6 -> Task 7) throw with task-naming messages and are replaced in the very next task.
 
-**Type consistency:** `LaneStepResult`/`LaneState`/`LaneInfo`/`LaneTransition`/`StepReport`/`StepEvidence` defined once (Task 1), imported everywhere. `LaneCheckpoint` defined once (Task 3). Runner fns `startLane`/`advanceLane`/`laneStatus`/`listLanes` keep one signature from Task 4 through Task 9's delegation. `verbSteps` shape `{verb, flowIds, guidance}` consistent between the generator (Task 2) and the runner (Task 4).
+**Type consistency:** lifecycle/outcome types defined once (Task 1) and used in `LaneCheckpoint`, runner, engine, CLI, e2e. `verbSteps {verb,flowIds,guidance}` consistent generator->runner. Engine uses `createExecutionEngine` in every caller (Tasks 9, 11, 12).
 
-**Known soft spots for the reviewer to probe:** (1) the `runFlow` signature - whether dispatching the registered handler with a synthetic `utterance:''` is acceptable for guidance generation, or whether handlers need richer context; (2) whether the monitor runs from `dist/` (Task 11 build dependency); (3) the P2 `prereqWaivers`-as-waiver-list interpretation in Task 7 vs the spec's richer prerequisite model.
+**Residual reviewer flags:** (1) Task 9 depends on the private `enrichContextForHandler` name at `:241` - confirm before editing; fallback wrapper noted inline. (2) Task 10's CLASSIFY response is a plain confirm prompt (P2 has no AskUserQuestion surface in the engine); the spec's one-question interview UI is a hook/MCP concern (P4). (3) `process()` returning a `lane` field is an additive `SidecoachResult` change - confirm no consumer asserts exact key sets.

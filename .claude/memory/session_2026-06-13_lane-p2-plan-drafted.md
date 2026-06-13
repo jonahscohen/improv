@@ -3,6 +3,7 @@ name: Lane P2 execution plan DRAFTED (pre-Codex-review)
 description: Phase 2 plan written (lane execution state machine + /sidecoach phrase wiring); scoped as ONE coherent slice, durability->P3, validators/convergence/MCP->P4; about to send to Codex for review
 type: project
 relates_to: [session_2026-06-13_lane-p1-COMPLETE.md, feedback_multiagent_verified_implementation_mandate.md]
+superseded_by: session_2026-06-13_lane-p2-plan-v2.md
 ---
 
 Jonah asked "what is in phase 2", then "draft the plan and then send it to Codex"
