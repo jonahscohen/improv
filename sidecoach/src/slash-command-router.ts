@@ -347,3 +347,23 @@ export function resolveSidecoachPhrase(phrase: string, lanesPath: string): Phras
   const routeGrade = top.score >= rf && (top.score - second) >= rm;  // explicit address: scope_unknown counts
   return routeGrade ? { kind: 'ROUTE', lane: top.lane } : { kind: 'CLASSIFY', lane: top.lane };
 }
+
+export interface SidecoachInputResolution {
+  source: 'command' | 'phrase' | 'not-addressed';
+  command?: CommandMatch;
+  phrase?: PhraseResolution;
+}
+
+const SIDECOACH_PHRASE_RE = /^\/sidecoach\s+(.+)$/i;
+
+// Live entrypoint. Known verbs/phase commands keep their exact parseSlashCommand
+// behavior. Only a `/sidecoach <phrase>` that is NOT a known command resolves via
+// the classifier. Anything not /sidecoach-addressed (or bare /sidecoach) returns
+// 'not-addressed' so the caller preserves existing behavior (menu / intent tier).
+export function resolveSidecoachInput(utterance: string, lanesPath: string): SidecoachInputResolution {
+  const cmd = parseSlashCommand(utterance);
+  if (cmd.isCommand) return { source: 'command', command: cmd };
+  const m = utterance.trim().match(SIDECOACH_PHRASE_RE);
+  if (!m) return { source: 'not-addressed' };
+  return { source: 'phrase', phrase: resolveSidecoachPhrase(m[1].trim(), lanesPath) };
+}

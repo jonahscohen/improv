@@ -14,7 +14,10 @@ import { ExtendedDomainValidator, DomainCheckContext, DomainValidationReport } f
 import { ContextLoader } from './project-context';
 import { buildProjectContext, ProjectContext } from './context-loader';
 import { persistSessionMemory } from './session-memory-writer';
-import { parseSlashCommand, getAvailableCommands, getCommandsByPhase, getVerbCommandInfo } from './slash-command-router';
+import { parseSlashCommand, getAvailableCommands, getCommandsByPhase, getVerbCommandInfo, resolveSidecoachInput } from './slash-command-router';
+import { LANES } from './lanes.generated';
+import * as path from 'path';
+import { createHash } from 'crypto';
 import { SidecoachEntryPoint, globalEntryPoint, EntryPointRequest } from './sidecoach-entry-point';
 import { TeachCommandHandlerV2 } from './teach-command-handler-v2';
 import { DocumentCommandHandler } from './document-command-handler';
@@ -1066,6 +1069,36 @@ export class FlowExecutionEngine {
       };
     }
 
+    // Step 2.5: /sidecoach <phrase> live wiring. Known verbs/phase commands were
+    // handled above (commandMatch.isCommand). Only an unrecognized `/sidecoach
+    // <phrase>` reaches the classifier here; everything else (bare /sidecoach,
+    // non-/sidecoach utterances) is 'not-addressed' and falls through unchanged.
+    const laneResolution = resolveSidecoachInput(utterance, path.resolve(__dirname, '..', '..', 'claude', 'hooks', 'sidecoach-lanes.json'));
+    if (laneResolution.source === 'phrase' && laneResolution.phrase) {
+      const pr = laneResolution.phrase;
+      if (pr.kind === 'ROUTE' && pr.lane) {
+        // deterministic id: a literal retry of the same phrase+project does NOT
+        // double-start (startLane dedups on startRequestId).
+        const startReq = laneStartRequestId(utterance, projectPath);
+        const lane = await this.startLane(pr.lane, utterance, { projectPath, userId: context.userId, metadata: context.metadata }, startReq);
+        return { success: true, message: `Routed to ${lane.laneLabel}: ${lane.message}`, detectedFlow: null, flowResults: [], guidance: lane.guidance, checklist: lane.checklist, lane };
+      }
+      if (pr.kind === 'CLASSIFY' && pr.lane) {
+        // One-question interview: surface the candidate so the model can confirm.
+        // Confirmation dispatches IDENTICALLY to ROUTE - the model calls
+        // engine.startLane(classify.laneId, ...), the same terminal path ROUTE uses.
+        // (The AskUserQuestion surface itself is a P4 hook/MCP concern; P2 exposes
+        // the candidate + the dispatch path so CLASSIFY is not a dead end.)
+        const cand = LANES.find((l) => l.lane === pr.lane);
+        return { success: true, message: `That reads like the "${cand?.interviewLabel ?? pr.lane}" direction. Confirm to start it, or rephrase for a different lane.`, detectedFlow: null, flowResults: [], guidance: [], checklist: [], classify: { laneId: pr.lane, label: cand?.label ?? pr.lane, interviewLabel: cand?.interviewLabel ?? pr.lane } };
+      }
+      if (pr.kind === 'OUT_OF_SCOPE') {
+        return { success: true, message: pr.redirect || 'That reads as non-UI work. Sidecoach covers UI/design only.', detectedFlow: null, flowResults: [], guidance: [], checklist: [] };
+      }
+      // UNKNOWN
+      return { success: true, message: pr.suggestion ? `Unrecognized - ${pr.suggestion}` : 'Unrecognized /sidecoach phrase.', detectedFlow: null, flowResults: [], guidance: [], checklist: [] };
+    }
+
     // Step 1: Detect intent (falls back to intent detection if not a slash command).
     // metadata.forceFlowId bypass: skip intent detection and route directly to the
     // named flow. Used by the disambiguation UI to re-invoke after the user picks
@@ -1691,6 +1724,17 @@ export interface SidecoachResult {
   needsDisambiguation?: boolean;
   // Pre-rendered prompt string the caller can surface directly. Includes the original utterance.
   disambiguationPrompt?: string;
+  // Lane execution (P2): set when a /sidecoach <phrase> ROUTEs to and starts a lane.
+  lane?: LaneStepResult;
+  // Lane execution (P2): set when a /sidecoach <phrase> CLASSIFYs to a candidate lane
+  // the model can confirm (confirming dispatches engine.startLane, same path as ROUTE).
+  classify?: { laneId: string; label: string; interviewLabel: string };
+}
+
+// module-level helper: deterministic start-request id from phrase + project so a
+// literal retry of the same phrase does not create a second lane.
+function laneStartRequestId(utterance: string, projectPath: string): string {
+  return 'proc-' + createHash('sha256').update(`${projectPath}\n${utterance.trim()}`).digest('hex').slice(0, 24);
 }
 
 export function createExecutionEngine(): FlowExecutionEngine {
