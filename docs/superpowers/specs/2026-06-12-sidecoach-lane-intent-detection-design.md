@@ -1,8 +1,9 @@
-# Sidecoach Lane Intent Detection - Design (v9)
+# Sidecoach Lane Intent Detection - Design (v10)
 
 Date: 2026-06-13
 Collaborator: Jonah
-Status: v9 is a SELF-AUDIT REPAIR pass over v8. v8 (the declarative
+Status: v10 is a REVIEW REPAIR pass over v9. v9 was a SELF-AUDIT REPAIR pass
+over v8. v8 (the declarative
 `ProductRuleDefinition` registry + defined `ProductFinding`/canonical-severity/
 evaluation algorithm) resolved the two convergent cross-model P0s; the v8
 review then found two contradictions v8 itself introduced (an exactly-once
@@ -14,9 +15,15 @@ registration/rule-registry two-sources-of-truth, the per-rule-vs-global
 severity ambiguity, the lease-struct/finalization-identity mismatch, the
 lifecycle-vs-outcome status conflict with retention, Flow J's registryScope
 overclaiming rules the partition delegates, an undefined rule-level error
-status, and clean-with-findings semantics. Architecture (classifier,
-model-driven state machine, checkpoint/resume, four-gate preflight, bounded
-release floor) has been stable since v3. Reviews at `docs/superpowers/reviews/`.
+status, and clean-with-findings semantics. v10 closes the remaining executable-
+contract gaps: it defines the loop iteration boundary, makes source preflight
+cover the active required-rule policy rather than Flow J alone, stages async
+side effects behind fenced finalization, repairs the missing `partial` outcome
+and validator error category, defines skip/dependency behavior, and permits a
+contained future literal target for a ground-up build. Architecture
+(classifier, model-driven state machine, checkpoint/resume, four-gate
+preflight, bounded release floor) has been stable since v3. Reviews at
+`docs/superpowers/reviews/`.
 
 ## Problem
 
@@ -265,11 +272,25 @@ the `interrupt` transition).
 **Engine API** (on `FlowExecutionEngine`):
 
 ```text
-startLane(laneId, target, context) -> LaneStepResult
-advanceLane(checkpointId, transition) -> LaneStepResult
-laneStatus(checkpointId) -> LaneState
-listLanes() -> LaneInfo[]
+startLane(laneId, target, context, startRequestId) -> LaneStepResult
+advanceLane(projectPath, checkpointId, transition) -> LaneStepResult
+laneStatus(projectPath, checkpointId) -> LaneState
+listLanes(projectPath, options?) -> LaneInfo[]
 ```
+
+The project path is explicit on every checkpoint lookup because checkpoint IDs
+are project-local, not globally addressable. Monitor/MCP `--project` supplies
+this argument (cwd remains the surface-level default); all four engine calls
+canonicalize it before store access.
+
+`startRequestId` is a required transport idempotency key. Under the project
+checkpoint lock, `startLane` maps it to exactly one checkpoint ID before
+serving initial guidance; a retried start returns that checkpoint's current
+state instead of creating a second active lane. Start-time preflight is pure.
+The first caller creates the checkpoint with a first-step lease, then uses the
+same EXECUTE / FINALIZE / committed-outbox protocol as advancement. Any
+persistent effects from initial guidance therefore publish only after that
+start operation finalizes.
 
 ```text
 transition = {
@@ -298,15 +319,16 @@ state (so a retried transport call cannot double-advance). `reportId` pairs
 with the lease `operationId` (below) - the lease guards execution, the
 reportId guards the report.
 
-**Step success is model-attested with evidence, engine-validated by the
-product validators bound to the step** - stated explicitly, not implied. A
-flow handler's `status: 'success'` means the handler produced its guidance,
-NOT that the work happened (`flow-handler.ts` creates checklist items
-`completed: false`). So: `complete` without a valid StepReport is REJECTED
-(the step stays current); otherwise `advanceLane` runs every product
-validator bound to the step (section "Validator registration" below) and maps
-the worst result deterministically - the SAME rule in sequence and loop
-lanes:
+**Work completion is model-attested with evidence; sequence steps and loop
+iteration boundaries are engine-validated at their declared gates** - stated
+explicitly, not implied. A flow handler's `status: 'success'` means the handler
+produced its guidance, NOT that the work happened (`flow-handler.ts` creates
+checklist items `completed: false`). So: `complete` without a valid StepReport
+is REJECTED
+(the step stays current); otherwise, for a sequence lane, `advanceLane` runs
+every product validator bound to the step (section "Validator registration"
+below) and maps the worst result deterministically. Loop lanes use the same
+result mapping at their iteration boundary, not at each member-flow step:
 
 ```text
 clean        -> completion may proceed
@@ -315,12 +337,32 @@ inconclusive -> validation_inconclusive (step stays current, coverage gap return
 error        -> validation_error      (step stays current, error returned)
 ```
 
-Only an explicit user `skip` or `stop` bypasses an unclean, inconclusive, or
-errored required validator (the bypass is recorded with its reason). Advisory
-and capability-`none` flows never block model-attested completion; their
-output coaches and is logged. Multiple flows/validators in one verb step
-aggregate: all guidance served together at step start; all bound product
-validators evaluated together at completion, worst-status-wins.
+For a SEQUENCE lane, only an explicit user `skip` or `stop` bypasses an
+unclean, inconclusive, or errored required step validator (the bypass is
+recorded with its reason). A skip is rejected if it would leave any remaining
+sequence step's non-waived hard prerequisite unsatisfied; skipped steps do not
+count as completed prerequisites. The response names the blocked dependent
+steps and offers retry or stop rather than silently serving an unexecutable
+step.
+
+For a LOOP lane, skipping a coaching verb step never bypasses the lane-policy
+gate. Advisory and capability-`none` flows never block model-attested
+completion; their output coaches and is logged. Multiple flows/validators in
+one verb step aggregate: all guidance served together at step start; all bound
+product validators evaluated together at sequence-step completion,
+worst-status-wins.
+
+**Loop execution boundary (v10 clarification).** A loop iteration walks every
+derived verb step once, collecting one `StepReport` per step under the current
+`iteration`. Flow-bound product validators gate sequence steps only; in a loop,
+the explicit `LaneValidationPolicy` supersedes member-flow bindings so the same
+validator is not run twice. After the FINAL verb step is completed or
+explicitly skipped, the engine reaches the iteration boundary and invokes each
+`requiredProductValidatorId` exactly once. If all return `clean`, the lane
+closes as converged. Otherwise the engine persists the full required-state
+signature, increments `iteration`, resets the verb-step cursor to the first
+step, and returns findings plus the next iteration's coaching. A loop `skip`
+can skip coaching, but cannot skip this boundary gate.
 
 **Validator registration - product validators are first-class, not flow
 properties.** v6 declared product-validator capability inline on flows, but
@@ -352,7 +394,7 @@ FlowValidationCapability = {          // how a FLOW relates to validators
 
 LaneValidationPolicy = {              // what a LANE requires to gate
   laneId
-  requiredProductValidatorIds[]       // AUTHORED: resolved + invoked once per iteration
+  requiredProductValidatorIds[]       // AUTHORED: loop gate; invoked once per iteration boundary
   excludedProductValidatorIds[]       // AUTHORED: member-flow validators intentionally not gating
 }
 ```
@@ -363,9 +405,10 @@ Single source of truth: the per-validator derived fields (`ownedRuleIds`,
 diverges from the generated value, so the registration can never drift from
 the rule registry.
 
-A lane's required validator IDs resolve DIRECTLY against the registration
-table and are invoked once per iteration regardless of which verb-flow (if
-any) also references them; the release floor is a lane policy, not a side
+A loop lane's required validator IDs resolve DIRECTLY against the registration
+table and are invoked once per iteration boundary regardless of which verb-flow
+(if any) also references them. Sequence-step gates come from the validators
+bound to that step's flows. The release floor is a lane policy, not a side
 effect of `verbChain`.
 
 **Lane policy is explicit; flow capability never silently widens it (both
@@ -388,8 +431,9 @@ the exact mirror-drift the design avoids. v8 introduces
 
 ```text
 ProductRuleDefinition = {
-  ruleId
-  canonicalRuleKey       // SAME key for the same semantic rule across registries
+  ruleId                 // one stable canonical rule id
+  sourceRuleAliases[]    // source-registry ids that map to this rule; never scheduled separately
+  canonicalRuleKey       // SAME key for the same semantic rule across source registries
   ownerValidatorId       // exactly one owner per canonicalRuleKey
   severity               // canonical (table below), not the source vocabulary
   findingClass           // e.g. 'a11y' | 'theming' | 'anti-pattern' | 'copy' | 'polish'
@@ -397,19 +441,24 @@ ProductRuleDefinition = {
   evidenceRequirements[] // e.g. 'css-rule' | 'computed-style' | 'dom' | 'markup' | 'contrast'
   supportedSourceKinds[] // PER RULE, with a support level (full | partial | none)
   scope                  // 'file' | 'component' | 'page' | 'project' - context the rule needs
+  narrowTargetBehavior   // 'evaluate_expanded_context' | 'exclude_and_disclose' | 'reject_target'
   applicability          // when the rule is not_applicable vs inconclusive
   checkProduct(context) -> ProductRuleResult
 }
 ```
 
-`ownedRuleIds`, `requiredRuleIds`, `minimumCoverageByScope`, and every
+`ownedRuleIds`, `requiredRuleIds`, `requiredCoverageByScope`, and every
 source-support declaration are GENERATED from this registry; the generator
 never inspects function source text. Single-owner identity is by
-`canonicalRuleKey`, not raw `ruleId` - so the 22 Polish Standard rules that
-the Extended Domain registry repeats as `POLISH_001..022`
+`canonicalRuleKey`, not a source registry's raw rule id. There is exactly ONE
+executable `ProductRuleDefinition` per canonical key; duplicated source ids are
+listed in `sourceRuleAliases` and adapters map them to the canonical rule
+rather than registering or scheduling a second check. Thus the 22 Polish
+Standard rules that the Extended Domain registry repeats as `POLISH_001..022`
 (`polish-standard-validator.ts:60-430` vs `extended-domain-validator.ts:174-529`)
-alias one canonical key with one gating owner, and `--check` fails on a
-canonical key with two owners or a gating `ruleId` lacking required metadata.
+alias one canonical definition with one gating owner, and `--check` fails on a
+duplicate executable canonical key, a source alias mapped to two keys, a
+canonical key with two owners, or a gating `ruleId` lacking required metadata.
 This dissolves the v7 rule-ownership collision (Flow J's "all
 statically-determinable polish rules" no longer overlaps the theming/
 anti-pattern/a11y slices, because ownership is declared per canonical key, not
@@ -417,6 +466,12 @@ inferred per validator).
 
 ```text
 CanonicalSeverity = 'blocker' | 'major' | 'minor' | 'advisory'
+NormalizedErrorCategory = 'unreadable_input' | 'registry_fault' |
+  'validator_exception' | 'rule_exception' | 'timeout' | 'aborted' |
+  'unsupported_runtime' | 'other'
+
+The category is selected from this closed vocabulary; free-text error messages
+and stack traces never become identity/signature input.
 
 ProductRuleResult = {
   ruleId, canonicalRuleKey,
@@ -432,7 +487,7 @@ ProductRuleResult = {
   message, remediation?
 }
 
-ProductFinding = {                 // emitted for every fail/blocking rule result
+ProductFinding = {                 // emitted for every fail rule result, blocking or not
   validatorId, ruleId, canonicalRuleKey,
   severity: CanonicalSeverity, findingClass,
   evidenceLocations[], message, remediation?
@@ -449,27 +504,41 @@ ProductValidationResult = {
     inspectedFiles[], skippedFiles[],
     supportedSourceKinds[], unsupportedSourceKinds[],
     ruleCounts: { pass, fail, notApplicable, inconclusive },
-    findingCounts: { blocking, tolerated },  // why a clean result can hold findings
+    findingCounts: { blockingExcess, withinTolerance, nonBlocking },
+                              // why a clean result can still hold findings
     measuredScope[],      // what this run actually proved
     unverifiedScope[]     // registryScope minus what this run proved
   },
-  error?: string          // set only when status === 'error' (validator-level)
+  normalizedErrorCategory?, // stable category; REQUIRED when status === 'error'
+  error?: string          // human detail; set only when status === 'error'
 }
 
 cleanPolicy = {
   requiredRuleIds[],                       // generated from the rule registry
   blockingSeverities: CanonicalSeverity[], // e.g. ['blocker','major']; minor/advisory never block
   toleratedFindingCounts,                  // keyed by (canonicalSeverity, findingClass)
-  minimumCoverageByScope,                  // generated from required rules' evidence
+  requiredCoverageByScope,                 // generated coverage plan (shape below)
   inconclusiveBehavior: 'block',
   notApplicableBehavior: 'exclude_and_report'
 }
 ```
 
+`requiredCoverageByScope` is a generated map whose entries contain per-rule
+coverage records: `{ruleId, scope, supportedEvidenceAlternatives[],
+requireAllDiscoveredApplicableFiles}`. Supported source kinds are alternatives
+that may satisfy a rule, not a demand that every supported kind exist. At
+preflight/run time, every discovered applicable input required by a record must
+map to at least one supported evidence alternative. It is an executable
+coverage plan, not merely a union of source-kind names. Source support,
+applicability, target scope, and clean evaluation all consume this same plan.
+
 Tolerance is keyed by `(severity, class)`, matching the dimensions the
 evaluator counts on; it only ever matters for a `blockingSeverities` entry
 (a `minor`/`advisory` finding is non-blocking already, so tolerating it is a
-no-op). The default for every blocking `(severity, class)` is 0.
+no-op). The default for every blocking `(severity, class)` is 0. For a blocking
+pair with count `N` and tolerance `T`, `withinTolerance += min(N,T)` and
+`blockingExcess += max(0,N-T)`; minor/advisory findings increment
+`nonBlocking`. Status is `findings` iff `blockingExcess > 0`.
 
 **Canonical severity - per-rule authoritative, table is a generation default
 only (v8 review).** The source validators use three incompatible vocabularies
@@ -495,27 +564,33 @@ is always deliberate and reviewable.
 inputs so a clean decision is reproducible after serialize/reload):
 
 ```text
-1. coverage: every required rule's supported-and-discovered source inspected?
-   any gap -> that rule is inconclusive.
-2. if the validator could not run at all (unreadable input, registry fault)
+1. if the validator could not run at all (unreadable input, registry fault)
    -> status = error (validator-level). STOP.
-3. block on any REQUIRED rule that is inconclusive (incl. a caught rule throw,
+2. non-vacuity: after applicability and declared target-scope exclusions, this
+   validator has at least one required measurable rule? no ->
+   status = inconclusive (normally rejected earlier by preflight). STOP.
+3. coverage: every required rule's supported-and-discovered source inspected?
+   any gap -> that rule is inconclusive.
+4. block on any REQUIRED rule that is inconclusive (incl. a caught rule throw,
    which is inconclusive + normalizedErrorCategory) -> status = inconclusive.
-4. count findings (fail results) by (canonicalSeverity, findingClass).
-5. any finding whose severity is in blockingSeverities AND whose
-   (severity, class) count exceeds toleratedFindingCounts -> status = findings.
-6. else -> clean (MAY still carry minor/advisory or tolerated findings;
-   findingCounts.tolerated records them; findingCounts.blocking == 0).
+5. count findings (fail results) by (canonicalSeverity, findingClass).
+6. compute blockingExcess / withinTolerance / nonBlocking as defined above.
+   any blockingExcess > 0 -> status = findings.
+7. else -> clean (MAY still carry minor/advisory or tolerated findings;
+   findingCounts records exactly why they did not block).
 notApplicable rules are excluded from all counts and reported separately.
 ```
 
-Four-status rule semantics remain mandatory: `clean` requires every required
-applicable rule `pass` with NO required rule `inconclusive`; missing, skipped,
-unreadable, or unsupported evidence makes affected rules `inconclusive`, never
-`pass` (the current absence-passes `undefined !== '0px'` and N/A-as-`passed:
-true` conventions are replaced). `measuredScope` is run-derived. The
-normalized policy inputs AND the evaluation result are persisted with each
-run and included in the closing summary.
+Four-status rule semantics remain mandatory: `clean` requires NO required rule
+`inconclusive`, NO validator-level `error`, and NO finding count above the
+explicit blocking tolerance. A required applicable rule may therefore fail
+without flipping status only when its severity is non-blocking or the relevant
+blocking `(severity,class)` count remains within an explicit tolerance.
+Missing, skipped, unreadable, or unsupported evidence makes affected rules
+`inconclusive`, never `pass` (the current absence-passes `undefined !== '0px'`
+and N/A-as-`passed: true` conventions are replaced). `measuredScope` is
+run-derived. The normalized policy inputs AND the evaluation result are
+persisted with each run and included in the closing summary.
 
 `product_validator` entry points inspect the target/project, not Sidecoach's
 own guidance/checklist output. General memory validations, framework-
@@ -541,24 +616,27 @@ construction:
   heuristic absolute-ban rules do not need a tolerance carve-out because they
   DECLARE `severity: minor` (per the per-rule override above), so they are
   reported-not-blocking by construction.
-- `minimumCoverageByScope` = generated from the union of each required rule's
-  `supportedSourceKinds`, so coverage and support can never disagree (fixes
-  the v7 LESS/TSX mismatch where a policy said "all CSS/SCSS" while the matrix
-  marked LESS full and TSX partial).
+- `requiredCoverageByScope` = generated from every required rule's scope,
+  applicability, evidence requirements, per-source support level, and whether
+  all discovered applicable files must be inspected. Coverage preflight and
+  evaluation therefore use the same plan (fixing the v7 LESS/TSX mismatch
+  where a policy said "all CSS/SCSS" while the matrix marked LESS full and TSX
+  partial).
 
 The four floor validators (Flow J static polish/copy/bans; theming/token
 consistency; CSS anti-patterns; static accessibility) thus get fully concrete
 policies with zero hand-classified rule IDs. `generate-lanes.ts --check`
 REJECTS: an empty generated `requiredRuleIds`; a gating rule lacking registry
-metadata; a `canonicalRuleKey` with more than one owner; a coverage threshold
-that omits a source kind a required rule declares supported; or a missing
-clean/findings/inconclusive fixture manifest entry (the generator checks
-MANIFEST PRESENCE; the test suite EXECUTES the fixtures - section 15 keeps
-these responsibilities separate).
+metadata; a `canonicalRuleKey` with more than one owner; a coverage plan whose
+alternatives cannot satisfy the required rule's declared evidence; or a
+missing clean/findings/inconclusive fixture manifest entry (the generator
+checks MANIFEST PRESENCE; the test suite EXECUTES the fixtures - section 15
+keeps these responsibilities separate).
 
 **Transitions** (all phrased in the lifecycle/outcome axes above): `retry`
 re-serves the current step (report optional, recorded); `skip` records the
-step skipped-with-reason (report.summary required) and serves the next;
+step skipped-with-reason (report.summary required) and serves the next only
+after the sequence dependency check / loop boundary rule above succeeds;
 `interrupt` sets `lifecycle: interrupted` (resumable - it is how "user said
 stop here" becomes durable state; a process that dies without calling it
 leaves `lifecycle: in_progress`, equally resumable); `resume` is the ONLY
@@ -584,16 +662,35 @@ step execution. v8 uses an operation-lease protocol:
 ```text
 advanceLane:
   1. CLAIM under O_EXCL CAS: verify expectedRevision, write an in-flight lease
-     {operationId, stepId, iteration, claimedCheckpointRevision, startedAt,
-     heartbeatAt} into the checkpoint, bump revision, release the file lock.
+     {operationId, stepId, iteration, claimedCheckpointRevision, fencingToken,
+     startedAt, heartbeatAt} into the checkpoint, bump revision, release the
+     file lock. `fencingToken` comes from a persisted checkpoint
+     `fencingCounter`, monotonically increased on every claim, reclaim, or
+     priority cancellation for this checkpoint.
      The lease carries exactly the identity FINALIZE validates (below), and
      `iteration` distinguishes repeated executions of the same loop step. The
      lease - not a held file lock - marks the step in-flight across the async
      body.
   2. EXECUTE the (async) validators with an AbortSignal derived from the
-     lease. Refresh heartbeatAt periodically.
+     lease. Refresh heartbeatAt under the checkpoint lock without changing the
+     semantic revision or fencing token. Collect persistent side effects in an
+     operation-local buffer; do not write flow history or session memory yet.
+     Every heartbeat re-verifies lease ownership; losing ownership aborts the
+     operation-local signal. The handler receives a composed signal covering
+     transport timeout, explicit cancellation, and lease ownership loss.
   3. FINALIZE under O_EXCL CAS: verify the SAME operationId still owns the
-     lease, write the step result, clear the lease, bump revision.
+     lease, write the step result plus a side-effect outbox record keyed by
+     `(checkpointId, committedRevision)` and carrying `fencingToken`, clear the
+     lease, bump revision. The committed revision distinguishes intentional
+     repeated attempts on the same step/iteration; entries inside the outbox
+     bundle have stable publisher + entry-index keys for replay.
+  4. PUBLISH the committed outbox record idempotently. Each downstream store
+     conditionally upserts the logical side-effect key only when the fencing
+     token is >= the token already recorded for that key. Outbox replay after
+     a crash is safe. Publisher acknowledgements update/remove the outbox
+     record under the checkpoint lock without changing the lane's semantic
+     revision, so background delivery cannot stale an unrelated client
+     transition.
 ```
 
 The guarantee is AT-MOST-ONE COMMITTED LANE TRANSITION, not exactly-once
@@ -602,25 +699,39 @@ handler can ignore it and keep running, so if its heartbeat goes stale a
 replacement may reclaim the lease and begin overlapping work. The lease can
 only fence which result COMMITS, not prevent two bodies from running. So:
 
-- A second `advanceLane` finding a live lease (heartbeat within the window)
-  for the same step is REJECTED. A stale lease (dead heartbeat = crashed or
-  runaway) is reclaimable and logged.
+- A second ordinary `advanceLane` finding a live lease (heartbeat within the
+  window) for the same step is REJECTED. `interrupt` and `stop` are priority
+  control transitions: with the current expected revision, they atomically
+  fence/clear a live lease, increase the fencing token, set the requested
+  lifecycle/outcome, and signal the in-process abort controller; an operation
+  in another process observes ownership loss on heartbeat. A stale lease (dead
+  heartbeat = crashed or runaway) is reclaimable and logged.
 - FINALIZE accepts a result only if the SAME lease identity still owns the
-  checkpoint - `{operationId, stepId, iteration, claimedCheckpointRevision}` -
-  so a superseded operation's commit is rejected even if it finished late.
+  checkpoint - `{operationId, stepId, iteration, claimedCheckpointRevision,
+  fencingToken}` - so a superseded operation's commit is rejected even if it
+  finished late.
 - Because overlap is possible, validators and flow handlers invoked during
-  advancement MUST be pure or idempotent, and any unavoidable persistent
-  side effect (flow-history, session memory - which today write OUTSIDE the
-  fenced commit) MUST carry the claimed checkpoint revision as a FENCING
-  TOKEN, so a superseded operation's writes are rejected downstream too.
+  advancement MUST be pure or idempotent. They MUST NOT directly write
+  flow-history, session memory, or another persistent side-effect store during
+  EXECUTE. Those effects publish only from the committed outbox record after
+  FINALIZE. This matters for append-oriented flow history: a bare token attached
+  to an early append cannot retract a superseded operation's already-written
+  entry.
+- Downstream side-effect stores persist the logical key and highest accepted
+  `fencingToken`; same-key/same-token replay is a no-op and a lower token is
+  rejected. The outbox is retained until every declared publisher confirms the
+  record, so a crash after FINALIZE cannot lose authoritative side effects.
 - `validateProduct`/handlers receive the `AbortSignal`; the MCP server
-  propagates it into tool handlers (today it does not).
+  propagates and composes its timeout signal into tool handlers (today it does
+  not).
 
 Tested: concurrent double-advance, timeout-then-retry (replacement acquires
 the lease while the original ignores abort), and crash-mid-advance all yield
-AT MOST ONE committed transition and one authoritative set of side effects -
-the superseded operation cannot commit state OR persistent side effects after
-its lease is fenced. (We do NOT claim exactly-once execution.)
+AT MOST ONE committed transition and one authoritative logical set of side
+effects - the superseded operation cannot publish state or side effects because
+it cannot create the committed outbox record. A crash after FINALIZE proves
+outbox replay publishes the accepted effects. (We do NOT claim exactly-once
+execution or exactly-once physical delivery.)
 Read-only reads (`laneStatus`, `listLanes`) never take the lock.
 
 **Lifecycle and outcome are SEPARATE axes (v8 review).** v8 conflated them -
@@ -629,7 +740,7 @@ also calling it resumable, a contradiction. v9 splits:
 
 ```text
 lifecycle: 'in_progress' | 'interrupted' | 'closed'   // governs listing + retention
-outcome?:  'converged' | 'stalled' | 'capped' | 'error' | 'stopped' | 'completed'
+outcome?:  'converged' | 'stalled' | 'capped' | 'error' | 'stopped' | 'completed' | 'partial'
                                                        // the result, recorded separately
 ```
 
@@ -642,6 +753,9 @@ outcome?:  'converged' | 'stalled' | 'capped' | 'error' | 'stopped' | 'completed
   validators); it is NOT terminal and NOT GC-eligible as terminal.
 - `interrupted` is its own lifecycle (resumable via `resume`).
 - The composite rule "success = any one flow passed" is NOT used for lanes.
+- For loop lanes, `LaneState.outcome` is DERIVED from
+  `convergence.outcome` (`running` maps to absent) on read/write; it is not a
+  separately authored value that can drift.
 
 A sequence lane's `outcome` on close is `completed` (all steps succeeded),
 `partial` (some succeeded, some skipped/failed), or `stopped` (user stop). A
@@ -654,10 +768,12 @@ flowIds, status: 'pending' | 'current' | 'completed' | 'skipped' |
 stepReports, revision, lifecycle, outcome?, convergence? }`.
 
 **Checkpoints:** `SidecoachCheckpoint` schemaVersion 2 adds `operationKind:
-'composite' | 'lane'`, `laneId?`, `projectPath`, `revision`, `lifecycle`,
-`outcome?`, `stepReports`, `lease?` (the in-flight `{operationId, stepId,
-iteration, claimedCheckpointRevision, startedAt, heartbeatAt}`),
-`seenReportIds[]` (idempotency), and `convergence?`. Lane resume resolves
+'composite' | 'lane'`, `laneId?`, `projectPath`, `revision`, `fencingCounter`,
+`lifecycle`,
+`outcome?`, `startRequestId?`, `stepReports`, `lease?` (the in-flight `{operationId, stepId,
+iteration, claimedCheckpointRevision, fencingToken, startedAt, heartbeatAt}`),
+`sideEffectOutbox[]`, `seenReportIds[]` (idempotency), and `convergence?`. Lane
+resume resolves
 against the lane registry (not `PRESET_COMPOSITE_FLOWS`); v1 checkpoints still
 resolve presets (migration shim). Checkpoint lookup: ids resolve within the
 project's checkpoint directory; monitor/MCP calls accept `--project <path>`
@@ -665,6 +781,11 @@ and default to cwd. **Project identity is canonicalized** (P2): the project
 path is resolved with `realpath` and that one canonical path keys the history
 store, the checkpoint root, MCP `--project`, and lane state - so the same
 project reached by a symlink or relative path is never split across two keys.
+Checkpoint IDs are opaque engine-generated identifiers matching a strict
+length-capped safe-character pattern; user-supplied IDs containing separators,
+dot segments, or any nonconforming value are rejected before path construction.
+`startRequestId` is length-capped and hashed for the durable project-local
+idempotency index; it is never used as a file name.
 
 **Report-input hardening:** structured JSON only - inline or a file path;
 paths are resolved with `realpath` and the RESOLVED path must remain under
@@ -680,11 +801,14 @@ still resumable) - are retained until they close or go 30 days idle; GC of a
 non-`closed` checkpoint is logged loudly. `lane list` shows `in_progress` and
 `interrupted` lanes by default (with their recorded `outcome`, if any);
 `--all` adds `closed` lanes within retention. Nothing reads `outcome` for
-retention/listing decisions.
+retention/listing decisions. A checkpoint with an unconfirmed side-effect
+outbox record is never GC-eligible; finalize/advance and a startup replay
+worker retry pending publishers until confirmed. `laneStatus` and `listLanes`
+remain read-only and never publish.
 
 **Dispatch surface:** `sidecoach-monitor lane start|advance|status|list`
 (flags: `--lane`, `--target`, `--checkpoint`, `--project`, `--action`,
-`--report`, `--revision`); MCP `sidecoach_lane` tool mirrors ALL FOUR
+`--start-request-id`, `--report`, `--revision`); MCP `sidecoach_lane` tool mirrors ALL FOUR
 operations. ROUTE directives and post-CLASSIFY selections dispatch through
 the identical path, e2e tested from hook output to engine call.
 
@@ -750,7 +874,7 @@ Policy:
   | `lane_delight` | flowF DESIGN.md/tokens + register; flowH brand personality | flowF converts-to-guidance (no tokens), flowH serves general motion guidance; lane proceeds, never errors |
   | `lane_live` | none hard | proceeds |
   | `lane_calm` | none hard | proceeds |
-  | `lane_converge` | flowJ source support | proceeds if a supported source exists; else preflight-rejected per the unsupported-source rule (section 9) |
+  | `lane_converge` | active lane-policy required-rule support | proceeds only when the full release-floor policy has an executable coverage plan for the target; else preflight-rejected per section 9 |
 
 - **Generation-time enforcement:** `generate-lanes.ts --check` FAILS if any
   required prerequisite EDGE of any flow in a lane's derived sequence is
@@ -759,6 +883,13 @@ Policy:
   unmet-handling; or if a precondition required by a lane is absent from the
   flow's authored `enforcesPreconditionIds[]` (a declaration check, no source
   parsing). No lane can ship unexecutable at any of the four gates.
+- **Runtime skip enforcement:** checkpoint-local prerequisite satisfaction
+  counts only successfully completed steps, never skipped steps. Before
+  accepting a sequence `skip`, the transition evaluator checks every remaining
+  hard prerequisite edge. If the skip would make a later step unexecutable and
+  no edge-specific waiver/fallback applies, the skip is rejected with the
+  affected flow IDs. A loop skip affects coaching only and never suppresses its
+  iteration-boundary lane-policy gate.
 - **History scoping:** where flow history remains an input (verb-tier
   behavior, advisory uses), it becomes project-scoped (keyed by project
   path, not a global default session). `flow-history.ts` joins the blast
@@ -812,7 +943,7 @@ capability and gate relationship is explicit:
 
 | Flow | Capability | Bound product validators | Runs each iteration | Error effect |
 |---|---|---|---|---|
-| `flowJ_tactical_polish` | `product_validator` | Flow J static validator | yes | blocks (gates) |
+| `flowJ_tactical_polish` | `product_validator` | Flow J static validator | yes | validator gates once at the iteration boundary via lane policy |
 | `flowM_responsive_validation` | `advisory` | none (rendered responsive is follow-up) | yes (guidance) | advisory only - it already self-reports it "cannot pass on documentation alone" |
 | `flowK_multi_lens_audit` | `advisory` | none (its 5-dim framework is manual) | yes (guidance) | advisory only |
 | `flowI_accessibility` | `advisory` | none - the STATIC a11y slice is a separate registered validator, not this handler's framework output | yes (guidance) | advisory only |
@@ -822,7 +953,9 @@ Plus the three lane-policy-bound static validators (theming, anti-patterns,
 static a11y) that gate without being owned by any of the five flows. The
 required gate for `lane_converge` is therefore: Flow J static validator +
 theming + anti-patterns + static a11y, all `clean`; M/K/I/L coach every
-iteration and their failures qualify the display label but never block.
+iteration and their failures qualify the display label but never block. Flow
+J's flow binding does not create a second mid-iteration validator run; loop
+membership is governed by the explicit lane policy.
 
 **Flow J hardening (required, and obligatory under this spec's own
 missing-inputs-are-inconclusive rule regardless of the floor):**
@@ -857,7 +990,7 @@ This validator-level table is a SUMMARY: "partial" is defined PER RULE by each
 `ProductRuleDefinition.supportedSourceKinds` (a rule provable from JSX
 className survives; a rule needing a CSS cascade does not), so the engine can
 always say which specific rules a partially-supported file proved vs left
-inconclusive - and `minimumCoverageByScope` is generated from exactly those
+inconclusive - and `requiredCoverageByScope` is generated from exactly those
 per-rule declarations (closing the v7 LESS-full-but-coverage-omits-LESS gap).
 
 Release requirement: at least one representative supported application
@@ -865,31 +998,42 @@ fixture (a CSS/SCSS + HTML project) must reach `clean` end to end - proving
 the gate is not permanently-inconclusive by construction. Widening source
 support (Vue/Svelte/CSS-in-JS parsers) is a registry-widening follow-up.
 
-**Unsupported sources block sequence and convergence lanes - but the gate is
-PHASE-AWARE, not universal (v8 review correction).** Every refinement/loop
-lane has a polish step bound to Flow J, so an unsupported-source project would
-otherwise leave that step permanently `validation_inconclusive` with no
-explanation. But a UNIVERSAL preflight (the over-broad rule v8 first wrote)
-would reject `lane_build` on a fresh, empty project - whose whole purpose is
-to CREATE the UI source that does not exist yet - and the own-acceptance "every
-lane passes a fresh-build fixture" makes that contradiction visible. So the
-gate is phase-aware:
+**Required-rule executability blocks sequence and convergence lanes - but the
+gate is POLICY-WIDE and PHASE-AWARE, not a Flow-J-only existence check (v10
+correction).** Checking only whether Flow J can parse at least one file admits
+a convergence target that another release-floor validator cannot evaluate, or
+a mixed-source target whose required applicable files include unsupported
+files. Such a lane can only remain inconclusive. The preflight therefore builds
+the active policy's generated `requiredCoverageByScope` plan and checks every
+required applicable rule for every required validator at the relevant gate.
+If any required rule lacks a supported evidence path for an applicable target
+scope, preflight reports the exact validator/rule/source gap instead of
+starting a permanently-inconclusive gate.
+
+A UNIVERSAL start-time preflight would still reject `lane_build` on a fresh,
+empty project - whose whole purpose is to CREATE the UI source that does not
+exist yet - and the own-acceptance "every lane passes a fresh-build fixture"
+makes that contradiction visible. So timing remains phase-aware:
 
 - Refinement/convergence lanes (`lane_ship`, `lane_calm`, `lane_live`,
-  `lane_converge`; `lane_delight` is refinement) check Flow J source support
-  at lane START and reject-at-preflight when no supported source exists, with
-  an actionable message ("this project's UI is in {Vue/Svelte/CSS-in-JS},
-  which the static validators don't yet parse").
-- Build lanes (`lane_build`) DEFER the Flow J source-support gate to the first
-  step that requires product/visual validation (its polish step). The lane
-  starts, creates source, and only at the polish gate is support evaluated; if
-  source is still unsupported there, it blocks at that step (not at start)
-  unless an explicit recorded bypass runs polish as advisory.
+  `lane_converge`; `lane_delight` is refinement) check the full active required
+  policy at lane START. Sequence lanes check all product validators bound to
+  their future sequence steps; `lane_converge` checks all four release-floor
+  validators in `requiredProductValidatorIds`. An unmet coverage plan rejects
+  at preflight with the exact gaps and actionable source-support message.
+- Build lanes (`lane_build`) DEFER required-rule executability to the first step
+  that requires product/visual validation (its polish step). The lane starts,
+  creates source, and only at that gate is the active step policy evaluated; if
+  required rules remain unsupported there, it blocks at that step (not at
+  start) unless an explicit recorded sequence-step bypass runs polish as
+  advisory.
 
 Either way a lane never silently appears stuck at a step the engine can't
 evaluate; the difference is only WHEN the gate fires. A fresh-empty-project
 acceptance test proves `lane_build` starts, creates supported source, and
-passes the deferred gate.
+passes the deferred gate. A mixed supported/unsupported fixture and a target
+supported by Flow J but not static a11y prove the policy-wide preflight rejects
+before convergence starts.
 
 **Validator target scope.** `startLane(laneId, target, ...)` takes a free-form
 `target`, but Flow J currently scans the whole project, so a lane aimed at one
@@ -898,22 +1042,37 @@ grammar: `target` is either a path/glob under the project root (validation
 scopes coverage to matching files) or the sentinel `project` (project-wide).
 A canonical target resolver:
 
-- resolves the target and the project root with `realpath` and rejects any
-  match that escapes the resolved root (symlink-safe, same rule as report-input
-  hardening); rejects non-regular matched files;
+- expands globs before resolving matches, resolves every existing match and the
+  project root with `realpath`, and rejects any match that escapes the resolved
+  root (symlink-safe, same rule as report-input hardening); rejects non-regular
+  matched files; validators open matched files with no-follow semantics where
+  supported and recheck identity/containment at read time to prevent a
+  preflight-to-read symlink swap;
 - defines glob semantics explicitly (shared Python/TS): `**` recursive, `*`
   single-segment, no negation in v1; a glob matching ZERO files is a
-  preflight error ("target matched no files"), never a silent clean.
+  preflight error ("target matched no files"), never a silent clean;
+- permits one exception for `lane_build`: an explicit LITERAL future file path
+  may be absent at start. Its nearest existing parent is realpath-resolved and
+  must remain under the resolved project root; `..` traversal and a symlinked
+  parent escape are rejected. Zero-match globs are still rejected because they
+  do not identify a deterministic future artifact. At the deferred validation
+  gate, the literal path must exist as a contained regular file and satisfy the
+  active required-rule coverage plan.
 
 `ProductRuleDefinition` carries a `scope` field (`file | component | page |
-project`) declaring the context a rule needs. A required rule whose declared
-scope cannot be validly evaluated against the selected target (e.g. a
-project-scope rule under a single-file target that can't supply enough
-context) returns a DISCLOSED `inconclusive` for that target, never `clean` -
-so a narrow target can never produce a falsely-clean project-wide claim.
-Coverage and `measuredScope` describe only the targeted subset; the target is
-persisted in the checkpoint and shown in the summary so the scope of any clean
-claim is explicit.
+project`) declaring the context a rule needs, plus an explicit
+`narrowTargetBehavior`. A broader-scope rule under a narrower target must do
+exactly one declared thing: expand to and disclose the broader evaluation
+context; become `not_applicable` while adding its claim to `unverifiedScope`;
+or reject that target shape at preflight. A required rule may not default to
+`inconclusive` solely because the user selected a narrow target, because that
+would admit a lane that can never complete. `--check` rejects a required rule
+without a behavior for narrower targets. After declared exclusions, every
+required validator must still have at least one required measurable rule for
+the selected target; otherwise preflight rejects the vacuous gate. Coverage and
+`measuredScope` describe the target plus any disclosed expansion; the target
+and expansion are persisted in the checkpoint and shown in the summary so the
+scope of any clean claim is explicit.
 
 This is deliberately narrow and honest. Audit's permanent "manual testing
 required" warning cannot make convergence impossible; critique's "framework
@@ -946,9 +1105,9 @@ measuredScope: derived PER RUN from the coverage record - only checks that
         actually ran with sufficient evidence. unverifiedScope = registry
         scope minus run-proven scope, merged into the summary.
 
-status: clean only when every required applicable rule passed with no
-        required rule inconclusive, under the persisted cleanPolicy;
-        missing/skipped/unsupported inputs = inconclusive
+status: clean only when no required rule is inconclusive, no validator-level
+        error exists, and no finding exceeds the persisted cleanPolicy's
+        blocking tolerance; missing/skipped/unsupported inputs = inconclusive
 ```
 
 Widening the gate is EXPLICIT, never automatic (v7 reviews both flagged the
@@ -964,10 +1123,11 @@ Semantic rules:
 - **Product-validator failure can no longer converge.** Current behavior
   records a runner throw as zero findings and converges
   (`ralph-loop.ts:265-303`; t20 asserts it). New rule: any required product
-  validator error, skip, unsupported/unparseable result, or missing input marks
-  the iteration `inconclusive`; convergence requires every required product
-  validator to return `clean`. At least one product validator is required.
-  The t20 expectation is updated as part of this work.
+  validator skip, unsupported/unparseable result, or missing input marks the
+  iteration `inconclusive`; a validator-level `error` marks the iteration
+  `error`. Neither can converge: convergence requires every required product
+  validator to return `clean`. At least one product validator is required. The
+  t20 expectation is updated as part of this work.
 - **Advisory output never enters the convergence signature.** It informs the
   model's next fixes and is logged/summarized, but cannot block or prove clean.
 - **No generic memory adapter.** Convergence consumes only typed
@@ -999,17 +1159,20 @@ coverage gaps would share the same empty signature, a changing validator
 error would read as no-progress, and stall reporting could not name the
 blocker. So `computeProgressSignature` is built from the full required-state
 tuple per validator: `{validatorId, status, failedRuleIds[],
-inconclusiveRuleIds[], coverageGapIdentities[], normalizedErrorCategory}` -
-stable identities only (rule keys, gap identities, error category), never
-free-text messages or stack traces (which would make the signature unstable
-and defeat stall detection). Advisory guidance changes never enter the
-signature or reset the no-progress counter. Each `LaneStepResult` carries the
+inconclusiveRuleIds[], coverageGapIdentities[], validatorErrorCategory,
+ruleErrorCategories[]}` - stable identities only (rule keys, gap identities,
+the validator-level `ProductValidationResult.normalizedErrorCategory`, and
+caught rule-level normalized categories), never free-text messages or stack
+traces (which would make the signature unstable and defeat stall detection).
+Advisory guidance changes never enter the signature or reset the no-progress
+counter. Each `LaneStepResult` carries the
 step-level result (the `clean/findings/inconclusive/error -> step status`
 mapping from section 7's completion contract) plus the lane's `lifecycle` and
 `outcome?`; the convergence detail lives in the `convergence` sub-state.
-Stepped iteration: `advanceLane` runs product validators and advisory flows
--> findings + coaching returned -> model fixes (real work) -> next
-`advanceLane` revalidates and updates signatures.
+Stepped iteration follows section 7's loop boundary: verb-step advances serve
+and record coaching; completing/skipping the final verb reaches the boundary,
+runs the lane-policy validators once, and returns findings plus the next
+iteration's coaching; model fixes are real work between advances.
 
 Every converged result and closing summary MUST state the boundary, and the
 summary is GENERATED FROM THE RUN COVERAGE RECORD, never from registry
@@ -1110,15 +1273,18 @@ pure product-validation entry point exposing the matrix +
 linguistic/absolute-ban findings; target-scoped discovery);
 `polish-standard-validator.ts` + `extended-domain-validator.ts` +
 `domains/*` (four-status rule results; absence-passes and
-N/A-as-`passed: true` eliminated; canonicalRuleKey aliasing the 22 duplicated
-POLISH_* rules);
+N/A-as-`passed: true` eliminated; sourceRuleAliases canonicalizing the 22
+duplicated POLISH_* rules);
 new static validator slice modules (theming/token consistency, CSS
 anti-patterns, static accessibility - the release floor);
-`sidecoach-orchestrator.ts` (lane API, per-step history refresh, status
-mapping, verb-guidance aggregation, lane resume dispatch, the lease/
-operation-id protocol + AbortSignal propagation);
-`checkpoint-store.ts` (schema v2 + migration + lease/seenReportIds + realpath
-project canonicalization); `flow-history.ts` (project scoping, realpath key);
+`sidecoach-orchestrator.ts` (lane API, loop iteration-boundary scheduling,
+per-step history refresh, status mapping, verb-guidance aggregation, lane
+resume dispatch, start-request idempotency, the lease/operation-id protocol +
+AbortSignal propagation + operation-local side-effect collection);
+`checkpoint-store.ts` (schema v2 + migration + lease/fencing token/
+side-effect outbox/seenReportIds + realpath project canonicalization);
+`flow-history.ts` + `session-memory-writer.ts` (project scoping, realpath key,
+conditional logical-key upsert by fencing token, outbox publisher);
 `flow-handler-brand-verify.ts` + others (execution-time precondition IDs);
 `slash-command-router.ts` (+ tests); shared classifier module;
 `bin/sidecoach-monitor.js` (lane subcommands);
@@ -1171,13 +1337,21 @@ all v3 cases, plus:
 
 Execution acceptance: all v3 cases, plus:
 
+- Retrying `startLane` with the same `startRequestId` returns the original
+  checkpoint; it never creates a duplicate active lane or duplicate initial
+  side effects.
 - `advanceLane complete` without a valid StepReport is rejected; the step
   cannot silently complete.
 - Explicit retry, skip, interrupt, resume, and stop transitions persist and
-  return documented statuses; status precedence verified.
+  return documented statuses; status precedence verified. A sequence skip that
+  would break a remaining hard prerequisite is rejected; a loop coaching-step
+  skip still reaches its required iteration-boundary gate.
 - Two concurrent advances against one checkpoint: exactly one COMMITS
   (expectedRevision CAS + lease finalization); the other is rejected even if
   it finished.
+- `interrupt` and `stop` with the current revision fence a live operation,
+  trigger cooperative abort, and prevent its late finalize/outbox publication;
+  other transitions are rejected while the lease is live.
 - Convergence state survives a fresh process per iteration; stall and cap
   still fire.
 - Any REQUIRED PRODUCT-validator error/skip/unsupported result prevents
@@ -1212,20 +1386,25 @@ Execution acceptance: all v3 cases, plus:
     signature; a required inconclusive/error identity participates in it;
   - AT-MOST-ONE COMMITTED TRANSITION (not exactly-once execution): a timed-out
     operation that ignores abort while a replacement acquires the lease cannot
-    commit state OR persistent side effects after fencing; a superseded
-    operation's fencing-token writes are rejected downstream; a duplicate
-    `reportId` is a no-op; a stale lease between two iterations of the same
-    loop step is cleanly reclaimable;
+    commit state or create an authoritative side-effect outbox record; only the
+    finalized operation publishes. Outbox replay after a crash is idempotent,
+    lower fencing tokens are rejected downstream, a duplicate `reportId` is a
+    no-op, and a stale lease between two iterations of the same loop step is
+    cleanly reclaimable;
   - an explicit verb + SCOPE_UNKNOWN/OUT_OF_SCOPE lane evidence resolves to
     `VERB` primary (zero explicit-verb overrides), lane scope diagnostic-only;
-  - PHASE-AWARE source preflight: a refinement/convergence lane on a
-    Vue/Svelte/CSS-in-JS-only target is rejected at lane start; `lane_build`
-    on a fresh EMPTY project STARTS, creates supported source, and passes the
-    deferred Flow J gate (the review's lane_build contradiction);
+  - POLICY-WIDE, PHASE-AWARE source preflight: a refinement/convergence lane
+    with any required applicable rule lacking a supported evidence path is
+    rejected at lane start, including a target supported by Flow J but not
+    another release-floor validator; `lane_build` on a fresh EMPTY project
+    STARTS, creates supported source, and passes the deferred active-policy
+    gate;
   - the per-lane no-PRODUCT/no-DESIGN/no-tokens/no-history matrix outcome holds
     for every lane (esp. `lane_delight`'s flowF+flowH preconditions);
-  - a path/glob `target` scopes coverage to matching files; `measuredScope`
-    describes only the targeted subset.
+  - a path/glob `target` scopes coverage to matching files plus any explicitly
+    declared broader-scope expansion; `measuredScope` discloses both. A
+    contained future literal path is accepted only for `lane_build` and must
+    exist by its deferred gate; a zero-match glob is rejected.
 - Release-floor truthfulness suite (fifth review):
   - a nested TSX/CSS-in-JS fixture cannot report unsupported checks as pass;
   - removing required evidence flips affected rules from pass/fail to
@@ -1249,18 +1428,23 @@ Execution acceptance: all v3 cases, plus:
     fixtures (a static release condition - distinct from a given project's
     runtime cleanliness).
   - every required lane validator ID resolves to exactly one registration and
-    is INVOKED once per convergence iteration (scheduling - distinct from the
-    async at-most-one-committed guarantee above); a registered release-floor
+    is INVOKED once at the convergence iteration boundary, not again through a
+    member-flow binding (scheduling - distinct from the async
+    at-most-one-committed guarantee above); a registered release-floor
     validator with no lane attachment fails generation; a canonicalRuleKey
-    owned by two validators fails generation.
+    owned by two validators, a duplicate executable canonical key, or a source
+    alias mapped to two keys fails generation.
   - empty required-rule sets and zero/vacuous coverage policies fail
-    generation; each initial clean policy has fixtures proving clean,
-    findings, AND inconclusive outcomes.
+    generation; a runtime target that excludes every measurable required rule
+    for any required validator fails preflight; each initial clean policy has
+    fixtures proving clean, findings, AND inconclusive outcomes.
   - product-validator `inconclusive` and `error` outcomes block sequence-step
     completion (not only `findings`), per the section-7 completion contract.
   - a representative supported CSS/HTML fixture reaches `clean` end to end;
-    an unsupported-source-only project fails preflight with an actionable
-    message rather than looping inconclusively.
+    an unsupported-source-only project, a mixed target with an uncovered
+    required applicable file, and a Flow-J-supported/static-a11y-unsupported
+    target fail preflight with actionable rule-level gaps rather than looping
+    inconclusively.
 - Ship, delight, live, calm, and converge lanes each have defined, tested
   behavior on an existing UI with NO prior sidecoach history (waiver +
   preflight path) AND on a fresh-build fixture.
@@ -1277,8 +1461,13 @@ Execution acceptance: all v3 cases, plus:
 - A real cross-process race (two concurrent `updateCheckpoint` calls) proves
   exactly one update succeeds via the lock-file CAS; stale-lock takeover is
   exercised and logged.
+- Checkpoint IDs containing separators/dot-segments or exceeding the cap are
+  rejected before path construction; repeated/oversized `startRequestId`
+  inputs cannot create duplicate checkpoints or file names.
 - Report-path containment: a symlink inside the project pointing outside it
   is rejected (realpath containment), as are non-regular files.
+- Target containment is rechecked at validator read time; swapping a validated
+  target to an escaping symlink cannot expose an outside file.
 - Hook NUDGE mapping covers cooldown-active (`SILENT`) and cooldown-inactive
   (`NUDGE`) cases over the shared `NUDGE_ELIGIBLE` classifier outcome.
 - Mixed-scope multi-clause prompts (negation, conjunctions, abbreviations)
