@@ -6,6 +6,7 @@ import type { FlowExecutionResult } from './flow-handler';
 import { LANES, GeneratedLane } from './lanes.generated';
 import { LaneCheckpoint, LaneCheckpointStore } from './lane-checkpoint-store';
 import { LaneStepResult, LaneState, LaneInfo, LaneTransition, LaneAuditEntry, isClosed } from './lane-types';
+import { FlowPrerequisiteValidator } from './flow-prerequisites';
 
 export interface LaneRunnerDeps {
   store: LaneCheckpointStore;
@@ -225,6 +226,39 @@ async function transitionNonComplete(cp: LaneCheckpoint, l: GeneratedLane, proje
   }
 }
 
+// remaining (cursor+1..end) verb steps whose member flows have a REQUIRED
+// prerequisite that is among the skipped flows, not already completed, and whose
+// exact edge is not waived in the lane's prereqWaivers.
+function strandedBySkipping(cp: LaneCheckpoint, l: GeneratedLane): string[] {
+  const skipFlows = new Set(l.verbSteps[cp.cursor].flowIds);
+  if (skipFlows.size === 0) return [];
+  const completed = new Set(cp.completedFlowIds);
+  const waived = new Set(l.prereqWaivers.map((w) => `${w.dependentFlowId}<-${w.prerequisiteFlowId}`));
+  const blocked = new Set<string>();
+  for (let i = cp.cursor + 1; i < l.verbSteps.length; i++) {
+    const later = l.verbSteps[i];
+    for (const depFlow of later.flowIds) {
+      const deps = FlowPrerequisiteValidator.getDependencies(depFlow);
+      if (!deps) continue;
+      for (const p of deps.prerequisites) {
+        if (!p.required) continue;
+        if (skipFlows.has(p.flowId) && !completed.has(p.flowId) && !waived.has(`${depFlow}<-${p.flowId}`)) {
+          blocked.add(later.verb);
+        }
+      }
+    }
+  }
+  return [...blocked];
+}
+
 async function skipStep(cp: LaneCheckpoint, l: GeneratedLane, projectPath: string, t: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
-  throw new Error('skipStep not implemented (Task 7)');
+  if (!t.reason || !t.reason.trim()) throw new Error('advanceLane: skip requires a reason');
+  const blocked = strandedBySkipping(cp, l);
+  if (blocked.length > 0) {
+    throw new Error(`advanceLane: cannot skip "${l.verbSteps[cp.cursor].verb}" - later steps require its prerequisites: ${blocked.join(', ')}. Complete it or stop the lane.`);
+  }
+  const step = l.verbSteps[cp.cursor];
+  cp.skippedStepIds.push(step.verb);
+  pushAudit(cp, { action: 'skip', stepId: step.verb, iteration: cp.iteration, reason: t.reason }, d);
+  return advanceCursor(cp, l, { projectPath }, d);
 }
