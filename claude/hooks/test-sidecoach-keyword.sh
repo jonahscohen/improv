@@ -68,6 +68,30 @@ assert_silent() {
   fi
 }
 
+# Assert the hook output CONTAINS a substring (label-first, mirrors assert_fires).
+assert_contains() {
+  local label="$1" prompt="$2" needle="$3"
+  local out; out=$(run_hook "$prompt")
+  if echo "$out" | grep -qF "$needle"; then
+    echo "PASS: $label"; ((PASS++))
+  else
+    echo "FAIL: $label (expected to contain '$needle', got: $out)"
+    FAIL_LABELS+=("$label"); ((FAIL++))
+  fi
+}
+
+# Assert the hook output does NOT contain a substring (e.g. a forbidden route).
+assert_not_contains() {
+  local label="$1" prompt="$2" needle="$3"
+  local out; out=$(run_hook "$prompt")
+  if echo "$out" | grep -qF "$needle"; then
+    echo "FAIL: $label (expected NOT to contain '$needle', got: $out)"
+    FAIL_LABELS+=("$label"); ((FAIL++))
+  else
+    echo "PASS: $label"; ((PASS++))
+  fi
+}
+
 # Modes (T-0011) emit a <mode>NAME</mode> tag instead of <verb>NAME</verb>,
 # plus a <chain>verb1,verb2,...</chain> tag listing the verb chain.
 assert_mode_fires() {
@@ -209,15 +233,17 @@ assert_silent "animated gif"             "render this as an animated gif"
 assert_silent "layouts plural"           "we have many layouts to choose from"
 
 echo ""
-echo "===== sidecoach-keyword: multi-verb tie-break to first in registry ====="
+echo "===== sidecoach-keyword: multi-verb picks first verb in registry order ====="
 
+# The classifier picks the FIRST verb in registry order and emits it. It no
+# longer prints the legacy "tie-breaking to first in registry" stderr warning
+# (the VERB branch is a single emit), so we assert the chosen verb fires.
 # Registry order: ... audit (12), critique (13), polish (14) ...
-# So "audit and polish" -> audit wins.
-assert_tiebreak "audit + polish picks audit"        "please audit and polish this page"          "audit"
+assert_fires "audit + polish picks audit"         "please audit and polish this page"          "audit"
 # craft (3) before animate (4)
-assert_tiebreak "craft + animate picks craft"       "craft and animate the new modal"            "craft"
+assert_fires "craft + animate picks craft"        "craft and animate the new modal"            "craft"
 # shape (1) before everything
-assert_tiebreak "shape + craft + polish picks shape" "shape, craft, and polish the new feature"   "shape"
+assert_fires "shape + craft + polish picks shape" "shape, craft, and polish the new feature"   "shape"
 
 echo ""
 echo "===== sidecoach-keyword: zero matches pass through silently ====="
@@ -257,56 +283,25 @@ assert_silent "quoted polish stays silent" "the spec said \"polish it\""
 assert_fires  "real polish still fires"    "polish the hero"                                    "polish"
 
 echo ""
-echo "===== sidecoach-keyword: T-0011 modes fire with chains ====="
+echo "===== sidecoach-keyword: retired mode words no longer route (v10) ====="
 
-# Every mode fires in invocation context and emits the right verb chain.
-assert_mode_fires "forge fires"   "forge the homepage"                "forge"  "shape,craft,polish"
-assert_mode_fires "kiln fires"    "kiln this release"                 "kiln"   "audit,critique,harden,adapt,polish"
-assert_mode_fires "bloom fires"   "bloom the dashboard"               "bloom"  "colorize,delight,animate,polish"
-assert_mode_fires "canvas fires"  "canvas mode for the pricing page"  "canvas" "live,colorize,polish,critique"
-assert_mode_fires "trim fires"    "trim the settings panel"           "trim"   "quieter,distill,clarify,polish"
-# T-0020: ralph mode fires (relentless cross-flow iteration). Chain is
-# polish -> audit -> critique - the three validating verbs the loop drives.
-assert_mode_fires "ralph fires"   "ralph the checkout flow"           "ralph"  "polish,audit,critique"
+# The MODE tier was removed in P1 (the lane classifier replaced it). The old
+# mode words (forge/kiln/bloom/canvas/trim/ralph) are not verbs and carry no
+# lane lexicon, so they no longer emit a <mode>/<chain>. Where a real verb
+# co-occurs, that verb still routes (the mode word is simply ignored now).
+assert_fires "forge+polish routes the polish verb" "forge and polish the homepage" "polish"
 
-# Word-boundary correctness on modes - "forged" / "blooming" / "trimmed" do NOT fire.
+# Word-boundary correctness still holds - "forged" / "blooming" / "trimmed" never fire.
 assert_silent "forged in past tense"      "the steel was forged yesterday"
 assert_silent "blooming gardens"          "the gardens are blooming this week"
 assert_silent "trimmed hedges"            "I just trimmed the hedges"
 
-# Informational framings suppress mode firing.
+# Informational framings stay silent.
 assert_silent "what is forge"             "what is forge in sidecoach"
 assert_silent "how do I use kiln"         "how do I use kiln on a feature"
 assert_silent "explain bloom"             "explain bloom and what it chains"
-# T-0020: informational mention of ralph must not fire the mode.
 assert_silent "what is ralph"             "what is ralph mode in sidecoach"
-# T-0020: word-boundary correctness - "ralphing" / "ralpher" must NOT fire.
 assert_silent "ralphing not a word"       "ralphing through the changelog feels noisy"
-
-# Mode + verb in same prompt: mode wins (precedence).
-out=$(run_hook "forge and polish the homepage" 2>/dev/null)
-if echo "$out" | grep -q "<mode>forge</mode>" && \
-   echo "$out" | grep -q "<chain>shape,craft,polish</chain>" && \
-   ! echo "$out" | grep -q "<verb>"; then
-  echo "PASS: forge + polish picks mode forge"
-  ((PASS++))
-else
-  echo "FAIL: forge + polish picks mode forge (got: $out)"
-  FAIL_LABELS+=("forge + polish picks mode forge")
-  ((FAIL++))
-fi
-
-# Multi-mode tie-break: registry order is forge, kiln, bloom, canvas, trim.
-out=$(run_hook_with_stderr "bloom and trim this view")
-if echo "$out" | grep -q "<mode>bloom</mode>" && \
-   echo "$out" | grep -q "tie-breaking to first in registry"; then
-  echo "PASS: bloom + trim picks mode bloom (registry order)"
-  ((PASS++))
-else
-  echo "FAIL: bloom + trim picks mode bloom (got: $out)"
-  FAIL_LABELS+=("bloom + trim picks mode bloom (registry order)")
-  ((FAIL++))
-fi
 
 # ---------------------------------------------------------------------------
 # Intent tier (sidecoach-intent.json): natural front-end/design requests fire a
@@ -343,7 +338,9 @@ assert_intent_silent() {
   fi
 }
 
-assert_intent_fires  "intent: build a pricing page"   "can you build me a pricing page for the launch"
+# "build me a ..." now carries lane_build evidence; with no domain word it is a
+# CONTEXT-CHECK (lane tier), not the generic intent nudge.
+assert_contains      "build pricing -> context-check" "can you build me a pricing page for the launch" "without domain evidence"
 assert_intent_fires  "intent: design a landing page"  "design a landing page for the new product"
 assert_intent_fires  "intent: redesign the nav"       "redesign the navigation, it feels clunky"
 assert_intent_fires  "intent: aesthetic complaint"    "this dashboard looks dated and generic"
@@ -357,16 +354,59 @@ assert_intent_silent "intent: backend task"           "add a database migration 
 # Explicit verbs still hard-route even with the intent tier present.
 assert_fires "verb routes alongside intent tier" "polish the checkout flow" "polish"
 
-# Cooldown: a second intent prompt within the window is suppressed.
-CDX=$(mktemp -u /tmp/sc-cd-XXXXXX)
-intent_out "design a landing page" "$CDX" >/dev/null
-cool_second=$(intent_out "build a hero section" "$CDX")
-rm -f "$CDX"
-if [ -z "$cool_second" ]; then
-  echo "PASS: cooldown suppresses the second intent nudge"; ((PASS++))
+echo ""
+echo "===== sidecoach-keyword: lane classifier corpus (v10) ====="
+
+# ROUTE: in-scope, route-grade
+assert_contains     "ship route"            'make the landing page production-ready'                            'release-readiness pass'
+# CONTEXT-CHECK: lane evidence, no domain evidence (NOT out-of-scope)
+assert_contains     "ship context-check"    'make this production-ready'                                        'without domain evidence'
+# Clause binding: ship evidence bound to "migration" in its own sentence -> no route
+assert_not_contains "migration not routed"  'The landing page is done. Make the migration production-ready.'    'release-readiness pass'
+# Negator discards first occurrence, routes the second clause
+assert_contains     "negator then route"    "Don't make the API production-ready; make the landing page production-ready." 'release-readiness pass'
+# Bare ambiguous tokens never prove scope (no lane lexicon match -> silent)
+assert_silent       "ts interface silent"   'I have a TypeScript interface I need to refactor'
+assert_silent       "packet header silent"  'fix the packet header parsing in the network layer'
+# (NOTE: the plan's "rework the memory layout of the struct" case is omitted -
+#  "layout" is a registered sidecoach VERB, so that prompt fires VERB(layout),
+#  not silence. Same plan-corpus bug corrected in the Task 7 parity corpus;
+#  lexicon/verb calibration of common words like layout/live is out of P1 scope.)
+# Quoted/pasted-doc suppression: quoted lane evidence does not fire
+assert_not_contains "quoted not routed"     'the reviewer wrote "make it production-ready" - thoughts?'          'release-readiness pass'
+# Explicit verb beats scope outcome -> VERB primary, lane is a diagnostic only
+assert_contains     "verb beats scope"      'audit this and make it production-ready'                            '<verb>audit</verb>'
+assert_contains     "verb diagnostic shown" 'audit this and make it production-ready'                            'non-routing diagnostic'
+# Tone-down lane
+assert_contains     "calm route"            "tone the hero down, it's too busy"                                 'tone-down pass'
+# Converge lane (route-grade lane competing with the explicit 'audit' verb -> the
+# lane label still surfaces in the CLASSIFY prompt)
+assert_contains     "converge surfaced"     'keep iterating on the card until it passes the audit'              'iterate-until-it-passes'
+# /sidecoach prefix is owned by the slash router, hook stays silent
+assert_silent       "slash prefix silent"   '/sidecoach make this production-ready'
+
+echo ""
+echo "===== sidecoach-keyword: NUDGE cooldown mapping (v10) ====="
+
+# Cooldown INACTIVE (absent file) -> NUDGE_ELIGIBLE becomes a nudge.
+CDN=$(mktemp -u /tmp/sc-cd-XXXXXX)
+nudge_out=$(intent_out 'restyle the navbar' "$CDN")
+if echo "$nudge_out" | grep -qF 'sidecoach flow or mode'; then
+  echo "PASS: navbar nudge fires when cooldown inactive"; ((PASS++))
 else
-  echo "FAIL: cooldown suppresses the second intent nudge (got: $cool_second)"
-  FAIL_LABELS+=("cooldown suppresses second intent nudge"); ((FAIL++))
+  echo "FAIL: navbar nudge fires when cooldown inactive (got: $nudge_out)"
+  FAIL_LABELS+=("navbar nudge inactive"); ((FAIL++))
+fi
+
+# Cooldown ACTIVE (file timestamped 'now') -> suppressed to silence.
+date +%s > "$CDN"
+cool_out=$(intent_out 'restyle the navbar' "$CDN")
+rm -f "$CDN"
+if [ -z "$cool_out" ]; then
+  echo "PASS: navbar nudge suppressed when cooldown active"; ((PASS++))
+else
+  echo "FAIL: navbar nudge suppressed when cooldown active (got: $cool_out)"
+  FAIL_LABELS+=("navbar nudge active"); ((FAIL++))
 fi
 
 echo ""
