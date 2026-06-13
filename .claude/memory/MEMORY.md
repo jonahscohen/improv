@@ -1,3 +1,6 @@
+- [Lane P2 COMPLETE (merged) - PROJECT (2026-06-13)](session_2026-06-13_lane-p2-COMPLETE.md): sequence execution + phrase wiring built (19 commits), 3-leg verified, Codex SHIP after 1 fix round; loop lanes->P4
+- [Lane P2 code review (Codex SHIP) - PROJECT (2026-06-13)](session_2026-06-13_lane-p2-code-review.md): independent verify green; Codex found 6 defects (3 P1/3 P2) all fixed+confirmed
+- [Lane P2 execution progress + harness friction - PROJECT (2026-06-13)](session_2026-06-13_lane-p2-execution-progress.md): impl-p2 built 13 tasks TDD; memory+verification gates misfire on subagent commits
 - [Lane P2 plan v4 + EXECUTE - PROJECT (2026-06-13)](session_2026-06-13_lane-p2-plan-v4-and-execute.md): v4 fixes Codex v3 criticals (false attestation, intra-step prereqs, try/catch, closed-restart, NUL); stop plan-review, execute via subagents w/ Codex code review
 - [Lane P2 plan v3 (v2-review fixes) - PROJECT (2026-06-13)](session_2026-06-13_lane-p2-plan-v3.md): folds Codex v2 findings (prereq-aware dispatch, best-effort CAS, CLASSIFY dispatch path, deterministic id, hardening); confirming pass then execute
 - [Lane P2 plan v2 (all Codex fixes folded) - PROJECT (2026-06-13)](session_2026-06-13_lane-p2-plan-v2.md): v2 addresses all 7 P0/8 P1/2 P2; sequence-only, lifecycle/outcome, live process() wiring, real prereq validator; re-sent to Codex
