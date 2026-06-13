@@ -365,3 +365,6 @@
 
 <!-- archived 2026-06-13 (moved from MEMORY.md to stay under load budget) -->
 - [Background 3 - surface.contrast token (2026-06-10)](session_2026-06-10_background-3-contrast-surface.md): pure white light / #1A1A1A dark, tokenized + DESIGN.md documented as the deliberate except…
+
+<!-- archived 2026-06-13 (moved from MEMORY.md to stay under load budget) -->
+- [Footer wordmark + MIT copyright via Justify (2026-06-10)](session_2026-06-10_footer-wordmark-copyright.md): and-dev wordmark (theme-swap reused) + "Copyright (c) 2026 Yes&" line; NO LICENSE file e…

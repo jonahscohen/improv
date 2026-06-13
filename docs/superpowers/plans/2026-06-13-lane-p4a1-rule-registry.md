@@ -1,14 +1,18 @@
-# Product Rule Registry + Clean-Evaluation Model (Phase 4a-1) Implementation Plan - v3
+# Product Rule Registry + Clean-Evaluation Model (Phase 4a-1) Implementation Plan - v4
 
-## What changed in v3 (Codex review `task-mqcyy723` - clean rewrite; no changelog-vs-body drift)
+## What changed in v4 (Codex review `task-mqcyy723`; TASK-BODY edits, no changelog-vs-body drift)
 
-v2 folded its fixes into a CHANGELOG block while the TASK BODIES still showed the old code, so the plan contradicted itself and Codex rejected it. v3 deletes that changelog and rewrites the task bodies so the code, the tests, and the prose all agree. Every fix now lives where the work happens:
+v3 closed 10 findings; v4 folds the remaining 9 into the TASK BODIES themselves - there is no separate changelog carrying stale code (the v2 failure mode). Every fix lives where the work happens, and the pointers below only describe the bodies (they do not restate code):
 
-- The evidence-compatibility model (`EVIDENCE_SOURCE_COMPATIBILITY`, `sourceKindsForEvidence`, `isStaticallySatisfiable`) is defined in Task 1 and consumed by the generator (Task 4) and the coverage guard.
-- The 6 seed `ProductRuleDefinition`s are fully spelled out in Task 2 with real cross-registry aliases (polish-standard numeric id + extended-domain `POLISH_0NN`), `sourceVocabulary`, and `sourceSeverity` taken from the live validators.
-- `ProductValidatorRegistration` gains optional `validateProduct?`; flow `capability` is GENERATED from an authored `baseCapability` (Task 3 authors the base + a pure `deriveCapability`; Task 4 emits and `--check`s the resolved value).
-- The generator (Task 4) exports pure `validateRegistry()` / `deriveValidator()`, generates EXPLICIT zero tolerance per owned blocking `(severity,findingClass)` pair, and has failing-first negative fixtures for EACH rejection case.
-- `evaluateCleanPolicy` (Task 5) materializes findings for every non-error status, CONSUMES `requiredCoverageByScope` through a real run-derived coverage input + satisfaction function, looks up the real `ProductRuleDefinition` for missing-rule synthesis (never fabricates severity), carries reproducible coverage, rejects duplicate rule results, and uses a closed-vocab `NormalizedErrorCategory` for `validatorError.category`. The Task 5 test compiles against that signature.
+- **TS6059 (Task 4):** the importable generator logic (`validateRegistry`, `deriveValidator`, `deriveFlowCapabilities`, `validateFixtureManifest`, `gatingValidatorIds`) moves into `src/validator-generation.ts` (inside rootDir `./src`); `scripts/generate-validators.ts` becomes a thin I/O + `--check` wrapper; the test imports from `../validator-generation`, never `../../scripts/`. This mirrors the P2 `lane-derivation.ts` / `generate-lanes.ts` split.
+- **Evidence-compat AND-semantics (Tasks 1, 4, 5):** coverage satisfaction requires EVERY evidence requirement to have at least one present compatible source (AND across requirements, OR within a requirement's alternatives). `RequiredCoverageRecord` now carries `evidenceAlternativesByRequirement` (one alternatives list per requirement); `isCoverageSatisfied` and the generator derive per-requirement, so a `['css-rule','markup']` rule is NOT satisfied by a CSS-only run. `isStaticallySatisfiable` stays AND-across-requirements (every required kind must be statically satisfiable).
+- **7-step order (Task 5):** `evaluateCleanPolicy` runs step-2 non-vacuity BEFORE step-3 coverage conversion (spec 567-575). A vacuous validator returns `inconclusive` before any coverage logic runs.
+- **Capability seed matches spec 939-950 (Task 3):** `flowI_accessibility` is `advisory` (the static a11y slice is a lane-policy validator, NOT a flow-I binding); the five `lane_converge` member flows (J/M/K/I/L) are all authored and the test classifies the actual member flows, not just ids already in lane policies.
+- **validateRegistry completeness (Task 4):** ALL required `ProductRuleDefinition` fields are enforced non-empty; a duplicate canonical `ruleId` is rejected; failing-first fixtures cover each case.
+- **Fixture-manifest presence (Task 4):** `--check` rejects a gating validator missing a clean/findings/inconclusive fixture-manifest entry; the generator checks manifest PRESENCE, the suite EXECUTES fixtures (spec 628-634, section 15 keep these responsibilities separate).
+- **requireAllDiscoveredApplicableFiles (Task 4):** derived from rule metadata (defaults true; only `exclude_and_disclose` justifies false), not a blanket component/page scope check (spec 526-533).
+- **Discriminated union (Task 1):** `ProductValidationResult` is a discriminated union whose `error` variant REQUIRES `normalizedErrorCategory` (spec 512-513).
+- **Real ban aliases (Task 2):** the absolute-ban source aliases use the raw `banName` ids (`gradient-text`, `identical-card-grids`, no prefix), grounded against `absolute-ban-detector.ts:110,159`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
 
@@ -18,18 +22,19 @@ v2 folded its fixes into a CHANGELOG block while the TASK BODIES still showed th
 
 **Scope discipline.** This sub-plan delivers the MODEL + ALGORITHM + GENERATION with a SMALL but real seed of canonical rules (enough to exercise aliasing, severity override, DOM-only-non-required, the evidence-compatibility model, and the four-status evaluation). P4a-2 populates the full floor-validator rule set and adapts the existing validators (`polish-standard-validator.ts`, `extended-domain-validator.ts`, `domains/*`, etc.) to emit `ProductRuleResult`/`ProductValidationResult` (attaching `checkProduct`/`validateProduct`). P4b wires `evaluateCleanPolicy` into `advanceLane` gating with the async lease/outbox durability. Do NOT pull those forward.
 
-**Tech Stack:** TypeScript (`sidecoach/src/`), a new `scripts/generate-validators.ts` (mirrors `generate-lanes.ts`), ts-node runner via `sidecoach/scripts/run-tests.ts` SUITES (explicit, `required:true`).
+**Tech Stack:** TypeScript (`sidecoach/src/`). Pure generation logic lives in `src/validator-generation.ts`; a thin `scripts/generate-validators.ts` does file I/O + `--check` (mirrors how `generate-lanes.ts` wraps `src/lane-derivation.ts` to avoid the TS6059 rootDir crossing). ts-node runner via `sidecoach/scripts/run-tests.ts` SUITES (explicit, `required:true`).
 
 ---
 
 ## File Structure
 
 **Create:**
-- `sidecoach/src/product-rule-types.ts` - `CanonicalSeverity`, `NormalizedErrorCategory`, `RuleStatus`, `EvidenceKind`, `RuleScope`, `ProductRuleDefinition`, `ProductRuleResult`, `ProductFinding`, `ProductValidationResult`, `CleanPolicy`, `RequiredCoverageRecord`, `SEVERITY_TABLE`, the evidence-compatibility model (`EVIDENCE_SOURCE_COMPATIBILITY`, `sourceKindsForEvidence`, `isStaticallySatisfiable`), and `isBlocking`. Types + pure helpers only, one source.
+- `sidecoach/src/product-rule-types.ts` - `CanonicalSeverity`, `NormalizedErrorCategory`, `RuleStatus`, `EvidenceKind`, `RuleScope`, `ProductRuleDefinition`, `ProductRuleResult`, `ProductFinding`, `ProductValidationResult` (a DISCRIMINATED UNION; the `error` variant requires `normalizedErrorCategory`), `ProductValidationCoverage`, `CleanPolicy`, `RequiredCoverageRecord` (per-requirement `evidenceAlternativesByRequirement`), `SEVERITY_TABLE`, the evidence-compatibility model (`EVIDENCE_SOURCE_COMPATIBILITY`, `sourceKindsForEvidence`, `isStaticallySatisfiable`), and `isBlocking`. Types + pure helpers only, one source.
 - `sidecoach/src/product-rule-registry.ts` - the canonical `ProductRuleDefinition[]` (6-rule seed) + `getRule(canonicalRuleKey)` / `getRuleById(ruleId)` / `resolveSourceAlias(sourceId)`.
-- `sidecoach/src/flow-validation-capabilities.ts` - the three registries (authored fields) + accessors + the pure `deriveCapability()`; per-validator derived fields and the resolved flow `capability` are imported from the generated file.
-- `sidecoach/src/clean-evaluator.ts` - `evaluateCleanPolicy(input, policy)` deterministic 7-step function + `CleanEvalInput`/`CoverageObservation`/`RunCoverage` + `isCoverageSatisfied`.
-- `sidecoach/scripts/generate-validators.ts` - pure `deriveValidator()` + `validateRegistry()` + `deriveFlowCapabilities()`; writes `validators.generated.ts`; `--check` mode (drift + registry validity).
+- `sidecoach/src/flow-validation-capabilities.ts` - the three registries (authored fields) + the authored `FIXTURE_MANIFEST` + accessors (`getValidatorRegistration`, `getFlowCapability`) + the pure `deriveCapability()`; per-validator derived fields and the resolved flow `capability` are imported from the generated file.
+- `sidecoach/src/validator-generation.ts` - the PURE generation logic INSIDE rootDir `./src` (so the test imports it without a TS6059 rootDir crossing): `deriveValidator()`, `validateRegistry()`, `deriveFlowCapabilities()`, `validateFixtureManifest()`, `gatingValidatorIds()`, `GeneratedValidator`. No file I/O.
+- `sidecoach/src/clean-evaluator.ts` - `evaluateCleanPolicy(input, policy)` deterministic 7-step function (non-vacuity BEFORE coverage) + `CleanEvalInput`/`CoverageObservation`/`RunCoverage` + `isCoverageSatisfied` (per-requirement AND-semantics).
+- `sidecoach/scripts/generate-validators.ts` - a THIN wrapper: imports the pure functions from `../src/validator-generation`, writes `validators.generated.ts`, and runs `--check` (drift + registry validity + fixture-manifest presence). Mirrors `generate-lanes.ts` over `lane-derivation.ts`.
 - `sidecoach/src/validators.generated.ts` - GENERATED per-validator derived fields + resolved flow capabilities (DO NOT EDIT BY HAND).
 - Tests: `product-rule-registry.test.ts`, `flow-validation-capabilities.test.ts`, `clean-evaluator.test.ts`, `generate-validators.test.ts` (all under `src/__tests__/`).
 
@@ -85,9 +90,11 @@ function run() {
   if (EVIDENCE_SOURCE_COMPATIBILITY['contrast'].length !== 0) throw new Error('contrast must be browser-only');
   if (!EVIDENCE_SOURCE_COMPATIBILITY['css-rule'].includes('css')) throw new Error('css-rule must be satisfiable from css source');
 
-  // a css-rule rule is statically satisfiable; a dom rule is not
+  // a css-rule rule is statically satisfiable; a dom rule is not. isStaticallySatisfiable
+  // is AND-across-requirements: EVERY required kind must be statically satisfiable.
   if (!isStaticallySatisfiable(['css-rule'] as EvidenceKind[])) throw new Error('css-rule must be statically satisfiable');
-  if (isStaticallySatisfiable(['css-rule', 'dom'] as EvidenceKind[])) throw new Error('any dom requirement makes a rule non-statically-satisfiable');
+  if (!isStaticallySatisfiable(['css-rule', 'markup'] as EvidenceKind[])) throw new Error('css-rule + markup are BOTH static -> statically satisfiable');
+  if (isStaticallySatisfiable(['css-rule', 'dom'] as EvidenceKind[])) throw new Error('any dom requirement makes a rule non-statically-satisfiable (AND across requirements)');
   if (sourceKindsForEvidence(['markup'] as EvidenceKind[]).includes('css')) throw new Error('css cannot satisfy a markup-only requirement');
 
   console.log('product-rule-types: OK');
@@ -163,7 +170,13 @@ export interface ProductFinding {
 export interface RequiredCoverageRecord {
   ruleId: string;
   scope: RuleScope;
-  supportedEvidenceAlternatives: string[];   // source kinds that can satisfy this rule's evidence
+  // ONE alternatives list PER evidence requirement family. Each inner list is the
+  // source kinds that can satisfy THAT requirement (static compatibility
+  // intersected with the rule's supported source kinds). Coverage is satisfied
+  // iff EVERY entry has at least one present source (AND across requirements, OR
+  // within a requirement) - a flat union would let a css-only run "satisfy" a
+  // css-rule+markup rule, which is the v4 false-satisfaction bug.
+  evidenceAlternativesByRequirement: string[][];
   requireAllDiscoveredApplicableFiles: boolean;
 }
 
@@ -176,20 +189,32 @@ export interface CleanPolicy {
   notApplicableBehavior: 'exclude_and_report';
 }
 
-export interface ProductValidationResult {
-  status: 'clean' | 'findings' | 'inconclusive' | 'error';
+export interface ProductValidationCoverage {
+  inspectedFiles: string[]; skippedFiles: string[];
+  supportedSourceKinds: string[]; unsupportedSourceKinds: string[];
+  ruleCounts: { pass: number; fail: number; notApplicable: number; inconclusive: number };
+  findingCounts: { blockingExcess: number; withinTolerance: number; nonBlocking: number };
+  measuredScope: string[]; unverifiedScope: string[];
+}
+
+interface ProductValidationBase {
   rules: ProductRuleResult[];
   findings: ProductFinding[];
-  coverage: {
-    inspectedFiles: string[]; skippedFiles: string[];
-    supportedSourceKinds: string[]; unsupportedSourceKinds: string[];
-    ruleCounts: { pass: number; fail: number; notApplicable: number; inconclusive: number };
-    findingCounts: { blockingExcess: number; withinTolerance: number; nonBlocking: number };
-    measuredScope: string[]; unverifiedScope: string[];
-  };
-  normalizedErrorCategory?: NormalizedErrorCategory;   // REQUIRED when status === 'error'
-  error?: string;
+  coverage: ProductValidationCoverage;
 }
+
+// DISCRIMINATED UNION (spec 512-513): the `error` variant REQUIRES
+// normalizedErrorCategory + error; the non-error variants carry neither. The
+// compiler now enforces that a status==='error' result always has a category.
+export interface ProductValidationOk extends ProductValidationBase {
+  status: 'clean' | 'findings' | 'inconclusive';
+}
+export interface ProductValidationError extends ProductValidationBase {
+  status: 'error';
+  normalizedErrorCategory: NormalizedErrorCategory;
+  error: string;
+}
+export type ProductValidationResult = ProductValidationOk | ProductValidationError;
 
 export function isBlocking(sev: CanonicalSeverity, blocking: CanonicalSeverity[]): boolean {
   return blocking.includes(sev);
@@ -362,9 +387,11 @@ export const RULES: ProductRuleDefinition[] = [
 
   // 3. CSS-side anti-pattern (precise detector) - owner anti-pattern - REQUIRED
   //    (css-rule, major). Source: absolute-ban gradient-text ('P1' -> table major).
+  //    The alias is the RAW banName the live detector emits (no prefix):
+  //    findingFromBan('gradient-text', ...) at absolute-ban-detector.ts:110.
   {
     ruleId: 'anti-pattern.gradient-text',
-    sourceRuleAliases: ['ban/gradient-text'],
+    sourceRuleAliases: ['gradient-text'],
     canonicalRuleKey: 'anti-pattern/gradient-text',
     ownerValidatorId: 'anti-pattern',
     sourceVocabulary: 'p012',
@@ -431,9 +458,11 @@ export const RULES: ProductRuleDefinition[] = [
   // 6. Heuristic anti-pattern with a DECLARED severity override - owner
   //    anti-pattern - REQUIRED (markup) but NON-blocking by construction. Source:
   //    absolute-ban identical-card-grids ('P1' -> table major) DECLARED minor.
+  //    The alias is the RAW banName the live detector emits (no prefix):
+  //    findingFromBan('identical-card-grids', ...) at absolute-ban-detector.ts:159.
   {
     ruleId: 'anti-pattern.identical-card-grids',
-    sourceRuleAliases: ['ban/identical-card-grids'],
+    sourceRuleAliases: ['identical-card-grids'],
     canonicalRuleKey: 'anti-pattern/identical-card-grids',
     ownerValidatorId: 'anti-pattern',
     sourceVocabulary: 'p012',
@@ -476,7 +505,7 @@ Note: conflicting-alias REJECTION (the negative case) is exercised by `validateR
 
 **Files:** Create `flow-validation-capabilities.ts`; Test `flow-validation-capabilities.test.ts`
 
-Authored fields only. `capability` is GENERATED: this file authors `baseCapability` (distinguishing an empty flow that is `advisory` from one that is `none`) plus a pure `deriveCapability(flow)`; Task 4 emits the resolved value to `validators.generated.ts` and `--check` asserts file-level equality. Per-validator derived fields (`ownedRuleIds`, `registryScope`, `supportedSourceKinds`, `cleanPolicy`) are imported from the generated file (consumed by P4a-2/P4b), never authored here.
+Authored fields only. `capability` is GENERATED: this file authors `baseCapability` (distinguishing an empty flow that is `advisory` from one that is `none`) plus a pure `deriveCapability(flow)`; Task 4 emits the resolved value to `validators.generated.ts` and `--check` asserts file-level equality. Per-validator derived fields (`ownedRuleIds`, `registryScope`, `supportedSourceKinds`, `cleanPolicy`) are imported from the generated file (consumed by P4a-2/P4b), never authored here. The `FLOW_CAPABILITIES` seed authors the FIVE `lane_converge` member flows EXACTLY as spec 939-950 declares them (only Flow J binds a product validator; M/K/I/L are advisory; flow I is advisory because the static a11y slice gates via lane policy, not flow ownership). This file also authors the `FIXTURE_MANIFEST` (one entry per gating validator) that Task 4's `--check` validates for presence.
 
 - [ ] **Step 3.1: Failing test**
 
@@ -484,15 +513,40 @@ Authored fields only. `capability` is GENERATED: this file authors `baseCapabili
 // sidecoach/src/__tests__/flow-validation-capabilities.test.ts
 import {
   VALIDATOR_REGISTRATIONS, FLOW_CAPABILITIES, LANE_POLICIES,
-  getValidatorRegistration, deriveCapability,
+  getValidatorRegistration, getFlowCapability, deriveCapability,
 } from '../flow-validation-capabilities';
 import { RULES } from '../product-rule-registry';
+
+// lane_converge's FIVE derived member flows and their spec-declared capability
+// (spec 939-950). ONLY Flow J binds a product validator; M/K/I/L are advisory
+// coaching. The static a11y slice gates the lane as a LANE-POLICY validator, it
+// is NOT bound to flow I (spec 949).
+const MEMBER_FLOW_CAPABILITY: Record<string, 'product_validator' | 'advisory'> = {
+  flowJ_tactical_polish: 'product_validator',
+  flowM_responsive_validation: 'advisory',
+  flowK_multi_lens_audit: 'advisory',
+  flowI_accessibility: 'advisory',
+  flowL_design_critique: 'advisory',
+};
 
 function run() {
   // a registration exists for EVERY ownerValidatorId in the rule registry
   for (const ownerId of new Set(RULES.map((r) => r.ownerValidatorId))) {
     if (!getValidatorRegistration(ownerId)) throw new Error(`missing registration for owner ${ownerId}`);
   }
+
+  // classify the ACTUAL lane-converge MEMBER flows (not just ids already in a
+  // lane policy): every member flow is authored AND derives the spec capability.
+  for (const [flowId, expected] of Object.entries(MEMBER_FLOW_CAPABILITY)) {
+    const f = getFlowCapability(flowId);
+    if (!f) throw new Error(`missing capability for lane-converge member flow ${flowId}`);
+    if (deriveCapability(f) !== expected) {
+      throw new Error(`member flow ${flowId} capability ${deriveCapability(f)} != spec ${expected}`);
+    }
+  }
+  // spec 949: flow I is ADVISORY and binds NO product validator
+  const fi = getFlowCapability('flowI_accessibility');
+  if (!fi || fi.productValidatorIds.length !== 0) throw new Error('flow I must NOT bind a product validator (static a11y is a lane validator)');
 
   // deriveCapability matches the spec formula EXACTLY for every authored flow
   for (const f of FLOW_CAPABILITIES) {
@@ -503,6 +557,12 @@ function run() {
   const caps = new Set(FLOW_CAPABILITIES.map(deriveCapability));
   if (!caps.has('product_validator') || !caps.has('advisory') || !caps.has('none')) {
     throw new Error('seed must exercise product_validator, advisory, and none');
+  }
+
+  // static-a11y gates lane_converge through the LANE POLICY, not a flow binding
+  const lc = LANE_POLICIES.find((p) => p.laneId === 'lane_converge');
+  if (!lc || !lc.requiredProductValidatorIds.includes('static-a11y')) {
+    throw new Error('static-a11y must gate lane_converge via requiredProductValidatorIds');
   }
 
   // every lane-policy member validator is classified (required or excluded) AND registered
@@ -549,6 +609,16 @@ export interface LaneValidationPolicy {
   excludedProductValidatorIds: string[];         // AUTHORED: member-flow validators intentionally not gating
 }
 
+// AUTHORED fixture-manifest entry per gating validator. The generator checks
+// PRESENCE only (clean/findings/inconclusive each declared); the test SUITE
+// executes the referenced fixtures (spec 628-634, section 15 keep these
+// responsibilities separate). Paths are declarative anchors in P4a-1; the actual
+// fixture files + execution land in P4a-2.
+export interface ValidatorFixtureManifest {
+  validatorId: string;
+  fixtures: { clean: string; findings: string; inconclusive: string };
+}
+
 // The single derivation rule for a flow's capability (spec lines 391-393). The
 // generator emits the resolved value to validators.generated.ts and --check
 // asserts file-level equality; this pure function is the contract both sides use.
@@ -563,13 +633,25 @@ export const VALIDATOR_REGISTRATIONS: ProductValidatorRegistration[] = [
   { validatorId: 'static-a11y', label: 'Static Accessibility' },
 ];
 
+// lane_converge's FIVE derived member flows (spec 939-950). ONLY Flow J binds a
+// product validator (the Flow J static polish/copy/bans validator). M/K/I/L are
+// advisory coaching. flow I is advisory: the STATIC a11y slice is a separate
+// registered validator gating via lane policy, NOT this flow's framework output
+// (spec 949). The trailing flowA_brand_verify is a NON-member flow kept only to
+// exercise the 'none' branch of deriveCapability so the formula test covers all
+// three resolved capabilities.
 export const FLOW_CAPABILITIES: FlowValidationCapability[] = [
   { flowId: 'flowJ_tactical_polish' as FlowId, productValidatorIds: ['polish-standard'], baseCapability: 'none' },
-  { flowId: 'flowI_accessibility' as FlowId, productValidatorIds: ['static-a11y'], baseCapability: 'none' },
-  { flowId: 'flowB_component_research' as FlowId, productValidatorIds: [], baseCapability: 'advisory' },
+  { flowId: 'flowM_responsive_validation' as FlowId, productValidatorIds: [], baseCapability: 'advisory' },
+  { flowId: 'flowK_multi_lens_audit' as FlowId, productValidatorIds: [], baseCapability: 'advisory' },
+  { flowId: 'flowI_accessibility' as FlowId, productValidatorIds: [], baseCapability: 'advisory' },
+  { flowId: 'flowL_design_critique' as FlowId, productValidatorIds: [], baseCapability: 'advisory' },
   { flowId: 'flowA_brand_verify' as FlowId, productValidatorIds: [], baseCapability: 'none' },
 ];
 
+// The required gate for lane_converge: Flow J static validator + theming +
+// anti-patterns + static a11y, all clean (spec 952-958). These bind through the
+// LANE POLICY, not flow ownership; M/K/I/L coach every iteration but never gate.
 export const LANE_POLICIES: LaneValidationPolicy[] = [
   {
     laneId: 'lane_converge',
@@ -578,8 +660,20 @@ export const LANE_POLICIES: LaneValidationPolicy[] = [
   },
 ];
 
+// One manifest entry per gating validator (every id in a lane policy's
+// requiredProductValidatorIds). Each declares all three fixture categories.
+export const FIXTURE_MANIFEST: ValidatorFixtureManifest[] = [
+  { validatorId: 'polish-standard', fixtures: { clean: 'fixtures/polish-standard/clean', findings: 'fixtures/polish-standard/findings', inconclusive: 'fixtures/polish-standard/inconclusive' } },
+  { validatorId: 'theming', fixtures: { clean: 'fixtures/theming/clean', findings: 'fixtures/theming/findings', inconclusive: 'fixtures/theming/inconclusive' } },
+  { validatorId: 'anti-pattern', fixtures: { clean: 'fixtures/anti-pattern/clean', findings: 'fixtures/anti-pattern/findings', inconclusive: 'fixtures/anti-pattern/inconclusive' } },
+  { validatorId: 'static-a11y', fixtures: { clean: 'fixtures/static-a11y/clean', findings: 'fixtures/static-a11y/findings', inconclusive: 'fixtures/static-a11y/inconclusive' } },
+];
+
 export function getValidatorRegistration(id: string): ProductValidatorRegistration | null {
   return VALIDATOR_REGISTRATIONS.find((v) => v.validatorId === id) ?? null;
+}
+export function getFlowCapability(flowId: string): FlowValidationCapability | null {
+  return FLOW_CAPABILITIES.find((f) => (f.flowId as string) === flowId) ?? null;
 }
 ```
 
@@ -589,7 +683,7 @@ export function getValidatorRegistration(id: string): ProductValidatorRegistrati
 
 ## Task 4: Generator + `--check` (derive clean policies, validate registry)
 
-**Files:** Create `scripts/generate-validators.ts`, `src/validators.generated.ts`; Test `generate-validators.test.ts`
+**Files:** Create `src/validator-generation.ts` (pure logic), `scripts/generate-validators.ts` (thin I/O wrapper), `src/validators.generated.ts`; Test `generate-validators.test.ts`
 
 - [ ] **Step 4.1: Failing test (positive + failing-first negative fixtures for EACH rejection)**
 
@@ -597,7 +691,14 @@ export function getValidatorRegistration(id: string): ProductValidatorRegistrati
 // sidecoach/src/__tests__/generate-validators.test.ts
 import { execFileSync } from 'child_process';
 import * as path from 'path';
-import { deriveValidator, validateRegistry } from '../../scripts/generate-validators';
+// IMPORT THE PURE LOGIC FROM src/ (inside rootDir ./src) - NEVER from ../../scripts/
+// (a src/ test importing scripts/ breaks `tsc` with TS6059, the P2 lane-derivation
+// issue). The --check below still drives the SCRIPT, but via the ts-node CLI, not a
+// TS import, so it does not cross rootDir.
+import {
+  deriveValidator, validateRegistry, validateFixtureManifest, gatingValidatorIds,
+} from '../validator-generation';
+import { LANE_POLICIES, FIXTURE_MANIFEST } from '../flow-validation-capabilities';
 import type { ProductRuleDefinition } from '../product-rule-types';
 import type { ProductValidatorRegistration } from '../flow-validation-capabilities';
 
@@ -619,7 +720,8 @@ const expectInvalid = (label: string, rules: ProductRuleDefinition[], regs: Prod
 };
 
 function run() {
-  // --check passes on the committed generated file (no drift) AND the real registry is valid
+  // --check passes on the committed generated file (no drift) AND the real registry
+  // + fixture manifest are valid. Driven through the SCRIPT CLI (not a TS import).
   execFileSync('npx', ['ts-node', 'scripts/generate-validators.ts', '--check'], { cwd: SC, stdio: 'pipe' });
 
   // generated cleanPolicy for polish-standard is non-vacuous
@@ -636,6 +738,15 @@ function run() {
   if (Object.keys(a11y.cleanPolicy.toleratedFindingCounts).length === 0) throw new Error('tolerated counts must be explicit, not empty');
   if (a11y.cleanPolicy.toleratedFindingCounts['blocker|a11y'] !== 0) throw new Error('explicit 0 expected for blocker|a11y');
 
+  // generated coverage is PER-REQUIREMENT (evidenceAlternativesByRequirement), never
+  // a flat union, and defaults requireAll=true (no blanket component/page=false).
+  const focus = pol.cleanPolicy.requiredCoverageByScope.find((c: any) => c.ruleId === 'polish.reduced-motion-respect')
+    || a11y.cleanPolicy.requiredCoverageByScope.find((c: any) => c.ruleId === 'a11y.focus-visible');
+  if (!focus || !Array.isArray(focus.evidenceAlternativesByRequirement) || focus.evidenceAlternativesByRequirement.length === 0) {
+    throw new Error('coverage must carry per-requirement evidence alternatives');
+  }
+  if (focus.requireAllDiscoveredApplicableFiles !== true) throw new Error('a evaluate_expanded_context rule must requireAll=true');
+
   // deriveValidator is pure: an all-dom-only owner yields EMPTY requiredRuleIds
   const domOwner = deriveValidator(reg('v'), [baseRule({ ruleId: 'v.dom', canonicalRuleKey: 'v/dom', ownerValidatorId: 'v', evidenceRequirements: ['dom'], supportedSourceKinds: [{ kind: 'dom', level: 'full' }] })]);
   if (domOwner.cleanPolicy.requiredRuleIds.length !== 0) throw new Error('all-dom-only owner must derive empty requiredRuleIds');
@@ -643,44 +754,77 @@ function run() {
   // --- failing-first negative fixtures, ONE per rejection case (spec 628-634) ---
   // 1. empty requiredRuleIds (only owned rule is dom-only)
   expectInvalid('empty-required', [baseRule({ ruleId: 'v.dom', canonicalRuleKey: 'v/dom', evidenceRequirements: ['dom'], supportedSourceKinds: [{ kind: 'dom', level: 'full' }] })], [reg('v')]);
-  // 2. missing metadata (no findingClass)
-  expectInvalid('missing-metadata', [baseRule({ findingClass: '' as any })], [reg('v')]);
-  // 3. canonicalRuleKey with two owners (same key, different ownerValidatorId)
+  // 2. canonicalRuleKey with two owners (same key, different ownerValidatorId)
   expectInvalid('two-owners', [baseRule({ ruleId: 'a', canonicalRuleKey: 'dup/key', ownerValidatorId: 'v' }), baseRule({ ruleId: 'b', canonicalRuleKey: 'dup/key', ownerValidatorId: 'w' })], [reg('v'), reg('w')]);
-  // 4. conflicting alias (one source id mapped to two canonical keys)
+  // 3. conflicting alias (one source id mapped to two canonical keys)
   expectInvalid('conflicting-alias', [baseRule({ ruleId: 'a', canonicalRuleKey: 'k/a', sourceRuleAliases: ['DUP'] }), baseRule({ ruleId: 'b', canonicalRuleKey: 'k/b', sourceRuleAliases: ['DUP'] })], [reg('v')]);
-  // 5. unsatisfiable coverage (markup evidence but only css supported)
+  // 4. unsatisfiable coverage (markup evidence but only css supported -> empty
+  //    alternatives for the markup requirement under per-requirement AND-semantics)
   expectInvalid('unsatisfiable-coverage', [baseRule({ ruleId: 'v.m', canonicalRuleKey: 'v/m', evidenceRequirements: ['markup'], supportedSourceKinds: [{ kind: 'css', level: 'full' }] })], [reg('v')]);
-  // 6. undocumented severity divergence (table says major, declares minor, no reason)
+  // 5. undocumented severity divergence (table says major, declares minor, no reason)
   expectInvalid('severity-divergence', [baseRule({ severity: 'minor' })], [reg('v')]);
+  // 6. duplicate canonical ruleId (two definitions share a ruleId; distinct keys)
+  expectInvalid('duplicate-ruleId', [baseRule({ ruleId: 'dup', canonicalRuleKey: 'k/a' }), baseRule({ ruleId: 'dup', canonicalRuleKey: 'k/b' })], [reg('v')]);
+
+  // 7. FULL field-completeness (P1-7): EACH required field, when empty, must fail.
+  const requiredFieldFixtures: Array<[string, Partial<ProductRuleDefinition>]> = [
+    ['missing-findingClass', { findingClass: '' as any }],
+    ['missing-sourceVocabulary', { sourceVocabulary: '' as any }],
+    ['missing-sourceSeverity', { sourceSeverity: '' }],
+    ['missing-registryScope', { registryScope: '' }],
+    ['missing-narrowTargetBehavior', { narrowTargetBehavior: '' as any }],
+    ['missing-applicability', { applicability: '' as any }],
+    ['missing-supportedSourceKinds', { supportedSourceKinds: [] }],
+    ['missing-scope', { scope: '' as any }],
+    ['missing-ownerValidatorId', { ownerValidatorId: '' }],
+    ['missing-canonicalRuleKey', { canonicalRuleKey: '' }],
+    ['missing-evidenceRequirements', { evidenceRequirements: [] }],
+  ];
+  for (const [label, over] of requiredFieldFixtures) expectInvalid(label, [baseRule(over)], [reg('v')]);
+
+  // --- fixture-manifest PRESENCE (spec 628-634; generator checks presence, the
+  //     suite executes fixtures) ---
+  // the REAL manifest covers every gating validator across all three categories
+  if (!validateFixtureManifest(gatingValidatorIds(LANE_POLICIES), FIXTURE_MANIFEST).ok) {
+    throw new Error('real fixture manifest must be complete for every gating validator');
+  }
+  // failing-first: a gating validator missing its inconclusive fixture entry
+  const missingCat = FIXTURE_MANIFEST.map((m) => m.validatorId === 'static-a11y' ? { ...m, fixtures: { ...m.fixtures, inconclusive: '' } } : m);
+  if (validateFixtureManifest(gatingValidatorIds(LANE_POLICIES), missingCat).ok) {
+    throw new Error('a missing inconclusive fixture-manifest entry must FAIL --check');
+  }
+  // failing-first: a gating validator with NO manifest entry at all
+  const droppedEntry = FIXTURE_MANIFEST.filter((m) => m.validatorId !== 'theming');
+  if (validateFixtureManifest(gatingValidatorIds(LANE_POLICIES), droppedEntry).ok) {
+    throw new Error('a gating validator with no manifest entry must FAIL --check');
+  }
 
   console.log('generate-validators: OK');
 }
 run();
 ```
 
-- [ ] **Step 4.2: Run, verify FAIL** -> generator/generated file missing (cannot import `deriveValidator`/`validateRegistry`).
+- [ ] **Step 4.2: Run, verify FAIL** -> `Cannot find module '../validator-generation'` (the pure module + generated file do not exist yet).
 
 - [ ] **Step 4.3: Write the generator**
 
-`scripts/generate-validators.ts` exports PURE functions (no I/O) so the test imports them directly, plus a `main()`/`--check` that does the file I/O.
+The PURE logic lives in `src/validator-generation.ts` (inside rootDir `./src`, so the test imports it without TS6059); `scripts/generate-validators.ts` is a thin I/O + `--check` wrapper. This mirrors the P2 `src/lane-derivation.ts` / `scripts/generate-lanes.ts` split.
 
 ```typescript
-// sidecoach/scripts/generate-validators.ts
-import * as fs from 'fs';
-import * as path from 'path';
+// sidecoach/src/validator-generation.ts
+//
+// PURE generation logic, INSIDE rootDir ./src so src/__tests__ can import it
+// without a TS6059 rootDir crossing (the P2 lane-derivation precedent). The thin
+// scripts/generate-validators.ts wrapper imports these for file I/O + --check.
 import {
-  CleanPolicy, ProductRuleDefinition, SourceKindSupport,
+  CleanPolicy, ProductRuleDefinition, RequiredCoverageRecord, SourceKindSupport,
   SEVERITY_TABLE, sourceKindsForEvidence, isStaticallySatisfiable,
-} from '../src/product-rule-types';
-import { RULES } from '../src/product-rule-registry';
+} from './product-rule-types';
 import {
-  VALIDATOR_REGISTRATIONS, FLOW_CAPABILITIES, ProductValidatorRegistration,
-  deriveCapability,
-} from '../src/flow-validation-capabilities';
+  ProductValidatorRegistration, LaneValidationPolicy, ValidatorFixtureManifest,
+  FLOW_CAPABILITIES, deriveCapability,
+} from './flow-validation-capabilities';
 
-const SC = path.resolve(__dirname, '..');
-const OUT = path.resolve(SC, 'src', 'validators.generated.ts');
 const BLOCKING: CleanPolicy['blockingSeverities'] = ['blocker', 'major'];
 
 export interface GeneratedValidator {
@@ -702,20 +846,36 @@ function dedupeSourceKinds(kinds: SourceKindSupport[]): SourceKindSupport[] {
   return [...best.values()].sort((a, b) => a.kind.localeCompare(b.kind));
 }
 
+// requireAll defaults TRUE (spec 526-533: completeness wants EVERY discovered
+// applicable input checked). Only a rule that explicitly excludes-and-discloses
+// narrow targets is permitted NOT to require all discovered files - derived from
+// metadata, NOT a blanket component/page scope check.
+function deriveRequireAll(r: ProductRuleDefinition): boolean {
+  return r.narrowTargetBehavior !== 'exclude_and_disclose';
+}
+
+// PER-REQUIREMENT coverage alternatives: for EACH evidence requirement, the source
+// kinds that can satisfy THAT requirement (static compatibility intersected with
+// the rule's supported kinds). AND-across-requirements is then enforced by
+// isCoverageSatisfied; a flat union would false-satisfy a css-rule+markup rule
+// from a css-only run.
+function coverageRecord(r: ProductRuleDefinition): RequiredCoverageRecord {
+  const supported = new Set(r.supportedSourceKinds.filter((s) => s.level !== 'none').map((s) => s.kind));
+  return {
+    ruleId: r.ruleId,
+    scope: r.scope,
+    evidenceAlternativesByRequirement: r.evidenceRequirements.map((e) =>
+      sourceKindsForEvidence([e]).filter((k) => supported.has(k))),
+    requireAllDiscoveredApplicableFiles: deriveRequireAll(r),
+  };
+}
+
 // PURE: derive one validator's generated entry from the registry.
 export function deriveValidator(reg: ProductValidatorRegistration, rules: ProductRuleDefinition[]): GeneratedValidator {
   const owned = rules.filter((r) => r.ownerValidatorId === reg.validatorId);
   const required = owned.filter((r) => isStaticallySatisfiable(r.evidenceRequirements));
 
-  const requiredCoverageByScope = required.map((r) => ({
-    ruleId: r.ruleId,
-    scope: r.scope,
-    supportedEvidenceAlternatives: r.supportedSourceKinds
-      .filter((s) => s.level !== 'none')
-      .map((s) => s.kind)
-      .filter((k) => sourceKindsForEvidence(r.evidenceRequirements).includes(k)),
-    requireAllDiscoveredApplicableFiles: r.scope === 'file' || r.scope === 'project',
-  }));
+  const requiredCoverageByScope = required.map(coverageRecord);
 
   // EXPLICIT 0 tolerance for every owned blocking (severity,findingClass) pair.
   const toleratedFindingCounts: Record<string, number> = {};
@@ -746,12 +906,29 @@ export function deriveValidator(reg: ProductValidatorRegistration, rules: Produc
 export function validateRegistry(rules: ProductRuleDefinition[], regs: ProductValidatorRegistration[]): { ok: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  // missing metadata
+  // FULL field completeness (P1-7): EVERY required field must be non-empty.
   for (const r of rules) {
-    if (!r.ruleId || !r.canonicalRuleKey || !r.ownerValidatorId || !r.severity || !r.findingClass || !r.scope || !r.evidenceRequirements?.length) {
-      errors.push(`missing metadata on rule ${r.ruleId || '(no id)'}`);
-    }
+    const missing: string[] = [];
+    if (!r.ruleId) missing.push('ruleId');
+    if (!r.canonicalRuleKey) missing.push('canonicalRuleKey');
+    if (!r.ownerValidatorId) missing.push('ownerValidatorId');
+    if (!r.severity) missing.push('severity');
+    if (!r.findingClass) missing.push('findingClass');
+    if (!r.scope) missing.push('scope');
+    if (!r.sourceVocabulary) missing.push('sourceVocabulary');
+    if (!r.sourceSeverity) missing.push('sourceSeverity');
+    if (!r.registryScope) missing.push('registryScope');
+    if (!r.narrowTargetBehavior) missing.push('narrowTargetBehavior');
+    if (!r.applicability) missing.push('applicability');
+    if (!r.evidenceRequirements?.length) missing.push('evidenceRequirements');
+    if (!r.supportedSourceKinds?.length) missing.push('supportedSourceKinds');
+    if (missing.length) errors.push(`rule ${r.ruleId || '(no id)'} missing required field(s): ${missing.join(', ')}`);
   }
+
+  // duplicate canonical ruleId (distinct from canonicalRuleKey / aliases)
+  const idCounts = new Map<string, number>();
+  for (const r of rules) idCounts.set(r.ruleId, (idCounts.get(r.ruleId) ?? 0) + 1);
+  for (const [id, n] of idCounts) if (id && n > 1) errors.push(`duplicate canonical ruleId ${id} (${n} definitions)`);
 
   // canonicalRuleKey with more than one owner / definition
   const byKey = new Map<string, Set<string>>();
@@ -761,7 +938,7 @@ export function validateRegistry(rules: ProductRuleDefinition[], regs: ProductVa
   }
   for (const [key, owners] of byKey) {
     const defs = rules.filter((r) => r.canonicalRuleKey === key).length;
-    if (defs > 1 || owners.size > 1) errors.push(`canonicalRuleKey ${key} has more than one owner/definition`);
+    if (key && (defs > 1 || owners.size > 1)) errors.push(`canonicalRuleKey ${key} has more than one owner/definition`);
   }
 
   // conflicting alias (one source id -> two canonical keys)
@@ -783,7 +960,7 @@ export function validateRegistry(rules: ProductRuleDefinition[], regs: ProductVa
   // every owner referenced by a rule has a registration
   const registered = new Set(regs.map((v) => v.validatorId));
   for (const ownerId of new Set(rules.map((r) => r.ownerValidatorId))) {
-    if (!registered.has(ownerId)) errors.push(`rule owner ${ownerId} has no registration`);
+    if (ownerId && !registered.has(ownerId)) errors.push(`rule owner ${ownerId} has no registration`);
   }
 
   // per-validator generated checks: non-empty requiredRuleIds + satisfiable coverage
@@ -792,10 +969,34 @@ export function validateRegistry(rules: ProductRuleDefinition[], regs: ProductVa
     const g = deriveValidator(reg, rules);
     if (g.cleanPolicy.requiredRuleIds.length === 0) errors.push(`validator ${reg.validatorId} has empty generated requiredRuleIds`);
     for (const c of g.cleanPolicy.requiredCoverageByScope) {
-      if (c.supportedEvidenceAlternatives.length === 0) errors.push(`coverage plan for ${c.ruleId} cannot satisfy its declared evidence`);
+      // AND-across-requirements: EVERY requirement must have >=1 alternative.
+      if (c.evidenceAlternativesByRequirement.length === 0 || c.evidenceAlternativesByRequirement.some((alts) => alts.length === 0)) {
+        errors.push(`coverage plan for ${c.ruleId} cannot satisfy its declared evidence`);
+      }
     }
   }
 
+  return { ok: errors.length === 0, errors };
+}
+
+// gating validators = every id required by some lane policy.
+export function gatingValidatorIds(policies: LaneValidationPolicy[]): string[] {
+  return [...new Set(policies.flatMap((p) => p.requiredProductValidatorIds))];
+}
+
+// PURE: every gating validator must declare a clean/findings/inconclusive
+// fixture-manifest entry. The generator checks PRESENCE; the test SUITE executes
+// the fixtures (spec 628-634; section 15 separates these). --check rejects a gap.
+export function validateFixtureManifest(gating: string[], manifest: ValidatorFixtureManifest[]): { ok: boolean; errors: string[] } {
+  const errors: string[] = [];
+  const byId = new Map(manifest.map((m) => [m.validatorId, m]));
+  for (const id of gating) {
+    const m = byId.get(id);
+    if (!m) { errors.push(`gating validator ${id} has no fixture-manifest entry`); continue; }
+    for (const cat of ['clean', 'findings', 'inconclusive'] as const) {
+      if (!m.fixtures[cat]) errors.push(`gating validator ${id} fixture-manifest missing ${cat} entry`);
+    }
+  }
   return { ok: errors.length === 0, errors };
 }
 
@@ -803,6 +1004,29 @@ export function validateRegistry(rules: ProductRuleDefinition[], regs: ProductVa
 export function deriveFlowCapabilities() {
   return FLOW_CAPABILITIES.map((f) => ({ flowId: f.flowId as string, capability: deriveCapability(f) }));
 }
+```
+
+```typescript
+// sidecoach/scripts/generate-validators.ts
+//
+// THIN wrapper: all pure logic lives in ../src/validator-generation (inside
+// rootDir ./src so the test imports it without TS6059). This file only does file
+// I/O + --check. Re-exports the pure fns for back-compat (mirrors how
+// generate-lanes.ts re-exports lane-derivation).
+import * as fs from 'fs';
+import * as path from 'path';
+import { RULES } from '../src/product-rule-registry';
+import { VALIDATOR_REGISTRATIONS, LANE_POLICIES, FIXTURE_MANIFEST } from '../src/flow-validation-capabilities';
+import {
+  deriveValidator, validateRegistry, validateFixtureManifest, gatingValidatorIds, deriveFlowCapabilities,
+} from '../src/validator-generation';
+
+export {
+  deriveValidator, validateRegistry, validateFixtureManifest, gatingValidatorIds, deriveFlowCapabilities,
+} from '../src/validator-generation';
+
+const SC = path.resolve(__dirname, '..');
+const OUT = path.resolve(SC, 'src', 'validators.generated.ts');
 
 function render(): string {
   const validators = VALIDATOR_REGISTRATIONS.map((reg) => deriveValidator(reg, RULES));
@@ -820,13 +1044,16 @@ function render(): string {
 
 function main() {
   const check = process.argv.includes('--check');
-  const { ok, errors } = validateRegistry(RULES, VALIDATOR_REGISTRATIONS);
-  if (!ok) { console.error('generate-validators: INVALID registry\n' + errors.map((e) => '  - ' + e).join('\n')); process.exit(1); }
+  const errors = [
+    ...validateRegistry(RULES, VALIDATOR_REGISTRATIONS).errors,
+    ...validateFixtureManifest(gatingValidatorIds(LANE_POLICIES), FIXTURE_MANIFEST).errors,
+  ];
+  if (errors.length) { console.error('generate-validators: INVALID registry/manifest\n' + errors.map((e) => '  - ' + e).join('\n')); process.exit(1); }
   const want = render();
   if (check) {
     const have = fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf-8') : '';
     if (have !== want) { console.error(`generate-validators --check: DRIFT in ${path.relative(SC, OUT)}`); process.exit(1); }
-    console.log('generate-validators --check: OK (registry valid, no drift)');
+    console.log('generate-validators --check: OK (registry valid, manifest present, no drift)');
     return;
   }
   fs.writeFileSync(OUT, want);
@@ -838,7 +1065,7 @@ if (require.main === module) main();
 
 Then run `npx ts-node scripts/generate-validators.ts` once to WRITE `src/validators.generated.ts`, and commit the generated file.
 
-- [ ] **Step 4.4: Run PASS + register + commit** -> verify: `generate-validators: OK` and the standalone `npx ts-node scripts/generate-validators.ts --check` prints OK. Add the suite to `run-tests.ts`; `git add` generator + generated file + test + run-tests; `git commit -m "feat(lane-p4a1): validator clean-policy generator + --check drift/registry guard"`.
+- [ ] **Step 4.4: Run PASS + register + commit** -> verify: `generate-validators: OK` and the standalone `npx ts-node scripts/generate-validators.ts --check` prints OK. Add the suite to `run-tests.ts`; `git add` `src/validator-generation.ts` + generator wrapper + generated file + test + run-tests; `git commit -m "feat(lane-p4a1): validator clean-policy generator + --check drift/registry/manifest guard"`.
 
 ---
 
@@ -860,7 +1087,7 @@ const policy: CleanPolicy = {
   requiredRuleIds: [REQ],
   blockingSeverities: ['blocker', 'major'],
   toleratedFindingCounts: {},
-  requiredCoverageByScope: [{ ruleId: REQ, scope: 'file', supportedEvidenceAlternatives: ['css', 'scss'], requireAllDiscoveredApplicableFiles: true }],
+  requiredCoverageByScope: [{ ruleId: REQ, scope: 'file', evidenceAlternativesByRequirement: [['css', 'scss']], requireAllDiscoveredApplicableFiles: true }],
   inconclusiveBehavior: 'block',
   notApplicableBehavior: 'exclude_and_report',
 };
@@ -880,11 +1107,26 @@ function run_() {
   if (!isCoverageSatisfied(policy.requiredCoverageByScope[0], satObs(REQ))) throw new Error('satObs must satisfy');
   if (isCoverageSatisfied(policy.requiredCoverageByScope[0], gapObs(REQ))) throw new Error('gapObs must NOT satisfy');
 
+  // AND-across-requirements: a css-rule + markup rule needs BOTH a css source AND
+  // a markup source present. A CSS-only run does NOT satisfy it (the v4 union bug).
+  const twoReq = { ruleId: 't', scope: 'file' as const, evidenceAlternativesByRequirement: [['css'], ['html', 'tsx']], requireAllDiscoveredApplicableFiles: false };
+  const cssOnly = { ruleId: 't', inspectedFiles: ['a.css'], discoveredApplicableFiles: ['a.css'], evidenceKindsPresent: ['css'] };
+  const cssAndMarkup = { ruleId: 't', inspectedFiles: ['a.css', 'b.html'], discoveredApplicableFiles: ['a.css', 'b.html'], evidenceKindsPresent: ['css', 'html'] };
+  if (isCoverageSatisfied(twoReq, cssOnly)) throw new Error('css-only run must NOT satisfy a css-rule+markup rule');
+  if (!isCoverageSatisfied(twoReq, cssAndMarkup)) throw new Error('css+markup present must satisfy the two-requirement rule');
+
   // required pass + satisfied coverage -> clean, with REPRODUCIBLE coverage
   let r = evaluateCleanPolicy(input([rule(REQ, 'pass')], [satObs(REQ)]), policy);
   if (r.status !== 'clean') throw new Error('all required pass -> clean');
   if (JSON.stringify(r.coverage.inspectedFiles) !== JSON.stringify(['a.css'])) throw new Error('coverage must be reproducible (inspectedFiles)');
   if (r.coverage.measuredScope[0] !== 'file:a.css') throw new Error('coverage must carry measuredScope');
+
+  // STEP 2 (non-vacuity) PRECEDES STEP 3 (coverage): a validator whose only
+  // required rule is not_applicable is vacuous -> inconclusive, EVEN WHEN a
+  // satisfying coverage observation is supplied (vacuity is decided before any
+  // coverage logic runs). The not_applicable rule is excluded by applicability.
+  r = evaluateCleanPolicy(input([rule(REQ, 'not_applicable')], [satObs(REQ)]), policy);
+  if (r.status !== 'inconclusive') throw new Error('vacuous validator -> inconclusive BEFORE coverage');
 
   // required inconclusive -> inconclusive (step 4)
   r = evaluateCleanPolicy(input([rule(REQ, 'inconclusive')], [satObs(REQ)]), policy);
@@ -961,14 +1203,18 @@ export interface CleanEvalInput {
 }
 
 // A required rule is coverage-satisfied iff (requireAllDiscovered ? inspected
-// superset of discovered : inspected non-empty) AND at least one supported
-// evidence alternative is present this run. Consumes requiredCoverageByScope.
+// superset of discovered : inspected non-empty) AND every evidence requirement
+// has at least one present compatible source. The evidence test is AND across
+// requirements, OR within a requirement's alternatives - a flat union would let a
+// css-only run satisfy a css-rule+markup rule (the v4 false-satisfaction bug).
+// Consumes requiredCoverageByScope's per-requirement evidenceAlternativesByRequirement.
 export function isCoverageSatisfied(record: RequiredCoverageRecord | undefined, obs: CoverageObservation | undefined): boolean {
   if (!record || !obs) return false;
   const filesOk = record.requireAllDiscoveredApplicableFiles
     ? obs.discoveredApplicableFiles.every((f) => obs.inspectedFiles.includes(f))
     : obs.inspectedFiles.length > 0;
-  const evidenceOk = record.supportedEvidenceAlternatives.some((alt) => obs.evidenceKindsPresent.includes(alt));
+  const evidenceOk = record.evidenceAlternativesByRequirement.length > 0
+    && record.evidenceAlternativesByRequirement.every((alts) => alts.some((alt) => obs.evidenceKindsPresent.includes(alt)));
   return filesOk && evidenceOk;
 }
 
@@ -1042,9 +1288,24 @@ export function evaluateCleanPolicy(input: CleanEvalInput, policy: CleanPolicy):
   const duplicated = new Set([...occurrence].filter(([, n]) => n > 1).map(([id]) => id));
   const byId = new Map(input.rules.map((r) => [r.ruleId, r]));
 
-  // EFFECTIVE rule set over EVERY required rule (missing / duplicated /
-  // coverage-gapped required rules are synthesized inconclusive, not ignored),
-  // plus the present non-required rules.
+  // 2. NON-VACUITY runs BEFORE coverage (spec 567-575). A required rule is
+  //    "measurable" unless its produced result is not_applicable (applicability /
+  //    target-scope exclusion). A MISSING required rule is still declared-
+  //    measurable (it becomes inconclusive in step 4; it is not excluded here).
+  //    No measurable required rule -> inconclusive, with NO coverage logic run.
+  const measurableRequiredIds = policy.requiredRuleIds.filter((id) => byId.get(id)?.status !== 'not_applicable');
+  if (measurableRequiredIds.length === 0) {
+    // findings can still come from present non-required, non-duplicated fails (P1-1).
+    const naFindings: ProductFinding[] = input.rules
+      .filter((r) => !required.has(r.ruleId) && !duplicated.has(r.ruleId) && r.status === 'fail')
+      .map((r) => toFinding(input.validatorId, r));
+    return { status: 'inconclusive', rules: input.rules, findings: naFindings, coverage: { ...baseCoverage(run), ruleCounts: ruleCounts(input.rules) } };
+  }
+
+  // 3. COVERAGE + EFFECTIVE rule set (only now that non-vacuity has passed). Over
+  //    EVERY required rule: missing / duplicated / coverage-gapped required rules
+  //    are synthesized inconclusive, not ignored; present non-required rules carry
+  //    through.
   const effective: ProductRuleResult[] = [];
   for (const reqId of policy.requiredRuleIds) {
     if (duplicated.has(reqId)) { effective.push(synthInconclusive(reqId, `duplicate results for required rule ${reqId}`, 'rule_exception')); continue; }
@@ -1073,13 +1334,9 @@ export function evaluateCleanPolicy(input: CleanEvalInput, policy: CleanPolicy):
   const findings: ProductFinding[] = effective.filter((r) => r.status === 'fail').map((r) => toFinding(input.validatorId, r));
   const rc = ruleCounts(effective);
 
-  // 2. non-vacuity: at least one required APPLICABLE rule after exclusions.
+  // 4. block on any REQUIRED applicable rule that is inconclusive (non-vacuity in
+  //    step 2 guarantees this set is non-empty, so a vacuous run never reaches here).
   const requiredApplicable = effective.filter((r) => required.has(r.ruleId) && r.status !== 'not_applicable');
-  if (requiredApplicable.length === 0) {
-    return { status: 'inconclusive', rules: effective, findings, coverage: { ...baseCoverage(run), ruleCounts: rc } };
-  }
-
-  // 3/4. any required applicable rule inconclusive -> inconclusive.
   if (requiredApplicable.some((r) => r.status === 'inconclusive')) {
     return { status: 'inconclusive', rules: effective, findings, coverage: { ...baseCoverage(run), ruleCounts: rc } };
   }
@@ -1099,8 +1356,9 @@ export function evaluateCleanPolicy(input: CleanEvalInput, policy: CleanPolicy):
     blockingExcess += Math.max(0, n - T);
   }
 
-  // 7. clean unless blockingExcess > 0; findings PRESERVED for every status.
-  const status: ProductValidationResult['status'] = blockingExcess > 0 ? 'findings' : 'clean';
+  // 7. clean unless blockingExcess > 0; findings PRESERVED for every status. The
+  //    status literal narrows to the ProductValidationOk variant of the union.
+  const status: 'clean' | 'findings' = blockingExcess > 0 ? 'findings' : 'clean';
   return {
     status, rules: effective, findings,
     coverage: { ...baseCoverage(run), ruleCounts: rc, findingCounts: { blockingExcess, withinTolerance, nonBlocking } },
@@ -1153,7 +1411,12 @@ Expect `clean`.
 
 ## Self-Review (P2/P3 lessons applied)
 
-- **No changelog-vs-body drift:** the v2 failure mode (a binding changelog contradicting the task bodies) is gone. The only summary is the v3 pointer, and it points AT the task bodies, which carry the actual correct code.
+- **No changelog-vs-body drift:** the v2 failure mode (a binding changelog contradicting the task bodies) stays gone. The only summary is the v4 pointer, and it describes (never restates the code of) the task bodies, which carry the actual correct code.
+- **No src->scripts rootDir crossing (TS6059):** the importable generator logic lives in `src/validator-generation.ts` and the test imports it from `../validator-generation`; `scripts/generate-validators.ts` is a thin I/O + `--check` wrapper. Mirrors the P2 `lane-derivation.ts` split; no test imports `../../scripts/`.
+- **Evidence is AND-across-requirements:** coverage satisfaction and `isStaticallySatisfiable` both require EVERY evidence requirement to be met (OR within a requirement's alternatives). `RequiredCoverageRecord.evidenceAlternativesByRequirement` is per-requirement, so a css-only run cannot satisfy a css-rule+markup rule.
+- **Ordered evaluation:** `evaluateCleanPolicy` runs step-2 non-vacuity BEFORE step-3 coverage conversion (spec 567-575); a vacuous validator returns inconclusive without any coverage logic.
+- **Capability seed is spec-faithful:** `FLOW_CAPABILITIES` authors the five `lane_converge` member flows exactly as spec 939-950 declares (flow I advisory, static a11y gates via lane policy); the test classifies the actual member flows.
+- **Typed error contract:** `ProductValidationResult` is a discriminated union whose `error` variant requires `normalizedErrorCategory`; a fixture-manifest presence check gates each lane-required validator.
 - **No execution coupling:** P4a-1 is pure model + algorithm + generation; nothing here is wired into lane execution (that is P4b), so no false attestation / lease interaction to get wrong.
 - **Generated, not authored:** ownedRuleIds/registryScope/supportedSourceKinds/cleanPolicy/requiredCoverageByScope AND the resolved flow `capability` are derived by the generator and `--check`-guarded (spec 601-634); the registry is the single source.
 - **Evidence-compatibility is a model, not prose:** `EVIDENCE_SOURCE_COMPATIBILITY` makes "statically satisfiable" and "coverage satisfiable" computable; the generator and the coverage guard read the SAME mapping, so they cannot disagree (fixes the v7 LESS/TSX mismatch class of bug).
