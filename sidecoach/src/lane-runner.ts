@@ -185,6 +185,14 @@ export async function advanceLane(projectPath: string, checkpointId: string, tra
       if (!r.evidence || r.evidence.length < 1) throw new Error('advanceLane: StepReport needs >=1 evidence');
       const step = l.verbSteps[cp.cursor];
       if (r.stepId !== step.verb || r.iteration !== cp.iteration) throw new Error(`advanceLane: report (${r.stepId}/${r.iteration}) != current step (${step.verb}/${cp.iteration})`);
+      // The step must be FULLY served before it can be completed. A mid-serve
+      // interruption can persist a partial servedSteps cache (fewer flows than
+      // step.flowIds); completing then would attest the step while silently
+      // skipping the unserved flows. Reject - resume re-serves and finishes first.
+      const servedFlows = cp.servedSteps[`${cp.cursor}:${cp.iteration}`]?.flowIds ?? [];
+      if (servedFlows.length < step.flowIds.length) {
+        throw new Error(`advanceLane: step "${step.verb}" is only partially served (${servedFlows.length}/${step.flowIds.length} flows) - resume to finish serving before completing`);
+      }
       cp.seenReportIds.push(r.reportId); cp.stepReports.push(r); cp.completedStepIds.push(step.verb);
       // Attest ONLY the flows that actually ran successfully this step (from the
       // served cache) - never blindly all step.flowIds. Degraded/skipped/errored

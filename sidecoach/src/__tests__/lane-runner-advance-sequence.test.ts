@@ -53,6 +53,21 @@ async function run() {
   threw = false;
   try { await advanceLane(proj, start.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: r3.revision }, d); } catch { threw = true; }
   if (!threw) throw new Error('advancing a closed lane rejects');
+
+  // P1-3: a PARTIALLY-served step must NOT be completable. A mid-serve
+  // interruption can leave servedSteps[key].flowIds covering only some of
+  // step.flowIds; completing then would attest the step while skipping the
+  // unserved flows. Simulate a truncated served cache and assert complete rejects.
+  const p = await startLane('lane_build', 'heroP', { projectPath: proj }, 'req-P', d); // shape
+  const pc = await advanceLane(proj, p.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: p.revision }, d); // craft (multi-flow, fully served)
+  const cpRaw = d.store.read(p.checkpointId);
+  const key = `${cpRaw.cursor}:${cpRaw.iteration}`;
+  if ((cpRaw.servedSteps[key]?.flowIds.length ?? 0) < 2) throw new Error('test setup: craft step must have >=2 flows to truncate');
+  cpRaw.servedSteps[key].flowIds = cpRaw.servedSteps[key].flowIds.slice(0, 1); // simulate mid-serve interruption
+  d.store.write(cpRaw);
+  threw = false;
+  try { await advanceLane(proj, p.checkpointId, { action: 'complete', report: rep('craft'), expectedRevision: pc.revision }, d); } catch (e: any) { threw = /partial|served/i.test(String(e.message)); }
+  if (!threw) throw new Error('completing a partially-served step must be rejected');
   console.log('lane-runner-advance-sequence: OK');
 }
 run();
