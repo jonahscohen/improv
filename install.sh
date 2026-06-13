@@ -1045,7 +1045,7 @@ deactivate_task_list() {
 deactivate_sidecoach() {
   [ -d "$CLAUDE_DIR/skills/sidecoach" ] && rm -rf "$CLAUDE_DIR/skills/sidecoach"
   local f
-  for f in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh sidecoach-keyword.sh sidecoach-preamble.sh sidecoach-verbs.json sidecoach-lanes.json sidecoach_lanes.py; do
+  for f in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh sidecoach-keyword.sh sidecoach-preamble.sh sidecoach-verbs.json sidecoach-lanes.json sidecoach-intent.json sidecoach_lanes.py; do
     [ -L "$CLAUDE_DIR/hooks/$f" ] && rm -f "$CLAUDE_DIR/hooks/$f"
   done
   [ -L "$HOME/.local/bin/sidecoach" ] && rm -f "$HOME/.local/bin/sidecoach"
@@ -2611,11 +2611,13 @@ if picked sidecoach; then
   # Registries + classifier module consumed by sidecoach-keyword.sh.
   #   sidecoach-verbs.json  - verb tier (T-0008)
   #   sidecoach-lanes.json  - lane registry (P1, replaces the retired sidecoach-modes.json)
+  #   sidecoach-intent.json - nudge tier; the hook reads it for NUDGE_ELIGIBLE.
+  #                           WITHOUT it the nudge tier degrades to disabled.
   #   sidecoach_lanes.py    - the shared lane classifier the hook imports at runtime
   #                           (HOOK_DIR is on sys.path); WITHOUT it the lane tier
   #                           silently disables, so it MUST be deployed alongside.
   # Symlinked (not chmod'd) - data/module files, not executables.
-  for registry in sidecoach-verbs.json sidecoach-lanes.json sidecoach_lanes.py; do
+  for registry in sidecoach-verbs.json sidecoach-lanes.json sidecoach-intent.json sidecoach_lanes.py; do
     ln -sf "$REPO_DIR/claude/hooks/$registry" "$HOME/.claude/hooks/$registry"
   done
 
