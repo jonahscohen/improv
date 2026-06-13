@@ -14,11 +14,11 @@
 
 This plan was authored against the frozen v10 spec (`docs/superpowers/specs/2026-06-12-sidecoach-lane-intent-detection-design.md`, sections 1-6, 8, 10, 14, 15) and the grounding beat (`.claude/memory/reference_lane_impl_grounding_v10.md`). The following files were read **verbatim** and their exact current structure is reflected in the edits: `claude/hooks/sidecoach-keyword.sh`, `claude/hooks/sidecoach-modes.json`, `claude/hooks/sidecoach-intent.json`, `sidecoach/src/modes.ts`, `sidecoach/src/verb-command-registry.ts`.
 
-These files could **not** be re-read at authoring time (an OS-level file-access grant closed mid-session); their edits are grounded in the spec + grounding beat and each carries a **Step 0: confirm anchor** sub-step the implementer MUST run first (read the live file, confirm the quoted current line/anchor, adapt the edit to the real surrounding code if it differs):
-- `sidecoach/src/slash-command-router.ts` (7973 bytes; behavior fully specified by spec section 10; currently emits UNKNOWN with near-miss typo suggestions)
-- `sidecoach/mcp-server/src/keyword-resolver.ts` (6366 bytes; TS-only classifier per grounding gap #3)
-- `claude/hooks/test-sidecoach-keyword.sh` (16297 bytes; bash harness that pipes JSON to the hook and asserts on `additionalContext`)
-- `sidecoach/package.json` (grounding fact: line 12 currently `"test": "ts-node src/intent-detector.test.ts"`)
+These files could **not** be re-read at authoring time (an OS-level file-access grant closed mid-session); a later verification pass HAS since read them and corrected the facts below, but each still carries a **Step 0: confirm anchor** sub-step the implementer MUST run first (read the live file, confirm the quoted current line/anchor, adapt the edit to the real surrounding code if it differs):
+- `sidecoach/src/slash-command-router.ts` (verified): `parseSlashCommand` is the existing exported entry point. Its unknown-command branch currently returns `{ isCommand: false, flowIds: [], reason: 'Unknown command: /<cmd>' }` (file lines ~104-110). There is **NO** near-miss / "did you mean" / typo-suggestion / Levenshtein logic anywhere in the file (or anywhere in `sidecoach/src` or `sidecoach/mcp-server/src`). Task 8 therefore **BUILDS** the near-miss suggester and the known-command matcher from scratch; it does not reuse an existing one.
+- `sidecoach/mcp-server/src/keyword-resolver.ts` (verified): currently exports `sanitize`, `isInformational`, and `resolveKeyword` (returns `{ kind: 'verb' | 'mode' | 'none', ... }`), and imports `ModeEntry, VerbEntry` from `./registries`. It is NOT yet a lane classifier; Task 7 ADDS the lane-classifier exports alongside `resolveKeyword` (which the P4 tool rename will retire later).
+- `claude/hooks/test-sidecoach-keyword.sh` (verified): bash harness that pipes `{"prompt":"..."}` JSON to the hook and asserts on `additionalContext`. Real helpers are `assert_fires(label, prompt, EXPECTED_VERB)`, `assert_silent(label, prompt)`, `assert_mode_fires(label, prompt, mode, chain)`, `assert_tiebreak(label, prompt, verb)`, `assert_intent_fires(label, prompt)`, `assert_intent_silent(label, prompt)`, plus `run_hook`, `run_hook_with_stderr`, `intent_out(prompt, cdfile)`. There is **NO** `assert_contains` / `assert_not_contains` / `assert_empty`; Task 12 adds the two genuinely-missing ones and reuses `assert_silent` for empty-output checks.
+- `sidecoach/package.json` (verified): line 12 is `"test": "ts-node src/intent-detector.test.ts"`. The benchmark suites `src/__tests__/t13-bench-harness.test.ts` and `src/__tests__/t16-bench-ledger.test.ts` only run under `--project benchmarks/tsconfig.bench.json` (see the `bench`/`test:bench` scripts) and fail under plain `npx ts-node`.
 - `install.sh` (spec section 14: lines 1048 and 2613 reference `sidecoach-modes.json`)
 
 ## Scope
@@ -42,12 +42,12 @@ P1 ships working software on its own: natural-language lane routing replaces mod
 | `claude/hooks/test-sidecoach-keyword.sh` | Modify | Bash integration harness. Add the v10 classifier corpus (CONTEXT-CHECK, clause-binding negatives, bare interface/header/layout, quoted/pasted-doc suppression, explicit-verb-beats-scope). |
 | `sidecoach/mcp-server/src/keyword-resolver.ts` | Modify | TS mirror of the classifier (grouped scoring, clause binding, occurrence-aware suppression, decision flow). Must return decisions identical to the Python side on every shared fixture. |
 | `sidecoach/parity/classifier-corpus.json` | Create | Shared Python/TS fixture corpus: prompt -> expected outcome (+ winningLane). Run against BOTH classifiers. |
-| `sidecoach/src/slash-command-router.ts` | Modify | `/sidecoach <phrase>` resolution union: ROUTE / CLASSIFY / OUT_OF_SCOPE / UNKNOWN (UNKNOWN preserves typo/near-miss suggestions). |
+| `sidecoach/src/slash-command-router.ts` | Modify | `/sidecoach <phrase>` resolution union: ROUTE / CLASSIFY / OUT_OF_SCOPE / UNKNOWN. UNKNOWN returns a typo/near-miss suggestion BUILT in Task 8 (no such helper exists today). |
 | `sidecoach/scripts/generate-lanes.ts` | Create | Generator: derive each lane's executed flow sequence (flows in verb order, each once, first owning verb) + verb-guidance map from `verb-command-registry.ts`; emit `lanes.generated.ts`; regenerate the doc lane-table block; `--check` fails on JSON / derivation / doc-section drift. |
 | `sidecoach/src/lanes.generated.ts` | Create (checked in) | Generated output: typed lane records + derived flow sequences + verb-guidance map. Consumed by the engine; regenerated by `generate-lanes.ts`. |
-| `sidecoach/src/modes.ts` | Delete | Removed; `lanes.generated.ts` supersedes it. Importers repointed. |
-| `sidecoach/scripts/run-tests.ts` | Create | Enumerating test runner over `src/__tests__/*.test.ts` so new suites actually execute. Wired to `npm test`. |
-| `sidecoach/package.json` | Modify | `"test"` script -> the enumerating runner (was `ts-node src/intent-detector.test.ts`). |
+| `sidecoach/src/modes.ts` | Retain in P1 (delete in P4) | `lanes.generated.ts` supersedes it as the ENGINE registry, but `modes.ts` is engine-orphaned (no `sidecoach/src` importer) and its compiled `dist/modes.js` is still the MCP server's legacy mode feed (`mcp-server/src/registries.ts`). The MCP `list-modes -> list-lanes` rename is P4, so P1 FREEZES `modes.ts` in place to keep the MCP build green. See Task 11. |
+| `sidecoach/scripts/run-tests.ts` | Create | Scoped test runner: runs the new lane suites + the legacy `intent-detector` suite explicitly (NOT a blanket `src/__tests__/*.test.ts` glob, which would pull in ~88 unrelated suites and the bench suites). Wired to `npm test`. |
+| `sidecoach/package.json` | Modify | `"test"` script -> the scoped runner (was `ts-node src/intent-detector.test.ts`). |
 | `install.sh` | Modify (lines ~1048, ~2613) | Repoint `sidecoach-modes.json` references to `sidecoach-lanes.json`. |
 
 ### Lane -> derived flow sequence (golden, derived from `verb-command-registry.ts`)
@@ -672,6 +672,9 @@ def test_explicit_verb_beats_scope_outcome():
     assert r["outcome"] == "VERB"
     assert r["verbMatch"] == "audit"
     assert any(s["lane"] == "lane_ship" for s in r["laneScores"])
+    # the strongest lane signal rides along as a non-routing diagnostic (NOT winningLane)
+    assert r["diagnosticLane"] == "lane_ship"
+    assert r["winningLane"] is None
 
 def test_explicit_verb_plus_route_grade_in_scope_is_classify():
     r = _ci("audit the landing page production-ready release-readiness pass")
@@ -684,7 +687,9 @@ def test_classify_when_in_scope_low_score():
     assert r["winningLane"] == "lane_delight"
 
 def test_silent_when_nothing_and_not_eligible():
-    assert _ci("what time is it").outcome if False else _ci("fix a flaky backend test")["outcome"] in ("SILENT", "OUT_OF_SCOPE")
+    # a non-design backend prompt with no lane lexicon match and no eligibility
+    r = _ci("fix a flaky backend test")
+    assert r["outcome"] in ("SILENT", "OUT_OF_SCOPE")
 
 def test_nudge_eligible_passthrough():
     r = _ci("restyle the navbar", intent_eligible=True)
@@ -736,7 +741,7 @@ def classify_intent(prompt, reg, verbs, intent_eligible=False):
     """Top-level decision flow (spec section 5). Returns a dict with keys
     outcome, winningLane, verbMatch, laneScores, schemaVersion."""
     result = {"outcome": "SILENT", "winningLane": None, "verbMatch": None,
-              "laneScores": [], "schemaVersion": SCHEMA_VERSION}
+              "diagnosticLane": None, "laneScores": [], "schemaVersion": SCHEMA_VERSION}
     if not prompt or not prompt.strip():
         return result
     # 2. explicit /sidecoach command is owned by the slash router, not the hook
@@ -757,11 +762,19 @@ def classify_intent(prompt, reg, verbs, intent_eligible=False):
     route_grade = (top["scope"] == "IN_SCOPE" and top["score"] >= rf
                    and (top["score"] - second) >= rm)
 
-    # 5/8. explicit verb evaluated before inferred-lane scope outcomes
+    # 5/8. explicit verb evaluated before inferred-lane scope outcomes.
+    # A route-grade IN_SCOPE lane competing with the verb -> CLASSIFY (lane wins
+    # the routing slot). Otherwise the verb is primary (VERB) and the strongest
+    # lane signal (any scope, score>0) rides along as a NON-ROUTING diagnostic
+    # so the hook can surface "lane X noted, do not auto-expand" without routing.
     if verb:
-        result["outcome"] = "CLASSIFY" if route_grade else "VERB"
         if route_grade:
+            result["outcome"] = "CLASSIFY"
             result["winningLane"] = top["lane"]
+        else:
+            result["outcome"] = "VERB"
+            diag = next((r for r in ranked if r["score"] > 0), None)
+            result["diagnosticLane"] = diag["lane"] if diag else None
         return result
 
     # 6/9. IN_SCOPE branch
@@ -956,7 +969,14 @@ if lane_registry is not None and sidecoach_lanes is not None:
         touch_cooldown()
     elif outcome == "VERB":
         verb = decision.get("verbMatch")
-        diag = f" (Lane signal '{label}' noted as a non-routing diagnostic; do not auto-expand it into a lane.)" if label else ""
+        # The VERB outcome leaves winningLane None on purpose; the strongest lane
+        # signal arrives as decision["diagnosticLane"] and must be resolved to a
+        # label HERE (the shared `label`/`win` above is None for VERB).
+        diag_lane = decision.get("diagnosticLane")
+        diag_label = next((l["label"] for l in lane_registry["lanes"]
+                           if l["lane"] == diag_lane), "") if diag_lane else ""
+        diag = (f" (Lane signal '{diag_label}' noted as a non-routing diagnostic; "
+                f"do not auto-expand it into a lane.)") if diag_label else ""
         context = (
             f"User intends to invoke the sidecoach <verb>{verb}</verb> flow. Route accordingly.{diag}"
         )
@@ -1100,8 +1120,10 @@ Expected: FAIL - `loadRegistry`/`classifyIntent` not exported from keyword-resol
 
 - [ ] **Step 4: Add the TS classifier mirror to `sidecoach/mcp-server/src/keyword-resolver.ts`** (append these exports; they mirror `sidecoach_lanes.py` exactly)
 
+First add `import * as fs from 'fs';` to the TOP of the file, alongside the existing `import type { ModeEntry, VerbEntry } from './registries';` line (imports belong at module top, not mid-file). Then append the rest of this block:
+
 ```typescript
-import * as fs from 'fs';
+// NOTE: `import * as fs from 'fs';` goes at the TOP of the file (see above) - do not place it here.
 
 export const SCHEMA_VERSION = 1;
 const NEGATORS = ["don't", 'do not', 'never', 'not', 'stop'];
@@ -1110,7 +1132,7 @@ const CONJUNCTION_BOUNDARIES = [', but', ', and', ', or', ', yet', ', so'];
 const TERMINATORS = new Set(['.', '!', '?', ';', '\n']);
 
 export interface LaneScore { lane: string; label: string; score: number; scope: string; evidenceIds: string[]; }
-export interface Decision { outcome: string; winningLane: string | null; verbMatch: string | null; laneScores: LaneScore[]; schemaVersion: number; }
+export interface Decision { outcome: string; winningLane: string | null; verbMatch: string | null; diagnosticLane: string | null; laneScores: LaneScore[]; schemaVersion: number; }
 
 export function loadRegistry(p: string): any {
   const reg = JSON.parse(fs.readFileSync(p, 'utf-8'));
@@ -1225,7 +1247,7 @@ export function detectVerb(text: string, verbs: any[]): string | null {
 }
 
 export function classifyIntent(prompt: string, reg: any, verbs: any[], opts?: { intentEligible?: boolean }): Decision {
-  const res: Decision = { outcome: 'SILENT', winningLane: null, verbMatch: null, laneScores: [], schemaVersion: SCHEMA_VERSION };
+  const res: Decision = { outcome: 'SILENT', winningLane: null, verbMatch: null, diagnosticLane: null, laneScores: [], schemaVersion: SCHEMA_VERSION };
   if (!prompt || !prompt.trim()) return res;
   if (/^\s*\/sidecoach\b/i.test(prompt)) return res;
   const text = blankInformational(sanitize(prompt));
@@ -1236,7 +1258,11 @@ export function classifyIntent(prompt: string, reg: any, verbs: any[], opts?: { 
   const verb = detectVerb(text, verbs); res.verbMatch = verb;
   const { route_floor: rf, route_margin: rm, classify_floor: cf } = reg.scoring;
   const routeGrade = top.scope === 'IN_SCOPE' && top.score >= rf && (top.score - second) >= rm;
-  if (verb) { res.outcome = routeGrade ? 'CLASSIFY' : 'VERB'; if (routeGrade) res.winningLane = top.lane; return res; }
+  if (verb) {
+    if (routeGrade) { res.outcome = 'CLASSIFY'; res.winningLane = top.lane; }
+    else { res.outcome = 'VERB'; const diag = ranked.find(r => r.score > 0); res.diagnosticLane = diag ? diag.lane : null; }
+    return res;
+  }
   if (top.scope === 'IN_SCOPE' && top.score > 0) {
     res.winningLane = top.lane;
     res.outcome = routeGrade ? 'ROUTE' : (top.score >= cf ? 'CLASSIFY' : 'SILENT');
@@ -1301,9 +1327,11 @@ git commit -m "feat(sidecoach): TS classifier mirror + shared parity corpus (P1 
 - Modify: `sidecoach/src/slash-command-router.ts`
 - Test: `sidecoach/src/__tests__/slash-phrase.test.ts`
 
-Spec section 10: `/sidecoach <phrase>` resolves to `ROUTE | CLASSIFY | OUT_OF_SCOPE | UNKNOWN`. Because the user explicitly addressed sidecoach, SCOPE_UNKNOWN (with no negative evidence) PROCEEDS to ROUTE/CLASSIFY; positive negative evidence still refuses (OUT_OF_SCOPE); a phrase with NO lane evidence at all is UNKNOWN and preserves the existing typo/near-miss suggestion (`/sidecoach polsih` -> "did you mean polish?").
+Spec section 10: `/sidecoach <phrase>` resolves to `ROUTE | CLASSIFY | OUT_OF_SCOPE | UNKNOWN`. Because the user explicitly addressed sidecoach, SCOPE_UNKNOWN (with no negative evidence) PROCEEDS to ROUTE/CLASSIFY; positive negative evidence still refuses (OUT_OF_SCOPE); a phrase with NO lane evidence at all is UNKNOWN and returns a typo/near-miss suggestion (`/sidecoach polsih` -> "did you mean /sidecoach polish?").
 
-- [ ] **Step 0: Confirm anchors.** Read `sidecoach/src/slash-command-router.ts`. Identify (a) the existing exported resolve function and its result type, (b) the known-command matcher (verb/lane name match), and (c) the near-miss/"did you mean" suggestion helper. The new function reuses (b) and (c). Confirm whether the mcp-server tsconfig can import from `../../src` (cross-package). If it CAN, Step 1 makes the engine module canonical; if it CANNOT, keep the classifier copy in `keyword-resolver.ts` (Task 7) AND duplicate the core into `sidecoach/src/lane-classifier.ts` for the engine - the shared `classifier-corpus.json` parity test (Task 7) remains the guard that both stay identical. Note which path you took.
+**This task BUILDS the near-miss machinery - it does not exist yet (verified).** There is no `matchKnownCommand`, no `nearMissSuggestion`, no Levenshtein/edit-distance, and no "did you mean" logic anywhere in `sidecoach/src` or `sidecoach/mcp-server/src`. `parseSlashCommand`'s unknown branch today just returns `{ isCommand: false, reason: 'Unknown command: /<cmd>' }`. Step 4 below adds: (a) a `matchKnownCommand` built from the real command/verb lookups (`VERB_REGISTRY` keys via `getVerbEntry` + the `SLASH_COMMANDS` keys, both already in this file's scope), and (b) a `nearMissSuggestion` using Levenshtein edit distance over the known verb names + `SLASH_COMMANDS` keys + lane labels. Full code is given inline - no placeholders.
+
+- [ ] **Step 0: Confirm anchors.** Read `sidecoach/src/slash-command-router.ts` and `sidecoach/src/verb-command-registry.ts`. Confirm (verified at authoring time, re-confirm against the live file): (a) the existing exported entry point is `parseSlashCommand(utterance)` returning `CommandMatch`; (b) `VERB_REGISTRY` and `getVerbEntry` are already imported from `./verb-command-registry`, and the phase-command map `SLASH_COMMANDS` is a module-level `const` in this same file - both are directly in scope for the new function; (c) there is **NO** existing known-command matcher and **NO** near-miss/"did you mean"/Levenshtein helper to reuse - this task BUILDS both (Step 4). Then confirm whether the mcp-server tsconfig can import from `../../src` (cross-package). If it CAN, Step 1 makes the engine module canonical; if it CANNOT, keep the classifier copy in `keyword-resolver.ts` (Task 7) AND duplicate the core into `sidecoach/src/lane-classifier.ts` for the engine - the shared `classifier-corpus.json` parity test (Task 7) remains the guard that both stay identical. Note which path you took.
 
 - [ ] **Step 1: Make the classifier core a shared engine module.**
 
@@ -1333,7 +1361,15 @@ function check(phrase: string, kind: string, lane?: string) {
 check('make this production-ready', 'ROUTE', 'lane_ship');        // SCOPE_UNKNOWN proceeds under explicit address
 check('build the API from scratch', 'OUT_OF_SCOPE');               // positive negative evidence refuses
 check('make the landing page production-ready', 'ROUTE', 'lane_ship');
-check('polsih the button', 'UNKNOWN');                             // no lane evidence -> near-miss suggestion preserved
+
+// UNKNOWN: no lane evidence at all -> a BUILT near-miss suggestion. Assert the
+// actual suggestion string, not merely kind==='UNKNOWN', so an empty stub FAILS.
+const miss = resolveSidecoachPhrase('polsih the button', LANES);
+assert.strictEqual(miss.kind, 'UNKNOWN', `polsih -> ${miss.kind}`);
+assert.ok(
+  miss.suggestion && /did you mean/i.test(miss.suggestion) && /\bpolish\b/i.test(miss.suggestion),
+  `expected a "did you mean ... polish" near-miss suggestion, got: ${miss.suggestion}`,
+);
 console.log('slash-phrase: OK');
 ```
 
@@ -1344,21 +1380,80 @@ Expected: FAIL - `resolveSidecoachPhrase` not exported.
 
 - [ ] **Step 4: Add `resolveSidecoachPhrase` to `slash-command-router.ts`**
 
+`VERB_REGISTRY`, `getVerbEntry`, and the module-level `SLASH_COMMANDS` const are already in this file's scope (confirmed in Step 0). Add the `lane-classifier` import and all of the following (the helpers are NET-NEW - nothing like them exists today):
+
 ```typescript
 import { loadRegistry, evaluateLane } from './lane-classifier';
-// reuse the existing known-command matcher + near-miss helper found in Step 0;
-// referenced below as matchKnownCommand(phrase) and nearMissSuggestion(phrase).
 
 export interface PhraseResolution {
   kind: 'ROUTE' | 'CLASSIFY' | 'OUT_OF_SCOPE' | 'UNKNOWN';
-  command?: string;     // when the phrase is a known verb/lane command
+  command?: string;     // when the phrase is a known verb/phase command
   lane?: string;        // when routed/classified to a lane
   suggestion?: string;  // UNKNOWN near-miss ("did you mean /sidecoach polish?")
   redirect?: string;    // OUT_OF_SCOPE one-line redirect
 }
 
+// First word of the phrase (the bit a user would type as a command), lowercased.
+function firstToken(phrase: string): string {
+  const m = phrase.trim().match(/^([a-z][\w-]*)/i);
+  return m ? m[1].toLowerCase() : '';
+}
+
+// Known command vocabulary = the 22 verb-registry keys + the phase SLASH_COMMANDS
+// keys. Lanes are reached by the classifier (evaluateLane), not by name here.
+function knownCommandNames(): string[] {
+  return [...Object.keys(VERB_REGISTRY), ...Object.keys(SLASH_COMMANDS)];
+}
+
+// Exact known-command fast path: if the phrase opens with a known verb/phase
+// command, treat it as a direct command (the user typed a real command word).
+function matchKnownCommand(phrase: string): string | null {
+  const tok = firstToken(phrase);
+  if (!tok) return null;
+  if (getVerbEntry(tok)) return tok;
+  if (Object.prototype.hasOwnProperty.call(SLASH_COMMANDS, tok)) return tok;
+  return null;
+}
+
+// Standard iterative Levenshtein edit distance (two-row, O(m*n) time, O(n) space).
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const row: number[] = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    let prev = row[0];
+    row[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const tmp = row[j];
+      row[j] = Math.min(
+        row[j] + 1,                                   // deletion
+        row[j - 1] + 1,                               // insertion
+        prev + (a[i - 1] === b[j - 1] ? 0 : 1),       // substitution
+      );
+      prev = tmp;
+    }
+  }
+  return row[n];
+}
+
+// Closest known command/verb/lane-label to the phrase's first token, returned
+// only when it is a plausible typo (<= 2 edits). undefined means "no good guess".
+function nearMissSuggestion(phrase: string, laneLabels: string[] = []): string | undefined {
+  const tok = firstToken(phrase);
+  if (!tok) return undefined;
+  const candidates = [...knownCommandNames(), ...laneLabels];
+  let best: string | undefined;
+  let bestDist = Infinity;
+  for (const c of candidates) {
+    const dist = levenshtein(tok, c.toLowerCase());
+    if (dist < bestDist) { bestDist = dist; best = c; }
+  }
+  if (best !== undefined && bestDist <= 2) return `did you mean /sidecoach ${best}?`;
+  return undefined;
+}
+
 export function resolveSidecoachPhrase(phrase: string, lanesPath: string): PhraseResolution {
-  const known = matchKnownCommand(phrase);            // existing behavior wins
+  const known = matchKnownCommand(phrase);            // a typed command word wins outright
   if (known) return { kind: 'ROUTE', command: known };
 
   const reg = loadRegistry(lanesPath);
@@ -1374,15 +1469,14 @@ export function resolveSidecoachPhrase(phrase: string, lanesPath: string): Phras
       return { kind: 'OUT_OF_SCOPE',
         redirect: 'That reads as backend/infrastructure work. Sidecoach covers UI/design only.' };
     }
-    return { kind: 'UNKNOWN', suggestion: nearMissSuggestion(phrase) };
+    // No lane evidence at all -> typo guess over verbs/phase commands/lane labels.
+    return { kind: 'UNKNOWN', suggestion: nearMissSuggestion(phrase, reg.lanes.map((l: any) => l.label)) };
   }
   const { route_floor: rf, route_margin: rm } = reg.scoring;
   const routeGrade = top.score >= rf && (top.score - second) >= rm;  // explicit address: scope_unknown counts
   return routeGrade ? { kind: 'ROUTE', lane: top.lane } : { kind: 'CLASSIFY', lane: top.lane };
 }
 ```
-
-If Step 0 found the known-command matcher and near-miss helper under different names, alias them at the import site; do not duplicate their logic.
 
 - [ ] **Step 5: Run to verify it passes**
 
@@ -1405,9 +1499,16 @@ git commit -m "feat(sidecoach): /sidecoach phrase resolution union (P1 task 8)"
 - Modify: `sidecoach/package.json`
 - Test: the runner is self-verifying (it exits nonzero if a listed suite is missing).
 
-Spec section 14: `npm test` today runs ONLY `intent-detector.test.ts`, so new lane suites would never execute. Replace it with an enumerating runner.
+Spec section 14: `npm test` today runs ONLY `intent-detector.test.ts`, so new lane suites would never execute. Replace it with a **scoped** runner.
 
-- [ ] **Step 0: Confirm anchor.** Read `sidecoach/package.json`. Confirm the current `"test"` value (grounding fact: `"test": "ts-node src/intent-detector.test.ts"`). Note the package's `main`/`scripts` shape so the edit slots in cleanly.
+**Why scoped, not a `src/__tests__/*.test.ts` glob (verified against the live tree):** that directory holds ~88 suites unrelated to P1, and two of them - `t13-bench-harness.test.ts` and `t16-bench-ledger.test.ts` - only compile under `--project benchmarks/tsconfig.bench.json` (see the `bench`/`test:bench` scripts) and FAIL under plain `npx ts-node`. A blanket glob would also DROP the one suite `npm test` runs today, `src/intent-detector.test.ts`, because it lives at `src/` (outside `__tests__/`). So the runner names an explicit suite list: the legacy `intent-detector` suite + the new lane suites. It excludes the bench suites by simply not listing them.
+
+- [ ] **Step 0: Confirm anchor + capture baseline.** Read `sidecoach/package.json`. Confirm the current `"test"` value (grounding fact: `"test": "ts-node src/intent-detector.test.ts"`) and note the `main`/`scripts` shape so the edit slots in cleanly. Then record the baseline of the suite we must not drop:
+
+```bash
+cd sidecoach && npx ts-node src/intent-detector.test.ts; echo "intent-detector baseline exit=$?"
+```
+Expected: it runs and exits 0 (record the exit code). This is the legacy suite `npm test` runs today; after the swap it must still run and pass. (The ~88 other `src/__tests__/*.test.ts` suites and the 3 other `src/*.test.ts` files are OUT of P1 scope - the scoped runner deliberately does not flip them on, so there is no need to baseline them here.)
 
 - [ ] **Step 1: Write the runner `sidecoach/scripts/run-tests.ts`**
 
@@ -1416,26 +1517,37 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
 
-const TESTS_DIR = path.resolve(__dirname, '..', 'src', '__tests__');
-// Suites that MUST exist; the runner fails loudly if one is deleted/renamed.
-const REQUIRED = ['slash-phrase.test.ts'];
+const SIDECOACH = path.resolve(__dirname, '..');
 
-function listSuites(): string[] {
-  if (!fs.existsSync(TESTS_DIR)) return [];
-  return fs.readdirSync(TESTS_DIR).filter(f => f.endsWith('.test.ts')).sort();
-}
+// P1 scope: the legacy suite npm test already ran (intent-detector, which lives
+// OUTSIDE src/__tests__/) PLUS the new lane suites this plan adds. This is NOT a
+// blanket src/__tests__/*.test.ts glob: that would pull in ~88 unrelated suites
+// and the two bench suites (t13-bench-harness, t16-bench-ledger) that only run
+// under --project benchmarks/tsconfig.bench.json. Paths are relative to sidecoach/.
+const SUITES: string[] = [
+  'src/intent-detector.test.ts',            // legacy; NOT under __tests__/ - must not be dropped
+  'src/__tests__/lane-derivation.test.ts',  // Task 10 (created AFTER this task)
+  'src/__tests__/slash-phrase.test.ts',     // Task 8
+];
+// Suites that MUST exist whenever the runner runs (vanishing => hard fail).
+// The lane suites are forward-declared: some are created in later tasks, so a
+// not-yet-present lane suite is SKIPPED-with-warning, never silently ignored.
+const REQUIRED = new Set<string>(['src/intent-detector.test.ts']);
 
-const suites = listSuites();
-for (const req of REQUIRED) {
-  if (!suites.includes(req)) {
-    console.error(`run-tests: REQUIRED suite missing from src/__tests__: ${req}`);
-    process.exit(2);
-  }
-}
+let ran = 0;
 let failed = 0;
-for (const s of suites) {
-  const full = path.join(TESTS_DIR, s);
-  process.stdout.write(`-> ${s}\n`);
+for (const rel of SUITES) {
+  const full = path.join(SIDECOACH, rel);
+  if (!fs.existsSync(full)) {
+    if (REQUIRED.has(rel)) {
+      console.error(`run-tests: REQUIRED suite missing: ${rel}`);
+      process.exit(2);
+    }
+    console.error(`run-tests: SKIP (not present yet): ${rel}`);  // forward-declared lane suite
+    continue;
+  }
+  ran++;
+  process.stdout.write(`-> ${rel}\n`);
   try {
     execFileSync('npx', ['ts-node', full], { stdio: 'inherit' });
   } catch {
@@ -1443,7 +1555,7 @@ for (const s of suites) {
   }
 }
 if (failed) { console.error(`run-tests: ${failed} suite(s) failed`); process.exit(1); }
-console.log(`run-tests: ${suites.length} suite(s) passed`);
+console.log(`run-tests: ${ran} suite(s) passed`);
 ```
 
 - [ ] **Step 2: Point `npm test` at the runner.**
@@ -1460,15 +1572,15 @@ with:
 - [ ] **Step 3: Run it**
 
 Run: `cd sidecoach && npm test`
-Expected: enumerates `src/__tests__/*.test.ts` (including the legacy `intent-detector` suite if it has a `.test.ts` peer, and `slash-phrase.test.ts`), runs each, prints `run-tests: N suite(s) passed`.
+Expected (at THIS task's point in the sequence): runs `src/intent-detector.test.ts` and `src/__tests__/slash-phrase.test.ts` (both exist - Task 8 created slash-phrase), prints `run-tests: SKIP (not present yet): src/__tests__/lane-derivation.test.ts` (Task 10 has not run yet), then `run-tests: 2 suite(s) passed`. After Task 10 lands, the same command runs all 3 and prints `run-tests: 3 suite(s) passed`.
 
-Note: if `intent-detector.test.ts` lives at `src/intent-detector.test.ts` (not under `__tests__/`), either move it under `src/__tests__/` or add `src/` to the runner's scan list. Confirm in Step 0 and adjust the `TESTS_DIR`/scan accordingly so no existing suite is silently dropped.
+Note: the runner names suites explicitly rather than globbing, which (a) keeps `src/intent-detector.test.ts` in scope even though it sits outside `src/__tests__/`, (b) excludes the bench suites that need `benchmarks/tsconfig.bench.json`, and (c) does not flip on the ~88 unrelated `src/__tests__` suites. A forward-declared lane suite that does not exist yet is SKIPPED with a printed warning (never silently dropped); the legacy `intent-detector` suite is REQUIRED and a hard failure if it ever vanishes.
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add sidecoach/scripts/run-tests.ts sidecoach/package.json
-git commit -m "build(sidecoach): enumerating test runner replaces single-suite npm test (P1 task 9)"
+git commit -m "build(sidecoach): scoped test runner replaces single-suite npm test (P1 task 9)"
 ```
 
 ---
@@ -1482,6 +1594,8 @@ git commit -m "build(sidecoach): enumerating test runner replaces single-suite n
 - Test: `sidecoach/src/__tests__/lane-derivation.test.ts`
 
 Spec section 2: derive each lane's executed flow sequence from `verb-command-registry.ts` (flows in verb order, each once, first owning verb) + the verb-guidance map; `--check` fails on JSON drift, derivation drift, or generated-doc-section drift. P1 `--check` does NOT cover prerequisite-edge or validator-registration checks (P2/P3).
+
+> **P2 note - `LANES.generated.md` is a P1 stand-in.** In P1 the generator writes its doc-section to a dedicated `sidecoach/LANES.generated.md` (with the `<!-- lanes:generated:start/end -->` markers) so the `--check` drift guard has something to compare against without touching shipped docs. Wiring those same markers INTO the real `SKILL.md` / `CHEATSHEET.md` (so the lane table regenerates inside the published docs) is **P4**. Do not edit SKILL.md/CHEATSHEET.md here.
 
 - [ ] **Step 1: Write the failing derivation test `sidecoach/src/__tests__/lane-derivation.test.ts`**
 
@@ -1628,52 +1742,53 @@ git commit -m "feat(sidecoach): lane flow-sequence generator + checked-in lanes.
 
 ---
 
-## Task 11: Remove `sidecoach/src/modes.ts` and repoint importers
+## Task 11: Confirm `modes.ts` is engine-orphaned; FREEZE it as the MCP legacy feed (do NOT delete in P1)
 
 **Files:**
-- Delete: `sidecoach/src/modes.ts`
-- Modify: any importer of `./modes` / `../src/modes` (discovered in Step 1)
+- Verify (no edit): `sidecoach/src/modes.ts` - retained in P1, deleted in P4.
+- Modify (marker only): `sidecoach/src/modes.ts` - add a `// FROZEN(P1)/TODO(P4)` banner.
+- Inspect (no edit in P1): `sidecoach/mcp-server/src/registries.ts`, `sidecoach/mcp-server/src/keyword-resolver.ts`, `sidecoach/mcp-server/src/tools/list-modes.ts` - the P4 consumers.
 
-`lanes.generated.ts` supersedes `modes.ts`. The full MCP `list-modes` -> `list-lanes` rename is P4; in P1 we only repoint importers enough to keep BOTH package builds green.
+`lanes.generated.ts` (Task 10) supersedes `modes.ts` as the ENGINE's canonical registry. But the original "delete modes.ts and repoint importers" plan was grounded in a false assumption: **verified, nothing in `sidecoach/src` imports `modes.ts`** (it is engine-orphaned), and **`slash-command-router.ts` never imported `modes` - it imports only `getVerbEntry, VERB_REGISTRY` from `./verb-command-registry`** (so the earlier "confirm it no longer needs modes" note was moot). The ONLY consumer of `modes.ts` is the MCP server, cross-package, via its compiled output:
 
-- [ ] **Step 1: Find every importer.**
+- `sidecoach/mcp-server/src/registries.ts` line 22: `import { MODE_LIST, getMode } from '../../dist/modes';` (used by `loadModesViaTs()` ~line 249 and `getModeByName()` ~line 259), plus the `ModeEntry` interface (~line 110) and the `parsed.modes` JSON path (`loadModeRegistry`, lines ~123-150) that reads `sidecoach-modes.json`.
+- `sidecoach/mcp-server/src/keyword-resolver.ts` imports `ModeEntry` (and `resolveKeyword` consumes it), and `sidecoach/mcp-server/src/tools/list-modes.ts` returns `ModeEntry`-shaped data.
+
+Because the MCP tool rename (`list-modes` -> `list-lanes`) and the `ModeEntry` retirement are explicitly **P4**, P1 keeps the MCP side BUILDING by **freezing the legacy mode path** rather than doing P4's rename early. We do NOT delete `modes.ts` in P1 (preferred disposition: it stays as the MCP server's legacy feed until P4 removes both ends together).
+
+> **Stale-`dist/modes.js` landmine (why deletion is deferred, not just delayed):** `registries.ts` imports from `../../dist/modes`, i.e. the COMPILED output of `modes.ts`, not the source. `tsc` does NOT prune `dist/` when a source file is removed (verified: `sidecoach/dist/modes.js` exists on disk right now). So if P1 deleted `src/modes.ts` and rebuilt, `dist/modes.js` would persist stale, the MCP `import` would still RESOLVE against it, and `cd sidecoach/mcp-server && npm run build` would FALSELY pass while the source of truth was gone. Freezing `modes.ts` sidesteps the trap entirely. When P4 deletes the source it MUST also remove `dist/modes.js` (e.g. `rm -f dist/modes.js` or a clean `dist` rebuild) so the stale artifact cannot keep the import alive.
+
+- [ ] **Step 1: Prove the orphan status.**
 
 Run:
 ```bash
-grep -rn "modes'" sidecoach/src sidecoach/mcp-server/src 2>/dev/null; \
-grep -rn "MODES\|MODE_LIST\|getMode\|getModeChain\|getModeVerbChain" sidecoach/src sidecoach/mcp-server/src 2>/dev/null
+grep -rn "from './modes'\|from \"./modes\"\|/modes'\|\bMODE_LIST\b\|\bgetModeChain\b\|\bgetModeVerbChain\b\|\bgetMode\b\|\bMODES\b" sidecoach/src 2>/dev/null; echo "engine-exit=$?"
+grep -rn "dist/modes\|\bMODE_LIST\b\|\bgetMode\b\|\bModeEntry\b" sidecoach/mcp-server/src 2>/dev/null
 ```
-Record each hit. Known consumers from the spec/grounding: `slash-command-router.ts` (already rewritten in Task 8 - confirm it no longer needs `modes`), and the MCP `list-modes.ts` (P4 target).
+Expected: the ONLY engine-side hits are inside `sidecoach/src/modes.ts` itself (its own declarations - no OTHER `sidecoach/src` file imports it). The mcp-server side shows `registries.ts`, `keyword-resolver.ts`, and `tools/list-modes.ts`. If any OTHER `sidecoach/src` file imports `./modes`, STOP - the orphan assumption is wrong and you must repoint that importer to `lanes.generated.ts` before proceeding (mapping: `MODE_LIST`->`LANES`, `getMode(x)`->`getLane(x)`, `getModeChain(x)`->`getLaneFlowSequence(x)`, `getModeVerbChain(x)`->`getLane(x)?.verbChain`, `.chain`->`.flowSequence`).
 
-- [ ] **Step 2: Repoint each importer to the generated registry.** Mapping:
-  - `import { MODES } from './modes'` -> `import { LANES_BY_ID } from './lanes.generated'`
-  - `MODE_LIST` -> `LANES`
-  - `getMode(x)` -> `getLane(x)`
-  - `getModeChain(x)` -> `getLaneFlowSequence(x)`
-  - `getModeVerbChain(x)` -> `getLane(x)?.verbChain`
-  - `.chain` (FlowId chain) -> `.flowSequence`; `.verbChain` stays `.verbChain`.
+- [ ] **Step 2: Add the freeze marker to `sidecoach/src/modes.ts`.** Insert a banner comment at the top of the file (no logic change):
 
-For the MCP `list-modes.ts`: if it only lists modes, change its import to `LANES` from the engine's generated file and map fields to its existing return shape (do NOT rename the tool/file in P1 - that is P4). If it cannot import the engine generated file across packages (same constraint as Task 8 Step 0), have it load `claude/hooks/sidecoach-lanes.json` and map. Leave a `// TODO(P4): rename list-modes -> list-lanes` marker.
-
-- [ ] **Step 3: Delete the file.**
-
-```bash
-git rm sidecoach/src/modes.ts
+```typescript
+// FROZEN(P1): superseded by lanes.generated.ts for engine use; retained ONLY as
+// the MCP server's legacy mode feed (mcp-server/src/registries.ts imports the
+// compiled ../../dist/modes). TODO(P4): delete this file AND dist/modes.js when
+// the MCP `list-modes` -> `list-lanes` rename lands and ModeEntry is retired.
 ```
 
-- [ ] **Step 4: Verify both builds compile.**
+- [ ] **Step 3: Verify BOTH builds stay green (nothing was broken).**
 
 Run:
 ```bash
 cd sidecoach && npm run build && cd mcp-server && npm run build
 ```
-Expected: both succeed with no `Cannot find module './modes'` / unresolved-symbol errors.
+Expected: both succeed. Because `modes.ts` (and thus `dist/modes.js`) is untouched, the MCP `import { MODE_LIST, getMode } from '../../dist/modes'` still resolves. No `Cannot find module './modes'` errors.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add -A sidecoach/src sidecoach/mcp-server/src
-git commit -m "refactor(sidecoach): remove modes.ts, repoint importers to lanes.generated (P1 task 11)"
+git add sidecoach/src/modes.ts
+git commit -m "chore(sidecoach): freeze modes.ts as MCP legacy feed until P4 rename (P1 task 11)"
 ```
 
 ---
@@ -1685,57 +1800,101 @@ git commit -m "refactor(sidecoach): remove modes.ts, repoint importers to lanes.
 
 Spec section 15 (classifier corpus) + the hook-only NUDGE cooldown mapping. These are end-to-end hook assertions (real stdin -> real `additionalContext`), distinct from the unit/parity tests.
 
-- [ ] **Step 0: Confirm anchors.** Read `claude/hooks/test-sidecoach-keyword.sh`. Identify (a) the assertion helper(s) - e.g. a function that runs `echo '{"prompt":"..."}' | bash sidecoach-keyword.sh` and greps the output for an expected/forbidden substring, and (b) how it sets `SIDECOACH_INTENT_COOLDOWN_FILE` for cooldown tests. Match that exact helper signature when adding the cases below. The hook's input contract (verbatim from `sidecoach-keyword.sh`): payload is `{"prompt":"..."}` on stdin; output is JSON with `.hookSpecificOutput.additionalContext`, or empty/`{}` when silent.
+- [ ] **Step 0: Confirm anchors (verified - re-confirm against the live file).** The harness defines `run_hook(prompt)` (pipes `{"prompt":"..."}` to the hook, stdout only), `run_hook_with_stderr(prompt)`, and `intent_out(prompt, cdfile)` (pipes with `SIDECOACH_INTENT_COOLDOWN_FILE="$cdfile"` set). Its label-FIRST assertion helpers are `assert_fires(label, prompt, EXPECTED_VERB)` (greps `<verb>X</verb>`), `assert_silent(label, prompt)` (asserts empty stdout), `assert_mode_fires`, `assert_tiebreak`, `assert_intent_fires(label, prompt)`, `assert_intent_silent(label, prompt)`. It increments `PASS`/`FAIL` and appends to `FAIL_LABELS`. There is **NO** `assert_contains` / `assert_not_contains` / `assert_empty`. The hook's I/O contract: payload `{"prompt":"..."}` on stdin; output JSON with `.hookSpecificOutput.additionalContext`, or empty when silent. The real intent-tier nudge string (from `sidecoach-intent.json`) contains the canonical substring `sidecoach flow or mode` (the existing `assert_intent_fires` already greps it).
 
-- [ ] **Step 1: Add the corpus cases.** Using the harness's existing helper convention, add assertions equivalent to (substitute the real helper names confirmed in Step 0):
+- [ ] **Step 1: Add the two genuinely-missing helpers** (`assert_contains`, `assert_not_contains`), mirroring `assert_fires`'s exact shape and counters. For empty-output checks, REUSE the existing `assert_silent` (it already asserts empty stdout - a separate `assert_empty` would be redundant). Add these next to `assert_silent` in the harness:
 
 ```bash
-# --- Lane classifier corpus (v10) ---
+# Assert the hook output CONTAINS a substring (label-first, mirrors assert_fires).
+assert_contains() {
+  local label="$1" prompt="$2" needle="$3"
+  local out; out=$(run_hook "$prompt")
+  if echo "$out" | grep -qF "$needle"; then
+    echo "PASS: $label"; ((PASS++))
+  else
+    echo "FAIL: $label (expected to contain '$needle', got: $out)"
+    FAIL_LABELS+=("$label"); ((FAIL++))
+  fi
+}
+
+# Assert the hook output does NOT contain a substring (e.g. a forbidden route).
+assert_not_contains() {
+  local label="$1" prompt="$2" needle="$3"
+  local out; out=$(run_hook "$prompt")
+  if echo "$out" | grep -qF "$needle"; then
+    echo "FAIL: $label (expected NOT to contain '$needle', got: $out)"
+    FAIL_LABELS+=("$label"); ((FAIL++))
+  else
+    echo "PASS: $label"; ((PASS++))
+  fi
+}
+```
+
+- [ ] **Step 2: Add the lane classifier corpus cases** (every sample is label-FIRST and uses a real helper):
+
+```bash
+echo ""
+echo "===== sidecoach-keyword: lane classifier corpus (v10) ====="
+
 # ROUTE: in-scope, route-grade
-assert_contains 'make the landing page production-ready' 'release-readiness pass'
+assert_contains     "ship route"            'make the landing page production-ready'                            'release-readiness pass'
 # CONTEXT-CHECK: lane evidence, no domain evidence (NOT out-of-scope)
-assert_contains 'make this production-ready' 'without domain evidence'
+assert_contains     "ship context-check"    'make this production-ready'                                        'without domain evidence'
 # Clause binding: ship evidence bound to "migration" in its own sentence -> no route
-assert_not_contains 'The landing page is done. Make the migration production-ready.' 'release-readiness pass'
+assert_not_contains "migration not routed"  'The landing page is done. Make the migration production-ready.'    'release-readiness pass'
 # Negator discards first occurrence, routes the second clause
-assert_contains "Don't make the API production-ready; make the landing page production-ready." 'release-readiness pass'
+assert_contains     "negator then route"    "Don't make the API production-ready; make the landing page production-ready." 'release-readiness pass'
 # Bare ambiguous tokens never prove scope (no lane lexicon match -> silent)
-assert_empty 'I have a TypeScript interface I need to refactor'
-assert_empty 'fix the packet header parsing in the network layer'
-assert_empty 'rework the memory layout of the struct'
+assert_silent       "ts interface silent"   'I have a TypeScript interface I need to refactor'
+assert_silent       "packet header silent"  'fix the packet header parsing in the network layer'
+assert_silent       "struct layout silent"  'rework the memory layout of the struct'
 # Quoted/pasted-doc suppression: quoted lane evidence does not fire
-assert_not_contains 'the reviewer wrote "make it production-ready" - thoughts?' 'release-readiness pass'
+assert_not_contains "quoted not routed"     'the reviewer wrote "make it production-ready" - thoughts?'          'release-readiness pass'
 # Explicit verb beats scope outcome -> VERB primary, lane is a diagnostic only
-assert_contains 'audit this and make it production-ready' '<verb>audit</verb>'
-assert_contains 'audit this and make it production-ready' 'non-routing diagnostic'
+assert_contains     "verb beats scope"      'audit this and make it production-ready'                            '<verb>audit</verb>'
+assert_contains     "verb diagnostic shown" 'audit this and make it production-ready'                            'non-routing diagnostic'
 # Tone-down lane
-assert_contains "tone the hero down, it's too busy" 'tone-down pass'
+assert_contains     "calm route"            "tone the hero down, it's too busy"                                 'tone-down pass'
 # Converge lane
-assert_contains 'keep iterating on the card until it passes the audit' 'iterate-until-it-passes'
+assert_contains     "converge route"        'keep iterating on the card until it passes the audit'              'iterate-until-it-passes'
 # /sidecoach prefix is owned by the slash router, hook stays silent
-assert_empty '/sidecoach make this production-ready'
+assert_silent       "slash prefix silent"   '/sidecoach make this production-ready'
 ```
 
-- [ ] **Step 2: Add the NUDGE cooldown-mapping cases (hook-only).** The shared classifier returns `NUDGE_ELIGIBLE`; the hook maps it via the cooldown file. Use a fresh temp cooldown file per the harness convention:
+- [ ] **Step 3: Add the NUDGE cooldown-mapping cases (hook-only).** The shared classifier returns `NUDGE_ELIGIBLE`; the hook maps it to a nudge or silence via the cooldown file. Drive these through the existing `intent_out(prompt, cdfile)` helper (same pattern as the harness's existing cooldown test), since `assert_contains`/`assert_silent` call `run_hook`, which does not set the cooldown env:
 
 ```bash
-# Cooldown INACTIVE -> NUDGE_ELIGIBLE becomes a nudge
-COOL="$(mktemp)"; rm -f "$COOL"
-SIDECOACH_INTENT_COOLDOWN_FILE="$COOL" assert_contains 'restyle the navbar' 'front-end / design work'
-# Cooldown ACTIVE (file just written) -> suppressed to SILENT
-date +%s > "$COOL"
-SIDECOACH_INTENT_COOLDOWN_FILE="$COOL" assert_empty 'restyle the navbar'
-rm -f "$COOL"
+echo ""
+echo "===== sidecoach-keyword: NUDGE cooldown mapping (v10) ====="
+
+# Cooldown INACTIVE (absent file) -> NUDGE_ELIGIBLE becomes a nudge.
+CDN=$(mktemp -u /tmp/sc-cd-XXXXXX)
+nudge_out=$(intent_out 'restyle the navbar' "$CDN")
+if echo "$nudge_out" | grep -qF 'sidecoach flow or mode'; then
+  echo "PASS: navbar nudge fires when cooldown inactive"; ((PASS++))
+else
+  echo "FAIL: navbar nudge fires when cooldown inactive (got: $nudge_out)"
+  FAIL_LABELS+=("navbar nudge inactive"); ((FAIL++))
+fi
+
+# Cooldown ACTIVE (file timestamped 'now') -> suppressed to silence.
+date +%s > "$CDN"
+cool_out=$(intent_out 'restyle the navbar' "$CDN")
+rm -f "$CDN"
+if [ -z "$cool_out" ]; then
+  echo "PASS: navbar nudge suppressed when cooldown active"; ((PASS++))
+else
+  echo "FAIL: navbar nudge suppressed when cooldown active (got: $cool_out)"
+  FAIL_LABELS+=("navbar nudge active"); ((FAIL++))
+fi
 ```
 
-(If the harness lacks `assert_empty`/`assert_not_contains`, add them next to the existing `assert_contains` following its pattern - run the hook, capture stdout, grep with `-q` and invert as needed.)
-
-- [ ] **Step 3: Run the harness**
+- [ ] **Step 4: Run the harness**
 
 Run: `bash claude/hooks/test-sidecoach-keyword.sh`
-Expected: all assertions pass, including the existing verb-tier cases (unchanged) and the new lane corpus.
+Expected: all assertions pass - the existing verb-tier and intent-tier cases (unchanged) plus the new lane corpus and cooldown cases. The final line reads `RESULTS: <N> passed, 0 failed`.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add claude/hooks/test-sidecoach-keyword.sh
@@ -1787,19 +1946,21 @@ git commit -m "build: install sidecoach-lanes.json (replaces sidecoach-modes.jso
 - [ ] Run the generator check: `cd sidecoach && npx ts-node scripts/generate-lanes.ts --check`
 - [ ] Build + test the engine: `cd sidecoach && npm run build && npm test`
 - [ ] Build + run the MCP parity test: `cd sidecoach/mcp-server && npm run build && npx ts-node src/__tests__/classifier-parity.test.ts`
+- [ ] Run the MCP server's own suite (guards the `keyword-resolver.ts` additions + the frozen mode path): `cd sidecoach/mcp-server && npm test`
+- [ ] Run the lane-harness end to end: `bash claude/hooks/test-sidecoach-keyword.sh`
 - [ ] Hook smoke: the three `echo '{"prompt":...}' | bash claude/hooks/sidecoach-keyword.sh` commands from Task 6 Step 4 behave as specified.
 
 ## Plan self-review (writing-plans checklist - run by the author)
 
-**1. Spec coverage.** Every P1-scoped item maps to a task: lane registry + lexicons + scope policy + prereqWaivers + schemaVersion (Task 1); occurrence-aware informational suppression (Task 3); grouped scoring + clause-bound 3-state scope with the exact segment/negation/bind/aggregate algorithm (Tasks 2, 4); decision flow with the 7 outcomes + documented precedence (explicit verb beats scope) + outcome table (Task 5); hook rewrite incl. NUDGE_ELIGIBLE->NUDGE/SILENT cooldown mapping (Task 6); shared Python classifier + TS parity + shared fixture corpus run against BOTH (Tasks 1-7); `/sidecoach <phrase>` union ROUTE|CLASSIFY|OUT_OF_SCOPE|UNKNOWN with near-miss preserved (Task 8); enumerating test runner (Task 9); `generate-lanes.ts` + `lanes.generated.ts` flow-sequence derivation + verb-guidance map + `--check` on JSON/derivation/doc-section drift (Task 10); `modes.ts` removal (Task 11); `test-sidecoach-keyword.sh` corpus incl. quoted/pasted suppression (Task 12); `install.sh` wiring (Task 13). Out-of-scope items (execution API, checkpoints, lease/outbox, validators, cleanPolicy/rule-registry, lane_converge enablement, MCP tool rename) are explicitly deferred and NOT covered here - intentional per the staging.
+**1. Spec coverage.** Every P1-scoped item maps to a task: lane registry + lexicons + scope policy + prereqWaivers + schemaVersion (Task 1); occurrence-aware informational suppression (Task 3); grouped scoring + clause-bound 3-state scope with the exact segment/negation/bind/aggregate algorithm (Tasks 2, 4); decision flow with the 7 outcomes + documented precedence (explicit verb beats scope) + outcome table (Task 5); hook rewrite incl. NUDGE_ELIGIBLE->NUDGE/SILENT cooldown mapping (Task 6); shared Python classifier + TS parity + shared fixture corpus run against BOTH (Tasks 1-7); `/sidecoach <phrase>` union ROUTE|CLASSIFY|OUT_OF_SCOPE|UNKNOWN with a near-miss suggester BUILT (not reused - none exists today) (Task 8); scoped test runner that keeps `intent-detector` and excludes the bench suites (Task 9); `generate-lanes.ts` + `lanes.generated.ts` flow-sequence derivation + verb-guidance map + `--check` on JSON/derivation/doc-section drift (Task 10); `modes.ts` FROZEN as the MCP legacy feed until P4, not deleted (Task 11); `test-sidecoach-keyword.sh` corpus incl. quoted/pasted suppression (Task 12); `install.sh` wiring (Task 13). Out-of-scope items (execution API, checkpoints, lease/outbox, validators, cleanPolicy/rule-registry, lane_converge enablement, MCP tool rename) are explicitly deferred and NOT covered here - intentional per the staging.
 
-**2. Placeholder scan.** No "TBD"/"implement later"/"add error handling"/"similar to Task N". Every code step shows complete code. The five MODIFY targets on files that could not be re-read carry a "Step 0: confirm anchor" with the exact expected current string (from grounding) - this is anchor confirmation, not a placeholder.
+**2. Placeholder scan.** No "TBD"/"implement later"/"add error handling"/"similar to Task N". Every code step shows complete code, including the NET-NEW Task 8 helpers (`levenshtein`/`firstToken`/`matchKnownCommand`/`nearMissSuggestion`, full bodies inline) and the Task 12 harness helpers (`assert_contains`/`assert_not_contains`, full bash inline). A later verification pass re-read all five MODIFY-target files (`slash-command-router.ts`, `keyword-resolver.ts`, `test-sidecoach-keyword.sh`, `package.json`, `registries.ts`) and corrected the grounding facts in this plan; each still carries a "Step 0: confirm anchor" as a re-confirmation step, not a placeholder. The `TODO(P4)` markers in Task 11 are intentional deferred-work pointers, not unfinished P1 work.
 
-**3. Type consistency.** Cross-task identifiers are consistent: Python `classify_intent`/`evaluate_lane`/`segment_clauses`/`blank_informational`/`sanitize`/`detect_verb`/`is_informational`/`load_registry`; TS mirrors `classifyIntent`/`evaluateLane`/`segmentClauses`/`blankInformational`/`sanitize`/`detectVerb`/`isInformational`/`loadRegistry`; result shape `{outcome, winningLane, verbMatch, laneScores, schemaVersion}` identical on both sides; generator exports `deriveFlowSequence`/`deriveVerbGuidance`/`LANES`/`LANES_BY_ID`/`getLane`/`getLaneFlowSequence`; the same scoring keys `route_floor`/`route_margin`/`classify_floor` flow from JSON through both classifiers. The golden flow sequences in the File Structure table, Task 10's test, and the derivation rule all agree.
+**3. Type consistency.** Cross-task identifiers are consistent: Python `classify_intent`/`evaluate_lane`/`segment_clauses`/`blank_informational`/`sanitize`/`detect_verb`/`is_informational`/`load_registry`; TS mirrors `classifyIntent`/`evaluateLane`/`segmentClauses`/`blankInformational`/`sanitize`/`detectVerb`/`isInformational`/`loadRegistry`; result shape `{outcome, winningLane, verbMatch, diagnosticLane, laneScores, schemaVersion}` identical on both sides (the `diagnosticLane` field carries the VERB-outcome non-routing lane signal and is consumed by the hook's VERB branch in Task 6 and the TS `Decision` interface in Task 7); generator exports `deriveFlowSequence`/`deriveVerbGuidance`/`LANES`/`LANES_BY_ID`/`getLane`/`getLaneFlowSequence`; the same scoring keys `route_floor`/`route_margin`/`classify_floor` flow from JSON through both classifiers. Task 8's `resolveSidecoachPhrase` adds `matchKnownCommand`/`nearMissSuggestion`/`levenshtein`/`firstToken` (all NET-NEW, full bodies inline). The golden flow sequences in the File Structure table, Task 10's test, and the derivation rule all agree.
 
 ## Execution handoff
 
-Plan complete. Recommended execution: subagent-driven (fresh subagent per task, two-stage review between tasks) via superpowers:subagent-driven-development. Tasks 1-7 and 9-10 are fully grounded in read files; Tasks 6, 8, 11, 12, 13 touch files that must have their Step 0 anchors confirmed against the live source before editing.
+Plan complete. Recommended execution: subagent-driven (fresh subagent per task, two-stage review between tasks) via superpowers:subagent-driven-development. All MODIFY targets have now been read and grounded by a verification pass (the P0/P1 corrections are folded in above); the Step 0 anchors on Tasks 6, 8, 9, 11, 12, 13 remain as a cheap re-confirmation against the live source before editing, since the working tree may move between now and execution.
 
 
 
