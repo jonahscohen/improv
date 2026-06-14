@@ -9,7 +9,7 @@
   "cases": [
     { "prompt": "make this production-ready", "expect": "CONTEXT_CHECK", "winningLane": "lane_ship" },
     { "prompt": "make the landing page production-ready", "expect": "ROUTE", "winningLane": "lane_ship" },
-    { "prompt": "The landing page is done. Make the migration production-ready.", "expect": "OUT_OF_SCOPE" },
+    { "prompt": "The landing page is done. Make the migration production-ready.", "expect": "NUDGE_ELIGIBLE", "eligible": true },
     { "prompt": "Don't make the API production-ready; make the landing page production-ready.", "expect": "ROUTE", "winningLane": "lane_ship" },
     { "prompt": "audit this and make it production-ready", "expect": "VERB", "verbMatch": "audit" },
     { "prompt": "the dashboard should feel more fun", "expect": "CLASSIFY", "winningLane": "lane_delight" },
@@ -25,6 +25,10 @@
     { "prompt": "make the user interface production-ready", "expect": "ROUTE", "winningLane": "lane_ship" },
     { "prompt": "the dashboard must be production-ready and ship-ready", "expect": "ROUTE", "winningLane": "lane_ship" },
     { "prompt": "build me a dashboard from scratch and make it production-ready", "expect": "ROUTE", "winningLane": "lane_build" },
-    { "prompt": "the spec said \"polish it\"", "expect": "SILENT" }
+    { "prompt": "the spec said \"polish it\"", "expect": "SILENT" },
+    { "prompt": "tell me about design system", "expect": "SILENT" },
+    { "prompt": "what design system does", "expect": "SILENT" },
+    { "prompt": "what design system is", "expect": "SILENT" },
+    { "prompt": "`restyle the navbar`", "expect": "SILENT" }
   ]
 }

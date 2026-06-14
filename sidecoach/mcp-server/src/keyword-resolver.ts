@@ -354,3 +354,62 @@ export function classifyIntent(prompt: string, reg: any, verbs: any[], opts?: { 
   res.outcome = oos ? 'OUT_OF_SCOPE' : 'SILENT';
   return res;
 }
+
+function hookEligibilitySanitize(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`[^`\n]*`/g, ' ')
+    .replace(/\b(?:https?|file|ftp):\/\/\S+/gi, ' ')
+    .replace(/<([a-zA-Z][\w:-]*)[^>]*>[\s\S]*?<\/\1\s*>/g, ' ')
+    .replace(/<[a-zA-Z!/][^>]*>/g, ' ')
+    .replace(/\[(?:MAGIC KEYWORD|TURN\s+(?:\d+|N))[^\]]*\]/gi, ' ');
+}
+
+function hookEligibilityIsInformational(text: string, pattern: string): boolean {
+  const frames = [
+    `\\bwhat\\s+(?:is|are|was|were|does|did)\\s+(?:the\\s+|a\\s+|an\\s+)?${pattern}(?![\\w-])`,
+    `\\bwhat['\\u2019]s\\s+(?:the\\s+|a\\s+|an\\s+)?${pattern}(?![\\w-])`,
+    `\\bhow\\s+to\\s+(?:use\\s+)?(?:the\\s+)?${pattern}(?![\\w-])`,
+    `\\bhow\\s+do\\s+(?:i|you|we)\\s+(?:use\\s+)?(?:the\\s+)?${pattern}(?![\\w-])`,
+    `\\btell\\s+me\\s+about\\s+(?:the\\s+|a\\s+|an\\s+)?${pattern}(?![\\w-])`,
+    `\\bexplain\\s+(?:the\\s+|how\\s+|what\\s+)?${pattern}(?![\\w-])`,
+    `\\bdefine\\s+${pattern}(?![\\w-])`,
+    `(?<![\\w-])${pattern}\\s+is\\s+(?:a|an|the)\\b`,
+    `\\bwhat\\s+(?:the\\s+)?${pattern}\\s+(?:does|means|is)\\b`,
+  ];
+  return frames.some((frame) => new RegExp(frame, 'i').test(text));
+}
+
+export function intentEligible(prompt: string, intentReg: any): boolean {
+  if (!intentReg) return false;
+  const sanitized = hookEligibilitySanitize(prompt);
+  const arr = (k: string): string[] => (Array.isArray(intentReg[k]) ? intentReg[k] : []);
+  const actions = arr('actions');
+  const targets = arr('substantive_targets');
+  const standalone = arr('standalone');
+  const exempt = arr('exempt');
+  const newBuild = arr('new_build');
+
+  const mlist = (pats: string[]): string[] => {
+    const out: string[] = [];
+    for (const p of pats) {
+      if (typeof p !== 'string' || !p) continue;
+      let rx: RegExp;
+      try { rx = new RegExp(`(?<![\\w-])${p}(?![\\w-])`, 'i'); } catch { continue; }
+      if (rx.test(sanitized)) out.push(p);
+    }
+    return out;
+  };
+  const subst = (pats: string[]): string[] =>
+    mlist(pats).filter((p) => !hookEligibilityIsInformational(sanitized, p));
+
+  const hasAction = mlist(actions).length > 0;
+  const hasTarget = subst(targets).length > 0;
+  const hasStandalone = subst(standalone).length > 0;
+  const hasExempt = mlist(exempt).length > 0;
+  const hasNewBuild = mlist(newBuild).length > 0;
+
+  let fires = hasStandalone || (hasAction && hasTarget);
+  if (hasExempt && !hasNewBuild && !hasStandalone) fires = false;
+  return fires;
+}

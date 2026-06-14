@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as assert from 'assert';
-import { loadRegistry, classifyIntent } from '../keyword-resolver';
+import { loadRegistry, classifyIntent, intentEligible } from '../keyword-resolver';
 
 const REPO = path.resolve(__dirname, '..', '..', '..', '..');
 const LANES = path.join(REPO, 'claude', 'hooks', 'sidecoach-lanes.json');
@@ -26,5 +26,22 @@ for (const c of corpus.cases) {
     console.error(String(e));
   }
 }
+const INTENT = path.join(REPO, 'claude', 'hooks', 'sidecoach-intent.json');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const intentReg = require(INTENT);
+
+for (const c of corpus.cases) {
+  const computed = intentEligible(c.prompt, intentReg);
+  const r = classifyIntent(c.prompt, reg, VERBS, { intentEligible: computed });
+  try {
+    assert.strictEqual(r.outcome, c.expect, `computed-eligibility outcome for: ${c.prompt}`);
+    if (c.winningLane) assert.strictEqual(r.winningLane, c.winningLane, `computed winningLane for: ${c.prompt}`);
+    if (c.verbMatch) assert.strictEqual(r.verbMatch, c.verbMatch, `computed verbMatch for: ${c.prompt}`);
+  } catch (e) {
+    failures++;
+    console.error(String(e));
+  }
+}
+
 if (failures) { console.error(`PARITY FAILURES: ${failures}`); process.exit(1); }
-console.log(`classifier-parity: ${corpus.cases.length} cases OK`);
+console.log(`classifier-parity: ${corpus.cases.length} cases OK (declared + computed eligibility)`);
