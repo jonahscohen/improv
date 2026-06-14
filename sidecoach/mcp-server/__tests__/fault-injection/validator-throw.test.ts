@@ -36,7 +36,7 @@ export async function run(): Promise<void> {
       try {
         await h(
           { html: '<div/>' },
-          { logger: silentLogger(), registries: fakeRegs as any },
+          { logger: silentLogger(), registries: fakeRegs as any, signal: new AbortController().signal },
         );
         assert.fail('expected throw');
       } catch (e) {
@@ -58,7 +58,7 @@ export async function run(): Promise<void> {
       try {
         await h(
           { html: '<div/>' },
-          { logger: silentLogger(), registries: fakeRegs as any },
+          { logger: silentLogger(), registries: fakeRegs as any, signal: new AbortController().signal },
         );
         assert.fail('expected throw');
       } catch (e) {
@@ -81,7 +81,7 @@ export async function run(): Promise<void> {
       try {
         await h(
           { css: '.x { color: red; }' },
-          { logger: silentLogger(), registries: fakeRegs as any },
+          { logger: silentLogger(), registries: fakeRegs as any, signal: new AbortController().signal },
         );
         assert.fail('expected throw');
       } catch (e) {
@@ -97,7 +97,7 @@ export async function run(): Promise<void> {
     const h = TOOLS.find((t) => t.definition.name === 'sidecoach_validate_taste')!.handler;
     const r = await h(
       { html: '<div>hello</div>' },
-      { logger: silentLogger(), registries: fakeRegs as any },
+      { logger: silentLogger(), registries: fakeRegs as any, signal: new AbortController().signal },
     );
     assert.ok(typeof (r.data as any).violationCount === 'number');
   });

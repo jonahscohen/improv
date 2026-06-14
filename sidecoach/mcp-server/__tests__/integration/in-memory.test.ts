@@ -51,9 +51,10 @@ export async function run(): Promise<void> {
 
     const calls: Array<{ name: string; args: any }> = [
       { name: 'sidecoach_list_verbs', args: {} },
-      { name: 'sidecoach_list_modes', args: {} },
+      { name: 'sidecoach_list_lanes', args: {} },
       { name: 'sidecoach_list_flows', args: {} },
-      { name: 'sidecoach_resolve_keyword', args: { phrase: 'polish the homepage' } },
+      { name: 'sidecoach_classify_intent', args: { prompt: 'polish the homepage' } },
+      { name: 'sidecoach_lane', args: { operation: 'list' } },
       { name: 'sidecoach_get_cheatsheet', args: {} },
       { name: 'sidecoach_get_flow_metadata', args: { flowId: 'flowJ_tactical_polish' } },
       { name: 'sidecoach_get_cost_ledger', args: {} },
@@ -101,12 +102,12 @@ export async function run(): Promise<void> {
       const payload = JSON.parse((r1.content as any[])[0].text);
       assert.strictEqual(payload.code, 'INVALID_INPUT');
 
-      // resolve_keyword with empty phrase -> schema rejects via SDK validation
+      // classify_intent with empty prompt -> schema rejects via SDK validation
       // (this is a -32602 protocol error, caught by callTool as a throw).
       try {
         await client.callTool({
-          name: 'sidecoach_resolve_keyword',
-          arguments: { phrase: '' },
+          name: 'sidecoach_classify_intent',
+          arguments: { prompt: '' },
         });
         // If the SDK surfaces it as a tool error rather than a throw, both
         // outcomes are acceptable - just ensure the call didn't claim success.
@@ -130,7 +131,7 @@ export async function run(): Promise<void> {
     await client.connect(clientTransport);
     try {
       // 1) good call
-      const a = await client.callTool({ name: 'sidecoach_list_modes', arguments: {} });
+      const a = await client.callTool({ name: 'sidecoach_list_lanes', arguments: {} });
       assert.notStrictEqual(a.isError, true);
       // 2) bad call (unknown flow)
       const b = await client.callTool({

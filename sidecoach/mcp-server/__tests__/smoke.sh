@@ -27,8 +27,9 @@ cat <<'EOF'
 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke-shell","version":"0.0.0"}}}
 {"jsonrpc":"2.0","method":"notifications/initialized"}
 {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
-{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"sidecoach_list_modes","arguments":{}}}
-{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"sidecoach_resolve_keyword","arguments":{"phrase":"please polish the homepage"}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"sidecoach_list_lanes","arguments":{}}}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"sidecoach_classify_intent","arguments":{"prompt":"please polish the homepage"}}}
+{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"sidecoach_lane","arguments":{"operation":"list"}}}
 {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"sidecoach_get_flow_metadata","arguments":{"flowId":"flowJ_tactical_polish"}}}
 {"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"sidecoach_get_flow_metadata","arguments":{"flowId":"flowZZZ_unknown"}}}
 EOF

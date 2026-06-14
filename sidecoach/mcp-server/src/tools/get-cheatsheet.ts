@@ -9,7 +9,7 @@ export const definition: ToolDefinition<typeof getCheatsheetShape> = {
   name: 'sidecoach_get_cheatsheet',
   description:
     'Return the sidecoach CHEATSHEET.md content. Optionally filter to a single section: ' +
-    'modes (5 modes), verbs (22 verbs), flows (registry), or routing (how verbs route to flows). ' +
+    'lanes (6 lanes), verbs (22 verbs), flows (registry), or routing (how verbs route to flows). ' +
     'Default returns the full markdown document.',
   inputSchema: getCheatsheetShape,
   timeoutMs: 5_000,
@@ -18,7 +18,7 @@ export const definition: ToolDefinition<typeof getCheatsheetShape> = {
 // Section headers in CHEATSHEET.md follow the pattern "## Section N - Title".
 // We extract the body between the requested header and the next ## or EOF.
 const SECTION_HEADERS: Record<NonNullable<GetCheatsheetInputT['section']>, RegExp | null> = {
-  modes: /^##\s+Section\s+0\b.*$/m,
+  lanes: /^##\s+Section\s+0\b.*$/m,
   verbs: /^##\s+Section\s+1\b.*$/m,
   flows: /^##\s+Section\s+2\b.*$/m,
   routing: /^##\s+Section\s+3\b.*$/m,

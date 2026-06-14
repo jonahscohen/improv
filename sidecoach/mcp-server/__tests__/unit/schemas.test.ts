@@ -15,18 +15,6 @@ export async function run(): Promise<void> {
     assert.strictEqual(r.success, false);
   });
 
-  await test('resolve_keyword: rejects empty phrase', () => {
-    const r = TOOL_INPUT_SCHEMAS.sidecoach_resolve_keyword.safeParse({ phrase: '' });
-    assert.strictEqual(r.success, false);
-  });
-
-  await test('resolve_keyword: rejects > 4000 char phrase', () => {
-    const r = TOOL_INPUT_SCHEMAS.sidecoach_resolve_keyword.safeParse({
-      phrase: 'a'.repeat(4001),
-    });
-    assert.strictEqual(r.success, false);
-  });
-
   await test('validate_polish_standard: rejects all-empty input via refine', () => {
     const r = TOOL_INPUT_SCHEMAS.sidecoach_validate_polish_standard.safeParse({});
     assert.strictEqual(r.success, false);

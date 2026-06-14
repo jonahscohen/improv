@@ -37,15 +37,16 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TOOL_NAMES = exports.TOOLS = void 0;
 const listVerbs = __importStar(require("./list-verbs"));
-const listModes = __importStar(require("./list-modes"));
+const listLanes = __importStar(require("./list-lanes"));
 const listFlows = __importStar(require("./list-flows"));
-const resolveKeyword = __importStar(require("./resolve-keyword"));
+const classifyIntent = __importStar(require("./classify-intent"));
 const validatePolish = __importStar(require("./validate-polish-standard"));
 const validateExtendedDomain = __importStar(require("./validate-extended-domain"));
 const validateTaste = __importStar(require("./validate-taste"));
 const getCostLedger = __importStar(require("./get-cost-ledger"));
 const getCheatsheet = __importStar(require("./get-cheatsheet"));
 const getFlowMetadata = __importStar(require("./get-flow-metadata"));
+const lane = __importStar(require("./lane"));
 // T-0022 extension tools
 const stateSet = __importStar(require("./state-set"));
 const stateGet = __importStar(require("./state-get"));
@@ -62,15 +63,16 @@ const lspWorkspaceSymbols = __importStar(require("./lsp-workspace-symbols"));
 const pythonReplExecute = __importStar(require("./python-repl-execute"));
 exports.TOOLS = [
     { definition: listVerbs.definition, handler: listVerbs.handler },
-    { definition: listModes.definition, handler: listModes.handler },
+    { definition: listLanes.definition, handler: listLanes.handler },
     { definition: listFlows.definition, handler: listFlows.handler },
-    { definition: resolveKeyword.definition, handler: resolveKeyword.handler },
+    { definition: classifyIntent.definition, handler: classifyIntent.handler },
     { definition: validatePolish.definition, handler: validatePolish.handler },
     { definition: validateExtendedDomain.definition, handler: validateExtendedDomain.handler },
     { definition: validateTaste.definition, handler: validateTaste.handler },
     { definition: getCostLedger.definition, handler: getCostLedger.handler },
     { definition: getCheatsheet.definition, handler: getCheatsheet.handler },
     { definition: getFlowMetadata.definition, handler: getFlowMetadata.handler },
+    { definition: lane.definition, handler: lane.handler },
     // T-0022 extension tools (state + ast-grep).
     { definition: stateSet.definition, handler: stateSet.handler },
     { definition: stateGet.definition, handler: stateGet.handler },

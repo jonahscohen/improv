@@ -13,7 +13,7 @@
 // both the raw shapes (for SDK registration) and the wrapped objects (for
 // internal validation in unit tests).
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TOOL_INPUT_SCHEMAS = exports.PythonReplExecuteInput = exports.pythonReplExecuteShape = exports.LspWorkspaceSymbolsInput = exports.lspWorkspaceSymbolsShape = exports.LspDocumentSymbolsInput = exports.lspDocumentSymbolsShape = exports.LspFindReferencesInput = exports.lspFindReferencesShape = exports.LspGotoDefinitionInput = exports.lspGotoDefinitionShape = exports.LspHoverInput = exports.lspHoverShape = exports.LSP_LANGUAGES = exports.AstGrepInput = exports.astGrepShape = exports.AST_GREP_LANGUAGES = exports.StateListKeysInput = exports.stateListKeysShape = exports.StateDeleteInput = exports.stateDeleteShape = exports.StateGetInput = exports.stateGetShape = exports.StateSetInput = exports.stateSetShape = exports.GetFlowMetadataInput = exports.getFlowMetadataShape = exports.GetCheatsheetInput = exports.getCheatsheetShape = exports.GetCostLedgerInput = exports.getCostLedgerShape = exports.ValidateTasteInput = exports.validateTasteShape = exports.ValidateExtendedDomainInput = exports.validateExtendedDomainShape = exports.ValidatePolishInput = exports.validatePolishShape = exports.ResolveKeywordInput = exports.resolveKeywordShape = exports.ListFlowsInput = exports.listFlowsShape = exports.ListModesInput = exports.listModesShape = exports.ListVerbsInput = exports.listVerbsShape = void 0;
+exports.TOOL_INPUT_SCHEMAS = exports.PythonReplExecuteInput = exports.pythonReplExecuteShape = exports.LspWorkspaceSymbolsInput = exports.lspWorkspaceSymbolsShape = exports.LspDocumentSymbolsInput = exports.lspDocumentSymbolsShape = exports.LspFindReferencesInput = exports.lspFindReferencesShape = exports.LspGotoDefinitionInput = exports.lspGotoDefinitionShape = exports.LspHoverInput = exports.lspHoverShape = exports.LSP_LANGUAGES = exports.AstGrepInput = exports.astGrepShape = exports.AST_GREP_LANGUAGES = exports.StateListKeysInput = exports.stateListKeysShape = exports.StateDeleteInput = exports.stateDeleteShape = exports.StateGetInput = exports.stateGetShape = exports.StateSetInput = exports.stateSetShape = exports.LaneInput = exports.laneShape = exports.GetFlowMetadataInput = exports.getFlowMetadataShape = exports.GetCheatsheetInput = exports.getCheatsheetShape = exports.GetCostLedgerInput = exports.getCostLedgerShape = exports.ValidateTasteInput = exports.validateTasteShape = exports.ValidateExtendedDomainInput = exports.validateExtendedDomainShape = exports.ValidatePolishInput = exports.validatePolishShape = exports.ClassifyIntentInput = exports.classifyIntentShape = exports.ListFlowsInput = exports.listFlowsShape = exports.ListLanesInput = exports.listLanesShape = exports.ListVerbsInput = exports.listVerbsShape = void 0;
 const zod_1 = require("zod");
 // ---------------------------------------------------------------------------
 // Shared primitive bounds
@@ -37,10 +37,10 @@ exports.listVerbsShape = {
 };
 exports.ListVerbsInput = zod_1.z.object(exports.listVerbsShape);
 // ---------------------------------------------------------------------------
-// Tool 2: list_modes (no input)
+// Tool 2: list_lanes (replaces list_modes - no input)
 // ---------------------------------------------------------------------------
-exports.listModesShape = {};
-exports.ListModesInput = zod_1.z.object(exports.listModesShape);
+exports.listLanesShape = {};
+exports.ListLanesInput = zod_1.z.object(exports.listLanesShape);
 // ---------------------------------------------------------------------------
 // Tool 3: list_flows
 // ---------------------------------------------------------------------------
@@ -61,16 +61,16 @@ exports.listFlowsShape = {
 };
 exports.ListFlowsInput = zod_1.z.object(exports.listFlowsShape);
 // ---------------------------------------------------------------------------
-// Tool 4: resolve_keyword
+// Tool 4: classify_intent (replaces resolve_keyword) - natural lane classifier
 // ---------------------------------------------------------------------------
-exports.resolveKeywordShape = {
-    phrase: zod_1.z
+exports.classifyIntentShape = {
+    prompt: zod_1.z
         .string()
         .min(1)
         .max(MAX_PHRASE_CHARS)
-        .describe('Free-text phrase to resolve against the verb/mode registries.'),
+        .describe('Natural user prompt to classify against the sidecoach lane registry.'),
 };
-exports.ResolveKeywordInput = zod_1.z.object(exports.resolveKeywordShape);
+exports.ClassifyIntentInput = zod_1.z.object(exports.classifyIntentShape);
 // ---------------------------------------------------------------------------
 // Tool 5: validate_polish_standard
 // ---------------------------------------------------------------------------
@@ -142,7 +142,7 @@ exports.GetCostLedgerInput = zod_1.z.object(exports.getCostLedgerShape);
 // ---------------------------------------------------------------------------
 exports.getCheatsheetShape = {
     section: zod_1.z
-        .enum(['modes', 'verbs', 'flows', 'routing', 'all'])
+        .enum(['lanes', 'verbs', 'flows', 'routing', 'all'])
         .optional()
         .describe('Optional section filter. "all" (default) returns the full document.'),
 };
@@ -158,6 +158,83 @@ exports.getFlowMetadataShape = {
         .describe('Flow ID (e.g. "flowJ_tactical_polish" or "flow1_clone_match").'),
 };
 exports.GetFlowMetadataInput = zod_1.z.object(exports.getFlowMetadataShape);
+// ---------------------------------------------------------------------------
+// Tool: sidecoach_lane (P4d) - drive the four monitor lane operations
+// ---------------------------------------------------------------------------
+const LANE_PROJECT_MAX = 2048;
+const LANE_ID_MAX = 128;
+const LANE_TARGET_MAX = 2048;
+const LANE_CHECKPOINT_MAX = 256;
+const LANE_REASON_MAX = 2048;
+const StepReportSchema = zod_1.z.object({
+    stepId: zod_1.z.string().min(1),
+    iteration: zod_1.z.number().int().min(0),
+    reportId: zod_1.z.string().min(1),
+    verb: zod_1.z.string().min(1),
+    summary: zod_1.z.string().min(1),
+    evidence: zod_1.z.array(zod_1.z.object({
+        kind: zod_1.z.enum(['files', 'screenshot', 'validation', 'note']),
+        detail: zod_1.z.string().min(1),
+    })).min(1),
+    checklistResults: zod_1.z.array(zod_1.z.object({ itemId: zod_1.z.string().min(1), done: zod_1.z.boolean() })).optional(),
+});
+exports.laneShape = {
+    operation: zod_1.z
+        .enum(['start', 'advance', 'status', 'list'])
+        .describe('Which lane engine method to invoke: start | advance | status | list.'),
+    projectPath: zod_1.z
+        .string()
+        .min(1)
+        .max(LANE_PROJECT_MAX)
+        .optional()
+        .describe('Project root for checkpoint storage. Defaults to SIDECOACH_PROJECT_ROOT (cwd).'),
+    laneId: zod_1.z.string().min(1).max(LANE_ID_MAX).optional().describe('Lane id, e.g. "lane_build" (operation=start).'),
+    target: zod_1.z.string().max(LANE_TARGET_MAX).optional().describe('Free-text target the lane operates on (operation=start).'),
+    startRequestId: zod_1.z
+        .string()
+        .min(1)
+        .max(LANE_CHECKPOINT_MAX)
+        .optional()
+        .describe('Caller-supplied required transport idempotency key for operation=start. A repeat reuses the active lane.'),
+    checkpointId: zod_1.z
+        .string()
+        .min(1)
+        .max(LANE_CHECKPOINT_MAX)
+        .optional()
+        .describe('Checkpoint id (operation=advance or status).'),
+    action: zod_1.z
+        .enum(['complete', 'retry', 'skip', 'resume', 'interrupt', 'stop'])
+        .optional()
+        .describe('Transition action (operation=advance).'),
+    expectedRevision: zod_1.z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe('Best-effort in-process revision check (operation=advance).'),
+    reason: zod_1.z.string().min(1).max(LANE_REASON_MAX).optional().describe('Required for skip; recorded for stop/interrupt.'),
+    report: StepReportSchema.optional().describe('StepReport object required for action=complete.'),
+    all: zod_1.z.boolean().optional().describe('Include closed lanes in the listing (operation=list).'),
+};
+exports.LaneInput = zod_1.z
+    .object(exports.laneShape)
+    .refine((v) => v.operation !== 'start' ||
+    (typeof v.laneId === 'string' &&
+        v.laneId.length > 0 &&
+        typeof v.startRequestId === 'string' &&
+        v.startRequestId.length > 0), { message: 'operation=start requires laneId and caller-supplied startRequestId' })
+    .refine((v) => v.operation !== 'advance' ||
+    (typeof v.checkpointId === 'string' &&
+        v.checkpointId.length > 0 &&
+        typeof v.action === 'string' &&
+        typeof v.expectedRevision === 'number'), { message: 'operation=advance requires checkpointId, action, and expectedRevision' })
+    .refine((v) => v.operation !== 'advance' || v.action !== 'complete' || v.report !== undefined, {
+    message: 'operation=advance action=complete requires report',
+})
+    .refine((v) => v.operation !== 'advance' || v.action !== 'skip' || (typeof v.reason === 'string' && v.reason.length > 0), { message: 'operation=advance action=skip requires reason' })
+    .refine((v) => v.operation !== 'status' || (typeof v.checkpointId === 'string' && v.checkpointId.length > 0), {
+    message: 'operation=status requires checkpointId',
+});
 // ---------------------------------------------------------------------------
 // Tool 11: state_set (T-0022)
 // ---------------------------------------------------------------------------
@@ -362,9 +439,10 @@ exports.PythonReplExecuteInput = zod_1.z.object(exports.pythonReplExecuteShape);
 // ---------------------------------------------------------------------------
 exports.TOOL_INPUT_SCHEMAS = {
     sidecoach_list_verbs: exports.ListVerbsInput,
-    sidecoach_list_modes: exports.ListModesInput,
+    sidecoach_list_lanes: exports.ListLanesInput,
+    sidecoach_classify_intent: exports.ClassifyIntentInput,
+    sidecoach_lane: exports.LaneInput,
     sidecoach_list_flows: exports.ListFlowsInput,
-    sidecoach_resolve_keyword: exports.ResolveKeywordInput,
     sidecoach_validate_polish_standard: exports.ValidatePolishInput,
     sidecoach_validate_extended_domain: exports.ValidateExtendedDomainInput,
     sidecoach_validate_taste: exports.ValidateTasteInput,

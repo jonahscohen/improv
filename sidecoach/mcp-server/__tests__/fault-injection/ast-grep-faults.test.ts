@@ -32,7 +32,7 @@ const NULL_REG: RegistryBundle = {
 };
 
 function deps() {
-  return { logger: silentLogger(), registries: NULL_REG };
+  return { logger: silentLogger(), registries: NULL_REG, signal: new AbortController().signal };
 }
 
 function pickHandler(name: string) {

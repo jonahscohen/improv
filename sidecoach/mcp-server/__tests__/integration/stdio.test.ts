@@ -152,10 +152,11 @@ export async function run(): Promise<void> {
       // 3) tools/call against each of the original 10 tools (T-0018 surface)
       const calls = [
         ['sidecoach_list_verbs', {}],
-        ['sidecoach_list_modes', {}],
+        ['sidecoach_list_lanes', {}],
         ['sidecoach_list_flows', {}],
-        ['sidecoach_resolve_keyword', { phrase: 'polish the homepage' }],
-        ['sidecoach_get_cheatsheet', { section: 'modes' }],
+        ['sidecoach_classify_intent', { prompt: 'polish the homepage' }],
+        ['sidecoach_lane', { operation: 'list' }],
+        ['sidecoach_get_cheatsheet', { section: 'lanes' }],
         ['sidecoach_get_flow_metadata', { flowId: 'flowJ_tactical_polish' }],
         ['sidecoach_get_cost_ledger', { format: 'summary' }],
         ['sidecoach_validate_taste', { html: '<div>hi</div>' }],
@@ -249,7 +250,7 @@ export async function run(): Promise<void> {
         jsonrpc: '2.0',
         id: 3,
         method: 'tools/call',
-        params: { name: 'sidecoach_list_modes', arguments: {} },
+        params: { name: 'sidecoach_list_lanes', arguments: {} },
       });
       const r2 = await server.waitFor(3, 5_000);
       assert.notStrictEqual(r2.result.isError, true);

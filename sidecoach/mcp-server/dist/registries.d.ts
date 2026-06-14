@@ -7,6 +7,8 @@ import type { Logger } from './logger';
 export declare function resolveRepoRoot(): string;
 export declare function resolveVerbsJsonPath(): string;
 export declare function resolveModesJsonPath(): string;
+export declare function resolveLanesJsonPath(): string;
+export declare function resolveIntentJsonPath(): string;
 export declare function resolveCheatsheetPath(): string;
 export interface VerbEntry {
     verb: string;
@@ -32,6 +34,12 @@ export interface ModeRegistry {
     meta?: Record<string, unknown>;
 }
 export declare function loadModeRegistry(logger: Logger): ModeRegistry | null;
+export interface LaneRegistryBundle {
+    registry: any;
+    sourcePath: string;
+}
+export declare function loadLaneRegistry(logger: Logger): LaneRegistryBundle | null;
+export declare function loadIntentRegistry(logger: Logger): any | null;
 export interface FlowSummary {
     id: string;
     name: string;
@@ -68,6 +76,8 @@ export interface RegistryBundle {
     modes: ModeRegistry | null;
     flows: FlowSummary[];
     cheatsheet: CheatsheetContent | null;
+    lanes: LaneRegistryBundle | null;
+    intent: any | null;
 }
 export declare function loadAllRegistries(logger: Logger): RegistryBundle;
 //# sourceMappingURL=registries.d.ts.map

@@ -84,6 +84,7 @@ function buildServer(opts = {}) {
                 const result = await withTimeout(() => handler(validatedInput, {
                     logger: childLogger,
                     registries,
+                    signal: controller.signal,
                 }), timeoutMs, controller);
                 const duration = Date.now() - tracker.startedAt;
                 childLogger.info('tool call complete', { durationMs: duration, isError: false });

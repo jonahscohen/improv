@@ -14,7 +14,7 @@ function silentLogger() {
 }
 
 function buildDeps(reg: RegistryBundle) {
-  return { logger: silentLogger(), registries: reg };
+  return { logger: silentLogger(), registries: reg, signal: new AbortController().signal };
 }
 
 function pickHandler(name: ToolName) {
@@ -22,6 +22,17 @@ function pickHandler(name: ToolName) {
   if (!t) throw new Error(`tool ${name} not registered`);
   return t.handler;
 }
+
+const realDeps = () => ({
+  logger: silentLogger(),
+  registries: loadAllRegistries(silentLogger()),
+  signal: new AbortController().signal,
+});
+const depsWithLanes = (lanes: any) => ({
+  logger: silentLogger(),
+  registries: { ...loadAllRegistries(silentLogger()), lanes },
+  signal: new AbortController().signal,
+});
 
 function fakeRegistries(): RegistryBundle {
   return {
@@ -91,20 +102,22 @@ export async function run(): Promise<void> {
     }
   });
 
-  // ------ list_modes ------
-  await test('list_modes: happy path', async () => {
-    const h = pickHandler('sidecoach_list_modes');
-    const r = await h({}, buildDeps(fakeRegistries()));
+  // ------ list_lanes ------
+  await test('list_lanes: happy path', async () => {
+    const h = pickHandler('sidecoach_list_lanes');
+    const r = await h({} as any, realDeps());
     const d = r.data as any;
-    assert.strictEqual(d.count, 1);
-    assert.strictEqual(d.modes[0].mode, 'forge');
+    assert.ok(d.count >= 1);
+    assert.ok(Array.isArray(d.lanes) && d.lanes.length >= 1);
+    assert.ok(d.lanes.every((l: any) => typeof l.lane === 'string' && typeof l.label === 'string'));
+    assert.ok(d.lanes.some((l: any) => l.lane === 'lane_build'));
   });
 
-  await test('list_modes: tolerates missing modes registry (returns empty list, no throw)', async () => {
-    const h = pickHandler('sidecoach_list_modes');
-    const reg = { ...fakeRegistries(), modes: null };
-    const r = await h({}, buildDeps(reg));
-    assert.strictEqual((r.data as any).count, 0);
+  await test('list_lanes: null lane registry throws DOWNSTREAM_UNAVAILABLE', async () => {
+    const h = pickHandler('sidecoach_list_lanes');
+    let threw = false;
+    try { await h({} as any, depsWithLanes(null)); } catch (e) { threw = e instanceof SidecoachToolError && e.code === 'DOWNSTREAM_UNAVAILABLE'; }
+    assert.strictEqual(threw, true);
   });
 
   // ------ list_flows ------
@@ -130,48 +143,30 @@ export async function run(): Promise<void> {
     }
   });
 
-  // ------ resolve_keyword ------
-  await test('resolve_keyword: matches verb', async () => {
-    const h = pickHandler('sidecoach_resolve_keyword');
-    const r = await h({ phrase: 'polish the homepage' }, buildDeps(fakeRegistries()));
-    const m = (r.data as any).match;
-    assert.strictEqual(m.kind, 'verb');
-    assert.strictEqual(m.name, 'polish');
+  // ------ classify_intent ------
+  await test('classify_intent: routes a confident lane phrase', async () => {
+    const h = pickHandler('sidecoach_classify_intent');
+    const r = await h({ prompt: 'make the landing page production-ready' } as any, realDeps());
+    assert.strictEqual((r.data as any).decision.outcome, 'ROUTE');
   });
 
-  await test('resolve_keyword: matches mode (precedence)', async () => {
-    const h = pickHandler('sidecoach_resolve_keyword');
-    const r = await h(
-      { phrase: 'forge a new homepage with polish' },
-      buildDeps(fakeRegistries()),
-    );
-    const m = (r.data as any).match;
-    assert.strictEqual(m.kind, 'mode');
-    assert.strictEqual(m.name, 'forge');
+  await test('classify_intent: detects an explicit verb', async () => {
+    const h = pickHandler('sidecoach_classify_intent');
+    const r = await h({ prompt: 'audit this and make it production-ready' } as any, realDeps());
+    assert.strictEqual((r.data as any).decision.verbMatch, 'audit');
   });
 
-  await test('resolve_keyword: no match returns kind=none', async () => {
-    const h = pickHandler('sidecoach_resolve_keyword');
-    const r = await h({ phrase: 'something totally unrelated' }, buildDeps(fakeRegistries()));
-    assert.strictEqual((r.data as any).match.kind, 'none');
+  await test('classify_intent: NUDGE_ELIGIBLE on an eligible natural prompt', async () => {
+    const h = pickHandler('sidecoach_classify_intent');
+    const r = await h({ prompt: 'restyle the navbar' } as any, realDeps());
+    assert.strictEqual((r.data as any).decision.outcome, 'NUDGE_ELIGIBLE');
   });
 
-  await test('resolve_keyword: empty registries throws DOWNSTREAM_UNAVAILABLE', async () => {
-    const h = pickHandler('sidecoach_resolve_keyword');
-    const empty: RegistryBundle = {
-      verbs: { verbs: [] },
-      modes: { modes: [] },
-      flows: fakeRegistries().flows,
-      cheatsheet: fakeRegistries().cheatsheet,
-      lanes: null,
-      intent: null,
-    };
-    try {
-      await h({ phrase: 'polish this' }, buildDeps(empty));
-      assert.fail('expected throw');
-    } catch (e) {
-      assert.strictEqual((e as SidecoachToolError).code, 'DOWNSTREAM_UNAVAILABLE');
-    }
+  await test('classify_intent: null lane registry throws DOWNSTREAM_UNAVAILABLE', async () => {
+    const h = pickHandler('sidecoach_classify_intent');
+    let threw = false;
+    try { await h({ prompt: 'x' } as any, depsWithLanes(null)); } catch (e) { threw = e instanceof SidecoachToolError && e.code === 'DOWNSTREAM_UNAVAILABLE'; }
+    assert.strictEqual(threw, true);
   });
 
   // ------ get_cheatsheet ------
@@ -182,9 +177,9 @@ export async function run(): Promise<void> {
     assert.ok((r.data as any).content.includes('ROUTING TEXT'));
   });
 
-  await test('get_cheatsheet: section=modes returns just modes section', async () => {
+  await test('get_cheatsheet: section=lanes returns just Section 0', async () => {
     const h = pickHandler('sidecoach_get_cheatsheet');
-    const r = await h({ section: 'modes' }, buildDeps(fakeRegistries()));
+    const r = await h({ section: 'lanes' }, buildDeps(fakeRegistries()));
     const content = (r.data as any).content as string;
     assert.ok(content.includes('MODE TEXT'));
     assert.ok(!content.includes('VERB TEXT'));

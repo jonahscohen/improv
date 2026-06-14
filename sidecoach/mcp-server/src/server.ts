@@ -139,6 +139,7 @@ export function buildServer(opts: BuildServerOptions = {}): BuiltServer {
             handler(validatedInput, {
               logger: childLogger,
               registries,
+              signal: controller.signal,
             }),
           timeoutMs,
           controller,

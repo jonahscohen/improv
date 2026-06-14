@@ -127,14 +127,15 @@ recognizable. Tools follow `verb_noun` naming.
 | # | Tool name | Purpose | Input | Output | Errors | Timeout | Idempotent |
 |---|---|---|---|---|---|---|---|
 | 1 | `sidecoach_list_verbs` | Return the 22 verbs from `sidecoach-verbs.json` | `{}` (optional filter by `phase`) | `{verbs: Verb[]}` | INVALID_INPUT (filter not a string), DOWNSTREAM_UNAVAILABLE (verbs JSON unreadable) | 5000ms | yes |
-| 2 | `sidecoach_list_modes` | Return the 5 modes from `sidecoach-modes.json` | `{}` | `{modes: Mode[]}` | DOWNSTREAM_UNAVAILABLE | 5000ms | yes |
+| 2 | `sidecoach_list_lanes` | Return the lanes from `sidecoach-lanes.json` (lane_build / lane_ship / lane_delight / lane_live / lane_calm / lane_converge) | `{}` | `{count, lanes: Lane[]}` | DOWNSTREAM_UNAVAILABLE (lane registry missing/structure-invalid, no fallback) | 5000ms | yes |
 | 3 | `sidecoach_list_flows` | Return all flow IDs + names + descriptions from `sidecoach/src/flows.ts` | `{}` (optional filter by `tier` or `idPrefix`) | `{flows: FlowSummary[]}` | INVALID_INPUT | 5000ms | yes |
-| 4 | `sidecoach_resolve_keyword` | Given a user phrase, return matched verb/mode using the same sanitize + word-boundary + informational-suppression logic the bash hook uses | `{phrase: string}` (1-4000 chars) | `{match: {kind: "verb"|"mode"|"none", name?: string, chain?: string[], reason?: string}}` | INVALID_INPUT (empty/too long) | 5000ms | yes |
+| 4 | `sidecoach_classify_intent` | Classify a natural prompt against the lane registry using the same grouped scoring / clause binding / occurrence-aware suppression as the hook; computes advisory-nudge eligibility from `sidecoach-intent.json` but never reads/mutates the cooldown | `{prompt: string}` (1-4000 chars) | `{decision: {outcome, winningLane, verbMatch, diagnosticLane, laneScores, schemaVersion}, winningLabel?, nudge?}` (outcome in ROUTE/CLASSIFY/OUT_OF_SCOPE/CONTEXT_CHECK/VERB/NUDGE_ELIGIBLE/SILENT) | INVALID_INPUT (empty/too long), DOWNSTREAM_UNAVAILABLE (lane registry missing) | 5000ms | yes |
+| 4a | `sidecoach_lane` | Drive a lane through the engine state machine (start / advance / status / list), wrapping the same `createExecutionEngine().{startLane,advanceLane,laneStatus,listLanes}` the monitor CLI uses | `{operation, projectPath?, laneId?, target?, startRequestId?, checkpointId?, action?, expectedRevision?, reason?, report?, all?}` | `{result}` or `{count, lanes}` | INVALID_INPUT (per-operation contract), TIMEOUT (response deadline) | 25000ms | start is idempotent on `startRequestId` |
 | 5 | `sidecoach_validate_polish_standard` | Run `PolishStandardValidator.validateAll` against provided context | `{html?: string, css?: string, designTokens?: object, contextOverrides?: object}` | `PolishValidationReport` | INVALID_INPUT, VALIDATOR_FAILURE | 30000ms | yes |
 | 6 | `sidecoach_validate_extended_domain` | Run `ExtendedDomainValidator.validateAll` against provided context | `{html?: string, css?: string, designTokens?: object, typography?: object, colors?: object, spacing?: object, motion?: object, accessibility?: object, contrast?: object, performance?: object, visualization?: object, internationalization?: object}` | `DomainValidationReport` | INVALID_INPUT, VALIDATOR_FAILURE | 30000ms | yes |
 | 7 | `sidecoach_validate_taste` | Run `validateTaste(html, css)` | `{html: string, css?: string, iconLibrary?: string}` | `{violations: TasteViolation[], formatted: string}` | INVALID_INPUT, VALIDATOR_FAILURE | 30000ms | yes |
 | 8 | `sidecoach_get_cost_ledger` | Read current session cost ledger from `model-routing.ts` | `{format?: "raw"|"summary"}` (default `summary`) | `{entries: CostEntry[], summary: string, totals: {calls, inputTokens, outputTokens, estimatedCostUsd}}` | INVALID_INPUT | 5000ms | yes (read-only) |
-| 9 | `sidecoach_get_cheatsheet` | Return the CHEATSHEET.md content | `{section?: "modes"|"verbs"|"flows"|"all"}` (default `all`) | `{content: string, section: string, source: string}` | INVALID_INPUT, DOWNSTREAM_UNAVAILABLE (cheatsheet not found) | 5000ms | yes |
+| 9 | `sidecoach_get_cheatsheet` | Return the CHEATSHEET.md content | `{section?: "lanes"|"verbs"|"flows"|"routing"|"all"}` (default `all`) | `{content: string, section: string, source: string}` | INVALID_INPUT, DOWNSTREAM_UNAVAILABLE (cheatsheet not found) | 5000ms | yes |
 | 10 | `sidecoach_get_flow_metadata` | Given a flow ID, return its description, tier assignment, registered validators, and model-routing config | `{flowId: string}` | `{flowId, name, description, triggers, modelConfig, validators: string[]}` | INVALID_INPUT (unknown flow ID), DOWNSTREAM_UNAVAILABLE | 5000ms | yes |
 
 ### Schema sketches (Zod)
@@ -145,8 +146,8 @@ recognizable. Tools follow `verb_noun` naming.
 // 1. list_verbs
 ListVerbsInput = z.object({ phase: z.string().min(1).max(64).optional() })
 
-// 4. resolve_keyword
-ResolveKeywordInput = z.object({ phrase: z.string().min(1).max(4000) })
+// 4. classify_intent
+ClassifyIntentInput = z.object({ prompt: z.string().min(1).max(4000) })
 
 // 5. validate_polish_standard
 ValidatePolishInput = z.object({
@@ -199,6 +200,26 @@ a TOCTOU race during deploys. The registry-reload path is a server restart.
 - Each tool call gets its own AbortController. Timeouts and shutdowns
   abort the controller, which propagates to any async-cancellable work in
   the handler.
+- That `controller.signal` is passed into every handler via `ToolDependencies.signal`
+  as a per-call response deadline. For `sidecoach_lane` it is used truthfully:
+  the handler stops awaiting the engine result and returns `TIMEOUT` when the
+  deadline fires, but the engine methods take no external signal, so an
+  already-started `startLane`/`advanceLane` continues to completion under its own
+  P4b-1 operation lease and heartbeat. P4d does not claim engine cancellation.
+
+**Lane + intent registry loading (P4d).** Beyond verbs/modes/flows/cheatsheet,
+`loadAllRegistries` loads two more slots:
+- `lanes`: loaded via the classifier's own validating `loadRegistry`
+  (`keyword-resolver.ts`), which THROWS on structural invalidity (no lanes,
+  incomplete scope, missing scoring keys). The loader surfaces that throw as a
+  null slot, which disables the lane tier loudly - `list_lanes`/`classify_intent`
+  return `DOWNSTREAM_UNAVAILABLE`. Unlike modes (which fall back to `modes.ts`),
+  there is NO silent TS fallback for lanes; the registry is the single source of truth.
+- `intent`: a plain JSON parse of `sidecoach-intent.json`, used only to compute
+  advisory-nudge eligibility and surface the nudge text. A missing/invalid file
+  yields a null slot (eligibility computes to false, no nudge). The MCP never
+  reads or mutates the cooldown state referenced inside it; cooldown -> NUDGE/SILENT
+  delivery stays the Python hook's job.
 - Logs are correlated with a per-request `requestId` (UUID v4) so concurrent
   call logs don't blur together when read in stderr.
 - Validators receive a fresh, JSON-cloned input object per call. We do not
@@ -289,7 +310,9 @@ last-resort backstop.
    30000), `SIDECOACH_MCP_LOG_LEVEL` (default `info`).
 2. Initializes the logger (stderr-only writer).
 3. Loads registries: `claude/hooks/sidecoach-verbs.json`,
-   `claude/hooks/sidecoach-modes.json`, the in-process `flows.ts` and
+   `claude/hooks/sidecoach-modes.json`, `claude/hooks/sidecoach-lanes.json`
+   (via the classifier's validating loader; no TS fallback),
+   `claude/hooks/sidecoach-intent.json`, the in-process `flows.ts` and
    `modes.ts` exports, `CHEATSHEET.md`. Logs `info` on each load, `error`
    on any failure but continues startup (the affected tool will return
    DOWNSTREAM_UNAVAILABLE rather than crashing the server).
@@ -376,9 +399,9 @@ For each of the 10 tools:
   a malformed value. Asserts the correct `DOWNSTREAM_UNAVAILABLE` or
   `VALIDATOR_FAILURE` code.
 
-Some tools get more (e.g. `resolve_keyword` has a separate test per kind:
-verb match, mode match, no match, informational suppression). Target: at
-least 30 unit tests across 10 tools.
+Some tools get more (e.g. `classify_intent` has a separate test per outcome:
+ROUTE with a winning label, VERB, NUDGE_ELIGIBLE with nudge text, and the
+no-cooldown invariant). Target: at least 30 unit tests across the tool surface.
 
 ### Integration (`__tests__/integration/`)
 

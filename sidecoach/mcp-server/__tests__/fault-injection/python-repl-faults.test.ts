@@ -28,7 +28,7 @@ function silentLogger() {
 const NULL_REG: RegistryBundle = { verbs: null, modes: null, flows: [], cheatsheet: null, lanes: null, intent: null };
 
 function deps() {
-  return { logger: silentLogger(), registries: NULL_REG };
+  return { logger: silentLogger(), registries: NULL_REG, signal: new AbortController().signal };
 }
 
 function pickHandler(name: string) {

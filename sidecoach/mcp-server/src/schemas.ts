@@ -45,14 +45,6 @@ export const ListVerbsInput = z.object(listVerbsShape);
 export type ListVerbsInputT = z.infer<typeof ListVerbsInput>;
 
 // ---------------------------------------------------------------------------
-// Tool 2: list_modes (no input)
-// ---------------------------------------------------------------------------
-
-export const listModesShape = {} as const;
-export const ListModesInput = z.object(listModesShape);
-export type ListModesInputT = z.infer<typeof ListModesInput>;
-
-// ---------------------------------------------------------------------------
 // Tool 2: list_lanes (replaces list_modes - no input)
 // ---------------------------------------------------------------------------
 
@@ -81,20 +73,6 @@ export const listFlowsShape = {
 };
 export const ListFlowsInput = z.object(listFlowsShape);
 export type ListFlowsInputT = z.infer<typeof ListFlowsInput>;
-
-// ---------------------------------------------------------------------------
-// Tool 4: resolve_keyword
-// ---------------------------------------------------------------------------
-
-export const resolveKeywordShape = {
-  phrase: z
-    .string()
-    .min(1)
-    .max(MAX_PHRASE_CHARS)
-    .describe('Free-text phrase to resolve against the verb/mode registries.'),
-};
-export const ResolveKeywordInput = z.object(resolveKeywordShape);
-export type ResolveKeywordInputT = z.infer<typeof ResolveKeywordInput>;
 
 // ---------------------------------------------------------------------------
 // Tool 4: classify_intent (replaces resolve_keyword) - natural lane classifier
@@ -196,7 +174,7 @@ export type GetCostLedgerInputT = z.infer<typeof GetCostLedgerInput>;
 
 export const getCheatsheetShape = {
   section: z
-    .enum(['modes', 'verbs', 'flows', 'routing', 'all'])
+    .enum(['lanes', 'verbs', 'flows', 'routing', 'all'])
     .optional()
     .describe('Optional section filter. "all" (default) returns the full document.'),
 };
@@ -553,12 +531,10 @@ export type PythonReplExecuteInputT = z.infer<typeof PythonReplExecuteInput>; //
 
 export const TOOL_INPUT_SCHEMAS = {
   sidecoach_list_verbs: ListVerbsInput,
-  sidecoach_list_modes: ListModesInput,
   sidecoach_list_lanes: ListLanesInput,
   sidecoach_classify_intent: ClassifyIntentInput,
   sidecoach_lane: LaneInput,
   sidecoach_list_flows: ListFlowsInput,
-  sidecoach_resolve_keyword: ResolveKeywordInput,
   sidecoach_validate_polish_standard: ValidatePolishInput,
   sidecoach_validate_extended_domain: ValidateExtendedDomainInput,
   sidecoach_validate_taste: ValidateTasteInput,

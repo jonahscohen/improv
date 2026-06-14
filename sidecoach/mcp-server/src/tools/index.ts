@@ -2,15 +2,16 @@
 // over this list to register each tool with the SDK.
 
 import * as listVerbs from './list-verbs';
-import * as listModes from './list-modes';
+import * as listLanes from './list-lanes';
 import * as listFlows from './list-flows';
-import * as resolveKeyword from './resolve-keyword';
+import * as classifyIntent from './classify-intent';
 import * as validatePolish from './validate-polish-standard';
 import * as validateExtendedDomain from './validate-extended-domain';
 import * as validateTaste from './validate-taste';
 import * as getCostLedger from './get-cost-ledger';
 import * as getCheatsheet from './get-cheatsheet';
 import * as getFlowMetadata from './get-flow-metadata';
+import * as lane from './lane';
 // T-0022 extension tools
 import * as stateSet from './state-set';
 import * as stateGet from './state-get';
@@ -35,15 +36,16 @@ export interface RegisteredTool {
 
 export const TOOLS: RegisteredTool[] = [
   { definition: listVerbs.definition, handler: listVerbs.handler },
-  { definition: listModes.definition, handler: listModes.handler },
+  { definition: listLanes.definition, handler: listLanes.handler },
   { definition: listFlows.definition, handler: listFlows.handler },
-  { definition: resolveKeyword.definition, handler: resolveKeyword.handler },
+  { definition: classifyIntent.definition, handler: classifyIntent.handler },
   { definition: validatePolish.definition, handler: validatePolish.handler },
   { definition: validateExtendedDomain.definition, handler: validateExtendedDomain.handler },
   { definition: validateTaste.definition, handler: validateTaste.handler },
   { definition: getCostLedger.definition, handler: getCostLedger.handler },
   { definition: getCheatsheet.definition, handler: getCheatsheet.handler },
   { definition: getFlowMetadata.definition, handler: getFlowMetadata.handler },
+  { definition: lane.definition, handler: lane.handler },
   // T-0022 extension tools (state + ast-grep).
   { definition: stateSet.definition, handler: stateSet.handler },
   { definition: stateGet.definition, handler: stateGet.handler },

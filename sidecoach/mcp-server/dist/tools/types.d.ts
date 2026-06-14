@@ -4,6 +4,8 @@ import type { RegistryBundle } from '../registries';
 export interface ToolDependencies {
     logger: Logger;
     registries: RegistryBundle;
+    /** Per-call response-deadline signal. Fires on tool timeout or server shutdown. */
+    signal: AbortSignal;
 }
 export interface ToolDefinition<S extends ZodRawShape = ZodRawShape> {
     name: string;

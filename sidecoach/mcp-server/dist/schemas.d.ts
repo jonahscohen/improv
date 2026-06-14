@@ -10,9 +10,9 @@ export declare const ListVerbsInput: z.ZodObject<{
     phase?: string | undefined;
 }>;
 export type ListVerbsInputT = z.infer<typeof ListVerbsInput>;
-export declare const listModesShape: {};
-export declare const ListModesInput: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
-export type ListModesInputT = z.infer<typeof ListModesInput>;
+export declare const listLanesShape: {};
+export declare const ListLanesInput: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+export type ListLanesInputT = z.infer<typeof ListLanesInput>;
 export declare const listFlowsShape: {
     tier: z.ZodOptional<z.ZodNumber>;
     idPrefix: z.ZodOptional<z.ZodString>;
@@ -28,17 +28,17 @@ export declare const ListFlowsInput: z.ZodObject<{
     idPrefix?: string | undefined;
 }>;
 export type ListFlowsInputT = z.infer<typeof ListFlowsInput>;
-export declare const resolveKeywordShape: {
-    phrase: z.ZodString;
+export declare const classifyIntentShape: {
+    prompt: z.ZodString;
 };
-export declare const ResolveKeywordInput: z.ZodObject<{
-    phrase: z.ZodString;
+export declare const ClassifyIntentInput: z.ZodObject<{
+    prompt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    phrase: string;
+    prompt: string;
 }, {
-    phrase: string;
+    prompt: string;
 }>;
-export type ResolveKeywordInputT = z.infer<typeof ResolveKeywordInput>;
+export type ClassifyIntentInputT = z.infer<typeof ClassifyIntentInput>;
 export declare const validatePolishShape: {
     html: z.ZodOptional<z.ZodString>;
     css: z.ZodOptional<z.ZodString>;
@@ -158,14 +158,14 @@ export declare const GetCostLedgerInput: z.ZodObject<{
 }>;
 export type GetCostLedgerInputT = z.infer<typeof GetCostLedgerInput>;
 export declare const getCheatsheetShape: {
-    section: z.ZodOptional<z.ZodEnum<["modes", "verbs", "flows", "routing", "all"]>>;
+    section: z.ZodOptional<z.ZodEnum<["lanes", "verbs", "flows", "routing", "all"]>>;
 };
 export declare const GetCheatsheetInput: z.ZodObject<{
-    section: z.ZodOptional<z.ZodEnum<["modes", "verbs", "flows", "routing", "all"]>>;
+    section: z.ZodOptional<z.ZodEnum<["lanes", "verbs", "flows", "routing", "all"]>>;
 }, "strip", z.ZodTypeAny, {
-    section?: "verbs" | "modes" | "flows" | "routing" | "all" | undefined;
+    section?: "verbs" | "lanes" | "flows" | "routing" | "all" | undefined;
 }, {
-    section?: "verbs" | "modes" | "flows" | "routing" | "all" | undefined;
+    section?: "verbs" | "lanes" | "flows" | "routing" | "all" | undefined;
 }>;
 export type GetCheatsheetInputT = z.infer<typeof GetCheatsheetInput>;
 export declare const getFlowMetadataShape: {
@@ -179,6 +179,453 @@ export declare const GetFlowMetadataInput: z.ZodObject<{
     flowId: string;
 }>;
 export type GetFlowMetadataInputT = z.infer<typeof GetFlowMetadataInput>;
+export declare const laneShape: {
+    operation: z.ZodEnum<["start", "advance", "status", "list"]>;
+    projectPath: z.ZodOptional<z.ZodString>;
+    laneId: z.ZodOptional<z.ZodString>;
+    target: z.ZodOptional<z.ZodString>;
+    startRequestId: z.ZodOptional<z.ZodString>;
+    checkpointId: z.ZodOptional<z.ZodString>;
+    action: z.ZodOptional<z.ZodEnum<["complete", "retry", "skip", "resume", "interrupt", "stop"]>>;
+    expectedRevision: z.ZodOptional<z.ZodNumber>;
+    reason: z.ZodOptional<z.ZodString>;
+    report: z.ZodOptional<z.ZodObject<{
+        stepId: z.ZodString;
+        iteration: z.ZodNumber;
+        reportId: z.ZodString;
+        verb: z.ZodString;
+        summary: z.ZodString;
+        evidence: z.ZodArray<z.ZodObject<{
+            kind: z.ZodEnum<["files", "screenshot", "validation", "note"]>;
+            detail: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }, {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }>, "many">;
+        checklistResults: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            itemId: z.ZodString;
+            done: z.ZodBoolean;
+        }, "strip", z.ZodTypeAny, {
+            itemId: string;
+            done: boolean;
+        }, {
+            itemId: string;
+            done: boolean;
+        }>, "many">>;
+    }, "strip", z.ZodTypeAny, {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    }, {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    }>>;
+    all: z.ZodOptional<z.ZodBoolean>;
+};
+export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodObject<{
+    operation: z.ZodEnum<["start", "advance", "status", "list"]>;
+    projectPath: z.ZodOptional<z.ZodString>;
+    laneId: z.ZodOptional<z.ZodString>;
+    target: z.ZodOptional<z.ZodString>;
+    startRequestId: z.ZodOptional<z.ZodString>;
+    checkpointId: z.ZodOptional<z.ZodString>;
+    action: z.ZodOptional<z.ZodEnum<["complete", "retry", "skip", "resume", "interrupt", "stop"]>>;
+    expectedRevision: z.ZodOptional<z.ZodNumber>;
+    reason: z.ZodOptional<z.ZodString>;
+    report: z.ZodOptional<z.ZodObject<{
+        stepId: z.ZodString;
+        iteration: z.ZodNumber;
+        reportId: z.ZodString;
+        verb: z.ZodString;
+        summary: z.ZodString;
+        evidence: z.ZodArray<z.ZodObject<{
+            kind: z.ZodEnum<["files", "screenshot", "validation", "note"]>;
+            detail: z.ZodString;
+        }, "strip", z.ZodTypeAny, {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }, {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }>, "many">;
+        checklistResults: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            itemId: z.ZodString;
+            done: z.ZodBoolean;
+        }, "strip", z.ZodTypeAny, {
+            itemId: string;
+            done: boolean;
+        }, {
+            itemId: string;
+            done: boolean;
+        }>, "many">>;
+    }, "strip", z.ZodTypeAny, {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    }, {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    }>>;
+    all: z.ZodOptional<z.ZodBoolean>;
+}, "strip", z.ZodTypeAny, {
+    operation: "start" | "status" | "advance" | "list";
+    all?: boolean | undefined;
+    projectPath?: string | undefined;
+    laneId?: string | undefined;
+    target?: string | undefined;
+    startRequestId?: string | undefined;
+    checkpointId?: string | undefined;
+    action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+    expectedRevision?: number | undefined;
+    reason?: string | undefined;
+    report?: {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    } | undefined;
+}, {
+    operation: "start" | "status" | "advance" | "list";
+    all?: boolean | undefined;
+    projectPath?: string | undefined;
+    laneId?: string | undefined;
+    target?: string | undefined;
+    startRequestId?: string | undefined;
+    checkpointId?: string | undefined;
+    action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+    expectedRevision?: number | undefined;
+    reason?: string | undefined;
+    report?: {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    } | undefined;
+}>, {
+    operation: "start" | "status" | "advance" | "list";
+    all?: boolean | undefined;
+    projectPath?: string | undefined;
+    laneId?: string | undefined;
+    target?: string | undefined;
+    startRequestId?: string | undefined;
+    checkpointId?: string | undefined;
+    action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+    expectedRevision?: number | undefined;
+    reason?: string | undefined;
+    report?: {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    } | undefined;
+}, {
+    operation: "start" | "status" | "advance" | "list";
+    all?: boolean | undefined;
+    projectPath?: string | undefined;
+    laneId?: string | undefined;
+    target?: string | undefined;
+    startRequestId?: string | undefined;
+    checkpointId?: string | undefined;
+    action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+    expectedRevision?: number | undefined;
+    reason?: string | undefined;
+    report?: {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    } | undefined;
+}>, {
+    operation: "start" | "status" | "advance" | "list";
+    all?: boolean | undefined;
+    projectPath?: string | undefined;
+    laneId?: string | undefined;
+    target?: string | undefined;
+    startRequestId?: string | undefined;
+    checkpointId?: string | undefined;
+    action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+    expectedRevision?: number | undefined;
+    reason?: string | undefined;
+    report?: {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    } | undefined;
+}, {
+    operation: "start" | "status" | "advance" | "list";
+    all?: boolean | undefined;
+    projectPath?: string | undefined;
+    laneId?: string | undefined;
+    target?: string | undefined;
+    startRequestId?: string | undefined;
+    checkpointId?: string | undefined;
+    action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+    expectedRevision?: number | undefined;
+    reason?: string | undefined;
+    report?: {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    } | undefined;
+}>, {
+    operation: "start" | "status" | "advance" | "list";
+    all?: boolean | undefined;
+    projectPath?: string | undefined;
+    laneId?: string | undefined;
+    target?: string | undefined;
+    startRequestId?: string | undefined;
+    checkpointId?: string | undefined;
+    action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+    expectedRevision?: number | undefined;
+    reason?: string | undefined;
+    report?: {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    } | undefined;
+}, {
+    operation: "start" | "status" | "advance" | "list";
+    all?: boolean | undefined;
+    projectPath?: string | undefined;
+    laneId?: string | undefined;
+    target?: string | undefined;
+    startRequestId?: string | undefined;
+    checkpointId?: string | undefined;
+    action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+    expectedRevision?: number | undefined;
+    reason?: string | undefined;
+    report?: {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    } | undefined;
+}>, {
+    operation: "start" | "status" | "advance" | "list";
+    all?: boolean | undefined;
+    projectPath?: string | undefined;
+    laneId?: string | undefined;
+    target?: string | undefined;
+    startRequestId?: string | undefined;
+    checkpointId?: string | undefined;
+    action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+    expectedRevision?: number | undefined;
+    reason?: string | undefined;
+    report?: {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    } | undefined;
+}, {
+    operation: "start" | "status" | "advance" | "list";
+    all?: boolean | undefined;
+    projectPath?: string | undefined;
+    laneId?: string | undefined;
+    target?: string | undefined;
+    startRequestId?: string | undefined;
+    checkpointId?: string | undefined;
+    action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+    expectedRevision?: number | undefined;
+    reason?: string | undefined;
+    report?: {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    } | undefined;
+}>, {
+    operation: "start" | "status" | "advance" | "list";
+    all?: boolean | undefined;
+    projectPath?: string | undefined;
+    laneId?: string | undefined;
+    target?: string | undefined;
+    startRequestId?: string | undefined;
+    checkpointId?: string | undefined;
+    action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+    expectedRevision?: number | undefined;
+    reason?: string | undefined;
+    report?: {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    } | undefined;
+}, {
+    operation: "start" | "status" | "advance" | "list";
+    all?: boolean | undefined;
+    projectPath?: string | undefined;
+    laneId?: string | undefined;
+    target?: string | undefined;
+    startRequestId?: string | undefined;
+    checkpointId?: string | undefined;
+    action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+    expectedRevision?: number | undefined;
+    reason?: string | undefined;
+    report?: {
+        verb: string;
+        summary: string;
+        stepId: string;
+        iteration: number;
+        reportId: string;
+        evidence: {
+            kind: "validation" | "files" | "screenshot" | "note";
+            detail: string;
+        }[];
+        checklistResults?: {
+            itemId: string;
+            done: boolean;
+        }[] | undefined;
+    } | undefined;
+}>;
+export type LaneInputT = z.infer<typeof LaneInput>;
 export declare const stateSetShape: {
     key: z.ZodString;
     value: z.ZodString;
@@ -371,7 +818,393 @@ export declare const TOOL_INPUT_SCHEMAS: {
     }, {
         phase?: string | undefined;
     }>;
-    readonly sidecoach_list_modes: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+    readonly sidecoach_list_lanes: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+    readonly sidecoach_classify_intent: z.ZodObject<{
+        prompt: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        prompt: string;
+    }, {
+        prompt: string;
+    }>;
+    readonly sidecoach_lane: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodObject<{
+        operation: z.ZodEnum<["start", "advance", "status", "list"]>;
+        projectPath: z.ZodOptional<z.ZodString>;
+        laneId: z.ZodOptional<z.ZodString>;
+        target: z.ZodOptional<z.ZodString>;
+        startRequestId: z.ZodOptional<z.ZodString>;
+        checkpointId: z.ZodOptional<z.ZodString>;
+        action: z.ZodOptional<z.ZodEnum<["complete", "retry", "skip", "resume", "interrupt", "stop"]>>;
+        expectedRevision: z.ZodOptional<z.ZodNumber>;
+        reason: z.ZodOptional<z.ZodString>;
+        report: z.ZodOptional<z.ZodObject<{
+            stepId: z.ZodString;
+            iteration: z.ZodNumber;
+            reportId: z.ZodString;
+            verb: z.ZodString;
+            summary: z.ZodString;
+            evidence: z.ZodArray<z.ZodObject<{
+                kind: z.ZodEnum<["files", "screenshot", "validation", "note"]>;
+                detail: z.ZodString;
+            }, "strip", z.ZodTypeAny, {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }, {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }>, "many">;
+            checklistResults: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                itemId: z.ZodString;
+                done: z.ZodBoolean;
+            }, "strip", z.ZodTypeAny, {
+                itemId: string;
+                done: boolean;
+            }, {
+                itemId: string;
+                done: boolean;
+            }>, "many">>;
+        }, "strip", z.ZodTypeAny, {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        }, {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        }>>;
+        all: z.ZodOptional<z.ZodBoolean>;
+    }, "strip", z.ZodTypeAny, {
+        operation: "start" | "status" | "advance" | "list";
+        all?: boolean | undefined;
+        projectPath?: string | undefined;
+        laneId?: string | undefined;
+        target?: string | undefined;
+        startRequestId?: string | undefined;
+        checkpointId?: string | undefined;
+        action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+        expectedRevision?: number | undefined;
+        reason?: string | undefined;
+        report?: {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        } | undefined;
+    }, {
+        operation: "start" | "status" | "advance" | "list";
+        all?: boolean | undefined;
+        projectPath?: string | undefined;
+        laneId?: string | undefined;
+        target?: string | undefined;
+        startRequestId?: string | undefined;
+        checkpointId?: string | undefined;
+        action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+        expectedRevision?: number | undefined;
+        reason?: string | undefined;
+        report?: {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        } | undefined;
+    }>, {
+        operation: "start" | "status" | "advance" | "list";
+        all?: boolean | undefined;
+        projectPath?: string | undefined;
+        laneId?: string | undefined;
+        target?: string | undefined;
+        startRequestId?: string | undefined;
+        checkpointId?: string | undefined;
+        action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+        expectedRevision?: number | undefined;
+        reason?: string | undefined;
+        report?: {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        } | undefined;
+    }, {
+        operation: "start" | "status" | "advance" | "list";
+        all?: boolean | undefined;
+        projectPath?: string | undefined;
+        laneId?: string | undefined;
+        target?: string | undefined;
+        startRequestId?: string | undefined;
+        checkpointId?: string | undefined;
+        action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+        expectedRevision?: number | undefined;
+        reason?: string | undefined;
+        report?: {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        } | undefined;
+    }>, {
+        operation: "start" | "status" | "advance" | "list";
+        all?: boolean | undefined;
+        projectPath?: string | undefined;
+        laneId?: string | undefined;
+        target?: string | undefined;
+        startRequestId?: string | undefined;
+        checkpointId?: string | undefined;
+        action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+        expectedRevision?: number | undefined;
+        reason?: string | undefined;
+        report?: {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        } | undefined;
+    }, {
+        operation: "start" | "status" | "advance" | "list";
+        all?: boolean | undefined;
+        projectPath?: string | undefined;
+        laneId?: string | undefined;
+        target?: string | undefined;
+        startRequestId?: string | undefined;
+        checkpointId?: string | undefined;
+        action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+        expectedRevision?: number | undefined;
+        reason?: string | undefined;
+        report?: {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        } | undefined;
+    }>, {
+        operation: "start" | "status" | "advance" | "list";
+        all?: boolean | undefined;
+        projectPath?: string | undefined;
+        laneId?: string | undefined;
+        target?: string | undefined;
+        startRequestId?: string | undefined;
+        checkpointId?: string | undefined;
+        action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+        expectedRevision?: number | undefined;
+        reason?: string | undefined;
+        report?: {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        } | undefined;
+    }, {
+        operation: "start" | "status" | "advance" | "list";
+        all?: boolean | undefined;
+        projectPath?: string | undefined;
+        laneId?: string | undefined;
+        target?: string | undefined;
+        startRequestId?: string | undefined;
+        checkpointId?: string | undefined;
+        action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+        expectedRevision?: number | undefined;
+        reason?: string | undefined;
+        report?: {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        } | undefined;
+    }>, {
+        operation: "start" | "status" | "advance" | "list";
+        all?: boolean | undefined;
+        projectPath?: string | undefined;
+        laneId?: string | undefined;
+        target?: string | undefined;
+        startRequestId?: string | undefined;
+        checkpointId?: string | undefined;
+        action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+        expectedRevision?: number | undefined;
+        reason?: string | undefined;
+        report?: {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        } | undefined;
+    }, {
+        operation: "start" | "status" | "advance" | "list";
+        all?: boolean | undefined;
+        projectPath?: string | undefined;
+        laneId?: string | undefined;
+        target?: string | undefined;
+        startRequestId?: string | undefined;
+        checkpointId?: string | undefined;
+        action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+        expectedRevision?: number | undefined;
+        reason?: string | undefined;
+        report?: {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        } | undefined;
+    }>, {
+        operation: "start" | "status" | "advance" | "list";
+        all?: boolean | undefined;
+        projectPath?: string | undefined;
+        laneId?: string | undefined;
+        target?: string | undefined;
+        startRequestId?: string | undefined;
+        checkpointId?: string | undefined;
+        action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+        expectedRevision?: number | undefined;
+        reason?: string | undefined;
+        report?: {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        } | undefined;
+    }, {
+        operation: "start" | "status" | "advance" | "list";
+        all?: boolean | undefined;
+        projectPath?: string | undefined;
+        laneId?: string | undefined;
+        target?: string | undefined;
+        startRequestId?: string | undefined;
+        checkpointId?: string | undefined;
+        action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
+        expectedRevision?: number | undefined;
+        reason?: string | undefined;
+        report?: {
+            verb: string;
+            summary: string;
+            stepId: string;
+            iteration: number;
+            reportId: string;
+            evidence: {
+                kind: "validation" | "files" | "screenshot" | "note";
+                detail: string;
+            }[];
+            checklistResults?: {
+                itemId: string;
+                done: boolean;
+            }[] | undefined;
+        } | undefined;
+    }>;
     readonly sidecoach_list_flows: z.ZodObject<{
         tier: z.ZodOptional<z.ZodNumber>;
         idPrefix: z.ZodOptional<z.ZodString>;
@@ -381,13 +1214,6 @@ export declare const TOOL_INPUT_SCHEMAS: {
     }, {
         tier?: number | undefined;
         idPrefix?: string | undefined;
-    }>;
-    readonly sidecoach_resolve_keyword: z.ZodObject<{
-        phrase: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        phrase: string;
-    }, {
-        phrase: string;
     }>;
     readonly sidecoach_validate_polish_standard: z.ZodEffects<z.ZodObject<{
         html: z.ZodOptional<z.ZodString>;
@@ -476,11 +1302,11 @@ export declare const TOOL_INPUT_SCHEMAS: {
         format?: "raw" | "summary" | undefined;
     }>;
     readonly sidecoach_get_cheatsheet: z.ZodObject<{
-        section: z.ZodOptional<z.ZodEnum<["modes", "verbs", "flows", "routing", "all"]>>;
+        section: z.ZodOptional<z.ZodEnum<["lanes", "verbs", "flows", "routing", "all"]>>;
     }, "strip", z.ZodTypeAny, {
-        section?: "verbs" | "modes" | "flows" | "routing" | "all" | undefined;
+        section?: "verbs" | "lanes" | "flows" | "routing" | "all" | undefined;
     }, {
-        section?: "verbs" | "modes" | "flows" | "routing" | "all" | undefined;
+        section?: "verbs" | "lanes" | "flows" | "routing" | "all" | undefined;
     }>;
     readonly sidecoach_get_flow_metadata: z.ZodObject<{
         flowId: z.ZodString;

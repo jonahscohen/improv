@@ -48,9 +48,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.resolveRepoRoot = resolveRepoRoot;
 exports.resolveVerbsJsonPath = resolveVerbsJsonPath;
 exports.resolveModesJsonPath = resolveModesJsonPath;
+exports.resolveLanesJsonPath = resolveLanesJsonPath;
+exports.resolveIntentJsonPath = resolveIntentJsonPath;
 exports.resolveCheatsheetPath = resolveCheatsheetPath;
 exports.loadVerbRegistry = loadVerbRegistry;
 exports.loadModeRegistry = loadModeRegistry;
+exports.loadLaneRegistry = loadLaneRegistry;
+exports.loadIntentRegistry = loadIntentRegistry;
 exports.loadFlowRegistry = loadFlowRegistry;
 exports.getFlowById = getFlowById;
 exports.loadModesViaTs = loadModesViaTs;
@@ -66,6 +70,7 @@ const path = __importStar(require("path"));
 const flows_1 = require("../../dist/flows");
 const modes_1 = require("../../dist/modes");
 const model_routing_1 = require("../../dist/model-routing");
+const keyword_resolver_1 = require("./keyword-resolver");
 // ---------------------------------------------------------------------------
 // Resolved registry paths
 // ---------------------------------------------------------------------------
@@ -83,6 +88,12 @@ function resolveVerbsJsonPath() {
 }
 function resolveModesJsonPath() {
     return path.join(resolveRepoRoot(), 'claude', 'hooks', 'sidecoach-modes.json');
+}
+function resolveLanesJsonPath() {
+    return path.join(resolveRepoRoot(), 'claude', 'hooks', 'sidecoach-lanes.json');
+}
+function resolveIntentJsonPath() {
+    return path.join(resolveRepoRoot(), 'claude', 'hooks', 'sidecoach-intent.json');
 }
 function resolveCheatsheetPath() {
     return path.join(resolveRepoRoot(), 'claude', 'skills', 'sidecoach', 'CHEATSHEET.md');
@@ -139,6 +150,46 @@ function loadModeRegistry(logger) {
     }
     catch (err) {
         logger.warn('failed to load modes registry', {
+            path: filePath,
+            err: err instanceof Error ? err.message : String(err),
+        });
+        return null;
+    }
+}
+function loadLaneRegistry(logger) {
+    const filePath = resolveLanesJsonPath();
+    try {
+        const registry = (0, keyword_resolver_1.loadRegistry)(filePath);
+        return { registry, sourcePath: filePath };
+    }
+    catch (err) {
+        logger.warn('failed to load lane registry (lane tier disabled, no fallback)', {
+            path: filePath,
+            err: err instanceof Error ? err.message : String(err),
+        });
+        return null;
+    }
+}
+// ---------------------------------------------------------------------------
+// Advisory-intent registry (P4d) - sidecoach-intent.json. Used ONLY to compute
+// nudge eligibility and to surface the advisory nudge text. The MCP never reads
+// or mutates the cooldown state file referenced inside it (cooldown -> NUDGE/
+// SILENT delivery is the Python hook's job). A missing/invalid file yields null:
+// eligibility computes to false and no nudge text is attached.
+// ---------------------------------------------------------------------------
+function loadIntentRegistry(logger) {
+    const filePath = resolveIntentJsonPath();
+    try {
+        const raw = fs.readFileSync(filePath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') {
+            logger.warn('intent registry shape unexpected', { path: filePath });
+            return null;
+        }
+        return parsed;
+    }
+    catch (err) {
+        logger.warn('failed to load intent registry (advisory nudge disabled)', {
             path: filePath,
             err: err instanceof Error ? err.message : String(err),
         });
@@ -265,6 +316,8 @@ function loadAllRegistries(logger) {
     const modesFromJson = loadModeRegistry(logger);
     const flows = loadFlowRegistry(logger);
     const cheatsheet = loadCheatsheet(logger);
+    const lanes = loadLaneRegistry(logger);
+    const intent = loadIntentRegistry(logger);
     // Fall back to the TS modes module if the JSON file is missing - we still
     // have the TS-side source of truth available in-process.
     const modes = modesFromJson ?? {
@@ -276,7 +329,9 @@ function loadAllRegistries(logger) {
         modeCount: modes.modes.length,
         flowCount: flows.length,
         cheatsheetLoaded: cheatsheet !== null,
+        laneCount: lanes?.registry.lanes.length ?? 0,
+        intentLoaded: intent !== null,
     });
-    return { verbs, modes, flows, cheatsheet };
+    return { verbs, modes, flows, cheatsheet, lanes, intent };
 }
 //# sourceMappingURL=registries.js.map

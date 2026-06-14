@@ -34,6 +34,8 @@ const fakeRegs = {
     },
   ],
   cheatsheet: null,
+  lanes: { registry: { lanes: [{ lane: 'lane_build', label: 'Build' }] }, sourcePath: 'fake-lanes.json' },
+  intent: null,
 } as const;
 
 async function connectInMemory(server: McpServer): Promise<Client> {
@@ -82,8 +84,8 @@ export async function run(): Promise<void> {
         assert.ok(String(e).toLowerCase().includes('timed out') || String(e).toLowerCase().includes('timeout'));
       }
 
-      // Server still alive: a normal list_modes call works.
-      const r = await client.callTool({ name: 'sidecoach_list_modes', arguments: {} });
+      // Server still alive: a normal list_lanes call works.
+      const r = await client.callTool({ name: 'sidecoach_list_lanes', arguments: {} });
       assert.strictEqual(r.isError, undefined);
     } finally {
       await client.close();

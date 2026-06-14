@@ -118,13 +118,15 @@ Return all 22 sidecoach verbs from the canonical registry.
 - Errors: `DOWNSTREAM_UNAVAILABLE` if `claude/hooks/sidecoach-verbs.json` is missing.
 - Timeout: 5s.
 
-### `sidecoach_list_modes`
+### `sidecoach_list_lanes`
 
-Return all 5 sidecoach modes (forge / kiln / bloom / canvas / trim).
+Return all sidecoach lanes (lane_build / lane_ship / lane_delight / lane_live /
+lane_calm / lane_converge). Lanes replace the legacy modes; the classifier
+routes natural prompts to a lane.
 
 - Input: `{}` (no params)
-- Output: `{ count, modes: [{ mode, pattern, description, oneLineExplanation, chain }] }`
-- Errors: none in normal operation.
+- Output: `{ count, lanes: [{ lane, label, executionKind, interviewLabel, description }] }`
+- Errors: `DOWNSTREAM_UNAVAILABLE` if `claude/hooks/sidecoach-lanes.json` is missing or structure-invalid (no fallback, unlike the old modes tier).
 - Timeout: 5s.
 
 ### `sidecoach_list_flows`
@@ -136,16 +138,33 @@ Return all flows from `sidecoach/src/flows.ts` with their model-routing config.
 - Errors: `DOWNSTREAM_UNAVAILABLE` if flow registry could not be loaded.
 - Timeout: 5s.
 
-### `sidecoach_resolve_keyword`
+### `sidecoach_classify_intent`
 
-Resolve a free-text phrase against the verb/mode registries using the same
-sanitize + word-boundary + informational-suppression logic as the
-UserPromptSubmit hook.
+Classify a natural prompt against the sidecoach lane registry using the same
+grouped scoring, clause binding, and occurrence-aware suppression as the
+UserPromptSubmit hook. Advisory-nudge eligibility is computed from
+`sidecoach-intent.json`; the cooldown that maps NUDGE_ELIGIBLE to NUDGE/SILENT
+is owned by the Python hook and is never read or mutated here.
 
-- Input: `{ phrase: string }` (1-4000 chars)
-- Output: `{ match: { kind: "verb"|"mode"|"none", name?, chain?, reason? } }`
-- Errors: `INVALID_INPUT` (empty/too long), `DOWNSTREAM_UNAVAILABLE` (both registries empty).
+- Input: `{ prompt: string }` (1-4000 chars)
+- Output: `{ decision: { outcome, winningLane, verbMatch, diagnosticLane, laneScores, schemaVersion }, winningLabel?, nudge? }`
+- Outcome is one of the seven-member union: `ROUTE | CLASSIFY | OUT_OF_SCOPE | CONTEXT_CHECK | VERB | NUDGE_ELIGIBLE | SILENT`. `nudge` text is attached only on `NUDGE_ELIGIBLE`.
+- Errors: `INVALID_INPUT` (empty/too long), `DOWNSTREAM_UNAVAILABLE` (lane registry missing/structure-invalid).
 - Timeout: 5s.
+
+### `sidecoach_lane`
+
+Drive a sidecoach lane through the engine state machine, wrapping the same
+engine methods the monitor CLI uses
+(`startLane` / `advanceLane` / `laneStatus` / `listLanes`).
+
+- Input: `{ operation: "start"|"advance"|"status"|"list", projectPath?, laneId?, target?, startRequestId?, checkpointId?, action?, expectedRevision?, reason?, report?, all? }`
+- `operation=start` requires `laneId` and a caller-supplied `startRequestId` (transport idempotency key; a repeat reuses the active lane). No `Date.now()` fallback is permitted.
+- `operation=advance` requires `checkpointId`, `action` (`complete|retry|skip|resume|interrupt|stop`), and `expectedRevision`. `action=complete` requires a `report` (StepReport: stepId, iteration, reportId, verb, summary, evidence[], optional checklistResults). `action=skip` requires a `reason`.
+- `operation=status` requires `checkpointId`. `operation=list` takes nothing (optional `all` includes closed lanes).
+- Response deadline: the per-call MCP signal can stop the handler awaiting an in-flight start/advance and return `TIMEOUT`, but the already-started engine operation continues under its own P4b-1 operation lease/heartbeat. P4d does not thread the MCP signal into the engine.
+- Errors: `INVALID_INPUT` (per-operation contract violation), `TIMEOUT` (response deadline exceeded).
+- Timeout: 25s.
 
 ### `sidecoach_validate_polish_standard`
 
@@ -188,7 +207,7 @@ Read the in-process session cost ledger from model-routing.
 
 Return the CHEATSHEET.md content, optionally filtered to one section.
 
-- Input: `{ section?: "modes"|"verbs"|"flows"|"routing"|"all" }` (default `all`)
+- Input: `{ section?: "lanes"|"verbs"|"flows"|"routing"|"all" }` (default `all`)
 - Output: `{ section, source, content }`
 - Errors: `DOWNSTREAM_UNAVAILABLE` if CHEATSHEET.md missing or section unknown.
 - Timeout: 5s.

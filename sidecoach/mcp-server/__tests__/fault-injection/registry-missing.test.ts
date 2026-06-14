@@ -35,6 +35,7 @@ export async function run(): Promise<void> {
         {},
         {
           logger: silentLogger(),
+          signal: new AbortController().signal,
           registries: {
             verbs: null,
             modes: { modes: [] },
@@ -52,22 +53,44 @@ export async function run(): Promise<void> {
     }
   });
 
-  await test('list_modes still works when verbs are missing (independent dep)', async () => {
-    const h = TOOLS.find((t) => t.definition.name === 'sidecoach_list_modes')!.handler;
-    const r = await h(
-      {},
-      {
-        logger: silentLogger(),
-        registries: {
-          verbs: null,
-          modes: { modes: [{ mode: 'forge', pattern: 'forge', description: '', oneLineExplanation: '', chain: [] }] },
-          flows: [],
-          cheatsheet: null,
-          lanes: null,
-          intent: null,
+  await test('list_lanes throws DOWNSTREAM_UNAVAILABLE when lane registry is null (no fallback)', async () => {
+    const h = TOOLS.find((t) => t.definition.name === 'sidecoach_list_lanes')!.handler;
+    try {
+      await h(
+        {},
+        {
+          logger: silentLogger(),
+          signal: new AbortController().signal,
+          registries: {
+            verbs: null,
+            modes: { modes: [{ mode: 'forge', pattern: 'forge', description: '', oneLineExplanation: '', chain: [] }] },
+            flows: [],
+            cheatsheet: null,
+            lanes: null,
+            intent: null,
+          },
         },
+      );
+      assert.fail('expected throw');
+    } catch (e) {
+      assert.ok(e instanceof SidecoachToolError);
+      assert.strictEqual((e as SidecoachToolError).code, 'DOWNSTREAM_UNAVAILABLE');
+    }
+  });
+
+  await test('server still boots with lanes: null (no throw at build time)', () => {
+    const built = buildServer({
+      logger: silentLogger(),
+      registries: {
+        verbs: null,
+        modes: { modes: [] },
+        flows: [],
+        cheatsheet: null,
+        lanes: null,
+        intent: null,
       },
-    );
-    assert.strictEqual((r.data as any).count, 1);
+    });
+    assert.ok(built.mcp);
+    assert.strictEqual(built.inFlightCount(), 0);
   });
 }
