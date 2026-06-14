@@ -31,6 +31,18 @@ function run() {
   const repeatedCardsWithRepeatGrid = '<style>.grid{display:grid;grid-template-columns:repeat(3,1fr)}</style><main class="grid"><article class="card"><h2>A</h2><p>x</p></article><article class="card"><h2>B</h2><p>x</p></article><article class="card"><h2>C</h2><p>x</p></article></main>';
   if (cg(ctxMarkup(repeatedCardsWithRepeatGrid)).status !== 'fail') throw new Error('repeat(...) grid plus repeated cards must preserve source finding');
 
+  // P2#4: findings must carry the REAL file path (not a placeholder) and preserve ALL
+  // rewrite options in remediation.
+  const gtFail = gt(ctxCss('.h { background-clip: text; background: linear-gradient(#a,#b); }'));
+  if (gtFail.status !== 'fail') throw new Error('precondition: gradient-text must fail');
+  if (!gtFail.evidenceLocations || !gtFail.evidenceLocations.some((l) => l.startsWith('a.css'))) throw new Error('gradient-text finding must reference the real file, not a placeholder');
+  for (const opt of ['Solid color', 'Emphasis via weight or size', 'Use the brand accent on one word with text-decoration-color instead']) {
+    if (!gtFail.remediation || !gtFail.remediation.includes(opt)) throw new Error(`remediation must preserve every rewrite option (missing: ${opt})`);
+  }
+  const moFail = mo(ctxMarkup('<div class="modal"><form><input></form></div>'));
+  if (!moFail.evidenceLocations || !moFail.evidenceLocations.some((l) => l.startsWith('a.html'))) throw new Error('modal finding must reference the real markup file, not <assembled-markup>');
+  if (!moFail.remediation || !moFail.remediation.includes('Toast for confirmation')) throw new Error('modal remediation must preserve all rewrite options');
+
   console.log('anti-pattern-checks: OK');
 }
 run();
