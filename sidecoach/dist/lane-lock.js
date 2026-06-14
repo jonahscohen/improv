@@ -57,6 +57,18 @@ function setLockCompromiseHandler(fn) {
 // could rename away a newer live owner's lock); proper-lockfile does. The lease / CLAIM /
 // FINALIZE / fencing protocol sits ON TOP of this lock, unchanged. Signature is identical
 // to the prior implementation so every caller keeps working.
+//
+// DOCUMENTED LIMITATION - BEST-EFFORT cross-process lock (accepted for this single-user
+// tool). proper-lockfile + the lease/fencing/onCompromised layer make the residual
+// stale-reclaim window tiny and fully safe within a single process. We do NOT, however,
+// guarantee strict at-most-one-committed under ADVERSARIAL multi-process concurrent
+// stale-reclaim (e.g. three OS processes all reclaiming the same stale lockfile at the
+// instant it crosses the stale threshold): proper-lockfile's reclaim is mtime-based, not
+// an OS-kernel mutual-exclusion primitive, so a pathological window remains. This is an
+// accepted limitation - the tool runs single-user, and the lease fencing token still
+// fences the COMMIT identity in practice. If multi-process execution ever matters, an OS
+// flock(2)-based lock (or an advisory-locked lockfile) could close the residual window;
+// it is intentionally deferred to avoid a native dependency here.
 async function withCheckpointLock(dir, checkpointId, fn, opts = {}) {
     if (!LOCK_ID_RE.test(checkpointId) || checkpointId.includes('..'))
         throw new Error(`withCheckpointLock: illegal checkpointId "${checkpointId}"`);
