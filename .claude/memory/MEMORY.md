@@ -1,3 +1,5 @@
+- [P4a-2 plan NEEDS-FIXES (11 findings) -> Codex authors v2, I review; partial-floor scope call - PROJECT (2026-06-13)](session_2026-06-13_p4a2-codex-review-handoff.md): P4a-2 plan NEEDS-FIXES (11 findings) -> Codex authors v2, I review; partial-floor scope call
+- [P4a-2 v2 (Codex-authored) reviewed+APPROVED; partial static floor; executing - PROJECT (2026-06-13)](session_2026-06-13_p4a2-v2-approved.md): P4a-2 v2 (Codex-authored) reviewed+APPROVED; partial static floor; executing
 - [P4a-2 validator-adaptation plan drafted - PROJECT (2026-06-13)](session_2026-06-13_lane-p4a2-plan.md): no-placeholder TDD plan - expand rule registry 6->30 floor rules, attach four-status checkPro…
 - [P4a-1 code review (Codex): core confirmed, 5 edge-case fixes - PROJECT (2026-06-13)](session_2026-06-13_p4a1-code-review.md): P4a-1 code review (Codex): core confirmed, 5 edge-case fixes
 - [P4a-1 COMPLETE (merged) - rule registry + clean-eval foundation; role inversion converged the plan; Codex code-review SHIP after 5 edge fixes - PROJECT (2026-06-13)](session_2026-06-13_p4a1-COMPLETE.md)

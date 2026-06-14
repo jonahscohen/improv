@@ -1,16 +1,16 @@
-# Floor-Validator Rule Set + checkProduct/validateProduct Adaptation (Phase 4a-2) Implementation Plan
+# Partial Static Floor Rule Set + checkProduct/validateProduct Adaptation (Phase 4a-2) Implementation Plan - v2
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax. Every task is failing-test-first, then real implementation, then the exact verify command. No task is "done" until its verify clause passes.
 
-**Goal:** Build ON the merged P4a-1 foundation (`product-rule-types.ts`, `product-rule-registry.ts` 6-rule seed, `flow-validation-capabilities.ts`, `validator-generation.ts`, `clean-evaluator.ts`). Three deliverables:
+**Goal:** Build ON the merged P4a-1 foundation (`product-rule-types.ts`, `product-rule-registry.ts` 6-rule seed, `flow-validation-capabilities.ts`, `validator-generation.ts`, `clean-evaluator.ts`) and deliver the STATIC-DETERMINABLE PARTIAL floor. This is not the full release floor. Browser-evidence rules remain owned-but-non-required and report `inconclusive` until P4b. Copy/linguistic gating is explicitly deferred to P4e. Three deliverables:
 
-1. EXPAND `product-rule-registry.ts` from the 6-rule seed to the full floor-validator canonical rule set (30 rules): the 22 Polish Standard rules (each canonicalizing its cross-registry `POLISH_0NN` duplicate via `sourceRuleAliases`), split by `findingClass` across the `polish-standard` and `static-a11y` owners, plus the `theming` token slice, the `anti-pattern` CSS/markup ban slice, and the remaining `static-a11y` rule. Keep `generate-validators.ts --check` green.
+1. EXPAND `product-rule-registry.ts` from the 6-rule seed to the 30-rule partial-static registry slice: the 22 Polish Standard rules (each canonicalizing its cross-registry `POLISH_0NN` duplicate via `sourceRuleAliases`), split by `findingClass` across the `polish-standard` and `static-a11y` owners, plus the `theming` token slice, the `anti-pattern` CSS/markup ban slice, and the remaining `static-a11y` rule. Keep `generate-validators.ts --check` green. The five browser-only rules are represented and owned, but are non-required and unmeasured in this phase.
 2. ATTACH a real four-status `checkProduct` to every `ProductRuleDefinition` and a real `validateProduct` to every `ProductValidatorRegistration`. Adapt the EXISTING validator logic (the hardened static checks already in `polish-standard-validator.ts`, the taste checks in `taste-validator.ts`, the ban detectors in `absolute-ban-detector.ts`) into pure per-rule verdicts that emit `pass | fail | not_applicable | inconclusive`. Eliminate the absence-passes (`undefined !== '0px' -> pass`) and the N/A-as-`passed: true` convention: missing, unsupported, or unreadable evidence becomes `inconclusive`, never `pass`. A thrown rule check is CAUGHT and recorded `inconclusive` + `normalizedErrorCategory`.
-3. WIRE `validateProduct` to collect a target, run its owned rules' `checkProduct`, build per-file `CoverageObservation`s, and assemble a `ProductValidationResult` by calling the P4a-1 `evaluateCleanPolicy` (do NOT re-implement it). Create the clean/findings/inconclusive fixture files declared by the P4a-1 manifest and make a suite EXECUTE them.
+3. WIRE `validateProduct` to collect a target without losing discovered gaps, run `scope: 'file'` rules once per actually applicable file, aggregate their verdicts, build truthful `CoverageObservation`s and evidence-derived `RunCoverage`, and assemble a `ProductValidationResult` by calling the P4a-1 `evaluateCleanPolicy` (do NOT re-implement it). Create the clean/findings/inconclusive fixture files declared by the P4a-1 manifest and make a suite EXECUTE them.
 
-**Out of scope (DEFERRED, do NOT pull forward):** P4b lane EXECUTION wiring (`advanceLane` calling validators) + async/lease/outbox durability; P4c loops/convergence enablement; P4d MCP/cleanup. This plan does NOT call any validator from `lane-runner.ts`. It builds the entry points and proves them through direct unit + fixture tests only.
+**Out of scope (DEFERRED, do NOT pull forward):** P4b lane EXECUTION wiring (`advanceLane` calling validators), browser evidence collection, and async/lease/outbox durability; P4c loops/convergence enablement; P4d MCP/cleanup; P4e copy/linguistic gating adaptation. This plan does NOT call any validator from `lane-runner.ts`, does NOT claim browser-derived scope as measured, and does NOT invent per-pattern linguistic rules. It builds the partial-static entry points and proves them through direct unit + fixture tests only.
 
-**Architecture.** Per spec section 7 (lines 367-634, 939-958, 1262-1310). The P4a-1 type already declared `checkProduct?` (on `ProductRuleDefinition`) and `validateProduct?` (on `ProductValidatorRegistration`) as OPTIONAL; this plan fills them in. The single source of each per-validator `cleanPolicy` / `ownedRuleIds` / `requiredRuleIds` stays the GENERATED `validators.generated.ts` (expanded by re-running the generator after the registry grows); the runtime validators READ the generated policy, they never re-derive it. Per-rule check logic is PURE (`context -> verdict`); the collection of files and the orchestration into a `ProductValidationResult` lives in a shared `run-validator.ts`. The four floor validators differ ONLY in which rules they own; orchestration is one shared factory `makeProductValidator(validatorId)`.
+**Architecture.** Per spec section 7 (lines 367-634, 939-958, 1262-1310). The P4a-1 type already declared `checkProduct?` (on `ProductRuleDefinition`) and `validateProduct?` (on `ProductValidatorRegistration`) as OPTIONAL; this plan fills them in. The single source of each per-validator `cleanPolicy` / `ownedRuleIds` / `requiredRuleIds` stays the GENERATED `validators.generated.ts` (expanded by re-running the generator after the registry grows); the runtime validators READ the generated policy, they never re-derive it. Per-rule check logic is PURE (`context -> verdict`); the collection of files and the orchestration into a `ProductValidationResult` lives in a shared `run-validator.ts`. The four partial-static validators differ ONLY in which rules they own; orchestration is one shared factory `makeProductValidator(validatorId)`.
 
 **Tech Stack:** TypeScript (`sidecoach/src/`). ts-node runner via `sidecoach/scripts/run-tests.ts` SUITES (explicit, `required:true`). No new deps.
 
@@ -19,19 +19,21 @@
 ## File Structure
 
 **Create:**
-- `sidecoach/src/validators/check-context.ts` - the per-target evidence type `ProductCheckContext`, the per-file `CollectedFile`, the verdict subtype `RuleVerdict`, the verdict helpers (`pass`/`fail`/`notApplicable`/`inconclusive`), and `stampResult(def, verdict) -> ProductRuleResult` (stamps `ruleId`/`canonicalRuleKey`/`severity`/`findingClass` from the definition so per-rule metadata is never duplicated in a check body). Imports `product-rule-types` only; no fs.
+- `sidecoach/src/validators/source-support-matrix.ts` - ONE source-support matrix shared by registry authoring/generation and project collection. It maps extensions to source kinds and evidence requirements to support levels; no second extension or support list is allowed.
+- `sidecoach/src/validators/check-context.ts` - the per-target evidence type `ProductCheckContext`, the per-file `CollectedFile`, collection outcome types, applicability probes, the verdict subtype `RuleVerdict`, the verdict helpers (`pass`/`fail`/`notApplicable`/`inconclusive`), and `stampResult(def, verdict) -> ProductRuleResult` (stamps `ruleId`/`canonicalRuleKey`/`severity`/`findingClass` from the definition so per-rule metadata is never duplicated in a check body). Imports `product-rule-types` only; no fs.
 - `sidecoach/src/validators/checks/polish-checks.ts` - the pure verdict functions for the 18 `polish-standard`-owned rules (adapted from `polish-standard-validator.ts` hardened static logic).
 - `sidecoach/src/validators/checks/a11y-checks.ts` - the 3 `static-a11y`-owned rule verdicts (`focus-visible` css-rule; `min-hit-area` dom-only -> inconclusive; `color-contrast` contrast-only -> inconclusive).
 - `sidecoach/src/validators/checks/theming-checks.ts` - the 2 `theming`-owned rule verdicts (adapted from `taste-validator.ts` `hex-in-interactive-state` + `border-radius-inconsistency`).
 - `sidecoach/src/validators/checks/anti-pattern-checks.ts` - the 6 `anti-pattern`-owned rule verdicts (adapted from `absolute-ban-detector.ts` scanners).
 - `sidecoach/src/validators/checks/index.ts` - merges the four slices into `CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict>` keyed by `canonicalRuleKey`, plus `missingCheck` (returns `inconclusive` for any unattached key).
-- `sidecoach/src/validators/project-collector.ts` - recursive project discovery (supported source types; excludes `node_modules`, dot-dirs, `dist`; 2MB per-file cap) producing `CollectedFile[]` + the joined `cssText`/`markup` + per-file `evidenceKindsPresent` (the file's source kind). Adapts and replaces the one-level-deep collectors in `absolute-ban-detector.ts:189` and `flow-handler-tactical-polish.ts:37`.
-- `sidecoach/src/validators/run-validator.ts` - `makeProductValidator(validatorId) -> (context) => ProductValidationResult`: reads the validator's generated `cleanPolicy`/`ownedRuleIds`, collects, runs each owned rule's `checkProduct`, builds one `CoverageObservation` per required rule + a `RunCoverage`, and calls `evaluateCleanPolicy`. Validator-level collection failure routes through `evaluateCleanPolicy`'s `validatorError` path.
+- `sidecoach/src/validators/project-collector.ts` - recursive project discovery driven by `source-support-matrix.ts`; returns discovered, inspected, policy-skipped, unreadable, oversized, and unsupported files. A root collection failure throws to the validator-level error path. Per-file gaps remain discovered.
+- `sidecoach/src/validators/run-validator.ts` - `makeProductValidator(validatorId) -> (context) => ProductValidationResult`: reads the validator's generated `cleanPolicy`/`ownedRuleIds`, collects, selects applicable evidence, executes file-scoped rules per applicable file and project-scoped rules only where semantically declared, aggregates verdicts, builds truthful `CoverageObservation`s + evidence-derived `RunCoverage`, and calls `evaluateCleanPolicy`.
 - Fixtures under `sidecoach/fixtures/<validatorId>/{clean,findings,inconclusive}/` (the exact paths the P4a-1 `FIXTURE_MANIFEST` already declares).
 - Tests (under `src/__tests__/`): `product-validator-pipeline.test.ts`, `polish-checks.test.ts`, `a11y-checks.test.ts`, `theming-checks.test.ts`, `anti-pattern-checks.test.ts`, `validator-fixtures-e2e.test.ts`.
 
 **Modify:**
-- `sidecoach/src/product-rule-registry.ts` - EXPAND the `RULES` array from 6 to 30 declarative definitions (Task 1), then change the export so each definition carries a `checkProduct` looked up from `CHECKS` by `canonicalRuleKey` and wrapped in the throw-catch boundary (Task 2). The literal metadata objects stay; only the export wrapping is added.
+- `sidecoach/src/product-rule-registry.ts` - EXPAND the `RULES` array from 6 to 30 declarative definitions (Task 1), sourcing `supportedSourceKinds` from the shared matrix, then change the export so each definition carries a `checkProduct` looked up from `CHECKS` by `canonicalRuleKey` and wrapped in the throw-catch boundary (Task 2).
+- `sidecoach/src/validator-generation.ts` - validate every rule's generated source-support declaration against the same shared matrix; no authored or generated support list may drift.
 - `sidecoach/src/flow-validation-capabilities.ts` - attach `validateProduct: makeProductValidator(id)` to each of the four `VALIDATOR_REGISTRATIONS` entries (Task 2). Identity fields unchanged; the generated derivation is unaffected because `deriveValidator` and `JSON.stringify` read identity/owned fields only, not the attached function.
 - `sidecoach/src/validators.generated.ts` - REGENERATED (committed) after Task 1 expands the registry. DO NOT hand-edit.
 - `sidecoach/scripts/run-tests.ts` - register each new suite `required:true`.
@@ -45,7 +47,7 @@
 
 ---
 
-## The complete canonical rule set (transcription table)
+## The complete partial-static registry slice (transcription table)
 
 This is the authoritative table for Task 1. Every row is grounded in a real source id/severity. Canonical severity is `SEVERITY_TABLE[sourceSeverity]` UNLESS an override is noted. `req` = statically satisfiable (all `evidenceRequirements` in `{css-rule, markup}`) and therefore a generated required rule; `non-req` = owned-but-not-required (a `computed-style`/`dom`/`contrast` requirement, surfaces `inconclusive` until a browser collector exists in P4b+).
 
@@ -113,7 +115,16 @@ This is the authoritative table for Task 1. Every row is grounded in a real sour
 
 **Counts after Task 1:** `polish-standard` owns 19 (16 required css-rule/markup, 3 non-required), `static-a11y` owns 3 (1 required, 2 non-required), `theming` owns 2 (both required), `anti-pattern` owns 6 (all required; 3 blocking major, 3 non-blocking minor). Total 30 canonical rules. Every gating validator has a non-empty generated `requiredRuleIds`. The only declared severity overrides are `identical-card-grids` and `hero-metric-template`.
 
-### Standard `supportedSourceKinds` blocks (transcribe verbatim)
+### Shared supported-source matrix and scope rules
+
+Create `validators/source-support-matrix.ts` in Task 1 and use it from BOTH `product-rule-registry.ts` and `project-collector.ts`. It exports:
+
+- `SOURCE_KIND_BY_EXTENSION`: `.css -> css`, `.scss -> scss`, `.sass -> scss`, `.less -> less`, `.html/.htm -> html`, `.tsx -> tsx`, `.jsx -> jsx`, `.vue -> vue`, `.svelte -> svelte`.
+- `SUPPORTED_SOURCE_KINDS_BY_EVIDENCE`: the five support blocks below.
+- `supportedKindsFor(...requirements)` for registry definitions and generator input.
+- `sourceKindForPath(path)` and `isCollectableSourceKind(kind)` for the collector.
+
+The canonical blocks in that one matrix are:
 
 - css-rule rule: `[{ kind: 'css', level: 'full' }, { kind: 'scss', level: 'full' }, { kind: 'less', level: 'full' }, { kind: 'tsx', level: 'partial' }, { kind: 'html', level: 'partial' }]`
 - markup rule: `[{ kind: 'html', level: 'full' }, { kind: 'tsx', level: 'partial' }, { kind: 'jsx', level: 'partial' }, { kind: 'vue', level: 'partial' }, { kind: 'svelte', level: 'partial' }]`
@@ -122,6 +133,34 @@ This is the authoritative table for Task 1. Every row is grounded in a real sour
 - contrast rule (non-req): `[{ kind: 'contrast', level: 'full' }, { kind: 'tsx', level: 'none' }, { kind: 'html', level: 'none' }]`
 
 Every row uses `narrowTargetBehavior: 'evaluate_expanded_context'` (matches the seed; coverage `requireAllDiscoveredApplicableFiles` derives `true`).
+
+`scope: 'file'` means execute once per applicable inspected file, then aggregate. Use it for every static CSS rule, theming rule, `polish.animatepresence-initial`, and `polish.image-outline-neutral`. Use `scope: 'project'` only for the three cross-markup anti-pattern heuristics because their source scanners intentionally reason over a page/project shape. Browser-only rules keep `scope: 'component'`.
+
+### Concrete applicability contract for every `not_applicable` rule
+
+Applicability is determined from collected evidence before the rule check runs. If the necessary evidence channel is missing, unreadable, oversized, unsupported, or insufficient to decide applicability, return `inconclusive`, never `fail` or `not_applicable`. The rule check may return `not_applicable` only after its probe conclusively returns false:
+
+| Rules | Applicable when collected evidence establishes |
+|---|---|
+| `polish.scale-on-press`, `polish.state-completeness` | an interactive selector or interactive element exists |
+| `polish.icon-swap-compound` | an icon-bearing interactive control or icon swap selector exists |
+| `polish.image-outline-neutral` | an image element or image selector exists |
+| `polish.no-transition-all` | at least one transition declaration exists |
+| `polish.tabular-nums` | a dynamic-number selector/element exists |
+| `polish.text-wrap-balance` | a heading element or heading selector exists |
+| `polish.staggered-enter`, `polish.subtle-exit`, `polish.reduced-motion-respect` | a transition, animation, keyframe, or motion-library marker exists |
+| `polish.font-smoothing` | a document/root/body style target exists |
+| `polish.animatepresence-initial` | Framer Motion or `AnimatePresence` markup exists |
+| `polish.sparse-will-change` | a `will-change` declaration exists |
+| `polish.shadows-over-borders`, `polish.shadow-hierarchy` | an elevated surface/card/panel/dialog or shadow declaration exists |
+| `polish.optical-alignment` | an icon-text control, badge, or optical-alignment target exists |
+| `a11y.focus-visible` | a focusable element or interactive selector exists |
+| `theming.hex-in-interactive-state` | an interactive state and a token system are both established; absence of either is N/A |
+| `theming.border-radius-consistency` | at least one radius declaration or rounded utility is established |
+| three CSS anti-pattern rules | the file contains CSS rule bodies; clean CSS is applicable and passes |
+| three markup anti-pattern rules | collected markup is sufficient for the source scanner; clean markup is applicable and passes |
+
+Implement these probes as named reusable functions in the slice modules or `check-context.ts`, and table-test every row. Do not infer N/A from a failed feature check. In particular, "no headings", "no focusable elements", "no motion", and "no interactive elements" must resolve N/A only when markup/CSS evidence is sufficient to establish that absence.
 
 ---
 
@@ -133,7 +172,7 @@ Every row uses `narrowTargetBehavior: 'evaluate_expanded_context'` (matches the 
 cd /Users/spare3/Documents/Github/improv
 git checkout main && git checkout -b lane-p4a2-validator-adaptation
 git branch --show-current
-git status --porcelain | grep -v '^??' | sort > /tmp/lane-p4a2-preexisting-dirty.txt
+git status --porcelain | sort > /tmp/lane-p4a2-preexisting-dirty.txt
 ```
 
 - [ ] **Step 0.2: Baseline green** -> verify: `cd sidecoach && npm run build && npm test` gives build exit 0 and `run-tests: 20 suite(s) passed`, AND `npx ts-node scripts/generate-validators.ts --check` prints `OK`. If red, STOP and fix the baseline before touching anything.
@@ -146,16 +185,51 @@ npm run build && npm test
 
 ---
 
-## Task 1: Expand the registry to the full 30-rule floor set (declarative only)
+## Task 1: Expand the registry to the 30-rule partial-static slice (declarative only)
 
-**Files:** Modify `src/product-rule-registry.ts` (6 -> 30 rules); Modify `src/__tests__/product-rule-registry.test.ts` + `src/__tests__/generate-validators.test.ts`; Regenerate `src/validators.generated.ts`.
+**Files:** Create `src/validators/source-support-matrix.ts`; Modify `src/product-rule-registry.ts` (6 -> 30 rules) and `src/validator-generation.ts` (matrix drift validation); Modify `src/__tests__/product-rule-registry.test.ts` + `src/__tests__/generate-validators.test.ts`; Regenerate `src/validators.generated.ts`.
 
 This task is PURELY declarative (no `checkProduct` yet). It must keep `--check` green and produce a non-empty generated `requiredRuleIds` for all four validators.
 
-- [ ] **Step 1.1: Failing test first.** Append to `src/__tests__/product-rule-registry.test.ts` a block asserting the expanded set. It fails now because the new rules do not exist.
+- [ ] **Step 1.1: Failing test first.** Append to `src/__tests__/product-rule-registry.test.ts` a table-driven EXACT assertion. Define `EXPECTED_RULES` by transcribing all 30 rows from the authoritative tables above with these exact fields for every row: `ruleId`, `sourceRuleAliases`, `canonicalRuleKey`, `ownerValidatorId`, `sourceVocabulary`, `sourceSeverity`, `severity`, `findingClass`, `registryScope`, `evidenceRequirements`, `supportedSourceKinds`, `scope`, `narrowTargetBehavior`, `applicability`, and `severityOverrideReason` when present. Sort actual and expected by `ruleId`, strip only executable `checkProduct`, and compare `JSON.stringify(actual) === JSON.stringify(EXPECTED_RULES)`. This is an exact 30-row assertion, not representative sampling.
+
+In the same test define all 22 Polish alias pairs explicitly and assert both aliases resolve to the same expected canonical key:
 
 ```typescript
-// --- P4a-2: full floor rule set (30 rules) ---
+const EXPECTED_POLISH_ALIAS_PAIRS: Array<[string, string, string]> = [
+  ['polish-standard:1', 'POLISH_001', 'polish/scale-on-press'],
+  ['polish-standard:2', 'POLISH_002', 'polish/concentric-radius'],
+  ['polish-standard:3', 'POLISH_003', 'polish/icon-swap-compound'],
+  ['polish-standard:4', 'POLISH_004', 'polish/image-outline-neutral'],
+  ['polish-standard:5', 'POLISH_005', 'a11y/min-hit-area'],
+  ['polish-standard:6', 'POLISH_006', 'polish/no-transition-all'],
+  ['polish-standard:7', 'POLISH_007', 'polish/tabular-nums'],
+  ['polish-standard:8', 'POLISH_008', 'polish/text-wrap-balance'],
+  ['polish-standard:9', 'POLISH_009', 'polish/staggered-enter'],
+  ['polish-standard:10', 'POLISH_010', 'polish/subtle-exit'],
+  ['polish-standard:11', 'POLISH_011', 'polish/font-smoothing'],
+  ['polish-standard:12', 'POLISH_012', 'polish/animatepresence-initial'],
+  ['polish-standard:13', 'POLISH_013', 'polish/sparse-will-change'],
+  ['polish-standard:14', 'POLISH_014', 'polish/shadows-over-borders'],
+  ['polish-standard:15', 'POLISH_015', 'polish/optical-alignment'],
+  ['polish-standard:16', 'POLISH_016', 'polish/typography-rhythm'],
+  ['polish-standard:17', 'POLISH_017', 'polish/shadow-hierarchy'],
+  ['polish-standard:18', 'POLISH_018', 'a11y/focus-visible'],
+  ['polish-standard:19', 'POLISH_019', 'polish/reduced-motion-respect'],
+  ['polish-standard:20', 'POLISH_020', 'a11y/color-contrast'],
+  ['polish-standard:21', 'POLISH_021', 'polish/state-completeness'],
+  ['polish-standard:22', 'POLISH_022', 'polish/anti-pattern-genericity'],
+];
+for (const [numeric, extended, key] of EXPECTED_POLISH_ALIAS_PAIRS) {
+  if (resolveSourceAlias(numeric)?.canonicalRuleKey !== key) throw new Error(`bad alias ${numeric}`);
+  if (resolveSourceAlias(extended)?.canonicalRuleKey !== key) throw new Error(`bad alias ${extended}`);
+}
+```
+
+Then retain the following focused invariant assertions for readable failures:
+
+```typescript
+// --- P4a-2: partial-static registry slice (30 rules) ---
 {
   if (RULES.length !== 30) throw new Error(`expected 30 canonical rules, got ${RULES.length}`);
 
@@ -164,13 +238,6 @@ This task is PURELY declarative (no `checkProduct` yet). It must keep `--check` 
   if (owners('static-a11y').length !== 3) throw new Error('static-a11y must own 3 rules');
   if (owners('theming').length !== 2) throw new Error('theming must own 2 rules');
   if (owners('anti-pattern').length !== 6) throw new Error('anti-pattern must own 6 rules');
-
-  // cross-registry aliasing holds for a representative NEW polish rule (id 1)
-  const byNum = resolveSourceAlias('polish-standard:1');
-  const byExt = resolveSourceAlias('POLISH_001');
-  if (!byNum || !byExt || byNum.canonicalRuleKey !== byExt.canonicalRuleKey) throw new Error('scale-on-press cross-registry aliases must resolve to one canonical rule');
-  if (byNum.canonicalRuleKey !== 'polish/scale-on-press') throw new Error('scale-on-press canonical key mismatch');
-  if (byNum.severity !== 'major' || byNum.findingClass !== 'polish') throw new Error('id 1 high->major, findingClass polish');
 
   // color-contrast is contrast-only -> NOT statically satisfiable -> owned non-required
   const contrast = getRuleById('a11y.color-contrast');
@@ -191,13 +258,13 @@ This task is PURELY declarative (no `checkProduct` yet). It must keep `--check` 
   if (!br || br.severity !== 'blocker' || !isStaticallySatisfiable(br.evidenceRequirements)) throw new Error('border-radius-consistency must be a required blocker');
   if (!resolveSourceAlias('taste/border-radius-inconsistency')) throw new Error('taste alias must resolve');
 
-  console.log('product-rule-registry (P4a-2 full set): OK');
+  console.log('product-rule-registry (P4a-2 partial-static slice): OK');
 }
 ```
 
 - [ ] **Step 1.2: Run, verify FAIL** -> `npx ts-node src/__tests__/product-rule-registry.test.ts` throws `expected 30 canonical rules, got 6`.
 
-- [ ] **Step 1.3: Add the 24 new rules** to `RULES` in `src/product-rule-registry.ts`, transcribing every field from the table above. Each rule is a full `ProductRuleDefinition` literal in the SAME shape as the seed entries (the seed's `polish.reduced-motion-respect`, `a11y.focus-visible`, etc. are the template). Concrete examples to copy the shape from (do all 24):
+- [ ] **Step 1.3: Create the shared matrix and add the 24 new rules.** Create `src/validators/source-support-matrix.ts` exactly as specified above. Replace every hand-written `supportedSourceKinds` block in all 30 registry definitions with `supportedKindsFor(...evidenceRequirements)` from that matrix, so registry generation and collection cannot drift. Modify `validateRegistry` in `validator-generation.ts` to call the same helper and reject any definition whose `supportedSourceKinds` diverge. Add the 24 new rules to `RULES`, transcribing every other field from the table above. Each rule is a full `ProductRuleDefinition` literal in the SAME shape as the seed entries. Concrete examples to copy the shape from (do all 24):
 
 ```typescript
 // polish-standard owner, css-rule required, high -> major (no override)
@@ -212,11 +279,7 @@ This task is PURELY declarative (no `checkProduct` yet). It must keep `--check` 
   findingClass: 'polish',
   registryScope: 'polished-press-feedback',
   evidenceRequirements: ['css-rule'],
-  supportedSourceKinds: [
-    { kind: 'css', level: 'full' }, { kind: 'scss', level: 'full' },
-    { kind: 'less', level: 'full' }, { kind: 'tsx', level: 'partial' },
-    { kind: 'html', level: 'partial' },
-  ],
+  supportedSourceKinds: supportedKindsFor('css-rule'),
   scope: 'file',
   narrowTargetBehavior: 'evaluate_expanded_context',
   applicability: 'not_applicable',
@@ -259,13 +322,13 @@ This task is PURELY declarative (no `checkProduct` yet). It must keep `--check` 
     { kind: 'jsx', level: 'partial' }, { kind: 'vue', level: 'partial' },
     { kind: 'svelte', level: 'partial' },
   ],
-  scope: 'page',
+  scope: 'project',
   narrowTargetBehavior: 'evaluate_expanded_context',
   applicability: 'not_applicable',
 },
 ```
 
-Use `scope: 'file'` for css-rule rules, `scope: 'component'` for the computed-style/contrast/dom non-required rules, `scope: 'page'` for the markup ban heuristics (matches the seed's `identical-card-grids` page scope), and `scope: 'file'` for `theming.*`, `polish.animatepresence-initial`, `polish.image-outline-neutral`. (Scope only affects the `RequiredCoverageRecord.scope` label; the existing tests do not constrain it beyond non-empty.)
+Use `scope: 'file'` for css-rule rules, theming rules, `polish.animatepresence-initial`, and `polish.image-outline-neutral`; use `scope: 'component'` for computed-style/contrast/dom non-required rules; use `scope: 'project'` for the three markup ban heuristics because their faithful source scanners aggregate a page/project shape. Task 2 executes these scopes differently, so the exact registry test must pin every scope.
 
 - [ ] **Step 1.4: Run, verify the registry test PASSES** -> `npx ts-node src/__tests__/product-rule-registry.test.ts` prints both `OK` lines.
 
@@ -289,6 +352,11 @@ npx ts-node scripts/generate-validators.ts --check   # expect: OK (registry vali
   const ap = gen.GENERATED_VALIDATORS.find((x: any) => x.validatorId === 'anti-pattern');
   if (!ap.cleanPolicy.requiredRuleIds.includes('anti-pattern.gradient-text')) throw new Error('gradient-text must be required');
   if (ap.cleanPolicy.toleratedFindingCounts['major|anti-pattern'] !== 0) throw new Error('explicit 0 tolerance for major|anti-pattern');
+  // generated support records must exactly reflect the one shared matrix
+  for (const rule of RULES) {
+    const expected = supportedKindsFor(...rule.evidenceRequirements);
+    if (JSON.stringify(rule.supportedSourceKinds) !== JSON.stringify(expected)) throw new Error(`source matrix drift for ${rule.ruleId}`);
+  }
 ```
 
 - [ ] **Step 1.7: Verify Task 1** -> all of:
@@ -299,17 +367,17 @@ npx ts-node src/__tests__/product-rule-registry.test.ts     # both OK lines
 npx ts-node src/__tests__/generate-validators.test.ts        # generate-validators: OK
 npx ts-node scripts/generate-validators.ts --check           # OK
 npx ts-node scripts/generate-lanes.ts --check                # unaffected, still OK
-git add src/product-rule-registry.ts src/validators.generated.ts src/__tests__/product-rule-registry.test.ts src/__tests__/generate-validators.test.ts
-git commit -m "lane-p4a2: expand product-rule-registry to full 30-rule floor set"
+git add src/validators/source-support-matrix.ts src/product-rule-registry.ts src/validator-generation.ts src/validators.generated.ts src/__tests__/product-rule-registry.test.ts src/__tests__/generate-validators.test.ts
+git commit -m "lane-p4a2: expand product-rule-registry to partial-static 30-rule slice"
 ```
 
 ---
 
 ## Task 2: Shared check infrastructure + checkProduct/validateProduct wiring
 
-**Files:** Create `src/validators/check-context.ts`, `src/validators/project-collector.ts`, `src/validators/run-validator.ts`, `src/validators/checks/index.ts`; Modify `src/product-rule-registry.ts` (attach `checkProduct`), `src/flow-validation-capabilities.ts` (attach `validateProduct`), `scripts/run-tests.ts`; Test `src/__tests__/product-validator-pipeline.test.ts`.
+**Files:** Create `src/validators/check-context.ts`, `src/validators/project-collector.ts`, `src/validators/run-validator.ts`, `src/validators/checks/index.ts`; Modify `src/product-rule-registry.ts` (attach `checkProduct`), `src/flow-validation-capabilities.ts` (attach `validateProduct`), `scripts/run-tests.ts`; Test `src/__tests__/product-validator-pipeline.test.ts` and `src/__tests__/project-collector.test.ts`.
 
-This task builds the plumbing and proves the four-status pipeline with ONE representative real check (`polish/reduced-motion-respect`); every other rule resolves to `missingCheck` (inconclusive) until Tasks 3-6 fill them in. That intermediate state is HONEST: an unattached required rule surfaces `inconclusive`, never a false `pass`.
+This task builds the plumbing and proves the four-status pipeline with ONE representative real check (`polish/reduced-motion-respect`); every other rule resolves to `missingCheck` (inconclusive) until Tasks 3-6 fill them in. It also proves the collection and execution invariants that every later slice relies on: no discovered input silently disappears, file rules execute per applicable file, coverage names the files actually evaluated, and measured scope is earned from conclusive sufficiently-covered executions only.
 
 - [ ] **Step 2.1: Failing test first** -> `src/__tests__/product-validator-pipeline.test.ts`:
 
@@ -317,6 +385,7 @@ This task builds the plumbing and proves the four-status pipeline with ONE repre
 // sidecoach/src/__tests__/product-validator-pipeline.test.ts
 import { getValidatorRegistration } from '../flow-validation-capabilities';
 import { getRuleById } from '../product-rule-registry';
+import { CHECKS } from '../validators/checks';
 import type { ProductCheckContext } from '../validators/check-context';
 
 // A context with CSS present but NO reduced-motion media query.
@@ -338,7 +407,7 @@ function run() {
   if (typeof rm.checkProduct !== 'function') throw new Error('reduced-motion checkProduct must be attached');
 
   // 3. evidence PRESENT, feature ABSENT -> FAIL (not the old absence-pass, not inconclusive)
-  const failV = rm.checkProduct!(cssNoReducedMotion('.btn { color: red; }'));
+  const failV = rm.checkProduct!(cssNoReducedMotion('.btn { transition: opacity 150ms; }'));
   if (failV.status !== 'fail') throw new Error(`css present without reduced-motion must FAIL, got ${failV.status}`);
 
   // 4. evidence PRESENT, feature PRESENT -> PASS
@@ -354,15 +423,23 @@ function run() {
   const unattached = getRuleById('polish.scale-on-press')!;   // not implemented until Task 3
   if (unattached.checkProduct!(cssNoReducedMotion('.btn{}')).status !== 'inconclusive') throw new Error('unattached rule must be inconclusive');
 
-  // 7. a thrown check is CAUGHT -> inconclusive + rule_exception (inject a context the guard rejects)
-  const thrown = rm.checkProduct!(null as unknown as ProductCheckContext);
+  // 7. a genuinely throwing injected check is CAUGHT -> inconclusive + rule_exception
+  const original = CHECKS['polish/reduced-motion-respect'];
+  CHECKS['polish/reduced-motion-respect'] = new Proxy(original, {
+    apply() { throw new Error('injected rule explosion'); },
+  });
+  const thrown = rm.checkProduct!(cssNoReducedMotion('.btn{}'));
+  CHECKS['polish/reduced-motion-respect'] = original;
   if (thrown.status !== 'inconclusive') throw new Error('a thrown check must be caught as inconclusive');
+  if (thrown.normalizedErrorCategory !== 'rule_exception') throw new Error('throw must normalize to rule_exception');
 
   // 8. validateProduct end-to-end on an empty project -> required rules inconclusive -> status inconclusive
   const res = getValidatorRegistration('polish-standard')!.validateProduct!(emptyCtx);
   if (res.status !== 'inconclusive') throw new Error(`empty project must yield validator status inconclusive, got ${res.status}`);
   // honest coverage is still populated
   if (!res.coverage || !Array.isArray(res.coverage.measuredScope)) throw new Error('coverage must be reproducible even when inconclusive');
+  if (res.coverage.measuredScope.includes('polished-motion-respect')) throw new Error('inconclusive rule must not claim measured scope');
+  if (!res.coverage.unverifiedScope.includes('polished-motion-respect')) throw new Error('unmeasured registry scope must remain unverified');
 
   console.log('product-validator-pipeline: OK');
 }
@@ -390,15 +467,25 @@ export interface CollectedFile {
   evidenceKindsPresent: string[];
 }
 
+export type CollectionOutcome = 'inspected' | 'policy_skipped' | 'unreadable' | 'oversized' | 'unsupported';
+export interface DiscoveredFile {
+  path: string;
+  sourceKind: string;
+  outcome: CollectionOutcome;
+  reason?: string;
+}
+
 // The per-target evidence a checkProduct inspects. Browser-collected fields are
 // OPTIONAL and absent in P4a-2; a rule that needs them returns inconclusive.
 export interface ProductCheckContext {
   cssText: string;               // joined CSS-family text across inspected files
   markup: string;                // joined markup across inspected files
   files: CollectedFile[];
+  discoveredFiles?: DiscoveredFile[];
   computedStyle?: Record<string, string>;
   contrast?: { wcagAA: boolean; ratio: number };
   designTokens?: Record<string, unknown>;
+  tasteOptions?: { tailwindDetected?: boolean };
 }
 
 // A check returns ONLY the verdict; metadata is stamped from the definition so a
@@ -437,6 +524,8 @@ export function stampResult(def: ProductRuleDefinition, v: RuleVerdict): Product
 }
 ```
 
+Also add named applicability probes and `withRuleApplicability(canonicalRuleKey, rawCheck)` used by Tasks 3-6. Each probe returns `true | false | 'unknown'`; `'unknown'` maps to `inconclusive`, `false` maps to `not_applicable`, and only `true` reaches the feature check. Rules whose registry applicability is `inconclusive` bypass the N/A wrapper and retain their raw browser-only inconclusive result. The probes implement every row in the complete applicability table above. They inspect the current per-file context for `scope: 'file'` rules and the assembled context only for declared `scope: 'project'` rules.
+
 - [ ] **Step 2.4: Write `src/validators/checks/index.ts`** (the merge point; slices are empty until Tasks 3-6):
 
 ```typescript
@@ -464,7 +553,7 @@ For Task 2 only, create the four slice files as stubs that each `export const <N
 ```typescript
 // sidecoach/src/validators/checks/polish-checks.ts  (Task 2 seed; Task 3 fills in the rest)
 import type { ProductCheckContext, RuleVerdict } from '../check-context';
-import { pass, fail, inconclusive, hasCss } from '../check-context';
+import { pass, fail, inconclusive, hasCss, withRuleApplicability } from '../check-context';
 
 // id 19, css-rule. Old code: cssRules?.some(...) ?? false (absence-failed silently).
 // New: no CSS collected -> inconclusive; CSS present without the media query -> fail.
@@ -477,7 +566,7 @@ export function checkReducedMotion(ctx: ProductCheckContext): RuleVerdict {
 }
 
 export const POLISH_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict> = {
-  'polish/reduced-motion-respect': checkReducedMotion,
+  'polish/reduced-motion-respect': withRuleApplicability('polish/reduced-motion-respect', checkReducedMotion),
 };
 ```
 
@@ -528,54 +617,69 @@ export const RULES: ProductRuleDefinition[] = RAW_RULES.map((def) => ({
 // sidecoach/src/validators/project-collector.ts
 import * as fs from 'fs';
 import * as path from 'path';
-import type { CollectedFile, ProductCheckContext } from './check-context';
+import type { CollectedFile, DiscoveredFile, ProductCheckContext } from './check-context';
+import { sourceKindForPath, isCollectableSourceKind } from './source-support-matrix';
 
-const CSS_EXT = /\.(?:css|scss|sass|less)$/i;
-const MARKUP_EXT = /\.(?:html?|jsx|tsx|vue|svelte)$/i;
 const SKIP_DIR = new Set(['node_modules', 'dist', 'build', '.git']);
 const MAX_BYTES = 2 * 1024 * 1024;
 
-function sourceKindOf(file: string): string {
-  const ext = path.extname(file).slice(1).toLowerCase();
-  return ext === 'htm' ? 'html' : ext;
-}
-
-// RECURSIVE discovery with explicit exclusions + size cap (spec 963-966).
-function walk(dir: string, acc: string[]): void {
-  let entries: fs.Dirent[];
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+// Root read/stat failure throws. Nested failures are recorded, never discarded.
+function walk(root: string, dir: string, discovered: DiscoveredFile[]): void {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const e of entries) {
+    const abs = path.join(dir, e.name);
+    const rel = path.relative(root, abs);
     if (e.isDirectory()) {
-      if (e.name.startsWith('.') || SKIP_DIR.has(e.name)) continue;
-      walk(path.join(dir, e.name), acc);
-    } else if (e.isFile() && (CSS_EXT.test(e.name) || MARKUP_EXT.test(e.name))) {
-      acc.push(path.join(dir, e.name));
+      if (e.name.startsWith('.') || SKIP_DIR.has(e.name)) {
+        discovered.push({ path: rel, sourceKind: 'directory', outcome: 'policy_skipped', reason: 'excluded_directory' });
+        continue;
+      }
+      try { walk(root, abs, discovered); }
+      catch { discovered.push({ path: rel, sourceKind: 'directory', outcome: 'unreadable', reason: 'readdir_failed' }); }
+    } else if (e.isFile()) {
+      const kind = sourceKindForPath(abs);
+      discovered.push({
+        path: rel,
+        sourceKind: kind ?? `extension:${path.extname(abs).toLowerCase() || '<none>'}`,
+        outcome: kind && isCollectableSourceKind(kind) ? 'inspected' : 'unsupported',
+      });
     }
   }
 }
 
-export interface Collected { files: CollectedFile[]; cssText: string; markup: string; }
+export interface Collected {
+  discovered: DiscoveredFile[];
+  files: CollectedFile[];
+  inspectedFiles: string[];
+  skippedFiles: string[];
+  unreadableFiles: string[];
+  unsupportedFiles: string[];
+  cssText: string;
+  markup: string;
+}
 
 export function collectFromPath(projectPath: string): Collected {
-  const found: string[] = [];
-  walk(projectPath, found);   // throws nothing; unreadable dirs are skipped
+  // Missing/unreadable root is a validator-level collection failure and throws.
+  fs.statSync(projectPath);
+  const discovered: DiscoveredFile[] = [];
+  walk(projectPath, projectPath, discovered);
   const files: CollectedFile[] = [];
-  for (const abs of found) {
+  for (const d of discovered.filter((x) => x.outcome === 'inspected')) {
+    const abs = path.join(projectPath, d.path);
     try {
-      if (fs.statSync(abs).size > MAX_BYTES) continue;
+      if (fs.statSync(abs).size > MAX_BYTES) { d.outcome = 'oversized'; d.reason = 'over_2mb'; continue; }
       const content = fs.readFileSync(abs, 'utf-8');
-      const rel = path.relative(projectPath, abs);
-      const kind = sourceKindOf(abs);
-      const isCss = CSS_EXT.test(abs);
+      const kind = d.sourceKind;
+      const isCss = kind === 'css' || kind === 'scss' || kind === 'less';
       files.push({
-        path: rel, sourceKind: kind,
+        path: d.path, sourceKind: kind,
         cssText: isCss ? content : extractInlineCss(content),
         markup: isCss ? '' : content,
         evidenceKindsPresent: [kind],
       });
-    } catch { /* skip unreadable file */ }
+    } catch { d.outcome = 'unreadable'; d.reason = 'stat_or_read_failed'; }
   }
-  return assemble(files);
+  return assemble(discovered, files);
 }
 
 function extractInlineCss(html: string): string {
@@ -584,9 +688,14 @@ function extractInlineCss(html: string): string {
   return out;
 }
 
-function assemble(files: CollectedFile[]): Collected {
+function assemble(discovered: DiscoveredFile[], files: CollectedFile[]): Collected {
   return {
+    discovered,
     files,
+    inspectedFiles: discovered.filter((d) => d.outcome === 'inspected').map((d) => d.path),
+    skippedFiles: discovered.filter((d) => d.outcome === 'policy_skipped' || d.outcome === 'oversized' || d.outcome === 'unreadable').map((d) => d.path),
+    unreadableFiles: discovered.filter((d) => d.outcome === 'unreadable').map((d) => d.path),
+    unsupportedFiles: discovered.filter((d) => d.outcome === 'unsupported').map((d) => d.path),
     cssText: files.map((f) => f.cssText).filter(Boolean).join('\n'),
     markup: files.map((f) => f.markup).filter(Boolean).join('\n'),
   };
@@ -597,17 +706,24 @@ function assemble(files: CollectedFile[]): Collected {
 // with NEITHER yields an empty collection (-> required rules inconclusive).
 export function collect(context: unknown): Collected {
   const c = context as Partial<ProductCheckContext> & { projectPath?: string };
-  if (c && Array.isArray(c.files)) return assemble(c.files as CollectedFile[]);
+  if (c && Array.isArray(c.files)) {
+    const discovered = c.discoveredFiles ?? c.files.map((f) => ({ path: f.path, sourceKind: f.sourceKind, outcome: 'inspected' as const }));
+    return assemble(discovered, c.files as CollectedFile[]);
+  }
   if (c && typeof c.projectPath === 'string') return collectFromPath(c.projectPath);
-  return { files: [], cssText: '', markup: '' };
+  return { discovered: [], files: [], inspectedFiles: [], skippedFiles: [], unreadableFiles: [], unsupportedFiles: [], cssText: '', markup: '' };
 }
 ```
+
+The implementation must preserve unsupported regular files in `discovered` even though their contents are not read. Excluded directories are `policy_skipped`; unreadable nested directories/files and oversized supported files stay discovered with their outcome. The explicit category arrays are derived views over `discovered`, never separate discovery passes. Only an unreadable/missing root becomes validator-level `error`.
+
+- [ ] **Step 2.6a: Add collector/source-matrix tests first, then implement.** `src/__tests__/project-collector.test.ts` creates temporary projects and asserts: a Sass-only project is discovered as `scss`, inspected, and usable by css-rule coverage; a mixed `.css` + `.md` project reports `.css` inspected and `.md` unsupported; an oversized supported file remains discovered and skipped; an injected/read-failure seam records unreadable; and a missing/unreadable root throws. Verify FAIL before implementing, then verify `npx ts-node src/__tests__/project-collector.test.ts` prints `project-collector: OK`.
 
 - [ ] **Step 2.7: Write `src/validators/run-validator.ts`** (the shared orchestration; CONSUMES `evaluateCleanPolicy`):
 
 ```typescript
 // sidecoach/src/validators/run-validator.ts
-import type { ProductValidationResult, ProductRuleResult } from '../product-rule-types';
+import type { ProductValidationResult, ProductRuleResult, ProductRuleDefinition, RequiredCoverageRecord } from '../product-rule-types';
 import { getRuleById } from '../product-rule-registry';
 import { GENERATED_VALIDATORS } from '../validators.generated';
 import { evaluateCleanPolicy } from '../clean-evaluator';
@@ -618,20 +734,45 @@ import type { ProductCheckContext, CollectedFile } from './check-context';
 function toCheckContext(c: Collected, raw: unknown): ProductCheckContext {
   const r = raw as Partial<ProductCheckContext>;
   return {
-    cssText: c.cssText, markup: c.markup, files: c.files,
-    computedStyle: r?.computedStyle, contrast: r?.contrast, designTokens: r?.designTokens,
+    cssText: c.cssText, markup: c.markup, files: c.files, discoveredFiles: c.discovered,
+    computedStyle: r?.computedStyle, contrast: r?.contrast, designTokens: r?.designTokens, tasteOptions: r?.tasteOptions,
   };
 }
 
-// Discovered-applicable files for a rule = collected files whose source kind is a
-// supported alternative for that rule's coverage record.
-function observationFor(ruleId: string, record: any, files: CollectedFile[]): CoverageObservation {
-  const supported = new Set(record ? record.evidenceAlternativesByRequirement.flat() : []);
-  const applicable = files.filter((f) => f.evidenceKindsPresent.some((k) => supported.has(k)));
+interface RuleExecution {
+  result: ProductRuleResult;
+  discoveredApplicableFiles: Array<{ file: string; evidenceKindsPresent: string[] }>;
+  inspectedApplicableFiles: string[];
+  sufficientlyCovered: boolean;
+}
+
+// executeRule is the single execution/coverage source of truth.
+// 1. Select candidate discovered files using the coverage record's supported alternatives.
+// 2. Run the rule's concrete applicability probe. An unreadable/oversized supported candidate,
+//    or an applicability result of unknown, produces an inconclusive execution.
+// 3. For scope:file, invoke checkProduct once per applicable inspected file using a one-file
+//    ProductCheckContext. Aggregate: any inconclusive -> inconclusive; else any fail -> fail;
+//    else any pass -> pass; else all conclusively non-applicable -> not_applicable.
+//    A pass in one file can never cover a fail or gap in another applicable file.
+// 4. For scope:project, invoke once on assembled applicable inspected evidence.
+// 5. Merge evidence locations/messages from every per-file result into the aggregate result.
+// 6. Return discoveredApplicableFiles containing only conclusively applicable files plus
+//    unknown/gapped candidates that could be applicable. Exclude conclusively N/A files.
+//    observationFor is built only from this RuleExecution, never from every collected
+//    supported-kind file. sufficientlyCovered is true only when every discovered applicable
+//    file was inspected with a compatible evidence alternative and no execution was inconclusive.
+function executeRule(
+  def: ProductRuleDefinition,
+  record: RequiredCoverageRecord | undefined,
+  collected: Collected,
+  raw: unknown,
+): RuleExecution { /* implement contract above */ }
+
+function observationFor(x: RuleExecution): CoverageObservation {
   return {
-    ruleId,
-    inspectedFiles: applicable.map((f) => f.path),
-    discoveredApplicableFiles: applicable.map((f) => ({ file: f.path, evidenceKindsPresent: f.evidenceKindsPresent })),
+    ruleId: x.result.ruleId,
+    inspectedFiles: x.inspectedApplicableFiles,
+    discoveredApplicableFiles: x.discoveredApplicableFiles,
   };
 }
 
@@ -659,21 +800,29 @@ export function makeProductValidator(validatorId: string) {
       );
     }
 
-    const ctx = toCheckContext(collected, context);
-    const rules: ProductRuleResult[] = gen.ownedRuleIds
+    const recordById = new Map(policy.requiredCoverageByScope.map((c) => [c.ruleId, c]));
+    const executions: RuleExecution[] = gen.ownedRuleIds
       .map((id) => getRuleById(id))
       .filter((d): d is NonNullable<typeof d> => !!d && typeof d.checkProduct === 'function')
-      .map((d) => d.checkProduct!(ctx));
+      .map((d) => executeRule(d, recordById.get(d.ruleId), collected, context));
+    const rules = executions.map((x) => x.result);
 
-    const recordById = new Map(policy.requiredCoverageByScope.map((c) => [c.ruleId, c]));
-    const coverageObservations = policy.requiredRuleIds.map((id) => observationFor(id, recordById.get(id), collected.files));
+    const coverageObservations = executions
+      .filter((x) => policy.requiredRuleIds.includes(x.result.ruleId))
+      .map(observationFor);
 
-    const inspectedFiles = collected.files.map((f) => f.path);
+    const inspectedFiles = collected.inspectedFiles;
+    const skippedFiles = collected.skippedFiles;
     const supportedSourceKinds = [...new Set(collected.files.map((f) => f.sourceKind))];
+    const unsupportedSourceKinds = [...new Set(collected.discovered.filter((d) => d.outcome === 'unsupported').map((d) => d.sourceKind))];
+    const measuredScope = [...new Set(executions
+      .filter((x) => x.sufficientlyCovered && x.result.status !== 'inconclusive')
+      .map((x) => getRuleById(x.result.ruleId)!.registryScope))];
     const runCoverage: RunCoverage = {
-      inspectedFiles, skippedFiles: [],
-      supportedSourceKinds, unsupportedSourceKinds: [],
-      measuredScope: gen.registryScope, unverifiedScope: [],
+      inspectedFiles, skippedFiles,
+      supportedSourceKinds, unsupportedSourceKinds,
+      measuredScope,
+      unverifiedScope: gen.registryScope.filter((s) => !measuredScope.includes(s)),
     };
 
     return evaluateCleanPolicy({ validatorId, rules, coverageObservations, runCoverage }, policy);
@@ -683,6 +832,22 @@ export function makeProductValidator(validatorId: string) {
 function emptyRun(): RunCoverage {
   return { inspectedFiles: [], skippedFiles: [], supportedSourceKinds: [], unsupportedSourceKinds: [], measuredScope: [], unverifiedScope: [] };
 }
+```
+
+- [ ] **Step 2.7a: Add execution/coverage regression cases before implementation, verify FAIL, then make them pass.** Extend `product-validator-pipeline.test.ts` with:
+
+1. A file-scoped injected check over `good.css` and `bad.css` where only `good.css` passes. Assert the aggregate rule verdict is `fail`, the check was called twice with one-file contexts, and `CoverageObservation.discoveredApplicableFiles` is exactly `['good.css', 'bad.css']`.
+2. A supported unreadable or oversized applicable file plus an inspected applicable file. Assert the required rule is `inconclusive`, the gap remains in `discoveredApplicableFiles`, only the inspected file is in `inspectedFiles`, and `coverage.skippedFiles` is non-empty.
+3. A mixed supported/unsupported project. Assert `unsupportedSourceKinds` is non-empty and contains the matrix-derived unsupported extension kind.
+4. A conclusive covered rule and an inconclusive/gapped rule with different registry scopes. Assert only the first scope is in `measuredScope`, and the second is in `unverifiedScope`.
+5. A root collection failure. Assert validator status `error` and `normalizedErrorCategory === 'unreadable_input'`.
+
+These tests must inspect the actual result/observation data through a small exported `runValidatorForTest` or injectable execution seam. Do not test private behavior by duplicating the algorithm.
+
+```bash
+cd sidecoach
+npx ts-node src/__tests__/product-validator-pipeline.test.ts
+# expect FAIL before executeRule/coverage implementation, then product-validator-pipeline: OK after
 ```
 
 - [ ] **Step 2.8: Attach `validateProduct` in `src/flow-validation-capabilities.ts`.** Import the factory and assign in the registration literals:
@@ -710,19 +875,21 @@ export const VALIDATOR_REGISTRATIONS: ProductValidatorRegistration[] = [
 
 ```bash
 cd sidecoach
-npx ts-node src/__tests__/product-validator-pipeline.test.ts   # product-validator-pipeline: OK
+npx ts-node src/__tests__/project-collector.test.ts             # project-collector: OK
+npx ts-node src/__tests__/product-validator-pipeline.test.ts    # product-validator-pipeline: OK
 npx ts-node scripts/generate-validators.ts --check             # OK (no drift from attaching functions)
-npm run build && npm test                                      # run-tests: 21 suite(s) passed
-git add -A && git commit -m "lane-p4a2: four-status checkProduct/validateProduct pipeline + recursive collector"
+npm run build && npm test                                      # run-tests: 22 suite(s) passed
+git add src/validators/check-context.ts src/validators/project-collector.ts src/validators/run-validator.ts src/validators/checks/index.ts src/validators/checks/polish-checks.ts src/validators/checks/a11y-checks.ts src/validators/checks/theming-checks.ts src/validators/checks/anti-pattern-checks.ts src/product-rule-registry.ts src/flow-validation-capabilities.ts src/__tests__/project-collector.test.ts src/__tests__/product-validator-pipeline.test.ts scripts/run-tests.ts
+git commit -m "lane-p4a2: add truthful four-status partial-static validator pipeline"
 ```
 
 ---
 
 ## Task 3: polish-standard slice - port the 18 remaining polish checks
 
-**Files:** Modify `src/validators/checks/polish-checks.ts`; Test `src/__tests__/polish-checks.test.ts`.
+**Files:** Modify `src/polish-standard-validator.ts` only as needed to export reusable source predicates; Modify `src/validators/checks/polish-checks.ts`; Test `src/__tests__/polish-checks.test.ts`.
 
-Port the HARDENED static logic from `polish-standard-validator.ts` (ids 1-17, 21, 22; id 19 already done in Task 2). The two computed-style rules (2, 16) and the dom rule (22) return `inconclusive` when their browser evidence is absent (which it always is in P4a-2). Every css-rule/markup rule: no evidence collected -> `inconclusive`; evidence present, feature absent -> `fail`; present and satisfied -> `pass`; declared N/A condition met -> `not_applicable`.
+Adapt the HARDENED static logic from `polish-standard-validator.ts` (ids 1-17, 21, 22; id 19 already done in Task 2). Extract every static source predicate used by these rules into named exported helpers in `polish-standard-validator.ts`, update the existing validator callbacks to call those helpers, and reuse the same helpers from `polish-checks.ts`. Do not independently rewrite any regex, substring predicate, threshold, or option. Preserve every source precondition and option. The two computed-style rules (2, 16) and the dom rule (22) remain owned-but-non-required and return `inconclusive` without browser evidence. Every static rule first runs its concrete applicability probe: unknown/missing evidence -> `inconclusive`; conclusively no target -> `not_applicable`; applicable target missing the required feature -> `fail`; satisfied -> `pass`.
 
 - [ ] **Step 3.1: Failing test first** -> `src/__tests__/polish-checks.test.ts`. It exercises the four-status contract for a representative spread (a css-rule pass/fail, an N/A rule, a computed-style inconclusive, the absence-pass elimination):
 
@@ -741,14 +908,15 @@ function run() {
 
   // css-rule: present-feature -> pass; present-css-missing-feature -> fail; no-css -> inconclusive
   if (get('polish/scale-on-press')(ctxCss(':active { transform: scale(0.96); }')).status !== 'pass') throw new Error('scale-on-press present must pass');
-  if (get('polish/scale-on-press')(ctxCss('.x { color: red; }')).status !== 'fail') throw new Error('scale-on-press missing must fail');
+  if (get('polish/scale-on-press')(ctxCss('.btn:active { color: red; }')).status !== 'fail') throw new Error('applicable scale-on-press missing must fail');
+  if (get('polish/scale-on-press')(ctxCss('.prose { color: red; }')).status !== 'not_applicable') throw new Error('no interactive target must be N/A');
   if (get('polish/scale-on-press')(empty).status !== 'inconclusive') throw new Error('scale-on-press no-css must be inconclusive');
 
   // NEGATION rule: transition: all present -> fail; absent -> pass (css present)
   if (get('polish/no-transition-all')(ctxCss('.x { transition: all 1s; }')).status !== 'fail') throw new Error('transition:all must fail');
   if (get('polish/no-transition-all')(ctxCss('.x { transition: opacity 1s; }')).status !== 'pass') throw new Error('explicit transition must pass');
 
-  // N/A: tabular-nums is not_applicable when no dynamic-number selectors exist
+  // N/A: tabular-nums is not_applicable only when sufficient evidence establishes no dynamic-number target
   if (get('polish/tabular-nums')(ctxCss('.btn { color: red; }')).status !== 'not_applicable') throw new Error('tabular-nums with no number selectors must be N/A');
   if (get('polish/tabular-nums')(ctxCss('.price { font-variant-numeric: tabular-nums; }')).status !== 'pass') throw new Error('tabular-nums present must pass');
   if (get('polish/tabular-nums')(ctxCss('.price { color: red; }')).status !== 'fail') throw new Error('number selector without tabular-nums must fail');
@@ -757,11 +925,14 @@ function run() {
   const radius = POLISH_CHECKS['polish/concentric-radius'];
   if (radius && radius(empty).status === 'pass') throw new Error('computed-style rule must never pass on absent evidence');
   if (radius && radius(empty).status !== 'inconclusive') throw new Error('computed-style rule must be inconclusive without browser evidence');
+  if (radius && radius({ ...empty, computedStyle: { borderRadius: '8px' } }).status !== 'inconclusive') throw new Error('ad hoc computed style must not bypass P4b collector');
 
   console.log('polish-checks: OK');
 }
 run();
 ```
+
+Add a table-driven applicability test covering every Polish `not_applicable` row from the contract table. Each row supplies: `unknownEvidence -> inconclusive`, `knownNoTarget -> not_applicable`, `applicableMissingFeature -> fail`, and `applicableSatisfied -> pass`. This prevents a feature absence from being mistaken for N/A.
 
 - [ ] **Step 3.2: Run, verify FAIL** -> `no check for polish/scale-on-press`.
 
@@ -774,7 +945,9 @@ function cssPresence(ctx: ProductCheckContext, needle: (css: string) => boolean,
 }
 ```
 
-Implement each rule from its `polish-standard-validator.ts` source (the substring/regex tests are copied verbatim; only the absence handling changes from `?? false` to the inconclusive guard). Concrete bodies:
+Implement each rule from its `polish-standard-validator.ts` source. The existing validator and the new adapter must call the same exported predicate helpers; no second regex/predicate implementation is allowed. Only the four-status/applicability wrapper is new. The bodies below are shape guidance; replace their inline predicates with the extracted source helpers, and pin every preserved precondition with regression tests.
+
+Every exported static Polish check is wrapped by `withRuleApplicability(canonicalRuleKey, rawCheck)` from `check-context.ts`. That wrapper consults the complete applicability table: unknown -> inconclusive, false -> not_applicable, true -> invoke the faithful raw source predicate. The direct raw bodies below must never be exported or placed in `POLISH_CHECKS` without that wrapper.
 
 ```typescript
 export const checkScaleOnPress = (ctx: ProductCheckContext): RuleVerdict =>
@@ -858,18 +1031,13 @@ export const checkOpticalAlignment = (ctx: ProductCheckContext): RuleVerdict =>
 
 // computed-style / dom rules: browser evidence absent in P4a-2 -> inconclusive (NOT pass).
 export const checkConcentricRadius = (ctx: ProductCheckContext): RuleVerdict =>
-  ctx.computedStyle ? (ctx.computedStyle.borderRadius && ctx.computedStyle.borderRadius !== '0px' ? pass('concentric radius set') : fail('border radius should follow the concentric rule', [], 'outer_radius = inner_radius + padding'))
-                    : inconclusive('concentric radius needs computed-style evidence (browser collector, P4b)', 'unsupported_runtime');
+  inconclusive('concentric radius needs computed-style evidence (browser collector, P4b)', 'unsupported_runtime');
 export const checkTypographyRhythm = (ctx: ProductCheckContext): RuleVerdict =>
-  ctx.computedStyle ? (ctx.computedStyle.lineHeight && ctx.computedStyle.lineHeight !== 'normal' ? pass('vertical rhythm set') : fail('establish typography rhythm', [], 'margin-bottom = line-height * font-size'))
-                    : inconclusive('typography rhythm needs computed-style evidence (browser collector, P4b)', 'unsupported_runtime');
-export const checkGenericity = (ctx: ProductCheckContext): RuleVerdict => {
-  const score = (ctx.designTokens as any)?.genericityScore;
-  if (typeof score !== 'number') return inconclusive('genericity needs a collected design-token metric (P4b)', 'unsupported_runtime');
-  return score < 55 ? pass(`genericityScore ${score}`) : fail(`design genericityScore ${score} too high`, [], 'Add unique design personality');
-};
+  inconclusive('typography rhythm needs computed-style evidence (browser collector, P4b)', 'unsupported_runtime');
+export const checkGenericity = (ctx: ProductCheckContext): RuleVerdict =>
+  inconclusive('genericity needs browser/design-token evidence (P4b)', 'unsupported_runtime');
 
-export const POLISH_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict> = {
+const RAW_POLISH_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict> = {
   'polish/reduced-motion-respect': checkReducedMotion,
   'polish/scale-on-press': checkScaleOnPress,
   'polish/concentric-radius': checkConcentricRadius,
@@ -890,9 +1058,12 @@ export const POLISH_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVer
   'polish/state-completeness': checkStateCompleteness,
   'polish/anti-pattern-genericity': checkGenericity,
 };
+export const POLISH_CHECKS = Object.fromEntries(
+  Object.entries(RAW_POLISH_CHECKS).map(([key, fn]) => [key, withRuleApplicability(key, fn)]),
+) as Record<string, (ctx: ProductCheckContext) => RuleVerdict>;
 ```
 
-(Add the `cssPresence` helper + the `import { pass, fail, notApplicable, inconclusive, hasCss, hasMarkup } from '../check-context';` line. Keep `checkReducedMotion` from Task 2.)
+(Add the `cssPresence` helper + the `import { pass, fail, notApplicable, inconclusive, hasCss, hasMarkup, withRuleApplicability } from '../check-context';` line. Keep `checkReducedMotion` from Task 2, but include it in the same wrapper map.)
 
 - [ ] **Step 3.4: Verify Task 3** ->
 
@@ -901,8 +1072,9 @@ cd sidecoach
 # register the suite in scripts/run-tests.ts first:  { rel: 'src/__tests__/polish-checks.test.ts', required: true },
 npx ts-node src/__tests__/polish-checks.test.ts                # polish-checks: OK
 npx ts-node src/__tests__/product-validator-pipeline.test.ts   # still OK (reduced-motion unchanged)
-npm test                                                       # run-tests: 22 suite(s) passed
-git add -A && git commit -m "lane-p4a2: port 18 polish-standard checks to four-status verdicts"
+npm test                                                       # run-tests: 23 suite(s) passed
+git add src/polish-standard-validator.ts src/validators/checks/polish-checks.ts src/__tests__/polish-checks.test.ts scripts/run-tests.ts
+git commit -m "lane-p4a2: adapt polish-standard checks to four-status verdicts"
 ```
 
 ---
@@ -911,7 +1083,7 @@ git add -A && git commit -m "lane-p4a2: port 18 polish-standard checks to four-s
 
 **Files:** Modify `src/validators/checks/a11y-checks.ts`; Test `src/__tests__/a11y-checks.test.ts`.
 
-`focus-visible` (id 18) is a real css-rule check. `min-hit-area` (id 5, dom) and `color-contrast` (id 20, contrast) have NO static source: they return `inconclusive` (never pass) until a browser collector exists, EXCEPT when the optional browser evidence is supplied (then they produce a real pass/fail). Because they are non-required, an inconclusive on them does NOT block the validator; only `focus-visible` gates.
+`focus-visible` (id 18) is a real css-rule check. `min-hit-area` (id 5, dom) and `color-contrast` (id 20, contrast) have NO static source: they always return `inconclusive` in P4a-2, even if a unit caller supplies ad hoc browser-shaped fields, because P4b owns the trusted browser collector and coverage contract. Because they are non-required, their inconclusive results do NOT block the validator; only `focus-visible` gates.
 
 - [ ] **Step 4.1: Failing test first** -> `src/__tests__/a11y-checks.test.ts`:
 
@@ -927,15 +1099,15 @@ function run() {
   if (!fv || !mh || !cc) throw new Error('all three a11y checks must be present');
 
   if (fv(ctxCss('a:focus-visible { outline: 2px solid; }')).status !== 'pass') throw new Error('focus-visible present must pass');
-  if (fv(ctxCss('.x { color: red; }')).status !== 'fail') throw new Error('focus-visible missing (css present) must fail');
+  if (fv(ctxCss('.btn:hover { color: red; }')).status !== 'fail') throw new Error('focus-visible missing for an applicable interactive target must fail');
+  if (fv(ctxCss('.prose { color: red; }')).status !== 'not_applicable') throw new Error('known no focusable target must be N/A');
   if (fv(empty).status !== 'inconclusive') throw new Error('focus-visible no-css must be inconclusive');
 
   // dom-only rule: inconclusive without DOM evidence, never pass
   if (mh(ctxCss('.btn { min-height: 48px; }')).status !== 'inconclusive') throw new Error('min-hit-area must be inconclusive without DOM evidence');
-  // contrast-only rule: inconclusive without contrast evidence; real verdict when supplied
+  // contrast-only rule stays inconclusive until P4b's trusted browser collector
   if (cc(empty).status !== 'inconclusive') throw new Error('color-contrast must be inconclusive without contrast evidence');
-  if (cc({ ...empty, contrast: { wcagAA: true, ratio: 5 } }).status !== 'pass') throw new Error('color-contrast with AA evidence must pass');
-  if (cc({ ...empty, contrast: { wcagAA: false, ratio: 2 } }).status !== 'fail') throw new Error('color-contrast below AA must fail');
+  if (cc({ ...empty, contrast: { wcagAA: true, ratio: 5 } }).status !== 'inconclusive') throw new Error('ad hoc contrast evidence must not bypass P4b collector');
 
   console.log('a11y-checks: OK');
 }
@@ -948,25 +1120,25 @@ run();
 
 ```typescript
 import type { ProductCheckContext, RuleVerdict } from '../check-context';
-import { pass, fail, inconclusive, hasCss } from '../check-context';
+import { pass, fail, notApplicable, inconclusive, hasCss, focusableTargetApplicability } from '../check-context';
 
 export const checkFocusVisible = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
+  const applicable = focusableTargetApplicability(ctx);
+  if (applicable === 'unknown') return inconclusive('cannot establish focusable targets from collected evidence', 'unreadable_input');
+  if (!applicable) return notApplicable('no focusable element or interactive selector');
   return ctx.cssText.includes(':focus-visible')
     ? pass(':focus-visible present')
     : fail('implement :focus-visible for keyboard navigation', [], 'Add :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }');
 };
 
-// dom-only: no static source can provide hit-area geometry (spec 98-119). Honest
-// inconclusive until a browser collector (P4b). Optional DOM evidence is allowed.
+// dom-only: no static source can provide hit-area geometry. Honest inconclusive until P4b.
 export const checkMinHitArea = (ctx: ProductCheckContext): RuleVerdict =>
   inconclusive('hit-area geometry needs DOM evidence (browser collector, P4b)', 'unsupported_runtime');
 
-// contrast-only: same. Honors optional contrast evidence when present.
-export const checkColorContrast = (ctx: ProductCheckContext): RuleVerdict => {
-  if (!ctx.contrast) return inconclusive('contrast ratio needs measured contrast evidence (browser collector, P4b)', 'unsupported_runtime');
-  return ctx.contrast.wcagAA ? pass(`contrast ${ctx.contrast.ratio.toFixed(2)}:1 meets AA`) : fail(`contrast ${ctx.contrast.ratio.toFixed(2)}:1 below AA`, [], 'Achieve WCAG AA minimum (4.5:1 for text)');
-};
+// contrast-only: same. P4a-2 does not trust ad hoc browser-shaped fields.
+export const checkColorContrast = (ctx: ProductCheckContext): RuleVerdict =>
+  inconclusive('contrast ratio needs measured contrast evidence (browser collector, P4b)', 'unsupported_runtime');
 
 export const A11Y_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict> = {
   'a11y/focus-visible': checkFocusVisible,
@@ -981,17 +1153,18 @@ export const A11Y_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdi
 cd sidecoach
 # register:  { rel: 'src/__tests__/a11y-checks.test.ts', required: true },
 npx ts-node src/__tests__/a11y-checks.test.ts                 # a11y-checks: OK
-npm test                                                      # run-tests: 23 suite(s) passed
-git add -A && git commit -m "lane-p4a2: static-a11y checks (focus-visible css; min-hit-area/contrast inconclusive)"
+npm test                                                      # run-tests: 24 suite(s) passed
+git add src/validators/check-context.ts src/validators/checks/a11y-checks.ts src/__tests__/a11y-checks.test.ts scripts/run-tests.ts
+git commit -m "lane-p4a2: adapt static-a11y checks for partial-static floor"
 ```
 
 ---
 
 ## Task 5: theming slice - port the taste token checks
 
-**Files:** Modify `src/validators/checks/theming-checks.ts`; Test `src/__tests__/theming-checks.test.ts`.
+**Files:** Modify `src/taste-validator.ts` only to export reusable scanner/context helpers; Modify `src/validators/checks/theming-checks.ts`; Test `src/__tests__/theming-checks.test.ts`.
 
-Port `taste-validator.ts` `checkHexInHoverWithCssVars` (line 226) and `checkBorderRadiusInconsistency` (line 289) into per-rule verdicts. The taste source iterates CSS blocks via `iterateCssBlocks`; the adapted check operates on `ctx.cssText`. Faithfully preserve: hex-in-interactive-state only fires when the file ALSO defines CSS custom properties (otherwise there is no token system to violate); border-radius fires when more than 2 distinct non-var radius literals appear.
+Adapt `taste-validator.ts` `checkHexInHoverWithCssVars` (line 226) and `checkBorderRadiusInconsistency` (line 289) into per-rule verdicts by exporting and reusing its existing `detectTailwindContext`, `blockReferencesToken`, CSS block iterator, and radius-token predicates. Do not create a lightweight replacement parser. Faithfully preserve every option and precondition: explicit `ValidateTasteOptions.tailwindDetected`, Tailwind/shadcn content detection, `hsl(var(--token))`, `@apply`/semantic token utility carve-outs, and token-derived radius carve-outs. Hex-in-interactive-state is applicable only when both an interactive state and a token system are established; border-radius is applicable only when a radius declaration/utility is established.
 
 - [ ] **Step 5.1: Failing test first** -> `src/__tests__/theming-checks.test.ts`:
 
@@ -1013,6 +1186,9 @@ function run() {
   if (hex(ctxCss(offending)).status !== 'fail') throw new Error('hardcoded hex in :hover with tokens defined must fail');
   // tokens defined, interactive state token-driven -> pass
   if (hex(ctxCss(':root { --c: #abc; } .b:hover { color: var(--c); }')).status !== 'pass') throw new Error('token-driven hover must pass');
+  // faithful Tailwind/shadcn carve-out: token utility makes incidental hex non-offending
+  const tw = '@tailwind base; :root { --primary: 222 47% 11%; } .b:hover { @apply bg-primary/90; color: #fff; }';
+  if (hex(ctxCss(tw)).status !== 'pass') throw new Error('Tailwind token utility must not false-positive');
   // no tokens in file at all -> not_applicable (no token system to violate)
   if (hex(ctxCss('.b:hover { color: #ff0000; }')).status !== 'not_applicable') throw new Error('no CSS vars -> N/A');
 
@@ -1029,27 +1205,18 @@ run();
 
 - [ ] **Step 5.2: Run, verify FAIL** -> `both theming checks must be present`.
 
-- [ ] **Step 5.3: Implement** `theming-checks.ts` (adapted from `taste-validator.ts`; uses a lightweight block iterator over `cssText`):
+- [ ] **Step 5.3: Implement** `theming-checks.ts` by calling the exported `taste-validator.ts` scanner helpers and mapping their result to four-status verdicts. The following is wrapper shape only; do not duplicate `blocks`, Tailwind detection, token-reference, or radius-value logic in the adapter:
 
 ```typescript
 import type { ProductCheckContext, RuleVerdict } from '../check-context';
 import { pass, fail, notApplicable, inconclusive, hasCss } from '../check-context';
 
-function* blocks(css: string): Generator<{ selector: string; body: string }> {
-  const re = /([^{}]+)\{([^}]*)\}/g;
-  for (const m of css.matchAll(re)) yield { selector: m[1].trim(), body: m[2] };
-}
-
 export const checkHexInInteractiveState = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
-  const hasVars = /--[\w-]+\s*:/.test(ctx.cssText) || /var\(\s*--[\w-]+/.test(ctx.cssText);
-  if (!hasVars) return notApplicable('no CSS custom properties defined; no token system to violate');
-  const offenders: string[] = [];
-  for (const b of blocks(ctx.cssText)) {
-    if (!/(:hover|:active)\b/.test(b.selector)) continue;
-    if (/var\(\s*--[\w-]+/.test(b.body)) continue;       // token-driven state is compliant
-    if (/#[0-9a-fA-F]{3,8}\b/.test(b.body)) offenders.push(b.selector.slice(0, 60));
-  }
+  const applicability = interactiveTokenApplicability(ctx);
+  if (applicability === 'unknown') return inconclusive('cannot establish interactive token applicability', 'unreadable_input');
+  if (!applicability) return notApplicable('no interactive token-system target');
+  const offenders = scanHexInHoverWithCssVars(ctx.markup, ctx.cssText, ctx.tasteOptions);
   return offenders.length
     ? fail(`interactive state(s) use hardcoded hex while tokens exist: ${offenders.join(', ')}`, offenders, 'Derive the interactive state from a token, e.g. var(--c-brand-hover)')
     : pass('interactive states are token-driven');
@@ -1057,16 +1224,9 @@ export const checkHexInInteractiveState = (ctx: ProductCheckContext): RuleVerdic
 
 export const checkBorderRadiusConsistency = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
-  const values = new Set<string>();
-  for (const m of ctx.cssText.matchAll(/border-radius\s*:\s*([^;}]+)/g)) {
-    const v = m[1].trim();
-    if (v.startsWith('var(')) continue;
-    values.add(v);
-  }
-  if (values.size === 0) return notApplicable('no border-radius literals to check');
-  return values.size > 2
-    ? fail(`${values.size} distinct border-radius literals (${[...values].join(', ')})`, [], 'Use 1-2 named radius tokens; concentric radii derive from those')
-    : pass(`${values.size} border-radius literal(s) within tolerance`);
+  if (!radiusApplicability(ctx)) return notApplicable('no radius declaration or rounded utility');
+  const violations = scanBorderRadiusInconsistency(ctx.markup, ctx.cssText, ctx.tasteOptions);
+  return violations.length ? fail(violations[0].message, [], violations[0].remediation) : pass('radius usage satisfies taste scanner');
 };
 
 export const THEMING_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict> = {
@@ -1081,17 +1241,18 @@ export const THEMING_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVe
 cd sidecoach
 # register:  { rel: 'src/__tests__/theming-checks.test.ts', required: true },
 npx ts-node src/__tests__/theming-checks.test.ts             # theming-checks: OK
-npm test                                                     # run-tests: 24 suite(s) passed
-git add -A && git commit -m "lane-p4a2: theming token checks ported from taste-validator"
+npm test                                                     # run-tests: 25 suite(s) passed
+git add src/taste-validator.ts src/validators/check-context.ts src/validators/checks/theming-checks.ts src/__tests__/theming-checks.test.ts scripts/run-tests.ts
+git commit -m "lane-p4a2: adapt faithful taste token scanners"
 ```
 
 ---
 
 ## Task 6: anti-pattern slice - port the 6 ban detectors
 
-**Files:** Modify `src/validators/checks/anti-pattern-checks.ts`; Test `src/__tests__/anti-pattern-checks.test.ts`.
+**Files:** Modify `src/absolute-ban-detector.ts` only to export its six existing scanner functions; Modify `src/validators/checks/anti-pattern-checks.ts`; Test `src/__tests__/anti-pattern-checks.test.ts`.
 
-Port the scanners from `absolute-ban-detector.ts`. The three precise CSS detectors (`gradient-text`, `glassmorphism-default`, `side-stripe-borders`) scan `ctx.cssText`; the three HTML-structural heuristics (`identical-card-grids`, `hero-metric-template`, `modal-as-first-thought`) scan `ctx.markup`. Evidence-absence rule: a css-detector with no CSS collected -> `inconclusive`; a markup-detector with no markup collected -> `inconclusive`. Evidence present without the ban -> `pass`. Ban present -> `fail` (the markup heuristics are still `fail` results, but their declared `minor` severity makes them non-blocking by construction, so a clean validator can tolerate them).
+Reuse the scanners from `absolute-ban-detector.ts`; do not rederive their regexes in the adapter. Export the existing six scanner functions without changing their behavior, then map findings to four-status verdicts. This preserves every source precondition, especially `scanIdenticalCardGrids` requiring `grid-template-columns: repeat(N, 1fr)` with `N >= 3` before repeated cards can match. The three precise CSS detectors scan each applicable file. The three HTML-structural heuristics are declared `scope: 'project'` and scan assembled markup because their source semantics reason over a page shape.
 
 - [ ] **Step 6.1: Failing test first** -> `src/__tests__/anti-pattern-checks.test.ts`:
 
@@ -1123,6 +1284,10 @@ function run() {
   if (mo(ctxMarkup('<div class="modal"><form><input></form></div>')).status !== 'fail') throw new Error('modal-as-first-thought must fail');
   if (mo(empty).status !== 'inconclusive') throw new Error('markup detector with no markup must be inconclusive');
   if (cg(ctxMarkup('<main><p>hi</p></main>')).status !== 'pass') throw new Error('clean markup must pass');
+  const repeatedCardsWithoutRepeatGrid = '<main><article class="card"><h2>A</h2><p>x</p></article><article class="card"><h2>B</h2><p>x</p></article><article class="card"><h2>C</h2><p>x</p></article></main>';
+  if (cg(ctxMarkup(repeatedCardsWithoutRepeatGrid)).status !== 'pass') throw new Error('identical cards without repeat(...) grid precondition must not find');
+  const repeatedCardsWithRepeatGrid = '<style>.grid{display:grid;grid-template-columns:repeat(3,1fr)}</style><main class="grid"><article class="card"><h2>A</h2><p>x</p></article><article class="card"><h2>B</h2><p>x</p></article><article class="card"><h2>C</h2><p>x</p></article></main>';
+  if (cg(ctxMarkup(repeatedCardsWithRepeatGrid)).status !== 'fail') throw new Error('repeat(...) grid plus repeated cards must preserve source finding');
 
   console.log('anti-pattern-checks: OK');
 }
@@ -1131,67 +1296,52 @@ run();
 
 - [ ] **Step 6.2: Run, verify FAIL** -> `missing gt`.
 
-- [ ] **Step 6.3: Implement** `anti-pattern-checks.ts` (regexes transcribed from `absolute-ban-detector.ts` scan functions):
+- [ ] **Step 6.3: Implement** `anti-pattern-checks.ts` as a thin adapter over the exported `absolute-ban-detector.ts` scanner functions. The code below describes the verdict mapping, but DELETE the duplicated regex bodies shown in v1 rather than maintaining two scanners:
 
 ```typescript
 import type { ProductCheckContext, RuleVerdict } from '../check-context';
 import { pass, fail, inconclusive, hasCss, hasMarkup } from '../check-context';
+import {
+  scanGradientText, scanGlassmorphism, scanSideStripeBorders,
+  scanIdenticalCardGrids, scanHeroMetricTemplate, scanModalAsFirstThought,
+} from '../../absolute-ban-detector';
+import type { AbsoluteBanFinding } from '../../absolute-ban-detector';
 
-// --- precise CSS detectors (operate per CSS rule body) ---
-function* cssBlocks(css: string): Generator<{ selector: string; body: string }> {
-  for (const m of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) yield { selector: m[1].trim(), body: m[2] };
+function verdictFromBanFindings(findings: AbsoluteBanFinding[], cleanMessage: string): RuleVerdict {
+  return findings.length
+    ? fail(findings[0].message, findings.map((f) => `${f.file}:${f.line}`), findings[0].remediation)
+    : pass(cleanMessage);
 }
 
 export const checkGradientText = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
-  for (const b of cssBlocks(ctx.cssText)) {
-    const clip = /background-clip\s*:\s*text|-webkit-background-clip\s*:\s*text/i.test(b.body);
-    const grad = /(?:linear|radial|conic)-gradient\s*\(/i.test(b.body);
-    if (clip && grad) return fail(`gradient text in "${b.selector.slice(0, 60)}"`, [b.selector.slice(0, 60)], 'Use the gradient on a background element, not the text');
-  }
-  return pass('no gradient-text ban');
+  return verdictFromBanFindings(scanGradientText(ctx.cssText, '<collected-file>'), 'no gradient-text ban');
 };
 
 export const checkGlassmorphism = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
-  for (const b of cssBlocks(ctx.cssText)) {
-    const blur = /backdrop-filter\s*:\s*[^;]*\bblur\s*\(/i.test(b.body);
-    let lowAlpha = false;
-    for (const v of b.body.matchAll(/(?:rgba|hsla)\s*\(\s*[\d.,%\s]+,\s*(0?\.\d+|0|1)\s*\)/gi)) {
-      if (parseFloat(v[1]) <= 0.4) { lowAlpha = true; break; }
-    }
-    if (blur && lowAlpha) return fail(`glassmorphism default in "${b.selector.slice(0, 60)}"`, [b.selector.slice(0, 60)], 'Reserve glassmorphism for overlay/modal contexts');
-  }
-  return pass('no glassmorphism-default ban');
+  return verdictFromBanFindings(scanGlassmorphism(ctx.cssText, '<collected-file>'), 'no glassmorphism-default ban');
 };
 
 export const checkSideStripeBorders = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
-  for (const b of cssBlocks(ctx.cssText)) {
-    const border = /border-(?:left|right)\s*:\s*([2-9]|[1-9][0-9]+)\s*px\s+(?:solid|dashed|dotted|double)\s+(?!transparent|inherit|currentColor)/i.test(b.body);
-    const targetable = /\.(?:card|alert|callout|notice|banner|install|tile|list-item|message|toast|tip)\b|aside\b|blockquote\b/i.test(b.selector);
-    if (border && targetable) return fail(`side-stripe border on "${b.selector.slice(0, 60)}"`, [b.selector.slice(0, 60)], 'Use border-bottom or box-shadow, not a colored side stripe');
-  }
-  return pass('no side-stripe-borders ban');
+  return verdictFromBanFindings(scanSideStripeBorders(ctx.cssText, '<collected-file>'), 'no side-stripe-borders ban');
 };
 
 // --- HTML-structural heuristics (declared minor; still emit fail when matched) ---
 export const checkIdenticalCardGrids = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasMarkup(ctx)) return inconclusive('no markup source collected', 'unreadable_input');
-  const re = /(<(?:a|div|article|li)\s+[^>]*class\s*=\s*["']([^"']*\b(?:tool-card|card|tile|feature|item|service|capability)\b[^"']*)["'][^>]*>[\s\S]*?<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>[\s\S]*?<p[^>]*>[\s\S]*?<\/p>[\s\S]*?<\/(?:a|div|article|li)>\s*){3,}/i;
-  return re.test(ctx.markup) ? fail('3+ identical card-grid triplets', [], 'Vary card sizes/layout to create hierarchy') : pass('no identical-card-grids shape');
+  return verdictFromBanFindings(scanIdenticalCardGrids(ctx.markup, '<assembled-markup>'), 'no identical-card-grids shape');
 };
 
 export const checkHeroMetricTemplate = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasMarkup(ctx)) return inconclusive('no markup source collected', 'unreadable_input');
-  const re = /(<(?:div|article|section|li)\s+[^>]*class\s*=\s*["'][^"']*\b(?:stat|metric|kpi|number|count)\b[^"']*["'][^>]*>[\s\S]*?<\/(?:div|article|section|li)>\s*){3,}/i;
-  return re.test(ctx.markup) ? fail('3+ stat/metric blocks (hero-metric template shape)', [], 'Use asymmetric proportions; avoid the SaaS hero-metric template') : pass('no hero-metric-template shape');
+  return verdictFromBanFindings(scanHeroMetricTemplate(ctx.markup, '<assembled-markup>'), 'no hero-metric-template shape');
 };
 
 export const checkModalAsFirstThought = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasMarkup(ctx)) return inconclusive('no markup source collected', 'unreadable_input');
-  const re = /<(?:dialog|div)\s+[^>]*(?:role\s*=\s*["']dialog["']|class\s*=\s*["'][^"']*\b(?:modal|dialog|popup)\b[^"']*["'])[^>]*>[\s\S]*?<form\b[\s\S]*?<\/form>[\s\S]*?<\/(?:dialog|div)>/i;
-  return re.test(ctx.markup) ? fail('modal containing a form', [], 'Consider inline editing or progressive disclosure first') : pass('no modal-as-first-thought shape');
+  return verdictFromBanFindings(scanModalAsFirstThought(ctx.markup, '<assembled-markup>'), 'no modal-as-first-thought shape');
 };
 
 export const ANTI_PATTERN_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict> = {
@@ -1210,8 +1360,9 @@ export const ANTI_PATTERN_CHECKS: Record<string, (ctx: ProductCheckContext) => R
 cd sidecoach
 # register:  { rel: 'src/__tests__/anti-pattern-checks.test.ts', required: true },
 npx ts-node src/__tests__/anti-pattern-checks.test.ts        # anti-pattern-checks: OK
-npm test                                                     # run-tests: 25 suite(s) passed
-git add -A && git commit -m "lane-p4a2: anti-pattern ban detectors ported to four-status verdicts"
+npm test                                                     # run-tests: 26 suite(s) passed
+git add src/absolute-ban-detector.ts src/validators/checks/anti-pattern-checks.ts src/__tests__/anti-pattern-checks.test.ts scripts/run-tests.ts
+git commit -m "lane-p4a2: adapt faithful absolute-ban scanners"
 ```
 
 ---
@@ -1269,7 +1420,7 @@ a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 ```
 `fixtures/static-a11y/findings/styles.css` (CSS present, focus-visible ABSENT -> required blocker fail):
 ```css
-.btn { color: #112233; }
+.btn:hover { color: #112233; }
 ```
 `fixtures/static-a11y/inconclusive/` (empty dir, keep with a `.gitkeep` -> no CSS collected -> focus-visible inconclusive -> status inconclusive). NOTE: an empty directory needs a tracked placeholder file; add `fixtures/static-a11y/inconclusive/.gitkeep`.
 
@@ -1319,6 +1470,15 @@ Why this is clean: scale-on-press (scale(0.96)), icon-swap (opacity+scale), no-t
 
 `fixtures/polish-standard/findings/styles.css` (drop reduced-motion -> required blocker fail). Copy `clean/styles.css` MINUS the `@media (prefers-reduced-motion ...)` line.
 
+`polish.animatepresence-initial` is a required markup rule, so BOTH Polish clean and findings fixtures must contain inspected markup. Add the same non-Framer file to both; this provides enough evidence for the applicability probe to resolve `not_applicable` rather than `inconclusive`:
+
+`fixtures/polish-standard/clean/markup.html` and `fixtures/polish-standard/findings/markup.html`:
+```html
+<main><button class="btn" type="button"><span class="icon" aria-hidden="true"></span>Save</button><h1>Settings</h1></main>
+```
+
+The e2e test must assert `polish.animatepresence-initial === 'not_applicable'` in both fixtures and must assert each gating validator reaches exactly `clean`, `findings`, and `inconclusive` for its three manifest entries. No CSS-only Polish fixture is accepted.
+
 `fixtures/polish-standard/inconclusive/.gitkeep` (empty -> required rules inconclusive).
 
 - [ ] **Step 7.4: Run, verify PASS** -> iterate until every fixture yields its target status:
@@ -1335,8 +1495,9 @@ If a clean fixture reports `findings` or `inconclusive`, the failure message lis
 
 ```bash
 cd sidecoach
-npm test                                                     # run-tests: 26 suite(s) passed
-git add -A && git commit -m "lane-p4a2: fixtures + end-to-end validateProduct execution (clean/findings/inconclusive)"
+npm test                                                     # run-tests: 27 suite(s) passed
+git add fixtures/static-a11y fixtures/theming fixtures/anti-pattern fixtures/polish-standard src/__tests__/validator-fixtures-e2e.test.ts scripts/run-tests.ts
+git commit -m "lane-p4a2: add achievable partial-static validator fixtures"
 ```
 
 ---
@@ -1350,49 +1511,93 @@ cd sidecoach
 npx ts-node scripts/generate-validators.ts --check     # OK (registry valid, manifest present, no drift)
 npx ts-node scripts/generate-lanes.ts --check          # OK (unaffected)
 npm run build                                          # exit 0
-npm test                                               # run-tests: 26 suite(s) passed
+npm test                                               # run-tests: 27 suite(s) passed
 ```
 
-`26` = the prior 20 + product-validator-pipeline + polish-checks + a11y-checks + theming-checks + anti-pattern-checks + validator-fixtures-e2e. Every new suite present and `required:true`.
+`27` = the prior 20 + project-collector + product-validator-pipeline + polish-checks + a11y-checks + theming-checks + anti-pattern-checks + validator-fixtures-e2e. Every new suite present and `required:true`.
 
 - [ ] **Step 8.2: Regenerated artifact is committed and drift-free** -> verify `git status --porcelain src/validators.generated.ts` is empty (the file was regenerated in Task 1 and committed; nothing since changed it).
 
 - [ ] **Step 8.3: Hook regression green** -> verify the dotfiles validation/bash guard regression suites still pass unchanged (no behavior in this plan touches them).
 
-- [ ] **Step 8.4: Scope guard** -> this sub-plan must NOT touch lane execution, the mcp-server, or the deferred `domains/*` adaptation. Run the failing blacklist:
+- [ ] **Step 8.4: Scope and staging guard** -> this sub-plan must NOT touch lane execution, the mcp-server, or the deferred `domains/*` adaptation. Compare committed paths to an explicit allowlist, then prove the preexisting-dirty snapshot was not staged, committed, or altered by this work:
 
 ```bash
 cd /Users/spare3/Documents/Github/improv
-leaks="$(git diff --name-only main..lane-p4a2-validator-adaptation \
-  | grep -E 'lane-runner|lane-checkpoint|sidecoach-orchestrator|mcp-server/|src/domains/|flow-handler-tactical-polish|convergence-loop|ralph-loop' || true)"
-test -z "$leaks" || { printf 'SCOPE LEAK:\n%s\n' "$leaks"; exit 1; }
+cat > /tmp/lane-p4a2-allowed-paths.txt <<'EOF'
+sidecoach/fixtures/anti-pattern/
+sidecoach/fixtures/polish-standard/
+sidecoach/fixtures/static-a11y/
+sidecoach/fixtures/theming/
+sidecoach/scripts/run-tests.ts
+sidecoach/src/__tests__/a11y-checks.test.ts
+sidecoach/src/__tests__/anti-pattern-checks.test.ts
+sidecoach/src/__tests__/generate-validators.test.ts
+sidecoach/src/__tests__/polish-checks.test.ts
+sidecoach/src/__tests__/product-rule-registry.test.ts
+sidecoach/src/__tests__/product-validator-pipeline.test.ts
+sidecoach/src/__tests__/project-collector.test.ts
+sidecoach/src/__tests__/theming-checks.test.ts
+sidecoach/src/__tests__/validator-fixtures-e2e.test.ts
+sidecoach/src/absolute-ban-detector.ts
+sidecoach/src/flow-validation-capabilities.ts
+sidecoach/src/polish-standard-validator.ts
+sidecoach/src/product-rule-registry.ts
+sidecoach/src/taste-validator.ts
+sidecoach/src/validator-generation.ts
+sidecoach/src/validators.generated.ts
+sidecoach/src/validators/
+EOF
+git diff --name-only main..lane-p4a2-validator-adaptation | sort > /tmp/lane-p4a2-committed-paths.txt
+bad="$(awk 'NR==FNR { a[++n]=$0; next } { ok=0; for (i=1;i<=n;i++) { if (a[i] ~ /\/$/ ? index($0,a[i])==1 : $0==a[i]) ok=1 } if (!ok) print }' /tmp/lane-p4a2-allowed-paths.txt /tmp/lane-p4a2-committed-paths.txt)"
+test -z "$bad" || { printf 'PATH OUTSIDE ALLOWLIST:\n%s\n' "$bad"; exit 1; }
+sed -E 's/^.. //' /tmp/lane-p4a2-preexisting-dirty.txt | sort -u > /tmp/lane-p4a2-preexisting-paths.txt
+overlap="$(comm -12 /tmp/lane-p4a2-preexisting-paths.txt /tmp/lane-p4a2-committed-paths.txt)"
+test -z "$overlap" || { printf 'PREEXISTING DIRTY PATH COMMITTED:\n%s\n' "$overlap"; exit 1; }
+git status --porcelain | sort > /tmp/lane-p4a2-postexisting-dirty.txt
+diff -u /tmp/lane-p4a2-preexisting-dirty.txt /tmp/lane-p4a2-postexisting-dirty.txt
 echo clean
 ```
 
-Expect `clean`. (The plan deliberately ADAPTS the collector logic into the NEW `src/validators/project-collector.ts` rather than editing `flow-handler-tactical-polish.ts`; wiring the collector into Flow J's handler is P4b.)
+Expect `clean`. Every task stages only its listed owned paths; broad staging is forbidden. Wiring the collector into Flow J's handler is P4b.
 
 - [ ] **Step 8.5: dist** -> no dist commit needed; no CLI/runtime path consumes these entry points yet (P4b wires `validateProduct` into `advanceLane`). If `npm run build` left `dist/` dirty, leave it uncommitted.
 
 ---
 
+## Acceptance
+
+- The delivered claim is the STATIC-DETERMINABLE PARTIAL floor only. The five browser-evidence rules remain owned-but-non-required, return `inconclusive` without browser evidence, and contribute only to `unverifiedScope`. Copy/linguistic gating is deferred to P4e.
+- The registry contains exactly 30 definitions with an exact table assertion over every field and exact resolution assertions for all 22 Polish alias pairs.
+- One source-support matrix is consumed by registry authoring, generator validation, and collection. Sass-only and mixed supported/unsupported projects are tested.
+- Collection never silently drops discovered inputs. Root collection failure is validator-level `error`; per-file unreadable/oversized gaps remain discovered, populate skipped/unreadable views, and make affected required rules inconclusive.
+- Every file-scoped rule executes per applicable file and aggregates honestly. Project-wide execution is used only for rules declared `scope: 'project'`. Coverage observations name the exact applicable/evaluated files.
+- `measuredScope` contains only sufficiently-covered, non-inconclusive rule scope; `unverifiedScope` is always the registry-scope difference.
+- Every `not_applicable` rule has a concrete, tested applicability probe. Unknown applicability is inconclusive.
+- Existing source scanners/predicates are exported and reused. The repeat-grid absence regression and Tailwind token-utility regression pass.
+- Each gating validator's clean/findings/inconclusive fixtures reach those exact statuses. Polish clean/findings fixtures include non-Framer markup so `polish.animatepresence-initial` resolves N/A.
+- Every commit stages only task-owned paths, and the final allowlist/preexisting-dirty guard passes.
+
+---
+
 ## Deferred (later P4 sub-plans)
 
-- **P4b:** wire `validateProduct` into `advanceLane` step/iteration-boundary gating; build the REAL `CoverageObservation` / `RunCoverage` from the live run (including `skippedFiles` and `unsupportedSourceKinds`, which this plan leaves empty); add the browser-evidence collector that turns the `dom`/`computed-style`/`contrast` rules (`min-hit-area`, `color-contrast`, `concentric-radius`, `typography-rhythm`, `genericity`) from owned-non-required into measured; the async lease/lock/outbox/AbortSignal durability (the folded P3); wire `project-collector.ts` into `flow-handler-tactical-polish.ts` and surface linguistic/absolute-ban findings through Flow J's collector.
-- **P4c:** loop execution + `lane_converge` enablement gated by the release floor (`polish-standard` + `theming` + `anti-pattern` + `static-a11y` all `clean`); `ralph-loop.ts` -> `convergence-loop.ts`.
+- **P4b:** wire `validateProduct` into `advanceLane` step/iteration-boundary gating; consume this plan's truthful static `CoverageObservation` / `RunCoverage`; add the browser-evidence collector that turns the `dom`/`computed-style`/`contrast` rules (`min-hit-area`, `color-contrast`, `concentric-radius`, `typography-rhythm`, `genericity`) from owned-non-required/inconclusive into measured; the async lease/lock/outbox/AbortSignal durability (the folded P3); wire `project-collector.ts` into `flow-handler-tactical-polish.ts`. Per spec 610-612, these browser-only rules stay inconclusive and never enter `measuredScope` until that collector exists.
+- **P4c:** loop execution + `lane_converge` enablement after the required release-floor phases exist; `ralph-loop.ts` -> `convergence-loop.ts`.
 - **P4d:** MCP migration (`classify-intent` / `list-lanes` / `sidecoach_lane`) + `modes.ts` deletion + SKILL/CHEATSHEET/marketing regen.
-- **Copy/linguistic slice (explicitly NOT in P4a-2):** the `linguistic-ban-validator.ts` slop-word / rhetorical-template findings that Flow J's collector exposes are NOT modeled as canonical registry rules here (the task scope is the 22 polish rules + theming/anti-pattern/static-a11y slices). If a future phase wants them as gating registry rules, model them as TWO canonical rules (`copy.rhetorical-template` blocker, `copy.slop-word` minor) under a `copy` finding class, not 38 per-pattern rules.
+- **P4e copy/linguistic gating adaptation (explicitly NOT in P4a-2):** adapt `linguistic-ban-validator.ts` into the gating model. Model it as TWO canonical rules (`copy.rhetorical-template` blocker, `copy.slop-word` minor) under a `copy` finding class, not approximately 38 per-pattern rules. Until P4e, this plan is a partial static floor and makes no copy/linguistic clean claim.
 
 ---
 
 ## Self-Review (P4a-1 review lessons applied)
 
-- **No changelog-vs-body drift (the P4a-1 v2 failure mode):** this plan has no separate changelog. The only summary is the goal/architecture intro, which describes (never restates the code of) the task bodies. The task bodies carry the actual correct code.
+- **No changelog-vs-body drift (the P4a-1 v2 failure mode):** this plan has no `## What changed` section or separate changelog. The goal/architecture intro matches the task bodies: partial static floor, truthful collection/coverage, browser evidence deferred to P4b, and linguistic gating deferred to P4e.
 - **Every new symbol traces to a caller in its own task:** `stampResult`/`pass`/`fail`/`notApplicable`/`inconclusive`/`hasCss`/`hasMarkup` are consumed by the slice checks and tested in Tasks 2-6; `collect`/`collectFromPath` are consumed by `makeProductValidator` and exercised by the pipeline (Task 2) and fixture (Task 7) suites; `makeProductValidator` is attached to every registration and tested end-to-end; every `CHECKS` key is asserted present by its slice test; `missingCheck` is asserted by the pipeline test's unattached-rule case.
-- **Four-status honesty (status not findings.length; missing evidence -> inconclusive):** every css/markup check guards `hasCss`/`hasMarkup` FIRST and returns `inconclusive` on absent evidence; the absence-pass (`undefined !== '0px' -> pass`, `?? false`) and the N/A-as-`passed:true` conventions are eliminated. The pipeline test pins "css present + feature absent -> fail" AND "no css -> inconclusive" AND "computed-style rule never passes on absence". A thrown check is caught at the registry boundary -> `inconclusive` + `rule_exception`.
+- **Four-status honesty (status not findings.length; missing evidence -> inconclusive):** every rule applies its concrete applicability probe before feature evaluation. Missing/unsupported/unreadable/oversized or applicability-unknown evidence is inconclusive; conclusively absent targets are N/A; applicable missing features fail. The pipeline test uses a genuinely throwing proxy and pins `normalizedErrorCategory === 'rule_exception'`.
 - **Generated-not-authored:** `cleanPolicy` / `ownedRuleIds` / `requiredRuleIds` / `requiredCoverageByScope` stay generated into `validators.generated.ts` and regenerated after the registry grows (Task 1); the runtime validators READ that policy, they never re-derive it. Attaching `checkProduct`/`validateProduct` functions does not change the generated output (`deriveValidator` and `JSON.stringify` read identity/owner fields only) - verified by `--check` staying green in Steps 2.10 and 8.1.
-- **Honor the P4a-1 evidence-compat model + clean-evaluator:** `makeProductValidator` builds `CoverageObservation`/`RunCoverage` and calls `evaluateCleanPolicy`; it does NOT reimplement non-vacuity, coverage, or the 7-step algorithm. Per-file `evidenceKindsPresent` carries SOURCE kinds (e.g. `['css']`) so `isCoverageSatisfied` matches the generated `evidenceAlternativesByRequirement` exactly.
-- **Representative-plus-table, not "author the rest":** Task 1 gives the COMPLETE 30-rule id/severity/owner/evidence table to transcribe plus three fully-written literal examples and the five canonical `supportedSourceKinds` blocks. Tasks 3-6 write EVERY check body concretely (no "...and similarly for the others").
+- **Honor the P4a-1 evidence-compat model + clean-evaluator:** `makeProductValidator` builds `CoverageObservation`/`RunCoverage` and calls `evaluateCleanPolicy`; it does NOT reimplement non-vacuity, coverage, or the 7-step algorithm. File-scoped rules run per applicable file; observations list the actual evaluated files plus applicable gaps; `measuredScope` is derived only from conclusive sufficiently-covered executions and `unverifiedScope` is the registry-scope difference.
+- **Exact registry and one source matrix:** Task 1 table-tests every field of all 30 definitions and all 22 Polish alias pairs. One supported-source matrix drives both registry generation and collection, with Sass-only and mixed supported/unsupported regression projects.
 - **Ground every id/severity in the real source:** polish ids/severities are `polish-standard-validator.ts` (= `extended-domain-validator.ts` `POLISH_0NN`); ban names are the raw `findingFromBan(...)` strings; taste ids are `taste/hex-in-interactive-state` and `taste/border-radius-inconsistency`; the two severity overrides (`identical-card-grids`, `hero-metric-template`) cite `absolute-ban-detector.ts:19-21`. No invented ids.
 - **Incremental honesty:** between Task 2 and Tasks 3-6, unattached required rules resolve to `missingCheck` -> `inconclusive`, so a validator reports `inconclusive` (never a false `clean`) until its whole required set is implemented; the fixture `clean` cases (Task 7) only pass once every required check exists, which is why Task 7 is last.
-- **Scope discipline:** no lane-runner / orchestrator / mcp-server / `domains/*` / `flow-handler-tactical-polish.ts` edits; the recursive collector lands as a NEW module and its Flow J wiring is explicitly P4b. Step 8.4 enforces this with a failing blacklist.
+- **Scope discipline:** no lane-runner / orchestrator / mcp-server / `domains/*` / `flow-handler-tactical-polish.ts` edits; the recursive collector lands as a NEW module and its Flow J wiring is explicitly P4b. Every commit stages task-owned paths only. Step 8.4 compares committed paths to an explicit allowlist and verifies the complete preexisting-dirty snapshot is unchanged.
 - **Reviewer watch-items:** (1) after Task 1, RE-RUN `generate-validators.ts` (not just `--check`) and COMMIT `validators.generated.ts`, or `--check` fails on drift; (2) the anti-pattern `findings` and `clean` fixtures need BOTH css and markup files so the markup-required rules are measurable (an omitted channel makes them inconclusive and flips the status); (3) empty `inconclusive` fixture dirs need a tracked `.gitkeep`, since git does not track empty directories; (4) the `${severity}|${findingClass}` tolerance key set by the generator must match what the evaluator counts - unchanged from P4a-1, but the new `major|anti-pattern` and `blocker|theming` pairs are first exercised here.
