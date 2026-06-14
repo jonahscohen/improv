@@ -74,6 +74,16 @@ export declare class FlowHistory {
      */
     private reloadFromDisk;
     /**
+     * Enforce the lane-fencing invariant in memory: for every session, laneFencing[key]
+     * must be >= the highest fencingToken of any retained tagged run for that key. Never
+     * lowers an existing entry, so it is idempotent. Called after load() inside
+     * reloadFromDisk so that every saving mutation (which reloads, mutates, then saves)
+     * durably persists the index BEFORE the 20-run cap can evict the run that justified it.
+     * This closes the whole stale-token class: once a tagged run has been observed, its
+     * accepted token survives even after the run itself is evicted.
+     */
+    private backfillLaneFencingFromRuns;
+    /**
      * Append one run to its flow's array (cap at 20). The caller is responsible for
      * reloading from disk first and saving afterward, so the whole sequence stays one
      * synchronous reload -> mutate -> save block.
