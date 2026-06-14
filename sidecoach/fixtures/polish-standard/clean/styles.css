@@ -1,0 +1,11 @@
+:root { --shadow-sm: 0 1px 2px rgba(0,0,0,0.1); --shadow-md: 0 4px 6px rgba(0,0,0,0.1); --shadow-lg: 0 10px 25px rgba(0,0,0,0.1); }
+* { -webkit-font-smoothing: antialiased; }
+h1 { text-wrap: balance; padding: 8px; }
+.btn { padding: 12px; box-shadow: var(--shadow-sm); transition: opacity 200ms, transform 200ms; }
+.btn:active { transform: scale(0.96); opacity: 0; filter: blur(2px); }
+.card { box-shadow: var(--shadow-md); }
+.panel { box-shadow: var(--shadow-lg); }
+.list-item { animation-delay: 30ms; }
+.exit { opacity: 0; transform: scale(0.96); }
+.s:default {} .s:hover {} .s:focus {} .s:active {} .s:disabled {} .s:loading {} .s:error {} .s:success {}
+@media (prefers-reduced-motion: reduce) { * { animation: none; transition: none; } }

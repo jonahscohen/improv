@@ -1,0 +1,3 @@
+:root { --c-brand: #c0392b; --radius: 8px; }
+.btn { border-radius: var(--radius); }
+.btn:hover { color: var(--c-brand); }
