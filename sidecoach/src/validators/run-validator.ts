@@ -75,8 +75,13 @@ function executeRule(
   // <button> and no inline <style>) still runs the check and surfaces inconclusive,
   // so the rule cannot be falsely reported measured/clean (Codex P1#1).
   const readable = collected.files.filter((f) => compatible.has(f.sourceKind));
+  // Gaps force the rule inconclusive: an oversized/unreadable file of a compatible kind,
+  // OR an unreadable directory subtree (sourceKind 'directory') - which could harbor
+  // applicable files of ANY kind, so it is an unknown gap for every static rule (Codex
+  // P1#2). Without the directory clause an unreadable subtree yielded a false clean.
   const gaps = collected.discovered.filter((d) =>
-    (d.outcome === 'unreadable' || d.outcome === 'oversized') && compatible.has(d.sourceKind));
+    (d.outcome === 'oversized' && compatible.has(d.sourceKind))
+    || (d.outcome === 'unreadable' && (d.sourceKind === 'directory' || compatible.has(d.sourceKind))));
 
   if (readable.length === 0 && gaps.length === 0) {
     return {

@@ -196,6 +196,24 @@ function coverageCorrectness() {
     const res = getValidatorRegistration('theming')!.validateProduct!({ projectPath: dir });
     if (res.status === 'clean') throw new Error('theming must not be clean: card.tsx is a compatible css-rule source that cannot be statically verified');
   }
+
+  // P1#2: an unreadable directory subtree could harbor applicable files, so it is an
+  // unknown gap for every required static rule -> the validator must NOT be clean.
+  if (!(typeof process.getuid === 'function' && process.getuid() === 0)) {
+    const dir = mkproj();
+    fs.writeFileSync(path.join(dir, 'styles.css'), 'a:focus-visible { outline: 2px solid currentColor; }');
+    const sub = path.join(dir, 'components');
+    fs.mkdirSync(sub);
+    fs.writeFileSync(path.join(sub, 'card.css'), '.x { color: red; }');
+    fs.chmodSync(sub, 0o000);
+    try {
+      const res = getValidatorRegistration('static-a11y')!.validateProduct!({ projectPath: dir });
+      if (res.status === 'clean') throw new Error('static-a11y must not be clean with an unreadable subtree that could hold applicable files');
+      if (res.status !== 'inconclusive') throw new Error(`unreadable subtree expected inconclusive, got ${res.status}`);
+    } finally {
+      fs.chmodSync(sub, 0o755);
+    }
+  }
 }
 
 function run() {
