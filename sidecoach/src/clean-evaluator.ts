@@ -62,25 +62,20 @@ function toFinding(validatorId: string, r: ProductRuleResult): ProductFinding {
   };
 }
 
-// Synthesize a required rule the validator did not cleanly produce. Look up the
-// REAL definition for severity/findingClass/canonicalRuleKey - never fabricate a
-// blocking severity. If the registry has no such rule (a generation bug --check
-// would normally catch), mark inconclusive with registry_fault + a benign
-// non-blocking severity (severity is immaterial for an inconclusive: step 4
-// blocks on it regardless).
+// Synthesize a required rule the validator did not cleanly produce. Looks up the
+// REAL definition for severity/findingClass/canonicalRuleKey - never fabricates a
+// severity. evaluateCleanPolicy preflights every required id through getRuleById
+// and returns a registry_fault ERROR before this is ever reached, so the
+// definition is guaranteed to exist for any reqId we synthesize here. (The
+// previous advisory-fabrication fallback for a missing definition is gone; a
+// genuinely unknown required rule is now a validator-level error, not a fudged
+// inconclusive.)
 function synthInconclusive(reqId: string, message: string, category: NormalizedErrorCategory): ProductRuleResult {
-  const def = getRuleById(reqId);
-  if (def) {
-    return {
-      ruleId: reqId, canonicalRuleKey: def.canonicalRuleKey, status: 'inconclusive',
-      normalizedErrorCategory: category, severity: def.severity, findingClass: def.findingClass,
-      evidenceLocations: [], message,
-    };
-  }
+  const def = getRuleById(reqId)!;
   return {
-    ruleId: reqId, canonicalRuleKey: reqId, status: 'inconclusive',
-    normalizedErrorCategory: 'registry_fault', severity: 'advisory', findingClass: 'unresolved',
-    evidenceLocations: [], message: `${message} (no registry definition for ${reqId})`,
+    ruleId: reqId, canonicalRuleKey: def.canonicalRuleKey, status: 'inconclusive',
+    normalizedErrorCategory: category, severity: def.severity, findingClass: def.findingClass,
+    evidenceLocations: [], message,
   };
 }
 
@@ -111,6 +106,20 @@ export function evaluateCleanPolicy(input: CleanEvalInput, policy: CleanPolicy):
     return {
       status: 'error', rules: input.rules, findings: [], coverage: baseCoverage(run),
       normalizedErrorCategory: input.validatorError.category, error: input.validatorError.message,
+    };
+  }
+
+  // 1b. REGISTRY PREFLIGHT (P1). A required ruleId with NO registry definition is
+  //     a TRUE registry fault, not an inconclusive: it is a validator-level ERROR
+  //     returned BEFORE any non-vacuity / coverage logic. (Distinct from a
+  //     required id that IS in the registry but produced no result this run -
+  //     that stays the inconclusive case synthesized in step 3 from real metadata.)
+  const unknownRequired = policy.requiredRuleIds.filter((id) => !getRuleById(id));
+  if (unknownRequired.length > 0) {
+    return {
+      status: 'error', rules: input.rules, findings: [], coverage: baseCoverage(run),
+      normalizedErrorCategory: 'registry_fault',
+      error: `required rule(s) have no registry definition: ${unknownRequired.join(', ')}`,
     };
   }
 

@@ -104,6 +104,21 @@ function run_() {
   r = evaluateCleanPolicy(input([rule(REQ, 'pass'), rule(REQ, 'pass')], [satObs(REQ)]), policy);
   if (r.status !== 'inconclusive') throw new Error('duplicate required result -> inconclusive');
 
+  // P1: a required ruleId with NO registry definition is a TRUE registry fault ->
+  // validator-level ERROR (registry_fault), returned BEFORE non-vacuity; never a
+  // fabricated advisory inconclusive.
+  {
+    const ghost = 'ghost.not-in-registry';
+    const ghostPolicy: CleanPolicy = {
+      ...policy,
+      requiredRuleIds: [ghost],
+      requiredCoverageByScope: [{ ruleId: ghost, scope: 'file', evidenceAlternativesByRequirement: [['css']], requireAllDiscoveredApplicableFiles: true }],
+    };
+    const e = evaluateCleanPolicy(input([], []), ghostPolicy);
+    if (e.status !== 'error') throw new Error('unknown required rule -> validator-level error');
+    if (e.normalizedErrorCategory !== 'registry_fault') throw new Error('unknown required rule -> registry_fault category');
+  }
+
   console.log('clean-evaluator: OK');
 }
 run_();
