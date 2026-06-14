@@ -297,6 +297,7 @@ export class FlowHistory {
    * Set context data (shared between flows)
    */
   setContext(key: string, value: any): void {
+    this.reloadFromDisk();
     const session = this.getSessionHistory();
     session.context[key] = value;
     this.save();
@@ -322,6 +323,7 @@ export class FlowHistory {
    * Clear session history (useful for testing or explicit reset)
    */
   clearSession(): void {
+    this.reloadFromDisk();
     this.history.delete(this.sessionId);
     this.save();
   }

@@ -138,6 +138,17 @@ async function run() {
     'migration: a higher token vs a pre-index retained run must be accepted');
   process.env.HOME = home;
 
+  // MINOR: setContext is a saving mutator and must also reload-before-mutate, else a stale
+  // instance clobbers a concurrently-written lane entry from its construction-time snapshot.
+  const ctxProject = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-flow-history-ctx-')));
+  const staleCtxInstance = new FlowHistory(ctxProject); // captures an empty snapshot now
+  await new LaneFlowHistoryPublisher(ctxProject).upsert('lane-cp12:craft:0:flow-history', 4, entry('ctx-lane'), now);
+  staleCtxInstance.setContext('phase', 'verify');
+  const afterCtx = new FlowHistory(ctxProject);
+  assert(afterCtx.getLatestRun('lane:lane_build:craft')?.laneLogicalKey === 'lane-cp12:craft:0:flow-history',
+    'setContext on a stale instance must not clobber the committed lane entry');
+  assert(afterCtx.getContext('phase') === 'verify', 'setContext must still persist its own value');
+
   const ordinary = new FlowHistory('ordinary-session');
   for (let i = 0; i < 21; i++) {
     ordinary.recordFlow({
