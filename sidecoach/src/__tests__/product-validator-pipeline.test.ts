@@ -20,7 +20,7 @@ const cssNoReducedMotion = (css: string): ProductCheckContext => ({
 });
 const emptyCtx: ProductCheckContext = { cssText: '', markup: '', files: [] };
 
-function basics() {
+async function basics() {
   // 1. validateProduct is ATTACHED to every gating registration
   for (const id of ['polish-standard', 'theming', 'anti-pattern', 'static-a11y']) {
     const reg = getValidatorRegistration(id);
@@ -64,7 +64,7 @@ function basics() {
   if (thrown.normalizedErrorCategory !== 'rule_exception') throw new Error('throw must normalize to rule_exception');
 
   // 8. validateProduct end-to-end on an empty project -> required rules inconclusive -> status inconclusive
-  const res = getValidatorRegistration('polish-standard')!.validateProduct!(emptyCtx);
+  const res = await getValidatorRegistration('polish-standard')!.validateProduct!(emptyCtx);
   if (res.status !== 'inconclusive') throw new Error(`empty project must yield validator status inconclusive, got ${res.status}`);
   if (!res.coverage || !Array.isArray(res.coverage.measuredScope)) throw new Error('coverage must be reproducible even when inconclusive');
   if (res.coverage.measuredScope.includes('polished-motion-respect')) throw new Error('inconclusive rule must not claim measured scope');
@@ -174,7 +174,7 @@ function executionCoverage() {
 
 // Coverage-correctness regressions (Codex review): a compatible inspected file with
 // an uncovered/unverifiable target must NOT be silently dropped into a false 'clean'.
-function coverageCorrectness() {
+async function coverageCorrectness() {
   // P1#1 repro (a): styles.css with `a:focus-visible` + a SEPARATE page.html holding an
   // uncovered <button>. The html is a compatible (partial) css-rule source we cannot
   // verify -> static-a11y must NOT be clean.
@@ -182,7 +182,7 @@ function coverageCorrectness() {
     const dir = mkproj();
     fs.writeFileSync(path.join(dir, 'styles.css'), 'a:focus-visible { outline: 2px solid currentColor; }');
     fs.writeFileSync(path.join(dir, 'page.html'), '<main><button type="button">Go</button></main>');
-    const res = getValidatorRegistration('static-a11y')!.validateProduct!({ projectPath: dir });
+    const res = await getValidatorRegistration('static-a11y')!.validateProduct!({ projectPath: dir });
     if (res.status === 'clean') throw new Error('static-a11y must not be clean: an uncovered <button> lives in an unstyled, compatible html file');
     if (res.status !== 'inconclusive') throw new Error(`expected inconclusive for the uncovered-button project, got ${res.status}`);
   }
@@ -193,7 +193,7 @@ function coverageCorrectness() {
     const dir = mkproj();
     fs.writeFileSync(path.join(dir, 'theme.css'), ':root { --c-brand: #c0392b; --radius: 8px; } .btn { border-radius: var(--radius); } .btn:hover { color: var(--c-brand); }');
     fs.writeFileSync(path.join(dir, 'card.tsx'), 'export const Card = () => <div className="rounded-sm rounded-lg" />;');
-    const res = getValidatorRegistration('theming')!.validateProduct!({ projectPath: dir });
+    const res = await getValidatorRegistration('theming')!.validateProduct!({ projectPath: dir });
     if (res.status === 'clean') throw new Error('theming must not be clean: card.tsx is a compatible css-rule source that cannot be statically verified');
   }
 
@@ -207,7 +207,7 @@ function coverageCorrectness() {
     fs.writeFileSync(path.join(sub, 'card.css'), '.x { color: red; }');
     fs.chmodSync(sub, 0o000);
     try {
-      const res = getValidatorRegistration('static-a11y')!.validateProduct!({ projectPath: dir });
+      const res = await getValidatorRegistration('static-a11y')!.validateProduct!({ projectPath: dir });
       if (res.status === 'clean') throw new Error('static-a11y must not be clean with an unreadable subtree that could hold applicable files');
       if (res.status !== 'inconclusive') throw new Error(`unreadable subtree expected inconclusive, got ${res.status}`);
     } finally {
@@ -216,10 +216,23 @@ function coverageCorrectness() {
   }
 }
 
-function run() {
-  basics();
+async function run() {
+  await basics();
   executionCoverage();
-  coverageCorrectness();
+  await coverageCorrectness();
+
+  const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'p4a2-empty-'));
+  // (1) async contract: validateProduct returns a Promise now
+  const pending = getValidatorRegistration('polish-standard')!.validateProduct!({ projectPath: emptyDir });
+  if (typeof (pending as any).then !== 'function') throw new Error('validateProduct must be async (returns a Promise)');
+  await pending;
+
+  // (2) an already-aborted signal yields a validator-level error, category 'aborted'
+  const ac = new AbortController();
+  ac.abort();
+  const aborted = await getValidatorRegistration('polish-standard')!.validateProduct!({ projectPath: emptyDir }, ac.signal);
+  if (aborted.status !== 'error' || aborted.normalizedErrorCategory !== 'aborted') throw new Error('aborted signal must yield status error / category aborted');
+
   console.log('product-validator-pipeline: OK');
 }
 run();

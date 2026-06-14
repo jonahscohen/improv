@@ -9,7 +9,7 @@ export interface ProductValidatorRegistration {
   // AUTHORED here is identity ONLY. validateProduct is attached in P4a-2; the
   // GENERATED per-validator fields (ownedRuleIds, registryScope,
   // supportedSourceKinds, cleanPolicy) live in validators.generated.ts.
-  validateProduct?: (context: unknown) => ProductValidationResult;
+  validateProduct?: (context: unknown, signal?: AbortSignal) => Promise<ProductValidationResult>;
 }
 
 export interface FlowValidationCapability {

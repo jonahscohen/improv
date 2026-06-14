@@ -57,7 +57,9 @@ function executeRule(
   record: RequiredCoverageRecord | undefined,
   collected: Collected,
   raw: unknown,
+  signal?: AbortSignal,
 ): RuleExecution {
+  if (signal?.aborted) throw new AbortSentinel();
   const reqKind = def.evidenceRequirements[0];
 
   if (!isStaticallySatisfiable(def.evidenceRequirements)) {
@@ -159,7 +161,7 @@ function emptyRun(): RunCoverage {
   return { inspectedFiles: [], skippedFiles: [], supportedSourceKinds: [], unsupportedSourceKinds: [], measuredScope: [], unverifiedScope: [] };
 }
 
-function runDetailed(validatorId: string, context: unknown): ValidatorRunDetail {
+function runDetailed(validatorId: string, context: unknown, signal?: AbortSignal): ValidatorRunDetail {
   const gen = GENERATED_VALIDATORS.find((v) => v.validatorId === validatorId);
   const policy = gen?.cleanPolicy;
   if (!gen || !policy) {
@@ -182,11 +184,18 @@ function runDetailed(validatorId: string, context: unknown): ValidatorRunDetail 
     return { result, executions: [], coverageObservations: [], runCoverage: emptyRun() };
   }
 
+  if (signal?.aborted) return abortedDetail(validatorId);
   const recordById = new Map(policy.requiredCoverageByScope.map((c) => [c.ruleId, c]));
-  const executions: RuleExecution[] = gen.ownedRuleIds
-    .map((id) => getRuleById(id))
-    .filter((d): d is NonNullable<typeof d> => !!d && typeof d.checkProduct === 'function')
-    .map((d) => executeRule(d, recordById.get(d.ruleId), collected, context));
+  let executions: RuleExecution[];
+  try {
+    executions = gen.ownedRuleIds
+      .map((id) => getRuleById(id))
+      .filter((d): d is NonNullable<typeof d> => !!d && typeof d.checkProduct === 'function')
+      .map((d) => executeRule(d, recordById.get(d.ruleId), collected, context, signal));
+  } catch (e) {
+    if (e instanceof AbortSentinel) return abortedDetail(validatorId);
+    throw e;
+  }
   const rules = executions.map((x) => x.result);
 
   const coverageObservations = executions
@@ -211,10 +220,32 @@ function runDetailed(validatorId: string, context: unknown): ValidatorRunDetail 
 }
 
 export function makeProductValidator(validatorId: string) {
-  return function validateProduct(context: unknown): ProductValidationResult {
-    return runDetailed(validatorId, context).result;
+  // The public entry is ASYNC with cooperative abort: it checks the signal at entry,
+  // yields one microtask so an abort fired during this tick is observed, then runs the
+  // synchronous CPU core (runDetailed), which itself re-checks the signal per rule.
+  return async function validateProduct(context: unknown, signal?: AbortSignal): Promise<ProductValidationResult> {
+    if (signal?.aborted) return abortedResult(validatorId);
+    await Promise.resolve();
+    if (signal?.aborted) return abortedResult(validatorId);
+    return runDetailed(validatorId, context, signal).result;
   };
 }
+
+// An aborted validator run maps to a validator-level error (category 'aborted') - the
+// same shape the lease protocol expects when ownership is lost mid-execute.
+function abortedResult(validatorId: string): ProductValidationResult {
+  return evaluateCleanPolicy(
+    { validatorId, rules: [], coverageObservations: [], runCoverage: emptyRun(),
+      validatorError: { category: 'aborted', message: 'validation aborted (lease lost / cancelled)' } },
+    { requiredRuleIds: [], blockingSeverities: ['blocker', 'major'], toleratedFindingCounts: {}, requiredCoverageByScope: [], inconclusiveBehavior: 'block', notApplicableBehavior: 'exclude_and_report' },
+  );
+}
+function abortedDetail(validatorId: string): ValidatorRunDetail {
+  return { result: abortedResult(validatorId), executions: [], coverageObservations: [], runCoverage: emptyRun() };
+}
+
+// Sentinel thrown by the per-rule abort check inside runDetailed's execution loop.
+class AbortSentinel extends Error {}
 
 // Test seam: exposes the internal executions/observations/coverage so the pipeline
 // suite can assert per-file execution and coverage WITHOUT duplicating the algorithm.
