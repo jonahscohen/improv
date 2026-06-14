@@ -100,7 +100,25 @@ class FlowHistory {
         }
         return this.history.get(this.sessionId);
     }
-    appendFlow(entry, now, strictSave = false) {
+    /**
+     * Discard the in-process snapshot and re-read the durable file. Called before every
+     * mutation so a long-lived instance (e.g. the orchestrator's recordFlow singleton)
+     * cannot overwrite writes made by another instance (e.g. the lane outbox publisher)
+     * from a stale construction-time snapshot. Within one process the caller's
+     * reloadFromDisk -> mutate -> save block runs synchronously with no interleaving, so
+     * it is atomic; cross-process safety remains best-effort for recordFlow (the lane
+     * publisher additionally serializes via withCheckpointLock around upsertLaneFlow).
+     */
+    reloadFromDisk() {
+        this.history.clear();
+        this.load();
+    }
+    /**
+     * Append one run to its flow's array (cap at 20). The caller is responsible for
+     * reloading from disk first and saving afterward, so the whole sequence stays one
+     * synchronous reload -> mutate -> save block.
+     */
+    appendFlowCore(entry, now) {
         const session = this.getSessionHistory();
         const flowId = entry.flowId;
         if (!session.flowSequence.includes(flowId)) {
@@ -123,31 +141,47 @@ class FlowHistory {
         }
         runs.push(entryWithTimestamp);
         session.flowOutputs[flowId] = runs;
-        this.save(strictSave);
     }
     /**
-     * Record an ordinary flow execution. Existing callers remain append-oriented.
+     * Record an ordinary flow execution. Stays SYNCHRONOUS for existing callers.
+     * Reloads fresh from disk before mutating so a stale singleton snapshot cannot
+     * clobber a concurrently-written lane entry.
      */
     recordFlow(entry) {
-        this.appendFlow(entry, () => new Date().toISOString());
+        this.reloadFromDisk();
+        this.appendFlowCore(entry, () => new Date().toISOString());
+        this.save(false);
     }
     /**
      * Conditionally upsert one committed lane STEP result by logical key and token.
      * New keys append through the normal 20-run cap. Higher tokens replace the
      * accepted tagged run in place. Same tokens no-op and lower tokens reject.
+     * Reloads fresh from disk first so the fencing decision and write act on the
+     * current durable state, not a stale snapshot.
      */
     upsertLaneFlow(logicalKey, fencingToken, entry, now = () => new Date().toISOString()) {
+        this.reloadFromDisk();
         const session = this.getSessionHistory();
+        if (!session.laneFencing)
+            session.laneFencing = {};
+        // Fencing decision comes from the PERSISTENT index, not the capped runs array, so
+        // an evicted tagged run cannot let a stale same/lower token slip through as a new key.
+        const acceptedToken = session.laneFencing[logicalKey];
+        if (acceptedToken !== undefined) {
+            if (fencingToken < acceptedToken)
+                return { status: 'rejected' };
+            if (fencingToken === acceptedToken)
+                return { status: 'noop' };
+        }
+        // Accepted (new key or strictly higher token): record the new highest token first.
+        session.laneFencing[logicalKey] = fencingToken;
+        // Replace the tagged run in place if it is still retained; otherwise append through
+        // the normal 20-run cap. Either way the persistent index above already advanced.
         for (const [flowId, stored] of Object.entries(session.flowOutputs)) {
             const runs = Array.isArray(stored) ? stored : [stored];
             const index = runs.findIndex((run) => run.laneLogicalKey === logicalKey);
             if (index < 0)
                 continue;
-            const currentToken = runs[index].fencingToken ?? -1;
-            if (fencingToken < currentToken)
-                return { status: 'rejected' };
-            if (fencingToken === currentToken)
-                return { status: 'noop' };
             runs[index] = {
                 ...entry,
                 flowId,
@@ -159,7 +193,8 @@ class FlowHistory {
             this.save(true);
             return { status: 'written' };
         }
-        this.appendFlow({ ...entry, laneLogicalKey: logicalKey, fencingToken }, now, true);
+        this.appendFlowCore({ ...entry, laneLogicalKey: logicalKey, fencingToken }, now);
+        this.save(true);
         return { status: 'written' };
     }
     /**

@@ -44,6 +44,7 @@ export interface SessionFlowHistory {
     timestamp: string;
     sessionId: string;
     projectPath?: string;
+    laneFencing?: Record<string, number>;
 }
 export declare class FlowHistory {
     static get HISTORY_FILE(): string;
@@ -62,15 +63,34 @@ export declare class FlowHistory {
      * Get or create session history
      */
     private getSessionHistory;
-    private appendFlow;
     /**
-     * Record an ordinary flow execution. Existing callers remain append-oriented.
+     * Discard the in-process snapshot and re-read the durable file. Called before every
+     * mutation so a long-lived instance (e.g. the orchestrator's recordFlow singleton)
+     * cannot overwrite writes made by another instance (e.g. the lane outbox publisher)
+     * from a stale construction-time snapshot. Within one process the caller's
+     * reloadFromDisk -> mutate -> save block runs synchronously with no interleaving, so
+     * it is atomic; cross-process safety remains best-effort for recordFlow (the lane
+     * publisher additionally serializes via withCheckpointLock around upsertLaneFlow).
+     */
+    private reloadFromDisk;
+    /**
+     * Append one run to its flow's array (cap at 20). The caller is responsible for
+     * reloading from disk first and saving afterward, so the whole sequence stays one
+     * synchronous reload -> mutate -> save block.
+     */
+    private appendFlowCore;
+    /**
+     * Record an ordinary flow execution. Stays SYNCHRONOUS for existing callers.
+     * Reloads fresh from disk before mutating so a stale singleton snapshot cannot
+     * clobber a concurrently-written lane entry.
      */
     recordFlow(entry: FlowHistoryEntry): void;
     /**
      * Conditionally upsert one committed lane STEP result by logical key and token.
      * New keys append through the normal 20-run cap. Higher tokens replace the
      * accepted tagged run in place. Same tokens no-op and lower tokens reject.
+     * Reloads fresh from disk first so the fencing decision and write act on the
+     * current durable state, not a stale snapshot.
      */
     upsertLaneFlow(logicalKey: string, fencingToken: number, entry: FlowHistoryEntry, now?: () => string): FlowHistoryUpsertOutcome;
     /**
