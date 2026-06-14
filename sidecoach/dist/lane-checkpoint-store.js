@@ -207,17 +207,31 @@ async function publishOutbox(store, checkpointId, projectPath, now) {
     // snapshot the records to publish (read outside the checkpoint lock; publishing is idempotent)
     const snapshot = store.read(checkpointId).sideEffectOutbox;
     for (const record of snapshot) {
-        for (const entry of record.entries) {
-            if (entry.publisher !== 'lane-side-effect-sink')
-                continue;
-            const r = await sink.upsert(entry.logicalKey, record.fencingToken, entry.payload, clock);
-            if (r.status === 'rejected')
-                continue; // a higher token already won; still ack-able as delivered
+        // Publish to the sink publisher if it is still pending. A 'rejected' upsert (a higher
+        // token already won) is still DELIVERED for ack purposes. Other declared publishers
+        // (e.g. P4f's FlowHistory) are NOT handled here and must stay pending.
+        const acked = [];
+        if (record.pendingPublishers.includes('lane-side-effect-sink')) {
+            for (const entry of record.entries) {
+                if (entry.publisher !== 'lane-side-effect-sink')
+                    continue;
+                await sink.upsert(entry.logicalKey, record.fencingToken, entry.payload, clock); // written | noop | rejected all = delivered
+            }
+            acked.push('lane-side-effect-sink');
         }
-        // ack: remove this record under the checkpoint lock; do NOT bump revision.
+        if (acked.length === 0)
+            continue;
+        // ack publishers INDIVIDUALLY under the checkpoint lock; delete the record ONLY when
+        // no publisher remains pending. Does NOT bump the semantic revision.
         await (0, lane_lock_1.withCheckpointLock)(store.dir(), checkpointId, () => {
             const cp = store.read(checkpointId);
-            cp.sideEffectOutbox = cp.sideEffectOutbox.filter((x) => !(x.committedRevision === record.committedRevision && x.fencingToken === record.fencingToken));
+            const rec = cp.sideEffectOutbox.find((x) => x.committedRevision === record.committedRevision && x.fencingToken === record.fencingToken);
+            if (!rec)
+                return;
+            rec.pendingPublishers = rec.pendingPublishers.filter((p) => !acked.includes(p));
+            if (rec.pendingPublishers.length === 0) {
+                cp.sideEffectOutbox = cp.sideEffectOutbox.filter((x) => x !== rec);
+            }
             cp.updatedAt = clock();
             store.write(cp);
         });

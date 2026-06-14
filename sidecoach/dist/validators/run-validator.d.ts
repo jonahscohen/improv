@@ -16,5 +16,5 @@ export interface ValidatorRunDetail {
     runCoverage: RunCoverage;
 }
 export declare function makeProductValidator(validatorId: string): (context: unknown, signal?: AbortSignal) => Promise<ProductValidationResult>;
-export declare function runValidatorForTest(validatorId: string, context: unknown): ValidatorRunDetail;
+export declare function runValidatorForTest(validatorId: string, context: unknown): Promise<ValidatorRunDetail>;
 //# sourceMappingURL=run-validator.d.ts.map

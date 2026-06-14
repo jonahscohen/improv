@@ -27,6 +27,19 @@ function defaultOperationId() {
 // and interrupt/stop (Task 9) can abort the exact controller for a fenced identity.
 const LIVE_OPERATIONS = new Map();
 const leaseKey = (checkpointId, id) => `${checkpointId}:${id.operationId}:${id.stepId}:${id.iteration}:${id.claimedCheckpointRevision}:${id.fencingToken}`;
+// A compromised checkpoint lock (proper-lockfile detected its lockfile was stolen/removed)
+// aborts every in-flight operation on that checkpoint so a lost lock cannot let EXECUTE
+// keep running against a checkpoint another process now owns.
+(0, lane_lock_1.setLockCompromiseHandler)((checkpointId, _err) => {
+    for (const [k, controller] of LIVE_OPERATIONS) {
+        if (k.startsWith(`${checkpointId}:`)) {
+            try {
+                controller.abort();
+            }
+            catch { /* ignore */ }
+        }
+    }
+});
 // Continuous ownership-checking heartbeat: refresh heartbeatAt on an interval; a
 // refresh that fails (ownership lost / lease fenced) aborts the operation-local signal.
 // Returns a stopper to clear the interval in finally.
@@ -169,14 +182,44 @@ async function startLane(laneId, target, context, startRequestId, d) {
         d.store.write(cp);
         return { checkpoint: cp, created: true, identity: cp.lease };
     });
-    // Lock released. Existing active lane: serve current state without re-running
-    // initial handlers (the served cache short-circuits handler execution).
+    // Lock released. Existing active lane: a DUPLICATE start must never re-run the
+    // first-step handler. If its first-step lease is LIVE, the original EXECUTE is still
+    // in flight - return the current in-flight step WITHOUT invoking handlers. If the
+    // lease is STALE (the original crashed mid-EXECUTE), reclaim it via CLAIM/EXECUTE/
+    // FINALIZE. Only when there is NO lease (already finalized) is serveStep safe (it
+    // short-circuits on the persisted served cache).
     if (!start.created) {
-        return serveStep(start.checkpoint, resolveLane(start.checkpoint.laneId), context, d);
+        const cur = start.checkpoint;
+        const ll = resolveLane(cur.laneId);
+        if (cur.lease) {
+            if ((0, lane_checkpoint_store_1.leaseIsLive)(cur.lease, Date.parse(d.now()), d.staleMs ?? 30000)) {
+                return inFlightResult(cur, ll); // original first-step EXECUTE in flight
+            }
+            // STALE first-step lease: reclaim and serve under a fresh lease identity.
+            const operationId = (d.newOperationId ?? defaultOperationId)();
+            const claimed = await (0, lane_checkpoint_store_1.claimLease)(d.store, cur.checkpointId, { expectedRevision: cur.revision, stepId: ll.verbSteps[cur.cursor].verb, iteration: cur.iteration, operationId, now: d.now, staleMs: d.staleMs });
+            return serveStepUnderLease(claimed, ll, context, d, claimed.lease);
+        }
+        return serveStep(cur, ll, context, d); // already served; cache short-circuits handlers
     }
     // New lane: serve the first step under the first-step lease identity, then
     // FINALIZE its served effects + clear the lease (same protocol as advancement).
     return serveStepUnderLease(start.checkpoint, l, context, d, start.identity);
+}
+// Current-step result for a lane whose first-step EXECUTE is in flight under a live
+// lease: report the step's static guidance WITHOUT running flow handlers (a duplicate
+// start must not re-trigger them). The served cache + final guidance land when the
+// original EXECUTE finalizes.
+function inFlightResult(cp, l) {
+    const step = l.verbSteps[cp.cursor];
+    return {
+        checkpointId: cp.checkpointId, laneId: l.lane, laneLabel: l.label,
+        lifecycle: cp.lifecycle, outcome: cp.outcome, executionKind: l.executionKind,
+        iteration: cp.iteration, stepIndex: cp.cursor, totalSteps: l.verbSteps.length,
+        currentVerb: step.verb, guidance: [...step.guidance], checklist: [], flowIds: [...step.flowIds],
+        revision: cp.revision,
+        message: `Step ${cp.cursor + 1}/${l.verbSteps.length}: ${step.verb} (in flight - operation already running)`,
+    };
 }
 // Serve the first step's flow handlers during EXECUTE (buffered operation-locally,
 // NO store writes), then FINALIZE the served-step entry + clear the lease under the
