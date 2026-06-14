@@ -14,7 +14,7 @@ function okResult(): ProductValidationResult {
       ruleCounts: { pass: 0, fail: 0, notApplicable: 0, inconclusive: 0 },
       findingCounts: { blockingExcess: 0, withinTolerance: 0, nonBlocking: 0 }, measuredScope: [], unverifiedScope: [] } };
 }
-function deps(proj: string, validator?: (id: string) => Promise<ProductValidationResult>): LaneRunnerDeps {
+function deps(proj: string, validator?: (id: string, ctx?: any, signal?: AbortSignal) => Promise<ProductValidationResult>): LaneRunnerDeps {
   let n = 0, t = 0, op = 0;
   return { store: new LaneCheckpointStore(proj),
     runFlow: async (flowId: any) => ({ flowId, flowName: String(flowId), status: 'success', message: 'ok', guidance: [], checklist: [] }),
@@ -114,6 +114,44 @@ async function run() {
     const after = d2.store.read(s.checkpointId);
     if (!after.completedStepIds.includes('shape') || !after.skippedStepIds.includes('craft')) throw new Error('stale serve persistence clobbered committed transition');
     if (!after.servedSteps['1:0']) throw new Error('serve persistence must merge its own entry');
+  }
+
+  // abort-fence: one slow validator runs longer than staleMs (the heartbeat LOOP keeps
+  // it live); a second store handle atomically fences the lease DURING that validator,
+  // proving ownership loss aborts it without waiting for a validator boundary.
+  {
+    const proj = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-abort-')));
+    let enteredValidator!: () => void;
+    const entered = new Promise<void>((r) => { enteredValidator = r; });
+    let releaseValidator!: () => void;
+    const held = new Promise<void>((r) => { releaseValidator = r; });
+    let sawAbort = false;
+    const d = deps(proj, async (_id, _ctx, signal) => {
+      signal?.addEventListener('abort', () => { sawAbort = true; });
+      enteredValidator();
+      await held;
+      return okResult();
+    });
+    d.now = () => new Date(Date.now()).toISOString();
+    d.staleMs = 40; d.heartbeatIntervalMs = 5;
+    const s = await startLane('lane_build', 'hero', { projectPath: proj }, 'req-abort', d);
+    await advanceLane(proj, s.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: d.store.read(s.checkpointId).revision }, d);
+    const inflight = advanceLane(proj, s.checkpointId, { action: 'complete', report: rep('craft'), expectedRevision: d.store.read(s.checkpointId).revision }, d);
+    await entered;
+    await new Promise((r) => setTimeout(r, 80));    // greater than staleMs; loop must keep lease live
+    const independent = new LaneCheckpointStore(proj);
+    const live = independent.read(s.checkpointId);
+    if (!leaseIsLive(live.lease, Date.now(), 40)) throw new Error('one slow validator must stay live via heartbeat loop');
+    await withCheckpointLock(independent.dir(), s.checkpointId, () => {
+      const cp = independent.read(s.checkpointId);
+      cp.fencingCounter += 1; cp.lease = null; cp.revision += 1; independent.write(cp);
+    });
+    for (let i = 0; i < 50 && !sawAbort; i++) await new Promise((r) => setTimeout(r, 2));
+    if (!sawAbort) throw new Error('independent-store ownership loss during one validator must abort signal');
+    releaseValidator();
+    await inflight.then(() => { throw new Error('fenced operation must reject FINALIZE'); }, () => {});
+    if (d.store.read(s.checkpointId).completedStepIds.includes('craft')) throw new Error('fenced operation must NOT commit');
+    console.log('lane-runner-concurrency abort-fence: OK');
   }
 
   console.log('lane-runner-concurrency: OK');

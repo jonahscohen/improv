@@ -5,7 +5,7 @@ import { createHash } from 'crypto';
 import type { FlowId } from './types';
 import type { FlowExecutionResult } from './flow-handler';
 import { LANES, GeneratedLane } from './lanes.generated';
-import { LaneCheckpoint, LaneCheckpointStore, finalizeLease, claimLease, leaseIsLive, publishOutbox, publishPendingOutbox } from './lane-checkpoint-store';
+import { LaneCheckpoint, LaneCheckpointStore, finalizeLease, claimLease, leaseIsLive, refreshHeartbeat, publishOutbox, publishPendingOutbox } from './lane-checkpoint-store';
 import type { LeaseIdentity } from './lane-checkpoint-store';
 import { LaneStepResult, LaneState, LaneInfo, LaneTransition, LaneAuditEntry, isClosed } from './lane-types';
 import type { GateStatus, PersistedStepGateStatus, LaneStepStatus } from './lane-types';
@@ -28,6 +28,7 @@ export interface LaneRunnerDeps {
   // validators that finds this absent throws (the Task 10 red).
   runValidator?: (validatorId: string, validatorContext: { projectPath: string; target: string }, signal?: AbortSignal) => Promise<ProductValidationResult>;
   staleMs?: number;                              // default 30000
+  heartbeatIntervalMs?: number;                  // default < staleMs/3
   // Deterministic failure-injection seam for outbox publishing. Production leaves it
   // undefined and therefore calls the real publisher.
   publishOutbox?: (store: LaneCheckpointStore, checkpointId: string, projectPath: string, now?: () => string) => Promise<void>;
@@ -38,6 +39,30 @@ export interface LaneRunnerDeps {
 // Default operation id when deps omits newOperationId (production wiring is Task 10).
 function defaultOperationId(): string {
   return `op-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// In-process registry of live operations, keyed by the FULL lease identity (NOT the
+// checkpoint id) so an old operation's finally never deletes a same-process replacement
+// and interrupt/stop (Task 9) can abort the exact controller for a fenced identity.
+const LIVE_OPERATIONS = new Map<string, AbortController>();
+const leaseKey = (checkpointId: string, id: LeaseIdentity) =>
+  `${checkpointId}:${id.operationId}:${id.stepId}:${id.iteration}:${id.claimedCheckpointRevision}:${id.fencingToken}`;
+
+// Continuous ownership-checking heartbeat: refresh heartbeatAt on an interval; a
+// refresh that fails (ownership lost / lease fenced) aborts the operation-local signal.
+// Returns a stopper to clear the interval in finally.
+function startHeartbeatLoop(d: LaneRunnerDeps, checkpointId: string, id: LeaseIdentity, controller: AbortController): () => void {
+  const every = d.heartbeatIntervalMs ?? Math.max(10, Math.floor((d.staleMs ?? 30000) / 3));
+  let stopped = false; let running = false;
+  const timer = setInterval(async () => {
+    if (stopped || running) return;
+    running = true;
+    try { await refreshHeartbeat(d.store, checkpointId, id, d.now); }
+    catch { controller.abort(); }
+    finally { running = false; }
+  }, every);
+  if (typeof (timer as any).unref === 'function') (timer as any).unref();
+  return () => { stopped = true; clearInterval(timer); };
 }
 
 function resolveLane(laneId: string): GeneratedLane {
@@ -182,28 +207,40 @@ async function serveStepUnderLease(cp: LaneCheckpoint, l: GeneratedLane, context
   }
   const step = l.verbSteps[cp.cursor];
   const key = `${cp.cursor}:${cp.iteration}`;
-  const acc: ServedEntry = { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [] };
-  for (let i = 0; i < step.flowIds.length; i++) {
-    const flowId = step.flowIds[i];
-    const flowCtx = { ...context, completedFlowIds: [...cp.completedFlowIds, ...acc.successfulFlowIds], waivers: l.prereqWaivers };
-    const r = await d.runFlow(flowId, flowCtx);
-    for (const g of r.guidance ?? []) acc.guidance.push(g);
-    for (const c of r.checklist ?? []) acc.checklist.push({ id: `${flowId}:${c.id}`, label: c.label, required: c.required, completed: false });
-    acc.flowIds.push(flowId);
-    if (r.status === 'success') acc.successfulFlowIds.push(flowId);
+  // Start the ownership heartbeat for the first-step lease before any handler runs, so a
+  // long first-step serve keeps the lease live; stop it in finally (Task 8).
+  const controller = new AbortController();
+  const opKey = leaseKey(cp.checkpointId, id);
+  LIVE_OPERATIONS.set(opKey, controller);
+  const stopHeartbeat = startHeartbeatLoop(d, cp.checkpointId, id, controller);
+  let final: LaneCheckpoint;
+  try {
+    const acc: ServedEntry = { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [] };
+    for (let i = 0; i < step.flowIds.length; i++) {
+      const flowId = step.flowIds[i];
+      const flowCtx = { ...context, completedFlowIds: [...cp.completedFlowIds, ...acc.successfulFlowIds], waivers: l.prereqWaivers };
+      const r = await d.runFlow(flowId, flowCtx);
+      for (const g of r.guidance ?? []) acc.guidance.push(g);
+      for (const c of r.checklist ?? []) acc.checklist.push({ id: `${flowId}:${c.id}`, label: c.label, required: c.required, completed: false });
+      acc.flowIds.push(flowId);
+      if (r.status === 'success') acc.successfulFlowIds.push(flowId);
+    }
+    await d.__beforeServePersist?.();   // the first-step serve persist (FINALIZE) mirrors serveStep's seam
+    final = await finalizeLease(d.store, cp.checkpointId, id, (c, committedRevision) => {
+      c.servedSteps[key] = acc;
+      // First-step committed outbox record (spec line 286): the served first-step effect
+      // publishes only from the committed outbox, like advancement.
+      c.sideEffectOutbox.push({
+        checkpointId: c.checkpointId, committedRevision, fencingToken: id.fencingToken, stepId: step.verb, iteration: id.iteration,
+        pendingPublishers: ['lane-side-effect-sink'], createdAt: d.now(),
+        entries: [{ publisher: 'lane-side-effect-sink', entryIndex: 0, logicalKey: `${c.checkpointId}:${step.verb}:${id.iteration}`,
+          payload: { laneId: c.laneId, verb: step.verb, served: true, committedRevision } }],
+      });
+    }, d.now);
+  } finally {
+    stopHeartbeat();
+    if (LIVE_OPERATIONS.get(opKey) === controller) LIVE_OPERATIONS.delete(opKey);
   }
-  await d.__beforeServePersist?.();   // the first-step serve persist (FINALIZE) mirrors serveStep's seam
-  const final = await finalizeLease(d.store, cp.checkpointId, id, (c, committedRevision) => {
-    c.servedSteps[key] = acc;
-    // First-step committed outbox record (spec line 286): the served first-step effect
-    // publishes only from the committed outbox, like advancement.
-    c.sideEffectOutbox.push({
-      checkpointId: c.checkpointId, committedRevision, fencingToken: id.fencingToken, stepId: step.verb, iteration: id.iteration,
-      pendingPublishers: ['lane-side-effect-sink'], createdAt: d.now(),
-      entries: [{ publisher: 'lane-side-effect-sink', entryIndex: 0, logicalKey: `${c.checkpointId}:${step.verb}:${id.iteration}`,
-        payload: { laneId: c.laneId, verb: step.verb, served: true, committedRevision } }],
-    });
-  }, d.now);
   if (context.projectPath) await (d.publishOutbox ?? publishOutbox)(d.store, cp.checkpointId, context.projectPath, d.now);
   return serveStep(final, l, context, d); // served cache complete -> pure read, no handler re-run
 }
@@ -350,46 +387,60 @@ export async function advanceLane(projectPath: string, checkpointId: string, tra
       const claimed = await claimLease(d.store, checkpointId, { expectedRevision: transition.expectedRevision, stepId: step.verb, iteration: cp.iteration, operationId, now: d.now, staleMs: d.staleMs });
       const id = claimed.lease!;                       // FULL identity captured under the lock
 
-      // EXECUTE: run the step's bound validators (async), aggregate worst-status.
-      const validatorIds = validatorsForStep(step);
-      const perValidator = await runStepValidators(d, validatorIds, { projectPath, target: cp.target });
-      const worst = aggregateWorstStatus(perValidator.map((p) => p.result.status as GateStatus));
-      const gate = { status: worst, validators: perValidator.map((p) => ({ validatorId: p.validatorId, status: p.result.status as GateStatus })),
-                     findings: perValidator.flatMap((p) => p.result.findings) };
-      const outcome = mapGateStatusToOutcome(worst);
-      const persistedStatus: PersistedStepGateStatus = outcome.proceed ? 'clean' : outcome.stepStatus!;
+      // Register the live operation + start the continuous ownership heartbeat. The
+      // composed signal covers lease-ownership-loss (a failed heartbeat aborts it) +
+      // in-process priority cancellation (interrupt/stop abort this controller in Task 9).
+      const controller = new AbortController();
+      const opKey = leaseKey(checkpointId, id);
+      LIVE_OPERATIONS.set(opKey, controller);
+      const stopHeartbeat = startHeartbeatLoop(d, checkpointId, id, controller);
+      try {
+        // EXECUTE: run the step's bound validators (async, abortable), aggregate worst-status.
+        const validatorIds = validatorsForStep(step);
+        const perValidator = await runStepValidators(d, validatorIds, { projectPath, target: cp.target }, controller.signal);
+        const worst = aggregateWorstStatus(perValidator.map((p) => p.result.status as GateStatus));
+        const gate = { status: worst, validators: perValidator.map((p) => ({ validatorId: p.validatorId, status: p.result.status as GateStatus })),
+                       findings: perValidator.flatMap((p) => p.result.findings) };
+        const outcome = mapGateStatusToOutcome(worst);
+        const persistedStatus: PersistedStepGateStatus = outcome.proceed ? 'clean' : outcome.stepStatus!;
 
-      if (outcome.proceed) {
-        const final = await finalizeLease(d.store, checkpointId, id, (c, committedRevision) => {
+        if (outcome.proceed) {
+          const final = await finalizeLease(d.store, checkpointId, id, (c, committedRevision) => {
+            c.stepGateStatuses[`${step.verb}:${c.iteration}`] = persistedStatus;
+            c.seenReportIds.push(r.reportId); c.stepReports.push(r); c.completedStepIds.push(step.verb);
+            // Attest ONLY the flows that ran successfully this step (degraded/skipped/
+            // errored flows must not falsely satisfy a later step's prerequisite).
+            for (const f of served!.successfulFlowIds) if (!c.completedFlowIds.includes(f)) c.completedFlowIds.push(f);
+            c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: committedRevision, at: d.now() });
+            advanceCursorInPlace(c, l);
+            // Committed side-effect outbox record keyed by (checkpointId, committedRevision),
+            // carrying the fencingToken. Published only AFTER FINALIZE, from the committed outbox.
+            c.sideEffectOutbox.push({
+              checkpointId, committedRevision, fencingToken: id.fencingToken, stepId: step.verb, iteration: id.iteration,
+              pendingPublishers: ['lane-side-effect-sink'], createdAt: d.now(),
+              entries: [{ publisher: 'lane-side-effect-sink', entryIndex: 0, logicalKey: `${checkpointId}:${step.verb}:${id.iteration}`,
+                payload: { laneId: cp.laneId, verb: step.verb, gateStatus: worst, validators: gate.validators, committedRevision } }],
+            });
+          }, d.now);
+          await (d.publishOutbox ?? publishOutbox)(d.store, checkpointId, projectPath, d.now);
+          return buildStepResult(final, l, { projectPath }, d, gate);
+        }
+        // UNCLEAN: release the lease WITHOUT advancing; the step stays current. Still a
+        // FINALIZE (owner-checked, bumps revision, clears lease) so writes stay under the
+        // lock and the next attempt can claim cleanly. Pushing r.reportId makes a re-send
+        // of the SAME report a no-op; a DIFFERENT report re-runs the gate.
+        const released = await finalizeLease(d.store, checkpointId, id, (c, committedRevision) => {
           c.stepGateStatuses[`${step.verb}:${c.iteration}`] = persistedStatus;
-          c.seenReportIds.push(r.reportId); c.stepReports.push(r); c.completedStepIds.push(step.verb);
-          // Attest ONLY the flows that ran successfully this step (degraded/skipped/
-          // errored flows must not falsely satisfy a later step's prerequisite).
-          for (const f of served!.successfulFlowIds) if (!c.completedFlowIds.includes(f)) c.completedFlowIds.push(f);
-          c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: committedRevision, at: d.now() });
-          advanceCursorInPlace(c, l);
-          // Committed side-effect outbox record keyed by (checkpointId, committedRevision),
-          // carrying the fencingToken. Published only AFTER FINALIZE, from the committed outbox.
-          c.sideEffectOutbox.push({
-            checkpointId, committedRevision, fencingToken: id.fencingToken, stepId: step.verb, iteration: id.iteration,
-            pendingPublishers: ['lane-side-effect-sink'], createdAt: d.now(),
-            entries: [{ publisher: 'lane-side-effect-sink', entryIndex: 0, logicalKey: `${checkpointId}:${step.verb}:${id.iteration}`,
-              payload: { laneId: cp.laneId, verb: step.verb, gateStatus: worst, validators: gate.validators, committedRevision } }],
-          });
+          c.seenReportIds.push(r.reportId);
+          c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: committedRevision, reason: `gate:${worst}`, at: d.now() });
         }, d.now);
-        await (d.publishOutbox ?? publishOutbox)(d.store, checkpointId, projectPath, d.now);
-        return buildStepResult(final, l, { projectPath }, d, gate);
+        return buildStepResult(released, l, { projectPath }, d, gate);   // re-serves the SAME (still-current) step + gate
+      } finally {
+        stopHeartbeat();
+        // Conditional delete: only remove OUR identity-keyed controller (a same-process
+        // replacement under the same key must not be deleted by this finally).
+        if (LIVE_OPERATIONS.get(opKey) === controller) LIVE_OPERATIONS.delete(opKey);
       }
-      // UNCLEAN: release the lease WITHOUT advancing; the step stays current. Still a
-      // FINALIZE (owner-checked, bumps revision, clears lease) so writes stay under the
-      // lock and the next attempt can claim cleanly. Pushing r.reportId makes a re-send
-      // of the SAME report a no-op; a DIFFERENT report re-runs the gate.
-      const released = await finalizeLease(d.store, checkpointId, id, (c, committedRevision) => {
-        c.stepGateStatuses[`${step.verb}:${c.iteration}`] = persistedStatus;
-        c.seenReportIds.push(r.reportId);
-        c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: committedRevision, reason: `gate:${worst}`, at: d.now() });
-      }, d.now);
-      return buildStepResult(released, l, { projectPath }, d, gate);   // re-serves the SAME (still-current) step + gate
     }
     // retry / interrupt / resume / stop keep P2 behavior (Task 9 moves them under the lock)
     default:
