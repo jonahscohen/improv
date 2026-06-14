@@ -5,10 +5,10 @@ import { createHash } from 'crypto';
 import type { FlowId } from './types';
 import type { FlowExecutionResult } from './flow-handler';
 import { LANES, GeneratedLane } from './lanes.generated';
-import { LaneCheckpoint, LaneCheckpointStore, finalizeLease, claimLease, leaseIsLive, refreshHeartbeat, publishOutbox, publishPendingOutbox } from './lane-checkpoint-store';
+import { LaneCheckpoint, LaneCheckpointStore, finalizeLease, claimLease, leaseIsLive, refreshHeartbeat, publishOutbox, publishPendingOutbox, OUTBOX_PUBLISHERS } from './lane-checkpoint-store';
 import type { LeaseIdentity } from './lane-checkpoint-store';
 import { LaneStepResult, LaneState, LaneInfo, LaneTransition, LaneAuditEntry, isClosed } from './lane-types';
-import type { GateStatus, PersistedStepGateStatus, LaneStepStatus } from './lane-types';
+import type { GateStatus, PersistedStepGateStatus, LaneStepStatus, SideEffectOutboxRecord } from './lane-types';
 import type { ProductValidationResult } from './product-rule-types';
 import { validatorsForStep, aggregateWorstStatus, mapGateStatusToOutcome, requiredValidatorsForLane, isLoopLane } from './lane-validators';
 import { getValidatorRegistration, getLanePolicy } from './flow-validation-capabilities';
@@ -102,6 +102,49 @@ function closedResult(cp: LaneCheckpoint, l: GeneratedLane): LaneStepResult {
 }
 
 type ServedEntry = { guidance: string[]; checklist: { id: string; label: string; required: boolean; completed: boolean }[]; flowIds: FlowId[]; successfulFlowIds: FlowId[]; flowOutcomes: { flowId: FlowId; status: 'success' | 'needs_input' | 'error' | 'skipped'; message: string }[] };
+
+function committedStepOutbox(
+  checkpoint: LaneCheckpoint,
+  stepId: string,
+  iteration: number,
+  committedRevision: number,
+  fencingToken: number,
+  createdAt: string,
+  sinkPayload: unknown,
+  served: ServedEntry,
+): SideEffectOutboxRecord {
+  const baseKey = `${checkpoint.checkpointId}:${stepId}:${iteration}`;
+  return {
+    checkpointId: checkpoint.checkpointId,
+    committedRevision,
+    fencingToken,
+    stepId,
+    iteration,
+    pendingPublishers: [...OUTBOX_PUBLISHERS],
+    createdAt,
+    entries: [
+      {
+        publisher: 'lane-side-effect-sink',
+        entryIndex: 0,
+        logicalKey: baseKey,
+        payload: sinkPayload,
+      },
+      {
+        publisher: 'flow-history',
+        entryIndex: 1,
+        logicalKey: `${baseKey}:flow-history`,
+        payload: {
+          flowId: `lane:${checkpoint.laneId}:${stepId}`,
+          flowName: `Lane ${checkpoint.laneId}: ${stepId}`,
+          status: 'success',
+          message: `Committed lane STEP ${stepId} for ${checkpoint.laneId} at revision ${committedRevision}.`,
+          guidance: [...served.guidance],
+          checklist: [...served.checklist],
+        },
+      },
+    ],
+  };
+}
 
 // Serve the verb step at cursor. Uses the PERSISTED cache if present (so retry/
 // resume/duplicate never re-run handlers); otherwise runs each member flow once into
@@ -295,12 +338,16 @@ async function serveStepUnderLease(cp: LaneCheckpoint, l: GeneratedLane, context
       c.servedSteps[key] = acc;
       // First-step committed outbox record (spec line 286): the served first-step effect
       // publishes only from the committed outbox, like advancement.
-      c.sideEffectOutbox.push({
-        checkpointId: c.checkpointId, committedRevision, fencingToken: id.fencingToken, stepId: step.verb, iteration: id.iteration,
-        pendingPublishers: ['lane-side-effect-sink'], createdAt: d.now(),
-        entries: [{ publisher: 'lane-side-effect-sink', entryIndex: 0, logicalKey: `${c.checkpointId}:${step.verb}:${id.iteration}`,
-          payload: { laneId: c.laneId, verb: step.verb, served: true, committedRevision } }],
-      });
+      c.sideEffectOutbox.push(committedStepOutbox(
+        c,
+        step.verb,
+        id.iteration,
+        committedRevision,
+        id.fencingToken,
+        d.now(),
+        { laneId: c.laneId, verb: step.verb, served: true, committedRevision },
+        acc,
+      ));
     }, d.now);
   } finally {
     stopHeartbeat();
@@ -483,12 +530,16 @@ export async function advanceLane(projectPath: string, checkpointId: string, tra
             advanceCursorInPlace(c, l);
             // Committed side-effect outbox record keyed by (checkpointId, committedRevision),
             // carrying the fencingToken. Published only AFTER FINALIZE, from the committed outbox.
-            c.sideEffectOutbox.push({
-              checkpointId, committedRevision, fencingToken: id.fencingToken, stepId: step.verb, iteration: id.iteration,
-              pendingPublishers: ['lane-side-effect-sink'], createdAt: d.now(),
-              entries: [{ publisher: 'lane-side-effect-sink', entryIndex: 0, logicalKey: `${checkpointId}:${step.verb}:${id.iteration}`,
-                payload: { laneId: cp.laneId, verb: step.verb, gateStatus: worst, validators: gate.validators, committedRevision } }],
-            });
+            c.sideEffectOutbox.push(committedStepOutbox(
+              c,
+              step.verb,
+              id.iteration,
+              committedRevision,
+              id.fencingToken,
+              d.now(),
+              { laneId: cp.laneId, verb: step.verb, gateStatus: worst, validators: gate.validators, committedRevision },
+              served!,
+            ));
           }, d.now);
           await (d.publishOutbox ?? publishOutbox)(d.store, checkpointId, projectPath, d.now);
           return buildStepResult(final, l, { projectPath }, d, gate);

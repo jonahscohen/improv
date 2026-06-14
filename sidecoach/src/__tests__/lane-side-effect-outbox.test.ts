@@ -32,9 +32,12 @@ function deps(proj: string, validator?: (id: string) => Promise<ProductValidatio
 const rep = (verb: string): StepReport => ({ stepId: verb, iteration: 0, reportId: `r:${verb}`, verb, summary: 's', evidence: [{ kind: 'note', detail: 'x' }] });
 
 async function run() {
+  process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-obx-home-'));
   const proj = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-obx-')));
   const d = deps(proj);
   const s = await startLane('lane_build', 'hero', { projectPath: proj }, 'req-obx', d);
+  const firstStepHistory = new FlowHistory(proj).getLatestRun(`lane:lane_build:${s.currentVerb}`);
+  if (!firstStepHistory?.laneLogicalKey?.endsWith(':flow-history')) throw new Error('first-step FINALIZE must publish a flow-history entry');
   // complete the craft step (binds polish-standard, clean) so a side effect is produced
   await advanceLane(proj, s.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: s.revision }, d);
   const cur = d.store.read(s.checkpointId);
@@ -74,11 +77,35 @@ async function run() {
   const pending = d2.store.read(s2.checkpointId);
   if (!pending.completedStepIds.includes('craft') || pending.sideEffectOutbox.length !== 1) throw new Error('FINALIZE commit + pending outbox must survive publish crash');
   const pendingRecord = pending.sideEffectOutbox[0];
+  if (JSON.stringify(pendingRecord.pendingPublishers) !== JSON.stringify(['lane-side-effect-sink', 'flow-history'])) {
+    throw new Error('committed STEP outbox must declare both publishers');
+  }
+  if (pendingRecord.entries.length !== 2
+      || pendingRecord.entries[0].publisher !== 'lane-side-effect-sink'
+      || pendingRecord.entries[0].entryIndex !== 0
+      || pendingRecord.entries[1].publisher !== 'flow-history'
+      || pendingRecord.entries[1].entryIndex !== 1) {
+    throw new Error('committed STEP outbox must contain stable sink and flow-history entries');
+  }
   await publishOutbox(d2.store, s2.checkpointId, proj, d2.now); // production publisher, no reseeding
   if (d2.store.read(s2.checkpointId).sideEffectOutbox.length !== 0) throw new Error('production replay must drain pending outbox');
   const sink2 = new LaneSideEffectSink(proj);
   const k2 = `${s2.checkpointId}:craft:0`;
   if (sink2.get(k2)?.fencingToken !== pendingRecord.fencingToken) throw new Error('production replay publishes the committed fencing token');
+  const historyAfterReplay = new FlowHistory(proj);
+  const replayedFlow = historyAfterReplay.getLatestRun('lane:lane_build:craft');
+  if (replayedFlow?.fencingToken !== pendingRecord.fencingToken) throw new Error('crash replay must publish flow-history with the committed fencing token');
+  const countBeforeReplay = historyAfterReplay.getFlowCount('lane:lane_build:craft');
+  const replayArtifact = d2.store.read(s2.checkpointId);
+  replayArtifact.sideEffectOutbox.push(pendingRecord);
+  d2.store.write(replayArtifact);
+  await publishOutbox(d2.store, s2.checkpointId, proj, d2.now);
+  if (d2.store.read(s2.checkpointId).sideEffectOutbox.length !== 0) {
+    throw new Error('same-token no-op replay must still ack both publishers');
+  }
+  if (new FlowHistory(proj).getFlowCount('lane:lane_build:craft') !== countBeforeReplay) {
+    throw new Error('same committed outbox replay must not append a duplicate flow-history run');
+  }
 
   // Automatic recovery path: make a committed record pending again as a crash
   // artifact, then a later production entrypoint must replay it before returning.
