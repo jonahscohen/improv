@@ -709,7 +709,7 @@ async function loopRetryResume(cp: LaneCheckpoint, l: GeneratedLane, projectPath
   if (t.action === 'retry') {
     return runIterationBoundary(cp, l, projectPath, d, t.expectedRevision, (c, committedRevision) => {
       c.audit.push({ action: 'retry', stepId: l.verbSteps[c.cursor].verb, iteration: c.iteration, reason: t.reason, revision: committedRevision, at: d.now() });
-    });
+    }, true);
   }
   const final = await withCheckpointLock(d.store.dir(), cp.checkpointId, () => {
     const c = d.store.read(cp.checkpointId);
@@ -740,6 +740,7 @@ async function loopRetryResume(cp: LaneCheckpoint, l: GeneratedLane, projectPath
 async function runIterationBoundary(
   cp: LaneCheckpoint, l: GeneratedLane, projectPath: string, d: LaneRunnerDeps,
   claimRevision: number, onCommit: (c: LaneCheckpoint, committedRevision: number) => void,
+  isRetry = false,
 ): Promise<LaneStepResult> {
   const step = l.verbSteps[cp.cursor];
   const operationId = (d.newOperationId ?? defaultOperationId)();
@@ -758,14 +759,15 @@ async function runIterationBoundary(
     const gate = { status: ev.iterationStatus, validators: perValidator.map((p) => ({ validatorId: p.validatorId, status: p.result.status as GateStatus })), findings: ev.findings };
     const final = await finalizeLease(d.store, cp.checkpointId, id, (c, committedRevision) => {
       onCommit(c, committedRevision);
-      applyConvergence(c, ev, decision);
+      applyConvergence(c, ev, decision, isRetry);
       if (ev.converged) { c.lifecycle = 'closed'; c.outcome = 'converged'; }
-      else if (decision.outcome === 'running') {
+      else if (!isRetry && decision.outcome === 'running') {
         c.iteration = decision.nextIteration;
-        c.cursor = 0;   // ONLY a running decision serves the next pass
+        c.cursor = 0;   // ONLY a genuine continue (not a retry) serves the next pass
       }
-      // stalled/capped are terminal-pending: remain in_progress at the completed
-      // final-step boundary, do not reset the cursor, and do not serve another pass.
+      // stalled/capped (and any non-converging RETRY) are terminal-pending: remain
+      // in_progress at the completed final-step boundary, do not reset the cursor, do
+      // not serve another pass, and do not consume the pending iteration index.
       c.sideEffectOutbox.push({
         checkpointId: c.checkpointId, committedRevision, fencingToken: id.fencingToken, stepId: step.verb, iteration: id.iteration,
         pendingPublishers: ['lane-side-effect-sink'], createdAt: d.now(),
@@ -815,7 +817,7 @@ async function runBoundaryValidators(
 // sub-state. Records the iteration in history (reproducible inputs), the latest
 // findings/validatorErrors/scope, and the signature. The caller sets c.iteration/
 // c.cursor/lifecycle; this only touches c.convergence.
-function applyConvergence(c: LaneCheckpoint, ev: BoundaryEvaluation, decision: ProgressDecision): void {
+function applyConvergence(c: LaneCheckpoint, ev: BoundaryEvaluation, decision: ProgressDecision, isRetry = false): void {
   const conv = c.convergence!;
   conv.history.push({ iteration: c.iteration, signature: ev.signature, perValidator: ev.perValidator, requiredValidatorRuns: ev.requiredValidatorRuns });
   conv.signatures.push(ev.signature);
@@ -824,7 +826,10 @@ function applyConvergence(c: LaneCheckpoint, ev: BoundaryEvaluation, decision: P
   conv.runCoverage = ev.runCoverage;
   conv.outcome = decision.outcome;
   conv.consecutiveNoProgress = ev.converged ? conv.consecutiveNoProgress : decision.consecutiveNoProgress;
-  conv.iteration = ev.converged ? c.iteration : decision.nextIteration;
+  // A genuine continue advances the pending index; a non-converging RETRY re-ran the
+  // SAME boundary and must PRESERVE the existing pending index (so a later resume runs
+  // that same pass, not the next). Convergence keeps the iteration it converged on.
+  conv.iteration = ev.converged ? c.iteration : (isRetry ? conv.iteration : decision.nextIteration);
 }
 
 function convergenceSurface(c: LaneCheckpoint): NonNullable<LaneStepResult['convergence']> {
