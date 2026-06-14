@@ -1,3 +1,5 @@
+- [P4a-1 role inversion: Codex authors, I review (v4 round failed) - PROJECT (2026-06-13)](session_2026-06-13_p4a1-codex-takeover.md): P4a-1 role inversion: Codex authors, I review (v4 round failed)
+- [P4a-1 v5 (Codex-authored) reviewed+APPROVED by me; role inversion converged in 1 pass; executing - PROJECT (2026-06-13)](session_2026-06-13_p4a1-v5-approved.md): P4a-1 v5 (Codex-authored) reviewed+APPROVED by me; role inversion converged in 1 pass; executing
 - [P4a-1 v3 review: 10 closed, ~9 tractable fixes -> v4 fix-spec - PROJECT (2026-06-13)](session_2026-06-13_p4a1-v3-review-fixspec.md): P4a-1 v3 review: 10 closed, ~9 tractable fixes -> v4 fix-spec
 - [P4a-1 v4 verified + committed; Codex review next; role-inversion armed (Codex authors if it fails) - PROJECT (2026-06-13)](session_2026-06-13_p4a1-v4-verified.md): P4a-1 v4 verified + committed; Codex review next; role-inversion armed (Codex authors if it fails)
 - [P4a-1 v2 review = needs clean rewrite - PROJECT (2026-06-13)](session_2026-06-13_p4a1-v2-review-rewrite-spec.md): changelog contradicted task bodies; complete fix-spec for the v3 rewrite
