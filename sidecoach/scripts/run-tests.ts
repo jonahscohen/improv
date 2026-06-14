@@ -36,6 +36,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/lane-validator-gating.test.ts', required: true },
   { rel: 'src/__tests__/lane-runner-concurrency.test.ts', required: true },
   { rel: 'src/__tests__/lane-side-effect-outbox.test.ts', required: true },
+  { rel: 'src/__tests__/lane-flow-history-publisher.test.ts', required: true },
   { rel: 'src/__tests__/lane-runner-start.test.ts', required: true },
   { rel: 'src/__tests__/lane-runner-advance-sequence.test.ts', required: true },
   { rel: 'src/__tests__/lane-runner-transitions.test.ts', required: true },
