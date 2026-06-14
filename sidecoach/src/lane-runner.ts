@@ -643,6 +643,7 @@ async function completeLoopStep(cp: LaneCheckpoint, l: GeneratedLane, transition
     return runIterationBoundary(cp, l, projectPath, d, transition.expectedRevision, (c, committedRevision) => {
       c.seenReportIds.push(r.reportId); c.stepReports.push(r);
       recordAdvisoryRun(c, cp.cursor, step.verb);
+      propagateSuccessfulFlows(c, cp.cursor);   // completing attests this step's successful flows
       c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: committedRevision, reason: 'boundary', at: d.now() });
     });
   }
@@ -652,6 +653,7 @@ async function completeLoopStep(cp: LaneCheckpoint, l: GeneratedLane, transition
   const final = await finalizeLease(d.store, cp.checkpointId, id, (c, committedRevision) => {
     c.seenReportIds.push(r.reportId); c.stepReports.push(r);
     recordAdvisoryRun(c, cp.cursor, step.verb);
+    propagateSuccessfulFlows(c, cp.cursor);   // a later step's prerequisites must see this step's successful flows
     c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: committedRevision, at: d.now() });
     c.cursor += 1;   // advance within the iteration; a loop never closes on a non-final step
   }, d.now);
@@ -669,6 +671,17 @@ function recordAdvisoryRun(c: LaneCheckpoint, cursor: number, stepId: string): v
     stepId,
     flows: (served.flowOutcomes ?? []).map((f) => ({ flowId: f.flowId, outcome: f.status, message: f.message })),
   });
+}
+
+// Attest the completed step's successful flows into completedFlowIds (mirrors the
+// sequence-complete path) so a later step's prerequisites see them through the real
+// orchestrator prereq graph. Only flows whose handler returned 'success' are attested
+// (degraded/skipped/errored flows must not satisfy a prerequisite). A skip never calls
+// this - a skipped step attests nothing.
+function propagateSuccessfulFlows(c: LaneCheckpoint, cursor: number): void {
+  const served = c.servedSteps[`${cursor}:${c.iteration}`];
+  if (!served) return;
+  for (const f of served.successfulFlowIds ?? []) if (!c.completedFlowIds.includes(f)) c.completedFlowIds.push(f);
 }
 
 // Skip a loop verb step. A non-final skip drops that pass's coaching and advances the

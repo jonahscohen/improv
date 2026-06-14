@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { FlowExecutionEngine } from '../sidecoach-orchestrator';
+import { LaneCheckpointStore } from '../lane-checkpoint-store';
 import { StepReport } from '../lane-types';
 import { getLanePolicy } from '../flow-validation-capabilities';
 import { runValidatorForTest } from '../validators/run-validator';
@@ -35,6 +36,26 @@ async function run() {
   if (c.outcome !== 'converged') throw new Error('expected converged end-to-end, got ' + c.outcome + ' / ' + JSON.stringify(c.convergence));
   if (!c.convergence?.summary) throw new Error('converged result must carry a truthful summary');
   if (fs.existsSync(path.join(FIXTURE, '.claude'))) throw new Error('tracked fixture must not receive checkpoint artifacts');
+
+  // Prerequisite propagation through the REAL orchestrator (not just machine convergence):
+  // completing a loop step must attest its successful flows so later steps' prerequisites
+  // are satisfied. flowK requires flowJ; flowL requires J/K. Without propagation these
+  // degrade to needs_input. (flowM/flowI require flowG, which the converge loop never
+  // runs and the lane does not waive, so they legitimately stay needs_input - not asserted.)
+  const cp = new LaneCheckpointStore(project).read(s.checkpointId);
+  const completed = cp.completedFlowIds as string[];
+  for (const need of ['flowJ_tactical_polish', 'flowK_multi_lens_audit', 'flowL_design_critique']) {
+    if (!completed.includes(need)) throw new Error(`loop-complete must attest ${need} into completedFlowIds; got ` + JSON.stringify(cp.completedFlowIds));
+  }
+  const advisoryOutcome = (flowId: string): string | undefined => {
+    for (const ar of cp.convergence!.advisoryRuns) {
+      const f = ar.flows.find((x) => String(x.flowId) === flowId);
+      if (f) return f.outcome;
+    }
+    return undefined;
+  };
+  if (advisoryOutcome('flowK_multi_lens_audit') !== 'success') throw new Error('flowK (audit) must run successfully once flowJ is attested, got ' + advisoryOutcome('flowK_multi_lens_audit'));
+  if (advisoryOutcome('flowL_design_critique') !== 'success') throw new Error('flowL (critique) must run successfully once J/K are attested, got ' + advisoryOutcome('flowL_design_critique'));
 
   console.log('lane-converge-e2e: OK');
 }
