@@ -48,6 +48,8 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/lane-converge-policy.test.ts', required: true },            // P4c lane policy + loop helpers
   { rel: 'src/__tests__/lane-convergence.test.ts', required: true },                // P4c pure convergence module
   { rel: 'src/__tests__/lane-loop-start.test.ts', required: true },                 // P4c lane_converge starts + seeds convergence
+  { rel: 'src/__tests__/lane-loop-advance.test.ts', required: true },               // P4c loop advisory step advance
+  { rel: 'src/__tests__/lane-loop-boundary-converge.test.ts', required: true },     // P4c boundary converged path
   { rel: 'src/__tests__/product-rule-registry.test.ts', required: true },
   { rel: 'src/__tests__/flow-validation-capabilities.test.ts', required: true },
   { rel: 'src/__tests__/generate-validators.test.ts', required: true },
