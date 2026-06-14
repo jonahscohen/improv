@@ -1458,6 +1458,7 @@ runValidator: async (validatorId, validatorContext, signal) => {
 - MCP migration + transport-timeout signal composition (P4d). The composed AbortSignal in P4b-1 covers lease-ownership-loss + in-process priority cancellation only.
 - Copy gating (P4e).
 - `P4f - Lane FlowHistory Conditional Publisher`: add FlowHistory as a second conditional publisher reading the SAME committed outbox record. P4b-1 deliberately keeps the global FlowHistory writer untouched because it serves the non-lane engine and changing it here risks the 27 green baseline suites.
+- **OS-level lock (deferred, accepted best-effort limitation):** the checkpoint lock is BEST-EFFORT cross-process via `proper-lockfile` (atomic-mkdir + mtime staleness) plus the lease/fencing/onCompromised layer - tiny residual stale-reclaim window, fully single-process-safe - but strict at-most-one-committed under ADVERSARIAL multi-process concurrent stale-reclaim is NOT guaranteed (mtime-based reclaim is not a kernel mutex). Accepted for this single-user tool (human decision: ship best-effort, document it; no native dependency). A future OS `flock(2)`-based lock could close the residual window if multi-process execution ever matters. See the documented-limitation block atop `withCheckpointLock` in `lane-lock.ts`.
 
 ---
 
