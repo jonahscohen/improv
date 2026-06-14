@@ -77,6 +77,25 @@ async function run() {
   const publisherHistory = new FlowHistory(publisherProject);
   assert(publisherHistory.getFlowCount('lane:lane_build:shape') === 1, 'publisher must persist one idempotent run in the project session');
 
+  // P1-1: a long-lived ordinary instance captured BEFORE a lane publish must not clobber
+  // the committed lane entry when it later records its own flow. recordFlow must reload
+  // fresh from disk before it mutates and saves, not write back from its stale snapshot.
+  const clobberProject = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-flow-history-clobber-')));
+  const staleOrchestrator = new FlowHistory(clobberProject); // captures an empty snapshot now
+  const clobberPublisher = new LaneFlowHistoryPublisher(clobberProject);
+  const laneWrite = await clobberPublisher.upsert('lane-cp9:craft:0:flow-history', 5, entry('lane-committed'), now);
+  assert(laneWrite.status === 'written', 'publisher must write the lane entry before the stale recordFlow');
+  staleOrchestrator.recordFlow({
+    flowId: 'flowZ_unrelated',
+    flowName: 'Unrelated',
+    status: 'success',
+    message: 'orchestrator-write',
+  });
+  const afterClobber = new FlowHistory(clobberProject);
+  assert(afterClobber.getLatestRun('lane:lane_build:craft')?.laneLogicalKey === 'lane-cp9:craft:0:flow-history',
+    'a later stale-instance recordFlow must not clobber the committed lane entry');
+  assert(afterClobber.getFlowCount('flowZ_unrelated') === 1, 'the stale instance recordFlow must still persist its own run');
+
   const ordinary = new FlowHistory('ordinary-session');
   for (let i = 0; i < 21; i++) {
     ordinary.recordFlow({
