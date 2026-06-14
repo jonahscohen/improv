@@ -20,7 +20,7 @@ async function run() {
   const start = await startLane('lane_build', 'hero', { projectPath: proj }, 'req-1', d); // shape, craft, polish
 
   let threw = false;
-  try { await advanceLane(proj, start.checkpointId, { action: 'complete', expectedRevision: 0 }, d); } catch { threw = true; }
+  try { await advanceLane(proj, start.checkpointId, { action: 'complete', expectedRevision: start.revision }, d); } catch { threw = true; }
   if (!threw) throw new Error('complete without report rejects');
 
   threw = false;
@@ -28,12 +28,12 @@ async function run() {
   if (!threw) throw new Error('stale revision rejects');
 
   threw = false;
-  try { await advanceLane(proj, start.checkpointId, { action: 'complete', report: { ...rep('shape'), evidence: [] }, expectedRevision: 0 }, d); } catch { threw = true; }
+  try { await advanceLane(proj, start.checkpointId, { action: 'complete', report: { ...rep('shape'), evidence: [] }, expectedRevision: start.revision }, d); } catch { threw = true; }
   if (!threw) throw new Error('report with no evidence rejects');
 
-  const r1 = await advanceLane(proj, start.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: 0 }, d);
+  const r1 = await advanceLane(proj, start.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: start.revision }, d);
   if (r1.currentVerb !== 'craft') throw new Error('advance to craft');
-  if (r1.revision !== 1) throw new Error('revision bumps to 1');
+  if (r1.revision <= start.revision) throw new Error('revision must advance after a committed complete');
 
   // duplicate reportId is a no-op (still craft) regardless of revision
   const dup = await advanceLane(proj, start.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: 1 }, d);

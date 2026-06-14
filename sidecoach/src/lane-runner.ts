@@ -1,18 +1,30 @@
 // sidecoach/src/lane-runner.ts
 // Sequence-lane execution state machine (P2). Loop lanes are rejected here and
 // handled in P4 with the convergence floor.
+import { createHash } from 'crypto';
 import type { FlowId } from './types';
 import type { FlowExecutionResult } from './flow-handler';
 import { LANES, GeneratedLane } from './lanes.generated';
-import { LaneCheckpoint, LaneCheckpointStore } from './lane-checkpoint-store';
+import { LaneCheckpoint, LaneCheckpointStore, finalizeLease } from './lane-checkpoint-store';
+import type { LeaseIdentity } from './lane-checkpoint-store';
 import { LaneStepResult, LaneState, LaneInfo, LaneTransition, LaneAuditEntry, isClosed } from './lane-types';
 import { FlowPrerequisiteValidator } from './flow-prerequisites';
+import { withCheckpointLock } from './lane-lock';
 
 export interface LaneRunnerDeps {
   store: LaneCheckpointStore;
   runFlow: (flowId: FlowId, context: any) => Promise<FlowExecutionResult>;
   now: () => string;
   newCheckpointId: () => string;
+  // P4b-1: operation-id minting for the lease protocol. Optional with a production
+  // -safe default so existing call sites keep compiling; production laneDeps wires
+  // an explicit generator in Task 10.
+  newOperationId?: () => string;
+}
+
+// Default operation id when deps omits newOperationId (production wiring is Task 10).
+function defaultOperationId(): string {
+  return `op-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function resolveLane(laneId: string): GeneratedLane {
@@ -87,27 +99,73 @@ export async function startLane(
   if (l.executionKind === 'loop') {
     throw new Error(`startLane: lane "${laneId}" is a loop lane - loop execution + the convergence floor land in P4. Not startable in P2.`);
   }
-  // Idempotency applies only to an ACTIVE lane: a duplicate request must not
-  // double-start one that is still in_progress/interrupted. A CLOSED checkpoint
-  // means that run finished, so the same phrase legitimately starts a fresh lane
-  // (this also prevents a deterministic process()-derived id from permanently
-  // aliasing later reruns to an old closed checkpoint).
-  const existing = d.store.findByStartRequestId(startRequestId);
-  if (existing && !isClosed(existing.lifecycle)) {
-    if (existing.laneId !== laneId) throw new Error(`startLane: startRequestId "${startRequestId}" already maps to active lane "${existing.laneId}", not "${laneId}"`);
-    return serveStep(existing, resolveLane(existing.laneId), context, d);
+  // Start-request lock: maps startRequestId -> ONE checkpoint and creates its
+  // first-step lease atomically. Idempotency applies only to an ACTIVE lane: a
+  // duplicate request must not double-start one still in_progress/interrupted. A
+  // CLOSED checkpoint means that run finished, so the same phrase legitimately
+  // starts a fresh lane. The lock holds ONLY the idempotent mapping + first-step
+  // lease creation - it is released BEFORE any flow handler runs (spec line 286).
+  const startLockId = 'start-' + createHash('sha256').update(startRequestId).digest('hex').slice(0, 40);
+  const start = await withCheckpointLock(d.store.dir(), startLockId, () => {
+    const existing = d.store.findByStartRequestId(startRequestId);
+    if (existing && !isClosed(existing.lifecycle)) {
+      if (existing.laneId !== laneId) throw new Error(`startLane: startRequestId "${startRequestId}" already maps to active lane "${existing.laneId}", not "${laneId}"`);
+      return { checkpoint: existing, created: false, identity: existing.lease };
+    }
+    const ts = d.now();
+    const operationId = (d.newOperationId ?? defaultOperationId)();
+    const cp: LaneCheckpoint = {
+      schemaVersion: 2, checkpointId: d.newCheckpointId(), laneId, target,
+      executionKind: l.executionKind, lifecycle: 'in_progress', outcome: undefined,
+      cursor: 0, iteration: 0, completedStepIds: [], skippedStepIds: [], completedFlowIds: [],
+      stepReports: [], audit: [], servedSteps: {}, revision: 0, startRequestId,
+      seenReportIds: [], fencingCounter: 1, sideEffectOutbox: [], stepGateStatuses: {},
+      lease: { operationId, stepId: l.verbSteps[0].verb, iteration: 0, claimedCheckpointRevision: 0,
+        fencingToken: 1, startedAt: ts, heartbeatAt: ts },
+      createdAt: ts, updatedAt: ts,
+    };
+    cp.revision = 1; // first-step CLAIM is persisted atomically with the mapping
+    d.store.write(cp);
+    return { checkpoint: cp, created: true, identity: cp.lease };
+  });
+
+  // Lock released. Existing active lane: serve current state without re-running
+  // initial handlers (the served cache short-circuits handler execution).
+  if (!start.created) {
+    return serveStep(start.checkpoint, resolveLane(start.checkpoint.laneId), context, d);
   }
-  const ts = d.now();
-  const cp: LaneCheckpoint = {
-    schemaVersion: 2, checkpointId: d.newCheckpointId(), laneId, target,
-    executionKind: l.executionKind, lifecycle: 'in_progress', outcome: undefined,
-    cursor: 0, iteration: 0, completedStepIds: [], skippedStepIds: [], completedFlowIds: [],
-    stepReports: [], audit: [], servedSteps: {}, revision: 0, startRequestId,
-    seenReportIds: [], fencingCounter: 0, lease: null, sideEffectOutbox: [], stepGateStatuses: {},
-    createdAt: ts, updatedAt: ts,
-  };
-  d.store.write(cp);
-  return serveStep(cp, l, context, d);
+  // New lane: serve the first step under the first-step lease identity, then
+  // FINALIZE its served effects + clear the lease (same protocol as advancement).
+  return serveStepUnderLease(start.checkpoint, l, context, d, start.identity!);
+}
+
+// Serve the first step's flow handlers during EXECUTE (buffered operation-locally,
+// NO store writes), then FINALIZE the served-step entry + clear the lease under the
+// full lease identity. The start-request lock is already released, so handlers run
+// without holding it; persistent effects land only via FINALIZE. Task 7 adds the
+// first-step committed outbox record inside this FINALIZE.
+async function serveStepUnderLease(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: LaneRunnerDeps, id: LeaseIdentity): Promise<LaneStepResult> {
+  if (isClosed(cp.lifecycle) || cp.lifecycle === 'interrupted' || cp.cursor >= l.verbSteps.length) {
+    const final = await finalizeLease(d.store, cp.checkpointId, id, () => { /* nothing to serve */ }, d.now);
+    return closedResult(final, l);
+  }
+  const step = l.verbSteps[cp.cursor];
+  const key = `${cp.cursor}:${cp.iteration}`;
+  const acc: { guidance: string[]; checklist: { id: string; label: string; required: boolean; completed: boolean }[]; flowIds: FlowId[]; successfulFlowIds: FlowId[] } =
+    { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [] };
+  for (let i = 0; i < step.flowIds.length; i++) {
+    const flowId = step.flowIds[i];
+    const flowCtx = { ...context, completedFlowIds: [...cp.completedFlowIds, ...acc.successfulFlowIds], waivers: l.prereqWaivers };
+    const r = await d.runFlow(flowId, flowCtx);
+    for (const g of r.guidance ?? []) acc.guidance.push(g);
+    for (const c of r.checklist ?? []) acc.checklist.push({ id: `${flowId}:${c.id}`, label: c.label, required: c.required, completed: false });
+    acc.flowIds.push(flowId);
+    if (r.status === 'success') acc.successfulFlowIds.push(flowId);
+  }
+  const final = await finalizeLease(d.store, cp.checkpointId, id, (c) => {
+    c.servedSteps[key] = acc;
+  }, d.now);
+  return serveStep(final, l, context, d); // served cache complete -> pure read, no handler re-run
 }
 
 // helpers shared with advance (Task 5)

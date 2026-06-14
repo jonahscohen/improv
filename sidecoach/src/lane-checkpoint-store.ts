@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { FlowId } from './types';
 import type { StepReport, LaneLifecycle, LaneOutcome, LaneAuditEntry, LeaseRecord, SideEffectOutboxRecord, PersistedStepGateStatus } from './lane-types';
+import { withCheckpointLock } from './lane-lock';
 
 export interface LaneCheckpoint {
   schemaVersion: 2;
@@ -92,4 +93,69 @@ export class LaneCheckpointStore {
     return out;
   }
   delete(id: string): void { const t = this.filePath(id); if (fs.existsSync(t)) fs.unlinkSync(t); }
+}
+
+// ---------------------------------------------------------------------------
+// Operation-lease helpers (P4b-1). CLAIM / heartbeat / FINALIZE all run under the
+// O_EXCL checkpoint lock so the read-modify-write is atomic across processes.
+// ---------------------------------------------------------------------------
+
+export function leaseIsLive(lease: LeaseRecord | null, nowMs: number, staleMs = 30000): boolean {
+  if (!lease) return false;
+  const hb = Date.parse(lease.heartbeatAt);
+  if (Number.isNaN(hb)) { process.stderr.write('[lane] malformed lease heartbeatAt; treating as not-live (reclaimable)\n'); return false; }
+  return (nowMs - hb) <= staleMs;
+}
+
+// The FULL identity FINALIZE/heartbeat must match (spec line 709-712).
+export type LeaseIdentity = Pick<LeaseRecord, 'operationId' | 'stepId' | 'iteration' | 'claimedCheckpointRevision' | 'fencingToken'>;
+function ownsLease(L: LeaseRecord | null, id: LeaseIdentity): boolean {
+  return !!L && L.operationId === id.operationId && L.stepId === id.stepId && L.iteration === id.iteration
+    && L.claimedCheckpointRevision === id.claimedCheckpointRevision && L.fencingToken === id.fencingToken;
+}
+
+export interface ClaimOpts { expectedRevision: number; stepId: string; iteration: number; operationId: string; now?: () => string; staleMs?: number; }
+
+export async function claimLease(store: LaneCheckpointStore, checkpointId: string, o: ClaimOpts): Promise<LaneCheckpoint> {
+  const now = o.now ?? (() => new Date(Date.now()).toISOString());
+  const staleMs = o.staleMs ?? 30000;
+  return withCheckpointLock(store.dir(), checkpointId, () => {
+    const cp = store.read(checkpointId);
+    if (cp.revision !== o.expectedRevision) throw new Error(`claimLease: stale expectedRevision ${o.expectedRevision} (current ${cp.revision})`);
+    if (leaseIsLive(cp.lease, Date.parse(now()), staleMs)) throw new Error(`claimLease: a live lease (op ${cp.lease!.operationId}) holds this checkpoint`);
+    if (cp.lease) process.stderr.write(`[lane] reclaiming stale lease op=${cp.lease.operationId} on ${checkpointId}\n`);
+    cp.fencingCounter += 1;
+    const ts = now();
+    cp.lease = { operationId: o.operationId, stepId: o.stepId, iteration: o.iteration, claimedCheckpointRevision: cp.revision, fencingToken: cp.fencingCounter, startedAt: ts, heartbeatAt: ts };
+    cp.revision += 1; cp.updatedAt = ts;
+    store.write(cp);
+    return cp;
+  });
+}
+
+// Update ONLY heartbeatAt under the lock; verify ownership; do NOT touch revision/fencing.
+export async function refreshHeartbeat(store: LaneCheckpointStore, checkpointId: string, id: LeaseIdentity, now?: () => string): Promise<LaneCheckpoint> {
+  const clock = now ?? (() => new Date(Date.now()).toISOString());
+  return withCheckpointLock(store.dir(), checkpointId, () => {
+    const cp = store.read(checkpointId);
+    if (!ownsLease(cp.lease, id)) throw new Error(`refreshHeartbeat: lease ownership lost (current op ${cp.lease?.operationId ?? 'none'})`);
+    cp.lease!.heartbeatAt = clock();
+    store.write(cp);
+    return cp;
+  });
+}
+
+// Bump revision BEFORE mutate so the committed revision is available to the outbox key.
+export async function finalizeLease(store: LaneCheckpointStore, checkpointId: string, id: LeaseIdentity, mutate: (cp: LaneCheckpoint, committedRevision: number) => void, now?: () => string): Promise<LaneCheckpoint> {
+  const clock = now ?? (() => new Date(Date.now()).toISOString());
+  return withCheckpointLock(store.dir(), checkpointId, () => {
+    const cp = store.read(checkpointId);
+    if (!ownsLease(cp.lease, id)) throw new Error(`finalizeLease: lease identity mismatch (current op ${cp.lease?.operationId ?? 'none'}, fencing ${cp.lease?.fencingToken ?? 'n/a'})`);
+    cp.revision += 1;
+    cp.updatedAt = clock();
+    mutate(cp, cp.revision);
+    cp.lease = null;
+    store.write(cp);
+    return cp;
+  });
 }
