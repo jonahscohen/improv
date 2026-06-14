@@ -90,4 +90,39 @@ async function run() {
   if (d2.store.read(s2.checkpointId).sideEffectOutbox.length !== 0) throw new Error('later production entrypoint must replay all pending project outbox');
   console.log('lane-side-effect-outbox: OK');
 }
-run();
+
+// P2: the outbox ack must remove publishers INDIVIDUALLY and delete a record only when
+// pendingPublishers is empty (so P4f's FlowHistory publisher, declared alongside the sink,
+// is never dropped when the sink acks first).
+function baseCp(id: string, outbox: any[]): any {
+  return { schemaVersion: 2, checkpointId: id, laneId: 'lane_build', target: 't',
+    executionKind: 'sequence', lifecycle: 'in_progress', cursor: 1, iteration: 0,
+    completedStepIds: ['shape'], skippedStepIds: [], completedFlowIds: [], stepReports: [], audit: [],
+    servedSteps: {}, revision: 5, startRequestId: `req-${id}`, seenReportIds: [],
+    fencingCounter: 3, lease: null, sideEffectOutbox: outbox, stepGateStatuses: {},
+    createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' };
+}
+function rec(id: string, publishers: string[]): any {
+  return { checkpointId: id, committedRevision: 4, fencingToken: 2, stepId: 'craft', iteration: 0,
+    pendingPublishers: publishers, createdAt: '2026-01-01T00:00:00.000Z',
+    entries: [{ publisher: 'lane-side-effect-sink', entryIndex: 0, logicalKey: `${id}:craft:0`, payload: { v: 1 } }] };
+}
+async function runMultiPublisherAck() {
+  const proj = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-multipub-')));
+  const store = new LaneCheckpointStore(proj);
+  // record with TWO declared publishers; the sink ack must NOT delete it - flow-history pends.
+  store.write(baseCp('lane-multi', [rec('lane-multi', ['lane-side-effect-sink', 'flow-history'])]));
+  await publishOutbox(store, 'lane-multi', proj, () => '2026-01-01T00:00:10.000Z');
+  const after = store.read('lane-multi');
+  if (after.sideEffectOutbox.length !== 1) throw new Error('a record with a still-pending publisher must survive the sink ack');
+  if (JSON.stringify(after.sideEffectOutbox[0].pendingPublishers) !== JSON.stringify(['flow-history'])) throw new Error('the sink publisher must be acked INDIVIDUALLY, leaving flow-history pending');
+  if (!new LaneSideEffectSink(proj).get('lane-multi:craft:0')) throw new Error('sink must hold the published entry');
+
+  // a record whose ONLY declared publisher is the sink is fully drained after publish.
+  store.write(baseCp('lane-solo', [rec('lane-solo', ['lane-side-effect-sink'])]));
+  await publishOutbox(store, 'lane-solo', proj, () => '2026-01-01T00:00:11.000Z');
+  if (store.read('lane-solo').sideEffectOutbox.length !== 0) throw new Error('a sink-only record must be drained when its sole publisher acks');
+  console.log('lane-side-effect-outbox multi-publisher-ack: OK');
+}
+
+run().then(runMultiPublisherAck);
