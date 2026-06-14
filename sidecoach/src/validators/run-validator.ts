@@ -14,7 +14,7 @@ import { getRuleById } from '../product-rule-registry';
 import { GENERATED_VALIDATORS } from '../validators.generated';
 import { evaluateCleanPolicy, isCoverageSatisfied } from '../clean-evaluator';
 import type { CoverageObservation, RunCoverage } from '../clean-evaluator';
-import { collect } from './project-collector';
+import { collect, CollectionAbortedError } from './project-collector';
 import type { Collected } from './project-collector';
 import { stampResult, inconclusive } from './check-context';
 import type { ProductCheckContext, CollectedFile } from './check-context';
@@ -183,8 +183,9 @@ async function runDetailed(validatorId: string, context: unknown, signal?: Abort
   }
 
   let collected: Collected;
-  try { collected = collect(context); }
+  try { collected = await collect(context, signal); }
   catch (e) {
+    if (e instanceof CollectionAbortedError) return abortedDetail(validatorId);  // aborted DURING collection
     const result = evaluateCleanPolicy(
       { validatorId, rules: [], coverageObservations: [], runCoverage: emptyRun(),
         validatorError: { category: 'unreadable_input', message: String(e instanceof Error ? e.message : e) } },

@@ -12,10 +12,26 @@ import { sourceKindForPath, isCollectableSourceKind } from './source-support-mat
 const SKIP_DIR = new Set(['node_modules', 'dist', 'build', '.git']);
 const MAX_BYTES = 2 * 1024 * 1024;
 
-// Root read/stat failure throws. Nested failures are recorded, never discarded.
-function walk(root: string, dir: string, discovered: DiscoveredFile[]): void {
+// Thrown when an AbortSignal fires DURING collection (between directory entries or file
+// reads). Distinct from a real collection failure so the caller maps it to an aborted
+// validator result rather than unreadable_input.
+export class CollectionAbortedError extends Error {
+  constructor() { super('collection aborted (lease lost / cancelled)'); this.name = 'CollectionAbortedError'; }
+}
+
+// Cooperative yield to the EVENT LOOP (macrotask via setImmediate) so setInterval timers
+// - notably the lease heartbeat - keep firing during a large/slow collection. A
+// microtask (Promise.resolve) would NOT let timers run.
+function yieldToEventLoop(): Promise<void> { return new Promise((r) => setImmediate(r)); }
+
+// Root read/stat failure throws. Nested failures are recorded, never discarded. Yields +
+// re-checks the signal BETWEEN directory entries so a large tree cannot block the event
+// loop or starve the heartbeat/abort.
+async function walk(root: string, dir: string, discovered: DiscoveredFile[], signal?: AbortSignal): Promise<void> {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const e of entries) {
+    if (signal?.aborted) throw new CollectionAbortedError();
+    await yieldToEventLoop();
     const abs = path.join(dir, e.name);
     const rel = path.relative(root, abs);
     if (e.isDirectory()) {
@@ -23,8 +39,11 @@ function walk(root: string, dir: string, discovered: DiscoveredFile[]): void {
         discovered.push({ path: rel, sourceKind: 'directory', outcome: 'policy_skipped', reason: 'excluded_directory' });
         continue;
       }
-      try { walk(root, abs, discovered); }
-      catch { discovered.push({ path: rel, sourceKind: 'directory', outcome: 'unreadable', reason: 'readdir_failed' }); }
+      try { await walk(root, abs, discovered, signal); }
+      catch (err) {
+        if (err instanceof CollectionAbortedError) throw err;     // abort must propagate, not be recorded as unreadable
+        discovered.push({ path: rel, sourceKind: 'directory', outcome: 'unreadable', reason: 'readdir_failed' });
+      }
     } else if (e.isFile()) {
       const kind = sourceKindForPath(abs);
       discovered.push({
@@ -47,13 +66,17 @@ export interface Collected {
   markup: string;
 }
 
-export function collectFromPath(projectPath: string): Collected {
+export async function collectFromPath(projectPath: string, signal?: AbortSignal): Promise<Collected> {
   // Missing/unreadable root is a validator-level collection failure and throws.
   fs.statSync(projectPath);
   const discovered: DiscoveredFile[] = [];
-  walk(projectPath, projectPath, discovered);
+  await walk(projectPath, projectPath, discovered, signal);
   const files: CollectedFile[] = [];
   for (const d of discovered.filter((x) => x.outcome === 'inspected')) {
+    // Yield + re-check the signal BETWEEN file reads so a many-file collection cannot
+    // block the event loop or delay abort.
+    if (signal?.aborted) throw new CollectionAbortedError();
+    await yieldToEventLoop();
     const abs = path.join(projectPath, d.path);
     try {
       if (fs.statSync(abs).size > MAX_BYTES) { d.outcome = 'oversized'; d.reason = 'over_2mb'; continue; }
@@ -93,12 +116,13 @@ function assemble(discovered: DiscoveredFile[], files: CollectedFile[]): Collect
 // Normalize whatever validateProduct received into a Collected. An in-memory
 // context (unit tests) is used verbatim; a { projectPath } is walked. A context
 // with NEITHER yields an empty collection (-> required rules inconclusive).
-export function collect(context: unknown): Collected {
+export async function collect(context: unknown, signal?: AbortSignal): Promise<Collected> {
   const c = context as Partial<ProductCheckContext> & { projectPath?: string };
   if (c && Array.isArray(c.files)) {
+    // In-memory context (unit tests): no IO, assemble verbatim - nothing to yield on.
     const discovered: DiscoveredFile[] = c.discoveredFiles ?? c.files.map((f) => ({ path: f.path, sourceKind: f.sourceKind, outcome: 'inspected' as const }));
     return assemble(discovered, c.files as CollectedFile[]);
   }
-  if (c && typeof c.projectPath === 'string') return collectFromPath(c.projectPath);
+  if (c && typeof c.projectPath === 'string') return collectFromPath(c.projectPath, signal);
   return { discovered: [], files: [], inspectedFiles: [], skippedFiles: [], unreadableFiles: [], unsupportedFiles: [], cssText: '', markup: '' };
 }
