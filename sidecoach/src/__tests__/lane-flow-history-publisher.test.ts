@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { FlowHistory, FlowHistoryEntry, getFlowHistory, resetFlowHistorySingleton } from '../flow-history';
+import { LaneFlowHistoryPublisher } from '../lane-flow-history-publisher';
 
 function entry(message: string): FlowHistoryEntry {
   return {
@@ -60,6 +61,21 @@ async function run() {
   }
   assert(strictSaveFailed, 'lane conditional upsert must throw when the durable save fails');
   process.env.HOME = home;
+
+  const publisherProject = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-flow-history-publisher-project-')));
+  const publisher = new LaneFlowHistoryPublisher(publisherProject);
+  const publisherKey = 'lane-cp2:shape:0:flow-history';
+  const publisherFirst = await publisher.upsert(publisherKey, 11, {
+    flowId: 'lane:lane_build:shape',
+    flowName: 'Lane lane_build: shape',
+    status: 'success',
+    message: 'published',
+  }, now);
+  assert(publisherFirst.status === 'written', 'publisher must write the first accepted token');
+  assert((await publisher.upsert(publisherKey, 11, entry('ignored'), now)).status === 'noop', 'publisher same-token replay must no-op');
+  assert((await publisher.upsert(publisherKey, 10, entry('ignored'), now)).status === 'rejected', 'publisher lower token must reject');
+  const publisherHistory = new FlowHistory(publisherProject);
+  assert(publisherHistory.getFlowCount('lane:lane_build:shape') === 1, 'publisher must persist one idempotent run in the project session');
 
   const ordinary = new FlowHistory('ordinary-session');
   for (let i = 0; i < 21; i++) {
