@@ -1,9 +1,28 @@
 ---
-name: Role inversion - if the P4a-1 round fails, Codex takes over authoring, I review
-description: Jonah's directive - if the current (v4) P4a-1 round fails Codex review, hand authoring to Codex (codex task --write) and I become the reviewer; flips the produce/review roles that weren't converging
+name: Role inversion - when I struggle to author, Codex writes it and I review
+description: Jonah's STANDING directive (generalized 2026-06-14) - whenever I am struggling/stalling to author something correctly, hand it to Codex to write (codex task --write) and I review the result; do NOT grind on it myself
 type: feedback
 relates_to: [session_2026-06-13_p4a1-v3-review-fixspec.md, feedback_autonomous_phases_codex_partner.md]
 ---
+
+## GENERALIZED (2026-06-14): "If you're having trouble writing something, give it
+to Codex to fix and then review it after."
+
+This is now a STANDING rule, not just a round-fail fallback. The moment I am
+struggling to author something correctly (a plan that won't converge, an
+intricate piece of code, a subtle algorithm) - hand the WRITING to Codex via
+`codex-companion task --write` and become the REVIEWER. Do not burn rounds
+grinding it myself. I default to authoring; I flip to Codex the instant it's not
+converging cleanly. Proven: Codex authored P4a-1 v5 (after 4 stalled me-rounds),
+P4a-2 v2, P4b-1 v2 + the proper-lockfile lock fix - each in ~1 pass; I reviewed.
+
+Reviewer protocol on Codex-authored output: independent integrity (0 unicode
+dashes - Codex writes BYPASS the content-guard hook, so I grep+strip myself; 0
+NUL), spec-fidelity spot-checks of the load-bearing logic (read it, don't
+rubber-stamp), internal consistency, then commit + gate.
+
+## Original (round-fail trigger):
+
 
 Mid P4a-1 v4 round, Jonah: "If this round fails, hand it off to Codex to take
 over and you become the reviewer."
