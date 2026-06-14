@@ -38,6 +38,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/slash-phrase-wiring.test.ts', required: true },
   { rel: 'src/__tests__/lane-cli.test.ts', required: true },
   { rel: 'src/__tests__/lane-execution-e2e.test.ts', required: true },
+  { rel: 'src/__tests__/product-rule-registry.test.ts', required: true },
 ];
 
 let ran = 0;
