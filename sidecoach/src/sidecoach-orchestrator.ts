@@ -24,6 +24,7 @@ import { DocumentCommandHandler } from './document-command-handler';
 import { FlowPrerequisiteValidator } from './flow-prerequisites';
 import * as laneRunner from './lane-runner';
 import { LaneCheckpointStore } from './lane-checkpoint-store';
+import { getValidatorRegistration } from './flow-validation-capabilities';
 import type { LaneTransition, LaneStepResult } from './lane-types';
 import { FlowCompositionEngine, PRESET_COMPOSITE_FLOWS, CompositeFlowDefinition } from './flow-composition';
 import { registerFlowDomainValidators, getValidatorsForFlow } from './flow-domain-validators';
@@ -1627,6 +1628,12 @@ export class FlowExecutionEngine {
       },
       now: () => new Date().toISOString(),
       newCheckpointId: () => `lane-${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+      newOperationId: () => 'op-' + createHash('sha256').update(`${process.pid}-${Date.now()}-${Math.random()}`).digest('hex').slice(0, 16),
+      runValidator: async (validatorId, validatorContext, signal) => {
+        const reg = getValidatorRegistration(validatorId);
+        if (!reg || !reg.validateProduct) throw new Error(`laneDeps.runValidator: no validator "${validatorId}"`);
+        return reg.validateProduct(validatorContext, signal);
+      },
     };
   }
   async startLane(laneId: string, target: string, context: { projectPath?: string } & Record<string, any>, startRequestId: string): Promise<LaneStepResult> {

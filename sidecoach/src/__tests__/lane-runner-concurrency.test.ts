@@ -5,6 +5,7 @@ import * as path from 'path';
 import { LaneCheckpointStore, finalizeLease, leaseIsLive } from '../lane-checkpoint-store';
 import { withCheckpointLock } from '../lane-lock';
 import { startLane, advanceLane, laneStatus, LaneRunnerDeps } from '../lane-runner';
+import { LaneSideEffectSink } from '../lane-side-effect-sink';
 import { StepReport } from '../lane-types';
 import type { ProductValidationResult } from '../product-rule-types';
 
@@ -231,6 +232,48 @@ async function run() {
     if (!bAborted) throw new Error('interrupt must abort replacement after stale same-process reclaim');
     releaseB(); await b.then(() => { throw new Error('interrupted B must reject FINALIZE'); }, () => {});
     console.log('lane-runner-concurrency live-aba: OK');
+  }
+
+  // crash-mid-advance reclaim: seed the exact persisted artifact a crashed process
+  // leaves (a stale lease), then a fresh advance reclaims it and commits exactly once.
+  {
+    const p = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-crash-reclaim-')));
+    const d = deps(p);
+    const s = await startLane('lane_build', 'crash', { projectPath: p }, 'req-crash-reclaim', d);
+    const cp = d.store.read(s.checkpointId);
+    cp.lease = { operationId: 'crashed-op', stepId: 'shape', iteration: 0, claimedCheckpointRevision: cp.revision,
+      fencingToken: cp.fencingCounter, startedAt: new Date(0).toISOString(), heartbeatAt: new Date(0).toISOString() };
+    d.store.write(cp);
+    const r = await advanceLane(p, s.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: cp.revision }, { ...d, staleMs: 1 });
+    const after = d.store.read(s.checkpointId);
+    if (r.currentVerb !== 'craft' || after.completedStepIds.filter((x) => x === 'shape').length !== 1) throw new Error('stale crash lease must be reclaimed and commit once');
+    if (after.fencingCounter <= cp.fencingCounter || after.lease !== null) throw new Error('reclaim must bump fencing and clear replacement lease on finalize');
+    console.log('lane-runner-concurrency crash-reclaim: OK');
+  }
+
+  // timeout-retry overlap: A's lease goes stale (injected clock), B reclaims + commits
+  // craft exactly once, superseded A rejects FINALIZE, exactly one authoritative sink entry.
+  {
+    const p = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-timeout-retry-')));
+    let nowMs = 1_000; let enteredA!: () => void; const aEntered = new Promise<void>((r) => { enteredA = r; });
+    let releaseA!: () => void; const holdA = new Promise<void>((r) => { releaseA = r; });
+    const base = deps(p);
+    const dA = { ...base, now: () => new Date(nowMs).toISOString(), staleMs: 10, heartbeatIntervalMs: 1_000_000,
+      runValidator: async () => { enteredA(); await holdA; return okResult(); } } as LaneRunnerDeps;
+    const s = await startLane('lane_build', 'overlap', { projectPath: p }, 'req-overlap', dA);
+    await advanceLane(p, s.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: dA.store.read(s.checkpointId).revision }, dA);
+    const a = advanceLane(p, s.checkpointId, { action: 'complete', report: rep('craft'), expectedRevision: dA.store.read(s.checkpointId).revision }, dA);
+    await aEntered;
+    nowMs += 100;
+    const dB = { ...base, now: () => new Date(nowMs).toISOString(), staleMs: 10, runValidator: async () => okResult() } as LaneRunnerDeps;
+    await advanceLane(p, s.checkpointId, { action: 'complete', report: { ...rep('craft'), reportId: 'r:craft:b' }, expectedRevision: dB.store.read(s.checkpointId).revision }, dB);
+    releaseA();
+    await a.then(() => { throw new Error('superseded A must reject FINALIZE'); }, () => {});
+    const after = dB.store.read(s.checkpointId);
+    if (after.completedStepIds.filter((x) => x === 'craft').length !== 1) throw new Error('timeout retry must commit craft exactly once');
+    const sink = new LaneSideEffectSink(p);
+    if (!sink.get(`${s.checkpointId}:craft:0`)) throw new Error('replacement commit must publish one authoritative logical entry');
+    console.log('lane-runner-concurrency timeout-retry: OK');
   }
 
   console.log('lane-runner-concurrency: OK');
