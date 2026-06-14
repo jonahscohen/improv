@@ -12,7 +12,7 @@ import type { GateStatus, PersistedStepGateStatus, LaneStepStatus } from './lane
 import type { ProductValidationResult } from './product-rule-types';
 import { validatorsForStep, aggregateWorstStatus, mapGateStatusToOutcome } from './lane-validators';
 import { FlowPrerequisiteValidator } from './flow-prerequisites';
-import { withCheckpointLock } from './lane-lock';
+import { withCheckpointLock, setLockCompromiseHandler } from './lane-lock';
 
 export interface LaneRunnerDeps {
   store: LaneCheckpointStore;
@@ -47,6 +47,15 @@ function defaultOperationId(): string {
 const LIVE_OPERATIONS = new Map<string, AbortController>();
 const leaseKey = (checkpointId: string, id: LeaseIdentity) =>
   `${checkpointId}:${id.operationId}:${id.stepId}:${id.iteration}:${id.claimedCheckpointRevision}:${id.fencingToken}`;
+
+// A compromised checkpoint lock (proper-lockfile detected its lockfile was stolen/removed)
+// aborts every in-flight operation on that checkpoint so a lost lock cannot let EXECUTE
+// keep running against a checkpoint another process now owns.
+setLockCompromiseHandler((checkpointId, _err) => {
+  for (const [k, controller] of LIVE_OPERATIONS) {
+    if (k.startsWith(`${checkpointId}:`)) { try { controller.abort(); } catch { /* ignore */ } }
+  }
+});
 
 // Continuous ownership-checking heartbeat: refresh heartbeatAt on an interval; a
 // refresh that fails (ownership lost / lease fenced) aborts the operation-local signal.
