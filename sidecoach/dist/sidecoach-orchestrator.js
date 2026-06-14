@@ -57,6 +57,7 @@ const document_command_handler_1 = require("./document-command-handler");
 const flow_prerequisites_1 = require("./flow-prerequisites");
 const laneRunner = __importStar(require("./lane-runner"));
 const lane_checkpoint_store_1 = require("./lane-checkpoint-store");
+const flow_validation_capabilities_1 = require("./flow-validation-capabilities");
 const flow_composition_1 = require("./flow-composition");
 const flow_domain_validators_1 = require("./flow-domain-validators");
 const flow_execution_context_enhanced_1 = require("./flow-execution-context-enhanced");
@@ -1475,6 +1476,13 @@ class FlowExecutionEngine {
             },
             now: () => new Date().toISOString(),
             newCheckpointId: () => `lane-${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+            newOperationId: () => 'op-' + (0, crypto_1.createHash)('sha256').update(`${process.pid}-${Date.now()}-${Math.random()}`).digest('hex').slice(0, 16),
+            runValidator: async (validatorId, validatorContext, signal) => {
+                const reg = (0, flow_validation_capabilities_1.getValidatorRegistration)(validatorId);
+                if (!reg || !reg.validateProduct)
+                    throw new Error(`laneDeps.runValidator: no validator "${validatorId}"`);
+                return reg.validateProduct(validatorContext, signal);
+            },
         };
     }
     async startLane(laneId, target, context, startRequestId) {

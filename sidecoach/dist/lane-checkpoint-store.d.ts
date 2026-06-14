@@ -1,7 +1,7 @@
 import type { FlowId } from './types';
-import type { StepReport, LaneLifecycle, LaneOutcome, LaneAuditEntry } from './lane-types';
+import type { StepReport, LaneLifecycle, LaneOutcome, LaneAuditEntry, LeaseRecord, SideEffectOutboxRecord, PersistedStepGateStatus } from './lane-types';
 export interface LaneCheckpoint {
-    schemaVersion: 1;
+    schemaVersion: 2;
     checkpointId: string;
     laneId: string;
     target: string;
@@ -29,6 +29,10 @@ export interface LaneCheckpoint {
     revision: number;
     startRequestId: string;
     seenReportIds: string[];
+    fencingCounter: number;
+    lease: LeaseRecord | null;
+    sideEffectOutbox: SideEffectOutboxRecord[];
+    stepGateStatuses: Record<string, PersistedStepGateStatus>;
     createdAt: string;
     updatedAt: string;
 }
@@ -43,8 +47,9 @@ export interface LaneCheckpointSummary {
 export declare class LaneCheckpointStore {
     private projectPath;
     constructor(projectPath: string);
-    private dir;
+    dir(): string;
     private filePath;
+    private migrate;
     write(cp: LaneCheckpoint): void;
     read(id: string): LaneCheckpoint;
     exists(id: string): boolean;
@@ -52,4 +57,20 @@ export declare class LaneCheckpointStore {
     list(): LaneCheckpointSummary[];
     delete(id: string): void;
 }
+export declare function leaseIsLive(lease: LeaseRecord | null, nowMs: number, staleMs?: number): boolean;
+export type LeaseIdentity = Pick<LeaseRecord, 'operationId' | 'stepId' | 'iteration' | 'claimedCheckpointRevision' | 'fencingToken'>;
+export interface ClaimOpts {
+    expectedRevision: number;
+    stepId: string;
+    iteration: number;
+    operationId: string;
+    now?: () => string;
+    staleMs?: number;
+}
+export declare function claimLease(store: LaneCheckpointStore, checkpointId: string, o: ClaimOpts): Promise<LaneCheckpoint>;
+export declare function refreshHeartbeat(store: LaneCheckpointStore, checkpointId: string, id: LeaseIdentity, now?: () => string): Promise<LaneCheckpoint>;
+export declare function finalizeLease(store: LaneCheckpointStore, checkpointId: string, id: LeaseIdentity, mutate: (cp: LaneCheckpoint, committedRevision: number) => void, now?: () => string): Promise<LaneCheckpoint>;
+export declare const OUTBOX_PUBLISHERS: readonly ["lane-side-effect-sink"];
+export declare function publishOutbox(store: LaneCheckpointStore, checkpointId: string, projectPath: string, now?: () => string): Promise<void>;
+export declare function publishPendingOutbox(store: LaneCheckpointStore, projectPath: string, now?: () => string): Promise<void>;
 //# sourceMappingURL=lane-checkpoint-store.d.ts.map
