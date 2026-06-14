@@ -10,7 +10,10 @@ import type { LeaseIdentity } from './lane-checkpoint-store';
 import { LaneStepResult, LaneState, LaneInfo, LaneTransition, LaneAuditEntry, isClosed } from './lane-types';
 import type { GateStatus, PersistedStepGateStatus, LaneStepStatus } from './lane-types';
 import type { ProductValidationResult } from './product-rule-types';
-import { validatorsForStep, aggregateWorstStatus, mapGateStatusToOutcome } from './lane-validators';
+import { validatorsForStep, aggregateWorstStatus, mapGateStatusToOutcome, requiredValidatorsForLane, isLoopLane } from './lane-validators';
+import { getValidatorRegistration, getLanePolicy } from './flow-validation-capabilities';
+import { GENERATED_VALIDATORS } from './validators.generated';
+import { seedConvergenceState, evaluateBoundary, decideProgress, BoundaryEvaluation, ProgressDecision } from './lane-convergence';
 import { FlowPrerequisiteValidator } from './flow-prerequisites';
 import { withCheckpointLock, setLockCompromiseHandler } from './lane-lock';
 
@@ -164,7 +167,22 @@ export async function startLane(
   }
   const l = resolveLane(laneId);
   if (l.executionKind === 'loop') {
-    throw new Error(`startLane: lane "${laneId}" is a loop lane - loop execution + the convergence floor land in P4. Not startable in P2.`);
+    // Minimal release-floor enablement: the lane must declare a non-empty product-
+    // validator policy and every required validator must be registered + generated.
+    // The IO-heavy coverage-plan satisfiability preflight runs at the orchestrator
+    // layer (Task 8) so engine unit tests can drive startLane directly.
+    const policy = getLanePolicy(l.lane);
+    if (!policy || policy.requiredProductValidatorIds.length === 0) {
+      throw new Error(`startLane: loop lane "${laneId}" has no release-floor policy (requiredProductValidatorIds) - convergence gating cannot be enabled`);
+    }
+    for (const vId of policy.requiredProductValidatorIds) {
+      if (!getValidatorRegistration(vId)?.validateProduct) {
+        throw new Error(`startLane: loop lane "${laneId}" requires validator "${vId}" which is not registered with a validateProduct entry`);
+      }
+      if (!GENERATED_VALIDATORS.find((g) => g.validatorId === vId)?.cleanPolicy) {
+        throw new Error(`startLane: loop lane "${laneId}" required validator "${vId}" has no generated cleanPolicy`);
+      }
+    }
   }
   // Startup recovery: replay any pending committed outbox records (a process that
   // crashed after FINALIZE but before publish) before this operation mutates state.
@@ -190,6 +208,7 @@ export async function startLane(
       cursor: 0, iteration: 0, completedStepIds: [], skippedStepIds: [], completedFlowIds: [],
       stepReports: [], audit: [], servedSteps: {}, revision: 0, startRequestId,
       seenReportIds: [], fencingCounter: 1, sideEffectOutbox: [], stepGateStatuses: {},
+      convergence: l.executionKind === 'loop' ? seedConvergenceState() : undefined,
       lease: { operationId, stepId: l.verbSteps[0].verb, iteration: 0, claimedCheckpointRevision: 0,
         fencingToken: 1, startedAt: ts, heartbeatAt: ts },
       createdAt: ts, updatedAt: ts,

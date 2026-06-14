@@ -33,10 +33,14 @@ async function run() {
   try { await startLane('lane_ship', 'hero', { projectPath: proj }, 'req-1', d); } catch { threw = true; }
   if (!threw) throw new Error('startRequestId reuse with a different lane must reject');
 
-  // loop lane is rejected in P2
-  threw = false;
-  try { await startLane('lane_converge', 't', { projectPath: proj }, 'req-2', d); } catch (e: any) { threw = /loop|P4|converge/i.test(String(e.message)); }
-  if (!threw) throw new Error('loop lane must be rejected in P2');
+  // P4c: a loop lane (lane_converge) now STARTS (the P2 rejection was removed in
+  // favor of the convergence release floor). It begins at the first verb (polish)
+  // with executionKind 'loop' and a seeded convergence sub-state.
+  const loop = await startLane('lane_converge', 't', { projectPath: proj }, 'req-2', d);
+  if (loop.executionKind !== 'loop') throw new Error('lane_converge runs as a loop');
+  if (loop.currentVerb !== 'polish') throw new Error('loop lane starts at polish');
+  if (loop.lifecycle !== 'in_progress') throw new Error('loop lane starts in_progress');
+  if (!d.store.read(loop.checkpointId).convergence) throw new Error('loop lane seeds convergence sub-state');
 
   // unknown lane errors
   threw = false;
