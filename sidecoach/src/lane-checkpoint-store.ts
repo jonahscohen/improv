@@ -4,6 +4,7 @@ import * as path from 'path';
 import type { FlowId } from './types';
 import type { StepReport, LaneLifecycle, LaneOutcome, LaneAuditEntry, LeaseRecord, SideEffectOutboxRecord, PersistedStepGateStatus } from './lane-types';
 import { withCheckpointLock } from './lane-lock';
+import { LaneSideEffectSink } from './lane-side-effect-sink';
 
 export interface LaneCheckpoint {
   schemaVersion: 2;
@@ -84,8 +85,11 @@ export class LaneCheckpointStore {
     const dir = this.dir();
     if (!fs.existsSync(dir)) return [];
     const out: LaneCheckpointSummary[] = [];
-    for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.json'))) {
+    // Skip non-checkpoint json that shares this dir (e.g. the side-effect sink store)
+    // by name AND by shape so a sibling file is never mis-read as a checkpoint.
+    for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.json') && x !== 'lane-side-effects.json')) {
       try { const cp = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) as LaneCheckpoint;
+        if (typeof cp?.checkpointId !== 'string' || typeof cp?.schemaVersion !== 'number') continue;
         out.push({ checkpointId: cp.checkpointId, laneId: cp.laneId, lifecycle: cp.lifecycle, outcome: cp.outcome, cursor: cp.cursor, updatedAt: cp.updatedAt });
       } catch { /* skip */ }
     }
@@ -158,4 +162,47 @@ export async function finalizeLease(store: LaneCheckpointStore, checkpointId: st
     store.write(cp);
     return cp;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Side-effect outbox publish (P4b-1). Drains each committed outbox record's pending
+// publishers idempotently (the sink is fencing-token-conditional), then removes the
+// acked record under the checkpoint lock WITHOUT bumping the semantic revision
+// (spec lines 691-693). AT-MOST-ONE-COMMITTED-TRANSITION: replay is idempotent.
+// ---------------------------------------------------------------------------
+
+export const OUTBOX_PUBLISHERS = ['lane-side-effect-sink'] as const;
+
+export async function publishOutbox(store: LaneCheckpointStore, checkpointId: string, projectPath: string, now?: () => string): Promise<void> {
+  const clock = now ?? (() => new Date(Date.now()).toISOString());
+  const sink = new LaneSideEffectSink(projectPath);
+  // snapshot the records to publish (read outside the checkpoint lock; publishing is idempotent)
+  const snapshot = store.read(checkpointId).sideEffectOutbox;
+  for (const record of snapshot) {
+    for (const entry of record.entries) {
+      if (entry.publisher !== 'lane-side-effect-sink') continue;
+      const r = await sink.upsert(entry.logicalKey, record.fencingToken, entry.payload, clock);
+      if (r.status === 'rejected') continue;          // a higher token already won; still ack-able as delivered
+    }
+    // ack: remove this record under the checkpoint lock; do NOT bump revision.
+    await withCheckpointLock(store.dir(), checkpointId, () => {
+      const cp = store.read(checkpointId);
+      cp.sideEffectOutbox = cp.sideEffectOutbox.filter((x) => !(x.committedRevision === record.committedRevision && x.fencingToken === record.fencingToken));
+      cp.updatedAt = clock();
+      store.write(cp);
+    });
+  }
+}
+
+// Startup/advance-time recovery: replay every checkpoint that still has pending outbox
+// records (a process that crashed after FINALIZE but before publish). A failed replay
+// is logged and left pending; it never corrupts or acks the record.
+export async function publishPendingOutbox(store: LaneCheckpointStore, projectPath: string, now?: () => string): Promise<void> {
+  for (const summary of store.list()) {
+    let cp: LaneCheckpoint;
+    try { cp = store.read(summary.checkpointId); } catch { continue; }
+    if (!cp.sideEffectOutbox || cp.sideEffectOutbox.length === 0) continue;
+    try { await publishOutbox(store, summary.checkpointId, projectPath, now); }
+    catch (e) { process.stderr.write(`[lane] outbox replay failed for ${summary.checkpointId}: ${String(e)}\n`); }
+  }
 }

@@ -5,7 +5,7 @@ import { createHash } from 'crypto';
 import type { FlowId } from './types';
 import type { FlowExecutionResult } from './flow-handler';
 import { LANES, GeneratedLane } from './lanes.generated';
-import { LaneCheckpoint, LaneCheckpointStore, finalizeLease, claimLease, leaseIsLive } from './lane-checkpoint-store';
+import { LaneCheckpoint, LaneCheckpointStore, finalizeLease, claimLease, leaseIsLive, publishOutbox, publishPendingOutbox } from './lane-checkpoint-store';
 import type { LeaseIdentity } from './lane-checkpoint-store';
 import { LaneStepResult, LaneState, LaneInfo, LaneTransition, LaneAuditEntry, isClosed } from './lane-types';
 import type { GateStatus, PersistedStepGateStatus, LaneStepStatus } from './lane-types';
@@ -28,6 +28,9 @@ export interface LaneRunnerDeps {
   // validators that finds this absent throws (the Task 10 red).
   runValidator?: (validatorId: string, validatorContext: { projectPath: string; target: string }, signal?: AbortSignal) => Promise<ProductValidationResult>;
   staleMs?: number;                              // default 30000
+  // Deterministic failure-injection seam for outbox publishing. Production leaves it
+  // undefined and therefore calls the real publisher.
+  publishOutbox?: (store: LaneCheckpointStore, checkpointId: string, projectPath: string, now?: () => string) => Promise<void>;
   __claimBarrier?: () => Promise<void>;          // test seam: awaited after the early read, before claimLease
   __beforeServePersist?: () => Promise<void>;    // test seam: deterministic stale-snapshot interleaving
 }
@@ -124,6 +127,9 @@ export async function startLane(
   if (l.executionKind === 'loop') {
     throw new Error(`startLane: lane "${laneId}" is a loop lane - loop execution + the convergence floor land in P4. Not startable in P2.`);
   }
+  // Startup recovery: replay any pending committed outbox records (a process that
+  // crashed after FINALIZE but before publish) before this operation mutates state.
+  if (context.projectPath) await publishPendingOutbox(d.store, context.projectPath, d.now);
   // Start-request lock: maps startRequestId -> ONE checkpoint and creates its
   // first-step lease atomically. Idempotency applies only to an ACTIVE lane: a
   // duplicate request must not double-start one still in_progress/interrupted. A
@@ -187,9 +193,18 @@ async function serveStepUnderLease(cp: LaneCheckpoint, l: GeneratedLane, context
     if (r.status === 'success') acc.successfulFlowIds.push(flowId);
   }
   await d.__beforeServePersist?.();   // the first-step serve persist (FINALIZE) mirrors serveStep's seam
-  const final = await finalizeLease(d.store, cp.checkpointId, id, (c) => {
+  const final = await finalizeLease(d.store, cp.checkpointId, id, (c, committedRevision) => {
     c.servedSteps[key] = acc;
+    // First-step committed outbox record (spec line 286): the served first-step effect
+    // publishes only from the committed outbox, like advancement.
+    c.sideEffectOutbox.push({
+      checkpointId: c.checkpointId, committedRevision, fencingToken: id.fencingToken, stepId: step.verb, iteration: id.iteration,
+      pendingPublishers: ['lane-side-effect-sink'], createdAt: d.now(),
+      entries: [{ publisher: 'lane-side-effect-sink', entryIndex: 0, logicalKey: `${c.checkpointId}:${step.verb}:${id.iteration}`,
+        payload: { laneId: c.laneId, verb: step.verb, served: true, committedRevision } }],
+    });
   }, d.now);
+  if (context.projectPath) await (d.publishOutbox ?? publishOutbox)(d.store, cp.checkpointId, context.projectPath, d.now);
   return serveStep(final, l, context, d); // served cache complete -> pure read, no handler re-run
 }
 
@@ -282,6 +297,8 @@ async function runStepValidators(
 }
 
 export async function advanceLane(projectPath: string, checkpointId: string, transition: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  // Advance-time recovery: replay any pending committed outbox records before mutating.
+  await publishPendingOutbox(d.store, projectPath, d.now);
   const cp = d.store.read(checkpointId);
   const l = resolveLane(cp.laneId);
 
@@ -351,8 +368,16 @@ export async function advanceLane(projectPath: string, checkpointId: string, tra
           for (const f of served!.successfulFlowIds) if (!c.completedFlowIds.includes(f)) c.completedFlowIds.push(f);
           c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: committedRevision, at: d.now() });
           advanceCursorInPlace(c, l);
-          // Task 7 pushes the side-effect outbox record here, keyed by committedRevision.
+          // Committed side-effect outbox record keyed by (checkpointId, committedRevision),
+          // carrying the fencingToken. Published only AFTER FINALIZE, from the committed outbox.
+          c.sideEffectOutbox.push({
+            checkpointId, committedRevision, fencingToken: id.fencingToken, stepId: step.verb, iteration: id.iteration,
+            pendingPublishers: ['lane-side-effect-sink'], createdAt: d.now(),
+            entries: [{ publisher: 'lane-side-effect-sink', entryIndex: 0, logicalKey: `${checkpointId}:${step.verb}:${id.iteration}`,
+              payload: { laneId: cp.laneId, verb: step.verb, gateStatus: worst, validators: gate.validators, committedRevision } }],
+          });
         }, d.now);
+        await (d.publishOutbox ?? publishOutbox)(d.store, checkpointId, projectPath, d.now);
         return buildStepResult(final, l, { projectPath }, d, gate);
       }
       // UNCLEAN: release the lease WITHOUT advancing; the step stays current. Still a
