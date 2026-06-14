@@ -1,7 +1,8 @@
 // sidecoach/src/lane-validators.ts
 import type { FlowId } from './types';
 import type { GateStatus } from './lane-types';
-import { getFlowCapability } from './flow-validation-capabilities';
+import { getFlowCapability, getLanePolicy } from './flow-validation-capabilities';
+import { getLane } from './lanes.generated';
 
 // A sequence step that maps to multiple flows gates on the UNION (de-duplicated,
 // order-preserving) of those flows' bound productValidatorIds (spec line 351-353).
@@ -33,4 +34,19 @@ export function mapGateStatusToOutcome(status: GateStatus): GateOutcome {
     case 'inconclusive': return { proceed: false, stepStatus: 'validation_inconclusive' };
     case 'error': return { proceed: false, stepStatus: 'validation_error' };
   }
+}
+
+// A lane runs as a loop iff its generated executionKind is 'loop'. Unknown lane -> false.
+export function isLoopLane(laneId: string): boolean {
+  return getLane(laneId)?.executionKind === 'loop';
+}
+
+// The required-validator gate for a LOOP lane's iteration boundary: the explicit
+// LaneValidationPolicy.requiredProductValidatorIds (the release floor), in declared
+// order, invoked once per boundary. Distinct from validatorsForStep (sequence per-step
+// gating) - a loop lane's per-step completion is advisory and never gates, so flow-bound
+// validators are NOT run twice (spec lines 355-359, 952-958). A lane without a policy
+// (every sequence lane) returns [] - the boundary gate never runs for it.
+export function requiredValidatorsForLane(laneId: string): string[] {
+  return getLanePolicy(laneId)?.requiredProductValidatorIds ?? [];
 }

@@ -45,6 +45,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/lane-cli.test.ts', required: true },
   { rel: 'src/__tests__/lane-execution-e2e.test.ts', required: true },
   { rel: 'src/__tests__/lane-convergence-types.test.ts', required: true },          // P4c convergence sub-state types
+  { rel: 'src/__tests__/lane-converge-policy.test.ts', required: true },            // P4c lane policy + loop helpers
   { rel: 'src/__tests__/product-rule-registry.test.ts', required: true },
   { rel: 'src/__tests__/flow-validation-capabilities.test.ts', required: true },
   { rel: 'src/__tests__/generate-validators.test.ts', required: true },

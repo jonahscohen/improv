@@ -89,3 +89,6 @@ export function getValidatorRegistration(id: string): ProductValidatorRegistrati
 export function getFlowCapability(flowId: string): FlowValidationCapability | null {
   return FLOW_CAPABILITIES.find((f) => (f.flowId as string) === flowId) ?? null;
 }
+export function getLanePolicy(laneId: string): LaneValidationPolicy | null {
+  return LANE_POLICIES.find((p) => p.laneId === laneId) ?? null;
+}
