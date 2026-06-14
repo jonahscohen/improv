@@ -25,6 +25,23 @@ export function renderUrlFromContext(raw: unknown): string | undefined {
   }
 }
 
+// Pure hermeticity policy for a subresource request given the supplied document URL.
+// Inline data: subresources are always allowed; otherwise a data:/file: document may
+// only load same-protocol resources, and an http(s) document may only load same-ORIGIN
+// resources. Cross-origin HTTP and ALL ws/wss (whose origin can never match a
+// data:/file:/http document origin) are blocked. Unparseable URLs are blocked.
+export function isSubresourceAllowed(suppliedUrl: string, requestedUrl: string): boolean {
+  let supplied: URL;
+  let requested: URL;
+  try { supplied = new URL(suppliedUrl); } catch { return false; }
+  try { requested = new URL(requestedUrl); } catch { return false; }
+  if (requested.protocol === 'data:') return true;
+  if (supplied.protocol === 'data:' || supplied.protocol === 'file:') {
+    return requested.protocol === supplied.protocol;
+  }
+  return requested.origin === supplied.origin;
+}
+
 const errorMessage = (e: unknown): string => e instanceof Error ? e.message : String(e);
 
 export async function collectBrowserEvidence(renderUrl: string | undefined, signal?: AbortSignal): Promise<BrowserEvidenceCollection> {
@@ -34,15 +51,16 @@ export async function collectBrowserEvidence(renderUrl: string | undefined, sign
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   try {
     browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    // serviceWorkers: 'block' stops a reviewed page from registering a SW that could
+    // initiate its own (cross-origin) traffic outside the request-route interception.
+    const context = await browser.newContext({ reducedMotion: 'reduce', serviceWorkers: 'block' });
     const page = await context.newPage();
-    const supplied = new URL(renderUrl);
+    // Block EVERY WebSocket before navigation: the collector reads static layout and
+    // never needs a live socket, and any ws/wss is a non-same-origin channel under the
+    // hermeticity model. Closing the route prevents the connection from reaching a server.
+    await page.routeWebSocket(() => true, (ws) => { ws.close(); });
     await page.route('**/*', async (route) => {
-      const requested = new URL(route.request().url());
-      const allowed = supplied.protocol === 'data:' || supplied.protocol === 'file:'
-        ? requested.protocol === supplied.protocol || requested.protocol === 'data:'
-        : requested.origin === supplied.origin || requested.protocol === 'data:';
-      if (allowed) await route.continue();
+      if (isSubresourceAllowed(renderUrl, route.request().url())) await route.continue();
       else await route.abort('blockedbyclient');
     });
     await page.goto(renderUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 });
