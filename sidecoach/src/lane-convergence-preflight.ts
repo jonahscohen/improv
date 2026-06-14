@@ -34,6 +34,12 @@ export async function convergencePreflight(projectPath: string, laneId: string):
     return { ok: false, gaps: [], message: `convergence preflight: lane "${laneId}" has no release-floor policy (requiredProductValidatorIds)` };
   }
   const collected = await collectFromPath(projectPath);
+  // An unreadable directory could harbor an applicable file of ANY kind for ANY rule,
+  // so the runtime (run-validator) treats it as a coverage gap for every static rule.
+  // Mirror that here: an unreadable subtree is an unmeasured gap for EVERY required
+  // record, so such a target is rejected before it can enter a permanently-inconclusive
+  // loop. (Policy-skipped directories like node_modules/.git are intentional, not gaps.)
+  const unreadableDirs = collected.discovered.filter((d) => d.sourceKind === 'directory' && d.outcome === 'unreadable');
   const gaps: PreflightGap[] = [];
   for (const vId of policy.requiredProductValidatorIds) {
     const gen = GENERATED_VALIDATORS.find((g) => g.validatorId === vId);
@@ -56,8 +62,16 @@ export async function convergencePreflight(projectPath: string, laneId: string):
           evidenceKindsPresent: f.outcome === 'inspected' ? [f.sourceKind] : [],
         })),
       };
-      if (isCoverageSatisfied(rec, obs)) continue;
-      gaps.push(...exactGapsForRecord(vId, rec, applicable, collected.inspectedFiles));
+      if (!isCoverageSatisfied(rec, obs)) gaps.push(...exactGapsForRecord(vId, rec, applicable, collected.inspectedFiles));
+      // An unreadable subtree is a gap for this required record even when the inspected
+      // files otherwise satisfy coverage (the unread files could be uncovered).
+      for (const d of unreadableDirs) {
+        gaps.push({
+          validatorId: vId, ruleId: rec.ruleId, sourceFile: d.path, sourceKind: 'directory',
+          missingRequirements: rec.evidenceAlternativesByRequirement.map((alternatives, requirementIndex) => ({ requirementIndex, alternatives })),
+          reason: 'uninspected_applicable_file',
+        });
+      }
     }
   }
   if (gaps.length) {

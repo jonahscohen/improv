@@ -60,6 +60,32 @@ async function run() {
   if (mixed.ok) throw new Error('mixed target with an uncovered applicable source file must reject');
   if (!mixed.gaps.some((g) => g.sourceFile === 'Widget.vue')) throw new Error('mixed-source gap must name Widget.vue: ' + JSON.stringify(mixed.gaps));
 
+  // --- unreadable subtree: a directory the collector cannot read is a coverage gap for
+  // EVERY required rule (it could harbor an applicable file of any kind), mirroring the
+  // runtime (run-validator treats an unreadable directory as a gap for every static
+  // rule). Without this, a target with an unreadable subtree would PASS preflight and
+  // then loop forever permanently-inconclusive. ---
+  const unreadableRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'p4c-pf-unreadable-'));
+  fs.writeFileSync(path.join(unreadableRoot, 'style.css'), '.btn { color: #111; }\n');
+  fs.writeFileSync(path.join(unreadableRoot, 'index.html'), '<!doctype html><html><body><button>Go</button></body></html>\n');
+  const locked = path.join(unreadableRoot, 'locked');
+  fs.mkdirSync(locked);
+  fs.writeFileSync(path.join(locked, 'inner.css'), '.x { color: #000; }\n');
+  fs.chmodSync(locked, 0o000);
+  try {
+    let dirReadable = true;
+    try { fs.readdirSync(locked); } catch { dirReadable = false; }
+    if (!dirReadable) {   // skip only on a permissive FS / root where the dir stays readable
+      const rUnreadable = await convergencePreflight(unreadableRoot, 'lane_converge');
+      if (rUnreadable.ok) throw new Error('a target with an unreadable subtree must reject (mirror the runtime directory gap)');
+      if (!rUnreadable.gaps.some((g) => g.sourceKind === 'directory' && g.sourceFile === 'locked')) {
+        throw new Error('unreadable-subtree rejection must name the directory gap: ' + JSON.stringify(rUnreadable.gaps));
+      }
+    }
+  } finally {
+    fs.chmodSync(locked, 0o755);
+  }
+
   // --- unknown lane / no policy -> reject ---
   const r3 = await convergencePreflight(good, 'lane_build');
   if (r3.ok) throw new Error('a lane with no policy cannot preflight as a convergence lane');
