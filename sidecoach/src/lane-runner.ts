@@ -13,6 +13,7 @@ import type { ProductValidationResult } from './product-rule-types';
 import { validatorsForStep, aggregateWorstStatus, mapGateStatusToOutcome, requiredValidatorsForLane, isLoopLane } from './lane-validators';
 import { getValidatorRegistration, getLanePolicy } from './flow-validation-capabilities';
 import { GENERATED_VALIDATORS } from './validators.generated';
+import { renderUrlFromContext } from './validators/browser-evidence-collector';
 import { seedConvergenceState, evaluateBoundary, decideProgress, BoundaryEvaluation, ProgressDecision } from './lane-convergence';
 import { FlowPrerequisiteValidator } from './flow-prerequisites';
 import { withCheckpointLock, setLockCompromiseHandler } from './lane-lock';
@@ -29,7 +30,7 @@ export interface LaneRunnerDeps {
   // The async EXECUTE: run one product validator. Optional in the type so laneDeps
   // (wired in Task 10) and validator-less call sites compile; a step with bound
   // validators that finds this absent throws (the Task 10 red).
-  runValidator?: (validatorId: string, validatorContext: { projectPath: string; target: string }, signal?: AbortSignal) => Promise<ProductValidationResult>;
+  runValidator?: (validatorId: string, validatorContext: { projectPath: string; target: string; renderUrl?: string }, signal?: AbortSignal) => Promise<ProductValidationResult>;
   staleMs?: number;                              // default 30000
   heartbeatIntervalMs?: number;                  // default < staleMs/3
   // Deterministic test seam: fired after each heartbeat tick - ok=true on a successful
@@ -424,7 +425,7 @@ async function buildStepResult(cp: LaneCheckpoint, l: GeneratedLane, context: an
 // A step with bound validators but no deps.runValidator throws (production wiring is
 // Task 10). Returns per-validator results in discovery order.
 async function runStepValidators(
-  d: LaneRunnerDeps, validatorIds: string[], ctx: { projectPath: string; target: string }, signal?: AbortSignal,
+  d: LaneRunnerDeps, validatorIds: string[], ctx: { projectPath: string; target: string; renderUrl?: string }, signal?: AbortSignal,
 ): Promise<{ validatorId: string; result: ProductValidationResult }[]> {
   const out: { validatorId: string; result: ProductValidationResult }[] = [];
   for (const vId of validatorIds) {
@@ -512,7 +513,7 @@ export async function advanceLane(projectPath: string, checkpointId: string, tra
       try {
         // EXECUTE: run the step's bound validators (async, abortable), aggregate worst-status.
         const validatorIds = validatorsForStep(step);
-        const perValidator = await runStepValidators(d, validatorIds, { projectPath, target: cp.target }, controller.signal);
+        const perValidator = await runStepValidators(d, validatorIds, { projectPath, target: cp.target, renderUrl: renderUrlFromContext({ target: cp.target }) }, controller.signal);
         const worst = aggregateWorstStatus(perValidator.map((p) => p.result.status as GateStatus));
         const gate = { status: worst, validators: perValidator.map((p) => ({ validatorId: p.validatorId, status: p.result.status as GateStatus })),
                        findings: perValidator.flatMap((p) => p.result.findings) };
@@ -817,7 +818,7 @@ async function runIterationBoundary(
   try {
     // EXECUTE: the required validators run ONCE each, via the lane policy (not per-step).
     const validatorIds = requiredValidatorsForLane(l.lane);
-    const perValidator = await runBoundaryValidators(d, validatorIds, { projectPath, target: cp.target }, controller.signal);
+    const perValidator = await runBoundaryValidators(d, validatorIds, { projectPath, target: cp.target, renderUrl: renderUrlFromContext({ target: cp.target }) }, controller.signal);
     const ev = evaluateBoundary(perValidator);
     const decision = decideProgress(cp.convergence!, ev);
     const gate = { status: ev.iterationStatus, validators: perValidator.map((p) => ({ validatorId: p.validatorId, status: p.result.status as GateStatus })), findings: ev.findings };
@@ -855,7 +856,7 @@ async function runIterationBoundary(
 // boundary still reaches owner-checked finalizeLease (the lease is always cleared).
 // Distinct from the reused sequence-gate runStepValidators (left unchanged).
 async function runBoundaryValidators(
-  d: LaneRunnerDeps, validatorIds: string[], ctx: { projectPath: string; target: string }, signal?: AbortSignal,
+  d: LaneRunnerDeps, validatorIds: string[], ctx: { projectPath: string; target: string; renderUrl?: string }, signal?: AbortSignal,
 ): Promise<{ validatorId: string; result: ProductValidationResult }[]> {
   const out: { validatorId: string; result: ProductValidationResult }[] = [];
   for (const vId of validatorIds) {

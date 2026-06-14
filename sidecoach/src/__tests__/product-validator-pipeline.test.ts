@@ -247,11 +247,71 @@ async function cooperativeAbort() {
   if (ticks === 0) throw new Error('a slow validator must yield to the event loop so the heartbeat timer can fire during the run');
 }
 
+async function browserPromotion() {
+  // static-a11y also requires the STATIC rule a11y.focus-visible. Supply a clean
+  // focus-visible CSS file so that required static rule PASSES (covered) - otherwise
+  // it is inconclusive and evaluateCleanPolicy short-circuits to inconclusive BEFORE
+  // counting the blocking browser-rule fails. With it clean, the two failing blocker
+  // browser rules are what drive `findings`, which is exactly what this case verifies.
+  const focusCss = 'a:focus-visible { outline: 2px solid currentColor; }';
+  const detail = await runValidatorForTest('static-a11y', {
+    cssText: focusCss, markup: '',
+    files: [{ path: 'a11y.css', sourceKind: 'css', cssText: focusCss, markup: '', evidenceKindsPresent: ['css'] }],
+    renderUrl: 'data:text/html,test',
+  }, {
+    collectBrowserEvidence: async (renderUrl) => ({
+      available: true,
+      evidence: {
+        browserEvidence: { available: true, kinds: ['computed-style', 'dom', 'contrast'], renderUrl: renderUrl! },
+        computedStyle: {},
+        dom: {
+          minHitArea: { checked: 1, failing: 1, smallestWidth: 20, smallestHeight: 20 },
+        },
+        contrast: { wcagAA: false, ratio: 1.2 },
+      },
+    }),
+  });
+  for (const id of ['a11y.min-hit-area', 'a11y.color-contrast']) {
+    if (!detail.activePolicy.requiredRuleIds.includes(id)) throw new Error(`${id}: successful collector must promote browser rule`);
+    const x = detail.executions.find((e) => e.result.ruleId === id);
+    if (!x || x.result.status !== 'fail' || !x.sufficientlyCovered) throw new Error(`${id}: promoted browser rule must fail with real coverage`);
+  }
+  if (detail.result.status !== 'findings') throw new Error(`blocking browser failures must yield findings, got ${detail.result.status}`);
+
+  const polish = await runValidatorForTest('polish-standard', {
+    cssText: '', markup: '', files: [], renderUrl: 'data:text/html,test',
+  }, {
+    collectBrowserEvidence: async (renderUrl) => ({
+      available: true,
+      evidence: {
+        browserEvidence: { available: true, kinds: ['computed-style', 'dom', 'contrast'], renderUrl: renderUrl! },
+        computedStyle: {
+          'concentric.checkedPairs': '1',
+          'concentric.failingPairs': '0',
+          'typography.checkedElements': '1',
+          'typography.invalidLineHeightElements': '0',
+        },
+        dom: { minHitArea: { checked: 1, failing: 0, smallestWidth: 44, smallestHeight: 44 } },
+        contrast: { wcagAA: true, ratio: 7 },
+      },
+    }),
+  });
+  for (const id of ['polish.concentric-radius', 'polish.typography-rhythm']) {
+    if (!polish.activePolicy.requiredRuleIds.includes(id)) throw new Error(`${id}: successful collector must promote browser rule`);
+    const x = polish.executions.find((e) => e.result.ruleId === id);
+    if (!x || x.result.status !== 'pass' || !x.sufficientlyCovered) throw new Error(`${id}: promoted browser rule must pass with real coverage`);
+  }
+  const genericity = polish.executions.find((e) => e.result.ruleId === 'polish.anti-pattern-genericity');
+  if (!genericity || genericity.result.status !== 'inconclusive') throw new Error('genericity must stay inconclusive with successful collector');
+  if (polish.activePolicy.requiredRuleIds.includes('polish.anti-pattern-genericity')) throw new Error('genericity must not be promoted');
+}
+
 async function run() {
   await basics();
   await executionCoverage();
   await coverageCorrectness();
   await cooperativeAbort();
+  await browserPromotion();
 
   const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'p4a2-empty-'));
   // (1) async contract: validateProduct returns a Promise now

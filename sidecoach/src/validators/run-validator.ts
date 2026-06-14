@@ -7,7 +7,7 @@
 // RunCoverage, and calls the P4a-1 evaluateCleanPolicy (never re-implements it).
 import type {
   ProductValidationResult, ProductRuleResult, ProductRuleDefinition, RequiredCoverageRecord,
-  RuleStatus, NormalizedErrorCategory,
+  RuleStatus, NormalizedErrorCategory, CleanPolicy, EvidenceKind,
 } from '../product-rule-types';
 import { isStaticallySatisfiable, sourceKindsForEvidence } from '../product-rule-types';
 import { getRuleById } from '../product-rule-registry';
@@ -18,12 +18,52 @@ import { collect, CollectionAbortedError } from './project-collector';
 import type { Collected } from './project-collector';
 import { stampResult, inconclusive } from './check-context';
 import type { ProductCheckContext, CollectedFile } from './check-context';
+import { collectBrowserEvidence, renderUrlFromContext } from './browser-evidence-collector';
+import type { BrowserEvidenceCollection } from './browser-evidence-collector';
 
-function toCheckContext(c: Collected, raw: unknown): ProductCheckContext {
+function toCheckContext(c: Collected, raw: unknown, browser?: BrowserEvidenceCollection): ProductCheckContext {
   const r = raw as Partial<ProductCheckContext>;
+  const e = browser?.available ? browser.evidence : undefined;
   return {
     cssText: c.cssText, markup: c.markup, files: c.files, discoveredFiles: c.discovered,
-    computedStyle: r?.computedStyle, contrast: r?.contrast, designTokens: r?.designTokens, tasteOptions: r?.tasteOptions,
+    renderUrl: renderUrlFromContext(raw),
+    browserEvidence: e?.browserEvidence,
+    computedStyle: e?.computedStyle ?? r?.computedStyle,
+    dom: e?.dom ?? r?.dom,
+    contrast: e?.contrast ?? r?.contrast,
+    designTokens: r?.designTokens, tasteOptions: r?.tasteOptions,
+  };
+}
+
+// Per-run browser dependency seam: production uses the real collector; tests inject
+// a deterministic one. Absent -> the real collectBrowserEvidence (which itself
+// degrades to available:false when there is no render URL or no launchable Chromium).
+export interface ValidatorRuntimeDeps {
+  collectBrowserEvidence?: (renderUrl: string | undefined, signal?: AbortSignal) => Promise<BrowserEvidenceCollection>;
+}
+
+// Promote ONLY the generated browserRuleIds whose evidence requirements are ALL
+// present in the collected evidence kinds. Failed/absent collection -> kinds empty
+// -> nothing promoted -> the static cleanPolicy is the safe baseline. Browser rules
+// still execute (surfacing inconclusive) because they are owned, not because they
+// are required.
+function activateBrowserPolicy(
+  base: CleanPolicy,
+  gen: typeof GENERATED_VALIDATORS[number],
+  kinds: EvidenceKind[],
+): CleanPolicy {
+  const present = new Set(kinds);
+  const promoted = gen.browserRuleIds.filter((id) => {
+    const def = getRuleById(id);
+    return !!def && def.evidenceRequirements.every((kind) => present.has(kind));
+  });
+  return {
+    ...base,
+    requiredRuleIds: [...base.requiredRuleIds, ...promoted],
+    requiredCoverageByScope: [
+      ...base.requiredCoverageByScope,
+      ...gen.browserCoverageByScope.filter((c) => promoted.includes(c.ruleId)),
+    ],
   };
 }
 
@@ -58,14 +98,23 @@ async function executeRule(
   collected: Collected,
   raw: unknown,
   signal?: AbortSignal,
+  browser?: BrowserEvidenceCollection,
 ): Promise<RuleExecution> {
   if (signal?.aborted) throw new AbortSentinel();
   const reqKind = def.evidenceRequirements[0];
 
   if (!isStaticallySatisfiable(def.evidenceRequirements)) {
-    // computed-style/dom/contrast: no static source can satisfy this until P4b.
-    const result = def.checkProduct!(toCheckContext(collected, raw)) as ProductRuleResult;
-    return { result, discoveredApplicableFiles: [], inspectedApplicableFiles: [], sufficientlyCovered: false };
+    // computed-style/dom/contrast: no static source can satisfy this. With trusted
+    // browser evidence the check produces a real verdict over the synthetic render-URL
+    // target; without it the check returns its honest inconclusive.
+    const result = def.checkProduct!(toCheckContext(collected, raw, browser)) as ProductRuleResult;
+    const renderUrl = renderUrlFromContext(raw);
+    const kinds = browser?.available ? browser.evidence.browserEvidence.kinds : [];
+    const discoveredApplicableFiles = renderUrl ? [{ file: renderUrl, evidenceKindsPresent: kinds }] : [];
+    const inspectedApplicableFiles = browser?.available && renderUrl ? [renderUrl] : [];
+    const exec: RuleExecution = { result, discoveredApplicableFiles, inspectedApplicableFiles, sufficientlyCovered: false };
+    exec.sufficientlyCovered = result.status !== 'inconclusive' && isCoverageSatisfied(record, observationFor(exec));
+    return exec;
   }
 
   const compatible = record
@@ -159,7 +208,15 @@ export interface ValidatorRunDetail {
   executions: RuleExecution[];
   coverageObservations: CoverageObservation[];
   runCoverage: RunCoverage;
+  activePolicy: CleanPolicy;
 }
+
+// The safe empty policy used for early error/abort detail returns when no generated
+// static policy is available (e.g. unknown validator id).
+const EMPTY_POLICY: CleanPolicy = {
+  requiredRuleIds: [], blockingSeverities: ['blocker', 'major'], toleratedFindingCounts: {},
+  requiredCoverageByScope: [], inconclusiveBehavior: 'block', notApplicableBehavior: 'exclude_and_report',
+};
 
 function emptyRun(): RunCoverage {
   return { inspectedFiles: [], skippedFiles: [], supportedSourceKinds: [], unsupportedSourceKinds: [], measuredScope: [], unverifiedScope: [],
@@ -171,32 +228,46 @@ function emptyRun(): RunCoverage {
 // microtask (Promise.resolve) would NOT let timers run; setImmediate does.
 function yieldToEventLoop(): Promise<void> { return new Promise((r) => setImmediate(r)); }
 
-async function runDetailed(validatorId: string, context: unknown, signal?: AbortSignal): Promise<ValidatorRunDetail> {
+async function runDetailed(
+  validatorId: string,
+  context: unknown,
+  signal?: AbortSignal,
+  deps: ValidatorRuntimeDeps = {},
+): Promise<ValidatorRunDetail> {
   const gen = GENERATED_VALIDATORS.find((v) => v.validatorId === validatorId);
   const policy = gen?.cleanPolicy;
   if (!gen || !policy) {
     const result = evaluateCleanPolicy(
       { validatorId, rules: [], coverageObservations: [], runCoverage: emptyRun(),
         validatorError: { category: 'registry_fault', message: `no generated validator for ${validatorId}` } },
-      { requiredRuleIds: [], blockingSeverities: ['blocker', 'major'], toleratedFindingCounts: {}, requiredCoverageByScope: [], inconclusiveBehavior: 'block', notApplicableBehavior: 'exclude_and_report' },
+      EMPTY_POLICY,
     );
-    return { result, executions: [], coverageObservations: [], runCoverage: emptyRun() };
+    return { result, executions: [], coverageObservations: [], runCoverage: emptyRun(), activePolicy: EMPTY_POLICY };
   }
 
   let collected: Collected;
   try { collected = await collect(context, signal); }
   catch (e) {
-    if (e instanceof CollectionAbortedError) return abortedDetail(validatorId);  // aborted DURING collection
+    if (e instanceof CollectionAbortedError) return abortedDetail(validatorId, policy);  // aborted DURING collection
     const result = evaluateCleanPolicy(
       { validatorId, rules: [], coverageObservations: [], runCoverage: emptyRun(),
         validatorError: { category: 'unreadable_input', message: String(e instanceof Error ? e.message : e) } },
       policy,
     );
-    return { result, executions: [], coverageObservations: [], runCoverage: emptyRun() };
+    return { result, executions: [], coverageObservations: [], runCoverage: emptyRun(), activePolicy: policy };
   }
 
-  if (signal?.aborted) return abortedDetail(validatorId);
-  const recordById = new Map(policy.requiredCoverageByScope.map((c) => [c.ruleId, c]));
+  if (signal?.aborted) return abortedDetail(validatorId, policy);
+
+  // Collect browser evidence ONCE for this target, then build the per-target active
+  // policy: successful collection promotes the browser rules whose evidence is present;
+  // failed/absent collection promotes none (static cleanPolicy stays the baseline).
+  const renderUrl = renderUrlFromContext(context);
+  const browser = await (deps.collectBrowserEvidence ?? collectBrowserEvidence)(renderUrl, signal);
+  if (signal?.aborted) return abortedDetail(validatorId, policy);
+  const activePolicy = activateBrowserPolicy(policy, gen, browser.available ? browser.evidence.browserEvidence.kinds : []);
+
+  const recordById = new Map(activePolicy.requiredCoverageByScope.map((c) => [c.ruleId, c]));
   const defs = gen.ownedRuleIds
     .map((id) => getRuleById(id))
     .filter((d): d is NonNullable<typeof d> => !!d && typeof d.checkProduct === 'function');
@@ -205,18 +276,18 @@ async function runDetailed(validatorId: string, context: unknown, signal?: Abort
     for (const d of defs) {
       // Cooperatively yield BETWEEN RULES so the heartbeat keeps firing and abort is
       // observed promptly across a long synchronous validator run.
-      if (signal?.aborted) return abortedDetail(validatorId);
+      if (signal?.aborted) return abortedDetail(validatorId, policy);
       await yieldToEventLoop();
-      executions.push(await executeRule(d, recordById.get(d.ruleId), collected, context, signal));
+      executions.push(await executeRule(d, recordById.get(d.ruleId), collected, context, signal, browser));
     }
   } catch (e) {
-    if (e instanceof AbortSentinel) return abortedDetail(validatorId);
+    if (e instanceof AbortSentinel) return abortedDetail(validatorId, policy);
     throw e;
   }
   const rules = executions.map((x) => x.result);
 
   const coverageObservations = executions
-    .filter((x) => policy.requiredRuleIds.includes(x.result.ruleId))
+    .filter((x) => activePolicy.requiredRuleIds.includes(x.result.ruleId))
     .map(observationFor);
 
   const supportedSourceKinds = [...new Set(collected.files.map((f) => f.sourceKind))];
@@ -236,8 +307,8 @@ async function runDetailed(validatorId: string, context: unknown, signal?: Abort
     unsupportedFiles: collected.unsupportedFiles,
   };
 
-  const result = evaluateCleanPolicy({ validatorId, rules, coverageObservations, runCoverage }, policy);
-  return { result, executions, coverageObservations, runCoverage };
+  const result = evaluateCleanPolicy({ validatorId, rules, coverageObservations, runCoverage }, activePolicy);
+  return { result, executions, coverageObservations, runCoverage, activePolicy };
 }
 
 export function makeProductValidator(validatorId: string) {
@@ -262,8 +333,8 @@ function abortedResult(validatorId: string): ProductValidationResult {
     { requiredRuleIds: [], blockingSeverities: ['blocker', 'major'], toleratedFindingCounts: {}, requiredCoverageByScope: [], inconclusiveBehavior: 'block', notApplicableBehavior: 'exclude_and_report' },
   );
 }
-function abortedDetail(validatorId: string): ValidatorRunDetail {
-  return { result: abortedResult(validatorId), executions: [], coverageObservations: [], runCoverage: emptyRun() };
+function abortedDetail(validatorId: string, policy?: CleanPolicy): ValidatorRunDetail {
+  return { result: abortedResult(validatorId), executions: [], coverageObservations: [], runCoverage: emptyRun(), activePolicy: policy ?? EMPTY_POLICY };
 }
 
 // Sentinel thrown by the per-rule abort check inside runDetailed's execution loop.
@@ -272,6 +343,6 @@ class AbortSentinel extends Error {}
 // Test seam: exposes the internal executions/observations/coverage so the pipeline
 // suite can assert per-file execution and coverage WITHOUT duplicating the algorithm.
 // Async now that runDetailed yields cooperatively.
-export function runValidatorForTest(validatorId: string, context: unknown): Promise<ValidatorRunDetail> {
-  return runDetailed(validatorId, context);
+export function runValidatorForTest(validatorId: string, context: unknown, deps: ValidatorRuntimeDeps = {}): Promise<ValidatorRunDetail> {
+  return runDetailed(validatorId, context, undefined, deps);
 }
