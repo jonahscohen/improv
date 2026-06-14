@@ -164,10 +164,17 @@ export function validateRegistry(rules: ProductRuleDefinition[], regs: ProductVa
     if (ownerId && !registered.has(ownerId)) errors.push(`rule owner ${ownerId} has no registration`);
   }
 
+  // Every gating validator (lane-required id) must have a registration. The
+  // owns-at-least-one-rule loop below iterates `regs`, so a gating id that
+  // NOTHING registers would never be checked and slip through unguarded.
+  const gating = new Set(gatingValidatorIdList);
+  for (const gid of gatingValidatorIdList) {
+    if (gid && !registered.has(gid)) errors.push(`gating validator ${gid} has no registration`);
+  }
+
   // A gating registration must own at least one rule. Without this explicit
   // check, the no-owned-rules skip below would permit a lane-required validator
   // whose generated requiredRuleIds is empty.
-  const gating = new Set(gatingValidatorIdList);
   for (const reg of regs) {
     if (gating.has(reg.validatorId) && rules.every((r) => r.ownerValidatorId !== reg.validatorId)) {
       errors.push(`gating validator ${reg.validatorId} owns zero rules`);

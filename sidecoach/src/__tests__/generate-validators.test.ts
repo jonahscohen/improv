@@ -134,6 +134,16 @@ function run() {
   //     bypass the divergence guard.
   expectInvalid('unknown-source-severity', [baseRule({ sourceSeverity: 'sev9000' })], [reg('v')]);
 
+  // 11. (P2) a gating validator id with NO ProductValidatorRegistration must be
+  //     rejected. Previously only registered validators were checked, so a
+  //     lane-required id that nothing registers slipped through unguarded.
+  expectInvalid(
+    'unregistered-gating',
+    [baseRule({ ownerValidatorId: 'v' })],
+    [reg('v')],
+    gatingValidatorIds([{ laneId: 'l', requiredProductValidatorIds: ['ghost-gate'], excludedProductValidatorIds: [] }]),
+  );
+
   console.log('generate-validators: OK');
 }
 run();
