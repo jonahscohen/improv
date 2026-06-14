@@ -29,6 +29,10 @@ export interface LaneRunnerDeps {
   runValidator?: (validatorId: string, validatorContext: { projectPath: string; target: string }, signal?: AbortSignal) => Promise<ProductValidationResult>;
   staleMs?: number;                              // default 30000
   heartbeatIntervalMs?: number;                  // default < staleMs/3
+  // Deterministic test seam: fired after each heartbeat tick - ok=true on a successful
+  // ownership refresh, ok=false when ownership is lost (the operation was aborted). Lets
+  // a test await ACTUAL heartbeat fires instead of racing a wall-clock timer.
+  onHeartbeat?: (ok: boolean) => void;
   // Deterministic failure-injection seam for outbox publishing. Production leaves it
   // undefined and therefore calls the real publisher.
   publishOutbox?: (store: LaneCheckpointStore, checkpointId: string, projectPath: string, now?: () => string) => Promise<void>;
@@ -66,8 +70,8 @@ function startHeartbeatLoop(d: LaneRunnerDeps, checkpointId: string, id: LeaseId
   const timer = setInterval(async () => {
     if (stopped || running) return;
     running = true;
-    try { await refreshHeartbeat(d.store, checkpointId, id, d.now); }
-    catch { controller.abort(); }
+    try { await refreshHeartbeat(d.store, checkpointId, id, d.now); d.onHeartbeat?.(true); }   // ok=refreshed (ownership held)
+    catch { controller.abort(); d.onHeartbeat?.(false); }                                       // failed=ownership lost -> aborted
     finally { running = false; }
   }, every);
   if (typeof (timer as any).unref === 'function') (timer as any).unref();

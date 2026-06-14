@@ -229,11 +229,14 @@ async function cooperativeAbort() {
   let ticks = 0;
   const timer = setInterval(() => { ticks++; }, 1);
   const ac = new AbortController();
-  setTimeout(() => ac.abort(), 5);                 // abort DURING the slow run
   const key = 'polish/reduced-motion-respect';
   const had = Object.prototype.hasOwnProperty.call(CHECKS, key);
   const prev = CHECKS[key];
-  CHECKS[key] = (_ctx: ProductCheckContext): RuleVerdict => { burn(4); return { status: 'pass', message: 'ok' }; };
+  // DETERMINISTIC abort: the check itself aborts on its 2nd execution (no setTimeout race);
+  // the next between-file/rule signal check then returns aborted mid-run. The burn keeps the
+  // run long enough that the concurrent 1ms timer still fires (proving the yields).
+  let checkCalls = 0;
+  CHECKS[key] = (_ctx: ProductCheckContext): RuleVerdict => { if (++checkCalls === 2) ac.abort(); burn(4); return { status: 'pass', message: 'ok' }; };
   try {
     const res = await getValidatorRegistration('polish-standard')!.validateProduct!({ projectPath: dir }, ac.signal);
     if (res.status !== 'error' || res.normalizedErrorCategory !== 'aborted') throw new Error(`slow validator must abort on signal during the run, got ${res.status}/${(res as any).normalizedErrorCategory}`);

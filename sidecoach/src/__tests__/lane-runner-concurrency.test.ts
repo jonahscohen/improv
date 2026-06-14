@@ -117,9 +117,10 @@ async function run() {
     if (!after.servedSteps['1:0']) throw new Error('serve persistence must merge its own entry');
   }
 
-  // abort-fence: one slow validator runs longer than staleMs (the heartbeat LOOP keeps
-  // it live); a second store handle atomically fences the lease DURING that validator,
-  // proving ownership loss aborts it without waiting for a validator boundary.
+  // abort-fence (DETERMINISTIC via the onHeartbeat seam - no wall-clock races): the
+  // heartbeat LOOP keeps a slow validator's lease live (await N actual successful refreshes);
+  // a second store handle then fences the lease, and the NEXT heartbeat detects ownership
+  // loss and aborts the in-flight operation (await the failed refresh, not a poll).
   {
     const proj = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-abort-')));
     let enteredValidator!: () => void;
@@ -127,6 +128,8 @@ async function run() {
     let releaseValidator!: () => void;
     const held = new Promise<void>((r) => { releaseValidator = r; });
     let sawAbort = false;
+    let okBeats = 0; let resolveBeats!: () => void; const enoughBeats = new Promise<void>((r) => { resolveBeats = r; });
+    let resolveFenced!: () => void; const fencedBeat = new Promise<void>((r) => { resolveFenced = r; });
     const d = deps(proj, async (_id, _ctx, signal) => {
       signal?.addEventListener('abort', () => { sawAbort = true; });
       enteredValidator();
@@ -134,22 +137,21 @@ async function run() {
       return okResult();
     });
     d.now = () => new Date(Date.now()).toISOString();
-    // Margins (heartbeat << stale << wait) sized so proper-lockfile's real lock-acquire
-    // latency on each heartbeat cannot let the lease lapse; relationship is unchanged.
-    d.staleMs = 150; d.heartbeatIntervalMs = 15;
+    d.staleMs = 50; d.heartbeatIntervalMs = 5;
+    // ok beats accumulate while ownership holds; the first FAILED beat is the fence detection.
+    d.onHeartbeat = (ok) => { if (ok) { if (++okBeats >= 5) resolveBeats(); } else { resolveFenced(); } };
     const s = await startLane('lane_build', 'hero', { projectPath: proj }, 'req-abort', d);
     await advanceLane(proj, s.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: d.store.read(s.checkpointId).revision }, d);
     const inflight = advanceLane(proj, s.checkpointId, { action: 'complete', report: rep('craft'), expectedRevision: d.store.read(s.checkpointId).revision }, d);
     await entered;
-    await new Promise((r) => setTimeout(r, 250));    // greater than staleMs; loop must keep lease live
+    await enoughBeats;     // 5 actual successful refreshes during one slow validator -> the loop keeps the lease live
     const independent = new LaneCheckpointStore(proj);
-    const live = independent.read(s.checkpointId);
-    if (!leaseIsLive(live.lease, Date.now(), 150)) throw new Error('one slow validator must stay live via heartbeat loop');
+    if (!leaseIsLive(independent.read(s.checkpointId).lease, Date.now(), d.staleMs)) throw new Error('one slow validator must stay live via heartbeat loop');
     await withCheckpointLock(independent.dir(), s.checkpointId, () => {
       const cp = independent.read(s.checkpointId);
       cp.fencingCounter += 1; cp.lease = null; cp.revision += 1; independent.write(cp);
     });
-    for (let i = 0; i < 50 && !sawAbort; i++) await new Promise((r) => setTimeout(r, 2));
+    await fencedBeat;      // the next heartbeat observed ownership loss (and aborted the controller in the same tick)
     if (!sawAbort) throw new Error('independent-store ownership loss during one validator must abort signal');
     releaseValidator();
     await inflight.then(() => { throw new Error('fenced operation must reject FINALIZE'); }, () => {});
