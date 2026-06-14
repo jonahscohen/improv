@@ -45,6 +45,7 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const lane_lock_1 = require("./lane-lock");
 const lane_side_effect_sink_1 = require("./lane-side-effect-sink");
+const lane_flow_history_publisher_1 = require("./lane-flow-history-publisher");
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 function assertId(id) {
     if (!ID_RE.test(id) || id.includes('..'))
@@ -200,41 +201,46 @@ async function finalizeLease(store, checkpointId, id, mutate, now) {
 // acked record under the checkpoint lock WITHOUT bumping the semantic revision
 // (spec lines 691-693). AT-MOST-ONE-COMMITTED-TRANSITION: replay is idempotent.
 // ---------------------------------------------------------------------------
-exports.OUTBOX_PUBLISHERS = ['lane-side-effect-sink'];
+exports.OUTBOX_PUBLISHERS = ['lane-side-effect-sink', 'flow-history'];
+async function ackOutboxPublisher(store, checkpointId, record, publisher, clock) {
+    await (0, lane_lock_1.withCheckpointLock)(store.dir(), checkpointId, () => {
+        const cp = store.read(checkpointId);
+        const rec = cp.sideEffectOutbox.find((candidate) => candidate.committedRevision === record.committedRevision
+            && candidate.fencingToken === record.fencingToken);
+        if (!rec)
+            return;
+        rec.pendingPublishers = rec.pendingPublishers.filter((pending) => pending !== publisher);
+        if (rec.pendingPublishers.length === 0) {
+            cp.sideEffectOutbox = cp.sideEffectOutbox.filter((candidate) => candidate !== rec);
+        }
+        cp.updatedAt = clock();
+        store.write(cp);
+    });
+}
 async function publishOutbox(store, checkpointId, projectPath, now) {
     const clock = now ?? (() => new Date(Date.now()).toISOString());
     const sink = new lane_side_effect_sink_1.LaneSideEffectSink(projectPath);
-    // snapshot the records to publish (read outside the checkpoint lock; publishing is idempotent)
+    const flowHistory = new lane_flow_history_publisher_1.LaneFlowHistoryPublisher(projectPath);
+    const dispatch = {
+        'lane-side-effect-sink': async (entry, fencingToken) => {
+            await sink.upsert(entry.logicalKey, fencingToken, entry.payload, clock);
+        },
+        'flow-history': async (entry, fencingToken) => {
+            await flowHistory.upsert(entry.logicalKey, fencingToken, entry.payload, clock);
+        },
+    };
     const snapshot = store.read(checkpointId).sideEffectOutbox;
     for (const record of snapshot) {
-        // Publish to the sink publisher if it is still pending. A 'rejected' upsert (a higher
-        // token already won) is still DELIVERED for ack purposes. Other declared publishers
-        // (e.g. P4f's FlowHistory) are NOT handled here and must stay pending.
-        const acked = [];
-        if (record.pendingPublishers.includes('lane-side-effect-sink')) {
+        for (const publisher of exports.OUTBOX_PUBLISHERS) {
+            if (!record.pendingPublishers.includes(publisher))
+                continue;
             for (const entry of record.entries) {
-                if (entry.publisher !== 'lane-side-effect-sink')
+                if (entry.publisher !== publisher)
                     continue;
-                await sink.upsert(entry.logicalKey, record.fencingToken, entry.payload, clock); // written | noop | rejected all = delivered
+                await dispatch[publisher](entry, record.fencingToken);
             }
-            acked.push('lane-side-effect-sink');
+            await ackOutboxPublisher(store, checkpointId, record, publisher, clock);
         }
-        if (acked.length === 0)
-            continue;
-        // ack publishers INDIVIDUALLY under the checkpoint lock; delete the record ONLY when
-        // no publisher remains pending. Does NOT bump the semantic revision.
-        await (0, lane_lock_1.withCheckpointLock)(store.dir(), checkpointId, () => {
-            const cp = store.read(checkpointId);
-            const rec = cp.sideEffectOutbox.find((x) => x.committedRevision === record.committedRevision && x.fencingToken === record.fencingToken);
-            if (!rec)
-                return;
-            rec.pendingPublishers = rec.pendingPublishers.filter((p) => !acked.includes(p));
-            if (rec.pendingPublishers.length === 0) {
-                cp.sideEffectOutbox = cp.sideEffectOutbox.filter((x) => x !== rec);
-            }
-            cp.updatedAt = clock();
-            store.write(cp);
-        });
     }
 }
 // Startup/advance-time recovery: replay every checkpoint that still has pending outbox

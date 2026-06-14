@@ -76,7 +76,7 @@ export interface ClaimOpts {
 export declare function claimLease(store: LaneCheckpointStore, checkpointId: string, o: ClaimOpts): Promise<LaneCheckpoint>;
 export declare function refreshHeartbeat(store: LaneCheckpointStore, checkpointId: string, id: LeaseIdentity, now?: () => string): Promise<LaneCheckpoint>;
 export declare function finalizeLease(store: LaneCheckpointStore, checkpointId: string, id: LeaseIdentity, mutate: (cp: LaneCheckpoint, committedRevision: number) => void, now?: () => string): Promise<LaneCheckpoint>;
-export declare const OUTBOX_PUBLISHERS: readonly ["lane-side-effect-sink"];
+export declare const OUTBOX_PUBLISHERS: readonly ["lane-side-effect-sink", "flow-history"];
 export declare function publishOutbox(store: LaneCheckpointStore, checkpointId: string, projectPath: string, now?: () => string): Promise<void>;
 export declare function publishPendingOutbox(store: LaneCheckpointStore, projectPath: string, now?: () => string): Promise<void>;
 //# sourceMappingURL=lane-checkpoint-store.d.ts.map

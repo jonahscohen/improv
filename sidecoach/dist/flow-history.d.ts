@@ -31,6 +31,11 @@ export interface FlowHistoryEntry {
     nextSteps?: string[];
     artifacts?: any[];
     error?: string;
+    laneLogicalKey?: string;
+    fencingToken?: number;
+}
+export interface FlowHistoryUpsertOutcome {
+    status: 'written' | 'noop' | 'rejected';
 }
 export interface SessionFlowHistory {
     flowSequence: string[];
@@ -41,7 +46,7 @@ export interface SessionFlowHistory {
     projectPath?: string;
 }
 export declare class FlowHistory {
-    private static readonly HISTORY_FILE;
+    static get HISTORY_FILE(): string;
     private sessionId;
     private history;
     constructor(sessionId: string);
@@ -57,10 +62,17 @@ export declare class FlowHistory {
      * Get or create session history
      */
     private getSessionHistory;
+    private appendFlow;
     /**
-     * Record a flow execution (v2: append to array, cap at 20 runs per flow)
+     * Record an ordinary flow execution. Existing callers remain append-oriented.
      */
     recordFlow(entry: FlowHistoryEntry): void;
+    /**
+     * Conditionally upsert one committed lane STEP result by logical key and token.
+     * New keys append through the normal 20-run cap. Higher tokens replace the
+     * accepted tagged run in place. Same tokens no-op and lower tokens reject.
+     */
+    upsertLaneFlow(logicalKey: string, fencingToken: number, entry: FlowHistoryEntry, now?: () => string): FlowHistoryUpsertOutcome;
     /**
      * Get the last executed flow
      */

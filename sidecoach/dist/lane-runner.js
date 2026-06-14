@@ -89,6 +89,39 @@ function closedResult(cp, l) {
                 : 'Lane has no current step.',
     };
 }
+function committedStepOutbox(checkpoint, stepId, iteration, committedRevision, fencingToken, createdAt, sinkPayload, served) {
+    const baseKey = `${checkpoint.checkpointId}:${stepId}:${iteration}`;
+    return {
+        checkpointId: checkpoint.checkpointId,
+        committedRevision,
+        fencingToken,
+        stepId,
+        iteration,
+        pendingPublishers: [...lane_checkpoint_store_1.OUTBOX_PUBLISHERS],
+        createdAt,
+        entries: [
+            {
+                publisher: 'lane-side-effect-sink',
+                entryIndex: 0,
+                logicalKey: baseKey,
+                payload: sinkPayload,
+            },
+            {
+                publisher: 'flow-history',
+                entryIndex: 1,
+                logicalKey: `${baseKey}:flow-history`,
+                payload: {
+                    flowId: `lane:${checkpoint.laneId}:${stepId}`,
+                    flowName: `Lane ${checkpoint.laneId}: ${stepId}`,
+                    status: 'success',
+                    message: `Committed lane STEP ${stepId} for ${checkpoint.laneId} at revision ${committedRevision}.`,
+                    guidance: [...served.guidance],
+                    checklist: [...served.checklist],
+                },
+            },
+        ],
+    };
+}
 // Serve the verb step at cursor. Uses the PERSISTED cache if present (so retry/
 // resume/duplicate never re-run handlers); otherwise runs each member flow once into
 // an operation-local accumulator, then persists ONCE under the checkpoint lock via a
@@ -282,12 +315,7 @@ async function serveStepUnderLease(cp, l, context, d, id) {
             c.servedSteps[key] = acc;
             // First-step committed outbox record (spec line 286): the served first-step effect
             // publishes only from the committed outbox, like advancement.
-            c.sideEffectOutbox.push({
-                checkpointId: c.checkpointId, committedRevision, fencingToken: id.fencingToken, stepId: step.verb, iteration: id.iteration,
-                pendingPublishers: ['lane-side-effect-sink'], createdAt: d.now(),
-                entries: [{ publisher: 'lane-side-effect-sink', entryIndex: 0, logicalKey: `${c.checkpointId}:${step.verb}:${id.iteration}`,
-                        payload: { laneId: c.laneId, verb: step.verb, served: true, committedRevision } }],
-            });
+            c.sideEffectOutbox.push(committedStepOutbox(c, step.verb, id.iteration, committedRevision, id.fencingToken, d.now(), { laneId: c.laneId, verb: step.verb, served: true, committedRevision }, acc));
         }, d.now);
     }
     finally {
@@ -471,12 +499,7 @@ async function advanceLane(projectPath, checkpointId, transition, d) {
                         advanceCursorInPlace(c, l);
                         // Committed side-effect outbox record keyed by (checkpointId, committedRevision),
                         // carrying the fencingToken. Published only AFTER FINALIZE, from the committed outbox.
-                        c.sideEffectOutbox.push({
-                            checkpointId, committedRevision, fencingToken: id.fencingToken, stepId: step.verb, iteration: id.iteration,
-                            pendingPublishers: ['lane-side-effect-sink'], createdAt: d.now(),
-                            entries: [{ publisher: 'lane-side-effect-sink', entryIndex: 0, logicalKey: `${checkpointId}:${step.verb}:${id.iteration}`,
-                                    payload: { laneId: cp.laneId, verb: step.verb, gateStatus: worst, validators: gate.validators, committedRevision } }],
-                        });
+                        c.sideEffectOutbox.push(committedStepOutbox(c, step.verb, id.iteration, committedRevision, id.fencingToken, d.now(), { laneId: cp.laneId, verb: step.verb, gateStatus: worst, validators: gate.validators, committedRevision }, served));
                     }, d.now);
                     await (d.publishOutbox ?? lane_checkpoint_store_1.publishOutbox)(d.store, checkpointId, projectPath, d.now);
                     return buildStepResult(final, l, { projectPath }, d, gate);

@@ -39,6 +39,9 @@ exports.resetFlowHistorySingleton = resetFlowHistorySingleton;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 class FlowHistory {
+    static get HISTORY_FILE() {
+        return path.join(process.env.HOME || '~', '.claude', 'sidecoach-flow-history.json');
+    }
     constructor(sessionId) {
         this.sessionId = sessionId;
         this.history = new Map();
@@ -65,17 +68,21 @@ class FlowHistory {
     /**
      * Save history to disk
      */
-    save() {
+    save(throwOnError = false) {
         try {
             const dir = path.dirname(FlowHistory.HISTORY_FILE);
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
             }
             const data = Object.fromEntries(this.history);
-            fs.writeFileSync(FlowHistory.HISTORY_FILE, JSON.stringify(data, null, 2), 'utf-8');
+            const tmp = `${FlowHistory.HISTORY_FILE}.tmp-${process.pid}-${Date.now()}`;
+            fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
+            fs.renameSync(tmp, FlowHistory.HISTORY_FILE);
         }
         catch (error) {
             console.error('Failed to save flow history:', error);
+            if (throwOnError)
+                throw error;
         }
     }
     /**
@@ -93,10 +100,7 @@ class FlowHistory {
         }
         return this.history.get(this.sessionId);
     }
-    /**
-     * Record a flow execution (v2: append to array, cap at 20 runs per flow)
-     */
-    recordFlow(entry) {
+    appendFlow(entry, now, strictSave = false) {
         const session = this.getSessionHistory();
         const flowId = entry.flowId;
         if (!session.flowSequence.includes(flowId)) {
@@ -104,26 +108,59 @@ class FlowHistory {
         }
         const entryWithTimestamp = {
             ...entry,
-            timestamp: new Date().toISOString(),
+            timestamp: now(),
         };
-        // Get or create runs array
         let runs = [];
         const existing = session.flowOutputs[flowId];
         if (existing && Array.isArray(existing)) {
             runs = existing;
         }
         else if (existing) {
-            // Migration from v1 (single entry to array)
             runs = [existing];
         }
-        // Append to runs and cap at 20
         if (runs.length >= 20) {
             runs.shift();
         }
         runs.push(entryWithTimestamp);
-        // Update session with properly typed array
         session.flowOutputs[flowId] = runs;
-        this.save();
+        this.save(strictSave);
+    }
+    /**
+     * Record an ordinary flow execution. Existing callers remain append-oriented.
+     */
+    recordFlow(entry) {
+        this.appendFlow(entry, () => new Date().toISOString());
+    }
+    /**
+     * Conditionally upsert one committed lane STEP result by logical key and token.
+     * New keys append through the normal 20-run cap. Higher tokens replace the
+     * accepted tagged run in place. Same tokens no-op and lower tokens reject.
+     */
+    upsertLaneFlow(logicalKey, fencingToken, entry, now = () => new Date().toISOString()) {
+        const session = this.getSessionHistory();
+        for (const [flowId, stored] of Object.entries(session.flowOutputs)) {
+            const runs = Array.isArray(stored) ? stored : [stored];
+            const index = runs.findIndex((run) => run.laneLogicalKey === logicalKey);
+            if (index < 0)
+                continue;
+            const currentToken = runs[index].fencingToken ?? -1;
+            if (fencingToken < currentToken)
+                return { status: 'rejected' };
+            if (fencingToken === currentToken)
+                return { status: 'noop' };
+            runs[index] = {
+                ...entry,
+                flowId,
+                laneLogicalKey: logicalKey,
+                fencingToken,
+                timestamp: now(),
+            };
+            session.flowOutputs[flowId] = runs;
+            this.save(true);
+            return { status: 'written' };
+        }
+        this.appendFlow({ ...entry, laneLogicalKey: logicalKey, fencingToken }, now, true);
+        return { status: 'written' };
     }
     /**
      * Get the last executed flow
@@ -234,7 +271,6 @@ class FlowHistory {
     }
 }
 exports.FlowHistory = FlowHistory;
-FlowHistory.HISTORY_FILE = path.join(process.env.HOME || '~', '.claude', 'sidecoach-flow-history.json');
 // Module-level singleton instance
 let _flowHistoryInstance = null;
 /**
