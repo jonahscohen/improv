@@ -111,6 +111,11 @@ export function validateRegistry(rules: ProductRuleDefinition[], regs: ProductVa
     if (!r.evidenceRequirements?.length) missing.push('evidenceRequirements');
     if (!r.supportedSourceKinds?.length) missing.push('supportedSourceKinds');
     if (missing.length) errors.push(`rule ${r.ruleId || '(no id)'} missing required field(s): ${missing.join(', ')}`);
+    // a present-but-blank alias entry is not a valid alias (the array-length check
+    // above only rejects an empty array, not [''] or ['   ']).
+    if (r.sourceRuleAliases?.some((a) => !a || !a.trim())) {
+      errors.push(`rule ${r.ruleId || '(no id)'} has a blank/empty sourceRuleAlias entry`);
+    }
   }
 
   // duplicate canonical ruleId (distinct from canonicalRuleKey / aliases)

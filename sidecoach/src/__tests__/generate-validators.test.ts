@@ -124,6 +124,11 @@ function run() {
     throw new Error('a gating validator with no manifest entry must FAIL --check');
   }
 
+  // 9. (P2) a blank/empty sourceRuleAlias entry must be rejected. A non-empty
+  //    array whose only entry is '' would otherwise pass the array-length check.
+  expectInvalid('blank-alias', [baseRule({ sourceRuleAliases: [''] })], [reg('v')]);
+  expectInvalid('whitespace-alias', [baseRule({ sourceRuleAliases: ['   '] })], [reg('v')]);
+
   console.log('generate-validators: OK');
 }
 run();
