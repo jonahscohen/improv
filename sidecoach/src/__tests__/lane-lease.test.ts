@@ -96,4 +96,25 @@ async function runFirstStep() {
   console.log('lane-lease first-step: OK');
 }
 
-run().then(runFirstStep);
+async function runRetryDuringFirstStep() {
+  const proj = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-dupstart-')));
+  let entered!: () => void, release!: () => void, flowCalls = 0;
+  const flowEntered = new Promise<void>((r) => { entered = r; });
+  const holdFlow = new Promise<void>((r) => { release = r; });
+  // Only the FIRST flow blocks: a (buggy) duplicate re-run would still COUNT extra calls
+  // and return - the assertion catches the re-run cleanly instead of deadlocking.
+  const d = deps(proj, async (flowId) => { flowCalls++; if (flowCalls === 1) { entered(); await holdFlow; } return okFlow(flowId); });
+  const starting = startLane('lane_build', 'dup', { projectPath: proj }, 'req-dup', d);
+  await flowEntered;                                   // first-step EXECUTE in flight (lease LIVE, servedSteps not yet persisted)
+  const callsBeforeRetry = flowCalls;
+  // a duplicate start arriving DURING first-step EXECUTE must NOT re-run the handler.
+  const dup = await startLane('lane_build', 'dup', { projectPath: proj }, 'req-dup', d);
+  if (flowCalls !== callsBeforeRetry) throw new Error('duplicate start during first-step EXECUTE must NOT re-run the handler');
+  if (dup.currentVerb !== 'shape') throw new Error('duplicate start must return the current in-flight step');
+  release();
+  const first = await starting;
+  if (dup.checkpointId !== first.checkpointId) throw new Error('duplicate start must map to the same checkpoint');
+  console.log('lane-lease retry-during-first-step: OK');
+}
+
+run().then(runFirstStep).then(runRetryDuringFirstStep);
