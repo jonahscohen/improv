@@ -71,19 +71,21 @@ async function basics() {
   if (!res.coverage.unverifiedScope.includes('polished-motion-respect')) throw new Error('unmeasured registry scope must remain unverified');
 }
 
-// Inject a CHECKS override around a body, then restore exactly.
-function withCheck(key: string, fn: CheckFn, body: () => void) {
+// Inject a CHECKS override around a (possibly async) body, then restore exactly. The
+// body must be AWAITED so the override is still installed while the now-async validator
+// runs, and only restored once it resolves.
+async function withCheck(key: string, fn: CheckFn, body: () => void | Promise<void>) {
   const had = Object.prototype.hasOwnProperty.call(CHECKS, key);
   const prev = CHECKS[key];
   CHECKS[key] = fn;
-  try { body(); }
+  try { await body(); }
   finally { if (had) CHECKS[key] = prev; else delete CHECKS[key]; }
 }
 
-function executionCoverage() {
+async function executionCoverage() {
   const RM = 'polish.reduced-motion-respect';
-  const findExec = (validatorId: string, ctx: unknown, ruleId: string) => {
-    const detail = runValidatorForTest(validatorId, ctx);
+  const findExec = async (validatorId: string, ctx: unknown, ruleId: string) => {
+    const detail = await runValidatorForTest(validatorId, ctx);
     const x = detail.executions.find((e) => e.result.ruleId === ruleId);
     if (!x) throw new Error(`no execution for ${ruleId}`);
     return { detail, x };
@@ -98,12 +100,12 @@ function executionCoverage() {
       if (ctx.files.length !== 1) throw new Error('file-scoped rule must run with a one-file context');
       return ctx.cssText.includes('GOODMOTION') ? { status: 'pass', message: 'ok' } : { status: 'fail', message: 'bad', evidenceLocations: [ctx.files[0].path] };
     };
-    withCheck('polish/reduced-motion-respect', spy, () => {
+    await withCheck('polish/reduced-motion-respect', spy, async () => {
       const ctx: ProductCheckContext = {
         cssText: '', markup: '',
         files: [file('good.css', 'css', '.g { transition: opacity 1s; } /* GOODMOTION */'), file('bad.css', 'css', '.b { transition: opacity 1s; }')],
       };
-      const { x } = findExec('polish-standard', ctx, RM);
+      const { x } = await findExec('polish-standard', ctx, RM);
       if (x.result.status !== 'fail') throw new Error(`a fail in one applicable file must not be covered by a pass in another (got ${x.result.status})`);
       if (calls !== 2) throw new Error(`check must run once per applicable file (got ${calls})`);
       const files = x.discoveredApplicableFiles.map((d) => d.file).sort();
@@ -116,7 +118,7 @@ function executionCoverage() {
   //    inspected file is in inspectedFiles, coverage.skippedFiles non-empty.
   {
     const spy: CheckFn = (): RuleVerdict => ({ status: 'pass', message: 'ok' });
-    withCheck('polish/reduced-motion-respect', spy, () => {
+    await withCheck('polish/reduced-motion-respect', spy, async () => {
       const ctx = {
         cssText: '', markup: '',
         files: [file('a.css', 'css', '.a { transition: opacity 1s; }')],
@@ -125,7 +127,7 @@ function executionCoverage() {
           { path: 'big.css', sourceKind: 'css', outcome: 'oversized' as const, reason: 'over_2mb' },
         ],
       };
-      const { detail, x } = findExec('polish-standard', ctx, RM);
+      const { detail, x } = await findExec('polish-standard', ctx, RM);
       if (x.result.status !== 'inconclusive') throw new Error(`an unread applicable gap must make the rule inconclusive, got ${x.result.status}`);
       const disc = x.discoveredApplicableFiles.map((d) => d.file).sort();
       if (JSON.stringify(disc) !== JSON.stringify(['a.css', 'big.css'])) throw new Error('the gap must remain in discoveredApplicableFiles');
@@ -145,7 +147,7 @@ function executionCoverage() {
         { path: 'notes.md', sourceKind: 'extension:.md', outcome: 'unsupported' as const },
       ],
     };
-    const detail = runValidatorForTest('polish-standard', ctx);
+    const detail = await runValidatorForTest('polish-standard', ctx);
     if (detail.runCoverage.unsupportedSourceKinds.length === 0) throw new Error('unsupportedSourceKinds must be non-empty');
     if (!detail.runCoverage.unsupportedSourceKinds.includes('extension:.md')) throw new Error('unsupportedSourceKinds must contain the matrix-derived unsupported kind');
   }
@@ -153,10 +155,10 @@ function executionCoverage() {
   // 4. a conclusive covered rule and an inconclusive rule with different registry
   //    scopes -> only the covered scope is measured; the other stays unverified.
   {
-    withCheck('polish/reduced-motion-respect', (): RuleVerdict => ({ status: 'pass', message: 'ok' }), () => {
-      withCheck('polish/scale-on-press', (): RuleVerdict => ({ status: 'inconclusive', message: 'gap', normalizedErrorCategory: 'unreadable_input' }), () => {
+    await withCheck('polish/reduced-motion-respect', (): RuleVerdict => ({ status: 'pass', message: 'ok' }), async () => {
+      await withCheck('polish/scale-on-press', (): RuleVerdict => ({ status: 'inconclusive', message: 'gap', normalizedErrorCategory: 'unreadable_input' }), async () => {
         const ctx: ProductCheckContext = { cssText: '', markup: '', files: [file('a.css', 'css', '.a { transition: opacity 1s; }')] };
-        const detail = runValidatorForTest('polish-standard', ctx);
+        const detail = await runValidatorForTest('polish-standard', ctx);
         if (!detail.runCoverage.measuredScope.includes('polished-motion-respect')) throw new Error('the covered rule scope must be measured');
         if (detail.runCoverage.measuredScope.includes('polished-press-feedback')) throw new Error('an inconclusive rule scope must not be measured');
         if (!detail.runCoverage.unverifiedScope.includes('polished-press-feedback')) throw new Error('the inconclusive rule scope must remain unverified');
@@ -166,7 +168,7 @@ function executionCoverage() {
 
   // 5. a root collection failure -> validator status error + unreadable_input.
   {
-    const detail = runValidatorForTest('polish-standard', { projectPath: '/p4a2/definitely/missing/' + process.pid });
+    const detail = await runValidatorForTest('polish-standard', { projectPath: '/p4a2/definitely/missing/' + process.pid });
     if (detail.result.status !== 'error') throw new Error(`a root collection failure must be a validator-level error, got ${detail.result.status}`);
     if (detail.result.status === 'error' && detail.result.normalizedErrorCategory !== 'unreadable_input') throw new Error('root failure must normalize to unreadable_input');
   }
@@ -216,10 +218,37 @@ async function coverageCorrectness() {
   }
 }
 
+function burn(ms: number): void { const end = Date.now() + ms; while (Date.now() < end) { /* spin to simulate a slow synchronous rule */ } }
+
+// A deliberately slow multi-file validator must NOT block the event loop: it yields
+// cooperatively between files/rules so a concurrent timer (the heartbeat) keeps firing,
+// and it observes an AbortSignal promptly (mid-run) rather than only after finishing.
+async function cooperativeAbort() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'p4b1-coop-'));
+  for (let i = 0; i < 5; i++) fs.writeFileSync(path.join(dir, `s${i}.css`), `.b${i} { transition: opacity 1s; }`);
+  let ticks = 0;
+  const timer = setInterval(() => { ticks++; }, 1);
+  const ac = new AbortController();
+  setTimeout(() => ac.abort(), 5);                 // abort DURING the slow run
+  const key = 'polish/reduced-motion-respect';
+  const had = Object.prototype.hasOwnProperty.call(CHECKS, key);
+  const prev = CHECKS[key];
+  CHECKS[key] = (_ctx: ProductCheckContext): RuleVerdict => { burn(4); return { status: 'pass', message: 'ok' }; };
+  try {
+    const res = await getValidatorRegistration('polish-standard')!.validateProduct!({ projectPath: dir }, ac.signal);
+    if (res.status !== 'error' || res.normalizedErrorCategory !== 'aborted') throw new Error(`slow validator must abort on signal during the run, got ${res.status}/${(res as any).normalizedErrorCategory}`);
+  } finally {
+    if (had) CHECKS[key] = prev; else delete CHECKS[key];
+    clearInterval(timer);
+  }
+  if (ticks === 0) throw new Error('a slow validator must yield to the event loop so the heartbeat timer can fire during the run');
+}
+
 async function run() {
   await basics();
-  executionCoverage();
+  await executionCoverage();
   await coverageCorrectness();
+  await cooperativeAbort();
 
   const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'p4a2-empty-'));
   // (1) async contract: validateProduct returns a Promise now

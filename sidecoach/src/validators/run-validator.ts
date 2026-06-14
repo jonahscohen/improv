@@ -52,13 +52,13 @@ function observationFor(x: RuleExecution): CoverageObservation {
 //    scanner reasons over the page/project). Aggregate: any gap/inconclusive ->
 //    inconclusive; else any fail -> fail; else any pass -> pass; else all N/A -> N/A.
 // 4. A pass in one file can never cover a fail/gap in another applicable file.
-function executeRule(
+async function executeRule(
   def: ProductRuleDefinition,
   record: RequiredCoverageRecord | undefined,
   collected: Collected,
   raw: unknown,
   signal?: AbortSignal,
-): RuleExecution {
+): Promise<RuleExecution> {
   if (signal?.aborted) throw new AbortSentinel();
   const reqKind = def.evidenceRequirements[0];
 
@@ -99,6 +99,10 @@ function executeRule(
     for (const f of readable) perFile.push({ file: f, result });
   } else {
     for (const f of readable) {
+      // Cooperatively yield BETWEEN FILES so the heartbeat timer can fire and an abort is
+      // observed promptly even within a single rule scanning many files.
+      if (signal?.aborted) throw new AbortSentinel();
+      await yieldToEventLoop();
       const oneFile: ProductCheckContext = {
         cssText: f.cssText, markup: f.markup, files: [f],
         tasteOptions: (raw as Partial<ProductCheckContext>)?.tasteOptions,
@@ -161,7 +165,12 @@ function emptyRun(): RunCoverage {
   return { inspectedFiles: [], skippedFiles: [], supportedSourceKinds: [], unsupportedSourceKinds: [], measuredScope: [], unverifiedScope: [] };
 }
 
-function runDetailed(validatorId: string, context: unknown, signal?: AbortSignal): ValidatorRunDetail {
+// Cooperative yield to the EVENT LOOP (a macrotask, not a microtask): returns control
+// so setInterval timers - notably the lease heartbeat - can fire between files/rules. A
+// microtask (Promise.resolve) would NOT let timers run; setImmediate does.
+function yieldToEventLoop(): Promise<void> { return new Promise((r) => setImmediate(r)); }
+
+async function runDetailed(validatorId: string, context: unknown, signal?: AbortSignal): Promise<ValidatorRunDetail> {
   const gen = GENERATED_VALIDATORS.find((v) => v.validatorId === validatorId);
   const policy = gen?.cleanPolicy;
   if (!gen || !policy) {
@@ -186,12 +195,18 @@ function runDetailed(validatorId: string, context: unknown, signal?: AbortSignal
 
   if (signal?.aborted) return abortedDetail(validatorId);
   const recordById = new Map(policy.requiredCoverageByScope.map((c) => [c.ruleId, c]));
-  let executions: RuleExecution[];
+  const defs = gen.ownedRuleIds
+    .map((id) => getRuleById(id))
+    .filter((d): d is NonNullable<typeof d> => !!d && typeof d.checkProduct === 'function');
+  const executions: RuleExecution[] = [];
   try {
-    executions = gen.ownedRuleIds
-      .map((id) => getRuleById(id))
-      .filter((d): d is NonNullable<typeof d> => !!d && typeof d.checkProduct === 'function')
-      .map((d) => executeRule(d, recordById.get(d.ruleId), collected, context, signal));
+    for (const d of defs) {
+      // Cooperatively yield BETWEEN RULES so the heartbeat keeps firing and abort is
+      // observed promptly across a long synchronous validator run.
+      if (signal?.aborted) return abortedDetail(validatorId);
+      await yieldToEventLoop();
+      executions.push(await executeRule(d, recordById.get(d.ruleId), collected, context, signal));
+    }
   } catch (e) {
     if (e instanceof AbortSentinel) return abortedDetail(validatorId);
     throw e;
@@ -221,13 +236,14 @@ function runDetailed(validatorId: string, context: unknown, signal?: AbortSignal
 
 export function makeProductValidator(validatorId: string) {
   // The public entry is ASYNC with cooperative abort: it checks the signal at entry,
-  // yields one microtask so an abort fired during this tick is observed, then runs the
-  // synchronous CPU core (runDetailed), which itself re-checks the signal per rule.
+  // yields so an abort fired during this tick is observed, then runs the cooperatively
+  // async core (runDetailed), which yields + re-checks the signal between files and rules
+  // so a long run cannot block the heartbeat / delay abort.
   return async function validateProduct(context: unknown, signal?: AbortSignal): Promise<ProductValidationResult> {
     if (signal?.aborted) return abortedResult(validatorId);
     await Promise.resolve();
     if (signal?.aborted) return abortedResult(validatorId);
-    return runDetailed(validatorId, context, signal).result;
+    return (await runDetailed(validatorId, context, signal)).result;
   };
 }
 
@@ -249,6 +265,7 @@ class AbortSentinel extends Error {}
 
 // Test seam: exposes the internal executions/observations/coverage so the pipeline
 // suite can assert per-file execution and coverage WITHOUT duplicating the algorithm.
-export function runValidatorForTest(validatorId: string, context: unknown): ValidatorRunDetail {
+// Async now that runDetailed yields cooperatively.
+export function runValidatorForTest(validatorId: string, context: unknown): Promise<ValidatorRunDetail> {
   return runDetailed(validatorId, context);
 }
