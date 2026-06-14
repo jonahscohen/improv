@@ -1,0 +1,734 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.GENERATED_FLOW_CAPABILITIES = exports.GENERATED_VALIDATORS = void 0;
+exports.GENERATED_VALIDATORS = [
+    {
+        "validatorId": "polish-standard",
+        "ownedRuleIds": [
+            "polish.scale-on-press",
+            "polish.concentric-radius",
+            "polish.icon-swap-compound",
+            "polish.image-outline-neutral",
+            "polish.no-transition-all",
+            "polish.tabular-nums",
+            "polish.text-wrap-balance",
+            "polish.staggered-enter",
+            "polish.subtle-exit",
+            "polish.font-smoothing",
+            "polish.animatepresence-initial",
+            "polish.sparse-will-change",
+            "polish.shadows-over-borders",
+            "polish.optical-alignment",
+            "polish.typography-rhythm",
+            "polish.shadow-hierarchy",
+            "polish.reduced-motion-respect",
+            "polish.state-completeness",
+            "polish.anti-pattern-genericity"
+        ],
+        "registryScope": [
+            "polished-press-feedback",
+            "polished-radius-concentricity",
+            "polished-icon-transition",
+            "polished-image-outline",
+            "polished-explicit-transition",
+            "polished-tabular-numerics",
+            "polished-heading-balance",
+            "polished-enter-stagger",
+            "polished-exit-choreography",
+            "polished-font-smoothing",
+            "polished-first-load-suppression",
+            "polished-sparse-will-change",
+            "polished-elevation-shadow",
+            "polished-optical-alignment",
+            "polished-vertical-rhythm",
+            "polished-shadow-hierarchy",
+            "polished-motion-respect",
+            "polished-state-completeness",
+            "polished-genericity-floor"
+        ],
+        "supportedSourceKinds": [
+            {
+                "kind": "computed-style",
+                "level": "full"
+            },
+            {
+                "kind": "css",
+                "level": "full"
+            },
+            {
+                "kind": "dom",
+                "level": "full"
+            },
+            {
+                "kind": "html",
+                "level": "full"
+            },
+            {
+                "kind": "jsx",
+                "level": "partial"
+            },
+            {
+                "kind": "less",
+                "level": "full"
+            },
+            {
+                "kind": "scss",
+                "level": "full"
+            },
+            {
+                "kind": "svelte",
+                "level": "partial"
+            },
+            {
+                "kind": "tsx",
+                "level": "partial"
+            },
+            {
+                "kind": "vue",
+                "level": "partial"
+            }
+        ],
+        "browserRuleIds": [
+            "polish.concentric-radius",
+            "polish.typography-rhythm"
+        ],
+        "browserCoverageByScope": [
+            {
+                "ruleId": "polish.concentric-radius",
+                "scope": "component",
+                "evidenceAlternativesByRequirement": [
+                    [
+                        "computed-style"
+                    ]
+                ],
+                "requireAllDiscoveredApplicableFiles": true
+            },
+            {
+                "ruleId": "polish.typography-rhythm",
+                "scope": "component",
+                "evidenceAlternativesByRequirement": [
+                    [
+                        "computed-style"
+                    ]
+                ],
+                "requireAllDiscoveredApplicableFiles": true
+            }
+        ],
+        "cleanPolicy": {
+            "requiredRuleIds": [
+                "polish.scale-on-press",
+                "polish.icon-swap-compound",
+                "polish.image-outline-neutral",
+                "polish.no-transition-all",
+                "polish.tabular-nums",
+                "polish.text-wrap-balance",
+                "polish.staggered-enter",
+                "polish.subtle-exit",
+                "polish.font-smoothing",
+                "polish.animatepresence-initial",
+                "polish.sparse-will-change",
+                "polish.shadows-over-borders",
+                "polish.optical-alignment",
+                "polish.shadow-hierarchy",
+                "polish.reduced-motion-respect",
+                "polish.state-completeness"
+            ],
+            "blockingSeverities": [
+                "blocker",
+                "major"
+            ],
+            "toleratedFindingCounts": {
+                "major|polish": 0,
+                "blocker|polish": 0
+            },
+            "requiredCoverageByScope": [
+                {
+                    "ruleId": "polish.scale-on-press",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.icon-swap-compound",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.image-outline-neutral",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.no-transition-all",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.tabular-nums",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.text-wrap-balance",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.staggered-enter",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.subtle-exit",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.font-smoothing",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.animatepresence-initial",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "html",
+                            "tsx",
+                            "jsx",
+                            "vue",
+                            "svelte"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.sparse-will-change",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.shadows-over-borders",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.optical-alignment",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.shadow-hierarchy",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.reduced-motion-respect",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "polish.state-completeness",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                }
+            ],
+            "inconclusiveBehavior": "block",
+            "notApplicableBehavior": "exclude_and_report"
+        }
+    },
+    {
+        "validatorId": "theming",
+        "ownedRuleIds": [
+            "theming.hex-in-interactive-state",
+            "theming.border-radius-consistency"
+        ],
+        "registryScope": [
+            "token-consistency"
+        ],
+        "supportedSourceKinds": [
+            {
+                "kind": "css",
+                "level": "full"
+            },
+            {
+                "kind": "html",
+                "level": "partial"
+            },
+            {
+                "kind": "less",
+                "level": "full"
+            },
+            {
+                "kind": "scss",
+                "level": "full"
+            },
+            {
+                "kind": "tsx",
+                "level": "partial"
+            }
+        ],
+        "browserRuleIds": [],
+        "browserCoverageByScope": [],
+        "cleanPolicy": {
+            "requiredRuleIds": [
+                "theming.hex-in-interactive-state",
+                "theming.border-radius-consistency"
+            ],
+            "blockingSeverities": [
+                "blocker",
+                "major"
+            ],
+            "toleratedFindingCounts": {
+                "blocker|theming": 0
+            },
+            "requiredCoverageByScope": [
+                {
+                    "ruleId": "theming.hex-in-interactive-state",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "theming.border-radius-consistency",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                }
+            ],
+            "inconclusiveBehavior": "block",
+            "notApplicableBehavior": "exclude_and_report"
+        }
+    },
+    {
+        "validatorId": "anti-pattern",
+        "ownedRuleIds": [
+            "anti-pattern.gradient-text",
+            "anti-pattern.glassmorphism-default",
+            "anti-pattern.side-stripe-borders",
+            "anti-pattern.identical-card-grids",
+            "anti-pattern.hero-metric-template",
+            "anti-pattern.modal-as-first-thought"
+        ],
+        "registryScope": [
+            "named-ban-compliance"
+        ],
+        "supportedSourceKinds": [
+            {
+                "kind": "css",
+                "level": "full"
+            },
+            {
+                "kind": "html",
+                "level": "full"
+            },
+            {
+                "kind": "jsx",
+                "level": "partial"
+            },
+            {
+                "kind": "less",
+                "level": "full"
+            },
+            {
+                "kind": "scss",
+                "level": "full"
+            },
+            {
+                "kind": "svelte",
+                "level": "partial"
+            },
+            {
+                "kind": "tsx",
+                "level": "partial"
+            },
+            {
+                "kind": "vue",
+                "level": "partial"
+            }
+        ],
+        "browserRuleIds": [],
+        "browserCoverageByScope": [],
+        "cleanPolicy": {
+            "requiredRuleIds": [
+                "anti-pattern.gradient-text",
+                "anti-pattern.glassmorphism-default",
+                "anti-pattern.side-stripe-borders",
+                "anti-pattern.identical-card-grids",
+                "anti-pattern.hero-metric-template",
+                "anti-pattern.modal-as-first-thought"
+            ],
+            "blockingSeverities": [
+                "blocker",
+                "major"
+            ],
+            "toleratedFindingCounts": {
+                "major|anti-pattern": 0
+            },
+            "requiredCoverageByScope": [
+                {
+                    "ruleId": "anti-pattern.gradient-text",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "anti-pattern.glassmorphism-default",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "anti-pattern.side-stripe-borders",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "anti-pattern.identical-card-grids",
+                    "scope": "project",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "html",
+                            "tsx",
+                            "jsx",
+                            "vue",
+                            "svelte"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "anti-pattern.hero-metric-template",
+                    "scope": "project",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "html",
+                            "tsx",
+                            "jsx",
+                            "vue",
+                            "svelte"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "anti-pattern.modal-as-first-thought",
+                    "scope": "project",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "html",
+                            "tsx",
+                            "jsx",
+                            "vue",
+                            "svelte"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                }
+            ],
+            "inconclusiveBehavior": "block",
+            "notApplicableBehavior": "exclude_and_report"
+        }
+    },
+    {
+        "validatorId": "static-a11y",
+        "ownedRuleIds": [
+            "a11y.focus-visible",
+            "a11y.min-hit-area",
+            "a11y.color-contrast"
+        ],
+        "registryScope": [
+            "keyboard-accessibility-floor",
+            "touch-target-floor",
+            "contrast-floor"
+        ],
+        "supportedSourceKinds": [
+            {
+                "kind": "contrast",
+                "level": "full"
+            },
+            {
+                "kind": "css",
+                "level": "full"
+            },
+            {
+                "kind": "dom",
+                "level": "full"
+            },
+            {
+                "kind": "html",
+                "level": "partial"
+            },
+            {
+                "kind": "less",
+                "level": "full"
+            },
+            {
+                "kind": "scss",
+                "level": "full"
+            },
+            {
+                "kind": "tsx",
+                "level": "partial"
+            }
+        ],
+        "browserRuleIds": [
+            "a11y.min-hit-area",
+            "a11y.color-contrast"
+        ],
+        "browserCoverageByScope": [
+            {
+                "ruleId": "a11y.min-hit-area",
+                "scope": "component",
+                "evidenceAlternativesByRequirement": [
+                    [
+                        "dom"
+                    ]
+                ],
+                "requireAllDiscoveredApplicableFiles": true
+            },
+            {
+                "ruleId": "a11y.color-contrast",
+                "scope": "component",
+                "evidenceAlternativesByRequirement": [
+                    [
+                        "contrast"
+                    ]
+                ],
+                "requireAllDiscoveredApplicableFiles": true
+            }
+        ],
+        "cleanPolicy": {
+            "requiredRuleIds": [
+                "a11y.focus-visible"
+            ],
+            "blockingSeverities": [
+                "blocker",
+                "major"
+            ],
+            "toleratedFindingCounts": {
+                "blocker|a11y": 0
+            },
+            "requiredCoverageByScope": [
+                {
+                    "ruleId": "a11y.focus-visible",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                }
+            ],
+            "inconclusiveBehavior": "block",
+            "notApplicableBehavior": "exclude_and_report"
+        }
+    }
+];
+exports.GENERATED_FLOW_CAPABILITIES = [
+    {
+        "flowId": "flowJ_tactical_polish",
+        "capability": "product_validator"
+    },
+    {
+        "flowId": "flowM_responsive_validation",
+        "capability": "advisory"
+    },
+    {
+        "flowId": "flowK_multi_lens_audit",
+        "capability": "advisory"
+    },
+    {
+        "flowId": "flowI_accessibility",
+        "capability": "advisory"
+    },
+    {
+        "flowId": "flowL_design_critique",
+        "capability": "advisory"
+    },
+    {
+        "flowId": "flowA_brand_verify",
+        "capability": "none"
+    }
+];
+//# sourceMappingURL=validators.generated.js.map

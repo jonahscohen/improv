@@ -1,0 +1,22 @@
+import type { ProductCheckContext, RuleVerdict } from '../check-context';
+export declare const checkReducedMotion: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkScaleOnPress: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkIconSwapCompound: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkNoTransitionAll: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkSparseWillChange: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkTabularNums: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkSubtleExit: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkImageOutline: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkAnimatePresenceInitial: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkShadowsOverBorders: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkShadowHierarchy: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkStateCompleteness: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkStaggeredEnter: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFontSmoothing: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkTextWrapBalance: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkOpticalAlignment: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkConcentricRadius: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkTypographyRhythm: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkGenericity: (_ctx: ProductCheckContext) => RuleVerdict;
+export declare const POLISH_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict>;
+//# sourceMappingURL=polish-checks.d.ts.map

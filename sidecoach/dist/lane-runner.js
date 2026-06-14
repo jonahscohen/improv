@@ -18,6 +18,7 @@ const lane_types_1 = require("./lane-types");
 const lane_validators_1 = require("./lane-validators");
 const flow_validation_capabilities_1 = require("./flow-validation-capabilities");
 const validators_generated_1 = require("./validators.generated");
+const browser_evidence_collector_1 = require("./validators/browser-evidence-collector");
 const lane_convergence_1 = require("./lane-convergence");
 const flow_prerequisites_1 = require("./flow-prerequisites");
 const lane_lock_1 = require("./lane-lock");
@@ -478,7 +479,7 @@ async function advanceLane(projectPath, checkpointId, transition, d) {
             try {
                 // EXECUTE: run the step's bound validators (async, abortable), aggregate worst-status.
                 const validatorIds = (0, lane_validators_1.validatorsForStep)(step);
-                const perValidator = await runStepValidators(d, validatorIds, { projectPath, target: cp.target }, controller.signal);
+                const perValidator = await runStepValidators(d, validatorIds, { projectPath, target: cp.target, renderUrl: (0, browser_evidence_collector_1.renderUrlFromContext)({ target: cp.target }) }, controller.signal);
                 const worst = (0, lane_validators_1.aggregateWorstStatus)(perValidator.map((p) => p.result.status));
                 const gate = { status: worst, validators: perValidator.map((p) => ({ validatorId: p.validatorId, status: p.result.status })),
                     findings: perValidator.flatMap((p) => p.result.findings) };
@@ -806,7 +807,7 @@ async function runIterationBoundary(cp, l, projectPath, d, claimRevision, onComm
     try {
         // EXECUTE: the required validators run ONCE each, via the lane policy (not per-step).
         const validatorIds = (0, lane_validators_1.requiredValidatorsForLane)(l.lane);
-        const perValidator = await runBoundaryValidators(d, validatorIds, { projectPath, target: cp.target }, controller.signal);
+        const perValidator = await runBoundaryValidators(d, validatorIds, { projectPath, target: cp.target, renderUrl: (0, browser_evidence_collector_1.renderUrlFromContext)({ target: cp.target }) }, controller.signal);
         const ev = (0, lane_convergence_1.evaluateBoundary)(perValidator);
         const decision = (0, lane_convergence_1.decideProgress)(cp.convergence, ev);
         const gate = { status: ev.iterationStatus, validators: perValidator.map((p) => ({ validatorId: p.validatorId, status: p.result.status })), findings: ev.findings };

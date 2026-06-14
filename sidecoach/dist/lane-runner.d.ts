@@ -13,6 +13,7 @@ export interface LaneRunnerDeps {
     runValidator?: (validatorId: string, validatorContext: {
         projectPath: string;
         target: string;
+        renderUrl?: string;
     }, signal?: AbortSignal) => Promise<ProductValidationResult>;
     staleMs?: number;
     heartbeatIntervalMs?: number;

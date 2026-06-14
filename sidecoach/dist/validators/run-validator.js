@@ -8,11 +8,38 @@ const validators_generated_1 = require("../validators.generated");
 const clean_evaluator_1 = require("../clean-evaluator");
 const project_collector_1 = require("./project-collector");
 const check_context_1 = require("./check-context");
-function toCheckContext(c, raw) {
+const browser_evidence_collector_1 = require("./browser-evidence-collector");
+function toCheckContext(c, raw, browser) {
     const r = raw;
+    const e = browser?.available ? browser.evidence : undefined;
     return {
         cssText: c.cssText, markup: c.markup, files: c.files, discoveredFiles: c.discovered,
-        computedStyle: r?.computedStyle, contrast: r?.contrast, designTokens: r?.designTokens, tasteOptions: r?.tasteOptions,
+        renderUrl: (0, browser_evidence_collector_1.renderUrlFromContext)(raw),
+        browserEvidence: e?.browserEvidence,
+        computedStyle: e?.computedStyle ?? r?.computedStyle,
+        dom: e?.dom ?? r?.dom,
+        contrast: e?.contrast ?? r?.contrast,
+        designTokens: r?.designTokens, tasteOptions: r?.tasteOptions,
+    };
+}
+// Promote ONLY the generated browserRuleIds whose evidence requirements are ALL
+// present in the collected evidence kinds. Failed/absent collection -> kinds empty
+// -> nothing promoted -> the static cleanPolicy is the safe baseline. Browser rules
+// still execute (surfacing inconclusive) because they are owned, not because they
+// are required.
+function activateBrowserPolicy(base, gen, kinds) {
+    const present = new Set(kinds);
+    const promoted = gen.browserRuleIds.filter((id) => {
+        const def = (0, product_rule_registry_1.getRuleById)(id);
+        return !!def && def.evidenceRequirements.every((kind) => present.has(kind));
+    });
+    return {
+        ...base,
+        requiredRuleIds: [...base.requiredRuleIds, ...promoted],
+        requiredCoverageByScope: [
+            ...base.requiredCoverageByScope,
+            ...gen.browserCoverageByScope.filter((c) => promoted.includes(c.ruleId)),
+        ],
     };
 }
 function observationFor(x) {
@@ -32,14 +59,22 @@ function observationFor(x) {
 //    scanner reasons over the page/project). Aggregate: any gap/inconclusive ->
 //    inconclusive; else any fail -> fail; else any pass -> pass; else all N/A -> N/A.
 // 4. A pass in one file can never cover a fail/gap in another applicable file.
-async function executeRule(def, record, collected, raw, signal) {
+async function executeRule(def, record, collected, raw, signal, browser) {
     if (signal?.aborted)
         throw new AbortSentinel();
     const reqKind = def.evidenceRequirements[0];
     if (!(0, product_rule_types_1.isStaticallySatisfiable)(def.evidenceRequirements)) {
-        // computed-style/dom/contrast: no static source can satisfy this until P4b.
-        const result = def.checkProduct(toCheckContext(collected, raw));
-        return { result, discoveredApplicableFiles: [], inspectedApplicableFiles: [], sufficientlyCovered: false };
+        // computed-style/dom/contrast: no static source can satisfy this. With trusted
+        // browser evidence the check produces a real verdict over the synthetic render-URL
+        // target; without it the check returns its honest inconclusive.
+        const result = def.checkProduct(toCheckContext(collected, raw, browser));
+        const renderUrl = (0, browser_evidence_collector_1.renderUrlFromContext)(raw);
+        const kinds = browser?.available ? browser.evidence.browserEvidence.kinds : [];
+        const discoveredApplicableFiles = renderUrl ? [{ file: renderUrl, evidenceKindsPresent: kinds }] : [];
+        const inspectedApplicableFiles = browser?.available && renderUrl ? [renderUrl] : [];
+        const exec = { result, discoveredApplicableFiles, inspectedApplicableFiles, sufficientlyCovered: false };
+        exec.sufficientlyCovered = result.status !== 'inconclusive' && (0, clean_evaluator_1.isCoverageSatisfied)(record, observationFor(exec));
+        return exec;
     }
     const compatible = record
         ? new Set(record.evidenceAlternativesByRequirement.flat())
@@ -122,6 +157,12 @@ async function executeRule(def, record, collected, raw, signal) {
     exec.sufficientlyCovered = status !== 'inconclusive' && (0, clean_evaluator_1.isCoverageSatisfied)(record, observationFor(exec));
     return exec;
 }
+// The safe empty policy used for early error/abort detail returns when no generated
+// static policy is available (e.g. unknown validator id).
+const EMPTY_POLICY = {
+    requiredRuleIds: [], blockingSeverities: ['blocker', 'major'], toleratedFindingCounts: {},
+    requiredCoverageByScope: [], inconclusiveBehavior: 'block', notApplicableBehavior: 'exclude_and_report',
+};
 function emptyRun() {
     return { inspectedFiles: [], skippedFiles: [], supportedSourceKinds: [], unsupportedSourceKinds: [], measuredScope: [], unverifiedScope: [],
         discoveredFiles: [], unreadableFiles: [], unsupportedFiles: [] };
@@ -130,13 +171,13 @@ function emptyRun() {
 // so setInterval timers - notably the lease heartbeat - can fire between files/rules. A
 // microtask (Promise.resolve) would NOT let timers run; setImmediate does.
 function yieldToEventLoop() { return new Promise((r) => setImmediate(r)); }
-async function runDetailed(validatorId, context, signal) {
+async function runDetailed(validatorId, context, signal, deps = {}) {
     const gen = validators_generated_1.GENERATED_VALIDATORS.find((v) => v.validatorId === validatorId);
     const policy = gen?.cleanPolicy;
     if (!gen || !policy) {
         const result = (0, clean_evaluator_1.evaluateCleanPolicy)({ validatorId, rules: [], coverageObservations: [], runCoverage: emptyRun(),
-            validatorError: { category: 'registry_fault', message: `no generated validator for ${validatorId}` } }, { requiredRuleIds: [], blockingSeverities: ['blocker', 'major'], toleratedFindingCounts: {}, requiredCoverageByScope: [], inconclusiveBehavior: 'block', notApplicableBehavior: 'exclude_and_report' });
-        return { result, executions: [], coverageObservations: [], runCoverage: emptyRun() };
+            validatorError: { category: 'registry_fault', message: `no generated validator for ${validatorId}` } }, EMPTY_POLICY);
+        return { result, executions: [], coverageObservations: [], runCoverage: emptyRun(), activePolicy: EMPTY_POLICY };
     }
     let collected;
     try {
@@ -144,14 +185,22 @@ async function runDetailed(validatorId, context, signal) {
     }
     catch (e) {
         if (e instanceof project_collector_1.CollectionAbortedError)
-            return abortedDetail(validatorId); // aborted DURING collection
+            return abortedDetail(validatorId, policy); // aborted DURING collection
         const result = (0, clean_evaluator_1.evaluateCleanPolicy)({ validatorId, rules: [], coverageObservations: [], runCoverage: emptyRun(),
             validatorError: { category: 'unreadable_input', message: String(e instanceof Error ? e.message : e) } }, policy);
-        return { result, executions: [], coverageObservations: [], runCoverage: emptyRun() };
+        return { result, executions: [], coverageObservations: [], runCoverage: emptyRun(), activePolicy: policy };
     }
     if (signal?.aborted)
-        return abortedDetail(validatorId);
-    const recordById = new Map(policy.requiredCoverageByScope.map((c) => [c.ruleId, c]));
+        return abortedDetail(validatorId, policy);
+    // Collect browser evidence ONCE for this target, then build the per-target active
+    // policy: successful collection promotes the browser rules whose evidence is present;
+    // failed/absent collection promotes none (static cleanPolicy stays the baseline).
+    const renderUrl = (0, browser_evidence_collector_1.renderUrlFromContext)(context);
+    const browser = await (deps.collectBrowserEvidence ?? browser_evidence_collector_1.collectBrowserEvidence)(renderUrl, signal);
+    if (signal?.aborted)
+        return abortedDetail(validatorId, policy);
+    const activePolicy = activateBrowserPolicy(policy, gen, browser.available ? browser.evidence.browserEvidence.kinds : []);
+    const recordById = new Map(activePolicy.requiredCoverageByScope.map((c) => [c.ruleId, c]));
     const defs = gen.ownedRuleIds
         .map((id) => (0, product_rule_registry_1.getRuleById)(id))
         .filter((d) => !!d && typeof d.checkProduct === 'function');
@@ -161,19 +210,19 @@ async function runDetailed(validatorId, context, signal) {
             // Cooperatively yield BETWEEN RULES so the heartbeat keeps firing and abort is
             // observed promptly across a long synchronous validator run.
             if (signal?.aborted)
-                return abortedDetail(validatorId);
+                return abortedDetail(validatorId, policy);
             await yieldToEventLoop();
-            executions.push(await executeRule(d, recordById.get(d.ruleId), collected, context, signal));
+            executions.push(await executeRule(d, recordById.get(d.ruleId), collected, context, signal, browser));
         }
     }
     catch (e) {
         if (e instanceof AbortSentinel)
-            return abortedDetail(validatorId);
+            return abortedDetail(validatorId, policy);
         throw e;
     }
     const rules = executions.map((x) => x.result);
     const coverageObservations = executions
-        .filter((x) => policy.requiredRuleIds.includes(x.result.ruleId))
+        .filter((x) => activePolicy.requiredRuleIds.includes(x.result.ruleId))
         .map(observationFor);
     const supportedSourceKinds = [...new Set(collected.files.map((f) => f.sourceKind))];
     const unsupportedSourceKinds = [...new Set(collected.discovered.filter((d) => d.outcome === 'unsupported').map((d) => d.sourceKind))];
@@ -191,8 +240,8 @@ async function runDetailed(validatorId, context, signal) {
         unreadableFiles: collected.unreadableFiles,
         unsupportedFiles: collected.unsupportedFiles,
     };
-    const result = (0, clean_evaluator_1.evaluateCleanPolicy)({ validatorId, rules, coverageObservations, runCoverage }, policy);
-    return { result, executions, coverageObservations, runCoverage };
+    const result = (0, clean_evaluator_1.evaluateCleanPolicy)({ validatorId, rules, coverageObservations, runCoverage }, activePolicy);
+    return { result, executions, coverageObservations, runCoverage, activePolicy };
 }
 function makeProductValidator(validatorId) {
     // The public entry is ASYNC with cooperative abort: it checks the signal at entry,
@@ -214,8 +263,8 @@ function abortedResult(validatorId) {
     return (0, clean_evaluator_1.evaluateCleanPolicy)({ validatorId, rules: [], coverageObservations: [], runCoverage: emptyRun(),
         validatorError: { category: 'aborted', message: 'validation aborted (lease lost / cancelled)' } }, { requiredRuleIds: [], blockingSeverities: ['blocker', 'major'], toleratedFindingCounts: {}, requiredCoverageByScope: [], inconclusiveBehavior: 'block', notApplicableBehavior: 'exclude_and_report' });
 }
-function abortedDetail(validatorId) {
-    return { result: abortedResult(validatorId), executions: [], coverageObservations: [], runCoverage: emptyRun() };
+function abortedDetail(validatorId, policy) {
+    return { result: abortedResult(validatorId), executions: [], coverageObservations: [], runCoverage: emptyRun(), activePolicy: policy ?? EMPTY_POLICY };
 }
 // Sentinel thrown by the per-rule abort check inside runDetailed's execution loop.
 class AbortSentinel extends Error {
@@ -223,7 +272,7 @@ class AbortSentinel extends Error {
 // Test seam: exposes the internal executions/observations/coverage so the pipeline
 // suite can assert per-file execution and coverage WITHOUT duplicating the algorithm.
 // Async now that runDetailed yields cooperatively.
-function runValidatorForTest(validatorId, context) {
-    return runDetailed(validatorId, context);
+function runValidatorForTest(validatorId, context, deps = {}) {
+    return runDetailed(validatorId, context, undefined, deps);
 }
 //# sourceMappingURL=run-validator.js.map
