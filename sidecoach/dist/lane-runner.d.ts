@@ -16,6 +16,7 @@ export interface LaneRunnerDeps {
     }, signal?: AbortSignal) => Promise<ProductValidationResult>;
     staleMs?: number;
     heartbeatIntervalMs?: number;
+    onHeartbeat?: (ok: boolean) => void;
     publishOutbox?: (store: LaneCheckpointStore, checkpointId: string, projectPath: string, now?: () => string) => Promise<void>;
     __claimBarrier?: () => Promise<void>;
     __beforeServePersist?: () => Promise<void>;

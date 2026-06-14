@@ -53,10 +53,12 @@ function startHeartbeatLoop(d, checkpointId, id, controller) {
         running = true;
         try {
             await (0, lane_checkpoint_store_1.refreshHeartbeat)(d.store, checkpointId, id, d.now);
-        }
+            d.onHeartbeat?.(true);
+        } // ok=refreshed (ownership held)
         catch {
             controller.abort();
-        }
+            d.onHeartbeat?.(false);
+        } // failed=ownership lost -> aborted
         finally {
             running = false;
         }
