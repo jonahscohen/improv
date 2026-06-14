@@ -114,6 +114,30 @@ async function run() {
   assert(new FlowHistory(capProject).getFlowCount('lane:lane_build:craft') === countAfterEvict, 'cap: a no-op/rejected replay after eviction must not append');
   assert(capHistory.upsertLaneFlow(capKey, 31, entry('supersede-after-evict'), now).status === 'written', 'cap: a higher token after eviction must be accepted');
 
+  // P1 migration: PRE-INDEX persisted data has a retained tagged run but NO laneFencing
+  // entry. The fencing decision must derive the accepted token from the retained run so a
+  // stale same/lower token cannot blindly overwrite it.
+  const migHome = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-flow-history-mig-home-'));
+  process.env.HOME = migHome;
+  const migProject = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-flow-history-mig-')));
+  const migKey = 'lane-cp11:craft:0:flow-history';
+  // Seed a tagged run at token 30 through the real path, then STRIP laneFencing to simulate
+  // data written before the index existed.
+  new FlowHistory(migProject).upsertLaneFlow(migKey, 30, entry('pre-index-30'), now);
+  const migFile = path.join(migHome, '.claude', 'sidecoach-flow-history.json');
+  const migData = JSON.parse(fs.readFileSync(migFile, 'utf-8'));
+  delete migData[migProject].laneFencing;
+  fs.writeFileSync(migFile, JSON.stringify(migData, null, 2), 'utf-8');
+  assert(new FlowHistory(migProject).upsertLaneFlow(migKey, 30, entry('mig-replay'), now).status === 'noop',
+    'migration: same token vs a pre-index retained run must no-op');
+  assert(new FlowHistory(migProject).upsertLaneFlow(migKey, 29, entry('mig-stale'), now).status === 'rejected',
+    'migration: lower token vs a pre-index retained run must reject');
+  assert(new FlowHistory(migProject).getLatestRun('lane:lane_build:craft')?.fencingToken === 30,
+    'migration: a rejected lower token must not overwrite the pre-index token-30 run');
+  assert(new FlowHistory(migProject).upsertLaneFlow(migKey, 31, entry('mig-supersede'), now).status === 'written',
+    'migration: a higher token vs a pre-index retained run must be accepted');
+  process.env.HOME = home;
+
   const ordinary = new FlowHistory('ordinary-session');
   for (let i = 0; i < 21; i++) {
     ordinary.recordFlow({

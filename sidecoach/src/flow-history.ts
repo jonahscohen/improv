@@ -204,6 +204,22 @@ export class FlowHistory {
     const session = this.getSessionHistory();
     if (!session.laneFencing) session.laneFencing = {};
 
+    // Migration: data written before the index existed has a retained tagged run but no
+    // laneFencing entry. Derive the accepted token from that run first, so a stale
+    // same/lower token cannot be mistaken for a brand-new key and blindly overwrite it.
+    if (session.laneFencing[logicalKey] === undefined) {
+      for (const stored of Object.values(session.flowOutputs)) {
+        const runs = Array.isArray(stored) ? stored : [stored as FlowHistoryEntry];
+        const retained = runs.find(
+          (run) => run.laneLogicalKey === logicalKey && typeof run.fencingToken === 'number',
+        );
+        if (retained && typeof retained.fencingToken === 'number') {
+          session.laneFencing[logicalKey] = retained.fencingToken;
+          break;
+        }
+      }
+    }
+
     // Fencing decision comes from the PERSISTENT index, not the capped runs array, so
     // an evicted tagged run cannot let a stale same/lower token slip through as a new key.
     const acceptedToken = session.laneFencing[logicalKey];
