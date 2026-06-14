@@ -9,10 +9,14 @@ import { pass, fail, notApplicable, inconclusive, hasCss, focusableTargetApplica
 import { hasFocusVisible } from '../../polish-standard-validator';
 
 export const checkFocusVisible = (ctx: ProductCheckContext): RuleVerdict => {
-  if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
+  // Applicability FIRST: a focusable target can live in markup (e.g. a <button> in an
+  // html file with no inline <style>). A file with no focusable target is N/A; a file
+  // WITH a focusable target but no readable CSS is an inconclusive gap (we cannot verify
+  // the focus styling here, which may be cross-file) - never a silent pass.
   const applicable = focusableTargetApplicability(ctx);
+  if (applicable === false) return notApplicable('no focusable element or interactive selector');
+  if (!hasCss(ctx)) return inconclusive('focusable target present but no CSS collected to verify focus styling', 'unreadable_input');
   if (applicable === 'unknown') return inconclusive('cannot establish focusable targets from collected evidence', 'unreadable_input');
-  if (!applicable) return notApplicable('no focusable element or interactive selector');
   return hasFocusVisible(ctx.cssText)
     ? pass(':focus-visible present')
     : fail('implement :focus-visible for keyboard navigation', [], 'Add :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }');

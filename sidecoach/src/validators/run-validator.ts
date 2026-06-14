@@ -66,12 +66,15 @@ function executeRule(
     return { result, discoveredApplicableFiles: [], inspectedApplicableFiles: [], sufficientlyCovered: false };
   }
 
-  const wantsMarkup = reqKind === 'markup';
-  const fileHasEvidence = (f: CollectedFile) => (wantsMarkup ? f.markup : f.cssText).trim().length > 0;
   const compatible = record
     ? new Set(record.evidenceAlternativesByRequirement.flat())
     : new Set(sourceKindsForEvidence([reqKind]));
-  const readable = collected.files.filter(fileHasEvidence);
+  // Candidates are inspected files of a COMPATIBLE source kind - NOT only files that
+  // already yielded extracted text. A compatible inspected file that carries an
+  // applicable target but no usable evidence (e.g. an html/tsx with an uncovered
+  // <button> and no inline <style>) still runs the check and surfaces inconclusive,
+  // so the rule cannot be falsely reported measured/clean (Codex P1#1).
+  const readable = collected.files.filter((f) => compatible.has(f.sourceKind));
   const gaps = collected.discovered.filter((d) =>
     (d.outcome === 'unreadable' || d.outcome === 'oversized') && compatible.has(d.sourceKind));
 

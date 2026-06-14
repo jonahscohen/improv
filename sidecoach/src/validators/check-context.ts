@@ -120,7 +120,7 @@ export const framerApplicability = (ctx: ProductCheckContext): Applicability => 
 export const willChangeApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, /will-change\s*:/i, 'css');
 export const shadowTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, SHADOW_TARGET_RE, 'css');
 export const opticalTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, OPTICAL_TARGET_RE, 'css');
-export const focusableTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, FOCUSABLE_RE, 'css');
+export const focusableTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, FOCUSABLE_RE, 'both');
 
 // canonicalRuleKey -> the probe gating that rule. Browser-only rules (computed-
 // style/dom/contrast) are NOT listed: they bypass the N/A wrapper and return

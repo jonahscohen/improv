@@ -1,10 +1,15 @@
 // sidecoach/src/__tests__/product-validator-pipeline.test.ts
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { getValidatorRegistration } from '../flow-validation-capabilities';
 import { getRuleById } from '../product-rule-registry';
 import { CHECKS } from '../validators/checks';
 import type { CheckFn } from '../validators/checks';
 import { runValidatorForTest } from '../validators/run-validator';
 import type { ProductCheckContext, RuleVerdict } from '../validators/check-context';
+
+const mkproj = (): string => fs.mkdtempSync(path.join(os.tmpdir(), 'p4a2-pipeline-'));
 
 const file = (p: string, sourceKind: string, cssText: string, markup = ''): ProductCheckContext['files'][number] =>
   ({ path: p, sourceKind, cssText, markup, evidenceKindsPresent: [sourceKind] });
@@ -167,9 +172,36 @@ function executionCoverage() {
   }
 }
 
+// Coverage-correctness regressions (Codex review): a compatible inspected file with
+// an uncovered/unverifiable target must NOT be silently dropped into a false 'clean'.
+function coverageCorrectness() {
+  // P1#1 repro (a): styles.css with `a:focus-visible` + a SEPARATE page.html holding an
+  // uncovered <button>. The html is a compatible (partial) css-rule source we cannot
+  // verify -> static-a11y must NOT be clean.
+  {
+    const dir = mkproj();
+    fs.writeFileSync(path.join(dir, 'styles.css'), 'a:focus-visible { outline: 2px solid currentColor; }');
+    fs.writeFileSync(path.join(dir, 'page.html'), '<main><button type="button">Go</button></main>');
+    const res = getValidatorRegistration('static-a11y')!.validateProduct!({ projectPath: dir });
+    if (res.status === 'clean') throw new Error('static-a11y must not be clean: an uncovered <button> lives in an unstyled, compatible html file');
+    if (res.status !== 'inconclusive') throw new Error(`expected inconclusive for the uncovered-button project, got ${res.status}`);
+  }
+
+  // P1#1 repro (b): clean token CSS + card.tsx (a compatible css-rule source we cannot
+  // statically resolve) -> theming must NOT be clean.
+  {
+    const dir = mkproj();
+    fs.writeFileSync(path.join(dir, 'theme.css'), ':root { --c-brand: #c0392b; --radius: 8px; } .btn { border-radius: var(--radius); } .btn:hover { color: var(--c-brand); }');
+    fs.writeFileSync(path.join(dir, 'card.tsx'), 'export const Card = () => <div className="rounded-sm rounded-lg" />;');
+    const res = getValidatorRegistration('theming')!.validateProduct!({ projectPath: dir });
+    if (res.status === 'clean') throw new Error('theming must not be clean: card.tsx is a compatible css-rule source that cannot be statically verified');
+  }
+}
+
 function run() {
   basics();
   executionCoverage();
+  coverageCorrectness();
   console.log('product-validator-pipeline: OK');
 }
 run();
