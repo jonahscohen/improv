@@ -140,6 +140,33 @@ export class FlowHistory {
   private reloadFromDisk(): void {
     this.history.clear();
     this.load();
+    this.backfillLaneFencingFromRuns();
+  }
+
+  /**
+   * Enforce the lane-fencing invariant in memory: for every session, laneFencing[key]
+   * must be >= the highest fencingToken of any retained tagged run for that key. Never
+   * lowers an existing entry, so it is idempotent. Called after load() inside
+   * reloadFromDisk so that every saving mutation (which reloads, mutates, then saves)
+   * durably persists the index BEFORE the 20-run cap can evict the run that justified it.
+   * This closes the whole stale-token class: once a tagged run has been observed, its
+   * accepted token survives even after the run itself is evicted.
+   */
+  private backfillLaneFencingFromRuns(): void {
+    for (const session of this.history.values()) {
+      if (!session.laneFencing) session.laneFencing = {};
+      for (const stored of Object.values(session.flowOutputs)) {
+        const runs = Array.isArray(stored) ? stored : [stored as FlowHistoryEntry];
+        for (const run of runs) {
+          if (typeof run.laneLogicalKey === 'string' && typeof run.fencingToken === 'number') {
+            const existing = session.laneFencing[run.laneLogicalKey];
+            if (existing === undefined || run.fencingToken > existing) {
+              session.laneFencing[run.laneLogicalKey] = run.fencingToken;
+            }
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -204,24 +231,9 @@ export class FlowHistory {
     const session = this.getSessionHistory();
     if (!session.laneFencing) session.laneFencing = {};
 
-    // Migration: data written before the index existed has a retained tagged run but no
-    // laneFencing entry. Derive the accepted token from that run first, so a stale
-    // same/lower token cannot be mistaken for a brand-new key and blindly overwrite it.
-    if (session.laneFencing[logicalKey] === undefined) {
-      for (const stored of Object.values(session.flowOutputs)) {
-        const runs = Array.isArray(stored) ? stored : [stored as FlowHistoryEntry];
-        const retained = runs.find(
-          (run) => run.laneLogicalKey === logicalKey && typeof run.fencingToken === 'number',
-        );
-        if (retained && typeof retained.fencingToken === 'number') {
-          session.laneFencing[logicalKey] = retained.fencingToken;
-          break;
-        }
-      }
-    }
-
-    // Fencing decision comes from the PERSISTENT index, not the capped runs array, so
-    // an evicted tagged run cannot let a stale same/lower token slip through as a new key.
+    // Fencing decision comes from the PERSISTENT index (kept correct by the reload-time
+    // backfill above, including pre-index data), not the capped runs array, so an evicted
+    // tagged run cannot let a stale same/lower token slip through as a new key.
     const acceptedToken = session.laneFencing[logicalKey];
     if (acceptedToken !== undefined) {
       if (fencingToken < acceptedToken) return { status: 'rejected' };

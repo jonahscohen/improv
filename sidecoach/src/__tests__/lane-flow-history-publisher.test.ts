@@ -149,6 +149,58 @@ async function run() {
     'setContext on a stale instance must not clobber the committed lane entry');
   assert(afterCtx.getContext('phase') === 'verify', 'setContext must still persist its own value');
 
+  // P1 invariant (Codex sequence): the seeded fencing token must be PERSISTED, not just
+  // derived in-memory, so a later eviction cannot resurrect a stale token. Pre-index
+  // token-30 run, strip the index; same/lower decisions, then evict the run via the
+  // 20-cap, then a stale token must STILL be rejected (the evicting recordFlow persisted
+  // the backfilled index before the eviction).
+  const invHome = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-flow-history-inv-home-'));
+  process.env.HOME = invHome;
+  const invProject = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-flow-history-inv-')));
+  const invKey = 'lane-cp13:craft:0:flow-history';
+  new FlowHistory(invProject).upsertLaneFlow(invKey, 30, entry('inv-30'), now);
+  const invFile = path.join(invHome, '.claude', 'sidecoach-flow-history.json');
+  const invData = JSON.parse(fs.readFileSync(invFile, 'utf-8'));
+  delete invData[invProject].laneFencing;
+  fs.writeFileSync(invFile, JSON.stringify(invData, null, 2), 'utf-8');
+  assert(new FlowHistory(invProject).upsertLaneFlow(invKey, 30, entry('inv-replay'), now).status === 'noop',
+    'invariant: same token vs a pre-index run must no-op');
+  assert(new FlowHistory(invProject).upsertLaneFlow(invKey, 29, entry('inv-stale'), now).status === 'rejected',
+    'invariant: lower token vs a pre-index run must reject');
+  const invEvictor = new FlowHistory(invProject);
+  for (let i = 0; i < 20; i++) {
+    invEvictor.recordFlow({ flowId: 'lane:lane_build:craft', flowName: 'Lane lane_build: craft', status: 'success', message: `inv-evict-${i}` });
+  }
+  assert(new FlowHistory(invProject).getFlowRuns('lane:lane_build:craft').every((r) => r.laneLogicalKey !== invKey),
+    'invariant: 20 newer runs must have evicted the tagged run');
+  assert(new FlowHistory(invProject).upsertLaneFlow(invKey, 29, entry('inv-stale-after-evict'), now).status === 'rejected',
+    'invariant: a stale token after eviction must STILL be rejected (durably-seeded index survived eviction)');
+  process.env.HOME = home;
+
+  // P1 invariant (eviction-before-any-upsert): with NO upsert between the pre-index run
+  // and its eviction, the evicting recordFlow itself must have backfilled + persisted the
+  // index, so a later stale token is rejected and a higher one accepted.
+  const inv2Home = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-flow-history-inv2-home-'));
+  process.env.HOME = inv2Home;
+  const inv2Project = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-flow-history-inv2-')));
+  const inv2Key = 'lane-cp14:craft:0:flow-history';
+  new FlowHistory(inv2Project).upsertLaneFlow(inv2Key, 30, entry('inv2-30'), now);
+  const inv2File = path.join(inv2Home, '.claude', 'sidecoach-flow-history.json');
+  const inv2Data = JSON.parse(fs.readFileSync(inv2File, 'utf-8'));
+  delete inv2Data[inv2Project].laneFencing;
+  fs.writeFileSync(inv2File, JSON.stringify(inv2Data, null, 2), 'utf-8');
+  const inv2Evictor = new FlowHistory(inv2Project);
+  for (let i = 0; i < 20; i++) {
+    inv2Evictor.recordFlow({ flowId: 'lane:lane_build:craft', flowName: 'Lane lane_build: craft', status: 'success', message: `inv2-evict-${i}` });
+  }
+  assert(new FlowHistory(inv2Project).getFlowRuns('lane:lane_build:craft').every((r) => r.laneLogicalKey !== inv2Key),
+    'invariant2: 20 newer runs must have evicted the tagged run with no upsert in between');
+  assert(new FlowHistory(inv2Project).upsertLaneFlow(inv2Key, 29, entry('inv2-stale'), now).status === 'rejected',
+    'invariant2: a stale token after eviction-without-upsert must be rejected');
+  assert(new FlowHistory(inv2Project).upsertLaneFlow(inv2Key, 31, entry('inv2-supersede'), now).status === 'written',
+    'invariant2: a higher token after eviction-without-upsert must be accepted');
+  process.env.HOME = home;
+
   const ordinary = new FlowHistory('ordinary-session');
   for (let i = 0; i < 21; i++) {
     ordinary.recordFlow({
