@@ -56,7 +56,7 @@ const handler = async (input, deps) => {
     const engine = (0, sidecoach_orchestrator_1.createExecutionEngine)();
     switch (request.operation) {
         case 'start': {
-            const result = await raceResponseDeadline(engine.startLane(request.laneId, request.target ?? '', { projectPath }, request.startRequestId), deps.signal);
+            const result = await raceResponseDeadline(engine.startLane(request.laneId, request.target ?? '', { projectPath }, request.startRequestId, request.renderUrl), deps.signal);
             return { data: { result }, summary: `sidecoach_lane start: ${result.laneId} @ ${result.checkpointId}` };
         }
         case 'advance': {

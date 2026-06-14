@@ -158,8 +158,8 @@ Drive a sidecoach lane through the engine state machine, wrapping the same
 engine methods the monitor CLI uses
 (`startLane` / `advanceLane` / `laneStatus` / `listLanes`).
 
-- Input: `{ operation: "start"|"advance"|"status"|"list", projectPath?, laneId?, target?, startRequestId?, checkpointId?, action?, expectedRevision?, reason?, report?, all? }`
-- `operation=start` requires `laneId` and a caller-supplied `startRequestId` (transport idempotency key; a repeat reuses the active lane). No `Date.now()` fallback is permitted.
+- Input: `{ operation: "start"|"advance"|"status"|"list", projectPath?, laneId?, target?, renderUrl?, startRequestId?, checkpointId?, action?, expectedRevision?, reason?, report?, all? }`
+- `operation=start` requires `laneId` and a caller-supplied `startRequestId` (transport idempotency key; a repeat reuses the active lane). No `Date.now()` fallback is permitted. Optional `renderUrl` (http/https/file/data, distinct from the free-text `target`) activates the browser-backed rules (hit-area, contrast, concentric-radius, typography-rhythm); a non-URL is rejected.
 - `operation=advance` requires `checkpointId`, `action` (`complete|retry|skip|resume|interrupt|stop`), and `expectedRevision`. `action=complete` requires a `report` (StepReport: stepId, iteration, reportId, verb, summary, evidence[], optional checklistResults). `action=skip` requires a `reason`.
 - `operation=status` requires `checkpointId`. `operation=list` takes nothing (optional `all` includes closed lanes).
 - Response deadline: the per-call MCP signal can stop the handler awaiting an in-flight start/advance and return `TIMEOUT`, but the already-started engine operation continues under its own P4b-1 operation lease/heartbeat. P4d does not thread the MCP signal into the engine.

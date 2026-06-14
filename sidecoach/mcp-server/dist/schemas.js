@@ -164,6 +164,18 @@ exports.GetFlowMetadataInput = zod_1.z.object(exports.getFlowMetadataShape);
 const LANE_PROJECT_MAX = 2048;
 const LANE_ID_MAX = 128;
 const LANE_TARGET_MAX = 2048;
+const LANE_RENDER_URL_MAX = 4096;
+// renderUrl protocol allowlist - mirrors the engine's renderUrlFromContext
+// (http/https/file/data). A renderUrl outside this set is rejected at the schema
+// boundary rather than silently ignored.
+function isValidRenderUrl(v) {
+    try {
+        return ['http:', 'https:', 'file:', 'data:'].includes(new URL(v).protocol);
+    }
+    catch {
+        return false;
+    }
+}
 const LANE_CHECKPOINT_MAX = 256;
 const LANE_REASON_MAX = 2048;
 const StepReportSchema = zod_1.z.object({
@@ -190,6 +202,12 @@ exports.laneShape = {
         .describe('Project root for checkpoint storage. Defaults to SIDECOACH_PROJECT_ROOT (cwd).'),
     laneId: zod_1.z.string().min(1).max(LANE_ID_MAX).optional().describe('Lane id, e.g. "lane_build" (operation=start).'),
     target: zod_1.z.string().max(LANE_TARGET_MAX).optional().describe('Free-text target the lane operates on (operation=start).'),
+    renderUrl: zod_1.z
+        .string()
+        .max(LANE_RENDER_URL_MAX)
+        .refine(isValidRenderUrl, { message: 'renderUrl must be an http/https/file/data URL' })
+        .optional()
+        .describe('Optional render URL (http/https/file/data) for browser-evidence collection (operation=start). Distinct from the free-text target; activates the browser-backed rules (hit-area, contrast, concentric-radius, typography-rhythm).'),
     startRequestId: zod_1.z
         .string()
         .min(1)

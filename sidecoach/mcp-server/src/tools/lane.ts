@@ -63,7 +63,7 @@ export const handler: ToolHandler<LaneInputT> = async (input, deps) => {
   switch (request.operation) {
     case 'start': {
       const result = await raceResponseDeadline(
-        engine.startLane(request.laneId as string, request.target ?? '', { projectPath }, request.startRequestId as string),
+        engine.startLane(request.laneId as string, request.target ?? '', { projectPath }, request.startRequestId as string, request.renderUrl),
         deps.signal,
       );
       return { data: { result }, summary: `sidecoach_lane start: ${result.laneId} @ ${result.checkpointId}` };

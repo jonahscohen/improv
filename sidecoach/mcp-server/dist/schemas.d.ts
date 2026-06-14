@@ -184,6 +184,7 @@ export declare const laneShape: {
     projectPath: z.ZodOptional<z.ZodString>;
     laneId: z.ZodOptional<z.ZodString>;
     target: z.ZodOptional<z.ZodString>;
+    renderUrl: z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>;
     startRequestId: z.ZodOptional<z.ZodString>;
     checkpointId: z.ZodOptional<z.ZodString>;
     action: z.ZodOptional<z.ZodEnum<["complete", "retry", "skip", "resume", "interrupt", "stop"]>>;
@@ -251,6 +252,7 @@ export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffe
     projectPath: z.ZodOptional<z.ZodString>;
     laneId: z.ZodOptional<z.ZodString>;
     target: z.ZodOptional<z.ZodString>;
+    renderUrl: z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>;
     startRequestId: z.ZodOptional<z.ZodString>;
     checkpointId: z.ZodOptional<z.ZodString>;
     action: z.ZodOptional<z.ZodEnum<["complete", "retry", "skip", "resume", "interrupt", "stop"]>>;
@@ -318,6 +320,7 @@ export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffe
     projectPath?: string | undefined;
     laneId?: string | undefined;
     target?: string | undefined;
+    renderUrl?: string | undefined;
     startRequestId?: string | undefined;
     checkpointId?: string | undefined;
     action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -344,6 +347,7 @@ export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffe
     projectPath?: string | undefined;
     laneId?: string | undefined;
     target?: string | undefined;
+    renderUrl?: string | undefined;
     startRequestId?: string | undefined;
     checkpointId?: string | undefined;
     action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -370,6 +374,7 @@ export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffe
     projectPath?: string | undefined;
     laneId?: string | undefined;
     target?: string | undefined;
+    renderUrl?: string | undefined;
     startRequestId?: string | undefined;
     checkpointId?: string | undefined;
     action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -396,6 +401,7 @@ export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffe
     projectPath?: string | undefined;
     laneId?: string | undefined;
     target?: string | undefined;
+    renderUrl?: string | undefined;
     startRequestId?: string | undefined;
     checkpointId?: string | undefined;
     action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -422,6 +428,7 @@ export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffe
     projectPath?: string | undefined;
     laneId?: string | undefined;
     target?: string | undefined;
+    renderUrl?: string | undefined;
     startRequestId?: string | undefined;
     checkpointId?: string | undefined;
     action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -448,6 +455,7 @@ export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffe
     projectPath?: string | undefined;
     laneId?: string | undefined;
     target?: string | undefined;
+    renderUrl?: string | undefined;
     startRequestId?: string | undefined;
     checkpointId?: string | undefined;
     action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -474,6 +482,7 @@ export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffe
     projectPath?: string | undefined;
     laneId?: string | undefined;
     target?: string | undefined;
+    renderUrl?: string | undefined;
     startRequestId?: string | undefined;
     checkpointId?: string | undefined;
     action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -500,6 +509,7 @@ export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffe
     projectPath?: string | undefined;
     laneId?: string | undefined;
     target?: string | undefined;
+    renderUrl?: string | undefined;
     startRequestId?: string | undefined;
     checkpointId?: string | undefined;
     action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -526,6 +536,7 @@ export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffe
     projectPath?: string | undefined;
     laneId?: string | undefined;
     target?: string | undefined;
+    renderUrl?: string | undefined;
     startRequestId?: string | undefined;
     checkpointId?: string | undefined;
     action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -552,6 +563,7 @@ export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffe
     projectPath?: string | undefined;
     laneId?: string | undefined;
     target?: string | undefined;
+    renderUrl?: string | undefined;
     startRequestId?: string | undefined;
     checkpointId?: string | undefined;
     action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -578,6 +590,7 @@ export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffe
     projectPath?: string | undefined;
     laneId?: string | undefined;
     target?: string | undefined;
+    renderUrl?: string | undefined;
     startRequestId?: string | undefined;
     checkpointId?: string | undefined;
     action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -604,6 +617,7 @@ export declare const LaneInput: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffe
     projectPath?: string | undefined;
     laneId?: string | undefined;
     target?: string | undefined;
+    renderUrl?: string | undefined;
     startRequestId?: string | undefined;
     checkpointId?: string | undefined;
     action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -831,6 +845,7 @@ export declare const TOOL_INPUT_SCHEMAS: {
         projectPath: z.ZodOptional<z.ZodString>;
         laneId: z.ZodOptional<z.ZodString>;
         target: z.ZodOptional<z.ZodString>;
+        renderUrl: z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>;
         startRequestId: z.ZodOptional<z.ZodString>;
         checkpointId: z.ZodOptional<z.ZodString>;
         action: z.ZodOptional<z.ZodEnum<["complete", "retry", "skip", "resume", "interrupt", "stop"]>>;
@@ -898,6 +913,7 @@ export declare const TOOL_INPUT_SCHEMAS: {
         projectPath?: string | undefined;
         laneId?: string | undefined;
         target?: string | undefined;
+        renderUrl?: string | undefined;
         startRequestId?: string | undefined;
         checkpointId?: string | undefined;
         action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -924,6 +940,7 @@ export declare const TOOL_INPUT_SCHEMAS: {
         projectPath?: string | undefined;
         laneId?: string | undefined;
         target?: string | undefined;
+        renderUrl?: string | undefined;
         startRequestId?: string | undefined;
         checkpointId?: string | undefined;
         action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -950,6 +967,7 @@ export declare const TOOL_INPUT_SCHEMAS: {
         projectPath?: string | undefined;
         laneId?: string | undefined;
         target?: string | undefined;
+        renderUrl?: string | undefined;
         startRequestId?: string | undefined;
         checkpointId?: string | undefined;
         action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -976,6 +994,7 @@ export declare const TOOL_INPUT_SCHEMAS: {
         projectPath?: string | undefined;
         laneId?: string | undefined;
         target?: string | undefined;
+        renderUrl?: string | undefined;
         startRequestId?: string | undefined;
         checkpointId?: string | undefined;
         action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -1002,6 +1021,7 @@ export declare const TOOL_INPUT_SCHEMAS: {
         projectPath?: string | undefined;
         laneId?: string | undefined;
         target?: string | undefined;
+        renderUrl?: string | undefined;
         startRequestId?: string | undefined;
         checkpointId?: string | undefined;
         action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -1028,6 +1048,7 @@ export declare const TOOL_INPUT_SCHEMAS: {
         projectPath?: string | undefined;
         laneId?: string | undefined;
         target?: string | undefined;
+        renderUrl?: string | undefined;
         startRequestId?: string | undefined;
         checkpointId?: string | undefined;
         action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -1054,6 +1075,7 @@ export declare const TOOL_INPUT_SCHEMAS: {
         projectPath?: string | undefined;
         laneId?: string | undefined;
         target?: string | undefined;
+        renderUrl?: string | undefined;
         startRequestId?: string | undefined;
         checkpointId?: string | undefined;
         action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -1080,6 +1102,7 @@ export declare const TOOL_INPUT_SCHEMAS: {
         projectPath?: string | undefined;
         laneId?: string | undefined;
         target?: string | undefined;
+        renderUrl?: string | undefined;
         startRequestId?: string | undefined;
         checkpointId?: string | undefined;
         action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -1106,6 +1129,7 @@ export declare const TOOL_INPUT_SCHEMAS: {
         projectPath?: string | undefined;
         laneId?: string | undefined;
         target?: string | undefined;
+        renderUrl?: string | undefined;
         startRequestId?: string | undefined;
         checkpointId?: string | undefined;
         action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -1132,6 +1156,7 @@ export declare const TOOL_INPUT_SCHEMAS: {
         projectPath?: string | undefined;
         laneId?: string | undefined;
         target?: string | undefined;
+        renderUrl?: string | undefined;
         startRequestId?: string | undefined;
         checkpointId?: string | undefined;
         action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -1158,6 +1183,7 @@ export declare const TOOL_INPUT_SCHEMAS: {
         projectPath?: string | undefined;
         laneId?: string | undefined;
         target?: string | undefined;
+        renderUrl?: string | undefined;
         startRequestId?: string | undefined;
         checkpointId?: string | undefined;
         action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
@@ -1184,6 +1210,7 @@ export declare const TOOL_INPUT_SCHEMAS: {
         projectPath?: string | undefined;
         laneId?: string | undefined;
         target?: string | undefined;
+        renderUrl?: string | undefined;
         startRequestId?: string | undefined;
         checkpointId?: string | undefined;
         action?: "stop" | "complete" | "retry" | "skip" | "resume" | "interrupt" | undefined;
