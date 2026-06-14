@@ -5,7 +5,7 @@
 // never re-implemented here; only the four-status/applicability wrapper is new. The
 // three browser-evidence rules (computed-style/dom) surface inconclusive until P4b.
 import type { ProductCheckContext, RuleVerdict } from '../check-context';
-import { pass, fail, notApplicable, inconclusive, hasCss, hasMarkup, withRuleApplicability } from '../check-context';
+import { pass, fail, notApplicable, inconclusive, hasCss, hasMarkup, withRuleApplicability, browserNumber, hasTrustedBrowserEvidence } from '../check-context';
 import {
   hasScaleOnPress, hasCompoundIconTransition, hasImageOutlineRule, hasNoImages,
   hasTransitionAll, hasTabularNums, hasTextWrapBalance, hasStaggerDelay, hasExitOpacity, hasExitScale,
@@ -97,11 +97,32 @@ export const checkTextWrapBalance = (ctx: ProductCheckContext): RuleVerdict =>
 export const checkOpticalAlignment = (ctx: ProductCheckContext): RuleVerdict =>
   cssPresence(ctx, hasOpticalPadding, 'optical alignment padding present', 'apply optical alignment adjustments', 'Subtract 2-4px from top padding for descender allowance');
 
-// computed-style / dom rules: browser evidence absent in P4a-2 -> inconclusive (NOT pass).
-export const checkConcentricRadius = (_ctx: ProductCheckContext): RuleVerdict =>
-  inconclusive('concentric radius needs computed-style evidence (browser collector, P4b)', 'unsupported_runtime');
-export const checkTypographyRhythm = (_ctx: ProductCheckContext): RuleVerdict =>
-  inconclusive('typography rhythm needs computed-style evidence (browser collector, P4b)', 'unsupported_runtime');
+export const checkConcentricRadius = (ctx: ProductCheckContext): RuleVerdict => {
+  if (!hasTrustedBrowserEvidence(ctx, 'computed-style')) {
+    return inconclusive('concentric radius needs trusted computed-style evidence', 'unsupported_runtime');
+  }
+  const checked = browserNumber(ctx, 'concentric.checkedPairs');
+  const failing = browserNumber(ctx, 'concentric.failingPairs');
+  if (checked === undefined || failing === undefined) return inconclusive('concentric radius evidence is incomplete', 'unreadable_input');
+  if (checked === 0) return notApplicable('no visible nested rounded pair found');
+  return failing === 0
+    ? pass(`${checked} concentric radius pair(s) satisfy outer = inner + padding`)
+    : fail(`${failing}/${checked} concentric radius pair(s) violate outer = inner + padding`, [], 'Set outer radius to inner radius plus parent padding');
+};
+
+export const checkTypographyRhythm = (ctx: ProductCheckContext): RuleVerdict => {
+  if (!hasTrustedBrowserEvidence(ctx, 'computed-style')) {
+    return inconclusive('typography rhythm needs trusted computed-style evidence', 'unsupported_runtime');
+  }
+  const checked = browserNumber(ctx, 'typography.checkedElements');
+  const invalid = browserNumber(ctx, 'typography.invalidLineHeightElements');
+  if (checked === undefined || invalid === undefined) return inconclusive('typography rhythm evidence is incomplete', 'unreadable_input');
+  if (checked === 0) return notApplicable('no visible text-bearing element found');
+  return invalid === 0
+    ? pass(`${checked} visible text element(s) have resolved line-height`)
+    : fail(`${invalid}/${checked} visible text element(s) have invalid line-height`, [], 'Set an explicit usable line-height on visible text');
+};
+
 export const checkGenericity = (_ctx: ProductCheckContext): RuleVerdict =>
   inconclusive('genericity needs browser/design-token evidence (P4b)', 'unsupported_runtime');
 

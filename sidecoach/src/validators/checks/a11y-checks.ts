@@ -5,7 +5,7 @@
 // source: they always return inconclusive in P4a-2 even when a unit caller supplies
 // ad hoc browser-shaped fields, because P4b owns the trusted browser collector.
 import type { ProductCheckContext, RuleVerdict } from '../check-context';
-import { pass, fail, notApplicable, inconclusive, hasCss, focusableTargetApplicability } from '../check-context';
+import { pass, fail, notApplicable, inconclusive, hasCss, focusableTargetApplicability, hasTrustedBrowserEvidence } from '../check-context';
 import { hasFocusVisible } from '../../polish-standard-validator';
 
 export const checkFocusVisible = (ctx: ProductCheckContext): RuleVerdict => {
@@ -22,13 +22,25 @@ export const checkFocusVisible = (ctx: ProductCheckContext): RuleVerdict => {
     : fail('implement :focus-visible for keyboard navigation', [], 'Add :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }');
 };
 
-// dom-only: no static source can provide hit-area geometry. Honest inconclusive until P4b.
-export const checkMinHitArea = (_ctx: ProductCheckContext): RuleVerdict =>
-  inconclusive('hit-area geometry needs DOM evidence (browser collector, P4b)', 'unsupported_runtime');
+export const checkMinHitArea = (ctx: ProductCheckContext): RuleVerdict => {
+  if (!hasTrustedBrowserEvidence(ctx, 'dom') || !ctx.dom) {
+    return inconclusive('hit-area geometry needs trusted DOM evidence', 'unsupported_runtime');
+  }
+  const hit = ctx.dom.minHitArea;
+  if (hit.checked === 0) return notApplicable('no visible interactive element found');
+  return hit.failing === 0
+    ? pass(`${hit.checked} visible interactive target(s) meet minimum hit area`)
+    : fail(`${hit.failing}/${hit.checked} interactive target(s) miss minimum hit area; smallest is ${Math.round(hit.smallestWidth)}x${Math.round(hit.smallestHeight)}px`, [], 'Increase interactive target padding or dimensions to at least 40x40px, and buttons to 44x44px');
+};
 
-// contrast-only: same. P4a-2 does not trust ad hoc browser-shaped fields.
-export const checkColorContrast = (_ctx: ProductCheckContext): RuleVerdict =>
-  inconclusive('contrast ratio needs measured contrast evidence (browser collector, P4b)', 'unsupported_runtime');
+export const checkColorContrast = (ctx: ProductCheckContext): RuleVerdict => {
+  if (!hasTrustedBrowserEvidence(ctx, 'contrast') || !ctx.contrast) {
+    return inconclusive('contrast ratio needs trusted measured contrast evidence', 'unsupported_runtime');
+  }
+  return ctx.contrast.wcagAA
+    ? pass(`worst measured text contrast is ${ctx.contrast.ratio.toFixed(2)}:1`)
+    : fail(`worst measured text contrast is ${ctx.contrast.ratio.toFixed(2)}:1`, [], 'Increase foreground/background contrast to meet WCAG AA');
+};
 
 export const A11Y_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict> = {
   'a11y/focus-visible': checkFocusVisible,

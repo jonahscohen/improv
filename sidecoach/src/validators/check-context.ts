@@ -26,6 +26,21 @@ export interface DiscoveredFile {
   reason?: string;
 }
 
+export interface BrowserDomEvidence {
+  minHitArea: {
+    checked: number;
+    failing: number;
+    smallestWidth: number;
+    smallestHeight: number;
+  };
+}
+
+export interface BrowserEvidenceMeta {
+  available: true;
+  kinds: EvidenceKind[];
+  renderUrl: string;
+}
+
 // The per-target evidence a checkProduct inspects. Browser-collected fields are
 // OPTIONAL and absent in P4a-2; a rule that needs them returns inconclusive.
 export interface ProductCheckContext {
@@ -37,6 +52,9 @@ export interface ProductCheckContext {
   contrast?: { wcagAA: boolean; ratio: number };
   designTokens?: Record<string, unknown>;
   tasteOptions?: { tailwindDetected?: boolean; componentsJson?: boolean };
+  renderUrl?: string;
+  browserEvidence?: BrowserEvidenceMeta;
+  dom?: BrowserDomEvidence;
 }
 
 // A check returns ONLY the verdict; metadata is stamped from the definition so a
@@ -58,6 +76,16 @@ export const inconclusive = (message: string, category: NormalizedErrorCategory 
 // True only when at least one CSS-family file was collected with non-empty text.
 export const hasCss = (ctx: ProductCheckContext): boolean => !!ctx && typeof ctx.cssText === 'string' && ctx.cssText.trim().length > 0;
 export const hasMarkup = (ctx: ProductCheckContext): boolean => !!ctx && typeof ctx.markup === 'string' && ctx.markup.trim().length > 0;
+
+export const hasTrustedBrowserEvidence = (ctx: ProductCheckContext, kind: EvidenceKind): boolean =>
+  ctx.browserEvidence?.available === true && ctx.browserEvidence.kinds.includes(kind);
+
+export const browserNumber = (ctx: ProductCheckContext, key: string): number | undefined => {
+  const raw = ctx.computedStyle?.[key];
+  if (raw === undefined) return undefined;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : undefined;
+};
 
 export function stampResult(def: ProductRuleDefinition, v: RuleVerdict): ProductRuleResult {
   return {

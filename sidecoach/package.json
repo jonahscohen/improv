@@ -8,7 +8,7 @@
     "sidecoach": "bin/sidecoach.js"
   },
   "scripts": {
-    "build": "ts-node scripts/generate-lanes.ts && tsc",
+    "build": "ts-node scripts/generate-lanes.ts && ts-node scripts/generate-validators.ts && ts-node scripts/generate-validators.ts --check && tsc",
     "generate-lanes": "ts-node scripts/generate-lanes.ts",
     "test": "ts-node scripts/run-tests.ts",
     "test:compiled": "node dist/intent-detector.test.js",
@@ -35,6 +35,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",
     "js-yaml": "^4.1.1",
+    "playwright": "^1.60.0",
     "proper-lockfile": "^4.1.2"
   }
 }
