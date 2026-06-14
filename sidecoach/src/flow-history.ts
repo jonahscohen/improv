@@ -50,6 +50,10 @@ export interface SessionFlowHistory {
   timestamp: string;
   sessionId: string;
   projectPath?: string; // v2: track by project for cross-session regression
+  // P4f: logicalKey -> highest accepted lane fencing token. Persisted SEPARATELY from
+  // flowOutputs so the fencing decision survives the 20-run presentation cap (a tagged
+  // run can be evicted, but a stale same/lower-token replay must still no-op/reject).
+  laneFencing?: Record<string, number>;
 }
 
 export class FlowHistory {
@@ -198,15 +202,25 @@ export class FlowHistory {
   ): FlowHistoryUpsertOutcome {
     this.reloadFromDisk();
     const session = this.getSessionHistory();
+    if (!session.laneFencing) session.laneFencing = {};
 
+    // Fencing decision comes from the PERSISTENT index, not the capped runs array, so
+    // an evicted tagged run cannot let a stale same/lower token slip through as a new key.
+    const acceptedToken = session.laneFencing[logicalKey];
+    if (acceptedToken !== undefined) {
+      if (fencingToken < acceptedToken) return { status: 'rejected' };
+      if (fencingToken === acceptedToken) return { status: 'noop' };
+    }
+
+    // Accepted (new key or strictly higher token): record the new highest token first.
+    session.laneFencing[logicalKey] = fencingToken;
+
+    // Replace the tagged run in place if it is still retained; otherwise append through
+    // the normal 20-run cap. Either way the persistent index above already advanced.
     for (const [flowId, stored] of Object.entries(session.flowOutputs)) {
       const runs = Array.isArray(stored) ? stored : [stored as FlowHistoryEntry];
       const index = runs.findIndex((run) => run.laneLogicalKey === logicalKey);
       if (index < 0) continue;
-
-      const currentToken = runs[index].fencingToken ?? -1;
-      if (fencingToken < currentToken) return { status: 'rejected' };
-      if (fencingToken === currentToken) return { status: 'noop' };
 
       runs[index] = {
         ...entry,

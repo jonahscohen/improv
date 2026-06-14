@@ -96,6 +96,24 @@ async function run() {
     'a later stale-instance recordFlow must not clobber the committed lane entry');
   assert(afterClobber.getFlowCount('flowZ_unrelated') === 1, 'the stale instance recordFlow must still persist its own run');
 
+  // P1-2: the 20-run presentation cap must NOT erase the fencing decision. Once the
+  // tagged run is evicted, a stale same/lower token must still no-op/reject (the
+  // accepted token persists in a separate index, not in the capped runs array).
+  const capProject = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-flow-history-cap-')));
+  const capHistory = new FlowHistory(capProject);
+  const capKey = 'lane-cp10:craft:0:flow-history';
+  assert(capHistory.upsertLaneFlow(capKey, 30, entry('tagged-token-30'), now).status === 'written', 'cap: first lane write must be accepted');
+  for (let i = 0; i < 20; i++) {
+    capHistory.recordFlow({ flowId: 'lane:lane_build:craft', flowName: 'Lane lane_build: craft', status: 'success', message: `evict-${i}` });
+  }
+  assert(new FlowHistory(capProject).getFlowRuns('lane:lane_build:craft').every((r) => r.laneLogicalKey !== capKey),
+    'cap: 20 newer runs must have evicted the tagged run from the presentation array');
+  const countAfterEvict = new FlowHistory(capProject).getFlowCount('lane:lane_build:craft');
+  assert(capHistory.upsertLaneFlow(capKey, 30, entry('replay-after-evict'), now).status === 'noop', 'cap: same token after eviction must still no-op');
+  assert(capHistory.upsertLaneFlow(capKey, 29, entry('stale-after-evict'), now).status === 'rejected', 'cap: lower token after eviction must still reject');
+  assert(new FlowHistory(capProject).getFlowCount('lane:lane_build:craft') === countAfterEvict, 'cap: a no-op/rejected replay after eviction must not append');
+  assert(capHistory.upsertLaneFlow(capKey, 31, entry('supersede-after-evict'), now).status === 'written', 'cap: a higher token after eviction must be accepted');
+
   const ordinary = new FlowHistory('ordinary-session');
   for (let i = 0; i < 21; i++) {
     ordinary.recordFlow({
