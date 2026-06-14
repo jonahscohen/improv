@@ -9,6 +9,8 @@ import {
   deriveValidator, validateRegistry, validateFixtureManifest, gatingValidatorIds,
 } from '../validator-generation';
 import { LANE_POLICIES, FIXTURE_MANIFEST } from '../flow-validation-capabilities';
+import { RULES } from '../product-rule-registry';
+import { supportedKindsFor } from '../validators/source-support-matrix';
 import type { ProductRuleDefinition } from '../product-rule-types';
 import type { ProductValidatorRegistration } from '../flow-validation-capabilities';
 
@@ -143,6 +145,21 @@ function run() {
     [reg('v')],
     gatingValidatorIds([{ laneId: 'l', requiredProductValidatorIds: ['ghost-gate'], excludedProductValidatorIds: [] }]),
   );
+
+  // --- P4a-2: the four gating validators are non-vacuous and matrix-consistent ---
+  for (const id of ['polish-standard', 'theming', 'anti-pattern', 'static-a11y']) {
+    const v = gen.GENERATED_VALIDATORS.find((x: any) => x.validatorId === id);
+    if (!v || v.cleanPolicy.requiredRuleIds.length === 0) throw new Error(`gating validator ${id} must have non-empty requiredRuleIds`);
+  }
+  // anti-pattern: the heuristic markup rules are owned but the precise css bans are the blocking required ones
+  const apGen = gen.GENERATED_VALIDATORS.find((x: any) => x.validatorId === 'anti-pattern');
+  if (!apGen.cleanPolicy.requiredRuleIds.includes('anti-pattern.gradient-text')) throw new Error('gradient-text must be required');
+  if (apGen.cleanPolicy.toleratedFindingCounts['major|anti-pattern'] !== 0) throw new Error('explicit 0 tolerance for major|anti-pattern');
+  // generated support records must exactly reflect the one shared matrix
+  for (const rule of RULES) {
+    const expected = supportedKindsFor(...rule.evidenceRequirements);
+    if (JSON.stringify(rule.supportedSourceKinds) !== JSON.stringify(expected)) throw new Error(`source matrix drift for ${rule.ruleId}`);
+  }
 
   console.log('generate-validators: OK');
 }

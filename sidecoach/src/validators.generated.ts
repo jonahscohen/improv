@@ -9,18 +9,66 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
   {
     "validatorId": "polish-standard",
     "ownedRuleIds": [
-      "polish.reduced-motion-respect"
+      "polish.scale-on-press",
+      "polish.concentric-radius",
+      "polish.icon-swap-compound",
+      "polish.image-outline-neutral",
+      "polish.no-transition-all",
+      "polish.tabular-nums",
+      "polish.text-wrap-balance",
+      "polish.staggered-enter",
+      "polish.subtle-exit",
+      "polish.font-smoothing",
+      "polish.animatepresence-initial",
+      "polish.sparse-will-change",
+      "polish.shadows-over-borders",
+      "polish.optical-alignment",
+      "polish.typography-rhythm",
+      "polish.shadow-hierarchy",
+      "polish.reduced-motion-respect",
+      "polish.state-completeness",
+      "polish.anti-pattern-genericity"
     ],
     "registryScope": [
-      "polished-motion-respect"
+      "polished-press-feedback",
+      "polished-radius-concentricity",
+      "polished-icon-transition",
+      "polished-image-outline",
+      "polished-explicit-transition",
+      "polished-tabular-numerics",
+      "polished-heading-balance",
+      "polished-enter-stagger",
+      "polished-exit-choreography",
+      "polished-font-smoothing",
+      "polished-first-load-suppression",
+      "polished-sparse-will-change",
+      "polished-elevation-shadow",
+      "polished-optical-alignment",
+      "polished-vertical-rhythm",
+      "polished-shadow-hierarchy",
+      "polished-motion-respect",
+      "polished-state-completeness",
+      "polished-genericity-floor"
     ],
     "supportedSourceKinds": [
+      {
+        "kind": "computed-style",
+        "level": "full"
+      },
       {
         "kind": "css",
         "level": "full"
       },
       {
+        "kind": "dom",
+        "level": "full"
+      },
+      {
         "kind": "html",
+        "level": "full"
+      },
+      {
+        "kind": "jsx",
         "level": "partial"
       },
       {
@@ -32,24 +80,258 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
         "level": "full"
       },
       {
+        "kind": "svelte",
+        "level": "partial"
+      },
+      {
         "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "vue",
         "level": "partial"
       }
     ],
     "cleanPolicy": {
       "requiredRuleIds": [
-        "polish.reduced-motion-respect"
+        "polish.scale-on-press",
+        "polish.icon-swap-compound",
+        "polish.image-outline-neutral",
+        "polish.no-transition-all",
+        "polish.tabular-nums",
+        "polish.text-wrap-balance",
+        "polish.staggered-enter",
+        "polish.subtle-exit",
+        "polish.font-smoothing",
+        "polish.animatepresence-initial",
+        "polish.sparse-will-change",
+        "polish.shadows-over-borders",
+        "polish.optical-alignment",
+        "polish.shadow-hierarchy",
+        "polish.reduced-motion-respect",
+        "polish.state-completeness"
       ],
       "blockingSeverities": [
         "blocker",
         "major"
       ],
       "toleratedFindingCounts": {
+        "major|polish": 0,
         "blocker|polish": 0
       },
       "requiredCoverageByScope": [
         {
+          "ruleId": "polish.scale-on-press",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.icon-swap-compound",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.image-outline-neutral",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.no-transition-all",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.tabular-nums",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.text-wrap-balance",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.staggered-enter",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.subtle-exit",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.font-smoothing",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.animatepresence-initial",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.sparse-will-change",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.shadows-over-borders",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.optical-alignment",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.shadow-hierarchy",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
           "ruleId": "polish.reduced-motion-respect",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.state-completeness",
           "scope": "file",
           "evidenceAlternativesByRequirement": [
             [
@@ -70,7 +352,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
   {
     "validatorId": "theming",
     "ownedRuleIds": [
-      "theming.hex-in-interactive-state"
+      "theming.hex-in-interactive-state",
+      "theming.border-radius-consistency"
     ],
     "registryScope": [
       "token-consistency"
@@ -99,7 +382,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
     ],
     "cleanPolicy": {
       "requiredRuleIds": [
-        "theming.hex-in-interactive-state"
+        "theming.hex-in-interactive-state",
+        "theming.border-radius-consistency"
       ],
       "blockingSeverities": [
         "blocker",
@@ -122,6 +406,20 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
             ]
           ],
           "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "theming.border-radius-consistency",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
         }
       ],
       "inconclusiveBehavior": "block",
@@ -132,7 +430,11 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
     "validatorId": "anti-pattern",
     "ownedRuleIds": [
       "anti-pattern.gradient-text",
-      "anti-pattern.identical-card-grids"
+      "anti-pattern.glassmorphism-default",
+      "anti-pattern.side-stripe-borders",
+      "anti-pattern.identical-card-grids",
+      "anti-pattern.hero-metric-template",
+      "anti-pattern.modal-as-first-thought"
     ],
     "registryScope": [
       "named-ban-compliance"
@@ -174,7 +476,11 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
     "cleanPolicy": {
       "requiredRuleIds": [
         "anti-pattern.gradient-text",
-        "anti-pattern.identical-card-grids"
+        "anti-pattern.glassmorphism-default",
+        "anti-pattern.side-stripe-borders",
+        "anti-pattern.identical-card-grids",
+        "anti-pattern.hero-metric-template",
+        "anti-pattern.modal-as-first-thought"
       ],
       "blockingSeverities": [
         "blocker",
@@ -192,6 +498,35 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
               "css",
               "scss",
               "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "anti-pattern.glassmorphism-default",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "anti-pattern.side-stripe-borders",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
               "html"
             ]
           ],
@@ -199,7 +534,35 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
         },
         {
           "ruleId": "anti-pattern.identical-card-grids",
-          "scope": "page",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "anti-pattern.hero-metric-template",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "anti-pattern.modal-as-first-thought",
+          "scope": "project",
           "evidenceAlternativesByRequirement": [
             [
               "html",
@@ -220,13 +583,19 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
     "validatorId": "static-a11y",
     "ownedRuleIds": [
       "a11y.focus-visible",
-      "a11y.min-hit-area"
+      "a11y.min-hit-area",
+      "a11y.color-contrast"
     ],
     "registryScope": [
       "keyboard-accessibility-floor",
-      "touch-target-floor"
+      "touch-target-floor",
+      "contrast-floor"
     ],
     "supportedSourceKinds": [
+      {
+        "kind": "contrast",
+        "level": "full"
+      },
       {
         "kind": "css",
         "level": "full"

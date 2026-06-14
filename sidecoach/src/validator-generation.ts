@@ -7,6 +7,7 @@ import {
   CleanPolicy, ProductRuleDefinition, RequiredCoverageRecord, SourceKindSupport,
   SEVERITY_TABLE, sourceKindsForEvidence, isStaticallySatisfiable,
 } from './product-rule-types';
+import { supportedKindsFor } from './validators/source-support-matrix';
 import {
   ProductValidatorRegistration, LaneValidationPolicy, ValidatorFixtureManifest,
   FLOW_CAPABILITIES, deriveCapability,
@@ -115,6 +116,14 @@ export function validateRegistry(rules: ProductRuleDefinition[], regs: ProductVa
     // above only rejects an empty array, not [''] or ['   ']).
     if (r.sourceRuleAliases?.some((a) => !a || !a.trim())) {
       errors.push(`rule ${r.ruleId || '(no id)'} has a blank/empty sourceRuleAlias entry`);
+    }
+    // supportedSourceKinds must match the ONE shared matrix exactly (no authored or
+    // generated support list may drift from supportedKindsFor for this rule's evidence).
+    if (r.evidenceRequirements?.length && r.supportedSourceKinds?.length) {
+      const expected = supportedKindsFor(...r.evidenceRequirements);
+      if (JSON.stringify(r.supportedSourceKinds) !== JSON.stringify(expected)) {
+        errors.push(`rule ${r.ruleId || '(no id)'} supportedSourceKinds diverge from the shared source-support matrix`);
+      }
     }
   }
 
