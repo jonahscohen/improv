@@ -393,6 +393,15 @@ export async function advanceLane(projectPath: string, checkpointId: string, tra
   const cp = d.store.read(checkpointId);
   const l = resolveLane(cp.laneId);
 
+  // P4c loop terminal-pending guard. A stalled/capped boundary STOPS automatic
+  // iteration: ordinary complete/skip are rejected until an explicit retry, resume,
+  // or stop. Placed BEFORE the duplicate-report short-circuit so a re-sent boundary
+  // report cannot bypass the guard (spec lines 348-349, 364-365).
+  if (l.executionKind === 'loop' && (cp.convergence?.outcome === 'stalled' || cp.convergence?.outcome === 'capped')
+      && (transition.action === 'complete' || transition.action === 'skip')) {
+    throw new Error(`advanceLane: loop lane is ${cp.convergence!.outcome} (terminal-pending) - ordinary ${transition.action} is rejected; use an explicit retry or resume (or stop) to continue`);
+  }
+
   // duplicate report -> no-op (before CAS, so a retried transport call is idempotent).
   // Guard on an IN_PROGRESS lane ONLY: a closed lane must REJECT any further
   // advance, and an interrupted lane must REJECT every non-resume action - both
@@ -536,6 +545,12 @@ async function transitionNonComplete(cp: LaneCheckpoint, l: GeneratedLane, proje
     }
     case 'retry':
     case 'resume': {
+      // P4c: a loop lane in a terminal-pending boundary (stalled/capped) uses explicit
+      // loop recovery - retry reruns the SAME boundary, resume begins the pending next
+      // pass. Any other retry/resume keeps the sequence-lane behavior below.
+      if (l.executionKind === 'loop' && (cp.convergence?.outcome === 'stalled' || cp.convergence?.outcome === 'capped')) {
+        return loopRetryResume(cp, l, projectPath, t, d);
+      }
       // Ordinary transitions run wholly under the lock: reject a LIVE lease; FENCE a
       // STALE lease (bump fencing, clear) BEFORE mutating so its later FINALIZE fails;
       // else apply the normal P2 transition. serveStep runs AFTER the lock.
@@ -562,7 +577,9 @@ async function transitionNonComplete(cp: LaneCheckpoint, l: GeneratedLane, proje
       return serveStep(final, l, { projectPath }, d);     // re-serve from cache (no handler re-run)
     }
     case 'skip':
-      return skipStep(cp, l, projectPath, t, d);
+      return l.executionKind === 'loop'
+        ? loopSkipStep(cp, l, projectPath, t, d)
+        : skipStep(cp, l, projectPath, t, d);
     default:
       throw new Error(`advanceLane: unknown action "${(t as any).action}"`);
   }
@@ -652,6 +669,67 @@ function recordAdvisoryRun(c: LaneCheckpoint, cursor: number, stepId: string): v
     stepId,
     flows: (served.flowOutcomes ?? []).map((f) => ({ flowId: f.flowId, outcome: f.status, message: f.message })),
   });
+}
+
+// Skip a loop verb step. A non-final skip drops that pass's coaching and advances the
+// cursor. A skip of the FINAL verb step still reaches the iteration boundary - a skip
+// can skip coaching but cannot bypass the lane-policy gate (spec lines 348-349, 364-365).
+async function loopSkipStep(cp: LaneCheckpoint, l: GeneratedLane, projectPath: string, t: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  if (!t.reason || !t.reason.trim()) throw new Error('advanceLane: skip requires a reason');
+  const step = l.verbSteps[cp.cursor];
+  const isBoundary = cp.cursor === l.verbSteps.length - 1;
+  if (isBoundary) {
+    return runIterationBoundary(cp, l, projectPath, d, t.expectedRevision, (c, committedRevision) => {
+      c.skippedStepIds.push(step.verb);
+      recordAdvisoryRun(c, cp.cursor, step.verb);
+      c.audit.push({ action: 'skip', stepId: step.verb, iteration: c.iteration, reason: t.reason, revision: committedRevision, at: d.now() });
+    });
+  }
+  const operationId = (d.newOperationId ?? defaultOperationId)();
+  const claimed = await claimLease(d.store, cp.checkpointId, { expectedRevision: t.expectedRevision, stepId: step.verb, iteration: cp.iteration, operationId, now: d.now, staleMs: d.staleMs });
+  const id = claimed.lease!;
+  const final = await finalizeLease(d.store, cp.checkpointId, id, (c, committedRevision) => {
+    c.skippedStepIds.push(step.verb);
+    recordAdvisoryRun(c, cp.cursor, step.verb);
+    c.audit.push({ action: 'skip', stepId: step.verb, iteration: c.iteration, reason: t.reason, revision: committedRevision, at: d.now() });
+    c.cursor += 1;   // loop: advance within the iteration; never close on a non-final skip
+  }, d.now);
+  if (projectPath) await (d.publishOutbox ?? publishOutbox)(d.store, cp.checkpointId, projectPath, d.now);
+  return buildStepResult(final, l, { projectPath }, d);
+}
+
+// Explicit loop recovery from a terminal-pending boundary (stalled/capped). RETRY
+// reruns the SAME boundary at the same cursor/iteration (no report, no serve) - for
+// transient/inconclusive/error recovery; a now-clean evaluation converges. RESUME is
+// the explicit choice to begin the pending next pass: under the lock/fencing path it
+// sets convergence back to running, moves the checkpoint iteration to the pending next
+// index, resets cursor + consecutiveNoProgress, audits, then serves the first step
+// (validators do not run again until that pass reaches its boundary).
+async function loopRetryResume(cp: LaneCheckpoint, l: GeneratedLane, projectPath: string, t: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  if (t.action === 'retry') {
+    return runIterationBoundary(cp, l, projectPath, d, t.expectedRevision, (c, committedRevision) => {
+      c.audit.push({ action: 'retry', stepId: l.verbSteps[c.cursor].verb, iteration: c.iteration, reason: t.reason, revision: committedRevision, at: d.now() });
+    });
+  }
+  const final = await withCheckpointLock(d.store.dir(), cp.checkpointId, () => {
+    const c = d.store.read(cp.checkpointId);
+    if (t.expectedRevision !== c.revision) throw new Error(`advanceLane: stale expectedRevision ${t.expectedRevision} (current ${c.revision})`);
+    if (c.lease) {
+      if (leaseIsLive(c.lease, Date.parse(d.now()), d.staleMs ?? 30000)) throw new Error(`advanceLane: a live lease (op ${c.lease.operationId}) holds this checkpoint; resume cannot proceed`);
+      process.stderr.write(`[lane] resume fencing stale lease op=${c.lease.operationId} on ${c.checkpointId}\n`);
+      c.fencingCounter += 1; c.lease = null;
+    }
+    c.revision += 1; c.updatedAt = d.now();
+    const conv = c.convergence!;
+    conv.outcome = 'running';
+    conv.consecutiveNoProgress = 0;
+    c.iteration = conv.iteration;   // the pending next index recorded at the boundary
+    c.cursor = 0;
+    c.audit.push({ action: 'resume', stepId: l.verbSteps[0].verb, iteration: c.iteration, revision: c.revision, at: d.now() });
+    d.store.write(c);
+    return c;
+  });
+  return serveStep(final, l, { projectPath }, d);
 }
 
 // Run one loop iteration boundary: CLAIM the lease, EXECUTE the lane policy validators
