@@ -110,15 +110,25 @@ export async function collectBrowserEvidence(renderUrl: string | undefined, sign
           a,
         ];
       };
-      const backgroundFor = (el: HTMLElement): [number, number, number, number] => {
+      // Walk the ancestor chain blending background COLORS over an opaque-white canvas
+      // base. `unsupported` flips true if any ancestor paints a background IMAGE or
+      // gradient (background-image !== 'none') OR carries a backgroundColor the rgb
+      // parser cannot read - in either case the effective background behind the text is
+      // not faithfully determinable, so contrast must not be reported as trusted.
+      const backgroundFor = (el: HTMLElement): { color: [number, number, number, number]; unsupported: boolean } => {
         let bg: [number, number, number, number] = [255, 255, 255, 1];
+        let unsupported = false;
         const chain: HTMLElement[] = [];
         for (let cur: HTMLElement | null = el; cur; cur = cur.parentElement) chain.unshift(cur);
         for (const cur of chain) {
-          const parsed = parseColor(getComputedStyle(cur).backgroundColor);
+          const cs = getComputedStyle(cur);
+          if (cs.backgroundImage && cs.backgroundImage !== 'none') unsupported = true;
+          const rawBg = cs.backgroundColor;
+          const parsed = parseColor(rawBg);
           if (parsed) bg = blend(parsed, bg);
+          else if (rawBg && rawBg !== 'transparent' && rawBg !== 'rgba(0, 0, 0, 0)') unsupported = true;
         }
-        return bg;
+        return { color: bg, unsupported };
       };
       const linear = (n: number): number => {
         const c = n / 255;
@@ -131,20 +141,30 @@ export async function collectBrowserEvidence(renderUrl: string | undefined, sign
         return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
       };
 
+      // Contrast is only TRUSTED when EVERY applicable visible text was faithfully
+      // measured against a faithfully-determined background. Track applicable vs
+      // measured and whether anything unsupported was encountered; never default a
+      // "nothing measured" run to a passing ratio.
+      let contrastApplicable = 0;
+      let contrastMeasured = 0;
+      let contrastUnsupported = false;
       let worstRatio = Number.POSITIVE_INFINITY;
       let allAA = true;
       for (const el of textElements) {
+        contrastApplicable++;
         const style = getComputedStyle(el);
         const fgRaw = parseColor(style.color);
-        if (!fgRaw) continue;
-        const measured = ratio(blend(fgRaw, backgroundFor(el)), backgroundFor(el));
+        const bg = backgroundFor(el);
+        if (!fgRaw || bg.unsupported) { contrastUnsupported = true; continue; }
+        const measured = ratio(blend(fgRaw, bg.color), bg.color);
         const size = px(style.fontSize);
         const weight = Number.parseInt(style.fontWeight, 10) || 400;
         const threshold = size >= 24 || (size >= 18.66 && weight >= 700) ? 3 : 4.5;
+        contrastMeasured++;
         worstRatio = Math.min(worstRatio, measured);
         if (measured < threshold) allAA = false;
       }
-      if (!Number.isFinite(worstRatio)) worstRatio = 21;
+      const contrastMeasurable = contrastApplicable > 0 && contrastMeasured === contrastApplicable && !contrastUnsupported;
 
       return {
         computedStyle: {
@@ -161,17 +181,28 @@ export async function collectBrowserEvidence(renderUrl: string | undefined, sign
             smallestHeight: Number.isFinite(smallestHeight) ? smallestHeight : 0,
           },
         },
-        contrast: { wcagAA: allAA, ratio: worstRatio },
+        contrast: {
+          wcagAA: contrastMeasurable ? allAA : false,
+          ratio: Number.isFinite(worstRatio) ? worstRatio : 0,
+          measurable: contrastMeasurable,
+        },
       };
     });
+
+    // 'contrast' is included ONLY when the page evaluation faithfully measured every
+    // applicable text against a determinable background. computed-style and dom are
+    // always collectable. This keeps a11y.color-contrast inconclusive (never a false
+    // blocker pass) on any page the collector could not honestly measure.
+    const kinds: EvidenceKind[] = ['computed-style', 'dom'];
+    if (raw.contrast.measurable) kinds.push('contrast');
 
     return {
       available: true,
       evidence: {
-        browserEvidence: { available: true, kinds: ['computed-style', 'dom', 'contrast'] as EvidenceKind[], renderUrl },
+        browserEvidence: { available: true, kinds, renderUrl },
         computedStyle: raw.computedStyle,
         dom: raw.dom,
-        contrast: raw.contrast,
+        contrast: { wcagAA: raw.contrast.wcagAA, ratio: raw.contrast.ratio },
       },
     };
   } catch (e) {
