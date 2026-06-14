@@ -1,4 +1,4 @@
-# Lane P4c - Loop Execution + Convergence Release Floor Implementation Plan - v1
+# Lane P4c - Loop Execution + Convergence Release Floor Implementation Plan - v2
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -35,9 +35,10 @@ This phase builds on MERGED code. Read these before starting:
   2. **The persisted required-state signature** is a sha256 over the per-required-validator tuple `{validatorId, status, failedRuleIds[], inconclusiveRuleIds[], coverageGapIdentities[], validatorErrorCategory, ruleErrorCategories[]}` using stable identities only (canonical rule keys, gap identities, normalized error categories), sorted; never free-text messages or advisory output (spec lines 1155-1167).
   3. **`lane_calm` is SEQUENCE, not loop** (`lanes.generated.ts`), so it is unaffected; only `lane_converge` is a loop lane in the current registry.
 
-- **Test harness style:** Lane suites are plain `ts-node` scripts that throw on failure (uncaught -> nonzero exit) and print `OK` on success. Each new suite is registered in `sidecoach/scripts/run-tests.ts` with `required: true` and run via `npm test` (cwd `sidecoach/`). Engine unit tests STUB `deps.runValidator` (return a hand-built `ProductValidationResult`) exactly like `lane-runner-advance-sequence.test.ts` - they never need real validators or fixtures. Baseline today is 33 required suites; this phase adds 10 (final 43).
+- **Test harness style:** Lane suites are plain `ts-node` scripts that throw on failure (uncaught -> nonzero exit) and print `OK` on success. Each new suite is registered in `sidecoach/scripts/run-tests.ts` with `required: true` and run via `npm test` (cwd `sidecoach/`). Engine unit tests STUB `deps.runValidator` (return a hand-built `ProductValidationResult`) exactly like `lane-runner-advance-sequence.test.ts` - they never need real validators or fixtures. Integration coverage in Tasks 7 and 9 additionally proves fresh-store/process continuation, stall, cap, an inconclusive/error boundary, validator-throw finalization, and orchestrator preflight.
 
-- **Hard constraints:** path-specific `git add` in every commit (NEVER `git add -A`). Do not commit (the team-lead merges). Honest convergence: never set `outcome='converged'` unless every required validator returned `clean`. Trace every new symbol to a caller in the same task.
+- **Hard constraints:** The executor DOES commit once per task using the path-specific `git add` commands in this plan (NEVER `git add -A` or `git add .`), but does not push. Honest convergence: never set `outcome='converged'` unless every required validator returned `clean`. Trace every new symbol to a caller in the same task.
+- **Scope boundary:** Implement loop execution, `lane_converge`, the convergence release floor, and the ralph-to-convergence rename only. Do NOT add a browser collector, MCP work, copy gating, or a FlowHistory publisher. Reuse the merged P4b-1 lease/durability protocol and P4a clean evaluator/validators; only add the narrow coverage fields and boundary wrappers explicitly named below.
 
 ---
 
@@ -55,7 +56,7 @@ This phase builds on MERGED code. Read these before starting:
 - `sidecoach/src/lane-checkpoint-store.ts` - add optional `convergence?: ConvergenceState` to `LaneCheckpoint`. (Task 1)
 - `sidecoach/src/lane-validators.ts` - add `isLoopLane`, `requiredValidatorsForLane`. (Task 2)
 - `sidecoach/src/flow-validation-capabilities.ts` - add `getLanePolicy`. (Task 2)
-- `sidecoach/src/lane-runner.ts` - remove the loop rejection + minimal preflight + seed convergence (Task 4); `completeLoopStep` + `runIterationBoundary` + `loopSkipStep` + `applyConvergence` + `convergenceSurface` + dispatch wiring (Tasks 5-7).
+- `sidecoach/src/lane-runner.ts` - remove the loop rejection + minimal preflight + seed convergence (Task 4); land `completeLoopStep` and the real `runIterationBoundary` together (Task 5); add terminal-pending resume/retry, loop skip, and integration behavior (Task 7).
 - `sidecoach/src/sidecoach-orchestrator.ts` - call `convergencePreflight` for loop lanes in `startLane` (Task 8).
 - `sidecoach/scripts/run-tests.ts` - register each new suite `required:true` (every task).
 - `sidecoach/src/__tests__/t20-ralph-loop.test.ts` -> renamed `t20-convergence-loop.test.ts` with the Section 8 expectation fix (Task 10).
@@ -104,6 +105,10 @@ Expected: `NUL 0` and `dash-codepoints []`. (Run this same check on any new sour
 **Files:**
 - Modify: `sidecoach/src/lane-types.ts`
 - Modify: `sidecoach/src/lane-checkpoint-store.ts:9-27` (the `LaneCheckpoint` interface)
+- Modify: `sidecoach/src/lane-runner.ts` (persist actual served flow outcomes)
+- Modify: `sidecoach/src/product-rule-types.ts` (add stable file identities to `ProductValidationCoverage`)
+- Modify: `sidecoach/src/clean-evaluator.ts` (pass the additive coverage fields through)
+- Modify: `sidecoach/src/validators/run-validator.ts` (populate them from the existing collector result)
 - Test: `sidecoach/src/__tests__/lane-convergence-types.test.ts`
 - Modify: `sidecoach/scripts/run-tests.ts`
 
@@ -126,7 +131,8 @@ async function run() {
     outcome: 'running', iteration: 0, signatures: [], consecutiveNoProgress: 0,
     limits: { maxIterations: 10, maxNoProgress: 3 },
     history: [], findings: [], validatorErrors: [], advisoryRuns: [],
-    measuredScope: [], unverifiedScope: [],
+    runCoverage: { discoveredFiles: [], inspectedFiles: [], skippedFiles: [], unreadableFiles: [], unsupportedSourceKinds: [],
+      unsupportedFiles: [], measuredScope: [], unverifiedScope: [], notApplicableRuleIds: [] },
   };
   const cp: LaneCheckpoint = {
     schemaVersion: 2, checkpointId: 'cp-conv', laneId: 'lane_converge', target: 'project',
@@ -141,6 +147,7 @@ async function run() {
   if (!back.convergence) throw new Error('convergence sub-state must round-trip');
   if (back.convergence.outcome !== 'running') throw new Error('convergence.outcome lost');
   if (back.convergence.limits.maxNoProgress !== 3) throw new Error('limits lost');
+  if (!back.convergence.runCoverage || !Array.isArray(back.convergence.runCoverage.unsupportedFiles)) throw new Error('run coverage identities lost');
 
   // Regression: a SEQUENCE checkpoint with NO convergence still reads (additive field).
   const seq: LaneCheckpoint = { ...cp, checkpointId: 'cp-seq', laneId: 'lane_build', executionKind: 'sequence', convergence: undefined };
@@ -162,7 +169,7 @@ Expected: FAIL - TypeScript error that `ConvergenceState` is not exported / `con
 
 Append to `sidecoach/src/lane-types.ts` (after the existing `import type { ProductFinding }` line at the top, add `NormalizedErrorCategory`):
 ```ts
-import type { ProductFinding, NormalizedErrorCategory } from './product-rule-types';
+import type { ProductFinding, NormalizedErrorCategory, ProductValidationCoverage } from './product-rule-types';
 ```
 (Replace the existing `import type { ProductFinding } from './product-rule-types';` line.)
 
@@ -188,8 +195,20 @@ export interface ConvergenceIterationRecord {
   iteration: number;
   signature: string;
   perValidator: RequiredValidatorState[];
-  measuredScope: string[];
-  unverifiedScope: string[];
+  // Actual run coverage for EACH required validator. This is persisted alongside
+  // the signature so the boundary decision and closing summary are reproducible.
+  requiredValidatorRuns: {
+    validatorId: string;
+    status: GateStatus;
+    coverage: ProductValidationCoverage;
+  }[];
+}
+
+export type AdvisoryFlowOutcome = 'success' | 'needs_input' | 'skipped' | 'error';
+export interface AdvisoryRunRecord {
+  iteration: number;
+  stepId: string;
+  flows: { flowId: FlowId; outcome: AdvisoryFlowOutcome; message?: string }[];
 }
 
 // Persisted in the checkpoint so every iteration survives process boundaries and a
@@ -204,9 +223,19 @@ export interface ConvergenceState {
   history: ConvergenceIterationRecord[];                                  // productValidationRuns
   findings: ProductFinding[];                                            // latest boundary findings
   validatorErrors: { validatorId: string; category: NormalizedErrorCategory; message: string }[];
-  advisoryRuns: { iteration: number; flowIds: FlowId[] }[];
-  measuredScope: string[];
-  unverifiedScope: string[];
+  advisoryRuns: AdvisoryRunRecord[];
+  // Aggregated from the latest requiredValidatorRuns, never registry prose.
+  runCoverage: {
+    discoveredFiles: string[];
+    inspectedFiles: string[];
+    skippedFiles: string[];
+    unreadableFiles: string[];
+    unsupportedSourceKinds: string[];
+    unsupportedFiles: string[];
+    measuredScope: string[];
+    unverifiedScope: string[];
+    notApplicableRuleIds: string[];
+  };
 }
 ```
 
@@ -219,9 +248,21 @@ Then add the optional surface to `LaneStepResult` (inside the interface, after t
     iteration: number;
     signature?: string;
     findings: ProductFinding[];
+    displayLabel: 'running' | 'stalled' | 'capped' | 'converged' | 'machine_checks_clean_with_advisory_warnings';
     summary?: string;
   };
 ```
+
+Narrowly extend the existing P4a coverage plumbing without changing its evaluation
+algorithm or collector. Add optional `discoveredFiles`, `unreadableFiles`, and
+`unsupportedFiles` to `ProductValidationCoverage`, and required equivalents to
+internal `RunCoverage`; pass them
+through `clean-evaluator.ts:baseCoverage`; and populate them in
+`run-validator.ts:runDetailed` from `collected.discovered`, `collected.unreadableFiles`,
+and `collected.unsupportedFiles`. `skippedFiles` remains the collector's existing
+policy-skipped/oversized/unreadable list. This additive data is required for stable
+gap identities and truthful summaries; do not change rule execution or clean-policy
+semantics.
 
 - [ ] **Step 4: Add the checkpoint field**
 
@@ -236,6 +277,13 @@ Then add to the `LaneCheckpoint` interface (after `stepGateStatuses` on line 25)
   // through unchanged via the existing `...raw` spread.
   convergence?: ConvergenceState;
 ```
+
+Also extend each additive `servedSteps` entry with
+`flowOutcomes: { flowId: FlowId; status: 'success' | 'needs_input' | 'error' | 'skipped'; message: string }[]`.
+Populate it from each actual `FlowExecutionResult` inside the existing
+`serveStepUnderLease` buffering/finalization path. Keep `successfulFlowIds` for
+prerequisite behavior. This is checkpoint data, not a new publisher or collector,
+and it is the source for truthful advisory qualification at the boundary.
 
 - [ ] **Step 5: Run the test to verify it passes**
 
@@ -255,7 +303,7 @@ Expected: `run-tests: 34 suite(s) passed`
 
 ```bash
 cd /Users/spare3/Documents/Github/improv
-git add sidecoach/src/lane-types.ts sidecoach/src/lane-checkpoint-store.ts sidecoach/src/__tests__/lane-convergence-types.test.ts sidecoach/scripts/run-tests.ts
+git add sidecoach/src/lane-types.ts sidecoach/src/lane-checkpoint-store.ts sidecoach/src/lane-runner.ts sidecoach/src/product-rule-types.ts sidecoach/src/clean-evaluator.ts sidecoach/src/validators/run-validator.ts sidecoach/src/__tests__/lane-convergence-types.test.ts sidecoach/scripts/run-tests.ts
 git commit -m "feat(lane-p4c): add convergence sub-state types + optional checkpoint/result fields"
 ```
 
@@ -405,6 +453,13 @@ function errored(): ProductValidationResult {
       ruleCounts: { pass: 0, fail: 0, notApplicable: 0, inconclusive: 0 },
       findingCounts: { blockingExcess: 0, withinTolerance: 0, nonBlocking: 0 }, measuredScope: [], unverifiedScope: [] } };
 }
+function coverageGap(skipped: string[], unreadable: string[], unsupported: string[]): ProductValidationResult {
+  return { status: 'inconclusive', rules: [], findings: [],
+    coverage: { discoveredFiles: [...skipped, ...unreadable, ...unsupported], inspectedFiles: [], skippedFiles: [...skipped, ...unreadable],
+      unreadableFiles: unreadable, unsupportedFiles: unsupported, supportedSourceKinds: [], unsupportedSourceKinds: ['vue'],
+      ruleCounts: { pass: 0, fail: 0, notApplicable: 0, inconclusive: 1 },
+      findingCounts: { blockingExcess: 0, withinTolerance: 0, nonBlocking: 0 }, measuredScope: [], unverifiedScope: ['scope-x'] } };
+}
 
 function run() {
   // --- signature: stable across validator ORDER ---
@@ -426,6 +481,12 @@ function run() {
   const sigErr = computeRequiredStateSignature([toRequiredValidatorState('static-a11y', errored())]);
   const sigCleanOnly = computeRequiredStateSignature([toRequiredValidatorState('static-a11y', clean())]);
   if (sigErr === sigCleanOnly) throw new Error('error category must enter the signature');
+
+  // Stable FILE identities enter the signature. Different skipped, unreadable, or
+  // unsupported source files must not collapse to the same empty-gap signature.
+  const sigGapA = computeRequiredStateSignature([toRequiredValidatorState('polish-standard', coverageGap(['dist/a.css'], ['src/b.css'], ['src/C.vue']))]);
+  const sigGapB = computeRequiredStateSignature([toRequiredValidatorState('polish-standard', coverageGap(['dist/z.css'], ['src/q.css'], ['src/D.vue']))]);
+  if (sigGapA === sigGapB) throw new Error('different file-level coverage gaps need different signatures');
 
   // --- evaluateBoundary: all clean -> converged ---
   const evClean = evaluateBoundary([
@@ -514,7 +575,7 @@ Create `sidecoach/src/lane-convergence.ts`:
 // boundary. REUSES the P4a ProductValidationResult and aggregateWorstStatus; does
 // not re-implement clean evaluation.
 import { createHash } from 'crypto';
-import type { GateStatus, RequiredValidatorState, ConvergenceState, ConvergenceOutcome } from './lane-types';
+import type { GateStatus, RequiredValidatorState, ConvergenceState, ConvergenceOutcome, ConvergenceIterationRecord } from './lane-types';
 import type { ProductValidationResult, ProductValidationError, ProductFinding, NormalizedErrorCategory } from './product-rule-types';
 import { aggregateWorstStatus } from './lane-validators';
 
@@ -532,7 +593,13 @@ export function toRequiredValidatorState(validatorId: string, result: ProductVal
     status: result.status as GateStatus,
     failedRuleIds: rules.filter((r) => r.status === 'fail').map((r) => r.canonicalRuleKey).sort(),
     inconclusiveRuleIds: rules.filter((r) => r.status === 'inconclusive').map((r) => r.canonicalRuleKey).sort(),
-    coverageGapIdentities: [...new Set([...(cov?.unsupportedSourceKinds ?? []), ...(cov?.unverifiedScope ?? [])])].sort(),
+    coverageGapIdentities: [...new Set([
+      ...(cov?.skippedFiles ?? []).map((p) => `skipped-file:${p}`),
+      ...(cov?.unreadableFiles ?? []).map((p) => `unreadable-file:${p}`),
+      ...(cov?.unsupportedFiles ?? []).map((p) => `unsupported-source-file:${p}`),
+      ...(cov?.unsupportedSourceKinds ?? []).map((k) => `unsupported-source-kind:${k}`),
+      ...(cov?.unverifiedScope ?? []).map((s) => `unverified-scope:${s}`),
+    ])].sort(),
     validatorErrorCategory: result.status === 'error' ? (result as ProductValidationError).normalizedErrorCategory : undefined,
     ruleErrorCategories: rules.filter((r) => r.normalizedErrorCategory).map((r) => `${r.canonicalRuleKey}:${r.normalizedErrorCategory}`).sort(),
   };
@@ -555,8 +622,8 @@ export interface BoundaryEvaluation {
   signature: string;
   findings: ProductFinding[];
   validatorErrors: { validatorId: string; category: NormalizedErrorCategory; message: string }[];
-  measuredScope: string[];
-  unverifiedScope: string[];
+  requiredValidatorRuns: ConvergenceIterationRecord['requiredValidatorRuns'];
+  runCoverage: ConvergenceState['runCoverage'];
 }
 
 // Evaluate one iteration boundary from the required validators' typed results.
@@ -574,10 +641,15 @@ export function evaluateBoundary(perValidator: { validatorId: string; result: Pr
   const validatorErrors = perValidator
     .filter((p) => p.result.status === 'error')
     .map((p) => ({ validatorId: p.validatorId, category: (p.result as ProductValidationError).normalizedErrorCategory, message: (p.result as ProductValidationError).error }));
-  const measuredScope = [...new Set(perValidator.flatMap((p) => p.result.coverage?.measuredScope ?? []))].sort();
-  const unverifiedScope = [...new Set(perValidator.flatMap((p) => p.result.coverage?.unverifiedScope ?? []))].sort();
-  return { perValidator: states, iterationStatus, converged, signature, findings, validatorErrors, measuredScope, unverifiedScope };
+  const requiredValidatorRuns = perValidator.map((p) => ({ validatorId: p.validatorId, status: p.result.status as GateStatus, coverage: p.result.coverage }));
+  const runCoverage = aggregateActualRunCoverage(perValidator.map((p) => p.result));
+  return { perValidator: states, iterationStatus, converged, signature, findings, validatorErrors, requiredValidatorRuns, runCoverage };
 }
+
+// Add `aggregateActualRunCoverage(results)` immediately below `evaluateBoundary`.
+// It unions and sorts the ACTUAL coverage arrays from the results, derives
+// `notApplicableRuleIds` from actual rule statuses, and does not consult generated
+// registry declarations. Keep file paths and source kinds as separate arrays.
 
 export interface ProgressDecision {
   outcome: ConvergenceOutcome;     // converged | running | stalled | capped
@@ -605,7 +677,9 @@ export function seedConvergenceState(limits?: Partial<{ maxIterations: number; m
   return {
     outcome: 'running', iteration: 0, signatures: [], consecutiveNoProgress: 0,
     limits: { maxIterations: limits?.maxIterations ?? DEFAULT_LOOP_MAX_ITERATIONS, maxNoProgress: limits?.maxNoProgress ?? DEFAULT_LOOP_MAX_NO_PROGRESS },
-    history: [], findings: [], validatorErrors: [], advisoryRuns: [], measuredScope: [], unverifiedScope: [],
+    history: [], findings: [], validatorErrors: [], advisoryRuns: [],
+    runCoverage: { discoveredFiles: [], inspectedFiles: [], skippedFiles: [], unreadableFiles: [], unsupportedSourceKinds: [],
+      unsupportedFiles: [], measuredScope: [], unverifiedScope: [], notApplicableRuleIds: [] },
   };
 }
 ```
@@ -755,14 +829,15 @@ git commit -m "feat(lane-p4c): enable lane_converge start + minimal release-floo
 
 ---
 
-## Task 5: Loop non-final step completion (advisory advance, no gate)
+## Task 5: Loop advisory advance + real iteration boundary (one atomic task, no placeholder)
 
 **Files:**
 - Modify: `sidecoach/src/lane-runner.ts` (dispatch in `case 'complete'`, add `completeLoopStep`)
 - Test: `sidecoach/src/__tests__/lane-loop-advance.test.ts`
+- Test: `sidecoach/src/__tests__/lane-loop-boundary-converge.test.ts`
 - Modify: `sidecoach/scripts/run-tests.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write both failing tests before editing production code**
 
 Create `sidecoach/src/__tests__/lane-loop-advance.test.ts`:
 ```ts
@@ -814,10 +889,23 @@ async function run() {
 run().catch((e) => { console.error(e); process.exit(1); });
 ```
 
+Also create `sidecoach/src/__tests__/lane-loop-boundary-converge.test.ts` using
+the complete test body in the "Boundary converged-path test body" subsection
+below, including the advisory-error and required-validator-throw cases listed
+after the boundary helper snippet. Both tests and all focused cases must exist
+before the production edit so this combined task remains TDD while never
+committing a throwing boundary placeholder.
+
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-loop-advance.test.ts`
-Expected: FAIL - completing the polish step runs the SEQUENCE gate (`validatorsForStep`), which throws via `runValidator` (or advances wrongly), so the assertion `validatorCalls !== 0` / wrong currentVerb trips.
+Run:
+```bash
+cd sidecoach
+npx ts-node src/__tests__/lane-loop-advance.test.ts
+npx ts-node src/__tests__/lane-loop-boundary-converge.test.ts
+```
+Expected: both FAIL against merged code because loop completion still takes the
+sequence path. Record both failures before editing `lane-runner.ts`.
 
 - [ ] **Step 3: Add the loop dispatch + `completeLoopStep`**
 
@@ -829,13 +917,17 @@ In `sidecoach/src/lane-runner.ts`, inside `advanceLane`'s `case 'complete'`, AFT
       if (l.executionKind === 'loop') return completeLoopStep(cp, l, transition, projectPath, d);
 ```
 
-Then add the new function `completeLoopStep` near `skipStep` (end of file). Add the boundary helper `runIterationBoundary` and state helpers in Task 6 - for THIS task `completeLoopStep` only needs the non-boundary branch plus a placeholder that defers the boundary to a function added next task. To keep the build green now, implement `completeLoopStep` fully but have the boundary branch call `runIterationBoundary` (added in Task 6). Add a minimal stub of `runIterationBoundary` in THIS task that the next task replaces:
+Then add `completeLoopStep` near `skipStep` and add the REAL
+`runIterationBoundary`, `applyConvergence`, `convergenceSurface`, and
+`buildConvergedSummary` implementations from the continuation below in the SAME
+production edit. There must never be a throwing or fake boundary implementation
+in a task commit.
 ```ts
 // --- P4c loop execution -------------------------------------------------------
 
 // Complete one verb step of a loop lane. Non-final steps are advisory: record the
 // report, log the served advisory flows, advance the cursor within the iteration.
-// The final step reaches the iteration boundary (Task 6).
+// The final step reaches the real iteration boundary in this same task.
 async function completeLoopStep(cp: LaneCheckpoint, l: GeneratedLane, transition: LaneTransition, projectPath: string, d: LaneRunnerDeps): Promise<LaneStepResult> {
   const r = transition.report!;
   const step = l.verbSteps[cp.cursor];
@@ -843,7 +935,7 @@ async function completeLoopStep(cp: LaneCheckpoint, l: GeneratedLane, transition
   if (isBoundary) {
     return runIterationBoundary(cp, l, projectPath, d, transition.expectedRevision, (c, committedRevision) => {
       c.seenReportIds.push(r.reportId); c.stepReports.push(r);
-      recordAdvisoryRun(c, cp.cursor);
+      recordAdvisoryRun(c, cp.cursor, step.verb);
       c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: committedRevision, reason: 'boundary', at: d.now() });
     });
   }
@@ -852,7 +944,7 @@ async function completeLoopStep(cp: LaneCheckpoint, l: GeneratedLane, transition
   const id = claimed.lease!;
   const final = await finalizeLease(d.store, cp.checkpointId, id, (c, committedRevision) => {
     c.seenReportIds.push(r.reportId); c.stepReports.push(r);
-    recordAdvisoryRun(c, cp.cursor);
+    recordAdvisoryRun(c, cp.cursor, step.verb);
     c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: committedRevision, at: d.now() });
     c.cursor += 1;   // advance within the iteration; a loop never closes on a non-final step
   }, d.now);
@@ -862,58 +954,23 @@ async function completeLoopStep(cp: LaneCheckpoint, l: GeneratedLane, transition
 
 // Log the advisory member-flows served at the current step for this iteration (M/K/I/L
 // coach every pass; their guidance is informational - it never gates).
-function recordAdvisoryRun(c: LaneCheckpoint, cursor: number): void {
+function recordAdvisoryRun(c: LaneCheckpoint, cursor: number, stepId: string): void {
   if (!c.convergence) return;
   const served = c.servedSteps[`${cursor}:${c.iteration}`];
-  if (served) c.convergence.advisoryRuns.push({ iteration: c.iteration, flowIds: [...served.flowIds] });
+  if (served) c.convergence.advisoryRuns.push({
+    iteration: c.iteration,
+    stepId,
+    flows: served.flowOutcomes.map((f) => ({ flowId: f.flowId, outcome: f.status, message: f.message })),
+  });
 }
 
-// Placeholder boundary (Task 6 implements the real gate). Throws so the build is honest
-// until the gate exists; no test in Task 5 reaches it.
-async function runIterationBoundary(
-  _cp: LaneCheckpoint, _l: GeneratedLane, _projectPath: string, _d: LaneRunnerDeps,
-  _claimRevision: number, _onCommit: (c: LaneCheckpoint, committedRevision: number) => void,
-): Promise<LaneStepResult> {
-  throw new Error('runIterationBoundary: implemented in Task 6');
-}
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
-
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-loop-advance.test.ts`
-Expected: `lane-loop-advance: OK`
-
-- [ ] **Step 5: Register the suite and run the full gate**
-
-In `sidecoach/scripts/run-tests.ts`, add:
-```ts
-  { rel: 'src/__tests__/lane-loop-advance.test.ts', required: true },               // P4c loop advisory step advance
-```
-Run: `cd sidecoach && npm test`
-Expected: `run-tests: 38 suite(s) passed`
-
-- [ ] **Step 6: Commit**
-
-```bash
-cd /Users/spare3/Documents/Github/improv
-git add sidecoach/src/lane-runner.ts sidecoach/src/__tests__/lane-loop-advance.test.ts sidecoach/scripts/run-tests.ts
-git commit -m "feat(lane-p4c): loop non-final step completion is advisory (no per-step gate)"
-```
-
----
-
-## Task 6: Iteration boundary - converged path
-
-**Files:**
-- Modify: `sidecoach/src/lane-runner.ts` (replace the `runIterationBoundary` placeholder; add `applyConvergence`, `convergenceSurface`, `buildConvergedSummary`)
-- Test: `sidecoach/src/__tests__/lane-loop-boundary-converge.test.ts`
-- Modify: `sidecoach/scripts/run-tests.ts`
-
-- [ ] **Step 1: Write the failing test**
+### Boundary converged-path test body
 
 Create `sidecoach/src/__tests__/lane-loop-boundary-converge.test.ts`:
 ```ts
-// Task 6: completing the FINAL loop step runs the lane policy validators ONCE, and
+// Combined Task 5: completing the FINAL loop step runs the lane policy validators ONCE, and
 // all-clean closes the lane as converged with a truthful summary. Asserts the four
 // required validators each ran exactly once, AT the boundary (no double-run).
 import * as fs from 'fs';
@@ -971,19 +1028,14 @@ async function run() {
 run().catch((e) => { console.error(e); process.exit(1); });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [ ] **Step 4: Add the real boundary and state helpers in the same production edit**
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-loop-boundary-converge.test.ts`
-Expected: FAIL - `runIterationBoundary: implemented in Task 6` (the placeholder throws).
-
-- [ ] **Step 3: Replace the `runIterationBoundary` placeholder + add the state helpers**
-
-In `sidecoach/src/lane-runner.ts`, replace the placeholder `runIterationBoundary` (added in Task 5) with the real implementation, and add the helpers:
+In `sidecoach/src/lane-runner.ts`, add the real implementation and helpers:
 ```ts
 // Run one loop iteration boundary: CLAIM the lease, EXECUTE the lane policy validators
 // once (abortable, heartbeat-protected - same P4b-1 protocol as a sequence complete),
-// evaluate convergence, and FINALIZE. Converged -> close the lane (converged). Otherwise
-// -> persist the required-state signature, advance the iteration, reset the verb cursor.
+// evaluate convergence, and FINALIZE. Converged -> close the lane. Running ->
+// advance/reset/serve next iteration. Stalled/capped -> terminal-pending, no serve.
 // onCommit pushes the caller's report/skip audit inside the same atomic FINALIZE.
 async function runIterationBoundary(
   cp: LaneCheckpoint, l: GeneratedLane, projectPath: string, d: LaneRunnerDeps,
@@ -1000,7 +1052,12 @@ async function runIterationBoundary(
   try {
     // EXECUTE: the required validators run ONCE each, via the lane policy (not per-step).
     const validatorIds = requiredValidatorsForLane(l.lane);
-    const perValidator = await runStepValidators(d, validatorIds, { projectPath, target: cp.target }, controller.signal);
+    // Boundary-only wrapper catches EACH required validator throw and normalizes it
+    // to a typed error result with normalizedErrorCategory='validator_exception',
+    // empty actual coverage, and no free-text data in the signature. It continues
+    // through the remaining required validators so the whole required state is
+    // persisted. Do not change the reused sequence-gate `runStepValidators`.
+    const perValidator = await runBoundaryValidators(d, validatorIds, { projectPath, target: cp.target }, controller.signal);
     const ev = evaluateBoundary(perValidator);
     const decision = decideProgress(cp.convergence!, ev);
     const gate = { status: ev.iterationStatus, validators: perValidator.map((p) => ({ validatorId: p.validatorId, status: p.result.status as GateStatus })), findings: ev.findings };
@@ -1008,7 +1065,12 @@ async function runIterationBoundary(
       onCommit(c, committedRevision);
       applyConvergence(c, ev, decision);
       if (ev.converged) { c.lifecycle = 'closed'; c.outcome = 'converged'; }
-      else { c.iteration = decision.nextIteration; c.cursor = 0; }   // reset to the first verb step of the next pass
+      else if (decision.outcome === 'running') {
+        c.iteration = decision.nextIteration;
+        c.cursor = 0;   // ONLY a running decision serves the next pass
+      }
+      // stalled/capped are terminal-pending: remain in_progress at the completed
+      // final-step boundary, do not reset the cursor, and do not serve another pass.
       c.sideEffectOutbox.push({
         checkpointId: c.checkpointId, committedRevision, fencingToken: id.fencingToken, stepId: step.verb, iteration: id.iteration,
         pendingPublishers: ['lane-side-effect-sink'], createdAt: d.now(),
@@ -1031,12 +1093,11 @@ async function runIterationBoundary(
 // c.cursor/lifecycle; this only touches c.convergence.
 function applyConvergence(c: LaneCheckpoint, ev: BoundaryEvaluation, decision: ProgressDecision): void {
   const conv = c.convergence!;
-  conv.history.push({ iteration: c.iteration, signature: ev.signature, perValidator: ev.perValidator, measuredScope: ev.measuredScope, unverifiedScope: ev.unverifiedScope });
+  conv.history.push({ iteration: c.iteration, signature: ev.signature, perValidator: ev.perValidator, requiredValidatorRuns: ev.requiredValidatorRuns });
   conv.signatures.push(ev.signature);
   conv.findings = ev.findings;
   conv.validatorErrors = ev.validatorErrors;
-  conv.measuredScope = ev.measuredScope;
-  conv.unverifiedScope = ev.unverifiedScope;
+  conv.runCoverage = ev.runCoverage;
   conv.outcome = decision.outcome;
   conv.consecutiveNoProgress = ev.converged ? conv.consecutiveNoProgress : decision.consecutiveNoProgress;
   conv.iteration = ev.converged ? c.iteration : decision.nextIteration;
@@ -1048,6 +1109,7 @@ function convergenceSurface(c: LaneCheckpoint): NonNullable<LaneStepResult['conv
     outcome: conv.outcome, iteration: conv.iteration,
     signature: conv.signatures.length ? conv.signatures[conv.signatures.length - 1] : undefined,
     findings: conv.findings,
+    displayLabel: convergenceDisplayLabel(conv),
     summary: conv.outcome === 'converged' ? buildConvergedSummary(conv) : undefined,
   };
 }
@@ -1055,38 +1117,74 @@ function convergenceSurface(c: LaneCheckpoint): NonNullable<LaneStepResult['conv
 // Truthful closing summary GENERATED from the run coverage record (spec lines 1177-1186) -
 // never from registry declarations. ASCII only.
 function buildConvergedSummary(conv: NonNullable<LaneCheckpoint['convergence']>): string {
-  const measured = conv.measuredScope.length ? conv.measuredScope.join(', ') : 'no measured scope';
-  const unverified = conv.unverifiedScope.length ? conv.unverifiedScope.join(', ') : 'none';
+  const cov = conv.runCoverage;
+  const measured = cov.measuredScope.length ? cov.measuredScope.join(', ') : 'no measured scope';
+  const unverified = cov.unverifiedScope.length ? cov.unverifiedScope.join(', ') : 'none';
+  const skipped = cov.skippedFiles.length ? cov.skippedFiles.join(', ') : 'none';
+  const unreadable = cov.unreadableFiles.length ? cov.unreadableFiles.join(', ') : 'none';
+  const unsupported = cov.unsupportedFiles.length ? cov.unsupportedFiles.join(', ') : 'none';
+  const notApplicable = cov.notApplicableRuleIds.length ? cov.notApplicableRuleIds.join(', ') : 'none';
+  const advisoryUnavailable = conv.advisoryRuns.flatMap((r) => r.flows).filter((f) => f.outcome !== 'success');
+  const advisory = advisoryUnavailable.length
+    ? `partially unavailable (${advisoryUnavailable.map((f) => `${f.flowId}:${f.outcome}`).join(', ')})`
+    : 'completed';
   const passes = conv.history.length;
-  return `Converged (machine-measured): ${measured} clean after ${passes} iteration(s) under the release floor. Not machine-verified: ${unverified}. Advisory audit/critique guidance was served each pass; manual verification remains advised.`;
+  return `Converged (machine-measured): ${measured} clean after ${passes} iteration(s) under the release floor. Coverage: ${cov.inspectedFiles.length}/${cov.discoveredFiles.length} files; skipped: ${skipped}; unreadable: ${unreadable}; unsupported: ${unsupported}; not applicable rules: ${notApplicable}. Not machine-verified: ${unverified}. Advisory audit/critique guidance was ${advisory}; manual verification remains advised.`;
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+Add `runBoundaryValidators` and `convergenceDisplayLabel` beside these helpers.
+`runBoundaryValidators` catches a throw per required validator and returns a valid
+`ProductValidationError` with `normalizedErrorCategory: 'validator_exception'`,
+`error: String(err)`, empty rules/findings, and empty actual coverage. The boundary
+still evaluates and ALWAYS reaches owner-checked `finalizeLease`, so the errored
+iteration is persisted and the lease is cleared. `convergenceDisplayLabel` returns
+`machine_checks_clean_with_advisory_warnings` only when persisted outcome is
+`converged` and any persisted advisory flow outcome is not `success`; otherwise it
+returns the persisted convergence outcome.
 
-Run: `cd sidecoach && npx ts-node src/__tests__/lane-loop-boundary-converge.test.ts`
-Expected: `lane-loop-boundary-converge: OK`
+Extend `lane-loop-boundary-converge.test.ts` with two focused cases:
 
-- [ ] **Step 5: Register the suite and run the full gate**
+1. Clean required validators plus an advisory flow returning `status: 'error'` must
+   persist `convergence.outcome === 'converged'`, close the lane, return
+   `displayLabel === 'machine_checks_clean_with_advisory_warnings'`, and name the
+   unavailable flow in the generated summary.
+2. A required validator that THROWS must produce a persisted typed `error` required
+   validator state with category `validator_exception`, must not converge, must
+   persist one errored iteration with convergence outcome `running` (until the same
+   blocker reaches stall/cap), and `store.read(checkpointId).lease` must be null.
+
+- [ ] **Step 5: Run both tests to verify they pass**
+
+Run:
+```bash
+cd sidecoach
+npx ts-node src/__tests__/lane-loop-advance.test.ts
+npx ts-node src/__tests__/lane-loop-boundary-converge.test.ts
+```
+Expected: both print `OK`.
+
+- [ ] **Step 6: Register both suites and run the full gate**
 
 In `sidecoach/scripts/run-tests.ts`, add:
 ```ts
+  { rel: 'src/__tests__/lane-loop-advance.test.ts', required: true },               // P4c loop advisory step advance
   { rel: 'src/__tests__/lane-loop-boundary-converge.test.ts', required: true },     // P4c boundary converged path
 ```
 Run: `cd sidecoach && npm test`
 Expected: `run-tests: 39 suite(s) passed`
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit the complete advisory + boundary task**
 
 ```bash
 cd /Users/spare3/Documents/Github/improv
-git add sidecoach/src/lane-runner.ts sidecoach/src/__tests__/lane-loop-boundary-converge.test.ts sidecoach/scripts/run-tests.ts
-git commit -m "feat(lane-p4c): iteration-boundary gate runs the policy validators once; all-clean converges (persisted, truthful)"
+git add sidecoach/src/lane-runner.ts sidecoach/src/__tests__/lane-loop-advance.test.ts sidecoach/src/__tests__/lane-loop-boundary-converge.test.ts sidecoach/scripts/run-tests.ts
+git commit -m "feat(lane-p4c): land loop advisory advance and real iteration boundary"
 ```
 
 ---
 
-## Task 7: Iteration boundary - continue, stall, cap, and skip-cannot-bypass
+## Task 7: Boundary continuation, terminal-pending stall/cap, explicit retry/resume, and skip
 
 **Files:**
 - Modify: `sidecoach/src/lane-runner.ts` (loop-aware skip dispatch + `loopSkipStep`)
@@ -1097,9 +1195,9 @@ git commit -m "feat(lane-p4c): iteration-boundary gate runs the policy validator
 
 Create `sidecoach/src/__tests__/lane-loop-boundary-continue.test.ts`:
 ```ts
-// Task 7: non-converged boundary persists the signature, increments the iteration, and
-// resets the verb cursor; repeated identical state stalls; a SKIP of the final step
-// still runs the boundary gate (cannot bypass).
+// Task 7: only a RUNNING boundary advances to the next iteration. Stalled/capped
+// are terminal-pending, reject ordinary complete/skip, and require explicit
+// retry/resume. A final-step skip still runs the boundary gate.
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -1167,7 +1265,30 @@ async function run() {
     let last: any;
     for (let i = 0; i < 3; i++) { const { res } = await onePass(proj, d, s.checkpointId, rev, i); rev = res.revision; last = res; }
     if (!last.convergence || last.convergence.outcome !== 'stalled') throw new Error('stalled after 3 identical passes, got ' + last.convergence?.outcome);
+    if (last.currentVerb !== 'critique' || last.iteration !== 2) throw new Error('stall must remain at terminal boundary and not serve iteration 3');
+    const stopped = d.store.read(s.checkpointId);
+    if (stopped.cursor !== 2 || stopped.iteration !== 2 || stopped.lease !== null) throw new Error('stall persisted terminal-pending with cleared lease');
+    await mustReject(() => advanceLane(proj, s.checkpointId, { action: 'complete', report: rep('critique', 2), expectedRevision: last.revision }, d), /explicit retry or resume/);
+    await mustReject(() => advanceLane(proj, s.checkpointId, { action: 'skip', reason: 'ordinary skip', expectedRevision: last.revision }, d), /explicit retry or resume/);
   }
+
+  // Add these focused integration blocks in this same suite:
+  //
+  // - CAP: set the seeded checkpoint limit to maxIterations=1, run one failing
+  //   pass, and assert outcome capped, cursor remains on critique, iteration does
+  //   not advance, no next-step flow is served, lease is null, and ordinary
+  //   complete/skip reject.
+  // - RETRY: from capped, action retry reruns the SAME boundary without advancing
+  //   or serving flows. Make validators clean on retry and assert it converges.
+  // - RESUME: from stalled, action resume explicitly sets convergence.outcome back
+  //   to running, moves checkpoint iteration to convergence.iteration (the pending
+  //   next index), resets cursor=0, and serves polish exactly once.
+  // - FRESH STORE/PROCESS CONTINUATION: after a running non-clean boundary, create
+  //   a new LaneRunnerDeps with a NEW LaneCheckpointStore(projectPath) and continue
+  //   iteration 1 to convergence. No in-memory state may be required.
+  // - INCONCLUSIVE/ERROR: one required validator returns inconclusive on one pass
+  //   and typed error on the next. Assert neither converges, both iterations and
+  //   signatures persist, and both finalize with lease null.
 
   // --- skip of the FINAL step still runs the boundary gate (cannot bypass) ---
   {
@@ -1189,12 +1310,37 @@ async function run() {
 run().catch((e) => { console.error(e); process.exit(1); });
 ```
 
+Before running Step 2, replace every "Add these focused integration blocks"
+comment with executable test blocks implementing those assertions. Comment-only
+coverage is not acceptable.
+
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `cd sidecoach && npx ts-node src/__tests__/lane-loop-boundary-continue.test.ts`
-Expected: FAIL - the skip path uses the SEQUENCE `skipStep` (which advances/closes via `advanceCursorInPlace`), so the final-step skip does NOT run the boundary gate (`boundaryRan !== 4`). The continue/stall paths already pass from Task 6 (this suite also locks them in).
+Expected: FAIL - the skip path uses the SEQUENCE `skipStep` (which advances/closes via `advanceCursorInPlace`), so the final-step skip does NOT run the boundary gate (`boundaryRan !== 4`). The continue path already passes from combined Task 5; the new terminal-pending assertions fail until this task.
 
 - [ ] **Step 3: Add the loop-aware skip dispatch + `loopSkipStep`**
+
+Before dispatching ordinary `complete` or `skip`, add a loop terminal-pending
+guard: when `cp.convergence?.outcome` is `stalled` or `capped`, reject with an
+actionable error naming the outcome and requiring explicit `retry`, `resume`, or
+`stop`. Do not let duplicate reports bypass this guard.
+
+Define the explicit operations:
+
+- `retry` on stalled/capped reruns `runIterationBoundary` at the SAME final-step
+  cursor and SAME checkpoint iteration, without serving flows or consuming a new
+  `StepReport`. It is for transient/inconclusive/error recovery. The new boundary
+  evaluation replaces the terminal-pending decision normally and finalizes its
+  lease.
+- `resume` on stalled/capped is an explicit choice to begin the pending next pass.
+  Under the existing lock/fencing path, set `convergence.outcome='running'`,
+  `checkpoint.iteration=convergence.iteration`, `cursor=0`, reset
+  `consecutiveNoProgress=0`, audit the resume, then serve the first step. It does
+  not run validators until that pass reaches its boundary.
+- `stop` remains available through the existing priority transition.
+
+All other uses of retry/resume keep their existing sequence-lane behavior.
 
 In `sidecoach/src/lane-runner.ts`, in `transitionNonComplete`'s `case 'skip'` (line 538-539), change:
 ```ts
@@ -1221,6 +1367,7 @@ async function loopSkipStep(cp: LaneCheckpoint, l: GeneratedLane, projectPath: s
   if (isBoundary) {
     return runIterationBoundary(cp, l, projectPath, d, t.expectedRevision, (c, committedRevision) => {
       c.skippedStepIds.push(step.verb);
+      recordAdvisoryRun(c, cp.cursor, step.verb);
       c.audit.push({ action: 'skip', stepId: step.verb, iteration: c.iteration, reason: t.reason, revision: committedRevision, at: d.now() });
     });
   }
@@ -1229,6 +1376,7 @@ async function loopSkipStep(cp: LaneCheckpoint, l: GeneratedLane, projectPath: s
   const id = claimed.lease!;
   const final = await finalizeLease(d.store, cp.checkpointId, id, (c, committedRevision) => {
     c.skippedStepIds.push(step.verb);
+    recordAdvisoryRun(c, cp.cursor, step.verb);
     c.audit.push({ action: 'skip', stepId: step.verb, iteration: c.iteration, reason: t.reason, revision: committedRevision, at: d.now() });
     c.cursor += 1;   // loop: advance within the iteration; never close on a non-final skip
   }, d.now);
@@ -1240,7 +1388,8 @@ async function loopSkipStep(cp: LaneCheckpoint, l: GeneratedLane, projectPath: s
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `cd sidecoach && npx ts-node src/__tests__/lane-loop-boundary-continue.test.ts`
-Expected: `lane-loop-boundary-continue: OK`
+Expected: `lane-loop-boundary-continue: OK`, including the fresh-store, cap,
+stall, retry, resume, inconclusive, and error integration blocks.
 
 - [ ] **Step 5: Register the suite and run the full gate**
 
@@ -1273,15 +1422,22 @@ git commit -m "feat(lane-p4c): boundary continue/stall/cap + loop skip cannot by
 
 Create `sidecoach/src/__tests__/lane-convergence-preflight.test.ts`:
 ```ts
-// Task 8: convergence preflight rejects a target whose required validators have NO
-// supported evidence path (would be permanently inconclusive), and passes a CSS+HTML
-// target (spec lines 996-1011, 1069-1072).
+// Task 8: convergence preflight evaluates EVERY requiredCoverageByScope record
+// independently with AND-across-requirements / OR-within-a-requirement.
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { convergencePreflight } from '../lane-convergence-preflight';
+import { convergencePreflight, evaluateCoverageRecordForTest } from '../lane-convergence-preflight';
 
 async function run() {
+  // --- direct regression: do not flatten requirement families or records ---
+  const synthetic = evaluateCoverageRecordForTest(
+    { ruleId: 'r.synthetic', scope: 'project', evidenceAlternativesByRequirement: [['css', 'scss'], ['html', 'tsx']], requireAllDiscoveredApplicableFiles: false },
+    [{ path: 'style.css', sourceKind: 'css', outcome: 'inspected' }],
+  );
+  if (synthetic.ok) throw new Error('CSS satisfies only requirement 0; missing markup requirement must reject');
+  if (synthetic.missingRequirements.map((x) => x.requirementIndex).join(',') !== '1') throw new Error('must report exact unsatisfied requirement family');
+
   // --- empty target: no supported sources -> reject, gap names a required validator ---
   const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'p4c-pf-empty-'));
   const r1 = await convergencePreflight(empty, 'lane_converge');
@@ -1295,6 +1451,21 @@ async function run() {
   fs.writeFileSync(path.join(good, 'index.html'), '<!doctype html><html><body><button>Go</button></body></html>\n');
   const r2 = await convergencePreflight(good, 'lane_converge');
   if (!r2.ok) throw new Error('a CSS+HTML target meets the release floor, got: ' + r2.message);
+
+  // --- Flow J has CSS evidence, but static-a11y has no supported markup path ---
+  const cssOnly = fs.mkdtempSync(path.join(os.tmpdir(), 'p4c-pf-css-only-'));
+  fs.writeFileSync(path.join(cssOnly, 'style.css'), '.btn { color: #111; }\n');
+  const rCssOnly = await convergencePreflight(cssOnly, 'lane_converge');
+  if (rCssOnly.ok) throw new Error('Flow-J-supported/static-a11y-unsupported target must reject');
+  if (!rCssOnly.gaps.some((g) => g.validatorId === 'static-a11y' && g.ruleId && g.missingRequirements.length)) {
+    throw new Error('static-a11y rejection must name exact rule/requirement/source gap: ' + JSON.stringify(rCssOnly.gaps));
+  }
+
+  // --- mixed source: supported HTML/CSS plus unsupported Vue file must reject ---
+  fs.writeFileSync(path.join(good, 'Widget.vue'), '<template><button>Go</button></template>\n');
+  const mixed = await convergencePreflight(good, 'lane_converge');
+  if (mixed.ok) throw new Error('mixed target with an uncovered applicable source file must reject');
+  if (!mixed.gaps.some((g) => g.sourceFile === 'Widget.vue')) throw new Error('mixed-source gap must name Widget.vue: ' + JSON.stringify(mixed.gaps));
 
   // --- unknown lane / no policy -> reject ---
   const r3 = await convergencePreflight(good, 'lane_build');
@@ -1316,15 +1487,24 @@ Create `sidecoach/src/lane-convergence-preflight.ts`:
 ```ts
 // sidecoach/src/lane-convergence-preflight.ts
 // Static, IO-bound coverage-plan satisfiability preflight for a convergence lane. It
-// proves the gate is not permanently-inconclusive BY CONSTRUCTION (spec lines 996-1011,
-// 1069-1072): every required validator must have at least one required rule whose
-// supported source kinds intersect the target's discovered sources. Reuses the generated
-// requiredCoverageByScope and the real project collector - it does NOT run validators.
+// proves the gate is not permanently-inconclusive BY CONSTRUCTION (spec lines
+// 996-1011): evaluate EACH required rule coverage record independently. Within
+// one record coverage is AND across requirement families and OR within each
+// family's alternatives. Never flatten alternatives across records/requirements.
 import { getLanePolicy } from './flow-validation-capabilities';
 import { GENERATED_VALIDATORS } from './validators.generated';
 import { collectFromPath } from './validators/project-collector';
+import { getRuleById } from './product-rule-registry';
+import { isCoverageSatisfied } from './clean-evaluator';
 
-export interface PreflightGap { validatorId: string; requiredSourceKinds: string[]; presentSourceKinds: string[]; }
+export interface PreflightGap {
+  validatorId: string;
+  ruleId: string;
+  sourceFile?: string;
+  sourceKind?: string;
+  missingRequirements: { requirementIndex: number; alternatives: string[] }[];
+  reason: 'missing_rule' | 'no_applicable_source' | 'uninspected_applicable_file' | 'unsupported_source' | 'missing_evidence_requirement';
+}
 export interface PreflightResult { ok: boolean; gaps: PreflightGap[]; message?: string; }
 
 export async function convergencePreflight(projectPath: string, laneId: string): Promise<PreflightResult> {
@@ -1333,27 +1513,57 @@ export async function convergencePreflight(projectPath: string, laneId: string):
     return { ok: false, gaps: [], message: `convergence preflight: lane "${laneId}" has no release-floor policy (requiredProductValidatorIds)` };
   }
   const collected = await collectFromPath(projectPath);
-  const present = new Set(collected.files.map((f) => f.sourceKind));
   const gaps: PreflightGap[] = [];
   for (const vId of policy.requiredProductValidatorIds) {
     const gen = GENERATED_VALIDATORS.find((g) => g.validatorId === vId);
-    if (!gen) { gaps.push({ validatorId: vId, requiredSourceKinds: [], presentSourceKinds: [...present].sort() }); continue; }
-    const supported = new Set<string>();
-    for (const rec of gen.cleanPolicy.requiredCoverageByScope) {
-      for (const alts of rec.evidenceAlternativesByRequirement) for (const k of alts) supported.add(k);
+    if (!gen) {
+      gaps.push({ validatorId: vId, ruleId: '<generated-validator-missing>', missingRequirements: [], reason: 'missing_rule' });
+      continue;
     }
-    // A validator with NO required statically-coverable rules cannot anchor a gate.
-    if (supported.size === 0 || ![...supported].some((k) => present.has(k))) {
-      gaps.push({ validatorId: vId, requiredSourceKinds: [...supported].sort(), presentSourceKinds: [...present].sort() });
+    for (const rec of gen.cleanPolicy.requiredCoverageByScope) {
+      // Build a CoverageObservation for THIS record only, then reuse P4a's
+      // isCoverageSatisfied so preflight and runtime have identical AND/OR logic.
+      // applicableFilesForRule includes supported inspected candidates plus
+      // discovered UI-source files that the rule cannot inspect, so mixed-source
+      // targets cannot hide an unsupported applicable file.
+      const applicable = applicableFilesForRule(getRuleById(rec.ruleId), collected);
+      const obs = {
+        ruleId: rec.ruleId,
+        inspectedFiles: collected.inspectedFiles,
+        discoveredApplicableFiles: applicable.map((f) => ({
+          file: f.path,
+          evidenceKindsPresent: f.outcome === 'inspected' ? [f.sourceKind] : [],
+        })),
+      };
+      if (isCoverageSatisfied(rec, obs)) continue;
+      gaps.push(...exactGapsForRecord(vId, rec, applicable, collected.inspectedFiles));
     }
   }
   if (gaps.length) {
-    const detail = gaps.map((g) => `${g.validatorId} needs one of [${g.requiredSourceKinds.join(', ') || 'none'}] but the target has [${g.presentSourceKinds.join(', ') || 'no supported sources'}]`).join('; ');
-    return { ok: false, gaps, message: `convergence preflight: required validators cannot be measured on this target - ${detail}` };
+    const detail = gaps.map(formatGap).join('; ');
+    return { ok: false, gaps, message: `convergence preflight: required rules cannot be measured on this target - ${detail}` };
   }
   return { ok: true, gaps: [] };
 }
 ```
+
+Implement `applicableFilesForRule`, `exactGapsForRecord`, and `formatGap` in the
+same file. Their tests above are the contract: every gap names the exact
+`validatorId`, `ruleId`, source file/kind when present, and each unsatisfied
+requirement family's alternatives. `exactGapsForRecord` evaluates every
+`evidenceAlternativesByRequirement` entry independently. It must never build a
+flattened union and ask whether any one source kind intersects it.
+`applicableFilesForRule` uses the rule's existing `supportedSourceKinds` entries:
+`full` and `partial` entries are measurable candidates, while a discovered file
+whose listed level is `none` remains applicable-but-unsupported and therefore
+produces an exact source-file gap. Directories and source kinds absent from that
+rule's support declaration are not applicable to that record. Respect
+`requireAllDiscoveredApplicableFiles` exactly as `isCoverageSatisfied` does.
+Export the tiny pure `evaluateCoverageRecordForTest` seam used above; production
+preflight calls the same underlying per-record helper. Add a second synthetic
+assertion with two records (CSS-only and markup-only) and only CSS present, and
+assert only the markup record is reported. This locks independent record
+evaluation in addition to AND/OR behavior within one record.
 
 - [ ] **Step 4: Wire the preflight into the orchestrator's `startLane`**
 
@@ -1459,31 +1669,17 @@ Create `sidecoach/src/__tests__/fixtures/convergence/clean/index.html`:
 
 Create `sidecoach/src/__tests__/lane-converge-e2e.test.ts`:
 ```ts
-// Task 9: real-validator end-to-end. The four required validators reach clean on the
-// fixture, and lane_converge converges in one pass. Proves the gate is not permanently
-// inconclusive (spec lines 996-998, 1195-1199).
+// Task 9: real orchestrator end-to-end on a TEMP COPY. This must pass through
+// orchestrator preflight and must not write checkpoint artifacts under the tracked fixture.
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
-import { LaneCheckpointStore } from '../lane-checkpoint-store';
-import { startLane, advanceLane, LaneRunnerDeps } from '../lane-runner';
+import { FlowExecutionEngine } from '../sidecoach-orchestrator';
 import { StepReport } from '../lane-types';
-import { getValidatorRegistration, getLanePolicy } from '../flow-validation-capabilities';
+import { getLanePolicy } from '../flow-validation-capabilities';
 import { runValidatorForTest } from '../validators/run-validator';
 
 const FIXTURE = path.join(__dirname, 'fixtures', 'convergence', 'clean');
-
-function deps(proj: string): LaneRunnerDeps {
-  let n = 0, t = 0, op = 0;
-  return { store: new LaneCheckpointStore(proj),
-    runFlow: async (flowId) => ({ flowId, flowName: String(flowId), status: 'success', message: 'ok', guidance: [], checklist: [] }),
-    now: () => { t += 1000; return new Date(t).toISOString(); }, newCheckpointId: () => `lane-cp${++n}`,
-    newOperationId: () => `op-${++op}`,
-    // REAL validators against the fixture project.
-    runValidator: async (validatorId, ctx, signal) => {
-      const reg = getValidatorRegistration(validatorId);
-      if (!reg?.validateProduct) throw new Error('no validator ' + validatorId);
-      return reg.validateProduct({ projectPath: ctx.projectPath }, signal);
-    } };
-}
 const rep = (verb: string): StepReport => ({ stepId: verb, iteration: 0, reportId: `r:${verb}`, verb, summary: 'done', evidence: [{ kind: 'note', detail: 'x' }] });
 
 async function run() {
@@ -1497,21 +1693,27 @@ async function run() {
     }
   }
 
-  // Gate 2: drive the lane to convergence against the fixture project.
-  const d = deps(FIXTURE);
-  const s = await startLane('lane_converge', 'project', { projectPath: FIXTURE }, 'e2e-' + Date.now(), d);
-  const a = await advanceLane(FIXTURE, s.checkpointId, { action: 'complete', report: rep('polish'), expectedRevision: s.revision }, d);
-  const b = await advanceLane(FIXTURE, s.checkpointId, { action: 'complete', report: rep('audit'), expectedRevision: a.revision }, d);
-  const c = await advanceLane(FIXTURE, s.checkpointId, { action: 'complete', report: rep('critique'), expectedRevision: b.revision }, d);
+  // Gate 2: copy the fixture, then drive through the REAL orchestrator so
+  // convergencePreflight cannot be bypassed and tracked fixtures stay untouched.
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'p4c-e2e-'));
+  const project = path.join(tempRoot, 'project');
+  fs.cpSync(FIXTURE, project, { recursive: true });
+  const engine = new FlowExecutionEngine();
+  const s = await engine.startLane('lane_converge', 'project', { projectPath: project }, 'e2e-' + Date.now());
+  const a = await engine.advanceLane(project, s.checkpointId, { action: 'complete', report: rep('polish'), expectedRevision: s.revision });
+  const b = await engine.advanceLane(project, s.checkpointId, { action: 'complete', report: rep('audit'), expectedRevision: a.revision });
+  const c = await engine.advanceLane(project, s.checkpointId, { action: 'complete', report: rep('critique'), expectedRevision: b.revision });
   if (c.outcome !== 'converged') throw new Error('expected converged end-to-end, got ' + c.outcome + ' / ' + JSON.stringify(c.convergence));
   if (!c.convergence?.summary) throw new Error('converged result must carry a truthful summary');
+  if (fs.existsSync(path.join(FIXTURE, '.claude'))) throw new Error('tracked fixture must not receive checkpoint artifacts');
 
   console.log('lane-converge-e2e: OK');
 }
 run().catch((e) => { console.error(e); process.exit(1); });
 ```
 
-Note: the lane's checkpoint store writes under `FIXTURE/.claude/lane-checkpoints/`. That subtree is created at runtime and is fine to leave untracked; if you prefer a clean tree, the test can target a temp copy of the fixture instead. Keep `startRequestId` unique per run (the `Date.now()` suffix) so reruns are not deduped to a closed lane.
+The temp-copy and orchestrator path are REQUIRED, not optional. Keep
+`startRequestId` unique per run so reruns are not deduped to a closed lane.
 
 - [ ] **Step 3: Run it and iterate the fixture until clean**
 
@@ -1711,9 +1913,7 @@ These are out of scope. Do NOT build them here.
 - **Browser-evidence collector (P4b-2).** The convergence floor is met by the STATIC required rules being clean. Browser-only rules (dom/computed-style/contrast) are non-required (inconclusive). lane_converge converges WITHOUT the browser collector.
 - **MCP migration (P4d), copy gating (P4e), FlowHistory publisher (P4f).**
 - **Target-scoped validator discovery.** `makeProductValidator`/`collect` scan the whole `projectPath` (not the `target` glob). A lane aimed at one component can be blocked by unrelated project-wide findings. The convergence summary discloses the run `measuredScope`, so a clean claim's scope is explicit; narrowing discovery to the target (spec lines 1038-1075, the canonical target resolver) is a follow-up.
-- **Per-rule (vs per-validator) coverage-plan preflight granularity.** Task 8 checks each required validator has at least one required rule whose supported source kinds intersect the target's discovered sources (spec lines 1069-1072 "at least one required measurable rule"). Per-required-rule applicable-scope evaluation (spec lines 1007-1011) is a refinement.
 - **Sequence-lane start-time preflight for the other refinement lanes** (`lane_ship`, `lane_calm`, `lane_live`, `lane_delight`). Their polish step already gates on `polish-standard` via the existing P4b-1 sequence path; the policy-wide START preflight (spec lines 1018-1021) for sequence lanes is separate from P4c (which is scoped to `lane_converge`).
-- **Advisory-failure display-label qualification** (`machine_checks_clean_with_advisory_warnings`, spec lines 1188-1193). P4c records `advisoryRuns` but does not yet qualify the displayed label on advisory flow ERRORS - that needs advisory flow-status capture plumbing.
 - **A hard `convergence.outcome === 'error'` terminal transition.** For P4c an errored iteration is recorded (validatorErrors + signature including the normalized category) and stays resumable (`running`) until stall/cap, so it never converges - matching "neither can converge." A dedicated immediate error-termination policy is a follow-up.
 - **`sidecoach/dist/*` rebuild.** The test runner uses `ts-node` on `src/`, so the suite is green without dist. Rebuilding dist (and the stale `dist/ralph-loop.*` artifacts) is a separate build commit owned by the merge step, not hand-edited here.
 
@@ -1724,19 +1924,19 @@ These are out of scope. Do NOT build them here.
 Run this checklist yourself after the last task.
 
 **1. Spec coverage:**
-- Loop execution / iteration boundary (spec 355-365): Tasks 4-7 (start, advisory advance, boundary converge, boundary continue/stall/skip).
-- Validators run ONCE per boundary via the lane policy, never twice (spec 357-359, 958): Task 2 (`requiredValidatorsForLane`), Task 5 (loop dispatch never calls `validatorsForStep`), Task 6 assertion (exactly 4 runs, at the boundary).
-- Release floor is a lane policy, not a verbChain side effect (spec 411-412, 952-958): Tasks 2, 4, 6.
-- Persisted + truthful convergence; never converge without required-clean (spec 1108-1130, 1138-1199): Task 3 (`evaluateBoundary` requires every validator clean), Task 6 (`applyConvergence` persists history/signatures; converged closes), Task 9 (real validators).
-- Required-state signature = full per-validator tuple, not findings-only (spec 1155-1167): Task 3.
-- Floor enablement / permanently-inconclusive preflight (spec 996-1011): Task 4 (minimal) + Task 8 (coverage-plan).
+- Loop execution / iteration boundary (spec 355-365): Tasks 4, 5, and 7 (start, advisory advance + real boundary, terminal-pending continuation/skip).
+- Validators run ONCE per boundary via the lane policy, never twice (spec 357-359, 958): Task 2 (`requiredValidatorsForLane`) and combined Task 5 (loop dispatch never calls `validatorsForStep`; exactly 4 runs at the boundary).
+- Release floor is a lane policy, not a verbChain side effect (spec 411-412, 952-958): Tasks 2, 4, and 5.
+- Persisted + truthful convergence; never converge without required-clean (spec 1108-1130, 1138-1199): Task 3 persists required state + actual coverage; Task 5 finalizes clean/error/throw boundaries and advisory display qualification; Task 9 uses real validators through the orchestrator.
+- Required-state signature = full per-validator tuple including stable skipped/unreadable/unsupported file identities (spec 1155-1167): Tasks 1 and 3.
+- Floor enablement / permanently-inconclusive preflight (spec 996-1011): Task 4 (cheap policy guard) + Task 8 (each required coverage record, AND/OR semantics, exact gaps).
 - ralph-loop -> convergence-loop rename + t20 expectation fix (spec 1262-1263, 1123-1130): Task 10.
-- Closing summary GENERATED from run coverage (spec 1177-1186): Task 6 (`buildConvergedSummary`).
-- Loop skip cannot bypass the boundary gate (spec 348-349, 364-365): Task 7.
+- Closing summary GENERATED from actual persisted run coverage, with advisory-warning display qualification (spec 1177-1193): Task 5.
+- Loop skip cannot bypass the boundary gate; stalled/capped stop automatic iteration and require explicit retry/resume/stop (spec 348-349, 364-365): Task 7.
 
-**2. Placeholder scan:** The Task 5 `runIterationBoundary` placeholder throws by design and is REPLACED with the real implementation in Task 6 (a deliberate TDD step, not a shipped placeholder). Confirm no other step ships a stub. Confirm every code step shows complete code.
+**2. Placeholder scan:** Combined Task 5 lands advisory advance and the REAL iteration boundary in one task and one commit. Confirm no task or commit contains a throwing/fake boundary stub. Confirm every code step shows complete code.
 
-**3. Type/symbol consistency:** `ConvergenceState`/`RequiredValidatorState`/`ConvergenceOutcome` (lane-types) are used identically in lane-convergence.ts, lane-runner.ts, and lane-checkpoint-store.ts. `requiredValidatorsForLane`/`isLoopLane` (lane-validators), `getLanePolicy` (flow-validation-capabilities), `evaluateBoundary`/`decideProgress`/`seedConvergenceState`/`BoundaryEvaluation`/`ProgressDecision` (lane-convergence), `completeLoopStep`/`runIterationBoundary`/`loopSkipStep`/`applyConvergence`/`convergenceSurface`/`buildConvergedSummary` (lane-runner) - each new symbol has a named caller in its task: `completeLoopStep` is called from the `case 'complete'` loop dispatch (Task 5); `loopSkipStep` from the `case 'skip'` dispatch (Task 7); `runIterationBoundary`/`applyConvergence`/`convergenceSurface` from `completeLoopStep`/`loopSkipStep` (Tasks 6-7); `convergencePreflight` from orchestrator `startLane` (Task 8); the convergence module functions from `lane-runner` (Tasks 4, 6) and the unit suite (Task 3).
+**3. Type/symbol consistency:** `ConvergenceState`/`RequiredValidatorState`/`ConvergenceOutcome` (lane-types) are used identically in lane-convergence.ts, lane-runner.ts, and lane-checkpoint-store.ts. `requiredValidatorsForLane`/`isLoopLane` (lane-validators), `getLanePolicy` (flow-validation-capabilities), `evaluateBoundary`/`decideProgress`/`seedConvergenceState`/`BoundaryEvaluation`/`ProgressDecision` (lane-convergence), `completeLoopStep`/`runIterationBoundary`/`runBoundaryValidators`/`loopSkipStep`/`applyConvergence`/`convergenceSurface`/`convergenceDisplayLabel`/`buildConvergedSummary` (lane-runner) - each new symbol has a named caller in its task. `convergencePreflight` is called from orchestrator `startLane`; its per-record helpers are called only from preflight.
 
 **4. Final gate + hard-constraint checks:**
 - `cd sidecoach && npm test` -> `run-tests: 43 suite(s) passed`.
