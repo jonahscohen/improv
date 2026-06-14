@@ -134,15 +134,17 @@ async function run() {
       return okResult();
     });
     d.now = () => new Date(Date.now()).toISOString();
-    d.staleMs = 40; d.heartbeatIntervalMs = 5;
+    // Margins (heartbeat << stale << wait) sized so proper-lockfile's real lock-acquire
+    // latency on each heartbeat cannot let the lease lapse; relationship is unchanged.
+    d.staleMs = 150; d.heartbeatIntervalMs = 15;
     const s = await startLane('lane_build', 'hero', { projectPath: proj }, 'req-abort', d);
     await advanceLane(proj, s.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: d.store.read(s.checkpointId).revision }, d);
     const inflight = advanceLane(proj, s.checkpointId, { action: 'complete', report: rep('craft'), expectedRevision: d.store.read(s.checkpointId).revision }, d);
     await entered;
-    await new Promise((r) => setTimeout(r, 80));    // greater than staleMs; loop must keep lease live
+    await new Promise((r) => setTimeout(r, 250));    // greater than staleMs; loop must keep lease live
     const independent = new LaneCheckpointStore(proj);
     const live = independent.read(s.checkpointId);
-    if (!leaseIsLive(live.lease, Date.now(), 40)) throw new Error('one slow validator must stay live via heartbeat loop');
+    if (!leaseIsLive(live.lease, Date.now(), 150)) throw new Error('one slow validator must stay live via heartbeat loop');
     await withCheckpointLock(independent.dir(), s.checkpointId, () => {
       const cp = independent.read(s.checkpointId);
       cp.fencingCounter += 1; cp.lease = null; cp.revision += 1; independent.write(cp);
