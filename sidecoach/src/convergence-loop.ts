@@ -1,4 +1,5 @@
-// T-0020: Ralph-mode relentless cross-flow iteration.
+// Convergence-loop: relentless cross-flow iteration (the orphan diagnostic loop;
+// the production convergence floor lives in lane-runner.ts + lane-convergence.ts).
 //
 // Distinct from T-0009 (retry-control.ts): T-0009 caps per-handler iteration
 // (the polish handler retries polish up to 5 times). T-0020 is CROSS-flow -
@@ -24,30 +25,30 @@ import { FlowId } from './types';
 import { FlowExecutionContext, FlowExecutionResult } from './flow-handler';
 
 /**
- * Default flow chain for ralph-mode. Mirrors the T-0020 spec from TASKS.md:
+ * Default flow chain for convergence-mode. Mirrors the T-0020 spec from TASKS.md:
  * tactical-polish -> multi-lens-audit -> design-critique. Each iteration walks
  * this chain in order.
  */
-export const DEFAULT_RALPH_FLOW_CHAIN: FlowId[] = [
+export const DEFAULT_CONVERGENCE_FLOW_CHAIN: FlowId[] = [
   'flowJ_tactical_polish',
   'flowK_multi_lens_audit',
   'flowL_design_critique',
 ];
 
-export const DEFAULT_RALPH_MAX_GLOBAL_ITERATIONS = 10;
-export const DEFAULT_RALPH_MAX_NO_PROGRESS_ITERATIONS = 3;
+export const DEFAULT_CONVERGENCE_MAX_GLOBAL_ITERATIONS = 10;
+export const DEFAULT_CONVERGENCE_MAX_NO_PROGRESS_ITERATIONS = 3;
 
-/** Status of a completed ralph loop. */
-export type RalphStatus = 'converged' | 'stalled' | 'capped' | 'error';
+/** Status of a completed convergence loop. */
+export type ConvergenceStatus = 'converged' | 'stalled' | 'capped' | 'error';
 
 /**
- * A single finding produced by a flow during one ralph iteration. The shape
+ * A single finding produced by a flow during one convergence iteration. The shape
  * is intentionally narrow - a finding only needs a stable identity (flowId +
  * validator + ruleId + filePath when relevant) so its presence in successive
  * iterations can be detected via the progress signature. The optional fields
  * carry forward to the caller for surfacing in logs/reports.
  */
-export interface RalphFinding {
+export interface ConvergenceFinding {
   flowId: FlowId;
   validator: string;
   ruleId: string;
@@ -58,12 +59,12 @@ export interface RalphFinding {
 
 /**
  * Snapshot of one (iteration, flow) pair within the loop. Stored on the
- * RalphResult so callers can inspect the trajectory after the fact.
+ * ConvergenceResult so callers can inspect the trajectory after the fact.
  */
-export interface RalphIterationFlow {
+export interface ConvergenceIterationFlow {
   iteration: number;
   flowId: FlowId;
-  findings: RalphFinding[];
+  findings: ConvergenceFinding[];
   /** Total finding count for this flow on this iteration (cached for log readability). */
   findingCount: number;
   /** When the underlying flow handler errored out, this is the message. */
@@ -74,24 +75,24 @@ export interface RalphIterationFlow {
  * Snapshot of a full iteration across the flow chain. Each iteration record
  * holds one entry per flow in flowChain.
  */
-export interface RalphIteration {
+export interface ConvergenceIteration {
   iteration: number;
-  flowResults: RalphIterationFlow[];
+  flowResults: ConvergenceIterationFlow[];
   /** Aggregate findings across every flow in this iteration. */
-  allFindings: RalphFinding[];
+  allFindings: ConvergenceFinding[];
   /** sha256-12 hash over the sorted finding identities (see computeProgressSignature). */
   signature: string;
 }
 
-export interface RalphResult {
-  status: RalphStatus;
+export interface ConvergenceResult {
+  status: ConvergenceStatus;
   iterations: number;
   /** Total findings remaining at the moment the loop exited. */
   totalFindings: number;
   /** Iteration-by-iteration trace. */
-  history: RalphIteration[];
+  history: ConvergenceIteration[];
   /** Findings still outstanding when status === 'capped' or 'stalled'. */
-  remainingFindings?: RalphFinding[];
+  remainingFindings?: ConvergenceFinding[];
   /** Signature that repeated and triggered the stall (status === 'stalled'). */
   lastSignature?: string;
   /** Log lines emitted during the loop. Captured for tests/post-hoc reporting. */
@@ -100,7 +101,7 @@ export interface RalphResult {
   error?: string;
 }
 
-export interface RalphOptions {
+export interface ConvergenceOptions {
   maxGlobalIterations?: number;
   maxNoProgressIterations?: number;
   flowChain?: FlowId[];
@@ -114,7 +115,7 @@ export interface RalphOptions {
    * default way to invoke flows without a runner, by design (handlers carry
    * non-trivial setup that the loop itself should not hard-code).
    */
-  runFlow?: RalphFlowRunner;
+  runFlow?: ConvergenceFlowRunner;
   /**
    * Forward-compat: invoked after findings are collected for an iteration
    * and before the next iteration starts. If unset, findings accumulate
@@ -122,28 +123,28 @@ export interface RalphOptions {
    * Wire this once handlers grow a fix-mode (or an LLM-driven fix step
    * fits between iterations).
    */
-  applyFixes?: RalphFixApplier;
+  applyFixes?: ConvergenceFixApplier;
   /** Log sink. Defaults to console.log. Set to a no-op to silence the loop. */
   logger?: (line: string) => void;
 }
 
-export type RalphFlowRunner = (input: {
+export type ConvergenceFlowRunner = (input: {
   flowId: FlowId;
   target: string;
   iteration: number;
-}) => Promise<RalphFlowRunOutput>;
+}) => Promise<ConvergenceFlowRunOutput>;
 
-export interface RalphFlowRunOutput {
-  findings: RalphFinding[];
+export interface ConvergenceFlowRunOutput {
+  findings: ConvergenceFinding[];
   /** Optional raw result for callers that want the full FlowExecutionResult shape. */
   rawResult?: FlowExecutionResult;
   /** Optional handler-level error. The loop records the error and continues with zero findings for this flow. */
   error?: string;
 }
 
-export type RalphFixApplier = (input: {
+export type ConvergenceFixApplier = (input: {
   iteration: number;
-  findings: RalphFinding[];
+  findings: ConvergenceFinding[];
   target: string;
 }) => Promise<void>;
 
@@ -155,7 +156,7 @@ export type RalphFixApplier = (input: {
  * identity (flowId + validator + ruleId + filePath) so ephemeral fields like
  * message do not destabilize the signature.
  */
-export function computeProgressSignature(findings: RalphFinding[]): string {
+export function computeProgressSignature(findings: ConvergenceFinding[]): string {
   const identities = findings
     .map((f) => `${f.flowId}|${f.validator}|${f.ruleId}|${f.filePath || ''}`)
     .sort();
@@ -166,15 +167,15 @@ export function computeProgressSignature(findings: RalphFinding[]): string {
 /**
  * Helper to extract findings from a FlowExecutionResult. Provided for
  * convenience to runners that invoke the real handlers - they can map the
- * handler's validationResults / executionMetadata into RalphFinding[] using
- * this routine. Not used inside runRalphLoop itself (the runner is the only
+ * handler's validationResults / executionMetadata into ConvergenceFinding[] using
+ * this routine. Not used inside runConvergenceLoop itself (the runner is the only
  * thing that knows how its handlers shaped their results).
  */
 export function extractFindingsFromFlowResult(
   flowId: FlowId,
   result: FlowExecutionResult,
-): RalphFinding[] {
-  const findings: RalphFinding[] = [];
+): ConvergenceFinding[] {
+  const findings: ConvergenceFinding[] = [];
   const validationResults = result.validationResults || [];
   for (const vr of validationResults) {
     if (!vr || vr.status === 'pass') continue;
@@ -200,10 +201,10 @@ function defaultLogger(line: string): void {
  * Run a relentless cross-flow loop against `target`. See module header for
  * the contract and the auto-fix gap discussion.
  */
-export async function runRalphLoop(
+export async function runConvergenceLoop(
   target: string,
-  opts: RalphOptions = {},
-): Promise<RalphResult> {
+  opts: ConvergenceOptions = {},
+): Promise<ConvergenceResult> {
   const log: string[] = [];
   const logger = opts.logger || defaultLogger;
   const emit = (line: string) => {
@@ -214,19 +215,19 @@ export async function runRalphLoop(
   const maxGlobalIterations =
     typeof opts.maxGlobalIterations === 'number' && opts.maxGlobalIterations > 0
       ? opts.maxGlobalIterations
-      : DEFAULT_RALPH_MAX_GLOBAL_ITERATIONS;
+      : DEFAULT_CONVERGENCE_MAX_GLOBAL_ITERATIONS;
   const maxNoProgressIterations =
     typeof opts.maxNoProgressIterations === 'number' && opts.maxNoProgressIterations > 0
       ? opts.maxNoProgressIterations
-      : DEFAULT_RALPH_MAX_NO_PROGRESS_ITERATIONS;
+      : DEFAULT_CONVERGENCE_MAX_NO_PROGRESS_ITERATIONS;
   const flowChain = Array.isArray(opts.flowChain) && opts.flowChain.length > 0
     ? opts.flowChain
-    : DEFAULT_RALPH_FLOW_CHAIN;
+    : DEFAULT_CONVERGENCE_FLOW_CHAIN;
 
   // Config sanity: an empty flow chain is meaningless (the loop has nothing
   // to iterate). Return an error result rather than spinning a no-op cap.
   if (!Array.isArray(opts.flowChain) ? false : opts.flowChain.length === 0) {
-    const msg = '[ralph] invalid config: flowChain is empty';
+    const msg = '[convergence] invalid config: flowChain is empty';
     emit(msg);
     return {
       status: 'error',
@@ -243,7 +244,7 @@ export async function runRalphLoop(
   // invocation here) so the failure surfaces immediately rather than as
   // confusing zero-findings convergence.
   if (typeof opts.runFlow !== 'function') {
-    const msg = '[ralph] invalid config: runFlow is required';
+    const msg = '[convergence] invalid config: runFlow is required';
     emit(msg);
     return {
       status: 'error',
@@ -256,20 +257,21 @@ export async function runRalphLoop(
   }
 
   const runFlow = opts.runFlow;
-  const history: RalphIteration[] = [];
+  const history: ConvergenceIteration[] = [];
 
   for (let iteration = 1; iteration <= maxGlobalIterations; iteration++) {
-    const flowResults: RalphIterationFlow[] = [];
-    const allFindings: RalphFinding[] = [];
+    const flowResults: ConvergenceIterationFlow[] = [];
+    const allFindings: ConvergenceFinding[] = [];
+    let iterationErrored = false;
 
     for (const flowId of flowChain) {
-      let runOutput: RalphFlowRunOutput;
+      let runOutput: ConvergenceFlowRunOutput;
       try {
         runOutput = await runFlow({ flowId, target, iteration });
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
         emit(
-          `[ralph] iter ${iteration}/${maxGlobalIterations}: ${flowId} runner threw: ${errMsg}`,
+          `[convergence] iter ${iteration}/${maxGlobalIterations}: ${flowId} runner threw: ${errMsg}`,
         );
         flowResults.push({
           iteration,
@@ -278,6 +280,7 @@ export async function runRalphLoop(
           findingCount: 0,
           error: errMsg,
         });
+        iterationErrored = true;
         continue;
       }
 
@@ -289,19 +292,22 @@ export async function runRalphLoop(
         findingCount: findings.length,
         error: runOutput.error,
       });
+      if (runOutput.error) iterationErrored = true;
       allFindings.push(...findings);
 
       emit(
-        `[ralph] iter ${iteration}/${maxGlobalIterations}: ${flowId} found ${findings.length} violations`,
+        `[convergence] iter ${iteration}/${maxGlobalIterations}: ${flowId} found ${findings.length} violations`,
       );
     }
 
     const signature = computeProgressSignature(allFindings);
     history.push({ iteration, flowResults, allFindings, signature });
 
-    // Convergence: zero findings across every flow in this iteration.
-    if (allFindings.length === 0) {
-      emit(`[ralph] CONVERGED in ${iteration} iter`);
+    // Convergence requires zero findings AND no flow error this iteration. A flow
+    // error can no longer be recorded as zero findings and "converge" (spec lines
+    // 1123-1130: product-validator failure can no longer converge).
+    if (allFindings.length === 0 && !iterationErrored) {
+      emit(`[convergence] CONVERGED in ${iteration} iter`);
       return {
         status: 'converged',
         iterations: iteration,
@@ -320,7 +326,7 @@ export async function runRalphLoop(
       const recentSig = recent[0].signature;
       if (recentSig && recent.every((h) => h.signature === recentSig)) {
         emit(
-          `[ralph] STALLED at iter ${iteration} (same signature ${recentSig} for ${maxNoProgressIterations} iter)`,
+          `[convergence] STALLED at iter ${iteration} (same signature ${recentSig} for ${maxNoProgressIterations} iter)`,
         );
         return {
           status: 'stalled',
@@ -343,14 +349,14 @@ export async function runRalphLoop(
         await opts.applyFixes({ iteration, findings: allFindings, target });
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        emit(`[ralph] iter ${iteration}: applyFixes threw: ${errMsg} (continuing)`);
+        emit(`[convergence] iter ${iteration}: applyFixes threw: ${errMsg} (continuing)`);
       }
     }
   }
 
   // Cap: hit maxGlobalIterations without convergence or stall.
   const finalFindings = history[history.length - 1]?.allFindings || [];
-  emit(`[ralph] CAPPED at maxIter (${maxGlobalIterations})`);
+  emit(`[convergence] CAPPED at maxIter (${maxGlobalIterations})`);
   return {
     status: 'capped',
     iterations: maxGlobalIterations,

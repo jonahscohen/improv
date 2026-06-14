@@ -148,7 +148,7 @@ const CANVAS: Mode = {
 // code-correctness checks), and reuses the keyword so anyone coming from OMC
 // finds it where they expect. The mode is the user-facing trigger; the
 // actual loop algorithm (cap, stall, convergence) lives in
-// `sidecoach/src/ralph-loop.ts` per T-0020. Picked the OMC name verbatim
+// `sidecoach/src/convergence-loop.ts` per T-0020. Picked the OMC name verbatim
 // because every alternative ("loop", "iterate", "converge") either collides
 // with internal vocabulary or loses the connection to the established
 // pattern.
