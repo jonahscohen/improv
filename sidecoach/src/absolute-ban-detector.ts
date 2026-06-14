@@ -75,7 +75,7 @@ function findingFromBan(banName: string, file: string, line: number, matchedText
   };
 }
 
-function scanSideStripeBorders(content: string, file: string): AbsoluteBanFinding[] {
+export function scanSideStripeBorders(content: string, file: string): AbsoluteBanFinding[] {
   const findings: AbsoluteBanFinding[] = [];
   // Look for border-left or border-right with N>1 px solid <colored value>
   // on selectors that look like cards/alerts/callouts/list items.
@@ -97,7 +97,7 @@ function scanSideStripeBorders(content: string, file: string): AbsoluteBanFindin
   return findings;
 }
 
-function scanGradientText(content: string, file: string): AbsoluteBanFinding[] {
+export function scanGradientText(content: string, file: string): AbsoluteBanFinding[] {
   const findings: AbsoluteBanFinding[] = [];
   const ruleRegex = /([^{}]+)\{([^}]*)\}/g;
   for (const m of Array.from(content.matchAll(ruleRegex))) {
@@ -113,7 +113,7 @@ function scanGradientText(content: string, file: string): AbsoluteBanFinding[] {
   return findings;
 }
 
-function scanGlassmorphism(content: string, file: string): AbsoluteBanFinding[] {
+export function scanGlassmorphism(content: string, file: string): AbsoluteBanFinding[] {
   const findings: AbsoluteBanFinding[] = [];
   const ruleRegex = /([^{}]+)\{([^}]*)\}/g;
   for (const m of Array.from(content.matchAll(ruleRegex))) {
@@ -143,7 +143,7 @@ function scanGlassmorphism(content: string, file: string): AbsoluteBanFinding[] 
   return findings;
 }
 
-function scanIdenticalCardGrids(content: string, file: string): AbsoluteBanFinding[] {
+export function scanIdenticalCardGrids(content: string, file: string): AbsoluteBanFinding[] {
   const findings: AbsoluteBanFinding[] = [];
   // Heuristic: find a parent with grid-template-columns: repeat(N, 1fr) where N>=3,
   // then verify the source has multiple sibling elements with the same class
@@ -161,7 +161,7 @@ function scanIdenticalCardGrids(content: string, file: string): AbsoluteBanFindi
   return findings;
 }
 
-function scanHeroMetricTemplate(content: string, file: string): AbsoluteBanFinding[] {
+export function scanHeroMetricTemplate(content: string, file: string): AbsoluteBanFinding[] {
   const findings: AbsoluteBanFinding[] = [];
   // Heuristic: look for HTML with three or more sibling blocks each containing
   // a large numeric content + smaller label. Detect via CSS classes commonly used.
@@ -173,7 +173,7 @@ function scanHeroMetricTemplate(content: string, file: string): AbsoluteBanFindi
   return findings;
 }
 
-function scanModalAsFirstThought(content: string, file: string): AbsoluteBanFinding[] {
+export function scanModalAsFirstThought(content: string, file: string): AbsoluteBanFinding[] {
   const findings: AbsoluteBanFinding[] = [];
   // Heuristic: any <dialog> or [role="dialog"] for content that includes a
   // <form> with a single submit, or a simple confirmation pattern. P2 because

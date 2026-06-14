@@ -47,6 +47,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/polish-checks.test.ts', required: true },
   { rel: 'src/__tests__/a11y-checks.test.ts', required: true },
   { rel: 'src/__tests__/theming-checks.test.ts', required: true },
+  { rel: 'src/__tests__/anti-pattern-checks.test.ts', required: true },
 ];
 
 let ran = 0;
