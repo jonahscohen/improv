@@ -129,6 +129,11 @@ function run() {
   expectInvalid('blank-alias', [baseRule({ sourceRuleAliases: [''] })], [reg('v')]);
   expectInvalid('whitespace-alias', [baseRule({ sourceRuleAliases: ['   '] })], [reg('v')]);
 
+  // 10. (P2) an unknown/typoed sourceSeverity has no SEVERITY_TABLE entry, so it
+  //     cannot be normalized or compared - it must be rejected, not silently
+  //     bypass the divergence guard.
+  expectInvalid('unknown-source-severity', [baseRule({ sourceSeverity: 'sev9000' })], [reg('v')]);
+
   console.log('generate-validators: OK');
 }
 run();

@@ -144,8 +144,16 @@ export function validateRegistry(rules: ProductRuleDefinition[], regs: ProductVa
 
   // undocumented severity divergence
   for (const r of rules) {
+    if (!r.sourceSeverity) continue;   // already flagged by the field-completeness check
     const def = SEVERITY_TABLE[r.sourceSeverity];
-    if (def && def !== r.severity && !r.severityOverrideReason) {
+    // an unknown/typoed sourceSeverity cannot be normalized or compared against
+    // the declared canonical severity - reject it rather than silently skipping
+    // the divergence guard (which would let any severity claim through).
+    if (!def) {
+      errors.push(`rule ${r.ruleId} sourceSeverity '${r.sourceSeverity}' has no SEVERITY_TABLE entry (cannot normalize/compare)`);
+      continue;
+    }
+    if (def !== r.severity && !r.severityOverrideReason) {
       errors.push(`rule ${r.ruleId} severity ${r.severity} diverges from table default ${def} without severityOverrideReason`);
     }
   }
