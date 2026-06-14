@@ -32,6 +32,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/lane-checkpoint-migration.test.ts', required: true },
   { rel: 'src/__tests__/lane-lock.test.ts', required: true },
   { rel: 'src/__tests__/lane-lease.test.ts', required: true },
+  { rel: 'src/__tests__/lane-validator-gating.test.ts', required: true },
   { rel: 'src/__tests__/lane-runner-start.test.ts', required: true },
   { rel: 'src/__tests__/lane-runner-advance-sequence.test.ts', required: true },
   { rel: 'src/__tests__/lane-runner-transitions.test.ts', required: true },
