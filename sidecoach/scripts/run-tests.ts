@@ -74,6 +74,28 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/validator-fixtures-e2e.test.ts', required: true },
 ];
 
+// Pin Playwright to the SHARED real-home browser cache BEFORE we isolate HOME below.
+// Playwright resolves its browser cache from $HOME by default; the temp-HOME override
+// (next block) would otherwise hide the shared Chromium so the real-browser collector
+// suite could never launch and would SKIP. We capture the OS-default ms-playwright
+// cache under the REAL home and pin it via PLAYWRIGHT_BROWSERS_PATH (execFileSync
+// inherits env, so every spawned suite resolves Chromium from the shared cache
+// regardless of the temp HOME). This keeps the collector real-browser test RUNNING in
+// the committed `npm test` gate while leaving flow-history HOME-isolation intact.
+// - An existing PLAYWRIGHT_BROWSERS_PATH (user/CI override) is respected, never clobbered.
+// - If the cache dir does not exist (cacheless machine), Playwright simply cannot find
+//   Chromium and the collector suite SKIPs gracefully (required:true, exit 0) - no hard
+//   failure. Pointing the env var at a missing dir is safe.
+if (!process.env.PLAYWRIGHT_BROWSERS_PATH) {
+  const realHome = process.env.HOME || os.homedir();
+  const cacheByPlatform: Record<string, string> = {
+    darwin: path.join(realHome, 'Library', 'Caches', 'ms-playwright'),
+    win32: path.join(realHome, 'AppData', 'Local', 'ms-playwright'),
+  };
+  process.env.PLAYWRIGHT_BROWSERS_PATH = cacheByPlatform[process.platform] ?? path.join(realHome, '.cache', 'ms-playwright');
+}
+console.log(`run-tests: playwright cache -> ${process.env.PLAYWRIGHT_BROWSERS_PATH}`);
+
 // Isolate HOME so suites that drive lane FINALIZE (and thus publish to the
 // HOME-scoped ~/.claude/sidecoach-flow-history.json) write into a throwaway temp
 // home instead of the developer's real one. execFileSync below inherits env, so
