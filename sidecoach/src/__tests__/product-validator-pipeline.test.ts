@@ -39,9 +39,16 @@ function basics() {
   if (incV.status !== 'inconclusive') throw new Error(`no CSS evidence must be INCONCLUSIVE, got ${incV.status}`);
   if (!incV.normalizedErrorCategory) throw new Error('an evidence-gap inconclusive must carry a normalizedErrorCategory');
 
-  // 6. an UNATTACHED rule (missingCheck) is inconclusive, never a false pass
-  const unattached = getRuleById('polish.scale-on-press')!;   // not implemented until Task 3
-  if (unattached.checkProduct!(cssNoReducedMotion('.btn{}')).status !== 'inconclusive') throw new Error('unattached rule must be inconclusive');
+  // 6. an UNATTACHED rule (missingCheck) is inconclusive, never a false pass. By
+  //    Tasks 3-6 every key has a check, so simulate "unattached" by removing the
+  //    check for the duration and confirm the registry wrapper falls back to
+  //    missingCheck -> inconclusive (then restore exactly).
+  const unattached = getRuleById('polish.scale-on-press')!;
+  const savedSc = CHECKS['polish/scale-on-press'];
+  delete CHECKS['polish/scale-on-press'];
+  const unattachedStatus = unattached.checkProduct!(cssNoReducedMotion('.btn{}')).status;
+  if (savedSc) CHECKS['polish/scale-on-press'] = savedSc;
+  if (unattachedStatus !== 'inconclusive') throw new Error('unattached rule must be inconclusive');
 
   // 7. a genuinely throwing injected check is CAUGHT -> inconclusive + rule_exception
   const original = CHECKS['polish/reduced-motion-respect'];
