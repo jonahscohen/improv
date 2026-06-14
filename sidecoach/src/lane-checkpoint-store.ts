@@ -2,10 +2,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { FlowId } from './types';
-import type { StepReport, LaneLifecycle, LaneOutcome, LaneAuditEntry } from './lane-types';
+import type { StepReport, LaneLifecycle, LaneOutcome, LaneAuditEntry, LeaseRecord, SideEffectOutboxRecord, PersistedStepGateStatus } from './lane-types';
 
 export interface LaneCheckpoint {
-  schemaVersion: 1;
+  schemaVersion: 2;
   checkpointId: string; laneId: string; target: string;
   executionKind: 'sequence' | 'loop';
   lifecycle: LaneLifecycle; outcome?: LaneOutcome;
@@ -14,6 +14,13 @@ export interface LaneCheckpoint {
   stepReports: StepReport[]; audit: LaneAuditEntry[];
   servedSteps: Record<string, { guidance: string[]; checklist: { id: string; label: string; required: boolean; completed: boolean }[]; flowIds: FlowId[]; successfulFlowIds: FlowId[] }>; // key: `${cursor}:${iteration}`; successfulFlowIds = flows whose handler returned status 'success' (NOT degraded/skipped/errored)
   revision: number; startRequestId: string; seenReportIds: string[];
+  // P4b-1 durability (schema v2): fencing counter (monotonic), the active operation
+  // lease (null when idle), the side-effect outbox (committed-but-unpublished
+  // records), and the latest finalized gate status per current step attempt.
+  fencingCounter: number;
+  lease: LeaseRecord | null;
+  sideEffectOutbox: SideEffectOutboxRecord[];
+  stepGateStatuses: Record<string, PersistedStepGateStatus>; // key: `${stepId}:${iteration}`
   createdAt: string; updatedAt: string;
 }
 
@@ -33,11 +40,24 @@ export class LaneCheckpointStore {
     try { fs.mkdirSync(projectPath, { recursive: true }); } catch { /* ignore - realpath will throw if still bad */ }
     this.projectPath = fs.realpathSync(projectPath);
   }
-  private dir(): string { return path.join(this.projectPath, '.claude', 'lane-checkpoints'); }
+  dir(): string { return path.join(this.projectPath, '.claude', 'lane-checkpoints'); }   // public: the lock + lease helpers need it
   private filePath(id: string): string { assertId(id); return path.join(this.dir(), `${id}.json`); }
 
+  // Read-time migration: v1 -> v2 seeds the durability fields; v2 passes through
+  // (tolerating an older v2 missing the latest sub-fields). Any other version throws.
+  private migrate(raw: any): LaneCheckpoint {
+    if (raw.schemaVersion === 2) {
+      return { ...raw, sideEffectOutbox: Array.isArray(raw.sideEffectOutbox) ? raw.sideEffectOutbox : [],
+        stepGateStatuses: raw.stepGateStatuses && typeof raw.stepGateStatuses === 'object' ? raw.stepGateStatuses : {} } as LaneCheckpoint;
+    }
+    if (raw.schemaVersion === 1) {
+      return { ...raw, schemaVersion: 2, fencingCounter: 0, lease: null, sideEffectOutbox: [], stepGateStatuses: {} } as LaneCheckpoint;
+    }
+    throw new Error(`LaneCheckpointStore: unsupported schemaVersion ${raw.schemaVersion}`);
+  }
+
   write(cp: LaneCheckpoint): void {
-    if (cp.schemaVersion !== 1) throw new Error(`LaneCheckpointStore.write: schemaVersion ${cp.schemaVersion} unsupported`);
+    if (cp.schemaVersion !== 2) throw new Error(`LaneCheckpointStore.write: schemaVersion ${cp.schemaVersion} unsupported (writes 2)`);
     const target = this.filePath(cp.checkpointId);
     fs.mkdirSync(this.dir(), { recursive: true });
     const tmp = `${target}.tmp-${process.pid}-${Date.now()}`;
@@ -47,9 +67,7 @@ export class LaneCheckpointStore {
   read(id: string): LaneCheckpoint {
     const target = this.filePath(id);
     if (!fs.existsSync(target)) throw new Error(`LaneCheckpointStore.read: not found "${id}"`);
-    const parsed = JSON.parse(fs.readFileSync(target, 'utf8')) as LaneCheckpoint;
-    if (parsed.schemaVersion !== 1) throw new Error(`LaneCheckpointStore.read: schemaVersion ${parsed.schemaVersion} unsupported`);
-    return parsed;
+    return this.migrate(JSON.parse(fs.readFileSync(target, 'utf8')));
   }
   exists(id: string): boolean { try { return fs.existsSync(this.filePath(id)); } catch { return false; } }
   findByStartRequestId(reqId: string): LaneCheckpoint | null {

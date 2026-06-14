@@ -99,11 +99,12 @@ export async function startLane(
   }
   const ts = d.now();
   const cp: LaneCheckpoint = {
-    schemaVersion: 1, checkpointId: d.newCheckpointId(), laneId, target,
+    schemaVersion: 2, checkpointId: d.newCheckpointId(), laneId, target,
     executionKind: l.executionKind, lifecycle: 'in_progress', outcome: undefined,
     cursor: 0, iteration: 0, completedStepIds: [], skippedStepIds: [], completedFlowIds: [],
     stepReports: [], audit: [], servedSteps: {}, revision: 0, startRequestId,
-    seenReportIds: [], createdAt: ts, updatedAt: ts,
+    seenReportIds: [], fencingCounter: 0, lease: null, sideEffectOutbox: [], stepGateStatuses: {},
+    createdAt: ts, updatedAt: ts,
   };
   d.store.write(cp);
   return serveStep(cp, l, context, d);

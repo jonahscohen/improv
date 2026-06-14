@@ -6,11 +6,12 @@ import { LaneCheckpointStore, LaneCheckpoint } from '../lane-checkpoint-store';
 
 function fresh(): LaneCheckpoint {
   return {
-    schemaVersion: 1, checkpointId: 'lane-abc123', laneId: 'lane_build', target: 'hero',
+    schemaVersion: 2, checkpointId: 'lane-abc123', laneId: 'lane_build', target: 'hero',
     executionKind: 'sequence', lifecycle: 'in_progress', outcome: undefined,
     cursor: 0, iteration: 0, completedStepIds: [], skippedStepIds: [], completedFlowIds: [],
     stepReports: [], audit: [], servedSteps: {}, revision: 0, startRequestId: 'req1',
-    seenReportIds: [], createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+    seenReportIds: [], fencingCounter: 0, lease: null, sideEffectOutbox: [], stepGateStatuses: {},
+    createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
   };
 }
 function run() {
@@ -29,8 +30,8 @@ function run() {
     if (!threw) throw new Error(`illegal id "${bad}" must be rejected`);
   }
   let threw = false;
-  try { store.write({ ...fresh(), schemaVersion: 2 as any }); } catch { threw = true; }
-  if (!threw) throw new Error('schemaVersion 2 rejected in P2');
+  try { store.write({ ...fresh(), schemaVersion: 3 as any }); } catch { threw = true; }
+  if (!threw) throw new Error('schemaVersion 3 rejected (writes only v2)');
 
   // P2-1: when a CLOSED and an ACTIVE checkpoint share a startRequestId (a closed
   // run + a closed-restart), findByStartRequestId must prefer the ACTIVE one -

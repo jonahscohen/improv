@@ -3,6 +3,7 @@
 // (lines 636-649). P2 carries idempotency KEYS (startRequestId, expectedRevision,
 // reportId) but not P3 distributed-safety machinery.
 import type { FlowId } from './types';
+import type { ProductFinding } from './product-rule-types';
 
 export type LaneAction = 'complete' | 'retry' | 'skip' | 'resume' | 'interrupt' | 'stop';
 export type LaneLifecycle = 'in_progress' | 'interrupted' | 'closed';
@@ -32,6 +33,43 @@ export interface LaneAuditEntry {
   reason?: string; reportId?: string; at: string;
 }
 
+export interface LeaseRecord {
+  operationId: string;
+  stepId: string;
+  iteration: number;
+  claimedCheckpointRevision: number;
+  fencingToken: number;
+  startedAt: string;
+  heartbeatAt: string;
+}
+
+// One side-effect entry inside an outbox bundle. publisher + entryIndex give a
+// stable replay key; logicalKey is the downstream conditional-upsert key.
+export interface SideEffectEntry {
+  publisher: string;          // logical downstream store id, e.g. 'lane-side-effect-sink'
+  entryIndex: number;         // stable index within this bundle
+  logicalKey: string;         // downstream upsert key, e.g. `${checkpointId}:${stepId}:${iteration}`
+  payload: unknown;           // the side-effect content (P4b-1: a step-completion summary)
+}
+
+// Written at FINALIZE, keyed by (checkpointId, committedRevision), carrying the
+// fencingToken. Retained until every declared publisher acks (spec lines 683-723).
+export interface SideEffectOutboxRecord {
+  checkpointId: string;
+  committedRevision: number;
+  fencingToken: number;
+  stepId: string;
+  iteration: number;
+  entries: SideEffectEntry[];
+  pendingPublishers: string[];
+  createdAt: string;
+}
+
+export type PersistedStepGateStatus = 'clean' | 'validation_failed' | 'validation_inconclusive' | 'validation_error';
+
+// Worst-status verdict for a step's bound product validators (advanceLane gating).
+export type GateStatus = 'clean' | 'findings' | 'inconclusive' | 'error';
+
 export interface LaneStepResult {
   checkpointId: string; laneId: string; laneLabel: string;
   lifecycle: LaneLifecycle; outcome?: LaneOutcome;
@@ -43,6 +81,9 @@ export interface LaneStepResult {
   flowIds: FlowId[];
   revision: number;                     // pass as expectedRevision next advance
   message: string;
+  // Validator gate surface (optional so closed/serve results omit it). Present on
+  // a `complete` result that ran product validators.
+  gate?: { status: GateStatus; validators: { validatorId: string; status: GateStatus }[]; findings: ProductFinding[] };
 }
 
 export interface LaneState {
