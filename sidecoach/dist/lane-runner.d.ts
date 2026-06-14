@@ -27,7 +27,7 @@ declare function closedResult(cp: LaneCheckpoint, l: GeneratedLane): LaneStepRes
 declare function serveStep(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: LaneRunnerDeps): Promise<LaneStepResult>;
 export declare function startLane(laneId: string, target: string, context: {
     projectPath?: string;
-} & Record<string, any>, startRequestId: string, d: LaneRunnerDeps): Promise<LaneStepResult>;
+} & Record<string, any>, startRequestId: string, d: LaneRunnerDeps, renderUrl?: string): Promise<LaneStepResult>;
 export { serveStep, resolveLane, closedResult };
 export declare function pushAudit(cp: LaneCheckpoint, e: Omit<LaneAuditEntry, 'revision' | 'at'>, d: LaneRunnerDeps): void;
 export declare function laneStatus(projectPath: string, checkpointId: string, d: LaneRunnerDeps): LaneState;

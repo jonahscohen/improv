@@ -5,6 +5,7 @@ export interface LaneCheckpoint {
     checkpointId: string;
     laneId: string;
     target: string;
+    renderUrl?: string;
     executionKind: 'sequence' | 'loop';
     lifecycle: LaneLifecycle;
     outcome?: LaneOutcome;

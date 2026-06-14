@@ -180,10 +180,13 @@ async function serveStep(cp, l, context, d) {
         message: `Step ${cp.cursor + 1}/${l.verbSteps.length}: ${step.verb}`,
     };
 }
-async function startLane(laneId, target, context, startRequestId, d) {
+async function startLane(laneId, target, context, startRequestId, d, renderUrl) {
     if (!startRequestId || typeof startRequestId !== 'string' || startRequestId.length > 256) {
         throw new Error('startLane: startRequestId must be a non-empty string <= 256 chars');
     }
+    // Store renderUrl ONLY if it resolves to a valid http/https/file/data URL; a non-URL
+    // is ignored (left undefined) so the browser rules simply stay dormant for that lane.
+    const validRenderUrl = (0, browser_evidence_collector_1.renderUrlFromContext)({ renderUrl });
     const l = resolveLane(laneId);
     if (l.executionKind === 'loop') {
         // Minimal release-floor enablement: the lane must declare a non-empty product-
@@ -225,6 +228,7 @@ async function startLane(laneId, target, context, startRequestId, d) {
         const operationId = (d.newOperationId ?? defaultOperationId)();
         const cp = {
             schemaVersion: 2, checkpointId: d.newCheckpointId(), laneId, target,
+            renderUrl: validRenderUrl,
             executionKind: l.executionKind, lifecycle: 'in_progress', outcome: undefined,
             cursor: 0, iteration: 0, completedStepIds: [], skippedStepIds: [], completedFlowIds: [],
             stepReports: [], audit: [], servedSteps: {}, revision: 0, startRequestId,
@@ -479,7 +483,7 @@ async function advanceLane(projectPath, checkpointId, transition, d) {
             try {
                 // EXECUTE: run the step's bound validators (async, abortable), aggregate worst-status.
                 const validatorIds = (0, lane_validators_1.validatorsForStep)(step);
-                const perValidator = await runStepValidators(d, validatorIds, { projectPath, target: cp.target, renderUrl: (0, browser_evidence_collector_1.renderUrlFromContext)({ target: cp.target }) }, controller.signal);
+                const perValidator = await runStepValidators(d, validatorIds, { projectPath, target: cp.target, renderUrl: (0, browser_evidence_collector_1.renderUrlFromContext)({ renderUrl: cp.renderUrl, target: cp.target }) }, controller.signal);
                 const worst = (0, lane_validators_1.aggregateWorstStatus)(perValidator.map((p) => p.result.status));
                 const gate = { status: worst, validators: perValidator.map((p) => ({ validatorId: p.validatorId, status: p.result.status })),
                     findings: perValidator.flatMap((p) => p.result.findings) };
@@ -807,7 +811,7 @@ async function runIterationBoundary(cp, l, projectPath, d, claimRevision, onComm
     try {
         // EXECUTE: the required validators run ONCE each, via the lane policy (not per-step).
         const validatorIds = (0, lane_validators_1.requiredValidatorsForLane)(l.lane);
-        const perValidator = await runBoundaryValidators(d, validatorIds, { projectPath, target: cp.target, renderUrl: (0, browser_evidence_collector_1.renderUrlFromContext)({ target: cp.target }) }, controller.signal);
+        const perValidator = await runBoundaryValidators(d, validatorIds, { projectPath, target: cp.target, renderUrl: (0, browser_evidence_collector_1.renderUrlFromContext)({ renderUrl: cp.renderUrl, target: cp.target }) }, controller.signal);
         const ev = (0, lane_convergence_1.evaluateBoundary)(perValidator);
         const decision = (0, lane_convergence_1.decideProgress)(cp.convergence, ev);
         const gate = { status: ev.iterationStatus, validators: perValidator.map((p) => ({ validatorId: p.validatorId, status: p.result.status })), findings: ev.findings };

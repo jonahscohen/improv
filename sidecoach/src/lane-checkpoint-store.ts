@@ -11,6 +11,10 @@ import { LaneFlowHistoryPublisher } from './lane-flow-history-publisher';
 export interface LaneCheckpoint {
   schemaVersion: 2;
   checkpointId: string; laneId: string; target: string;
+  // P4b-2: optional explicit render URL for browser-evidence collection. TARGET IDENTITY
+  // (not evidence): set once at start, distinct from the free-text `target`. Additive +
+  // persisted; older checkpoints without it migrate through unchanged via `...raw`.
+  renderUrl?: string;
   executionKind: 'sequence' | 'loop';
   lifecycle: LaneLifecycle; outcome?: LaneOutcome;
   cursor: number; iteration: number;

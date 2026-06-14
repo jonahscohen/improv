@@ -56,7 +56,7 @@ export declare class FlowExecutionEngine {
     private laneDeps;
     startLane(laneId: string, target: string, context: {
         projectPath?: string;
-    } & Record<string, any>, startRequestId: string): Promise<LaneStepResult>;
+    } & Record<string, any>, startRequestId: string, renderUrl?: string): Promise<LaneStepResult>;
     advanceLane(projectPath: string, checkpointId: string, transition: LaneTransition): Promise<LaneStepResult>;
     laneStatus(projectPath: string, checkpointId: string): import("./lane-types").LaneState;
     listLanes(projectPath: string, options?: {

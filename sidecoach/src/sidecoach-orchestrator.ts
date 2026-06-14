@@ -1637,7 +1637,7 @@ export class FlowExecutionEngine {
       },
     };
   }
-  async startLane(laneId: string, target: string, context: { projectPath?: string } & Record<string, any>, startRequestId: string): Promise<LaneStepResult> {
+  async startLane(laneId: string, target: string, context: { projectPath?: string } & Record<string, any>, startRequestId: string, renderUrl?: string): Promise<LaneStepResult> {
     const projectPath = context.projectPath || process.cwd();
     // Loop lanes get the policy-wide coverage-plan preflight (spec lines 1018-1023): a
     // target that cannot satisfy the release floor is rejected here, not started into a
@@ -1646,7 +1646,7 @@ export class FlowExecutionEngine {
       const pf = await convergencePreflight(projectPath, laneId);
       if (!pf.ok) throw new Error(pf.message);
     }
-    return laneRunner.startLane(laneId, target, { ...context, projectPath }, startRequestId, this.laneDeps(projectPath));
+    return laneRunner.startLane(laneId, target, { ...context, projectPath }, startRequestId, this.laneDeps(projectPath), renderUrl);
   }
   async advanceLane(projectPath: string, checkpointId: string, transition: LaneTransition): Promise<LaneStepResult> {
     return laneRunner.advanceLane(projectPath, checkpointId, transition, this.laneDeps(projectPath));
