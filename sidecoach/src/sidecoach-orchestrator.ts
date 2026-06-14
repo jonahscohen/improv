@@ -15,7 +15,8 @@ import { ContextLoader } from './project-context';
 import { buildProjectContext, ProjectContext } from './context-loader';
 import { persistSessionMemory } from './session-memory-writer';
 import { parseSlashCommand, getAvailableCommands, getCommandsByPhase, getVerbCommandInfo, resolveSidecoachInput } from './slash-command-router';
-import { LANES } from './lanes.generated';
+import { LANES, getLane } from './lanes.generated';
+import { convergencePreflight } from './lane-convergence-preflight';
 import * as path from 'path';
 import { createHash } from 'crypto';
 import { SidecoachEntryPoint, globalEntryPoint, EntryPointRequest } from './sidecoach-entry-point';
@@ -1638,6 +1639,13 @@ export class FlowExecutionEngine {
   }
   async startLane(laneId: string, target: string, context: { projectPath?: string } & Record<string, any>, startRequestId: string): Promise<LaneStepResult> {
     const projectPath = context.projectPath || process.cwd();
+    // Loop lanes get the policy-wide coverage-plan preflight (spec lines 1018-1023): a
+    // target that cannot satisfy the release floor is rejected here, not started into a
+    // permanently-inconclusive loop. (laneRunner.startLane keeps the cheap policy check.)
+    if (getLane(laneId)?.executionKind === 'loop') {
+      const pf = await convergencePreflight(projectPath, laneId);
+      if (!pf.ok) throw new Error(pf.message);
+    }
     return laneRunner.startLane(laneId, target, { ...context, projectPath }, startRequestId, this.laneDeps(projectPath));
   }
   async advanceLane(projectPath: string, checkpointId: string, transition: LaneTransition): Promise<LaneStepResult> {

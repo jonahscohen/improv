@@ -51,6 +51,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/lane-loop-advance.test.ts', required: true },               // P4c loop advisory step advance
   { rel: 'src/__tests__/lane-loop-boundary-converge.test.ts', required: true },     // P4c boundary converged path
   { rel: 'src/__tests__/lane-loop-boundary-continue.test.ts', required: true },     // P4c boundary continue/stall/skip-no-bypass
+  { rel: 'src/__tests__/lane-convergence-preflight.test.ts', required: true },      // P4c coverage-plan preflight
   { rel: 'src/__tests__/product-rule-registry.test.ts', required: true },
   { rel: 'src/__tests__/flow-validation-capabilities.test.ts', required: true },
   { rel: 'src/__tests__/generate-validators.test.ts', required: true },
