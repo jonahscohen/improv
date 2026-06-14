@@ -1,6 +1,7 @@
 // sidecoach/src/flow-validation-capabilities.ts
 import type { FlowId } from './types';
 import type { ProductValidationResult } from './product-rule-types';
+import { makeProductValidator } from './validators/run-validator';
 
 export interface ProductValidatorRegistration {
   validatorId: string;
@@ -40,10 +41,10 @@ export function deriveCapability(f: FlowValidationCapability): 'product_validato
 }
 
 export const VALIDATOR_REGISTRATIONS: ProductValidatorRegistration[] = [
-  { validatorId: 'polish-standard', label: 'Polish Standard' },
-  { validatorId: 'theming', label: 'Theming / Token Consistency' },
-  { validatorId: 'anti-pattern', label: 'CSS Anti-Patterns' },
-  { validatorId: 'static-a11y', label: 'Static Accessibility' },
+  { validatorId: 'polish-standard', label: 'Polish Standard', validateProduct: makeProductValidator('polish-standard') },
+  { validatorId: 'theming', label: 'Theming / Token Consistency', validateProduct: makeProductValidator('theming') },
+  { validatorId: 'anti-pattern', label: 'CSS Anti-Patterns', validateProduct: makeProductValidator('anti-pattern') },
+  { validatorId: 'static-a11y', label: 'Static Accessibility', validateProduct: makeProductValidator('static-a11y') },
 ];
 
 // lane_converge's FIVE derived member flows (spec 939-950). ONLY Flow J binds a

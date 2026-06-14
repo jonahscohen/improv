@@ -1,6 +1,9 @@
 // sidecoach/src/product-rule-registry.ts
-import type { ProductRuleDefinition } from './product-rule-types';
+import type { ProductRuleDefinition, ProductRuleResult } from './product-rule-types';
 import { supportedKindsFor } from './validators/source-support-matrix';
+import { CHECKS, missingCheck } from './validators/checks';
+import { stampResult } from './validators/check-context';
+import type { ProductCheckContext } from './validators/check-context';
 
 // The shared HTML-structural-detector override reason (absolute-ban-detector.ts:19-21).
 // Both heuristic markup bans (identical-card-grids, hero-metric-template) cite it.
@@ -11,7 +14,7 @@ const STRUCTURAL_OVERRIDE_REASON =
 // is sourced from the ONE shared matrix (supportedKindsFor) so registry generation and
 // project collection cannot drift. Browser-evidence rules (computed-style/dom/contrast)
 // are owned-but-non-required and surface inconclusive until a browser collector (P4b).
-export const RULES: ProductRuleDefinition[] = [
+const RAW_RULES: ProductRuleDefinition[] = [
   // ====================== owner polish-standard (19) ======================
   {
     ruleId: 'polish.scale-on-press',
@@ -511,6 +514,27 @@ export const RULES: ProductRuleDefinition[] = [
     applicability: 'not_applicable',
   },
 ];
+
+// Attach the four-status checkProduct to every definition. The wrapper looks up the
+// verdict fn by canonicalRuleKey, stamps per-rule metadata from the definition, and
+// CATCHES a throwing rule check as inconclusive + rule_exception (spec 479-483). The
+// generated file is unaffected: deriveValidator reads identity/owner fields and
+// JSON.stringify drops functions.
+export const RULES: ProductRuleDefinition[] = RAW_RULES.map((def) => ({
+  ...def,
+  checkProduct: (context: unknown): ProductRuleResult => {
+    const fn = CHECKS[def.canonicalRuleKey] ?? missingCheck;
+    try {
+      return stampResult(def, fn(context as ProductCheckContext));
+    } catch (e) {
+      return stampResult(def, {
+        status: 'inconclusive',
+        message: `rule check threw: ${String(e instanceof Error ? e.message : e)}`.slice(0, 200),
+        normalizedErrorCategory: 'rule_exception',
+      });
+    }
+  },
+}));
 
 export function getRule(canonicalRuleKey: string): ProductRuleDefinition | null {
   return RULES.find((r) => r.canonicalRuleKey === canonicalRuleKey) ?? null;

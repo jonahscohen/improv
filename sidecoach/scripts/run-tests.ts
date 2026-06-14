@@ -42,6 +42,8 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/flow-validation-capabilities.test.ts', required: true },
   { rel: 'src/__tests__/generate-validators.test.ts', required: true },
   { rel: 'src/__tests__/clean-evaluator.test.ts', required: true },
+  { rel: 'src/__tests__/project-collector.test.ts', required: true },
+  { rel: 'src/__tests__/product-validator-pipeline.test.ts', required: true },
 ];
 
 let ran = 0;
