@@ -24,6 +24,7 @@ import { FLOW_MODELS } from '../../dist/model-routing';
 import type { FlowId } from '../../dist/types';
 
 import type { Logger } from './logger';
+import { loadRegistry as loadLaneClassifierRegistry } from './keyword-resolver';
 
 // ---------------------------------------------------------------------------
 // Resolved registry paths
@@ -45,6 +46,14 @@ export function resolveVerbsJsonPath(): string {
 
 export function resolveModesJsonPath(): string {
   return path.join(resolveRepoRoot(), 'claude', 'hooks', 'sidecoach-modes.json');
+}
+
+export function resolveLanesJsonPath(): string {
+  return path.join(resolveRepoRoot(), 'claude', 'hooks', 'sidecoach-lanes.json');
+}
+
+export function resolveIntentJsonPath(): string {
+  return path.join(resolveRepoRoot(), 'claude', 'hooks', 'sidecoach-intent.json');
 }
 
 export function resolveCheatsheetPath(): string {
@@ -142,6 +151,60 @@ export function loadModeRegistry(logger: Logger): ModeRegistry | null {
     return { modes, meta: parsed._meta };
   } catch (err) {
     logger.warn('failed to load modes registry', {
+      path: filePath,
+      err: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lane registry (P4d) - the classifier's own validating loader. Structural
+// invalidity (no lanes / incomplete scope / missing scoring keys) THROWS inside
+// loadLaneClassifierRegistry; we surface that as a null slot, which disables the
+// lane tier loudly (the tool returns DOWNSTREAM_UNAVAILABLE). There is no silent
+// TS fallback for lanes - the classifier registry is the single source of truth.
+// ---------------------------------------------------------------------------
+
+export interface LaneRegistryBundle {
+  registry: any;
+  sourcePath: string;
+}
+
+export function loadLaneRegistry(logger: Logger): LaneRegistryBundle | null {
+  const filePath = resolveLanesJsonPath();
+  try {
+    const registry = loadLaneClassifierRegistry(filePath);
+    return { registry, sourcePath: filePath };
+  } catch (err) {
+    logger.warn('failed to load lane registry (lane tier disabled, no fallback)', {
+      path: filePath,
+      err: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Advisory-intent registry (P4d) - sidecoach-intent.json. Used ONLY to compute
+// nudge eligibility and to surface the advisory nudge text. The MCP never reads
+// or mutates the cooldown state file referenced inside it (cooldown -> NUDGE/
+// SILENT delivery is the Python hook's job). A missing/invalid file yields null:
+// eligibility computes to false and no nudge text is attached.
+// ---------------------------------------------------------------------------
+
+export function loadIntentRegistry(logger: Logger): any | null {
+  const filePath = resolveIntentJsonPath();
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      logger.warn('intent registry shape unexpected', { path: filePath });
+      return null;
+    }
+    return parsed;
+  } catch (err) {
+    logger.warn('failed to load intent registry (advisory nudge disabled)', {
       path: filePath,
       err: err instanceof Error ? err.message : String(err),
     });
@@ -300,6 +363,8 @@ export interface RegistryBundle {
   modes: ModeRegistry | null;
   flows: FlowSummary[];
   cheatsheet: CheatsheetContent | null;
+  lanes: LaneRegistryBundle | null;
+  intent: any | null;
 }
 
 export function loadAllRegistries(logger: Logger): RegistryBundle {
@@ -307,6 +372,8 @@ export function loadAllRegistries(logger: Logger): RegistryBundle {
   const modesFromJson = loadModeRegistry(logger);
   const flows = loadFlowRegistry(logger);
   const cheatsheet = loadCheatsheet(logger);
+  const lanes = loadLaneRegistry(logger);
+  const intent = loadIntentRegistry(logger);
 
   // Fall back to the TS modes module if the JSON file is missing - we still
   // have the TS-side source of truth available in-process.
@@ -320,7 +387,9 @@ export function loadAllRegistries(logger: Logger): RegistryBundle {
     modeCount: modes.modes.length,
     flowCount: flows.length,
     cheatsheetLoaded: cheatsheet !== null,
+    laneCount: lanes?.registry.lanes.length ?? 0,
+    intentLoaded: intent !== null,
   });
 
-  return { verbs, modes, flows, cheatsheet };
+  return { verbs, modes, flows, cheatsheet, lanes, intent };
 }

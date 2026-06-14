@@ -17,6 +17,8 @@ const NULL_REG: RegistryBundle = {
   modes: null,
   flows: [],
   cheatsheet: null,
+  lanes: null,
+  intent: null,
 };
 
 function deps() {

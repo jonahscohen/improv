@@ -25,7 +25,7 @@ function silentLogger() {
   return createLogger({ level: 'error', write: () => undefined });
 }
 
-const NULL_REG: RegistryBundle = { verbs: null, modes: null, flows: [], cheatsheet: null };
+const NULL_REG: RegistryBundle = { verbs: null, modes: null, flows: [], cheatsheet: null, lanes: null, intent: null };
 
 function deps() {
   return { logger: silentLogger(), registries: NULL_REG };

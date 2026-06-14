@@ -57,6 +57,8 @@ function fakeRegistries(): RegistryBundle {
         '## Section 0 - Modes\n\nMODE TEXT\n\n## Section 1 - Verbs\n\nVERB TEXT\n\n## Section 2 - Flows\n\nFLOW TEXT\n\n## Section 3 - Routing\n\nROUTING TEXT\n',
       sourcePath: '/fake/cheatsheet.md',
     },
+    lanes: null,
+    intent: null,
   };
 }
 
@@ -161,6 +163,8 @@ export async function run(): Promise<void> {
       modes: { modes: [] },
       flows: fakeRegistries().flows,
       cheatsheet: fakeRegistries().cheatsheet,
+      lanes: null,
+      intent: null,
     };
     try {
       await h({ phrase: 'polish this' }, buildDeps(empty));

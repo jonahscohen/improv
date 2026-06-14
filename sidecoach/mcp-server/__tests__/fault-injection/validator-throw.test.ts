@@ -20,6 +20,8 @@ const fakeRegs = {
   modes: { modes: [] },
   flows: [],
   cheatsheet: null,
+  lanes: null,
+  intent: null,
 } as const;
 
 export async function run(): Promise<void> {

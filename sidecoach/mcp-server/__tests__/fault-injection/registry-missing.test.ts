@@ -20,6 +20,8 @@ export async function run(): Promise<void> {
         modes: { modes: [] },
         flows: [],
         cheatsheet: null,
+        lanes: null,
+        intent: null,
       },
     });
     assert.ok(built.mcp);
@@ -38,6 +40,8 @@ export async function run(): Promise<void> {
             modes: { modes: [] },
             flows: [],
             cheatsheet: null,
+            lanes: null,
+            intent: null,
           },
         },
       );
@@ -59,6 +63,8 @@ export async function run(): Promise<void> {
           modes: { modes: [{ mode: 'forge', pattern: 'forge', description: '', oneLineExplanation: '', chain: [] }] },
           flows: [],
           cheatsheet: null,
+          lanes: null,
+          intent: null,
         },
       },
     );
