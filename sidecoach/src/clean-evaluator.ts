@@ -137,8 +137,13 @@ export function evaluateCleanPolicy(input: CleanEvalInput, policy: CleanPolicy):
   //    "measurable" unless its produced result is not_applicable (applicability /
   //    target-scope exclusion). A MISSING required rule is still declared-
   //    measurable (it becomes inconclusive in step 4; it is not excluded here).
+  //    A DUPLICATED required rule is ALSO always measurable (P2): otherwise the
+  //    last-occurrence-wins `byId` lookup makes [fail, not_applicable] vacuously
+  //    drop the fail while [not_applicable, fail] synthesizes inconclusive - an
+  //    order-sensitive bug. Treating it as measurable routes BOTH orders through
+  //    step 3's deterministic single-inconclusive collapse.
   //    No measurable required rule -> inconclusive, with NO coverage logic run.
-  const measurableRequiredIds = policy.requiredRuleIds.filter((id) => byId.get(id)?.status !== 'not_applicable');
+  const measurableRequiredIds = policy.requiredRuleIds.filter((id) => duplicated.has(id) || byId.get(id)?.status !== 'not_applicable');
   if (measurableRequiredIds.length === 0) {
     // findings can still come from present non-required, non-duplicated fails (P1-1).
     const naFindings: ProductFinding[] = input.rules

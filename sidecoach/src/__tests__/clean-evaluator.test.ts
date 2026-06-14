@@ -119,6 +119,19 @@ function run_() {
     if (e.normalizedErrorCategory !== 'registry_fault') throw new Error('unknown required rule -> registry_fault category');
   }
 
+  // P2: duplicate required results must be ORDER-INSENSITIVE. [fail, not_applicable]
+  // must NOT take the vacuous branch and drop the fail while [not_applicable, fail]
+  // synthesizes inconclusive - both must collapse to the SAME single inconclusive.
+  {
+    const a = evaluateCleanPolicy(input([rule(REQ, 'fail', 'blocker'), rule(REQ, 'not_applicable')], [satObs(REQ)]), policy);
+    const b = evaluateCleanPolicy(input([rule(REQ, 'not_applicable'), rule(REQ, 'fail', 'blocker')], [satObs(REQ)]), policy);
+    if (a.status !== 'inconclusive' || b.status !== 'inconclusive') throw new Error('duplicate required (mixed statuses) must be inconclusive in BOTH orders');
+    const aReqs = a.rules.filter((x) => x.ruleId === REQ);
+    const bReqs = b.rules.filter((x) => x.ruleId === REQ);
+    if (aReqs.length !== 1 || bReqs.length !== 1) throw new Error('duplicate required id must collapse to ONE effective result in both orders');
+    if (aReqs[0].status !== 'inconclusive' || bReqs[0].status !== 'inconclusive') throw new Error('collapsed duplicate must be inconclusive in both orders');
+  }
+
   console.log('clean-evaluator: OK');
 }
 run_();
