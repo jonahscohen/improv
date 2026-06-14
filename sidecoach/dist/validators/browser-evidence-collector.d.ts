@@ -16,5 +16,6 @@ export type BrowserEvidenceCollection = {
     reason: string;
 };
 export declare function renderUrlFromContext(raw: unknown): string | undefined;
+export declare function isSubresourceAllowed(suppliedUrl: string, requestedUrl: string): boolean;
 export declare function collectBrowserEvidence(renderUrl: string | undefined, signal?: AbortSignal): Promise<BrowserEvidenceCollection>;
 //# sourceMappingURL=browser-evidence-collector.d.ts.map
