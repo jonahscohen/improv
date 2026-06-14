@@ -139,9 +139,11 @@ async function runDetailed(validatorId, context, signal) {
     }
     let collected;
     try {
-        collected = (0, project_collector_1.collect)(context);
+        collected = await (0, project_collector_1.collect)(context, signal);
     }
     catch (e) {
+        if (e instanceof project_collector_1.CollectionAbortedError)
+            return abortedDetail(validatorId); // aborted DURING collection
         const result = (0, clean_evaluator_1.evaluateCleanPolicy)({ validatorId, rules: [], coverageObservations: [], runCoverage: emptyRun(),
             validatorError: { category: 'unreadable_input', message: String(e instanceof Error ? e.message : e) } }, policy);
         return { result, executions: [], coverageObservations: [], runCoverage: emptyRun() };
