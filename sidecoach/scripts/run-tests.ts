@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
 
@@ -68,6 +69,13 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/anti-pattern-checks.test.ts', required: true },
   { rel: 'src/__tests__/validator-fixtures-e2e.test.ts', required: true },
 ];
+
+// Isolate HOME so suites that drive lane FINALIZE (and thus publish to the
+// HOME-scoped ~/.claude/sidecoach-flow-history.json) write into a throwaway temp
+// home instead of the developer's real one. execFileSync below inherits env, so
+// every spawned suite picks this up.
+process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecoach-test-home-'));
+console.log(`run-tests: isolated HOME -> ${process.env.HOME}`);
 
 let ran = 0;
 let failed = 0;
