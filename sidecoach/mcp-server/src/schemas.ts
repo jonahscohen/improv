@@ -53,6 +53,14 @@ export const ListModesInput = z.object(listModesShape);
 export type ListModesInputT = z.infer<typeof ListModesInput>;
 
 // ---------------------------------------------------------------------------
+// Tool 2: list_lanes (replaces list_modes - no input)
+// ---------------------------------------------------------------------------
+
+export const listLanesShape = {} as const;
+export const ListLanesInput = z.object(listLanesShape);
+export type ListLanesInputT = z.infer<typeof ListLanesInput>;
+
+// ---------------------------------------------------------------------------
 // Tool 3: list_flows
 // ---------------------------------------------------------------------------
 
@@ -87,6 +95,20 @@ export const resolveKeywordShape = {
 };
 export const ResolveKeywordInput = z.object(resolveKeywordShape);
 export type ResolveKeywordInputT = z.infer<typeof ResolveKeywordInput>;
+
+// ---------------------------------------------------------------------------
+// Tool 4: classify_intent (replaces resolve_keyword) - natural lane classifier
+// ---------------------------------------------------------------------------
+
+export const classifyIntentShape = {
+  prompt: z
+    .string()
+    .min(1)
+    .max(MAX_PHRASE_CHARS)
+    .describe('Natural user prompt to classify against the sidecoach lane registry.'),
+};
+export const ClassifyIntentInput = z.object(classifyIntentShape);
+export type ClassifyIntentInputT = z.infer<typeof ClassifyIntentInput>;
 
 // ---------------------------------------------------------------------------
 // Tool 5: validate_polish_standard
@@ -194,6 +216,98 @@ export const getFlowMetadataShape = {
 };
 export const GetFlowMetadataInput = z.object(getFlowMetadataShape);
 export type GetFlowMetadataInputT = z.infer<typeof GetFlowMetadataInput>;
+
+// ---------------------------------------------------------------------------
+// Tool: sidecoach_lane (P4d) - drive the four monitor lane operations
+// ---------------------------------------------------------------------------
+
+const LANE_PROJECT_MAX = 2048;
+const LANE_ID_MAX = 128;
+const LANE_TARGET_MAX = 2048;
+const LANE_CHECKPOINT_MAX = 256;
+const LANE_REASON_MAX = 2048;
+const StepReportSchema = z.object({
+  stepId: z.string().min(1),
+  iteration: z.number().int().min(0),
+  reportId: z.string().min(1),
+  verb: z.string().min(1),
+  summary: z.string().min(1),
+  evidence: z.array(z.object({
+    kind: z.enum(['files', 'screenshot', 'validation', 'note']),
+    detail: z.string().min(1),
+  })).min(1),
+  checklistResults: z.array(z.object({ itemId: z.string().min(1), done: z.boolean() })).optional(),
+});
+
+export const laneShape = {
+  operation: z
+    .enum(['start', 'advance', 'status', 'list'])
+    .describe('Which lane engine method to invoke: start | advance | status | list.'),
+  projectPath: z
+    .string()
+    .min(1)
+    .max(LANE_PROJECT_MAX)
+    .optional()
+    .describe('Project root for checkpoint storage. Defaults to SIDECOACH_PROJECT_ROOT (cwd).'),
+  laneId: z.string().min(1).max(LANE_ID_MAX).optional().describe('Lane id, e.g. "lane_build" (operation=start).'),
+  target: z.string().max(LANE_TARGET_MAX).optional().describe('Free-text target the lane operates on (operation=start).'),
+  startRequestId: z
+    .string()
+    .min(1)
+    .max(LANE_CHECKPOINT_MAX)
+    .optional()
+    .describe('Caller-supplied required transport idempotency key for operation=start. A repeat reuses the active lane.'),
+  checkpointId: z
+    .string()
+    .min(1)
+    .max(LANE_CHECKPOINT_MAX)
+    .optional()
+    .describe('Checkpoint id (operation=advance or status).'),
+  action: z
+    .enum(['complete', 'retry', 'skip', 'resume', 'interrupt', 'stop'])
+    .optional()
+    .describe('Transition action (operation=advance).'),
+  expectedRevision: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe('Best-effort in-process revision check (operation=advance).'),
+  reason: z.string().min(1).max(LANE_REASON_MAX).optional().describe('Required for skip; recorded for stop/interrupt.'),
+  report: StepReportSchema.optional().describe('StepReport object required for action=complete.'),
+  all: z.boolean().optional().describe('Include closed lanes in the listing (operation=list).'),
+};
+export const LaneInput = z
+  .object(laneShape)
+  .refine(
+    (v) =>
+      v.operation !== 'start' ||
+      (typeof v.laneId === 'string' &&
+        v.laneId.length > 0 &&
+        typeof v.startRequestId === 'string' &&
+        v.startRequestId.length > 0),
+    { message: 'operation=start requires laneId and caller-supplied startRequestId' },
+  )
+  .refine(
+    (v) =>
+      v.operation !== 'advance' ||
+      (typeof v.checkpointId === 'string' &&
+        v.checkpointId.length > 0 &&
+        typeof v.action === 'string' &&
+        typeof v.expectedRevision === 'number'),
+    { message: 'operation=advance requires checkpointId, action, and expectedRevision' },
+  )
+  .refine((v) => v.operation !== 'advance' || v.action !== 'complete' || v.report !== undefined, {
+    message: 'operation=advance action=complete requires report',
+  })
+  .refine(
+    (v) => v.operation !== 'advance' || v.action !== 'skip' || (typeof v.reason === 'string' && v.reason.length > 0),
+    { message: 'operation=advance action=skip requires reason' },
+  )
+  .refine((v) => v.operation !== 'status' || (typeof v.checkpointId === 'string' && v.checkpointId.length > 0), {
+    message: 'operation=status requires checkpointId',
+  });
+export type LaneInputT = z.infer<typeof LaneInput>;
 
 // ---------------------------------------------------------------------------
 // Tool 11: state_set (T-0022)
@@ -440,6 +554,9 @@ export type PythonReplExecuteInputT = z.infer<typeof PythonReplExecuteInput>; //
 export const TOOL_INPUT_SCHEMAS = {
   sidecoach_list_verbs: ListVerbsInput,
   sidecoach_list_modes: ListModesInput,
+  sidecoach_list_lanes: ListLanesInput,
+  sidecoach_classify_intent: ClassifyIntentInput,
+  sidecoach_lane: LaneInput,
   sidecoach_list_flows: ListFlowsInput,
   sidecoach_resolve_keyword: ResolveKeywordInput,
   sidecoach_validate_polish_standard: ValidatePolishInput,

@@ -228,4 +228,64 @@ export async function run(): Promise<void> {
       true,
     );
   });
+
+  await test('classify_intent: rejects empty prompt', () => {
+    const r = TOOL_INPUT_SCHEMAS.sidecoach_classify_intent.safeParse({ prompt: '' });
+    assert.strictEqual(r.success, false);
+  });
+
+  await test('classify_intent: accepts a normal prompt', () => {
+    const r = TOOL_INPUT_SCHEMAS.sidecoach_classify_intent.safeParse({ prompt: 'restyle the navbar' });
+    assert.strictEqual(r.success, true);
+  });
+
+  await test('classify_intent: rejects > 4000 char prompt', () => {
+    const r = TOOL_INPUT_SCHEMAS.sidecoach_classify_intent.safeParse({ prompt: 'x'.repeat(4001) });
+    assert.strictEqual(r.success, false);
+  });
+
+  await test('list_lanes: accepts empty input', () => {
+    const r = TOOL_INPUT_SCHEMAS.sidecoach_list_lanes.safeParse({});
+    assert.strictEqual(r.success, true);
+  });
+
+  await test('lane: start requires laneId', () => {
+    const ok = TOOL_INPUT_SCHEMAS.sidecoach_lane.safeParse({
+      operation: 'start', laneId: 'lane_build', startRequestId: 'transport-1',
+    });
+    const badLane = TOOL_INPUT_SCHEMAS.sidecoach_lane.safeParse({ operation: 'start', startRequestId: 'transport-1' });
+    const badKey = TOOL_INPUT_SCHEMAS.sidecoach_lane.safeParse({ operation: 'start', laneId: 'lane_build' });
+    assert.strictEqual(ok.success, true);
+    assert.strictEqual(badLane.success, false);
+    assert.strictEqual(badKey.success, false);
+  });
+
+  await test('lane: complete requires a StepReport; skip requires a reason', () => {
+    const report = {
+      stepId: 'shape', iteration: 0, reportId: 'report-1', verb: 'shape',
+      summary: 'done', evidence: [{ kind: 'note', detail: 'verified' }],
+    };
+    const complete = TOOL_INPUT_SCHEMAS.sidecoach_lane.safeParse({
+      operation: 'advance', checkpointId: 'cp1', action: 'complete', expectedRevision: 0, report,
+    });
+    const completeWithoutReport = TOOL_INPUT_SCHEMAS.sidecoach_lane.safeParse({
+      operation: 'advance', checkpointId: 'cp1', action: 'complete', expectedRevision: 0,
+    });
+    const skip = TOOL_INPUT_SCHEMAS.sidecoach_lane.safeParse({
+      operation: 'advance', checkpointId: 'cp1', action: 'skip', expectedRevision: 0, reason: 'not needed',
+    });
+    const skipWithoutReason = TOOL_INPUT_SCHEMAS.sidecoach_lane.safeParse({
+      operation: 'advance', checkpointId: 'cp1', action: 'skip', expectedRevision: 0,
+    });
+    assert.strictEqual(complete.success, true);
+    assert.strictEqual(completeWithoutReport.success, false);
+    assert.strictEqual(skip.success, true);
+    assert.strictEqual(skipWithoutReason.success, false);
+  });
+
+  await test('lane: status requires checkpointId; list needs nothing', () => {
+    assert.strictEqual(TOOL_INPUT_SCHEMAS.sidecoach_lane.safeParse({ operation: 'status', checkpointId: 'cp1' }).success, true);
+    assert.strictEqual(TOOL_INPUT_SCHEMAS.sidecoach_lane.safeParse({ operation: 'status' }).success, false);
+    assert.strictEqual(TOOL_INPUT_SCHEMAS.sidecoach_lane.safeParse({ operation: 'list' }).success, true);
+  });
 }
