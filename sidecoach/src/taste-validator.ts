@@ -51,7 +51,7 @@ const TAILWIND_UTILITY_PATTERN = new RegExp(
   'i'
 );
 
-function detectTailwindContext(
+export function detectTailwindContext(
   html: string,
   css: string,
   opts?: ValidateTasteOptions
@@ -83,7 +83,7 @@ function lineNumberOf(text: string, index: number): number {
   return text.slice(0, index).split('\n').length;
 }
 
-function extractInlineStyles(
+export function extractInlineStyles(
   html: string
 ): Array<{ content: string; start: number; contentStart: number }> {
   const blocks: Array<{ content: string; start: number; contentStart: number }> = [];
@@ -223,7 +223,7 @@ function checkHeroRadialGradient(allCss: string): TasteViolation[] {
   return violations;
 }
 
-function checkHexInHoverWithCssVars(allCss: string, tailwind: boolean): TasteViolation[] {
+export function checkHexInHoverWithCssVars(allCss: string, tailwind: boolean): TasteViolation[] {
   const violations: TasteViolation[] = [];
   const fileHasCssVars =
     /--[\w-]+\s*:/.test(allCss) || /var\(\s*--[\w-]+/.test(allCss);
@@ -286,7 +286,7 @@ function checkObserverRace(html: string, allCss: string): TasteViolation[] {
   return violations;
 }
 
-function checkBorderRadiusInconsistency(allCss: string, tailwind: boolean): TasteViolation[] {
+export function checkBorderRadiusInconsistency(allCss: string, tailwind: boolean): TasteViolation[] {
   const violations: TasteViolation[] = [];
   const radiusMatches = [...allCss.matchAll(/border-radius\s*:\s*([^;}]+)/g)];
   const values = new Set<string>();
