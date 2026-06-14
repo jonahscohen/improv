@@ -2,7 +2,7 @@
 // Source: product-rule-registry.ts + flow-validation-capabilities.ts
 import type { CleanPolicy, SourceKindSupport } from './product-rule-types';
 
-export interface GeneratedValidator { validatorId: string; ownedRuleIds: string[]; registryScope: string[]; supportedSourceKinds: SourceKindSupport[]; cleanPolicy: CleanPolicy; }
+export interface GeneratedValidator { validatorId: string; ownedRuleIds: string[]; registryScope: string[]; supportedSourceKinds: SourceKindSupport[]; browserRuleIds: string[]; browserCoverageByScope: import('./product-rule-types').RequiredCoverageRecord[]; cleanPolicy: CleanPolicy; }
 export interface GeneratedFlowCapability { flowId: string; capability: 'product_validator' | 'advisory' | 'none'; }
 
 export const GENERATED_VALIDATORS: GeneratedValidator[] = [
@@ -90,6 +90,32 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       {
         "kind": "vue",
         "level": "partial"
+      }
+    ],
+    "browserRuleIds": [
+      "polish.concentric-radius",
+      "polish.typography-rhythm"
+    ],
+    "browserCoverageByScope": [
+      {
+        "ruleId": "polish.concentric-radius",
+        "scope": "component",
+        "evidenceAlternativesByRequirement": [
+          [
+            "computed-style"
+          ]
+        ],
+        "requireAllDiscoveredApplicableFiles": true
+      },
+      {
+        "ruleId": "polish.typography-rhythm",
+        "scope": "component",
+        "evidenceAlternativesByRequirement": [
+          [
+            "computed-style"
+          ]
+        ],
+        "requireAllDiscoveredApplicableFiles": true
       }
     ],
     "cleanPolicy": {
@@ -380,6 +406,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
         "level": "partial"
       }
     ],
+    "browserRuleIds": [],
+    "browserCoverageByScope": [],
     "cleanPolicy": {
       "requiredRuleIds": [
         "theming.hex-in-interactive-state",
@@ -473,6 +501,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
         "level": "partial"
       }
     ],
+    "browserRuleIds": [],
+    "browserCoverageByScope": [],
     "cleanPolicy": {
       "requiredRuleIds": [
         "anti-pattern.gradient-text",
@@ -619,6 +649,32 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       {
         "kind": "tsx",
         "level": "partial"
+      }
+    ],
+    "browserRuleIds": [
+      "a11y.min-hit-area",
+      "a11y.color-contrast"
+    ],
+    "browserCoverageByScope": [
+      {
+        "ruleId": "a11y.min-hit-area",
+        "scope": "component",
+        "evidenceAlternativesByRequirement": [
+          [
+            "dom"
+          ]
+        ],
+        "requireAllDiscoveredApplicableFiles": true
+      },
+      {
+        "ruleId": "a11y.color-contrast",
+        "scope": "component",
+        "evidenceAlternativesByRequirement": [
+          [
+            "contrast"
+          ]
+        ],
+        "requireAllDiscoveredApplicableFiles": true
       }
     ],
     "cleanPolicy": {

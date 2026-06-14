@@ -4,7 +4,7 @@
 // without a TS6059 rootDir crossing (the P2 lane-derivation precedent). The thin
 // scripts/generate-validators.ts wrapper imports these for file I/O + --check.
 import {
-  CleanPolicy, ProductRuleDefinition, RequiredCoverageRecord, SourceKindSupport,
+  CleanPolicy, ProductRuleDefinition, RequiredCoverageRecord, SourceKindSupport, EvidenceKind,
   SEVERITY_TABLE, sourceKindsForEvidence, isStaticallySatisfiable,
 } from './product-rule-types';
 import { supportedKindsFor } from './validators/source-support-matrix';
@@ -15,11 +15,31 @@ import {
 
 const BLOCKING: CleanPolicy['blockingSeverities'] = ['blocker', 'major'];
 
+// P4b-2 EXPLICIT browser-backed allowlist. ONLY these four rules are promoted into
+// active browser policy when the collector succeeds. polish.anti-pattern-genericity
+// is deliberately EXCLUDED (team-lead decision) even though it also declares 'dom':
+// its render-URL meaning was never defined, so it stays owned, non-required, and
+// inconclusive. Browser satisfiability is NOT inferred from "any non-static evidence
+// requirement" - it is this hand-maintained allowlist.
+export const BROWSER_BACKED_RULE_IDS = new Set([
+  'a11y.min-hit-area',
+  'a11y.color-contrast',
+  'polish.concentric-radius',
+  'polish.typography-rhythm',
+]);
+
+// Evidence kinds the browser-evidence collector actually produces. An allowlisted
+// browser rule whose declared evidence is outside this set could never be satisfied
+// by collection, so --check rejects it.
+const COLLECTOR_EVIDENCE_KINDS = new Set<EvidenceKind>(['computed-style', 'dom', 'contrast']);
+
 export interface GeneratedValidator {
   validatorId: string;
   ownedRuleIds: string[];
   registryScope: string[];
   supportedSourceKinds: SourceKindSupport[];
+  browserRuleIds: string[];
+  browserCoverageByScope: RequiredCoverageRecord[];
   cleanPolicy: CleanPolicy;
 }
 
@@ -58,10 +78,24 @@ function coverageRecord(r: ProductRuleDefinition): RequiredCoverageRecord {
   };
 }
 
+// Browser coverage is satisfied by the collector's evidence KINDS directly (each
+// evidence requirement is its own collector kind, e.g. 'dom' / 'computed-style' /
+// 'contrast'), NOT by static source kinds. The runtime matches these against the
+// browserEvidence.kinds present for the synthetic render-URL target.
+function browserCoverageRecord(r: ProductRuleDefinition): RequiredCoverageRecord {
+  return {
+    ruleId: r.ruleId,
+    scope: r.scope,
+    evidenceAlternativesByRequirement: r.evidenceRequirements.map((e) => [e]),
+    requireAllDiscoveredApplicableFiles: deriveRequireAll(r),
+  };
+}
+
 // PURE: derive one validator's generated entry from the registry.
 export function deriveValidator(reg: ProductValidatorRegistration, rules: ProductRuleDefinition[]): GeneratedValidator {
   const owned = rules.filter((r) => r.ownerValidatorId === reg.validatorId);
   const required = owned.filter((r) => isStaticallySatisfiable(r.evidenceRequirements));
+  const browserRequired = owned.filter((r) => BROWSER_BACKED_RULE_IDS.has(r.ruleId));
 
   const requiredCoverageByScope = required.map(coverageRecord);
 
@@ -85,13 +119,15 @@ export function deriveValidator(reg: ProductValidatorRegistration, rules: Produc
     ownedRuleIds: owned.map((r) => r.ruleId),
     registryScope: [...new Set(owned.map((r) => r.registryScope))],
     supportedSourceKinds: dedupeSourceKinds(owned.flatMap((r) => r.supportedSourceKinds)),
+    browserRuleIds: browserRequired.map((r) => r.ruleId),
+    browserCoverageByScope: browserRequired.map(browserCoverageRecord),
     cleanPolicy,
   };
 }
 
 // PURE: validate the whole registry; returns { ok, errors }. --check exits nonzero
 // if !ok. Covers the spec 628-634 rejection set.
-export function validateRegistry(rules: ProductRuleDefinition[], regs: ProductValidatorRegistration[], gatingValidatorIdList: string[] = []): { ok: boolean; errors: string[] } {
+export function validateRegistry(rules: ProductRuleDefinition[], regs: ProductValidatorRegistration[], gatingValidatorIdList: string[] = [], browserBackedRuleIds: string[] = []): { ok: boolean; errors: string[] } {
   const errors: string[] = [];
 
   // FULL field completeness: EVERY required field must be non-empty.
@@ -187,6 +223,25 @@ export function validateRegistry(rules: ProductRuleDefinition[], regs: ProductVa
   for (const reg of regs) {
     if (gating.has(reg.validatorId) && rules.every((r) => r.ownerValidatorId !== reg.validatorId)) {
       errors.push(`gating validator ${reg.validatorId} owns zero rules`);
+    }
+  }
+
+  // P4b-2 browser-backed allowlist consistency. EACH allowlisted id must be owned
+  // by a present rule, must NOT be statically satisfiable (a static rule belongs in
+  // cleanPolicy, not browser policy), and every declared evidence requirement must
+  // be a collector-produced kind. Rules OUTSIDE the allowlist are NEVER rejected for
+  // being non-static, so an excluded owned rule (e.g. genericity) stays valid as
+  // owned, non-required, and inconclusive.
+  const byRuleId = new Map(rules.map((r) => [r.ruleId, r]));
+  for (const id of new Set(browserBackedRuleIds)) {
+    const r = byRuleId.get(id);
+    if (!r) { errors.push(`browser-backed rule ${id} is not present in the registry`); continue; }
+    if (isStaticallySatisfiable(r.evidenceRequirements)) {
+      errors.push(`browser-backed rule ${id} is statically satisfiable and must not be in the browser allowlist`);
+    }
+    const nonCollector = r.evidenceRequirements.filter((e) => !COLLECTOR_EVIDENCE_KINDS.has(e));
+    if (nonCollector.length) {
+      errors.push(`browser-backed rule ${id} declares non-collector evidence (${nonCollector.join(', ')})`);
     }
   }
 

@@ -26,9 +26,16 @@ const baseRule = (over: Partial<ProductRuleDefinition>): ProductRuleDefinition =
   ...over,
 });
 const reg = (id: string): ProductValidatorRegistration => ({ validatorId: id, label: id });
-const expectInvalid = (label: string, rules: ProductRuleDefinition[], regs: ProductValidatorRegistration[], gating: string[] = []) => {
-  const res = validateRegistry(rules, regs, gating);
+const expectInvalid = (label: string, rules: ProductRuleDefinition[], regs: ProductValidatorRegistration[], gating: string[] = [], browser: string[] = []) => {
+  const res = validateRegistry(rules, regs, gating, browser);
   if (res.ok) throw new Error(`${label}: validateRegistry should have FAILED but passed`);
+};
+// A matrix-consistent rule (supportedSourceKinds derived from the shared matrix) so a
+// fixture is valid EXCEPT for the one defect under test - lets the browser-allowlist
+// fixtures isolate their specific rejection rather than tripping the drift guard.
+const okRule = (over: Partial<ProductRuleDefinition>): ProductRuleDefinition => {
+  const reqs = over.evidenceRequirements ?? ['css-rule'];
+  return baseRule({ ...over, evidenceRequirements: reqs, supportedSourceKinds: supportedKindsFor(...reqs) });
 };
 
 function run() {
@@ -45,6 +52,19 @@ function run() {
   const a11y = gen.GENERATED_VALIDATORS.find((v: any) => v.validatorId === 'static-a11y');
   if (!a11y.ownedRuleIds.includes('a11y.min-hit-area')) throw new Error('static-a11y must OWN the dom-only rule');
   if (a11y.cleanPolicy.requiredRuleIds.includes('a11y.min-hit-area')) throw new Error('DOM-only rule must NOT be required');
+
+  if (!a11y.browserRuleIds.includes('a11y.min-hit-area')) throw new Error('DOM rule must be generated as a browser rule');
+  if (!a11y.browserRuleIds.includes('a11y.color-contrast')) throw new Error('contrast rule must be generated as a browser rule');
+  if (a11y.browserCoverageByScope.find((c: any) => c.ruleId === 'a11y.min-hit-area')?.evidenceAlternativesByRequirement[0][0] !== 'dom') {
+    throw new Error('DOM browser coverage must use the dom evidence kind');
+  }
+  if (pol.browserRuleIds.sort().join(',') !== [
+    'polish.concentric-radius',
+    'polish.typography-rhythm',
+  ].sort().join(',')) throw new Error('polish browser rule split drifted');
+  if (!pol.ownedRuleIds.includes('polish.anti-pattern-genericity')) throw new Error('genericity must remain owned');
+  if (pol.browserRuleIds.includes('polish.anti-pattern-genericity')) throw new Error('genericity must remain excluded from browser policy');
+  if (pol.cleanPolicy.requiredRuleIds.includes('polish.anti-pattern-genericity')) throw new Error('genericity must remain non-required');
 
   // toleratedFindingCounts is EXPLICIT 0 per owned blocking (severity,class) pair (not {})
   if (Object.keys(a11y.cleanPolicy.toleratedFindingCounts).length === 0) throw new Error('tolerated counts must be explicit, not empty');
@@ -145,6 +165,23 @@ function run() {
     [reg('v')],
     gatingValidatorIds([{ laneId: 'l', requiredProductValidatorIds: ['ghost-gate'], excludedProductValidatorIds: [] }]),
   );
+
+  // 12. (P4b-2) browser-allowlist consistency, ONE per rejection. The base registry
+  //     is matrix-consistent and otherwise valid, so the ONLY defect is the browser
+  //     allowlist passed explicitly as the 5th arg.
+  // 12a. an allowlisted id that no rule declares/owns
+  expectInvalid('browser-allowlist-absent', [okRule({ ruleId: 'v.css', canonicalRuleKey: 'v/css' })], [reg('v')], [], ['v.ghost']);
+  // 12b. an allowlisted rule that is statically satisfiable (belongs in cleanPolicy, not browser policy)
+  expectInvalid('browser-allowlist-static', [okRule({ ruleId: 'v.css', canonicalRuleKey: 'v/css' })], [reg('v')], [], ['v.css']);
+  // 12c. an allowlisted rule whose declared evidence is not a collector-produced kind
+  //      ('markup'). Mixed ['dom','markup'] is non-static (dom has no static source) so
+  //      this isolates the non-collector-evidence rejection from the static-satisfiable one.
+  expectInvalid('browser-allowlist-noncollector',
+    [
+      okRule({ ruleId: 'v.css', canonicalRuleKey: 'v/css', sourceRuleAliases: ['source:v.css'] }),
+      okRule({ ruleId: 'v.mixed', canonicalRuleKey: 'v/mixed', sourceRuleAliases: ['source:v.mixed'], evidenceRequirements: ['dom', 'markup'] }),
+    ],
+    [reg('v')], [], ['v.mixed']);
 
   // --- P4a-2: the four gating validators are non-vacuous and matrix-consistent ---
   for (const id of ['polish-standard', 'theming', 'anti-pattern', 'static-a11y']) {
