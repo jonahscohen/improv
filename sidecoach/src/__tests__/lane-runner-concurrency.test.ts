@@ -154,6 +154,85 @@ async function run() {
     console.log('lane-runner-concurrency abort-fence: OK');
   }
 
+  // priority interrupt/stop fence a live lease; retry/resume reject live + fence stale.
+  {
+    const d = deps(proj);
+    const s = await startLane('lane_build', 'x', { projectPath: proj }, 'req-int', d);
+    const cp0 = d.store.read(s.checkpointId);
+    cp0.lease = { operationId: 'stuck', stepId: 'shape', iteration: 0, claimedCheckpointRevision: cp0.revision, fencingToken: cp0.fencingCounter, startedAt: d.now(), heartbeatAt: d.now() };
+    d.store.write(cp0);
+    const rev = d.store.read(s.checkpointId).revision;
+    const ir = await advanceLane(proj, s.checkpointId, { action: 'interrupt', expectedRevision: rev }, d);
+    if (ir.lifecycle !== 'interrupted') throw new Error('interrupt sets interrupted even over a live lease');
+    const after = d.store.read(s.checkpointId);
+    if (after.lease !== null) throw new Error('interrupt clears the fenced lease');
+    if (after.fencingCounter <= cp0.fencingCounter) throw new Error('interrupt bumps the fencing token');
+    // retry over a re-seeded LIVE lease is rejected.
+    const cp1 = d.store.read(s.checkpointId);
+    cp1.lifecycle = 'in_progress';
+    cp1.lease = { operationId: 'live', stepId: 'shape', iteration: 0, claimedCheckpointRevision: cp1.revision, fencingToken: cp1.fencingCounter, startedAt: d.now(), heartbeatAt: d.now() };
+    d.store.write(cp1);
+    let rejected = false;
+    try { await advanceLane(proj, s.checkpointId, { action: 'retry', expectedRevision: d.store.read(s.checkpointId).revision }, d); } catch { rejected = true; }
+    if (!rejected) throw new Error('retry over a live lease must be rejected');
+
+    // retry over a STALE lease fences/clears it under the same lock before mutation.
+    const stale = d.store.read(s.checkpointId);
+    stale.lease = { ...stale.lease!, operationId: 'stale-retry', claimedCheckpointRevision: stale.revision,
+      fencingToken: stale.fencingCounter, heartbeatAt: new Date(-86_400_000).toISOString() };
+    const staleRetryIdentity = stale.lease!;
+    d.store.write(stale);
+    await advanceLane(proj, s.checkpointId, { action: 'retry', expectedRevision: stale.revision }, d);
+    const afterRetry = d.store.read(s.checkpointId);
+    if (afterRetry.lease !== null || afterRetry.fencingCounter <= stale.fencingCounter) throw new Error('retry must fence/clear stale lease before mutation');
+    await finalizeLease(d.store, s.checkpointId, staleRetryIdentity, () => {}).then(
+      () => { throw new Error('stale retry owner must not FINALIZE'); }, () => {});
+
+    const interrupted = d.store.read(s.checkpointId);
+    interrupted.lifecycle = 'interrupted';
+    interrupted.lease = { operationId: 'stale-resume', stepId: 'shape', iteration: 0,
+      claimedCheckpointRevision: interrupted.revision, fencingToken: interrupted.fencingCounter,
+      startedAt: new Date(-86_400_000).toISOString(), heartbeatAt: new Date(-86_400_000).toISOString() };
+    const staleResumeIdentity = interrupted.lease!;
+    d.store.write(interrupted);
+    await advanceLane(proj, s.checkpointId, { action: 'resume', expectedRevision: interrupted.revision }, d);
+    const afterResume = d.store.read(s.checkpointId);
+    if (afterResume.lease !== null || afterResume.fencingCounter <= interrupted.fencingCounter || afterResume.lifecycle !== 'in_progress') throw new Error('resume must fence stale lease before mutation');
+    await finalizeLease(d.store, s.checkpointId, staleResumeIdentity, () => {}).then(
+      () => { throw new Error('stale resume owner must not FINALIZE'); }, () => {});
+    console.log('lane-runner-concurrency interrupt-fence: OK');
+  }
+
+  // same-process ABA: A stale-reclaimed by B; A's finally must not delete B's controller,
+  // and interrupt must abort B's controller via the FULL-identity registry key.
+  {
+    const p = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-live-aba-')));
+    let nowMs = 1_000, releaseA!: () => void, releaseB!: () => void, enterA!: () => void, enterB!: () => void;
+    const holdA = new Promise<void>((r) => { releaseA = r; });
+    const holdB = new Promise<void>((r) => { releaseB = r; });
+    const aEntered = new Promise<void>((r) => { enterA = r; });
+    const bEntered = new Promise<void>((r) => { enterB = r; });
+    let calls = 0, bAborted = false;
+    const base = deps(p);
+    const validator = async (_id: string, _ctx: unknown, signal?: AbortSignal) => {
+      if (++calls === 1) { enterA(); await holdA; return okResult(); }
+      signal?.addEventListener('abort', () => { bAborted = true; }); enterB(); await holdB; return okResult();
+    };
+    const dA = { ...base, now: () => new Date(nowMs).toISOString(), staleMs: 10, heartbeatIntervalMs: 1_000_000, runValidator: validator } as LaneRunnerDeps;
+    const s = await startLane('lane_build', 'aba', { projectPath: p }, 'req-aba', dA);
+    await advanceLane(p, s.checkpointId, { action: 'complete', report: rep('shape'), expectedRevision: dA.store.read(s.checkpointId).revision }, dA);
+    const a = advanceLane(p, s.checkpointId, { action: 'complete', report: rep('craft'), expectedRevision: dA.store.read(s.checkpointId).revision }, dA);
+    await aEntered; nowMs += 100;
+    const dB = { ...dA, heartbeatIntervalMs: 5 } as LaneRunnerDeps;
+    const b = advanceLane(p, s.checkpointId, { action: 'complete', report: { ...rep('craft'), reportId: 'r:craft:b' }, expectedRevision: dB.store.read(s.checkpointId).revision }, dB);
+    await bEntered;
+    releaseA(); await a.then(() => { throw new Error('A must reject after B reclaim'); }, () => {});
+    await advanceLane(p, s.checkpointId, { action: 'interrupt', expectedRevision: dB.store.read(s.checkpointId).revision }, dB);
+    if (!bAborted) throw new Error('interrupt must abort replacement after stale same-process reclaim');
+    releaseB(); await b.then(() => { throw new Error('interrupted B must reject FINALIZE'); }, () => {});
+    console.log('lane-runner-concurrency live-aba: OK');
+  }
+
   console.log('lane-runner-concurrency: OK');
 }
 run();

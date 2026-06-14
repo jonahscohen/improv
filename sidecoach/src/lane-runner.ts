@@ -286,17 +286,6 @@ export function listLanes(projectPath: string, d: LaneRunnerDeps, options?: { al
     .map((s) => { const l = resolveLane(s.laneId); return { checkpointId: s.checkpointId, laneId: s.laneId, lifecycle: s.lifecycle, outcome: s.outcome, stepIndex: s.cursor, totalSteps: l.verbSteps.length, updatedAt: s.updatedAt }; });
 }
 
-function bump(cp: LaneCheckpoint, d: LaneRunnerDeps): void {
-  // Best-effort in-process guard: re-read the persisted revision and abort if it
-  // moved since this checkpoint was loaded. True cross-process CAS (lease +
-  // fencing token) is P3. `cp.revision` is the pre-bump value here; serveStep's
-  // incremental writes do NOT bump revision, so the on-disk value still matches.
-  if (d.store.exists(cp.checkpointId)) {
-    const onDisk = d.store.read(cp.checkpointId);
-    if (onDisk.revision !== cp.revision) throw new Error(`lane runner: concurrent modification (disk revision ${onDisk.revision} != in-memory ${cp.revision})`);
-  }
-  cp.revision += 1; cp.updatedAt = d.now(); d.store.write(cp);
-}
 
 // PURE in-place cursor/lifecycle/outcome advance after a committed complete/skip
 // (NO store writes - the caller's FINALIZE persists). Sequence final step closes the
@@ -448,35 +437,62 @@ export async function advanceLane(projectPath: string, checkpointId: string, tra
   }
 }
 
+function leaseIdentityOf(L: NonNullable<LaneCheckpoint['lease']>): LeaseIdentity {
+  return { operationId: L.operationId, stepId: L.stepId, iteration: L.iteration, claimedCheckpointRevision: L.claimedCheckpointRevision, fencingToken: L.fencingToken };
+}
+
 async function transitionNonComplete(cp: LaneCheckpoint, l: GeneratedLane, projectPath: string, t: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
+  const checkpointId = cp.checkpointId;
   switch (t.action) {
-    case 'retry': {
-      if (t.report) { cp.stepReports.push(t.report); if (t.report.reportId) cp.seenReportIds.push(t.report.reportId); }
-      pushAudit(cp, { action: 'retry', stepId: l.verbSteps[cp.cursor]?.verb, iteration: cp.iteration, reason: t.reason, reportId: t.report?.reportId }, d);
-      bump(cp, d);
-      return serveStep(cp, l, { projectPath }, d);     // served cache -> no handler re-run
-    }
-    case 'interrupt': {
-      pushAudit(cp, { action: 'interrupt', stepId: l.verbSteps[cp.cursor]?.verb, iteration: cp.iteration, reason: t.reason }, d);
-      cp.lifecycle = 'interrupted';
-      bump(cp, d);
-      return closedResult(cp, l);                       // paused state; NO serveStep
-    }
-    case 'resume': {
-      if (cp.lifecycle !== 'interrupted') throw new Error('advanceLane: resume is only valid on an interrupted lane');
-      cp.lifecycle = 'in_progress';
-      pushAudit(cp, { action: 'resume', stepId: l.verbSteps[cp.cursor]?.verb, iteration: cp.iteration }, d);
-      bump(cp, d);
-      return serveStep(cp, l, { projectPath }, d);      // re-serve from cache
-    }
+    case 'interrupt':
     case 'stop': {
-      pushAudit(cp, { action: 'stop', stepId: l.verbSteps[cp.cursor]?.verb, iteration: cp.iteration, reason: t.reason }, d);
-      cp.lifecycle = 'closed'; cp.outcome = 'stopped';
-      bump(cp, d);
-      return closedResult(cp, l);
+      // PRIORITY transitions run under the lock and do NOT require lease ownership:
+      // they fence ANY live/stale lease (bump fencing, clear it), set lifecycle, then
+      // signal the in-process controller of the fenced identity to abort.
+      let fenced: LeaseIdentity | null = null;
+      const final = await withCheckpointLock(d.store.dir(), checkpointId, () => {
+        const c = d.store.read(checkpointId);
+        if (t.expectedRevision !== c.revision) throw new Error(`advanceLane: stale expectedRevision ${t.expectedRevision} (current ${c.revision})`);
+        if (c.lease) { fenced = leaseIdentityOf(c.lease); c.fencingCounter += 1; c.lease = null; }
+        c.revision += 1; c.updatedAt = d.now();
+        if (t.action === 'interrupt') { c.lifecycle = 'interrupted'; c.audit.push({ action: 'interrupt', stepId: l.verbSteps[c.cursor]?.verb, iteration: c.iteration, reason: t.reason, revision: c.revision, at: d.now() }); }
+        else { c.lifecycle = 'closed'; c.outcome = 'stopped'; c.audit.push({ action: 'stop', stepId: l.verbSteps[c.cursor]?.verb, iteration: c.iteration, reason: t.reason, revision: c.revision, at: d.now() }); }
+        d.store.write(c);
+        return c;
+      });
+      // Abort the in-process controller that owns the fenced identity (if present).
+      if (fenced) LIVE_OPERATIONS.get(leaseKey(checkpointId, fenced))?.abort();
+      return closedResult(final, l);                     // paused/closed state; NO serveStep
+    }
+    case 'retry':
+    case 'resume': {
+      // Ordinary transitions run wholly under the lock: reject a LIVE lease; FENCE a
+      // STALE lease (bump fencing, clear) BEFORE mutating so its later FINALIZE fails;
+      // else apply the normal P2 transition. serveStep runs AFTER the lock.
+      const final = await withCheckpointLock(d.store.dir(), checkpointId, () => {
+        const c = d.store.read(checkpointId);
+        if (t.action === 'resume' && c.lifecycle !== 'interrupted') throw new Error('advanceLane: resume is only valid on an interrupted lane');
+        if (t.expectedRevision !== c.revision) throw new Error(`advanceLane: stale expectedRevision ${t.expectedRevision} (current ${c.revision})`);
+        if (c.lease) {
+          if (leaseIsLive(c.lease, Date.parse(d.now()), d.staleMs ?? 30000)) throw new Error(`advanceLane: a live lease (op ${c.lease.operationId}) holds this checkpoint; ${t.action} cannot proceed`);
+          process.stderr.write(`[lane] ${t.action} fencing stale lease op=${c.lease.operationId} on ${checkpointId}\n`);
+          c.fencingCounter += 1; c.lease = null;          // fence the stale owner before mutating
+        }
+        c.revision += 1; c.updatedAt = d.now();
+        if (t.action === 'retry') {
+          if (t.report) { c.stepReports.push(t.report); if (t.report.reportId) c.seenReportIds.push(t.report.reportId); }
+          c.audit.push({ action: 'retry', stepId: l.verbSteps[c.cursor]?.verb, iteration: c.iteration, reason: t.reason, reportId: t.report?.reportId, revision: c.revision, at: d.now() });
+        } else {
+          c.lifecycle = 'in_progress';
+          c.audit.push({ action: 'resume', stepId: l.verbSteps[c.cursor]?.verb, iteration: c.iteration, revision: c.revision, at: d.now() });
+        }
+        d.store.write(c);
+        return c;
+      });
+      return serveStep(final, l, { projectPath }, d);     // re-serve from cache (no handler re-run)
     }
     case 'skip':
-      return skipStep(cp, l, projectPath, t, d);        // Task 7
+      return skipStep(cp, l, projectPath, t, d);
     default:
       throw new Error(`advanceLane: unknown action "${(t as any).action}"`);
   }
