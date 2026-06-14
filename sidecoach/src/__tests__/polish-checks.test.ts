@@ -25,6 +25,10 @@ function explicit() {
   if (get('polish/tabular-nums')(ctxCss('.price { font-variant-numeric: tabular-nums; }')).status !== 'pass') throw new Error('tabular-nums present must pass');
   if (get('polish/tabular-nums')(ctxCss('.price { color: red; }')).status !== 'fail') throw new Error('number selector without tabular-nums must fail');
 
+  // P2#3: ordinary layout padding (no real optical-alignment target) must be N/A, not a pass.
+  if (get('polish/optical-alignment')(ctxCss('.container { padding: 20px; }')).status !== 'not_applicable') throw new Error('layout padding without an optical-alignment target must be N/A, not pass');
+  if (get('polish/optical-alignment')(ctxCss('.btn { padding: 12px; }')).status !== 'pass') throw new Error('an icon-text control with padding must pass optical-alignment');
+
   // ABSENCE-PASS ELIMINATED: computed-style/dom rules must NOT pass on absence (browser-only -> inconclusive)
   const radius = POLISH_CHECKS['polish/concentric-radius'];
   if (radius && radius(empty).status === 'pass') throw new Error('computed-style rule must never pass on absent evidence');

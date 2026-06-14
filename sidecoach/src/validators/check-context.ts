@@ -90,7 +90,10 @@ const HEADING_RE = /<h[1-6]\b|(?:^|[\s,}])h[1-6]\s*[,{:]|\.(?:title|heading|head
 const MOTION_RE = /transition\s*:|@keyframes\b|animation\s*:|animation-delay|framer-motion|<AnimatePresence|\bmotion\./i;
 const ROOT_TARGET_RE = /(?:^|[\s,}])(?:\*|:root|html|body)\s*[,{]/i;
 const SHADOW_TARGET_RE = /box-shadow\s*:|--shadow|\.(?:card|panel|dialog|modal|popover|surface|elevated|sheet|menu|dropdown|tooltip|tile)\b/i;
-const OPTICAL_TARGET_RE = /padding\s*:|\bbadge\b|\bicon\b|\bchip\b|\bbtn\b|\bbutton\b|\blabel\b/i;
+// A real optical-alignment target is an icon-text control / badge / labelled control -
+// NOT plain `padding:` (that is the FEATURE the check then evaluates; treating it as the
+// target made ordinary layout padding a false pass, Codex P2#3).
+const OPTICAL_TARGET_RE = /\bbadge\b|\bicon\b|\bchip\b|\bbtn\b|\bbutton\b|\blabel\b|icon-text|\bpill\b|\btag\b/i;
 const FOCUSABLE_RE = /:focus|:hover|:active|<button\b|<a\b|<input\b|<select\b|<textarea\b|role\s*=\s*["']?(?:button|link|tab|menuitem)\b|\b(?:btn|button|link|input|nav|tabs?|focusable|interactive|control)\b/i;
 
 const presence = (ctx: ProductCheckContext, target: RegExp, scope: 'css' | 'markup' | 'both'): Applicability => {
