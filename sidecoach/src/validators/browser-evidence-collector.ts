@@ -44,16 +44,33 @@ export function isSubresourceAllowed(suppliedUrl: string, requestedUrl: string):
 
 const errorMessage = (e: unknown): string => e instanceof Error ? e.message : String(e);
 
+class AbortError extends Error {}
+
 export async function collectBrowserEvidence(renderUrl: string | undefined, signal?: AbortSignal): Promise<BrowserEvidenceCollection> {
   if (!renderUrl) return { available: false, reason: 'no render URL in validation context' };
   if (signal?.aborted) return { available: false, reason: 'browser evidence collection aborted before launch' };
 
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  let launch: ReturnType<typeof chromium.launch> | undefined;
+  // The signal must be honored AT every phase, not only between phases: an abort during
+  // launch/navigation/collection rejects the in-flight phase immediately (no hang) and
+  // the listener closes whatever browser exists. `phase` is read at abort time so the
+  // reason names the phase that was in progress.
+  let phase = 'launch';
+  let onAbort: () => void = () => undefined;
+  const aborted = new Promise<never>((_resolve, reject) => {
+    onAbort = () => { void browser?.close().catch(() => undefined); reject(new AbortError(`browser evidence collection aborted during ${phase}`)); };
+  });
+  void aborted.catch(() => undefined);   // a late rejection (post-return) must not go unhandled
+  signal?.addEventListener('abort', onAbort, { once: true });
+  const race = <T>(p: Promise<T>, ph: string): Promise<T> => { phase = ph; return signal ? Promise.race([p, aborted]) : p; };
+
   try {
-    browser = await chromium.launch({ headless: true });
+    launch = chromium.launch({ headless: true });
+    browser = await race(launch, 'launch');
     // serviceWorkers: 'block' stops a reviewed page from registering a SW that could
     // initiate its own (cross-origin) traffic outside the request-route interception.
-    const context = await browser.newContext({ reducedMotion: 'reduce', serviceWorkers: 'block' });
+    const context = await race(browser.newContext({ reducedMotion: 'reduce', serviceWorkers: 'block' }), 'launch');
     const page = await context.newPage();
     // Block EVERY WebSocket before navigation: the collector reads static layout and
     // never needs a live socket, and any ws/wss is a non-same-origin channel under the
@@ -63,10 +80,9 @@ export async function collectBrowserEvidence(renderUrl: string | undefined, sign
       if (isSubresourceAllowed(renderUrl, route.request().url())) await route.continue();
       else await route.abort('blockedbyclient');
     });
-    await page.goto(renderUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 });
-    if (signal?.aborted) return { available: false, reason: 'browser evidence collection aborted during navigation' };
+    await race(page.goto(renderUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 }), 'navigation');
 
-    const raw = await page.evaluate(() => {
+    const rawPromise = page.evaluate(() => {
       const visible = (el: Element): el is HTMLElement => {
         if (!(el instanceof HTMLElement)) return false;
         const s = getComputedStyle(el);
@@ -206,6 +222,8 @@ export async function collectBrowserEvidence(renderUrl: string | undefined, sign
         },
       };
     });
+    const raw = await race(rawPromise, 'collection');
+    if (signal?.aborted) return { available: false, reason: 'browser evidence collection aborted during collection' };
 
     // 'contrast' is included ONLY when the page evaluation faithfully measured every
     // applicable text against a determinable background. computed-style and dom are
@@ -224,8 +242,13 @@ export async function collectBrowserEvidence(renderUrl: string | undefined, sign
       },
     };
   } catch (e) {
+    if (e instanceof AbortError) return { available: false, reason: e.message };
     return { available: false, reason: `browser evidence unavailable: ${errorMessage(e)}` };
   } finally {
+    signal?.removeEventListener('abort', onAbort);
+    // If we bailed before `browser` was assigned (abort during launch), the launch may
+    // still be in flight - await it so its browser is closed and never leaks.
+    if (!browser && launch) browser = await launch.catch(() => undefined);
     await browser?.close().catch(() => undefined);
   }
 }
