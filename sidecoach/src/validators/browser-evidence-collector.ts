@@ -46,12 +46,19 @@ const errorMessage = (e: unknown): string => e instanceof Error ? e.message : St
 
 class AbortError extends Error {}
 
-export async function collectBrowserEvidence(renderUrl: string | undefined, signal?: AbortSignal): Promise<BrowserEvidenceCollection> {
+export async function collectBrowserEvidence(
+  renderUrl: string | undefined,
+  signal?: AbortSignal,
+  // Test-only seam: inject the browser launcher so abort/latency behavior can be driven
+  // deterministically without a real Chromium. Production callers pass only (renderUrl,
+  // signal) - the public 2-arg contract is unchanged.
+  launcher: () => Promise<Awaited<ReturnType<typeof chromium.launch>>> = () => chromium.launch({ headless: true }),
+): Promise<BrowserEvidenceCollection> {
   if (!renderUrl) return { available: false, reason: 'no render URL in validation context' };
   if (signal?.aborted) return { available: false, reason: 'browser evidence collection aborted before launch' };
 
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
-  let launch: ReturnType<typeof chromium.launch> | undefined;
+  let launchPromise: ReturnType<typeof chromium.launch> | undefined;
   // The signal must be honored AT every phase, not only between phases: an abort during
   // launch/navigation/collection rejects the in-flight phase immediately (no hang) and
   // the listener closes whatever browser exists. `phase` is read at abort time so the
@@ -66,8 +73,8 @@ export async function collectBrowserEvidence(renderUrl: string | undefined, sign
   const race = <T>(p: Promise<T>, ph: string): Promise<T> => { phase = ph; return signal ? Promise.race([p, aborted]) : p; };
 
   try {
-    launch = chromium.launch({ headless: true });
-    browser = await race(launch, 'launch');
+    launchPromise = launcher();
+    browser = await race(launchPromise, 'launch');
     // serviceWorkers: 'block' stops a reviewed page from registering a SW that could
     // initiate its own (cross-origin) traffic outside the request-route interception.
     const context = await race(browser.newContext({ reducedMotion: 'reduce', serviceWorkers: 'block' }), 'launch');
@@ -250,8 +257,14 @@ export async function collectBrowserEvidence(renderUrl: string | undefined, sign
   } finally {
     signal?.removeEventListener('abort', onAbort);
     // If we bailed before `browser` was assigned (abort during launch), the launch may
-    // still be in flight - await it so its browser is closed and never leaks.
-    if (!browser && launch) browser = await launch.catch(() => undefined);
-    await browser?.close().catch(() => undefined);
+    // still be in flight - possibly STALLED. Do NOT block the return on it: fire-and-forget
+    // the close so an aborted collector returns promptly (bounded latency) while still
+    // closing the browser whenever the launch eventually resolves. An already-launched
+    // browser is closed synchronously.
+    if (!browser && launchPromise) {
+      void launchPromise.then((b) => b.close()).catch(() => undefined);
+    } else {
+      await browser?.close().catch(() => undefined);
+    }
   }
 }

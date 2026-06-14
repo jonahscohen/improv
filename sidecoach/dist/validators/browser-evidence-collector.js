@@ -47,13 +47,17 @@ function isSubresourceAllowed(suppliedUrl, requestedUrl) {
 const errorMessage = (e) => e instanceof Error ? e.message : String(e);
 class AbortError extends Error {
 }
-async function collectBrowserEvidence(renderUrl, signal) {
+async function collectBrowserEvidence(renderUrl, signal, 
+// Test-only seam: inject the browser launcher so abort/latency behavior can be driven
+// deterministically without a real Chromium. Production callers pass only (renderUrl,
+// signal) - the public 2-arg contract is unchanged.
+launcher = () => playwright_1.chromium.launch({ headless: true })) {
     if (!renderUrl)
         return { available: false, reason: 'no render URL in validation context' };
     if (signal?.aborted)
         return { available: false, reason: 'browser evidence collection aborted before launch' };
     let browser;
-    let launch;
+    let launchPromise;
     // The signal must be honored AT every phase, not only between phases: an abort during
     // launch/navigation/collection rejects the in-flight phase immediately (no hang) and
     // the listener closes whatever browser exists. `phase` is read at abort time so the
@@ -67,8 +71,8 @@ async function collectBrowserEvidence(renderUrl, signal) {
     signal?.addEventListener('abort', onAbort, { once: true });
     const race = (p, ph) => { phase = ph; return signal ? Promise.race([p, aborted]) : p; };
     try {
-        launch = playwright_1.chromium.launch({ headless: true });
-        browser = await race(launch, 'launch');
+        launchPromise = launcher();
+        browser = await race(launchPromise, 'launch');
         // serviceWorkers: 'block' stops a reviewed page from registering a SW that could
         // initiate its own (cross-origin) traffic outside the request-route interception.
         const context = await race(browser.newContext({ reducedMotion: 'reduce', serviceWorkers: 'block' }), 'launch');
@@ -260,10 +264,16 @@ async function collectBrowserEvidence(renderUrl, signal) {
     finally {
         signal?.removeEventListener('abort', onAbort);
         // If we bailed before `browser` was assigned (abort during launch), the launch may
-        // still be in flight - await it so its browser is closed and never leaks.
-        if (!browser && launch)
-            browser = await launch.catch(() => undefined);
-        await browser?.close().catch(() => undefined);
+        // still be in flight - possibly STALLED. Do NOT block the return on it: fire-and-forget
+        // the close so an aborted collector returns promptly (bounded latency) while still
+        // closing the browser whenever the launch eventually resolves. An already-launched
+        // browser is closed synchronously.
+        if (!browser && launchPromise) {
+            void launchPromise.then((b) => b.close()).catch(() => undefined);
+        }
+        else {
+            await browser?.close().catch(() => undefined);
+        }
     }
 }
 //# sourceMappingURL=browser-evidence-collector.js.map
