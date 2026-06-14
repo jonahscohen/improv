@@ -46,14 +46,12 @@ const errorMessage = (e: unknown): string => e instanceof Error ? e.message : St
 
 class AbortError extends Error {}
 
-export async function collectBrowserEvidence(
-  renderUrl: string | undefined,
-  signal?: AbortSignal,
-  // Test-only seam: inject the browser launcher so abort/latency behavior can be driven
-  // deterministically without a real Chromium. Production callers pass only (renderUrl,
-  // signal) - the public 2-arg contract is unchanged.
-  launcher: () => Promise<Awaited<ReturnType<typeof chromium.launch>>> = () => chromium.launch({ headless: true }),
-): Promise<BrowserEvidenceCollection> {
+// `launcher` is a TEST-ONLY seam: it injects the browser launcher so abort/latency
+// behavior can be driven deterministically without a real Chromium. Production callers
+// pass only (renderUrl, signal) - the public 2-arg contract is unchanged. The comment
+// lives ABOVE the signature (not interleaved between params) so tsc does not emit a
+// trailing space in the compiled parameter list.
+export async function collectBrowserEvidence(renderUrl: string | undefined, signal?: AbortSignal, launcher: () => Promise<Awaited<ReturnType<typeof chromium.launch>>> = () => chromium.launch({ headless: true })): Promise<BrowserEvidenceCollection> {
   if (!renderUrl) return { available: false, reason: 'no render URL in validation context' };
   if (signal?.aborted) return { available: false, reason: 'browser evidence collection aborted before launch' };
 
