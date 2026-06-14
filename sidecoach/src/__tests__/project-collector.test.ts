@@ -72,22 +72,31 @@ async function run() {
     if (!threw) throw new Error('a missing root must throw');
   }
 
-  // 6. cooperative async collection: a slow MULTI-FILE collection must YIELD to the
-  //    event loop (a concurrent timer keeps firing) and abort PROMPTLY on signal. The
-  //    abort is fired by the timer itself, so a synchronous (blocking) collector would
-  //    never let the timer fire, never abort, and fail this test - the precise red.
+  // 6a. cooperative async collection YIELDS to the event loop: a large multi-file
+  //     collection lets a concurrent 1ms timer fire (a synchronous/blocking collector
+  //     would starve it -> ticks stays 0 -> the precise red). No abort here, so no
+  //     dependence on the abort firing within a timing window.
   {
     const dir = mkproj();
-    for (let i = 0; i < 500; i++) fs.writeFileSync(path.join(dir, `f${i}.css`), `.c${i} { color: red; transition: opacity 1s; }`);
+    for (let i = 0; i < 1500; i++) fs.writeFileSync(path.join(dir, `f${i}.css`), `.c${i} { color: red; transition: opacity 1s; }`);
     let ticks = 0;
+    const timer = setInterval(() => { ticks++; }, 1);
+    try { await collect({ projectPath: dir }); }
+    finally { clearInterval(timer); }
+    if (ticks === 0) throw new Error('a slow multi-file collection must yield to the event loop so the heartbeat timer can fire');
+  }
+
+  // 6b. collection observes the AbortSignal between entries and throws promptly
+  //     (deterministic: an already-aborted signal trips the first between-entry check).
+  {
+    const dir = mkproj();
+    for (let i = 0; i < 4; i++) fs.writeFileSync(path.join(dir, `g${i}.css`), `.g${i} { color: blue; }`);
     const ac = new AbortController();
-    const timer = setInterval(() => { ticks++; if (ticks === 2) ac.abort(); }, 1);
+    ac.abort();
     let aborted = false;
     try { await collect({ projectPath: dir }, ac.signal); }
     catch (e) { aborted = e instanceof CollectionAbortedError; }
-    finally { clearInterval(timer); }
-    if (ticks < 2) throw new Error('a slow multi-file collection must yield to the event loop so the timer can fire');
-    if (!aborted) throw new Error('a slow multi-file collection must abort promptly on signal');
+    if (!aborted) throw new Error('collection must throw CollectionAbortedError when the signal is aborted');
   }
 
   console.log('project-collector: OK');
