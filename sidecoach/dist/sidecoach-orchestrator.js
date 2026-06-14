@@ -49,6 +49,7 @@ const context_loader_1 = require("./context-loader");
 const session_memory_writer_1 = require("./session-memory-writer");
 const slash_command_router_1 = require("./slash-command-router");
 const lanes_generated_1 = require("./lanes.generated");
+const lane_convergence_preflight_1 = require("./lane-convergence-preflight");
 const path = __importStar(require("path"));
 const crypto_1 = require("crypto");
 const sidecoach_entry_point_1 = require("./sidecoach-entry-point");
@@ -1487,6 +1488,14 @@ class FlowExecutionEngine {
     }
     async startLane(laneId, target, context, startRequestId) {
         const projectPath = context.projectPath || process.cwd();
+        // Loop lanes get the policy-wide coverage-plan preflight (spec lines 1018-1023): a
+        // target that cannot satisfy the release floor is rejected here, not started into a
+        // permanently-inconclusive loop. (laneRunner.startLane keeps the cheap policy check.)
+        if ((0, lanes_generated_1.getLane)(laneId)?.executionKind === 'loop') {
+            const pf = await (0, lane_convergence_preflight_1.convergencePreflight)(projectPath, laneId);
+            if (!pf.ok)
+                throw new Error(pf.message);
+        }
         return laneRunner.startLane(laneId, target, { ...context, projectPath }, startRequestId, this.laneDeps(projectPath));
     }
     async advanceLane(projectPath, checkpointId, transition) {

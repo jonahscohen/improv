@@ -30,4 +30,5 @@ export declare const LANE_POLICIES: LaneValidationPolicy[];
 export declare const FIXTURE_MANIFEST: ValidatorFixtureManifest[];
 export declare function getValidatorRegistration(id: string): ProductValidatorRegistration | null;
 export declare function getFlowCapability(flowId: string): FlowValidationCapability | null;
+export declare function getLanePolicy(laneId: string): LaneValidationPolicy | null;
 //# sourceMappingURL=flow-validation-capabilities.d.ts.map

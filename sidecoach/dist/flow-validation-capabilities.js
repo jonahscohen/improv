@@ -4,6 +4,7 @@ exports.FIXTURE_MANIFEST = exports.LANE_POLICIES = exports.FLOW_CAPABILITIES = e
 exports.deriveCapability = deriveCapability;
 exports.getValidatorRegistration = getValidatorRegistration;
 exports.getFlowCapability = getFlowCapability;
+exports.getLanePolicy = getLanePolicy;
 const run_validator_1 = require("./validators/run-validator");
 // The single derivation rule for a flow's capability (spec lines 391-393). The
 // generator emits the resolved value to validators.generated.ts and --check
@@ -55,5 +56,8 @@ function getValidatorRegistration(id) {
 }
 function getFlowCapability(flowId) {
     return exports.FLOW_CAPABILITIES.find((f) => f.flowId === flowId) ?? null;
+}
+function getLanePolicy(laneId) {
+    return exports.LANE_POLICIES.find((p) => p.laneId === laneId) ?? null;
 }
 //# sourceMappingURL=flow-validation-capabilities.js.map

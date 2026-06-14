@@ -1,5 +1,5 @@
 import type { FlowId } from './types';
-import type { StepReport, LaneLifecycle, LaneOutcome, LaneAuditEntry, LeaseRecord, SideEffectOutboxRecord, PersistedStepGateStatus } from './lane-types';
+import type { StepReport, LaneLifecycle, LaneOutcome, LaneAuditEntry, LeaseRecord, SideEffectOutboxRecord, PersistedStepGateStatus, ConvergenceState } from './lane-types';
 export interface LaneCheckpoint {
     schemaVersion: 2;
     checkpointId: string;
@@ -25,6 +25,11 @@ export interface LaneCheckpoint {
         }[];
         flowIds: FlowId[];
         successfulFlowIds: FlowId[];
+        flowOutcomes: {
+            flowId: FlowId;
+            status: 'success' | 'needs_input' | 'error' | 'skipped';
+            message: string;
+        }[];
     }>;
     revision: number;
     startRequestId: string;
@@ -33,6 +38,7 @@ export interface LaneCheckpoint {
     lease: LeaseRecord | null;
     sideEffectOutbox: SideEffectOutboxRecord[];
     stepGateStatuses: Record<string, PersistedStepGateStatus>;
+    convergence?: ConvergenceState;
     createdAt: string;
     updatedAt: string;
 }

@@ -1,5 +1,6 @@
 "use strict";
-// T-0020: Ralph-mode relentless cross-flow iteration.
+// Convergence-loop: relentless cross-flow iteration (the orphan diagnostic loop;
+// the production convergence floor lives in lane-runner.ts + lane-convergence.ts).
 //
 // Distinct from T-0009 (retry-control.ts): T-0009 caps per-handler iteration
 // (the polish handler retries polish up to 5 times). T-0020 is CROSS-flow -
@@ -52,23 +53,23 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_RALPH_MAX_NO_PROGRESS_ITERATIONS = exports.DEFAULT_RALPH_MAX_GLOBAL_ITERATIONS = exports.DEFAULT_RALPH_FLOW_CHAIN = void 0;
+exports.DEFAULT_CONVERGENCE_MAX_NO_PROGRESS_ITERATIONS = exports.DEFAULT_CONVERGENCE_MAX_GLOBAL_ITERATIONS = exports.DEFAULT_CONVERGENCE_FLOW_CHAIN = void 0;
 exports.computeProgressSignature = computeProgressSignature;
 exports.extractFindingsFromFlowResult = extractFindingsFromFlowResult;
-exports.runRalphLoop = runRalphLoop;
+exports.runConvergenceLoop = runConvergenceLoop;
 const crypto = __importStar(require("crypto"));
 /**
- * Default flow chain for ralph-mode. Mirrors the T-0020 spec from TASKS.md:
+ * Default flow chain for convergence-mode. Mirrors the T-0020 spec from TASKS.md:
  * tactical-polish -> multi-lens-audit -> design-critique. Each iteration walks
  * this chain in order.
  */
-exports.DEFAULT_RALPH_FLOW_CHAIN = [
+exports.DEFAULT_CONVERGENCE_FLOW_CHAIN = [
     'flowJ_tactical_polish',
     'flowK_multi_lens_audit',
     'flowL_design_critique',
 ];
-exports.DEFAULT_RALPH_MAX_GLOBAL_ITERATIONS = 10;
-exports.DEFAULT_RALPH_MAX_NO_PROGRESS_ITERATIONS = 3;
+exports.DEFAULT_CONVERGENCE_MAX_GLOBAL_ITERATIONS = 10;
+exports.DEFAULT_CONVERGENCE_MAX_NO_PROGRESS_ITERATIONS = 3;
 /**
  * Compute a deterministic 12-char hex signature from the set of findings
  * collected during one iteration. Two iterations producing the same findings
@@ -87,8 +88,8 @@ function computeProgressSignature(findings) {
 /**
  * Helper to extract findings from a FlowExecutionResult. Provided for
  * convenience to runners that invoke the real handlers - they can map the
- * handler's validationResults / executionMetadata into RalphFinding[] using
- * this routine. Not used inside runRalphLoop itself (the runner is the only
+ * handler's validationResults / executionMetadata into ConvergenceFinding[] using
+ * this routine. Not used inside runConvergenceLoop itself (the runner is the only
  * thing that knows how its handlers shaped their results).
  */
 function extractFindingsFromFlowResult(flowId, result) {
@@ -117,7 +118,7 @@ function defaultLogger(line) {
  * Run a relentless cross-flow loop against `target`. See module header for
  * the contract and the auto-fix gap discussion.
  */
-async function runRalphLoop(target, opts = {}) {
+async function runConvergenceLoop(target, opts = {}) {
     const log = [];
     const logger = opts.logger || defaultLogger;
     const emit = (line) => {
@@ -126,17 +127,17 @@ async function runRalphLoop(target, opts = {}) {
     };
     const maxGlobalIterations = typeof opts.maxGlobalIterations === 'number' && opts.maxGlobalIterations > 0
         ? opts.maxGlobalIterations
-        : exports.DEFAULT_RALPH_MAX_GLOBAL_ITERATIONS;
+        : exports.DEFAULT_CONVERGENCE_MAX_GLOBAL_ITERATIONS;
     const maxNoProgressIterations = typeof opts.maxNoProgressIterations === 'number' && opts.maxNoProgressIterations > 0
         ? opts.maxNoProgressIterations
-        : exports.DEFAULT_RALPH_MAX_NO_PROGRESS_ITERATIONS;
+        : exports.DEFAULT_CONVERGENCE_MAX_NO_PROGRESS_ITERATIONS;
     const flowChain = Array.isArray(opts.flowChain) && opts.flowChain.length > 0
         ? opts.flowChain
-        : exports.DEFAULT_RALPH_FLOW_CHAIN;
+        : exports.DEFAULT_CONVERGENCE_FLOW_CHAIN;
     // Config sanity: an empty flow chain is meaningless (the loop has nothing
     // to iterate). Return an error result rather than spinning a no-op cap.
     if (!Array.isArray(opts.flowChain) ? false : opts.flowChain.length === 0) {
-        const msg = '[ralph] invalid config: flowChain is empty';
+        const msg = '[convergence] invalid config: flowChain is empty';
         emit(msg);
         return {
             status: 'error',
@@ -152,7 +153,7 @@ async function runRalphLoop(target, opts = {}) {
     // invocation here) so the failure surfaces immediately rather than as
     // confusing zero-findings convergence.
     if (typeof opts.runFlow !== 'function') {
-        const msg = '[ralph] invalid config: runFlow is required';
+        const msg = '[convergence] invalid config: runFlow is required';
         emit(msg);
         return {
             status: 'error',
@@ -168,6 +169,7 @@ async function runRalphLoop(target, opts = {}) {
     for (let iteration = 1; iteration <= maxGlobalIterations; iteration++) {
         const flowResults = [];
         const allFindings = [];
+        let iterationErrored = false;
         for (const flowId of flowChain) {
             let runOutput;
             try {
@@ -175,7 +177,7 @@ async function runRalphLoop(target, opts = {}) {
             }
             catch (err) {
                 const errMsg = err instanceof Error ? err.message : String(err);
-                emit(`[ralph] iter ${iteration}/${maxGlobalIterations}: ${flowId} runner threw: ${errMsg}`);
+                emit(`[convergence] iter ${iteration}/${maxGlobalIterations}: ${flowId} runner threw: ${errMsg}`);
                 flowResults.push({
                     iteration,
                     flowId,
@@ -183,6 +185,7 @@ async function runRalphLoop(target, opts = {}) {
                     findingCount: 0,
                     error: errMsg,
                 });
+                iterationErrored = true;
                 continue;
             }
             const findings = Array.isArray(runOutput.findings) ? runOutput.findings : [];
@@ -193,14 +196,18 @@ async function runRalphLoop(target, opts = {}) {
                 findingCount: findings.length,
                 error: runOutput.error,
             });
+            if (runOutput.error)
+                iterationErrored = true;
             allFindings.push(...findings);
-            emit(`[ralph] iter ${iteration}/${maxGlobalIterations}: ${flowId} found ${findings.length} violations`);
+            emit(`[convergence] iter ${iteration}/${maxGlobalIterations}: ${flowId} found ${findings.length} violations`);
         }
         const signature = computeProgressSignature(allFindings);
         history.push({ iteration, flowResults, allFindings, signature });
-        // Convergence: zero findings across every flow in this iteration.
-        if (allFindings.length === 0) {
-            emit(`[ralph] CONVERGED in ${iteration} iter`);
+        // Convergence requires zero findings AND no flow error this iteration. A flow
+        // error can no longer be recorded as zero findings and "converge" (spec lines
+        // 1123-1130: product-validator failure can no longer converge).
+        if (allFindings.length === 0 && !iterationErrored) {
+            emit(`[convergence] CONVERGED in ${iteration} iter`);
             return {
                 status: 'converged',
                 iterations: iteration,
@@ -217,7 +224,7 @@ async function runRalphLoop(target, opts = {}) {
             const recent = history.slice(-maxNoProgressIterations);
             const recentSig = recent[0].signature;
             if (recentSig && recent.every((h) => h.signature === recentSig)) {
-                emit(`[ralph] STALLED at iter ${iteration} (same signature ${recentSig} for ${maxNoProgressIterations} iter)`);
+                emit(`[convergence] STALLED at iter ${iteration} (same signature ${recentSig} for ${maxNoProgressIterations} iter)`);
                 return {
                     status: 'stalled',
                     iterations: iteration,
@@ -239,13 +246,13 @@ async function runRalphLoop(target, opts = {}) {
             }
             catch (err) {
                 const errMsg = err instanceof Error ? err.message : String(err);
-                emit(`[ralph] iter ${iteration}: applyFixes threw: ${errMsg} (continuing)`);
+                emit(`[convergence] iter ${iteration}: applyFixes threw: ${errMsg} (continuing)`);
             }
         }
     }
     // Cap: hit maxGlobalIterations without convergence or stall.
     const finalFindings = history[history.length - 1]?.allFindings || [];
-    emit(`[ralph] CAPPED at maxIter (${maxGlobalIterations})`);
+    emit(`[convergence] CAPPED at maxIter (${maxGlobalIterations})`);
     return {
         status: 'capped',
         iterations: maxGlobalIterations,
@@ -255,4 +262,4 @@ async function runRalphLoop(target, opts = {}) {
         log,
     };
 }
-//# sourceMappingURL=ralph-loop.js.map
+//# sourceMappingURL=convergence-loop.js.map

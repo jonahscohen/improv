@@ -1,4 +1,9 @@
 "use strict";
+// FROZEN(P1): superseded by lanes.generated.ts for engine use; retained ONLY as
+// the MCP server's legacy mode feed (mcp-server/src/registries.ts imports the
+// compiled ../../dist/modes). TODO(P4): delete this file AND dist/modes.js when
+// the MCP `list-modes` -> `list-lanes` rename lands and ModeEntry is retired.
+//
 // Sidecoach modes (T-0011)
 //
 // Modes are higher-level than verbs. A verb runs one focused flow chain
@@ -120,7 +125,7 @@ const CANVAS = {
 // code-correctness checks), and reuses the keyword so anyone coming from OMC
 // finds it where they expect. The mode is the user-facing trigger; the
 // actual loop algorithm (cap, stall, convergence) lives in
-// `sidecoach/src/ralph-loop.ts` per T-0020. Picked the OMC name verbatim
+// `sidecoach/src/convergence-loop.ts` per T-0020. Picked the OMC name verbatim
 // because every alternative ("loop", "iterate", "converge") either collides
 // with internal vocabulary or loses the connection to the established
 // pattern.

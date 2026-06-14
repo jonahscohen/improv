@@ -1,5 +1,5 @@
 import type { FlowId } from './types';
-import type { ProductFinding } from './product-rule-types';
+import type { ProductFinding, NormalizedErrorCategory, ProductValidationCoverage } from './product-rule-types';
 export type LaneAction = 'complete' | 'retry' | 'skip' | 'resume' | 'interrupt' | 'stop';
 export type LaneLifecycle = 'in_progress' | 'interrupted' | 'closed';
 export type LaneOutcome = 'completed' | 'partial' | 'stopped' | 'converged';
@@ -90,6 +90,14 @@ export interface LaneStepResult {
         }[];
         findings: ProductFinding[];
     };
+    convergence?: {
+        outcome: ConvergenceOutcome;
+        iteration: number;
+        signature?: string;
+        findings: ProductFinding[];
+        displayLabel: 'running' | 'stalled' | 'capped' | 'converged' | 'machine_checks_clean_with_advisory_warnings';
+        summary?: string;
+    };
 }
 export type LaneStepStatus = 'pending' | 'current' | 'completed' | 'skipped' | 'validation_failed' | 'validation_inconclusive' | 'validation_error';
 export interface LaneState {
@@ -125,6 +133,65 @@ export interface LaneInfo {
     stepIndex: number;
     totalSteps: number;
     updatedAt: string;
+}
+export type ConvergenceOutcome = 'running' | 'converged' | 'stalled' | 'capped' | 'error';
+export interface RequiredValidatorState {
+    validatorId: string;
+    status: GateStatus;
+    failedRuleIds: string[];
+    inconclusiveRuleIds: string[];
+    coverageGapIdentities: string[];
+    validatorErrorCategory?: NormalizedErrorCategory;
+    ruleErrorCategories: string[];
+}
+export interface ConvergenceIterationRecord {
+    iteration: number;
+    signature: string;
+    perValidator: RequiredValidatorState[];
+    requiredValidatorRuns: {
+        validatorId: string;
+        status: GateStatus;
+        coverage: ProductValidationCoverage;
+    }[];
+}
+export type AdvisoryFlowOutcome = 'success' | 'needs_input' | 'skipped' | 'error';
+export interface AdvisoryRunRecord {
+    iteration: number;
+    stepId: string;
+    flows: {
+        flowId: FlowId;
+        outcome: AdvisoryFlowOutcome;
+        message?: string;
+    }[];
+}
+export interface ConvergenceState {
+    outcome: ConvergenceOutcome;
+    iteration: number;
+    signatures: string[];
+    consecutiveNoProgress: number;
+    limits: {
+        maxIterations: number;
+        maxNoProgress: number;
+    };
+    history: ConvergenceIterationRecord[];
+    findings: ProductFinding[];
+    validatorErrors: {
+        validatorId: string;
+        category: NormalizedErrorCategory;
+        message: string;
+    }[];
+    advisoryRuns: AdvisoryRunRecord[];
+    runCoverage: {
+        discoveredFiles: string[];
+        inspectedFiles: string[];
+        skippedFiles: string[];
+        unreadableFiles: string[];
+        unsupportedSourceKinds: string[];
+        unsupportedFiles: string[];
+        measuredScope: string[];
+        unverifiedScope: string[];
+        notApplicableRuleIds: string[];
+    };
 }
 export declare function makeStepReport(r: StepReport): StepReport;
 export declare function isClosed(l: LaneLifecycle): boolean;

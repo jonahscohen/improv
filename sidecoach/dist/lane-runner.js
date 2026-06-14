@@ -16,6 +16,9 @@ const lanes_generated_1 = require("./lanes.generated");
 const lane_checkpoint_store_1 = require("./lane-checkpoint-store");
 const lane_types_1 = require("./lane-types");
 const lane_validators_1 = require("./lane-validators");
+const flow_validation_capabilities_1 = require("./flow-validation-capabilities");
+const validators_generated_1 = require("./validators.generated");
+const lane_convergence_1 = require("./lane-convergence");
 const flow_prerequisites_1 = require("./flow-prerequisites");
 const lane_lock_1 = require("./lane-lock");
 // Default operation id when deps omits newOperationId (production wiring is Task 10).
@@ -99,8 +102,8 @@ async function serveStep(cp, l, context, d) {
     const key = `${cp.cursor}:${cp.iteration}`;
     const existing = cp.servedSteps[key];
     const acc = existing
-        ? { guidance: [...existing.guidance], checklist: [...existing.checklist], flowIds: [...existing.flowIds], successfulFlowIds: [...existing.successfulFlowIds] }
-        : { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [] };
+        ? { guidance: [...existing.guidance], checklist: [...existing.checklist], flowIds: [...existing.flowIds], successfulFlowIds: [...existing.successfulFlowIds], flowOutcomes: [...(existing.flowOutcomes ?? [])] }
+        : { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [], flowOutcomes: [] };
     const needsRun = existing === undefined || acc.flowIds.length < step.flowIds.length;
     if (acc.flowIds.length < step.flowIds.length) {
         for (let i = acc.flowIds.length; i < step.flowIds.length; i++) {
@@ -118,6 +121,7 @@ async function serveStep(cp, l, context, d) {
             acc.flowIds.push(flowId);
             if (r.status === 'success')
                 acc.successfulFlowIds.push(flowId);
+            acc.flowOutcomes.push({ flowId, status: r.status, message: r.message });
         }
     }
     if (needsRun) {
@@ -148,7 +152,22 @@ async function startLane(laneId, target, context, startRequestId, d) {
     }
     const l = resolveLane(laneId);
     if (l.executionKind === 'loop') {
-        throw new Error(`startLane: lane "${laneId}" is a loop lane - loop execution + the convergence floor land in P4. Not startable in P2.`);
+        // Minimal release-floor enablement: the lane must declare a non-empty product-
+        // validator policy and every required validator must be registered + generated.
+        // The IO-heavy coverage-plan satisfiability preflight runs at the orchestrator
+        // layer (Task 8) so engine unit tests can drive startLane directly.
+        const policy = (0, flow_validation_capabilities_1.getLanePolicy)(l.lane);
+        if (!policy || policy.requiredProductValidatorIds.length === 0) {
+            throw new Error(`startLane: loop lane "${laneId}" has no release-floor policy (requiredProductValidatorIds) - convergence gating cannot be enabled`);
+        }
+        for (const vId of policy.requiredProductValidatorIds) {
+            if (!(0, flow_validation_capabilities_1.getValidatorRegistration)(vId)?.validateProduct) {
+                throw new Error(`startLane: loop lane "${laneId}" requires validator "${vId}" which is not registered with a validateProduct entry`);
+            }
+            if (!validators_generated_1.GENERATED_VALIDATORS.find((g) => g.validatorId === vId)?.cleanPolicy) {
+                throw new Error(`startLane: loop lane "${laneId}" required validator "${vId}" has no generated cleanPolicy`);
+            }
+        }
     }
     // Startup recovery: replay any pending committed outbox records (a process that
     // crashed after FINALIZE but before publish) before this operation mutates state.
@@ -176,6 +195,7 @@ async function startLane(laneId, target, context, startRequestId, d) {
             cursor: 0, iteration: 0, completedStepIds: [], skippedStepIds: [], completedFlowIds: [],
             stepReports: [], audit: [], servedSteps: {}, revision: 0, startRequestId,
             seenReportIds: [], fencingCounter: 1, sideEffectOutbox: [], stepGateStatuses: {},
+            convergence: l.executionKind === 'loop' ? (0, lane_convergence_1.seedConvergenceState)() : undefined,
             lease: { operationId, stepId: l.verbSteps[0].verb, iteration: 0, claimedCheckpointRevision: 0,
                 fencingToken: 1, startedAt: ts, heartbeatAt: ts },
             createdAt: ts, updatedAt: ts,
@@ -243,7 +263,7 @@ async function serveStepUnderLease(cp, l, context, d, id) {
     const stopHeartbeat = startHeartbeatLoop(d, cp.checkpointId, id, controller);
     let final;
     try {
-        const acc = { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [] };
+        const acc = { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [], flowOutcomes: [] };
         for (let i = 0; i < step.flowIds.length; i++) {
             const flowId = step.flowIds[i];
             const flowCtx = { ...context, completedFlowIds: [...cp.completedFlowIds, ...acc.successfulFlowIds], waivers: l.prereqWaivers };
@@ -255,6 +275,7 @@ async function serveStepUnderLease(cp, l, context, d, id) {
             acc.flowIds.push(flowId);
             if (r.status === 'success')
                 acc.successfulFlowIds.push(flowId);
+            acc.flowOutcomes.push({ flowId, status: r.status, message: r.message });
         }
         await d.__beforeServePersist?.(); // the first-step serve persist (FINALIZE) mirrors serveStep's seam
         final = await (0, lane_checkpoint_store_1.finalizeLease)(d.store, cp.checkpointId, id, (c, committedRevision) => {
@@ -357,6 +378,14 @@ async function advanceLane(projectPath, checkpointId, transition, d) {
     await (0, lane_checkpoint_store_1.publishPendingOutbox)(d.store, projectPath, d.now);
     const cp = d.store.read(checkpointId);
     const l = resolveLane(cp.laneId);
+    // P4c loop terminal-pending guard. A stalled/capped boundary STOPS automatic
+    // iteration: ordinary complete/skip are rejected until an explicit retry, resume,
+    // or stop. Placed BEFORE the duplicate-report short-circuit so a re-sent boundary
+    // report cannot bypass the guard (spec lines 348-349, 364-365).
+    if (l.executionKind === 'loop' && (cp.convergence?.outcome === 'stalled' || cp.convergence?.outcome === 'capped')
+        && (transition.action === 'complete' || transition.action === 'skip')) {
+        throw new Error(`advanceLane: loop lane is ${cp.convergence.outcome} (terminal-pending) - ordinary ${transition.action} is rejected; use an explicit retry or resume (or stop) to continue`);
+    }
     // duplicate report -> no-op (before CAS, so a retried transport call is idempotent).
     // Guard on an IN_PROGRESS lane ONLY: a closed lane must REJECT any further
     // advance, and an interrupted lane must REJECT every non-resume action - both
@@ -402,6 +431,11 @@ async function advanceLane(projectPath, checkpointId, transition, d) {
             if (servedFlows.length < step.flowIds.length) {
                 throw new Error(`advanceLane: step "${step.verb}" is only partially served (${servedFlows.length}/${step.flowIds.length} flows) - resume to finish serving before completing`);
             }
+            // LOOP lanes: per-step completion is advisory (no per-step gate). The required
+            // validators run ONLY at the iteration boundary via the lane policy, so a flow-
+            // bound validator is never run twice (spec lines 355-359, 952-958).
+            if (l.executionKind === 'loop')
+                return completeLoopStep(cp, l, transition, projectPath, d);
             // CLAIM the operation lease (cross-process CAS on expectedRevision + ownership).
             const operationId = (d.newOperationId ?? defaultOperationId)();
             const claimed = await (0, lane_checkpoint_store_1.claimLease)(d.store, checkpointId, { expectedRevision: transition.expectedRevision, stepId: step.verb, iteration: cp.iteration, operationId, now: d.now, staleMs: d.staleMs });
@@ -513,6 +547,12 @@ async function transitionNonComplete(cp, l, projectPath, t, d) {
         }
         case 'retry':
         case 'resume': {
+            // P4c: a loop lane in a terminal-pending boundary (stalled/capped) uses explicit
+            // loop recovery - retry reruns the SAME boundary, resume begins the pending next
+            // pass. Any other retry/resume keeps the sequence-lane behavior below.
+            if (l.executionKind === 'loop' && (cp.convergence?.outcome === 'stalled' || cp.convergence?.outcome === 'capped')) {
+                return loopRetryResume(cp, l, projectPath, t, d);
+            }
             // Ordinary transitions run wholly under the lock: reject a LIVE lease; FENCE a
             // STALE lease (bump fencing, clear) BEFORE mutating so its later FINALIZE fails;
             // else apply the normal P2 transition. serveStep runs AFTER the lock.
@@ -549,7 +589,9 @@ async function transitionNonComplete(cp, l, projectPath, t, d) {
             return serveStep(final, l, { projectPath }, d); // re-serve from cache (no handler re-run)
         }
         case 'skip':
-            return skipStep(cp, l, projectPath, t, d);
+            return l.executionKind === 'loop'
+                ? loopSkipStep(cp, l, projectPath, t, d)
+                : skipStep(cp, l, projectPath, t, d);
         default:
             throw new Error(`advanceLane: unknown action "${t.action}"`);
     }
@@ -600,5 +642,267 @@ async function skipStep(cp, l, projectPath, t, d) {
         advanceCursorInPlace(c, l);
     }, d.now);
     return buildStepResult(final, l, { projectPath }, d);
+}
+// --- P4c loop execution -------------------------------------------------------
+// Complete one verb step of a loop lane. Non-final steps are advisory: record the
+// report, log the served advisory flows, advance the cursor within the iteration.
+// The final step reaches the real iteration boundary in this same task.
+async function completeLoopStep(cp, l, transition, projectPath, d) {
+    const r = transition.report;
+    const step = l.verbSteps[cp.cursor];
+    const isBoundary = cp.cursor === l.verbSteps.length - 1;
+    if (isBoundary) {
+        return runIterationBoundary(cp, l, projectPath, d, transition.expectedRevision, (c, committedRevision) => {
+            c.seenReportIds.push(r.reportId);
+            c.stepReports.push(r);
+            recordAdvisoryRun(c, cp.cursor, step.verb);
+            propagateSuccessfulFlows(c, cp.cursor); // completing attests this step's successful flows
+            c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: committedRevision, reason: 'boundary', at: d.now() });
+        });
+    }
+    const operationId = (d.newOperationId ?? defaultOperationId)();
+    const claimed = await (0, lane_checkpoint_store_1.claimLease)(d.store, cp.checkpointId, { expectedRevision: transition.expectedRevision, stepId: step.verb, iteration: cp.iteration, operationId, now: d.now, staleMs: d.staleMs });
+    const id = claimed.lease;
+    const final = await (0, lane_checkpoint_store_1.finalizeLease)(d.store, cp.checkpointId, id, (c, committedRevision) => {
+        c.seenReportIds.push(r.reportId);
+        c.stepReports.push(r);
+        recordAdvisoryRun(c, cp.cursor, step.verb);
+        propagateSuccessfulFlows(c, cp.cursor); // a later step's prerequisites must see this step's successful flows
+        c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: committedRevision, at: d.now() });
+        c.cursor += 1; // advance within the iteration; a loop never closes on a non-final step
+    }, d.now);
+    if (projectPath)
+        await (d.publishOutbox ?? lane_checkpoint_store_1.publishOutbox)(d.store, cp.checkpointId, projectPath, d.now);
+    return buildStepResult(final, l, { projectPath }, d);
+}
+// Log the advisory member-flows served at the current step for this iteration (M/K/I/L
+// coach every pass; their guidance is informational - it never gates).
+function recordAdvisoryRun(c, cursor, stepId) {
+    if (!c.convergence)
+        return;
+    const served = c.servedSteps[`${cursor}:${c.iteration}`];
+    if (served)
+        c.convergence.advisoryRuns.push({
+            iteration: c.iteration,
+            stepId,
+            flows: (served.flowOutcomes ?? []).map((f) => ({ flowId: f.flowId, outcome: f.status, message: f.message })),
+        });
+}
+// Attest the completed step's successful flows into completedFlowIds (mirrors the
+// sequence-complete path) so a later step's prerequisites see them through the real
+// orchestrator prereq graph. Only flows whose handler returned 'success' are attested
+// (degraded/skipped/errored flows must not satisfy a prerequisite). A skip never calls
+// this - a skipped step attests nothing.
+function propagateSuccessfulFlows(c, cursor) {
+    const served = c.servedSteps[`${cursor}:${c.iteration}`];
+    if (!served)
+        return;
+    for (const f of served.successfulFlowIds ?? [])
+        if (!c.completedFlowIds.includes(f))
+            c.completedFlowIds.push(f);
+}
+// Skip a loop verb step. A non-final skip drops that pass's coaching and advances the
+// cursor. A skip of the FINAL verb step still reaches the iteration boundary - a skip
+// can skip coaching but cannot bypass the lane-policy gate (spec lines 348-349, 364-365).
+async function loopSkipStep(cp, l, projectPath, t, d) {
+    if (!t.reason || !t.reason.trim())
+        throw new Error('advanceLane: skip requires a reason');
+    const step = l.verbSteps[cp.cursor];
+    const isBoundary = cp.cursor === l.verbSteps.length - 1;
+    if (isBoundary) {
+        return runIterationBoundary(cp, l, projectPath, d, t.expectedRevision, (c, committedRevision) => {
+            c.skippedStepIds.push(step.verb);
+            recordAdvisoryRun(c, cp.cursor, step.verb);
+            c.audit.push({ action: 'skip', stepId: step.verb, iteration: c.iteration, reason: t.reason, revision: committedRevision, at: d.now() });
+        });
+    }
+    const operationId = (d.newOperationId ?? defaultOperationId)();
+    const claimed = await (0, lane_checkpoint_store_1.claimLease)(d.store, cp.checkpointId, { expectedRevision: t.expectedRevision, stepId: step.verb, iteration: cp.iteration, operationId, now: d.now, staleMs: d.staleMs });
+    const id = claimed.lease;
+    const final = await (0, lane_checkpoint_store_1.finalizeLease)(d.store, cp.checkpointId, id, (c, committedRevision) => {
+        c.skippedStepIds.push(step.verb);
+        recordAdvisoryRun(c, cp.cursor, step.verb);
+        c.audit.push({ action: 'skip', stepId: step.verb, iteration: c.iteration, reason: t.reason, revision: committedRevision, at: d.now() });
+        c.cursor += 1; // loop: advance within the iteration; never close on a non-final skip
+    }, d.now);
+    if (projectPath)
+        await (d.publishOutbox ?? lane_checkpoint_store_1.publishOutbox)(d.store, cp.checkpointId, projectPath, d.now);
+    return buildStepResult(final, l, { projectPath }, d);
+}
+// Explicit loop recovery from a terminal-pending boundary (stalled/capped). RETRY
+// reruns the SAME boundary at the same cursor/iteration (no report, no serve) - for
+// transient/inconclusive/error recovery; a now-clean evaluation converges. RESUME is
+// the explicit choice to begin the pending next pass: under the lock/fencing path it
+// sets convergence back to running, moves the checkpoint iteration to the pending next
+// index, resets cursor + consecutiveNoProgress, audits, then serves the first step
+// (validators do not run again until that pass reaches its boundary).
+async function loopRetryResume(cp, l, projectPath, t, d) {
+    if (t.action === 'retry') {
+        return runIterationBoundary(cp, l, projectPath, d, t.expectedRevision, (c, committedRevision) => {
+            c.audit.push({ action: 'retry', stepId: l.verbSteps[c.cursor].verb, iteration: c.iteration, reason: t.reason, revision: committedRevision, at: d.now() });
+        }, true);
+    }
+    const final = await (0, lane_lock_1.withCheckpointLock)(d.store.dir(), cp.checkpointId, () => {
+        const c = d.store.read(cp.checkpointId);
+        if (t.expectedRevision !== c.revision)
+            throw new Error(`advanceLane: stale expectedRevision ${t.expectedRevision} (current ${c.revision})`);
+        if (c.lease) {
+            if ((0, lane_checkpoint_store_1.leaseIsLive)(c.lease, Date.parse(d.now()), d.staleMs ?? 30000))
+                throw new Error(`advanceLane: a live lease (op ${c.lease.operationId}) holds this checkpoint; resume cannot proceed`);
+            process.stderr.write(`[lane] resume fencing stale lease op=${c.lease.operationId} on ${c.checkpointId}\n`);
+            c.fencingCounter += 1;
+            c.lease = null;
+        }
+        c.revision += 1;
+        c.updatedAt = d.now();
+        const conv = c.convergence;
+        conv.outcome = 'running';
+        conv.consecutiveNoProgress = 0;
+        c.iteration = conv.iteration; // the pending next index recorded at the boundary
+        c.cursor = 0;
+        c.audit.push({ action: 'resume', stepId: l.verbSteps[0].verb, iteration: c.iteration, revision: c.revision, at: d.now() });
+        d.store.write(c);
+        return c;
+    });
+    return serveStep(final, l, { projectPath }, d);
+}
+// Run one loop iteration boundary: CLAIM the lease, EXECUTE the lane policy validators
+// once (abortable, heartbeat-protected - same P4b-1 protocol as a sequence complete),
+// evaluate convergence, and FINALIZE. Converged -> close the lane. Running ->
+// advance/reset/serve next iteration. Stalled/capped -> terminal-pending, no serve.
+// onCommit pushes the caller's report/skip audit inside the same atomic FINALIZE.
+async function runIterationBoundary(cp, l, projectPath, d, claimRevision, onCommit, isRetry = false) {
+    const step = l.verbSteps[cp.cursor];
+    const operationId = (d.newOperationId ?? defaultOperationId)();
+    const claimed = await (0, lane_checkpoint_store_1.claimLease)(d.store, cp.checkpointId, { expectedRevision: claimRevision, stepId: step.verb, iteration: cp.iteration, operationId, now: d.now, staleMs: d.staleMs });
+    const id = claimed.lease;
+    const controller = new AbortController();
+    const opKey = leaseKey(cp.checkpointId, id);
+    LIVE_OPERATIONS.set(opKey, controller);
+    const stopHeartbeat = startHeartbeatLoop(d, cp.checkpointId, id, controller);
+    try {
+        // EXECUTE: the required validators run ONCE each, via the lane policy (not per-step).
+        const validatorIds = (0, lane_validators_1.requiredValidatorsForLane)(l.lane);
+        const perValidator = await runBoundaryValidators(d, validatorIds, { projectPath, target: cp.target }, controller.signal);
+        const ev = (0, lane_convergence_1.evaluateBoundary)(perValidator);
+        const decision = (0, lane_convergence_1.decideProgress)(cp.convergence, ev);
+        const gate = { status: ev.iterationStatus, validators: perValidator.map((p) => ({ validatorId: p.validatorId, status: p.result.status })), findings: ev.findings };
+        const final = await (0, lane_checkpoint_store_1.finalizeLease)(d.store, cp.checkpointId, id, (c, committedRevision) => {
+            onCommit(c, committedRevision);
+            applyConvergence(c, ev, decision, isRetry);
+            if (ev.converged) {
+                c.lifecycle = 'closed';
+                c.outcome = 'converged';
+            }
+            else if (!isRetry && decision.outcome === 'running') {
+                c.iteration = decision.nextIteration;
+                c.cursor = 0; // ONLY a genuine continue (not a retry) serves the next pass
+            }
+            // stalled/capped (and any non-converging RETRY) are terminal-pending: remain
+            // in_progress at the completed final-step boundary, do not reset the cursor, do
+            // not serve another pass, and do not consume the pending iteration index.
+            c.sideEffectOutbox.push({
+                checkpointId: c.checkpointId, committedRevision, fencingToken: id.fencingToken, stepId: step.verb, iteration: id.iteration,
+                pendingPublishers: ['lane-side-effect-sink'], createdAt: d.now(),
+                entries: [{ publisher: 'lane-side-effect-sink', entryIndex: 0, logicalKey: `${c.checkpointId}:boundary:${id.iteration}`,
+                        payload: { laneId: c.laneId, boundary: true, iteration: id.iteration, convergence: c.convergence.outcome, committedRevision } }],
+            });
+        }, d.now);
+        if (projectPath)
+            await (d.publishOutbox ?? lane_checkpoint_store_1.publishOutbox)(d.store, cp.checkpointId, projectPath, d.now);
+        if (ev.converged)
+            return { ...closedResult(final, l), gate, convergence: convergenceSurface(final) };
+        return { ...(await buildStepResult(final, l, { projectPath }, d, gate)), convergence: convergenceSurface(final) };
+    }
+    finally {
+        stopHeartbeat();
+        if (LIVE_OPERATIONS.get(opKey) === controller)
+            LIVE_OPERATIONS.delete(opKey);
+    }
+}
+// EXECUTE wrapper for the boundary: run each required validator ONCE. A throw is
+// normalized to a typed error result (category 'validator_exception', empty actual
+// coverage, no free-text in the signature) and the loop CONTINUES through the
+// remaining required validators, so the whole required state is persisted and the
+// boundary still reaches owner-checked finalizeLease (the lease is always cleared).
+// Distinct from the reused sequence-gate runStepValidators (left unchanged).
+async function runBoundaryValidators(d, validatorIds, ctx, signal) {
+    const out = [];
+    for (const vId of validatorIds) {
+        if (!d.runValidator)
+            throw new Error(`runIterationBoundary: required validator "${vId}" is bound to this loop lane but deps.runValidator is not wired`);
+        try {
+            out.push({ validatorId: vId, result: await d.runValidator(vId, ctx, signal) });
+        }
+        catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            out.push({ validatorId: vId, result: {
+                    status: 'error', normalizedErrorCategory: 'validator_exception', error: message,
+                    rules: [], findings: [],
+                    coverage: { inspectedFiles: [], skippedFiles: [], supportedSourceKinds: [], unsupportedSourceKinds: [],
+                        ruleCounts: { pass: 0, fail: 0, notApplicable: 0, inconclusive: 0 },
+                        findingCounts: { blockingExcess: 0, withinTolerance: 0, nonBlocking: 0 }, measuredScope: [], unverifiedScope: [],
+                        discoveredFiles: [], unreadableFiles: [], unsupportedFiles: [] },
+                } });
+        }
+    }
+    return out;
+}
+// Fold one boundary's evaluation + progress decision into the persisted convergence
+// sub-state. Records the iteration in history (reproducible inputs), the latest
+// findings/validatorErrors/scope, and the signature. The caller sets c.iteration/
+// c.cursor/lifecycle; this only touches c.convergence.
+function applyConvergence(c, ev, decision, isRetry = false) {
+    const conv = c.convergence;
+    conv.history.push({ iteration: c.iteration, signature: ev.signature, perValidator: ev.perValidator, requiredValidatorRuns: ev.requiredValidatorRuns });
+    conv.signatures.push(ev.signature);
+    conv.findings = ev.findings;
+    conv.validatorErrors = ev.validatorErrors;
+    conv.runCoverage = ev.runCoverage;
+    conv.outcome = decision.outcome;
+    conv.consecutiveNoProgress = ev.converged ? conv.consecutiveNoProgress : decision.consecutiveNoProgress;
+    // A genuine continue advances the pending index; a non-converging RETRY re-ran the
+    // SAME boundary and must PRESERVE the existing pending index (so a later resume runs
+    // that same pass, not the next). Convergence keeps the iteration it converged on.
+    conv.iteration = ev.converged ? c.iteration : (isRetry ? conv.iteration : decision.nextIteration);
+}
+function convergenceSurface(c) {
+    const conv = c.convergence;
+    return {
+        outcome: conv.outcome, iteration: conv.iteration,
+        signature: conv.signatures.length ? conv.signatures[conv.signatures.length - 1] : undefined,
+        findings: conv.findings,
+        displayLabel: convergenceDisplayLabel(conv),
+        summary: conv.outcome === 'converged' ? buildConvergedSummary(conv) : undefined,
+    };
+}
+// machine_checks_clean_with_advisory_warnings only when the persisted outcome is
+// converged AND any persisted advisory flow outcome is not success; otherwise the
+// persisted convergence outcome (decideProgress never yields 'error', so default
+// the never-reached case to running).
+function convergenceDisplayLabel(conv) {
+    const anyAdvisoryFailed = conv.advisoryRuns.some((r) => r.flows.some((f) => f.outcome !== 'success'));
+    if (conv.outcome === 'converged')
+        return anyAdvisoryFailed ? 'machine_checks_clean_with_advisory_warnings' : 'converged';
+    if (conv.outcome === 'stalled' || conv.outcome === 'capped' || conv.outcome === 'running')
+        return conv.outcome;
+    return 'running';
+}
+// Truthful closing summary GENERATED from the run coverage record (spec lines 1177-1186) -
+// never from registry declarations. ASCII only.
+function buildConvergedSummary(conv) {
+    const cov = conv.runCoverage;
+    const measured = cov.measuredScope.length ? cov.measuredScope.join(', ') : 'no measured scope';
+    const unverified = cov.unverifiedScope.length ? cov.unverifiedScope.join(', ') : 'none';
+    const skipped = cov.skippedFiles.length ? cov.skippedFiles.join(', ') : 'none';
+    const unreadable = cov.unreadableFiles.length ? cov.unreadableFiles.join(', ') : 'none';
+    const unsupported = cov.unsupportedFiles.length ? cov.unsupportedFiles.join(', ') : 'none';
+    const notApplicable = cov.notApplicableRuleIds.length ? cov.notApplicableRuleIds.join(', ') : 'none';
+    const advisoryUnavailable = conv.advisoryRuns.flatMap((r) => r.flows).filter((f) => f.outcome !== 'success');
+    const advisory = advisoryUnavailable.length
+        ? `partially unavailable (${advisoryUnavailable.map((f) => `${f.flowId}:${f.outcome}`).join(', ')})`
+        : 'completed';
+    const passes = conv.history.length;
+    return `Converged (machine-measured): ${measured} clean after ${passes} iteration(s) under the release floor. Coverage: ${cov.inspectedFiles.length}/${cov.discoveredFiles.length} files; skipped: ${skipped}; unreadable: ${unreadable}; unsupported: ${unsupported}; not applicable rules: ${notApplicable}. Not machine-verified: ${unverified}. Advisory audit/critique guidance was ${advisory}; manual verification remains advised.`;
 }
 //# sourceMappingURL=lane-runner.js.map

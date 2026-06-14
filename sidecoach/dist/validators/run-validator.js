@@ -123,7 +123,8 @@ async function executeRule(def, record, collected, raw, signal) {
     return exec;
 }
 function emptyRun() {
-    return { inspectedFiles: [], skippedFiles: [], supportedSourceKinds: [], unsupportedSourceKinds: [], measuredScope: [], unverifiedScope: [] };
+    return { inspectedFiles: [], skippedFiles: [], supportedSourceKinds: [], unsupportedSourceKinds: [], measuredScope: [], unverifiedScope: [],
+        discoveredFiles: [], unreadableFiles: [], unsupportedFiles: [] };
 }
 // Cooperative yield to the EVENT LOOP (a macrotask, not a microtask): returns control
 // so setInterval timers - notably the lease heartbeat - can fire between files/rules. A
@@ -185,6 +186,10 @@ async function runDetailed(validatorId, context, signal) {
         supportedSourceKinds, unsupportedSourceKinds,
         measuredScope,
         unverifiedScope: gen.registryScope.filter((s) => !measuredScope.includes(s)),
+        // P4c stable file identities (from the collector result, not registry prose).
+        discoveredFiles: collected.discovered.map((d) => d.path),
+        unreadableFiles: collected.unreadableFiles,
+        unsupportedFiles: collected.unsupportedFiles,
     };
     const result = (0, clean_evaluator_1.evaluateCleanPolicy)({ validatorId, rules, coverageObservations, runCoverage }, policy);
     return { result, executions, coverageObservations, runCoverage };
