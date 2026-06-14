@@ -3,7 +3,7 @@
 // (lines 636-649). P2 carries idempotency KEYS (startRequestId, expectedRevision,
 // reportId) but not P3 distributed-safety machinery.
 import type { FlowId } from './types';
-import type { ProductFinding } from './product-rule-types';
+import type { ProductFinding, NormalizedErrorCategory, ProductValidationCoverage } from './product-rule-types';
 
 export type LaneAction = 'complete' | 'retry' | 'skip' | 'resume' | 'interrupt' | 'stop';
 export type LaneLifecycle = 'in_progress' | 'interrupted' | 'closed';
@@ -84,6 +84,16 @@ export interface LaneStepResult {
   // Validator gate surface (optional so closed/serve results omit it). Present on
   // a `complete` result that ran product validators.
   gate?: { status: GateStatus; validators: { validatorId: string; status: GateStatus }[]; findings: ProductFinding[] };
+  // Loop-lane convergence surface (present on a loop boundary result). The summary
+  // is GENERATED from the run coverage record for a converged result (truthful).
+  convergence?: {
+    outcome: ConvergenceOutcome;
+    iteration: number;
+    signature?: string;
+    findings: ProductFinding[];
+    displayLabel: 'running' | 'stalled' | 'capped' | 'converged' | 'machine_checks_clean_with_advisory_warnings';
+    summary?: string;
+  };
 }
 
 export type LaneStepStatus = 'pending' | 'current' | 'completed' | 'skipped' | 'validation_failed' | 'validation_inconclusive' | 'validation_error';
@@ -105,6 +115,69 @@ export interface LaneInfo {
   checkpointId: string; laneId: string;
   lifecycle: LaneLifecycle; outcome?: LaneOutcome;
   stepIndex: number; totalSteps: number; updatedAt: string;
+}
+
+// ---- P4c loop convergence sub-state (spec section 9 lines 1142-1167) ----------
+export type ConvergenceOutcome = 'running' | 'converged' | 'stalled' | 'capped' | 'error';
+
+// The full required-state tuple per required validator. Stable identities only
+// (canonical rule keys, gap identities, normalized error categories) - never
+// free-text messages, so the progress signature is reproducible.
+export interface RequiredValidatorState {
+  validatorId: string;
+  status: GateStatus;
+  failedRuleIds: string[];
+  inconclusiveRuleIds: string[];
+  coverageGapIdentities: string[];
+  validatorErrorCategory?: NormalizedErrorCategory;
+  ruleErrorCategories: string[];   // `${canonicalRuleKey}:${category}`
+}
+
+export interface ConvergenceIterationRecord {
+  iteration: number;
+  signature: string;
+  perValidator: RequiredValidatorState[];
+  // Actual run coverage for EACH required validator. This is persisted alongside
+  // the signature so the boundary decision and closing summary are reproducible.
+  requiredValidatorRuns: {
+    validatorId: string;
+    status: GateStatus;
+    coverage: ProductValidationCoverage;
+  }[];
+}
+
+export type AdvisoryFlowOutcome = 'success' | 'needs_input' | 'skipped' | 'error';
+export interface AdvisoryRunRecord {
+  iteration: number;
+  stepId: string;
+  flows: { flowId: FlowId; outcome: AdvisoryFlowOutcome; message?: string }[];
+}
+
+// Persisted in the checkpoint so every iteration survives process boundaries and a
+// clean decision is reproducible from persisted inputs (spec lines 1138-1152). The
+// LANE lifecycle/outcome lives on LaneCheckpoint; this is the LOOP result only.
+export interface ConvergenceState {
+  outcome: ConvergenceOutcome;
+  iteration: number;
+  signatures: string[];
+  consecutiveNoProgress: number;
+  limits: { maxIterations: number; maxNoProgress: number };
+  history: ConvergenceIterationRecord[];                                  // productValidationRuns
+  findings: ProductFinding[];                                            // latest boundary findings
+  validatorErrors: { validatorId: string; category: NormalizedErrorCategory; message: string }[];
+  advisoryRuns: AdvisoryRunRecord[];
+  // Aggregated from the latest requiredValidatorRuns, never registry prose.
+  runCoverage: {
+    discoveredFiles: string[];
+    inspectedFiles: string[];
+    skippedFiles: string[];
+    unreadableFiles: string[];
+    unsupportedSourceKinds: string[];
+    unsupportedFiles: string[];
+    measuredScope: string[];
+    unverifiedScope: string[];
+    notApplicableRuleIds: string[];
+  };
 }
 
 export function makeStepReport(r: StepReport): StepReport { return { ...r, evidence: [...r.evidence] }; }

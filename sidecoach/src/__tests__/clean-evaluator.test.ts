@@ -17,6 +17,7 @@ const policy: CleanPolicy = {
 const run: RunCoverage = {
   inspectedFiles: ['a.css'], skippedFiles: [], supportedSourceKinds: ['css'], unsupportedSourceKinds: [],
   measuredScope: ['file:a.css'], unverifiedScope: [],
+  discoveredFiles: ['a.css'], unreadableFiles: [], unsupportedFiles: [],
 };
 const satObs = (id: string): CoverageObservation => ({
   ruleId: id,

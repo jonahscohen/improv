@@ -162,7 +162,8 @@ export interface ValidatorRunDetail {
 }
 
 function emptyRun(): RunCoverage {
-  return { inspectedFiles: [], skippedFiles: [], supportedSourceKinds: [], unsupportedSourceKinds: [], measuredScope: [], unverifiedScope: [] };
+  return { inspectedFiles: [], skippedFiles: [], supportedSourceKinds: [], unsupportedSourceKinds: [], measuredScope: [], unverifiedScope: [],
+    discoveredFiles: [], unreadableFiles: [], unsupportedFiles: [] };
 }
 
 // Cooperative yield to the EVENT LOOP (a macrotask, not a microtask): returns control
@@ -229,6 +230,10 @@ async function runDetailed(validatorId: string, context: unknown, signal?: Abort
     supportedSourceKinds, unsupportedSourceKinds,
     measuredScope,
     unverifiedScope: gen.registryScope.filter((s) => !measuredScope.includes(s)),
+    // P4c stable file identities (from the collector result, not registry prose).
+    discoveredFiles: collected.discovered.map((d) => d.path),
+    unreadableFiles: collected.unreadableFiles,
+    unsupportedFiles: collected.unsupportedFiles,
   };
 
   const result = evaluateCleanPolicy({ validatorId, rules, coverageObservations, runCoverage }, policy);

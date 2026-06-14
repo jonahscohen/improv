@@ -98,7 +98,7 @@ function closedResult(cp: LaneCheckpoint, l: GeneratedLane): LaneStepResult {
   };
 }
 
-type ServedEntry = { guidance: string[]; checklist: { id: string; label: string; required: boolean; completed: boolean }[]; flowIds: FlowId[]; successfulFlowIds: FlowId[] };
+type ServedEntry = { guidance: string[]; checklist: { id: string; label: string; required: boolean; completed: boolean }[]; flowIds: FlowId[]; successfulFlowIds: FlowId[]; flowOutcomes: { flowId: FlowId; status: 'success' | 'needs_input' | 'error' | 'skipped'; message: string }[] };
 
 // Serve the verb step at cursor. Uses the PERSISTED cache if present (so retry/
 // resume/duplicate never re-run handlers); otherwise runs each member flow once into
@@ -113,8 +113,8 @@ async function serveStep(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: 
   const key = `${cp.cursor}:${cp.iteration}`;
   const existing = cp.servedSteps[key];
   const acc: ServedEntry = existing
-    ? { guidance: [...existing.guidance], checklist: [...existing.checklist], flowIds: [...existing.flowIds], successfulFlowIds: [...existing.successfulFlowIds] }
-    : { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [] };
+    ? { guidance: [...existing.guidance], checklist: [...existing.checklist], flowIds: [...existing.flowIds], successfulFlowIds: [...existing.successfulFlowIds], flowOutcomes: [...(existing.flowOutcomes ?? [])] }
+    : { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [], flowOutcomes: [] };
   const needsRun = existing === undefined || acc.flowIds.length < step.flowIds.length;
   if (acc.flowIds.length < step.flowIds.length) {
     for (let i = acc.flowIds.length; i < step.flowIds.length; i++) {
@@ -129,6 +129,7 @@ async function serveStep(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: 
       for (const c of r.checklist ?? []) acc.checklist.push({ id: `${flowId}:${c.id}`, label: c.label, required: c.required, completed: false });
       acc.flowIds.push(flowId);
       if (r.status === 'success') acc.successfulFlowIds.push(flowId);
+      acc.flowOutcomes.push({ flowId, status: r.status, message: r.message });
     }
   }
   if (needsRun) {
@@ -259,7 +260,7 @@ async function serveStepUnderLease(cp: LaneCheckpoint, l: GeneratedLane, context
   const stopHeartbeat = startHeartbeatLoop(d, cp.checkpointId, id, controller);
   let final: LaneCheckpoint;
   try {
-    const acc: ServedEntry = { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [] };
+    const acc: ServedEntry = { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [], flowOutcomes: [] };
     for (let i = 0; i < step.flowIds.length; i++) {
       const flowId = step.flowIds[i];
       const flowCtx = { ...context, completedFlowIds: [...cp.completedFlowIds, ...acc.successfulFlowIds], waivers: l.prereqWaivers };
@@ -268,6 +269,7 @@ async function serveStepUnderLease(cp: LaneCheckpoint, l: GeneratedLane, context
       for (const c of r.checklist ?? []) acc.checklist.push({ id: `${flowId}:${c.id}`, label: c.label, required: c.required, completed: false });
       acc.flowIds.push(flowId);
       if (r.status === 'success') acc.successfulFlowIds.push(flowId);
+      acc.flowOutcomes.push({ flowId, status: r.status, message: r.message });
     }
     await d.__beforeServePersist?.();   // the first-step serve persist (FINALIZE) mirrors serveStep's seam
     final = await finalizeLease(d.store, cp.checkpointId, id, (c, committedRevision) => {

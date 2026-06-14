@@ -2,7 +2,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { FlowId } from './types';
-import type { StepReport, LaneLifecycle, LaneOutcome, LaneAuditEntry, LeaseRecord, SideEffectOutboxRecord, PersistedStepGateStatus } from './lane-types';
+import type { StepReport, LaneLifecycle, LaneOutcome, LaneAuditEntry, LeaseRecord, SideEffectOutboxRecord, PersistedStepGateStatus, ConvergenceState } from './lane-types';
 import { withCheckpointLock } from './lane-lock';
 import { LaneSideEffectSink } from './lane-side-effect-sink';
 
@@ -14,7 +14,7 @@ export interface LaneCheckpoint {
   cursor: number; iteration: number;
   completedStepIds: string[]; skippedStepIds: string[]; completedFlowIds: FlowId[];
   stepReports: StepReport[]; audit: LaneAuditEntry[];
-  servedSteps: Record<string, { guidance: string[]; checklist: { id: string; label: string; required: boolean; completed: boolean }[]; flowIds: FlowId[]; successfulFlowIds: FlowId[] }>; // key: `${cursor}:${iteration}`; successfulFlowIds = flows whose handler returned status 'success' (NOT degraded/skipped/errored)
+  servedSteps: Record<string, { guidance: string[]; checklist: { id: string; label: string; required: boolean; completed: boolean }[]; flowIds: FlowId[]; successfulFlowIds: FlowId[]; flowOutcomes: { flowId: FlowId; status: 'success' | 'needs_input' | 'error' | 'skipped'; message: string }[] }>; // key: `${cursor}:${iteration}`; successfulFlowIds = flows whose handler returned status 'success' (NOT degraded/skipped/errored); flowOutcomes = every served flow's actual outcome (P4c truthful advisory qualification)
   revision: number; startRequestId: string; seenReportIds: string[];
   // P4b-1 durability (schema v2): fencing counter (monotonic), the active operation
   // lease (null when idle), the side-effect outbox (committed-but-unpublished
@@ -23,6 +23,10 @@ export interface LaneCheckpoint {
   lease: LeaseRecord | null;
   sideEffectOutbox: SideEffectOutboxRecord[];
   stepGateStatuses: Record<string, PersistedStepGateStatus>; // key: `${stepId}:${iteration}`
+  // P4c: loop convergence sub-state. Present only on loop lanes; undefined for
+  // sequence lanes. Additive optional field - schema stays v2, migrate() passes it
+  // through unchanged via the existing `...raw` spread.
+  convergence?: ConvergenceState;
   createdAt: string; updatedAt: string;
 }
 

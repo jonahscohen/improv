@@ -86,6 +86,12 @@ export interface ProductValidationCoverage {
   ruleCounts: { pass: number; fail: number; notApplicable: number; inconclusive: number };
   findingCounts: { blockingExcess: number; withinTolerance: number; nonBlocking: number };
   measuredScope: string[]; unverifiedScope: string[];
+  // P4c (additive, optional): stable file identities for convergence gap signatures
+  // and truthful summaries. discoveredFiles = every discovered path; unreadableFiles
+  // / unsupportedFiles are the corresponding gap subsets. Does not change evaluation.
+  discoveredFiles?: string[];
+  unreadableFiles?: string[];
+  unsupportedFiles?: string[];
 }
 
 interface ProductValidationBase {

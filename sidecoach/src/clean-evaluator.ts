@@ -27,6 +27,11 @@ export interface RunCoverage {
   unsupportedSourceKinds: string[];
   measuredScope: string[];
   unverifiedScope: string[];
+  // P4c (additive): stable file identities for convergence gap signatures + truthful
+  // summaries. Required on the internal type; surfaced as optional on the result.
+  discoveredFiles: string[];
+  unreadableFiles: string[];
+  unsupportedFiles: string[];
 }
 
 export interface CleanEvalInput {
@@ -86,6 +91,7 @@ function baseCoverage(run: RunCoverage) {
     ruleCounts: { pass: 0, fail: 0, notApplicable: 0, inconclusive: 0 },
     findingCounts: { blockingExcess: 0, withinTolerance: 0, nonBlocking: 0 },
     measuredScope: run.measuredScope, unverifiedScope: run.unverifiedScope,
+    discoveredFiles: run.discoveredFiles, unreadableFiles: run.unreadableFiles, unsupportedFiles: run.unsupportedFiles,
   };
 }
 
