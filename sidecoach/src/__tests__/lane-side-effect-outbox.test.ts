@@ -5,6 +5,7 @@ import * as path from 'path';
 import { LaneCheckpointStore, publishOutbox } from '../lane-checkpoint-store';
 import { startLane, advanceLane, LaneRunnerDeps } from '../lane-runner';
 import { LaneSideEffectSink } from '../lane-side-effect-sink';
+import { FlowHistory } from '../flow-history';
 import { StepReport } from '../lane-types';
 import type { ProductValidationResult } from '../product-rule-types';
 
@@ -103,25 +104,93 @@ function baseCp(id: string, outbox: any[]): any {
     createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' };
 }
 function rec(id: string, publishers: string[]): any {
-  return { checkpointId: id, committedRevision: 4, fencingToken: 2, stepId: 'craft', iteration: 0,
-    pendingPublishers: publishers, createdAt: '2026-01-01T00:00:00.000Z',
-    entries: [{ publisher: 'lane-side-effect-sink', entryIndex: 0, logicalKey: `${id}:craft:0`, payload: { v: 1 } }] };
+  return {
+    checkpointId: id,
+    committedRevision: 4,
+    fencingToken: 2,
+    stepId: 'craft',
+    iteration: 0,
+    pendingPublishers: publishers,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    entries: [
+      {
+        publisher: 'lane-side-effect-sink',
+        entryIndex: 0,
+        logicalKey: `${id}:craft:0`,
+        payload: { v: 1 },
+      },
+      {
+        publisher: 'flow-history',
+        entryIndex: 1,
+        logicalKey: `${id}:craft:0:flow-history`,
+        payload: {
+          flowId: 'lane:lane_build:craft',
+          flowName: 'Lane lane_build: craft',
+          status: 'success',
+          message: 'committed craft',
+        },
+      },
+    ],
+  };
 }
 async function runMultiPublisherAck() {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'lane-multipub-home-'));
+  process.env.HOME = home;
   const proj = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-multipub-')));
   const store = new LaneCheckpointStore(proj);
-  // record with TWO declared publishers; the sink ack must NOT delete it - flow-history pends.
+
   store.write(baseCp('lane-multi', [rec('lane-multi', ['lane-side-effect-sink', 'flow-history'])]));
   await publishOutbox(store, 'lane-multi', proj, () => '2026-01-01T00:00:10.000Z');
   const after = store.read('lane-multi');
-  if (after.sideEffectOutbox.length !== 1) throw new Error('a record with a still-pending publisher must survive the sink ack');
-  if (JSON.stringify(after.sideEffectOutbox[0].pendingPublishers) !== JSON.stringify(['flow-history'])) throw new Error('the sink publisher must be acked INDIVIDUALLY, leaving flow-history pending');
+  if (after.sideEffectOutbox.length !== 0) throw new Error('record must be removed only after both declared publishers ack');
   if (!new LaneSideEffectSink(proj).get('lane-multi:craft:0')) throw new Error('sink must hold the published entry');
+  const flowHistory = new FlowHistory(proj);
+  const flowRun = flowHistory.getLatestRun('lane:lane_build:craft');
+  if (flowRun?.laneLogicalKey !== 'lane-multi:craft:0:flow-history' || flowRun.fencingToken !== 2) {
+    throw new Error('flow-history must hold the committed logical key and fencing token');
+  }
 
-  // a record whose ONLY declared publisher is the sink is fully drained after publish.
-  store.write(baseCp('lane-solo', [rec('lane-solo', ['lane-side-effect-sink'])]));
-  await publishOutbox(store, 'lane-solo', proj, () => '2026-01-01T00:00:11.000Z');
-  if (store.read('lane-solo').sideEffectOutbox.length !== 0) throw new Error('a sink-only record must be drained when its sole publisher acks');
+  const rejectedDelivery = rec('lane-rejected', ['flow-history']);
+  rejectedDelivery.fencingToken = 1;
+  rejectedDelivery.entries = rejectedDelivery.entries.filter((entry: any) => entry.publisher === 'flow-history');
+  rejectedDelivery.entries[0].logicalKey = 'lane-multi:craft:0:flow-history';
+  store.write(baseCp('lane-rejected', [rejectedDelivery]));
+  await publishOutbox(store, 'lane-rejected', proj, () => '2026-01-01T00:00:10.250Z');
+  if (store.read('lane-rejected').sideEffectOutbox.length !== 0) throw new Error('rejected lower-token delivery must still ack its publisher');
+  if (new FlowHistory(proj).getLatestRun('lane:lane_build:craft')?.fencingToken !== 2) {
+    throw new Error('rejected lower-token delivery must preserve the higher accepted flow-history token');
+  }
+
+  const blockedHome = path.join(home, 'blocked-home');
+  fs.writeFileSync(blockedHome, 'not a directory');
+  process.env.HOME = blockedHome;
+  store.write(baseCp('lane-publisher-fail', [rec('lane-publisher-fail', ['lane-side-effect-sink', 'flow-history'])]));
+  let flowHistoryFailed = false;
+  try {
+    await publishOutbox(store, 'lane-publisher-fail', proj, () => '2026-01-01T00:00:10.500Z');
+  } catch {
+    flowHistoryFailed = true;
+  }
+  if (!flowHistoryFailed) throw new Error('flow-history persistence failure must leave its publisher pending');
+  const failedAfter = store.read('lane-publisher-fail');
+  if (JSON.stringify(failedAfter.sideEffectOutbox[0].pendingPublishers) !== JSON.stringify(['flow-history'])) {
+    throw new Error('sink must ack individually before a later flow-history publisher failure');
+  }
+  if (!new LaneSideEffectSink(proj).get('lane-publisher-fail:craft:0')) throw new Error('sink delivery must survive later publisher failure');
+  process.env.HOME = home;
+
+  const retained = rec('lane-retained', ['lane-side-effect-sink', 'unknown-publisher']);
+  retained.entries = retained.entries.filter((entry: any) => entry.publisher === 'lane-side-effect-sink');
+  store.write(baseCp('lane-retained', [retained]));
+  const revisionBefore = store.read('lane-retained').revision;
+  await publishOutbox(store, 'lane-retained', proj, () => '2026-01-01T00:00:11.000Z');
+  const retainedAfter = store.read('lane-retained');
+  if (retainedAfter.revision !== revisionBefore) throw new Error('publisher acknowledgement must not change semantic revision');
+  if (retainedAfter.sideEffectOutbox.length !== 1) throw new Error('record must survive while any publisher remains pending');
+  if (JSON.stringify(retainedAfter.sideEffectOutbox[0].pendingPublishers) !== JSON.stringify(['unknown-publisher'])) {
+    throw new Error('declared handled publisher must ack individually and leave unknown publisher pending');
+  }
+
   console.log('lane-side-effect-outbox multi-publisher-ack: OK');
 }
 
