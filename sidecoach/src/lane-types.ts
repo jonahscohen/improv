@@ -86,6 +86,8 @@ export interface LaneStepResult {
   gate?: { status: GateStatus; validators: { validatorId: string; status: GateStatus }[]; findings: ProductFinding[] };
 }
 
+export type LaneStepStatus = 'pending' | 'current' | 'completed' | 'skipped' | 'validation_failed' | 'validation_inconclusive' | 'validation_error';
+
 export interface LaneState {
   checkpointId: string; laneId: string; target: string;
   lifecycle: LaneLifecycle; outcome?: LaneOutcome;
@@ -93,6 +95,9 @@ export interface LaneState {
   stepIndex: number; totalSteps: number; currentVerb?: string;
   completedStepIds: string[]; skippedStepIds: string[]; completedFlowIds: FlowId[];
   stepReports: StepReport[]; audit: LaneAuditEntry[];
+  // Per-step status surface (spec): past steps report completed/skipped; the current
+  // step reports its persisted gate status (validation_*) or 'current'; the rest pending.
+  steps: { verb: string; flowIds: FlowId[]; status: LaneStepStatus }[];
   revision: number; createdAt: string; updatedAt: string;
 }
 

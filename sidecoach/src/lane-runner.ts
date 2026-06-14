@@ -5,9 +5,12 @@ import { createHash } from 'crypto';
 import type { FlowId } from './types';
 import type { FlowExecutionResult } from './flow-handler';
 import { LANES, GeneratedLane } from './lanes.generated';
-import { LaneCheckpoint, LaneCheckpointStore, finalizeLease } from './lane-checkpoint-store';
+import { LaneCheckpoint, LaneCheckpointStore, finalizeLease, claimLease, leaseIsLive } from './lane-checkpoint-store';
 import type { LeaseIdentity } from './lane-checkpoint-store';
 import { LaneStepResult, LaneState, LaneInfo, LaneTransition, LaneAuditEntry, isClosed } from './lane-types';
+import type { GateStatus, PersistedStepGateStatus, LaneStepStatus } from './lane-types';
+import type { ProductValidationResult } from './product-rule-types';
+import { validatorsForStep, aggregateWorstStatus, mapGateStatusToOutcome } from './lane-validators';
 import { FlowPrerequisiteValidator } from './flow-prerequisites';
 import { withCheckpointLock } from './lane-lock';
 
@@ -20,6 +23,13 @@ export interface LaneRunnerDeps {
   // -safe default so existing call sites keep compiling; production laneDeps wires
   // an explicit generator in Task 10.
   newOperationId?: () => string;
+  // The async EXECUTE: run one product validator. Optional in the type so laneDeps
+  // (wired in Task 10) and validator-less call sites compile; a step with bound
+  // validators that finds this absent throws (the Task 10 red).
+  runValidator?: (validatorId: string, validatorContext: { projectPath: string; target: string }, signal?: AbortSignal) => Promise<ProductValidationResult>;
+  staleMs?: number;                              // default 30000
+  __claimBarrier?: () => Promise<void>;          // test seam: awaited after the early read, before claimLease
+  __beforeServePersist?: () => Promise<void>;    // test seam: deterministic stale-snapshot interleaving
 }
 
 // Default operation id when deps omits newOperationId (production wiring is Task 10).
@@ -47,20 +57,24 @@ function closedResult(cp: LaneCheckpoint, l: GeneratedLane): LaneStepResult {
   };
 }
 
+type ServedEntry = { guidance: string[]; checklist: { id: string; label: string; required: boolean; completed: boolean }[]; flowIds: FlowId[]; successfulFlowIds: FlowId[] };
+
 // Serve the verb step at cursor. Uses the PERSISTED cache if present (so retry/
-// resume/duplicate never re-run handlers); otherwise runs each member flow once,
-// caches, and persists. Empty-flow steps serve guidance only.
+// resume/duplicate never re-run handlers); otherwise runs each member flow once into
+// an operation-local accumulator, then persists ONCE under the checkpoint lock via a
+// re-read + merge of ONLY servedSteps[key] (never a whole stale cp snapshot, so a
+// concurrent committed transition is preserved). Serving never bumps the revision.
 async function serveStep(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: LaneRunnerDeps): Promise<LaneStepResult> {
   if (isClosed(cp.lifecycle) || cp.lifecycle === 'interrupted' || cp.cursor >= l.verbSteps.length) {
     return closedResult(cp, l);
   }
   const step = l.verbSteps[cp.cursor];
   const key = `${cp.cursor}:${cp.iteration}`;
-  // Resumable incremental serve: persist after EACH flow so a mid-step
-  // interruption re-runs only the in-flight flow. Handlers are pure guidance,
-  // so even that re-run is benign. Serving is NOT a revision-bumping mutation.
-  let acc = cp.servedSteps[key];
-  if (!acc) { acc = { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [] }; cp.servedSteps[key] = acc; cp.updatedAt = d.now(); d.store.write(cp); }
+  const existing = cp.servedSteps[key];
+  const acc: ServedEntry = existing
+    ? { guidance: [...existing.guidance], checklist: [...existing.checklist], flowIds: [...existing.flowIds], successfulFlowIds: [...existing.successfulFlowIds] }
+    : { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [] };
+  const needsRun = existing === undefined || acc.flowIds.length < step.flowIds.length;
   if (acc.flowIds.length < step.flowIds.length) {
     for (let i = acc.flowIds.length; i < step.flowIds.length; i++) {
       const flowId = step.flowIds[i];
@@ -74,8 +88,19 @@ async function serveStep(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: 
       for (const c of r.checklist ?? []) acc.checklist.push({ id: `${flowId}:${c.id}`, label: c.label, required: c.required, completed: false });
       acc.flowIds.push(flowId);
       if (r.status === 'success') acc.successfulFlowIds.push(flowId);
-      cp.updatedAt = d.now(); d.store.write(cp);
     }
+  }
+  if (needsRun) {
+    // Persist the served-step entry under the checkpoint lock: re-read fresh, set
+    // ONLY this servedSteps[key], write. Never clobber a concurrent committed
+    // transition with a whole stale cp. Does NOT bump the semantic revision.
+    await d.__beforeServePersist?.();
+    await withCheckpointLock(d.store.dir(), cp.checkpointId, () => {
+      const fresh = d.store.read(cp.checkpointId);
+      fresh.servedSteps[key] = acc;
+      fresh.updatedAt = d.now();
+      d.store.write(fresh);
+    });
   }
   const served = acc;
   return {
@@ -151,8 +176,7 @@ async function serveStepUnderLease(cp: LaneCheckpoint, l: GeneratedLane, context
   }
   const step = l.verbSteps[cp.cursor];
   const key = `${cp.cursor}:${cp.iteration}`;
-  const acc: { guidance: string[]; checklist: { id: string; label: string; required: boolean; completed: boolean }[]; flowIds: FlowId[]; successfulFlowIds: FlowId[] } =
-    { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [] };
+  const acc: ServedEntry = { guidance: [...step.guidance], checklist: [], flowIds: [], successfulFlowIds: [] };
   for (let i = 0; i < step.flowIds.length; i++) {
     const flowId = step.flowIds[i];
     const flowCtx = { ...context, completedFlowIds: [...cp.completedFlowIds, ...acc.successfulFlowIds], waivers: l.prereqWaivers };
@@ -162,6 +186,7 @@ async function serveStepUnderLease(cp: LaneCheckpoint, l: GeneratedLane, context
     acc.flowIds.push(flowId);
     if (r.status === 'success') acc.successfulFlowIds.push(flowId);
   }
+  await d.__beforeServePersist?.();   // the first-step serve persist (FINALIZE) mirrors serveStep's seam
   const final = await finalizeLease(d.store, cp.checkpointId, id, (c) => {
     c.servedSteps[key] = acc;
   }, d.now);
@@ -178,12 +203,27 @@ export function laneStatus(projectPath: string, checkpointId: string, d: LaneRun
   const cp = d.store.read(checkpointId);
   const l = resolveLane(cp.laneId);
   const step = cp.lifecycle === 'in_progress' && cp.cursor < l.verbSteps.length ? l.verbSteps[cp.cursor] : undefined;
+  // Per-step status: past steps report completed/skipped; the current in-progress
+  // step reports its persisted gate status (validation_*) when present, else 'current';
+  // the rest are pending. This is persisted checkpoint state, so a later independent
+  // laneStatus call still surfaces validation_failed/inconclusive/error.
+  const steps = l.verbSteps.map((vs, idx): { verb: string; flowIds: FlowId[]; status: LaneStepStatus } => {
+    let status: LaneStepStatus;
+    if (cp.completedStepIds.includes(vs.verb)) status = 'completed';
+    else if (cp.skippedStepIds.includes(vs.verb)) status = 'skipped';
+    else if (cp.lifecycle === 'in_progress' && idx === cp.cursor) {
+      const gate = cp.stepGateStatuses[`${vs.verb}:${cp.iteration}`];
+      status = (gate && gate !== 'clean') ? gate : 'current';
+    } else status = 'pending';
+    return { verb: vs.verb, flowIds: vs.flowIds, status };
+  });
   return {
     checkpointId: cp.checkpointId, laneId: cp.laneId, target: cp.target,
     lifecycle: cp.lifecycle, outcome: cp.outcome, executionKind: cp.executionKind,
     iteration: cp.iteration, stepIndex: cp.cursor, totalSteps: l.verbSteps.length, currentVerb: step?.verb,
     completedStepIds: [...cp.completedStepIds], skippedStepIds: [...cp.skippedStepIds], completedFlowIds: [...cp.completedFlowIds],
-    stepReports: [...cp.stepReports], audit: [...cp.audit], revision: cp.revision, createdAt: cp.createdAt, updatedAt: cp.updatedAt,
+    stepReports: [...cp.stepReports], audit: [...cp.audit], steps,
+    revision: cp.revision, createdAt: cp.createdAt, updatedAt: cp.updatedAt,
   };
 }
 
@@ -206,16 +246,39 @@ function bump(cp: LaneCheckpoint, d: LaneRunnerDeps): void {
   cp.revision += 1; cp.updatedAt = d.now(); d.store.write(cp);
 }
 
-// Advance the cursor after a completed/skipped step. Sequence final step closes
-// the lane: outcome 'completed' if no step was skipped, else 'partial'. (Loop
-// lanes never reach here - they are rejected at startLane in P2.)
-async function advanceCursor(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: LaneRunnerDeps): Promise<LaneStepResult> {
+// PURE in-place cursor/lifecycle/outcome advance after a committed complete/skip
+// (NO store writes - the caller's FINALIZE persists). Sequence final step closes the
+// lane: 'completed' if nothing was skipped, else 'partial'. (Loop lanes never reach
+// here - they are rejected at startLane in P2.)
+function advanceCursorInPlace(cp: LaneCheckpoint, l: GeneratedLane): void {
   const last = l.verbSteps.length - 1;
-  if (cp.cursor < last) { cp.cursor += 1; bump(cp, d); return serveStep(cp, l, context, d); }
+  if (cp.cursor < last) { cp.cursor += 1; return; }
   cp.lifecycle = 'closed';
   cp.outcome = cp.skippedStepIds.length > 0 ? 'partial' : 'completed';
-  bump(cp, d);
-  return closedResult(cp, l);
+}
+
+// Build the result after a committed mutation: serve the new current step (or the
+// closed result), attaching the validator gate surface if provided.
+async function buildStepResult(cp: LaneCheckpoint, l: GeneratedLane, context: any, d: LaneRunnerDeps, gate?: LaneStepResult['gate']): Promise<LaneStepResult> {
+  if (isClosed(cp.lifecycle) || cp.lifecycle === 'interrupted' || cp.cursor >= l.verbSteps.length) {
+    return gate ? { ...closedResult(cp, l), gate } : closedResult(cp, l);
+  }
+  const res = await serveStep(cp, l, context, d);
+  return gate ? { ...res, gate } : res;
+}
+
+// EXECUTE: run a step's bound validators (async, abort/heartbeat wired in Task 8).
+// A step with bound validators but no deps.runValidator throws (production wiring is
+// Task 10). Returns per-validator results in discovery order.
+async function runStepValidators(
+  d: LaneRunnerDeps, validatorIds: string[], ctx: { projectPath: string; target: string }, signal?: AbortSignal,
+): Promise<{ validatorId: string; result: ProductValidationResult }[]> {
+  const out: { validatorId: string; result: ProductValidationResult }[] = [];
+  for (const vId of validatorIds) {
+    if (!d.runValidator) throw new Error(`advanceLane: validator "${vId}" is bound to this step but deps.runValidator is not wired`);
+    out.push({ validatorId: vId, result: await d.runValidator(vId, ctx, signal) });
+  }
+  return out;
 }
 
 export async function advanceLane(projectPath: string, checkpointId: string, transition: LaneTransition, d: LaneRunnerDeps): Promise<LaneStepResult> {
@@ -237,6 +300,17 @@ export async function advanceLane(projectPath: string, checkpointId: string, tra
   if (cp.lifecycle === 'closed') throw new Error(`advanceLane: lane already closed (outcome ${cp.outcome})`);
   if (transition.expectedRevision !== cp.revision) throw new Error(`advanceLane: stale expectedRevision ${transition.expectedRevision} (current ${cp.revision})`);
 
+  // Test seam awaited after the early read, BEFORE any claim (production passes none).
+  await d.__claimBarrier?.();
+  // ORDINARY transitions (complete/skip/retry/resume) must NOT proceed against a live
+  // lease - only interrupt/stop may supersede one (Task 9). A stale lease is reclaimable
+  // by claimLease/the under-lock fencing in Task 9.
+  const nowMs = Date.parse(d.now());
+  const ordinary = transition.action === 'complete' || transition.action === 'skip' || transition.action === 'retry' || transition.action === 'resume';
+  if (ordinary && leaseIsLive(cp.lease, nowMs, d.staleMs ?? 30000)) {
+    throw new Error(`advanceLane: an operation holds this checkpoint (lease op ${cp.lease!.operationId}); only interrupt/stop may supersede it`);
+  }
+
   switch (transition.action) {
     case 'complete': {
       const r = transition.report;
@@ -248,21 +322,51 @@ export async function advanceLane(projectPath: string, checkpointId: string, tra
       // interruption can persist a partial servedSteps cache (fewer flows than
       // step.flowIds); completing then would attest the step while silently
       // skipping the unserved flows. Reject - resume re-serves and finishes first.
-      const servedFlows = cp.servedSteps[`${cp.cursor}:${cp.iteration}`]?.flowIds ?? [];
+      const served = cp.servedSteps[`${cp.cursor}:${cp.iteration}`];
+      const servedFlows = served?.flowIds ?? [];
       if (servedFlows.length < step.flowIds.length) {
         throw new Error(`advanceLane: step "${step.verb}" is only partially served (${servedFlows.length}/${step.flowIds.length} flows) - resume to finish serving before completing`);
       }
-      cp.seenReportIds.push(r.reportId); cp.stepReports.push(r); cp.completedStepIds.push(step.verb);
-      // Attest ONLY the flows that actually ran successfully this step (from the
-      // served cache) - never blindly all step.flowIds. Degraded/skipped/errored
-      // flows must not be promoted into completedFlowIds, or they would falsely
-      // satisfy a later step's prerequisite (lane_ship's DAG-violating order).
-      const succ = cp.servedSteps[`${cp.cursor}:${cp.iteration}`]?.successfulFlowIds ?? [];
-      for (const f of succ) if (!cp.completedFlowIds.includes(f)) cp.completedFlowIds.push(f);
-      pushAudit(cp, { action: 'complete', stepId: step.verb, iteration: cp.iteration, reportId: r.reportId }, d);
-      return advanceCursor(cp, l, { projectPath }, d);
+
+      // CLAIM the operation lease (cross-process CAS on expectedRevision + ownership).
+      const operationId = (d.newOperationId ?? defaultOperationId)();
+      const claimed = await claimLease(d.store, checkpointId, { expectedRevision: transition.expectedRevision, stepId: step.verb, iteration: cp.iteration, operationId, now: d.now, staleMs: d.staleMs });
+      const id = claimed.lease!;                       // FULL identity captured under the lock
+
+      // EXECUTE: run the step's bound validators (async), aggregate worst-status.
+      const validatorIds = validatorsForStep(step);
+      const perValidator = await runStepValidators(d, validatorIds, { projectPath, target: cp.target });
+      const worst = aggregateWorstStatus(perValidator.map((p) => p.result.status as GateStatus));
+      const gate = { status: worst, validators: perValidator.map((p) => ({ validatorId: p.validatorId, status: p.result.status as GateStatus })),
+                     findings: perValidator.flatMap((p) => p.result.findings) };
+      const outcome = mapGateStatusToOutcome(worst);
+      const persistedStatus: PersistedStepGateStatus = outcome.proceed ? 'clean' : outcome.stepStatus!;
+
+      if (outcome.proceed) {
+        const final = await finalizeLease(d.store, checkpointId, id, (c, committedRevision) => {
+          c.stepGateStatuses[`${step.verb}:${c.iteration}`] = persistedStatus;
+          c.seenReportIds.push(r.reportId); c.stepReports.push(r); c.completedStepIds.push(step.verb);
+          // Attest ONLY the flows that ran successfully this step (degraded/skipped/
+          // errored flows must not falsely satisfy a later step's prerequisite).
+          for (const f of served!.successfulFlowIds) if (!c.completedFlowIds.includes(f)) c.completedFlowIds.push(f);
+          c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: committedRevision, at: d.now() });
+          advanceCursorInPlace(c, l);
+          // Task 7 pushes the side-effect outbox record here, keyed by committedRevision.
+        }, d.now);
+        return buildStepResult(final, l, { projectPath }, d, gate);
+      }
+      // UNCLEAN: release the lease WITHOUT advancing; the step stays current. Still a
+      // FINALIZE (owner-checked, bumps revision, clears lease) so writes stay under the
+      // lock and the next attempt can claim cleanly. Pushing r.reportId makes a re-send
+      // of the SAME report a no-op; a DIFFERENT report re-runs the gate.
+      const released = await finalizeLease(d.store, checkpointId, id, (c, committedRevision) => {
+        c.stepGateStatuses[`${step.verb}:${c.iteration}`] = persistedStatus;
+        c.seenReportIds.push(r.reportId);
+        c.audit.push({ action: 'complete', stepId: step.verb, iteration: c.iteration, reportId: r.reportId, revision: committedRevision, reason: `gate:${worst}`, at: d.now() });
+      }, d.now);
+      return buildStepResult(released, l, { projectPath }, d, gate);   // re-serves the SAME (still-current) step + gate
     }
-    // retry / skip / interrupt / resume / stop -> Tasks 6 & 7
+    // retry / interrupt / resume / stop keep P2 behavior (Task 9 moves them under the lock)
     default:
       return transitionNonComplete(cp, l, projectPath, transition, d);
   }
@@ -334,7 +438,15 @@ async function skipStep(cp: LaneCheckpoint, l: GeneratedLane, projectPath: strin
     throw new Error(`advanceLane: cannot skip "${l.verbSteps[cp.cursor].verb}" - later steps require its prerequisites: ${blocked.join(', ')}. Complete it or stop the lane.`);
   }
   const step = l.verbSteps[cp.cursor];
-  cp.skippedStepIds.push(step.verb);
-  pushAudit(cp, { action: 'skip', stepId: step.verb, iteration: cp.iteration, reason: t.reason }, d);
-  return advanceCursor(cp, l, { projectPath }, d);
+  // skip BYPASSES the gate (no validators), recorded with its reason in the audit.
+  // Claim + finalize so the skip commits atomically under the lock, like complete.
+  const operationId = (d.newOperationId ?? defaultOperationId)();
+  const claimed = await claimLease(d.store, cp.checkpointId, { expectedRevision: t.expectedRevision, stepId: step.verb, iteration: cp.iteration, operationId, now: d.now, staleMs: d.staleMs });
+  const id = claimed.lease!;
+  const final = await finalizeLease(d.store, cp.checkpointId, id, (c, committedRevision) => {
+    c.skippedStepIds.push(step.verb);
+    c.audit.push({ action: 'skip', stepId: step.verb, iteration: c.iteration, reason: t.reason, revision: committedRevision, at: d.now() });
+    advanceCursorInPlace(c, l);
+  }, d.now);
+  return buildStepResult(final, l, { projectPath }, d);
 }

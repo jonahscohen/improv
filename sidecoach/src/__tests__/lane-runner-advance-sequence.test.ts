@@ -7,10 +7,15 @@ import { startLane, advanceLane, LaneRunnerDeps } from '../lane-runner';
 import { StepReport } from '../lane-types';
 
 function deps(proj: string): LaneRunnerDeps {
-  let n = 0, t = 0;
+  let n = 0, t = 0, op = 0;
   return { store: new LaneCheckpointStore(proj),
     runFlow: async (flowId) => ({ flowId, flowName: String(flowId), status: 'success', message: 'ok', guidance: [], checklist: [] }),
-    now: () => { t += 1000; return new Date(t).toISOString(); }, newCheckpointId: () => `lane-cp${++n}` };
+    now: () => { t += 1000; return new Date(t).toISOString(); }, newCheckpointId: () => `lane-cp${++n}`,
+    newOperationId: () => `op-${++op}`,
+    runValidator: async () => ({ status: 'clean', rules: [], findings: [],
+      coverage: { inspectedFiles: [], skippedFiles: [], supportedSourceKinds: [], unsupportedSourceKinds: [],
+        ruleCounts: { pass: 0, fail: 0, notApplicable: 0, inconclusive: 0 },
+        findingCounts: { blockingExcess: 0, withinTolerance: 0, nonBlocking: 0 }, measuredScope: [], unverifiedScope: [] } }) };
 }
 const rep = (verb: string): StepReport => ({ stepId: verb, iteration: 0, reportId: `r:${verb}`, verb, summary: 'done', evidence: [{ kind: 'note', detail: 'x' }] });
 
