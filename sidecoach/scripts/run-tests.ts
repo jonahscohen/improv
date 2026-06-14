@@ -72,6 +72,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/browser-evidence-contrast.test.ts', required: true },
   { rel: 'src/__tests__/browser-evidence-hermeticity.test.ts', required: true },
   { rel: 'src/__tests__/browser-evidence-abort.test.ts', required: true },
+  { rel: 'src/__tests__/browser-evidence-concentric.test.ts', required: true },
   { rel: 'src/__tests__/theming-checks.test.ts', required: true },
   { rel: 'src/__tests__/anti-pattern-checks.test.ts', required: true },
   { rel: 'src/__tests__/validator-fixtures-e2e.test.ts', required: true },

@@ -101,14 +101,17 @@ export async function collectBrowserEvidence(renderUrl: string | undefined, sign
       let concentricChecked = 0;
       let concentricFailing = 0;
       for (const parent of Array.from(document.querySelectorAll('body *')).filter(visible)) {
-        const child = Array.from(parent.children).find(visible);
-        if (!child) continue;
         const outer = radius(getComputedStyle(parent));
-        const inner = radius(getComputedStyle(child));
         const pad = padding(getComputedStyle(parent));
-        if (outer <= 0 || inner <= 0 || pad <= 0) continue;
-        concentricChecked++;
-        if (Math.abs(outer - (inner + pad)) > 1) concentricFailing++;
+        if (outer <= 0 || pad <= 0) continue;
+        // Inspect EVERY visible direct child, not just the first: a clean first child
+        // must not hide a failing sibling pair.
+        for (const child of Array.from(parent.children).filter(visible)) {
+          const inner = radius(getComputedStyle(child));
+          if (inner <= 0) continue;
+          concentricChecked++;
+          if (Math.abs(outer - (inner + pad)) > 1) concentricFailing++;
+        }
       }
 
       const textElements = Array.from(document.querySelectorAll('body *')).filter((el): el is HTMLElement =>
