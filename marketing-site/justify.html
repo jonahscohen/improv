@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>justify - microadjustment toolbar for Claude Code | Improv</title>
-  <meta name="description" content="justify is the microadjustment toolbar for Claude Code. Justify elements with properties via prompt mode or manipulate mode, queue the offers, and Claude works the scene in the background while you keep stacking." />
+  <title>justify - tweak a live page, Claude writes the code | Improv</title>
+  <meta name="description" content="justify lets you change a live web page by pointing at it. Click an element, say what should change, hand the queue to Claude, and it edits your real source files while the page refreshes itself." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,90 +22,89 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css" />
+  <!-- ?v= busts stale stylesheet caches - bump alongside structural CSS changes -->
+  <link rel="stylesheet" href="styles.css?v=33" />
   <script src="nav.js" defer></script>
+  <script src="http://localhost:9223/justify-core.js?v=5"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <div class="container">
-    <header class="topbar">
-      <a class="wordmark" href="index.html" aria-label="Yes&amp; - Improv">
-        <img class="wordmark__img wordmark__img--light" src="assets/and-dev-black.svg" alt="and-dev - Improv" width="150" height="54" />
-        <img class="wordmark__img wordmark__img--dark" src="assets/and-dev-white.svg" alt="" aria-hidden="true" width="150" height="54" />
-      </a>
-      <div class="topbar__cluster">
-        <nav aria-label="Primary" id="primary-nav">
-          <a href="justify.html" aria-current="page">justify</a>
-          <a href="sidecoach.html">sidecoach</a>
-          <a href="cheatsheet.html">cheatsheet</a>
-          <a href="beats.html">beats</a>
-          <a href="reference.html">reference</a>
-          <a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a>
-        </nav>
-        <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
-          <svg class="theme-toggle__icon theme-toggle__icon--moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
-          </svg>
-          <svg class="theme-toggle__icon theme-toggle__icon--sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2" />
-            <path d="M12 20v2" />
-            <path d="m4.93 4.93 1.41 1.41" />
-            <path d="m17.66 17.66 1.41 1.41" />
-            <path d="M2 12h2" />
-            <path d="M20 12h2" />
-            <path d="m6.34 17.66-1.41 1.41" />
-            <path d="m19.07 4.93-1.41 1.41" />
-          </svg>
-        </button>
-        <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation menu">
-          <span class="nav-toggle__icon" aria-hidden="true"></span>
-        </button>
+  <header class="site-header">
+    <div class="container">
+      <div class="topbar">
+        <a class="wordmark" href="index.html" aria-label="Yes&amp; - Improv">
+          <img class="wordmark__img wordmark__img--light" src="assets/and-dev-black.svg" alt="and-dev - Improv" width="150" height="54" />
+          <img class="wordmark__img wordmark__img--dark" src="assets/and-dev-white.svg" alt="" aria-hidden="true" width="150" height="54" />
+        </a>
+        <div class="topbar__cluster">
+          <nav aria-label="Primary" id="primary-nav">
+            <ul class="nav-list">
+              <li><a href="justify.html" aria-current="page">justify</a></li>
+              <li><a href="sidecoach.html">sidecoach</a></li>
+              <li><a href="beats.html">beats</a></li>
+              <li><a href="foundation.html">foundation</a></li>
+              <li><a href="cheatsheet.html">cheatsheet</a></li>
+              <li><a href="reference.html">reference</a></li>
+              <li><a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a></li>
+            </ul>
+          </nav>
+          <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
+            <!-- source: lucide "moon" - path verbatim from lucide.dev -->
+            <svg class="theme-toggle__icon theme-toggle__icon--moon lucide-moon" data-icon-source="lucide:moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+            </svg>
+            <!-- source: lucide "sun" - paths verbatim from lucide.dev -->
+            <svg class="theme-toggle__icon theme-toggle__icon--sun lucide-sun" data-icon-source="lucide:sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2" />
+              <path d="M12 20v2" />
+              <path d="m4.93 4.93 1.41 1.41" />
+              <path d="m17.66 17.66 1.41 1.41" />
+              <path d="M2 12h2" />
+              <path d="M20 12h2" />
+              <path d="m6.34 17.66-1.41 1.41" />
+              <path d="m19.07 4.93-1.41 1.41" />
+            </svg>
+          </button>
+          <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation menu">
+            <span class="nav-toggle__icon" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
-    </header>
-  </div>
+    </div>
+  </header>
 
   <main id="main">
     <section class="page-hero">
       <div class="container">
         <p class="page-hero__tag stagger" style="--i: 0">visual / justify</p>
-        <h1 class="page-hero__title stagger" style="--i: 1">Justify the UI. Claude builds the <span style="text-decoration: underline; text-decoration-color: var(--color-red); text-decoration-thickness: 4px; text-underline-offset: 0.1em;">scene</span>.</h1>
+        <h1 class="page-hero__title stagger" style="--i: 1">Tweak the page. Claude writes the <span style="text-decoration: underline; text-decoration-color: var(--color-red); text-decoration-thickness: 4px; text-underline-offset: 0.1em;">code</span>.</h1>
         <p class="page-hero__lede stagger" style="--i: 2">
-          justify is the microadjustment toolbar for Claude Code. Queue a change through prompt mode or manipulate mode; Claude works the scene in the background and refreshes when it's done.
+          Justify lets you change a live web page by pointing at it. Open your running site, click the thing you want different, say what should change in plain English, and hand the queue to Claude. It edits your actual source files and the page refreshes itself.
         </p>
       </div>
     </section>
 
     <section class="section">
       <div class="container">
-        <p class="section__eyebrow">What it does</p>
-        <h2 class="section__title">Two modes. One queue. One scene.</h2>
+        <p class="section__eyebrow">The one move</p>
+        <h2 class="section__title">You tweak in the browser. Claude writes the code.</h2>
         <p class="section__lede">
-          justify is a toolbar that sits over your dev server. You select an element, make an offer in whichever mode fits the thought, and the queue builds. When you hand it off, Claude works through the whole stack at once and lands the scene with a refresh.
+          No copying selectors, no describing locations over chat, no trying to explain which button you mean. The page you are looking at is the interface, and the changes you make land as real edits to your files, not throwaway previews.
         </p>
 
         <div class="feature-row">
-          <h3 class="feature-row__title">Prompt mode.</h3>
+          <h3 class="feature-row__title">A toolbar over your own site.</h3>
           <div class="feature-row__body">
-            <p>Select an element. Type the offer in plain English. "Heavier heading," "tighten this card's padding," "swap the border for a shadow." Each prompt is an offer in the queue, scoped to the element you picked.</p>
-            <p>Good for the thoughts that are easier to say than to dial in - directional notes, vibe shifts, the kind of thing you'd whisper to a designer over their shoulder.</p>
+            <p>Justify runs as a small toolbar layered over your running site. It does not replace your dev setup or take over the page - it loads one script alongside whatever you are already building and stays out of the way until you summon it.</p>
           </div>
         </div>
 
         <div class="feature-row">
-          <h3 class="feature-row__title">Manipulate mode.</h3>
+          <h3 class="feature-row__title">For refining, not strategizing.</h3>
           <div class="feature-row__body">
-            <p>Select an element. Reach for the exact property you want to justify it with. Font weight, color, radius, spacing, shadow, text alignment. Every nudge becomes an offer in the queue.</p>
-            <p>Good for the thoughts that are easier to point at than to describe - "this much padding, this color, this radius." The toolbar reads your DESIGN.md tokens and surfaces them as the options.</p>
-          </div>
-        </div>
-
-        <div class="feature-row">
-          <h3 class="feature-row__title">Queue, then scene.</h3>
-          <div class="feature-row__body">
-            <p>Offers stack as you go. Stack five, stack twenty - the toolbar holds them all. When you're ready, hand them to Claude in one pass.</p>
-            <p>Claude works the offers in the background, through your real source code, through your real build pipeline. The browser refreshes when the scene is done. No half-applied state, no round-trip per tweak, no "let me regenerate."</p>
+            <p>Justify is deliberately narrow: nudging spacing, swapping a label, fixing a color, raising a background that reads too faint. For larger work that needs strategy and research, reach for <a href="sidecoach.html">Sidecoach</a>, which runs the broader design flow and hands live page tweaks back to Justify.</p>
           </div>
         </div>
       </div>
@@ -113,51 +112,105 @@
 
     <section class="section section--paper">
       <div class="container">
-        <p class="section__eyebrow">How to start</p>
-        <h2 class="section__title">One install. Then start justifying.</h2>
+        <p class="section__eyebrow">Two modes</p>
+        <h2 class="section__title">Point and describe, or point and adjust.</h2>
         <p class="section__lede">
-          justify is one component of the dotfiles. Install it standalone or as part of the full toolkit.
+          There are two ways to change something, and you pick based on whether you know exactly what you want or just know it needs to be different.
         </p>
 
-        <pre><code>./install.sh --only justify</code></pre>
+        <div class="feature-row">
+          <h3 class="feature-row__title">Prompt mode.</h3>
+          <div class="feature-row__body">
+            <p>Press <code>p</code>, click the element, and a small input appears right on it. Type what you want in normal language and press Enter to add it to the queue. This is the mode when you know the intent but not the exact CSS - you are telling Claude what to do, not how.</p>
+            <p>Real examples, each typed straight onto the element: <em>"make this caret into an actual icon from our library,"</em> <em>"this background layer is practically invisible, raise it,"</em> <em>"max-width this paragraph to 75%, full width below that."</em></p>
+          </div>
+        </div>
 
-        <p style="margin-top: var(--space-6); color: var(--text-secondary); max-width: 56ch;">
-          The installer wires the toolbar, the MCP server, and the queue. Open a project, run <code>justify start</code>, and the toolbar mounts over your dev server.
-        </p>
-
-        <div style="margin-top: var(--space-8); display: flex; gap: var(--space-3); flex-wrap: wrap;">
-          <a class="btn btn--primary" href="https://github.com/jonahscohen/improv/tree/main/justify" rel="noreferrer noopener">Read the source</a>
-          <a class="btn btn--secondary" href="index.html">Back to the toolkit</a>
+        <div class="feature-row">
+          <h3 class="feature-row__title">Manipulate mode.</h3>
+          <div class="feature-row__body">
+            <p>When you know the exact property, click an element and scrub its value directly - drag a number, change a color, adjust spacing or radius. The page updates as you go, and the changes buffer until you send them. This is for precise, known adjustments: "this is 16px and should be 20px," not "this feels cramped." The toolbar reads your DESIGN.md tokens and surfaces them as the options.</p>
+          </div>
         </div>
       </div>
     </section>
 
     <section class="section">
       <div class="container">
-        <p class="section__eyebrow">Coming soon</p>
-        <h2 class="section__title">Two heightenings on the way.</h2>
+        <p class="section__eyebrow">Hand off and review</p>
+        <h2 class="section__title">Stack the queue, hand it off, read the real diff.</h2>
         <p class="section__lede">
-          justify's first beat is the queue. Two more, both rooted in justify principles, are on the roadmap.
+          Offers stack as you go - stack five, stack twenty. When the queue is ready, hand it to Claude: hit <strong>Send All</strong> in the toolbar, or say "watch justify" in chat. Claude works your real source in the background and the page hot-refreshes when the scene is done.
         </p>
 
         <div class="feature-row">
-          <h3 class="feature-row__title">Offers mode.</h3>
+          <h3 class="feature-row__title">Watch the bar move.</h3>
           <div class="feature-row__body">
-            <p>Before you commit to a direction, ask Claude for variations on a single offer. Three takes laid side by side - typography one way, motion another, color a third. Pick the one that lands the scene; the others fall away.</p>
-            <p>For the moments when you know the change is needed but don't yet know what it should be.</p>
+            <p>A status bar tracks the handoff through three stages, so you always know where a change is. <strong>Working</strong>: Claude has claimed the task and is editing your source. <strong>Validating</strong>: it checks the change against your live page, the same page you are looking at. <strong>Review</strong>: the edit is done and the page hot-refreshes on its own, in every open tab.</p>
           </div>
         </div>
 
         <div class="feature-row">
-          <h3 class="feature-row__title">Sidecoach integration.</h3>
+          <h3 class="feature-row__title">Read the diff in the Changes panel.</h3>
           <div class="feature-row__body">
-            <p>Stack offers using sidecoach verbs instead of freeform prompts. <code>/bolder</code> on this card, <code>/quieter</code> on this section, <code>/polish</code> on this whole region - flow-oriented tasking with the full sidecoach pipeline (PRODUCT.md context, DESIGN.md tokens, QA gate triad) behind every offer.</p>
-            <p>For the moments when the change is part of a phase, not a one-off tweak.</p>
+            <p>The bottom-left Changes panel fills with a real before/after diff - a standard unified diff, old and new line numbers down the side, red and green +/- lines, exactly as you would see it in any code review. This is the actual edit to your files, not a paraphrase.</p>
+            <p>Each entry shows the file name, the size of the change (for example <code>+583 -71</code>), and an <strong>Open With</strong> control that jumps straight into your editor at the exact line that changed. Every entry also carries <strong>Revert</strong> to undo it and <strong>Reply</strong> to send Claude a follow-up.</p>
           </div>
         </div>
       </div>
     </section>
 
+    <section class="section section--paper">
+      <div class="container">
+        <p class="section__eyebrow">When something is off</p>
+        <h2 class="section__title">A few things go wrong predictably. Each has a quick fix.</h2>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">The toolbar never appears.</h3>
+          <div class="feature-row__body">
+            <p>The script did not load. Hard-reload first. If it still does not show, re-run <code>justify-init &lt;project-root&gt;</code> and confirm your site is served over http. An https-only site needs the secure core and a one-time trusted certificate.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">You send changes but nothing happens.</h3>
+          <div class="feature-row__body">
+            <p>Claude is not listening yet. Say "watch justify" in chat to start the loop, then hit Send All again. If the bar drifts to "Connected," the loop dropped - saying "watch justify" re-arms it.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">A command reports the service is down.</h3>
+          <div class="feature-row__body">
+            <p>The background server stopped. Run <code>justify-serve</code> to bring it back. It is safe to run anytime.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--ink">
+      <div class="container">
+        <p class="section__eyebrow">How to start</p>
+        <h2 class="section__title">One command starts everything.</h2>
+        <p class="section__lede">
+          Justify is one piece of Improv. Install it once, then in Claude say <code>/justify</code> - that single command starts the background service, wires the script into your project, and switches the toolbar on. If your site is already running, you are tweaking within a minute.
+        </p>
+
+        <pre><code>ampersand --only justify
+# then, in Claude:
+/justify</code></pre>
+
+        <p style="margin-top: var(--space-6); color: var(--text-on-inverse-secondary, var(--text-secondary)); max-width: 58ch;">
+          If you would rather do it by hand, it is three plain commands: <code>justify-serve</code> starts the service on port 9223, <code>justify-init &lt;project-root&gt;</code> wires the script into your stack, and opening your site over http brings up the toolbar. Toggle it any time with <code>CMD+SHIFT+.</code>.
+        </p>
+
+        <div style="margin-top: var(--space-8); display: flex; gap: var(--space-3); flex-wrap: wrap;">
+          <a class="btn btn--primary" href="reference.html">See the full reference</a>
+          <a class="btn btn--secondary" href="https://github.com/jonahscohen/improv/tree/main/justify" rel="noreferrer noopener">Read the source</a>
+          <a class="btn btn--secondary" href="index.html">Back to the toolkit</a>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -168,6 +221,7 @@
           <a href="index.html">Home</a>
           <a href="sidecoach.html">sidecoach</a>
           <a href="beats.html">beats</a>
+          <a href="foundation.html">foundation</a>
           <a href="reference.html">reference</a>
           <a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a>
         </nav>

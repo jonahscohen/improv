@@ -37,6 +37,10 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.detectTailwindContext = detectTailwindContext;
+exports.extractInlineStyles = extractInlineStyles;
+exports.checkHexInHoverWithCssVars = checkHexInHoverWithCssVars;
+exports.checkBorderRadiusInconsistency = checkBorderRadiusInconsistency;
 exports.validateTaste = validateTaste;
 exports.formatViolations = formatViolations;
 exports.toValidationResult = toValidationResult;

@@ -15,11 +15,11 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
   const annotations: Annotation[] = [];
   const PROMPT_FILE = join(homedir(), '.claude', 'justify', 'prompts.json');
 
-  function readPrompts(): Array<{ id: string; context: string; prompt: string; elementCount: number; timestamp: number }> {
+  function readPrompts(): Array<{ id: string; context: string; prompt: string; elementCount: number; timestamp: number; selectors?: string[] }> {
     try { return JSON.parse(readFileSync(PROMPT_FILE, 'utf-8')); } catch { return []; }
   }
 
-  function writePrompts(prompts: Array<{ id: string; context: string; prompt: string; elementCount: number; timestamp: number }>): void {
+  function writePrompts(prompts: Array<{ id: string; context: string; prompt: string; elementCount: number; timestamp: number; selectors?: string[] }>): void {
     try { writeFileSync(PROMPT_FILE, JSON.stringify(prompts)); } catch {}
   }
 
@@ -53,6 +53,10 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
       context: (params?.context ?? '') as string,
       prompt: (params?.prompt ?? '') as string,
       elementCount: (params?.elementCount ?? 0) as number,
+      // Issue #1: structured target selectors of the element(s) the prompt was
+      // about, so the daemon can join them onto the response and the Changes
+      // panel can scroll to + select the target on click.
+      selectors: (Array.isArray(params?.selectors) ? params?.selectors : []) as string[],
       timestamp: Date.now(),
     };
     const prompts = readPrompts(); prompts.push(prompt); writePrompts(prompts);

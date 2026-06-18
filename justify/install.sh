@@ -177,10 +177,9 @@ The bottom-left tray (queuebar + claudebar pills + Changes panel, per `decision_
 
 ## Usage once running
 
-Activate per tab with `justify_activate` (or `cmd+shift+.`). Three modes:
+Activate per tab with `justify_activate` (or `cmd+shift+.`). Two modes:
 - **Manipulate** - click an element, scrub a CSS property in the panel (mouse left/right = decrease/increase); changes buffer server-side until `justify_apply_changes`.
 - **Prompt** (`p`) - click an element, type an instruction inline ("make this button more rounded"); sent to Claude with the selector + computed styles.
-- **Annotate** (`a`) / **Layout** (`l`) - drop numbered markers, or drag elements on a grid to describe repositioning; read via `justify_get_annotations` / `justify_get_layout`.
 
 ### MCP tools (11)
 `justify_activate`, `justify_status`, `justify_get_selection`, `justify_get_pending_changes`, `justify_apply_changes`, `justify_get_annotations`, `justify_watch`, `justify_acknowledge`, `justify_get_layout`, `justify_get_components`, `justify_clear`.

@@ -1,0 +1,19 @@
+{
+  "id": "pixel",
+  "name": "Pixel",
+  "category": "background",
+  "layerRole": "background",
+  "params": [
+    { "name": "gap", "label": "Gap", "type": "range", "default": 8, "min": 3, "max": 24, "step": 1 },
+    { "name": "speed", "label": "Speed", "type": "range", "default": 40, "min": 0, "max": 100, "step": 1 },
+    { "name": "pattern", "label": "Reveal pattern", "type": "select", "default": "center", "options": ["center", "top", "bottom", "left", "right", "diagonal", "ascend", "random", "spiral"] },
+    { "name": "colors", "label": "Pixel colors", "type": "text", "default": "#f8fafc,#f1f5f9,#cbd5e1", "placeholder": "comma-separated hex colors" },
+    { "name": "backgroundColor", "label": "Background", "type": "color", "default": "#17181A" }
+  ],
+  "requiredAssets": [],
+  "origin": "https://github.com/DavidHDev/react-bits",
+  "license": "MIT",
+  "attribution": "React Bits (github.com/DavidHDev/react-bits) - Pixel Card by David Haz. The unlumen UI 'Pixel Background' that prompted this is a paid recreation of this same MIT original (its own page credits React Bits); ported the free original.",
+  "redistribution": "ok",
+  "tags": ["canvas", "pixel", "particles", "grid", "shimmer", "ripple", "background", "always-on"]
+}

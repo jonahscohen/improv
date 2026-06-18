@@ -237,7 +237,7 @@ PERSONAL_TITLES=(
 PERSONAL_DESCS=(
   "Personal: Ghostty terminal appearance (PolySans Neutral Mono font, custom 256-color palette, transparency, blur)."
   "Personal: cinematic Ghostty effects (CRT curvature, TFT pixel grid, blazing cursor trail). Also clones the wider community shader library."
-  "In-browser visual micro-adjustment tool. Three modes: Manipulate (CSS sliders/handles), Prompt (context extraction), Annotate + Layout (annotations and drag-and-drop composition). All changes flow through Claude Code via MCP."
+  "In-browser visual micro-adjustment tool. Two modes: Manipulate (CSS sliders/handles) and Prompt (context extraction). All changes flow through Claude Code via MCP."
 )
 PERSONAL_FILES=(
   "~/.config/ghostty/config (copy)"

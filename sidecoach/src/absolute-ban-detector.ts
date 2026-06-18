@@ -90,7 +90,9 @@ export function scanSideStripeBorders(content: string, file: string): AbsoluteBa
     const borderMatch = body.match(/border-(?:left|right)\s*:\s*([2-9]|[1-9][0-9]+)\s*px\s+(?:solid|dashed|dotted|double)\s+(?!transparent|inherit|currentColor)([^\n;]+);?/i);
     if (!borderMatch) continue;
     // Filter to ban targets: card / list / alert / callout / install / banner / notice
-    const targetable = /\.(?:card|alert|callout|notice|banner|install|tile|list-item|message|toast|tip)\b|aside\b|blockquote\b/i.test(selector);
+    // Match the keyword anywhere in a class token so namespaced/BEM names like
+    // `.ref-callout`, `.tool-card`, `.foo__alert` are caught, not only bare `.card`.
+    const targetable = /\.[\w-]*(?:card|alert|callout|notice|banner|install|tile|message|toast|tip|panel)[\w-]*\b|aside\b|blockquote\b/i.test(selector);
     if (!targetable) continue;
     findings.push(findingFromBan('side-stripe-borders', file, lineNumberAt(content, m.index), `${selector} { ${borderMatch[0].trim()} }`, 'P1'));
   }

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>sidecoach - design orchestration for Claude Code | Improv</title>
-  <meta name="description" content="sidecoach is the opinionated design orchestrator for Improv: eight flows, 159 validators, one chain from brief to polish." />
+  <title>sidecoach - the design layer for Claude Code | Improv</title>
+  <meta name="description" content="sidecoach is the design layer of Improv. Describe the design task in plain English and it runs the right pass end to end, then checks the result against your brand and tokens." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,206 +22,467 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css" />
+  <!-- ?v= busts stale stylesheet caches - bump alongside structural CSS changes -->
+  <link rel="stylesheet" href="styles.css?v=33" />
+  <link rel="stylesheet" href="demo.css?v=7" />
   <script src="nav.js" defer></script>
+  <script src="demo.js?v=1" defer></script>
+  <script src="install-demo.js?v=1" defer></script>
+  <script src="stepper-demo.js?v=1" defer></script>
+  <script src="http://localhost:9223/justify-core.js?v=5"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <div class="container">
-    <header class="topbar">
-      <a class="wordmark" href="index.html" aria-label="Yes&amp; - Improv">
-        <img class="wordmark__img wordmark__img--light" src="assets/and-dev-black.svg" alt="and-dev - Improv" width="150" height="54" />
-        <img class="wordmark__img wordmark__img--dark" src="assets/and-dev-white.svg" alt="" aria-hidden="true" width="150" height="54" />
-      </a>
-      <div class="topbar__cluster">
-        <nav aria-label="Primary" id="primary-nav">
-          <a href="justify.html">justify</a>
-          <a href="sidecoach.html" aria-current="page">sidecoach</a>
-          <a href="cheatsheet.html">cheatsheet</a>
-          <a href="beats.html">beats</a>
-          <a href="reference.html">reference</a>
-          <a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a>
-        </nav>
-        <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
-          <svg class="theme-toggle__icon theme-toggle__icon--moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
-          </svg>
-          <svg class="theme-toggle__icon theme-toggle__icon--sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2" />
-            <path d="M12 20v2" />
-            <path d="m4.93 4.93 1.41 1.41" />
-            <path d="m17.66 17.66 1.41 1.41" />
-            <path d="M2 12h2" />
-            <path d="M20 12h2" />
-            <path d="m6.34 17.66-1.41 1.41" />
-            <path d="m19.07 4.93-1.41 1.41" />
-          </svg>
-        </button>
-        <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation menu">
-          <span class="nav-toggle__icon" aria-hidden="true"></span>
-        </button>
+  <header class="site-header">
+    <div class="container">
+      <div class="topbar">
+        <a class="wordmark" href="index.html" aria-label="Yes&amp; - Improv">
+          <img class="wordmark__img wordmark__img--light" src="assets/and-dev-black.svg" alt="and-dev - Improv" width="150" height="54" />
+          <img class="wordmark__img wordmark__img--dark" src="assets/and-dev-white.svg" alt="" aria-hidden="true" width="150" height="54" />
+        </a>
+        <div class="topbar__cluster">
+          <nav aria-label="Primary" id="primary-nav">
+            <ul class="nav-list">
+              <li><a href="justify.html">justify</a></li>
+              <li><a href="sidecoach.html" aria-current="page">sidecoach</a></li>
+              <li><a href="beats.html">beats</a></li>
+              <li><a href="foundation.html">foundation</a></li>
+              <li><a href="cheatsheet.html">cheatsheet</a></li>
+              <li><a href="reference.html">reference</a></li>
+              <li><a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a></li>
+            </ul>
+          </nav>
+          <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
+            <!-- source: lucide "moon" - path verbatim from lucide.dev -->
+            <svg class="theme-toggle__icon theme-toggle__icon--moon lucide-moon" data-icon-source="lucide:moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+            </svg>
+            <!-- source: lucide "sun" - paths verbatim from lucide.dev -->
+            <svg class="theme-toggle__icon theme-toggle__icon--sun lucide-sun" data-icon-source="lucide:sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2" />
+              <path d="M12 20v2" />
+              <path d="m4.93 4.93 1.41 1.41" />
+              <path d="m17.66 17.66 1.41 1.41" />
+              <path d="M2 12h2" />
+              <path d="M20 12h2" />
+              <path d="m6.34 17.66-1.41 1.41" />
+              <path d="m19.07 4.93-1.41 1.41" />
+            </svg>
+          </button>
+          <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation menu">
+            <span class="nav-toggle__icon" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
-    </header>
-  </div>
+    </div>
+  </header>
 
   <main id="main">
     <section class="page-hero">
       <div class="container">
         <p class="page-hero__tag stagger" style="--i: 0">design / sidecoach</p>
-        <h1 class="page-hero__title stagger" style="--i: 1">A design orchestrator that <span style="text-decoration: underline; text-decoration-color: var(--color-red); text-decoration-thickness: 4px; text-underline-offset: 0.1em;">refuses to skip the work</span>.</h1>
+        <h1 class="page-hero__title stagger" style="--i: 1">Say what you want. Sidecoach puts it <span style="text-decoration: underline; text-decoration-color: var(--color-red); text-decoration-thickness: 4px; text-underline-offset: 0.1em;">all together</span>.</h1>
         <p class="page-hero__lede stagger" style="--i: 2">
-          Eight craft flows, 22 verb commands, 159 validators across ten design domains, one chain that runs from PRODUCT.md to the polish checklist without losing the thread.
+          Sidecoach is the design layer of Improv. You describe the task the way you would to a colleague, it recognizes the kind of design work you mean, runs it end to end, and validates the work against your brand, taste rules, and accessibility guidelines.
         </p>
       </div>
     </section>
 
     <section class="section">
       <div class="container">
-        <p class="section__eyebrow">The chain</p>
-        <h2 class="section__title">Eight flows. Each one earns the next one.</h2>
-        <p class="section__lede">
-          When you run <code>/sidecoach craft</code> against a project, sidecoach walks the chain in dependency order. Skip nothing. Each flow's output gets validated and becomes input for the next.
-        </p>
+        <div class="one-move">
+          <div class="one-move__text">
+            <p class="section__eyebrow">How it Works</p>
+            <h2 class="section__title">All you need to do is tell Claude what to do.</h2>
+            <p class="section__lede">
+              You say what you want in plain language. Sidecoach works out which pass it needs, then runs that pass from start to finish.
+            </p>
+          </div>
+          <div class="one-move__demo scd-stage-wrap">
+            <div class="scd-term" id="scd-term">
+              <div class="scd-term__bar">
+                <span class="scd-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="scd-term__title"><b>claude</b> &middot; acme-web</span>
+                <button class="scd-replay" id="scd-replay" type="button" aria-label="Replay the demo">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icon-source="lucide:rotate-ccw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  Replay
+                </button>
+              </div>
+              <div class="scd-term__body" id="scd-body" data-lenis-prevent aria-hidden="true"></div>
+              <div class="scd-term__foot" aria-hidden="true">
+                <div class="scd-foot-spin" id="scd-spin"></div>
+                <div class="scd-foot-rule"></div>
+                <div class="scd-foot-input"><span id="scd-cmd"></span><span class="scd-caret"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-        <ol style="list-style: none; margin: var(--space-12) 0 0; padding: 0; display: grid; gap: var(--space-2);">
-          <li class="feature-row" style="padding-block: var(--space-6); grid-template-columns: 8ch 1fr 1fr; gap: var(--space-8);">
-            <span style="font-family: var(--font-mono); font-size: var(--size-lg); color: var(--color-red);">flowA</span>
-            <h3 class="feature-row__title" style="font-size: var(--size-xl);">Brand verification</h3>
-            <p style="color: var(--text-secondary); font-size: var(--size-base);">Reads PRODUCT.md. Resolves register (brand vs product). Caches the design laws.</p>
-          </li>
-          <li class="feature-row" style="padding-block: var(--space-6); grid-template-columns: 8ch 1fr 1fr; gap: var(--space-8);">
-            <span style="font-family: var(--font-mono); font-size: var(--size-lg); color: var(--color-red);">flowB</span>
-            <h3 class="feature-row__title" style="font-size: var(--size-xl);">Component research</h3>
-            <p style="color: var(--text-secondary); font-size: var(--size-base);">Pulls component patterns vetted against AI-slop heuristics. 11 interaction rules. 8 writing rules.</p>
-          </li>
-          <li class="feature-row" style="padding-block: var(--space-6); grid-template-columns: 8ch 1fr 1fr; gap: var(--space-8);">
-            <span style="font-family: var(--font-mono); font-size: var(--size-lg); color: var(--color-red);">flowE</span>
-            <h3 class="feature-row__title" style="font-size: var(--size-xl);">Motion patterns</h3>
-            <p style="color: var(--text-secondary); font-size: var(--size-base);">Researches easing curves. Exponential-only - no bounce, no elastic. Six reduced-motion strategies.</p>
-          </li>
-          <li class="feature-row" style="padding-block: var(--space-6); grid-template-columns: 8ch 1fr 1fr; gap: var(--space-8);">
-            <span style="font-family: var(--font-mono); font-size: var(--size-lg); color: var(--color-red);">flowF</span>
-            <h3 class="feature-row__title" style="font-size: var(--size-xl);">Design tokens</h3>
-            <p style="color: var(--text-secondary); font-size: var(--size-base);">Validates DESIGN.md across all seven design domains. Twenty sections checked against the rule library.</p>
-          </li>
-          <li class="feature-row" style="padding-block: var(--space-6); grid-template-columns: 8ch 1fr 1fr; gap: var(--space-8);">
-            <span style="font-family: var(--font-mono); font-size: var(--size-lg); color: var(--color-red);">flowG</span>
-            <h3 class="feature-row__title" style="font-size: var(--size-xl);">Component implementation</h3>
-            <p style="color: var(--text-secondary); font-size: var(--size-base);">Generates token-backed component specs. Eight interaction states. Semantic copy. ARIA per state.</p>
-          </li>
-          <li class="feature-row" style="padding-block: var(--space-6); grid-template-columns: 8ch 1fr 1fr; gap: var(--space-8);">
-            <span style="font-family: var(--font-mono); font-size: var(--size-lg); color: var(--color-red);">flowH</span>
-            <h3 class="feature-row__title" style="font-size: var(--size-xl);">Motion integration</h3>
-            <p style="color: var(--text-secondary); font-size: var(--size-base);">Wires motion into components. Stack-aware templates. Exponential easing validated. Performance constraints checked.</p>
-          </li>
-          <li class="feature-row" style="padding-block: var(--space-6); grid-template-columns: 8ch 1fr 1fr; gap: var(--space-8);">
-            <span style="font-family: var(--font-mono); font-size: var(--size-lg); color: var(--color-red);">flowI</span>
-            <h3 class="feature-row__title" style="font-size: var(--size-xl);">Accessibility</h3>
-            <p style="color: var(--text-secondary); font-size: var(--size-base);">Seven WCAG 2.1 AA domain audits. Screen reader testing plan. Severity-prioritized findings.</p>
-          </li>
-          <li class="feature-row" style="padding-block: var(--space-6); grid-template-columns: 8ch 1fr 1fr; gap: var(--space-8); border-bottom: 0;">
-            <span style="font-family: var(--font-mono); font-size: var(--size-lg); color: var(--color-red);">flowJ</span>
-            <h3 class="feature-row__title" style="font-size: var(--size-xl);">Tactical polish</h3>
-            <p style="color: var(--text-secondary); font-size: var(--size-base);">Sixteen-point refinement pass. Concentric radius. Scale on press. Tabular nums. Text balance. The details that separate good from shipped.</p>
-          </li>
-        </ol>
+    <section class="section marquee-section">
+      <div class="container">
+        <p class="section__eyebrow">Things you can say</p>
+        <h2 class="section__title">No commands to learn. Just describe the work.</h2>
+      </div>
+      <div class="marquee">
+        <div class="marquee__group">
+          <span class="marquee__chip">make this feel better</span>
+          <span class="marquee__chip">this page is cluttered</span>
+          <span class="marquee__chip">review the checkout flow</span>
+          <span class="marquee__chip">build a pricing table for the three plans</span>
+          <span class="marquee__chip">make it bolder</span>
+          <span class="marquee__chip">tighten the spacing</span>
+          <span class="marquee__chip">add a loading state</span>
+        </div>
+        <div class="marquee__group" aria-hidden="true">
+          <span class="marquee__chip">make this feel better</span>
+          <span class="marquee__chip">this page is cluttered</span>
+          <span class="marquee__chip">review the checkout flow</span>
+          <span class="marquee__chip">build a pricing table for the three plans</span>
+          <span class="marquee__chip">make it bolder</span>
+          <span class="marquee__chip">tighten the spacing</span>
+          <span class="marquee__chip">add a loading state</span>
+        </div>
+        <div class="marquee__group" aria-hidden="true">
+          <span class="marquee__chip">make this feel better</span>
+          <span class="marquee__chip">this page is cluttered</span>
+          <span class="marquee__chip">review the checkout flow</span>
+          <span class="marquee__chip">build a pricing table for the three plans</span>
+          <span class="marquee__chip">make it bolder</span>
+          <span class="marquee__chip">tighten the spacing</span>
+          <span class="marquee__chip">add a loading state</span>
+        </div>
+      </div>
+      <div class="marquee marquee--reverse">
+        <div class="marquee__group">
+          <span class="marquee__chip">this feels generic</span>
+          <span class="marquee__chip">clean up the hierarchy</span>
+          <span class="marquee__chip">make it feel more premium</span>
+          <span class="marquee__chip">audit this page for accessibility</span>
+          <span class="marquee__chip">quiet this down</span>
+          <span class="marquee__chip">give it a hover state</span>
+          <span class="marquee__chip">match our brand</span>
+        </div>
+        <div class="marquee__group" aria-hidden="true">
+          <span class="marquee__chip">this feels generic</span>
+          <span class="marquee__chip">clean up the hierarchy</span>
+          <span class="marquee__chip">make it feel more premium</span>
+          <span class="marquee__chip">audit this page for accessibility</span>
+          <span class="marquee__chip">quiet this down</span>
+          <span class="marquee__chip">give it a hover state</span>
+          <span class="marquee__chip">match our brand</span>
+        </div>
+        <div class="marquee__group" aria-hidden="true">
+          <span class="marquee__chip">this feels generic</span>
+          <span class="marquee__chip">clean up the hierarchy</span>
+          <span class="marquee__chip">make it feel more premium</span>
+          <span class="marquee__chip">audit this page for accessibility</span>
+          <span class="marquee__chip">quiet this down</span>
+          <span class="marquee__chip">give it a hover state</span>
+          <span class="marquee__chip">match our brand</span>
+        </div>
+      </div>
+      <div class="marquee" style="--marquee-duration: 46s;">
+        <div class="marquee__group">
+          <span class="marquee__chip">make the empty state friendlier</span>
+          <span class="marquee__chip">this button feels weak</span>
+          <span class="marquee__chip">add a dark mode</span>
+          <span class="marquee__chip">the spacing feels off</span>
+          <span class="marquee__chip">make the hero pop</span>
+          <span class="marquee__chip">simplify this form</span>
+          <span class="marquee__chip">check the color contrast</span>
+        </div>
+        <div class="marquee__group" aria-hidden="true">
+          <span class="marquee__chip">make the empty state friendlier</span>
+          <span class="marquee__chip">this button feels weak</span>
+          <span class="marquee__chip">add a dark mode</span>
+          <span class="marquee__chip">the spacing feels off</span>
+          <span class="marquee__chip">make the hero pop</span>
+          <span class="marquee__chip">simplify this form</span>
+          <span class="marquee__chip">check the color contrast</span>
+        </div>
+        <div class="marquee__group" aria-hidden="true">
+          <span class="marquee__chip">make the empty state friendlier</span>
+          <span class="marquee__chip">this button feels weak</span>
+          <span class="marquee__chip">add a dark mode</span>
+          <span class="marquee__chip">the spacing feels off</span>
+          <span class="marquee__chip">make the hero pop</span>
+          <span class="marquee__chip">simplify this form</span>
+          <span class="marquee__chip">check the color contrast</span>
+        </div>
       </div>
     </section>
 
     <section class="section section--paper">
       <div class="container">
-        <p class="section__eyebrow">Verb commands</p>
-        <h2 class="section__title">Twenty-two slash commands, every one earned by a flow.</h2>
+        <p class="section__eyebrow">Setting It Up</p>
+        <h2 class="section__title">Two files, and every pass is measured against your brand.</h2>
         <p class="section__lede">
-          The full verb surface, twenty-two commands. <code>craft</code> runs the full chain. <code>polish</code> runs just the refinement pass. <code>audit</code>, <code>critique</code>, <code>shape</code>, <code>typeset</code>, <code>layout</code>, and the rest each map to a focused flow or composite.
+          Sidecoach does its best work when it knows your product. It reads two files from your project root, and you create them once, by asking - not from a blank page.
         </p>
 
-        <pre><code>/sidecoach craft marketing-site
-/sidecoach polish src/components/Button.tsx
-/sidecoach audit pages/checkout</code></pre>
+        <div class="setup-pair">
+          <div class="feature-row">
+            <h3 class="feature-row__title">PRODUCT.md</h3>
+            <div class="feature-row__body">
+              <p>Who the product is for, the brand voice, and what it should <em>not</em> look like. The strategic context: register, users, personality, and the patterns to avoid.</p>
+              <p>Say <code>teach Sidecoach about this project</code>. It interviews you for the gaps, reads anything you already told it, and writes the file. For a brand-new project it goes deeper and flags vague answers like <code>modern</code> so you sharpen them.</p>
+            </div>
+          </div>
 
-        <p style="margin-top: var(--space-6); color: var(--text-secondary); max-width: 56ch;">
-          The full command list is documented in <code>SKILL.md</code>. Run <code>/sidecoach help &lt;verb&gt;</code> for parity-checklist detail on any of them.
+          <div class="feature-row">
+            <h3 class="feature-row__title">DESIGN.md</h3>
+            <div class="feature-row__body">
+              <p>The design tokens: colors, typography, spacing, rounding, and component specs. The visual source of truth, written to the open design.md spec so generated code references tokens by name instead of pasting hex values.</p>
+              <p>Say <code>document the design system</code>. If the project already has CSS, Sidecoach scans it for tokens and writes the file for you.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <p class="section__eyebrow">The everyday workflow</p>
+        <h2 class="section__title">Build something. Then have it reviewed and polished.</h2>
+        <p class="section__lede">
+          The rhythm is simple, and you do both in plain language. The quality checks run as part of the pass, so nothing ships half-checked and you never have to remember to ask for them.
         </p>
+
+        <div class="workflow">
+          <ol class="stepper" id="wf-stepper">
+            <li class="stepper__step" data-step="0">
+              <button class="stepper__btn" type="button">
+                <span class="stepper__marker"><span class="stepper__dot"></span></span>
+                <span class="stepper__text">
+                  <span class="stepper__title">Build it</span>
+                  <span class="stepper__desc">Tokens, layout, every interaction state, and motion with a reduced-motion fallback.</span>
+                </span>
+              </button>
+            </li>
+            <li class="stepper__step" data-step="1">
+              <button class="stepper__btn" type="button">
+                <span class="stepper__marker"><span class="stepper__dot"></span></span>
+                <span class="stepper__text">
+                  <span class="stepper__title">A technical check</span>
+                  <span class="stepper__desc">Accessibility, theming across light and dark, responsiveness, and the named anti-patterns. Anything serious blocks the pass.</span>
+                </span>
+              </button>
+            </li>
+            <li class="stepper__step" data-step="2">
+              <button class="stepper__btn" type="button">
+                <span class="stepper__marker"><span class="stepper__dot"></span></span>
+                <span class="stepper__text">
+                  <span class="stepper__title">An independent critique</span>
+                  <span class="stepper__desc">A fresh look at cognitive load, visual hierarchy, the emotional read, and the signs of generic, templated design.</span>
+                </span>
+              </button>
+            </li>
+            <li class="stepper__step" data-step="3">
+              <button class="stepper__btn" type="button">
+                <span class="stepper__marker"><span class="stepper__dot"></span></span>
+                <span class="stepper__text">
+                  <span class="stepper__title">A final polish</span>
+                  <span class="stepper__desc">The tactical craft pass that runs last: optical alignment, press states, tabular numbers, and real hit-target sizes.</span>
+                </span>
+              </button>
+            </li>
+          </ol>
+
+          <div class="workflow__demo scd-stage-wrap">
+            <div class="scd-term" id="scd-wf">
+              <div class="scd-term__bar">
+                <span class="scd-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="scd-term__title"><b>claude</b> &middot; acme-web</span>
+                <button class="scd-replay" id="scd-wf-replay" type="button" aria-label="Restart the workflow demo">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icon-source="lucide:rotate-ccw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  Restart
+                </button>
+              </div>
+              <div class="scd-term__body" id="scd-wf-body" data-lenis-prevent aria-hidden="true"></div>
+              <div class="scd-term__foot" aria-hidden="true">
+                <div class="scd-foot-rule"></div>
+                <div class="scd-foot-input"><span id="scd-wf-cmd"></span><span class="scd-caret"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="section section--paper">
       <div class="container">
-        <p class="section__eyebrow">Modes</p>
-        <h2 class="section__title">Five sticky words for the shape of work.</h2>
+        <p class="section__eyebrow">Straight to the point</p>
+        <h2 class="section__title">Plain language is the default. The verbs are the shortcut.</h2>
         <p class="section__lede">
-          Verbs are single steps. Modes are bundles. Type one of these in a prompt and sidecoach runs the curated chain.
+          Know the pass you want? Name it as a command: <code>/sidecoach polish</code>, <code>/sidecoach audit</code>, <code>/sidecoach craft</code>. Twenty-two verbs, grouped by phase.
         </p>
 
-        <pre><code>forge the homepage          # shape -&gt; craft -&gt; polish
-kiln this release            # audit -&gt; critique -&gt; harden -&gt; adapt -&gt; polish
-bloom the dashboard          # colorize -&gt; delight -&gt; animate -&gt; polish
-canvas the pricing page      # live -&gt; colorize -&gt; polish -&gt; critique
-trim the settings panel      # quieter -&gt; distill -&gt; clarify -&gt; polish</code></pre>
+        <div class="verb-grid">
+          <article class="verb-card">
+            <h3 class="verb-card__phase">Plan</h3>
+            <ul class="verb-card__verbs">
+              <li><code class="verb-chip">shape</code></li>
+              <li><code class="verb-chip">onboard</code></li>
+            </ul>
+            <p class="verb-card__desc">Plan a feature's design before any code; design first-run and empty states.</p>
+          </article>
 
-        <p style="margin-top: var(--space-6); color: var(--text-secondary); max-width: 56ch;">
-          Modes are magic-keyword triggered by the same <code>UserPromptSubmit</code> hook that catches verbs. Mode beats verb if both appear in the prompt - the mode's chain already names the verbs.
-        </p>
+          <article class="verb-card verb-card--wide">
+            <h3 class="verb-card__phase">Build</h3>
+            <ul class="verb-card__verbs">
+              <li><code class="verb-chip">craft</code></li>
+              <li><code class="verb-chip">layout</code></li>
+              <li><code class="verb-chip">typeset</code></li>
+              <li><code class="verb-chip">animate</code></li>
+              <li><code class="verb-chip">colorize</code></li>
+              <li><code class="verb-chip">clarify</code></li>
+              <li><code class="verb-chip">delight</code></li>
+              <li><code class="verb-chip">bolder</code></li>
+              <li><code class="verb-chip">overdrive</code></li>
+            </ul>
+            <p class="verb-card__desc">Build a component from scratch, restructure layout, set type, add motion or color, sharpen the message, or push the visual weight up.</p>
+          </article>
+
+          <article class="verb-card">
+            <h3 class="verb-card__phase">Review</h3>
+            <ul class="verb-card__verbs">
+              <li><code class="verb-chip">audit</code></li>
+              <li><code class="verb-chip">critique</code></li>
+              <li><code class="verb-chip">polish</code></li>
+              <li><code class="verb-chip">harden</code></li>
+              <li><code class="verb-chip">adapt</code></li>
+              <li><code class="verb-chip">optimize</code></li>
+            </ul>
+            <p class="verb-card__desc">Technical audit, design critique, tactical polish, production hardening, a responsive pass, and a performance pass.</p>
+          </article>
+
+          <article class="verb-card">
+            <h3 class="verb-card__phase">Tone</h3>
+            <ul class="verb-card__verbs">
+              <li><code class="verb-chip">quieter</code></li>
+              <li><code class="verb-chip">distill</code></li>
+            </ul>
+            <p class="verb-card__desc">Reduce noise and complexity, or strip a design down to its essentials.</p>
+          </article>
+
+          <article class="verb-card">
+            <h3 class="verb-card__phase">Document and live</h3>
+            <ul class="verb-card__verbs">
+              <li><code class="verb-chip">document</code></li>
+              <li><code class="verb-chip">extract</code></li>
+              <li><code class="verb-chip">live</code></li>
+            </ul>
+            <p class="verb-card__desc">Generate DESIGN.md from existing CSS, pull reusable tokens out of an implementation, or iterate on a target in the browser in real time.</p>
+          </article>
+        </div>
+
       </div>
     </section>
 
-    <section class="section section--ink">
+    <section class="section">
       <div class="container">
-        <p class="section__eyebrow">Why it exists</p>
-        <h2 class="section__title">Because skipping the gates is how AI work ends up looking like AI work.</h2>
+        <p class="section__eyebrow">What you get back</p>
+        <h2 class="section__title" style="max-width: 800px;">A build report, graded by area, backed by real checks.</h2>
         <p class="section__lede">
-          Every shortcut sidecoach refuses corresponds to a failure mode we've watched LLMs produce on real projects.
+          Every pass ends with a readable report, not a wall of logs. It grades the work area by area, so a strong overall result never hides one weak spot.
         </p>
 
         <div class="feature-row">
-          <h3 class="feature-row__title">No fabricated icons.</h3>
+          <h3 class="feature-row__title">Graded per area.</h3>
           <div class="feature-row__body">
-            <p>SVG path data must come byte-for-byte from a real icon library - Heroicons, Lucide, Tabler, Phosphor. The reference system caches canonical path strings so flowG can verify them against what gets written into your codebase.</p>
-            <p>The ClaudemdMandate validator blocks the commit if a path doesn't match a registered source.</p>
+            <p>Accessibility, theming, responsiveness, motion, and craft each get their own mark, so you can see at a glance where the result is strong and where it needs another look.</p>
           </div>
         </div>
 
         <div class="feature-row">
-          <h3 class="feature-row__title">No hardcoded colors.</h3>
+          <h3 class="feature-row__title">Backed by real checks.</h3>
           <div class="feature-row__body">
-            <p>Every CSS value must resolve through a DESIGN.md token. flowF parses your tokens, flowG emits code that references them, and the build report grades each domain on token coverage.</p>
-            <p>A hex literal that didn't come from DESIGN.md is a partial grade, never a pass.</p>
+            <p>The grades come from actual tests: contrast measured against WCAG, tap targets measured in pixels, tokens checked for completeness, not a model's impression that it looks fine. Sidecoach can open your real rendered page in a browser and catch problems there, and that check runs server-side, so it works whether you are on the command line, the desktop app, or your phone.</p>
           </div>
         </div>
 
         <div class="feature-row">
-          <h3 class="feature-row__title">No "request a demo".</h3>
+          <h3 class="feature-row__title">It remembers the work.</h3>
           <div class="feature-row__body">
-            <p>The category-reflex detector in flowD watches for AI-template phrases - "request a demo," "we use AI to do X," "powered by," gradient-mesh hero, screenshot-carousel-of-fake-dashboards. Findings get a severity tag and a fix recommendation in the build report.</p>
-          </div>
-        </div>
-
-        <div class="feature-row">
-          <h3 class="feature-row__title">No silent failures.</h3>
-          <div class="feature-row__body">
-            <p>The chain doesn't half-finish. If a prerequisite is missing, you get a structured error naming the missing flow, not a silent skip. If a flow soft-fails, it surfaces in the build report under that domain's letter grade.</p>
+            <p>When a pass finishes, Sidecoach records what it did to your project's <a href="beats.html">Beats</a>, the running memory of the project, so the next session knows what was built, what was decided, and why, instead of starting cold.</p>
           </div>
         </div>
       </div>
     </section>
 
     <section class="section">
+      <div class="container">
+        <p class="section__eyebrow">Why it refuses shortcuts</p>
+        <h2 class="section__title">Skipping the gates is how AI work ends up looking like AI work.</h2>
+        <p class="section__lede">
+          Each standard Sidecoach holds corresponds to a failure mode we have watched language models produce on real projects. The pass does not finish around them.
+        </p>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Real icons only.</h3>
+          <div class="feature-row__body">
+            <p>Icon artwork comes verbatim from an established library: Heroicons, Lucide, Tabler, Phosphor. Nothing hand-drawn or approximated reaches your page, and a project is held to one library so the set stays consistent.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Live tokens, not hard-coded colors.</h3>
+          <div class="feature-row__body">
+            <p>Generated interface code points at your real DESIGN.md tokens. A hex literal that did not come from your tokens is a partial grade, never a pass, so the system never quietly drifts.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">No template phrases.</h3>
+          <div class="feature-row__body">
+            <p>The critique watches for the category reflexes: "request a demo," "we use AI to do X," gradient-mesh heroes, carousels of fake dashboards. Findings get a severity tag and a fix, not a shrug.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">No silent skips.</h3>
+          <div class="feature-row__body">
+            <p>The work does not half-finish. If something serious fails, you get a named blocker in the build report under that area's grade, not a quiet pass that looks done and is not.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--paper">
       <div class="container">
         <p class="section__eyebrow">How to start</p>
-        <h2 class="section__title">Install once. Add PRODUCT.md and DESIGN.md to your project.</h2>
+        <h2 class="section__title">Install it, teach it your project, then describe the work.</h2>
         <p class="section__lede">
-          sidecoach is part of the dotfiles. If you've cloned the repo, it's already installed.
+          Sidecoach is one piece of Improv. Install it on its own or as part of the full toolkit, set up the two files once, and start in plain language.
         </p>
 
-        <pre><code>./install.sh --only sidecoach
-echo "## Register\n\n**Brand**\n\n## Primary Users\n..." > PRODUCT.md
-/sidecoach craft .</code></pre>
+        <div class="install-term scd-stage-wrap">
+          <div class="scd-term" id="scd-install">
+            <div class="scd-term__bar">
+              <span class="scd-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="scd-term__title"><b>terminal</b> &middot; acme-web</span>
+              <button class="scd-replay" id="scd-install-replay" type="button" aria-label="Replay the install demo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icon-source="lucide:rotate-ccw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Replay
+              </button>
+            </div>
+            <div class="scd-term__body" id="scd-install-body" data-lenis-prevent aria-hidden="true"></div>
+            <div class="scd-term__foot" aria-hidden="true">
+              <div class="scd-foot-spin" id="scd-install-spin"></div>
+              <div class="scd-foot-rule"></div>
+              <div class="scd-foot-input"><span id="scd-install-cmd"></span><span class="scd-caret"></span></div>
+            </div>
+          </div>
+        </div>
 
         <div style="margin-top: var(--space-8); display: flex; gap: var(--space-3); flex-wrap: wrap;">
-          <a class="btn btn--primary" href="https://github.com/jonahscohen/improv/tree/main/sidecoach" rel="noreferrer noopener">Read the source</a>
+          <a class="btn btn--primary" href="reference.html">See the full reference</a>
+          <a class="btn btn--secondary" href="https://github.com/jonahscohen/improv/tree/main/sidecoach" rel="noreferrer noopener">Read the source</a>
           <a class="btn btn--secondary" href="index.html">Back to the toolkit</a>
         </div>
       </div>
@@ -236,6 +497,7 @@ echo "## Register\n\n**Brand**\n\n## Primary Users\n..." > PRODUCT.md
           <a href="index.html">Home</a>
           <a href="justify.html">justify</a>
           <a href="beats.html">beats</a>
+          <a href="foundation.html">foundation</a>
           <a href="reference.html">reference</a>
           <a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a>
         </nav>

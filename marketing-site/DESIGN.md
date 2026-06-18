@@ -14,6 +14,7 @@ colors:
     canvas: "#F4EFE4"       # = brand.cream
     raised: "#FAF7EE"       # = brand.paper
     inverse: "#1A1F1B"      # = brand.ink for dark sections
+    alt: "#ECE5D4"          # the alternate section plane: slightly darker cream when the theme is light, a slightly lifted dark green (#073035) when the theme is dark
   border:
     soft: "rgba(26,31,27,0.08)"   # 8% ink
     firm: "rgba(26,31,27,0.16)"   # 16% ink
@@ -116,7 +117,9 @@ A serif-leaning, editorial, warm-cream-on-off-black aesthetic. The Yes& wordmark
 
 Warm cream canvas (`{colors.brand.cream}` = `#F4EFE4`), off-black ink (`{colors.brand.ink}` = `#1A1F1B`), Yes& red as the only accent (`{colors.brand.red}` = `#DC2618`). Used sparingly - the red is the brand signature, not a default CTA color for everything.
 
-Dark sections inverse the palette: ink canvas, cream text, red still as the only accent.
+Inverse (ink/cream) surfaces appear only on cards and widgets, never as section planes; red stays the only accent on every plane.
+
+Section alternation runs on SHADES, not flipped contrast (decided 2026-06-11, retiring the earlier flipped-plane system). Sections alternate `{colors.surface.canvas}` / `{colors.surface.alt}` down the page in both themes: cream then slightly darker cream (`#ECE5D4`) when the theme is light, dark teal then a slightly lifted dark green (`#073035`) when the theme is dark. No section ever inverts, so text tokens never flip with the plane; dark/cream inverse surfaces remain available to CARDS and widgets (tool cards, carousel cards, install block) as accents riding on the planes. Pure white and near-black planes are retired entirely.
 
 **No tinted neutrals.** Borders are pure black/white at low opacity, never tinted blue or warm gray. This is a `make-interfaces-feel-better` rule and the brand demands it.
 
@@ -132,8 +135,7 @@ Dark sections inverse the palette: ink canvas, cream text, red still as the only
 
 - 8-point baseline grid (well, 4-point, with major rhythm on 8). Section gaps are 96px (`{spacing.section}`).
 - Max content width: 1200px outer, 740px text-column inner. Reading column hits ~62ch at body size.
-- Sections alternate cream / paper to break visual blocks without using borders.
-- Dark sections use ink canvas with cream text, sparingly.
+- Sections alternate canvas / alt shades to break visual blocks without using borders; no inverse section planes.
 
 ## Elevation
 
@@ -180,8 +182,9 @@ Shadows over borders, per `make-interfaces-feel-better`. Borders ONLY where stru
 - Radius: `{rounded.lg}` (12px - concentric: outer 12 = inner 8 + padding adjustment, close enough at this size)
 
 ### Curl install block (special component, hero-adjacent)
-- Background: ink with red accent border-left (3px solid `{colors.brand.red}`)
-- Copy button: monospace, cream-on-ink, hover state pulls Yes& red
+- Background: ink (`{colors.surface.inverse}`), borderless - the red Copy button is the brand anchor
+- Sized by its flex row: `.hero__cta-row` uses `align-items: stretch` so the block always equals the adjacent CTA button's height (44px floor)
+- Copy button: monospace, cream on `{colors.brand.red}` at rest, attached flush to the container's right edge (no radius), darkens on hover/active
 - Click-to-copy fires a `make-interfaces-feel-better` 240ms acknowledgment
 
 ### Section heading

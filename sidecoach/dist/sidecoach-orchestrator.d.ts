@@ -93,6 +93,7 @@ export interface SidecoachResult {
         confidence: number;
     }>;
     buildReport?: BuildReport;
+    panel?: string;
     needsDisambiguation?: boolean;
     disambiguationPrompt?: string;
     lane?: LaneStepResult;

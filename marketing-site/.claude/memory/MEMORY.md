@@ -1,0 +1,6 @@
+- [Justify - sidecoach "one move" demo split](session_2026-06-17_justify-sidecoach-demo-split.md) - section 2 split: copy left, live terminal demo component right; demo JS extracted to shared demo.js…
+- [Sidecoach Session](session_2026-06-17_sidecoach.md) - design decisions, rules applied, metrics
+- [Shade alternation system - DECISION (2026-06-11)](session_2026-06-11_shade-alternation-system.md): flipped-contrast planes RETIRED; sections alternate canvas/alt shades (cream/darker-cream light,…
+- [Justify queue stale responses (2026-06-10)](session_2026-06-10_justify-queue-stale-responses.md) - six already-applied prompts verified + reported done; queue cleared
+- [Toolkit title revert (2026-06-10)](session_2026-06-10_toolkit-title-revert.md) - user reverted prompt-3 title via Changes panel; original heading restored
+- [Install block stretch + borderless (2026-06-10)](session_2026-06-10_install-block-stretch-borderless.md) - cta-row stretch equalizes heights; border removed; DESIGN.md synced

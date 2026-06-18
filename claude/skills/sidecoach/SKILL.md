@@ -12,7 +12,7 @@ Sidecoach is the design workflow layer built into this Claude Code installation.
 Three command surfaces share the same flow chains:
 - **Phase commands** - sidecoach native vocabulary grouped by phase (research / craft / review / special).
 - **Verb commands** - 22 verb commands that mirror the canonical design verb vocabulary 1:1 and route to the same underlying flows. The orchestrator appends per-verb guidance (canonical reference sections plus sidecoach extensions) so output speaks the verb language while keeping sidecoach's validators, BuildReport, taste validation, and memory.
-- **Modes** - 6 sticky one-word "shape of work" keywords that bundle 3-5 verbs into a recognizable arc (analogs of oh-my-claudecode's autopilot/ralph/ultrawork, with `ralph` carried forward verbatim for cross-tool familiarity). Magic-keyword triggerable via the same `sidecoach-keyword.sh` hook that handles verbs.
+- **Natural-language intent detection** - the primary surface, and the one to lead with. You describe a design task in plain English and the intent detector classifies it to the right flow (asking a single clarifying question when two are a close call), then runs it to convergence with checkpointing. Exposed to the model as the MCP tools `classify_intent` / `list_lanes` / `sidecoach_lane`, so the same plain-language request works in the CLI, desktop, or an IDE sidebar. This replaced the retired one-word mode keywords.
 
 ## Dependent capabilities
 
@@ -20,20 +20,18 @@ Sidecoach delegates specialized work to dependent tools. Treat these as part of 
 
 - **tilt-lab** (`/tilt-lab` skill) - generative and shader BACKGROUNDS. When a flow produces a hero or section that wants an animated, shader, or gradient backdrop, that is sidecoach's job, fulfilled through tilt-lab: audition and tune the effect stack in the workbench, export the self-contained embed, and mount it with `mountStack` behind the content (absolute, reduced-motion-aware, with the design tokens the flow already established). `craft`, `bloom`, `animate`, and `overdrive` are the verbs most likely to reach for it. Do not hand-write a background shader when tilt-lab can supply a tuned, faithful one.
 
-## Modes
+## Natural-language intent detection (this replaced modes)
 
-Modes name the shape of work itself, not a single step. Each mode is a curated chain of verbs. Type a mode word in any prompt (`forge the homepage`, `kiln this release`) and the UserPromptSubmit hook injects the chain so the receiving session runs the verbs in order. Modes take precedence over verbs - if a prompt contains both, the mode wins because its chain already names the lower-level verbs.
+The old one-word mode keywords (`forge`/`kiln`/`bloom`/`canvas`/`trim`/`ralph`) are RETIRED. Jonah's call (2026-06-12): they were optimized for hook-detectability, not for how a person actually talks - "kiln this release" is not a sentence anyone types. Do not reintroduce magic keywords that fail the say-it-out-loud test.
 
-| Mode | Shape of work | Verb chain |
-|---|---|---|
-| `forge` | Build something new from raw to working | shape -> craft -> polish |
-| `kiln` | Fire-harden a built thing for production | audit -> critique -> harden -> adapt -> polish |
-| `bloom` | Add joy, color, motion, personality | colorize -> delight -> animate -> polish |
-| `canvas` | Live in-browser visual iteration | live -> colorize -> polish -> critique |
-| `trim` | Strip a busy UI back to essentials | quieter -> distill -> clarify -> polish |
-| `ralph` | Relentless cross-flow iteration to convergence | polish -> audit -> critique (loop until clean, stall, or cap) |
+The replacement is intent detection: you write what you want in plain language and sidecoach figures out which design task you mean.
 
-Source of truth: `sidecoach/src/modes.ts` (TypeScript registry with FlowId chains) mirrored by `claude/hooks/sidecoach-modes.json` (consumed by the bash hook).
+- An intent detector (`sidecoach/src/intent-detector.ts` / `lane-classifier.ts`) scores the request across tiers (strategy/research, execution, polish/QA, special, refinement) and picks the best-matching flow, keeping runner-up candidates.
+- When two are a close call, sidecoach asks a single clarifying question rather than guessing. A one-question confirm is a pathway to specificity, not a violation of the no-lazy-questions rule.
+- The matched task runs to convergence (`lane-runner.ts` + `lane-convergence.ts`): it loops until the quality checks pass or it stalls/caps, and checkpoints progress (`lane-checkpoint-store.ts`) so a crash never loses or double-applies work.
+- It is exposed to the model as MCP tools - `classify_intent`, `list_lanes`, `sidecoach_lane` - so the same plain-language request works in the CLI, desktop, or an IDE sidebar.
+
+Source of truth: `sidecoach/src/lanes.generated.ts` (generated task registry), `intent-detector.ts` / `lane-classifier.ts` (classification), `claude/hooks/sidecoach-lanes.json` (the hook lexicon). The legacy `modes.ts` / `sidecoach-modes.json` and the old MCP `list_modes` / `resolve_keyword` survive ONLY as a deprecated feed and are slated for deletion - do not document them as a feature.
 
 ## Invoking the Engine
 
@@ -44,19 +42,21 @@ node /Users/spare3/Documents/Github/improv/sidecoach/bin/sidecoach-monitor.js "/
 ```
 
 Parse the JSON result and act on it:
-- `guidance: string[]` - execute these steps in order; they are instructions, not suggestions
+- `panel: string` - the compact progress card (route -> flow -> checklist -> gates -> verdict/grade/findings). PRINT THIS VERBATIM to the user; it is the status surface. Do not rebuild it, wrap it in prose, or summarize it.
+- `guidance: string[]` - YOUR ordered steps to execute; they are instructions, not suggestions. Act on them; do NOT paste them to the user as a wall of text (the panel is what the user sees).
 - `checklist: object[]` - every item must pass before you report done; failures are blockers
 - `artifacts: object[]` - reference data (components, tokens, motion patterns); use verbatim, do not invent alternatives
-- `detectedFlow` - confirms which flow matched; log it for transparency
+- `detectedFlow` - confirms which flow matched
+- For the lane path (`sidecoach_lane`), each `start` / `advance` result carries `.panel` too - print that snapshot after each op so progress shows live.
 
-**Template for every invocation:**
+**Template for every invocation** (surface the panel; keep guidance/checklist for your own execution):
 
 ```bash
 RESULT=$(node /Users/spare3/Documents/Github/improv/sidecoach/bin/sidecoach-monitor.js "$UTTERANCE")
 echo "$RESULT" | node -e "
   const r = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
-  if (r.guidance) r.guidance.forEach((g,i) => console.log((i+1)+'. '+g));
-  if (r.checklist) { console.log('\nChecklist:'); r.checklist.forEach(c => console.log('- [ ] '+c.item)); }
+  if (r.panel) console.log(r.panel);   // the card the user sees - print verbatim
+  // r.guidance / r.checklist drive YOUR work; do not paste them as prose.
 "
 ```
 
@@ -149,7 +149,9 @@ These are not optional:
 
 ## Using Output Correctly
 
-**guidance:** Each item is a concrete, ordered step. Do not paraphrase, skip, or reorder. Execute them exactly.
+**panel (the progress surface - keep the run quiet):** `result.panel` (and the `.panel` on each `sidecoach_lane` start/advance result) is a pre-rendered compact card - route, flow chain, checklist, gates, verdict/grade/findings. PRINT IT VERBATIM. It is the only progress output the user needs. Do NOT also dump the verbose markdown Build Report, paste the guidance steps as prose, or narrate each flow as it runs - that mid-run verbosity is exactly what the panel replaces. Surface the panel, do the work quietly, surface the final panel. The detailed Build Report (in `artifacts`) stays available only if the user asks for findings detail.
+
+**guidance:** Each item is a concrete, ordered step. Do not paraphrase, skip, or reorder. Execute them exactly - act on them, do not paste them at the user.
 
 **checklist:** Every item is pass/fail. A failing checklist item means the task is not done. Fix it before moving on.
 

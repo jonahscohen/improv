@@ -1,8 +1,20 @@
+interface DiffLine { t: ' ' | '-' | '+'; oldNo: number | null; newNo: number | null; text: string; }
+interface DiffHunk { oldStart: number; newStart: number; header: string; lines: DiffLine[]; }
+interface FileDiff { file: string; hunks: DiffHunk[]; }
+
 interface ChangeEntry {
   promptId: string;
   summary: string;
   filesChanged: string[];
   changes: Array<{ selector: string; property: string; oldValue: string; newValue: string }>;
+  // Real code diffs (standard unified-diff hunks with line numbers). When present,
+  // the panel renders these instead of the selector/property pseudo-diff, and the
+  // file open button jumps to the first changed line.
+  diffs?: FileDiff[];
+  // Issue #1: the DOM selector(s) of the element(s) this task was about, carried
+  // from the original prompt. Used so clicking the entry can scroll to + select
+  // the target even when there are no per-change selectors (diff-only results).
+  targetSelectors?: string[];
   status: 'completed' | 'needsInfo' | 'failed';
   question?: string;
   reviewed: boolean;
@@ -25,6 +37,7 @@ export class ChangesPanel {
   private onUndoDoneCallback: ((promptId: string, entry: ChangeEntry) => void) | null = null;
   private onRevertCallback: ((promptId: string, changes: any[]) => void) | null = null;
   private onClearReviewedCallback: (() => void) | null = null;
+  private onClearAllCallback: (() => void) | null = null;
   private onHideCallback: (() => void) | null = null;
   private onSelectCallback: ((selectors: string[]) => void) | null = null;
   private onItemClickCallback: ((index: number) => void) | null = null;
@@ -112,23 +125,23 @@ export class ChangesPanel {
     this.bottomBar.style.cssText =
       'padding:10px 16px;border-top:1px solid rgba(255,255,255,0.1);flex-shrink:0;display:none';
     this._clearReviewedBtn = document.createElement('button');
-    this._clearReviewedBtn.textContent = 'Clear Completed Tasks';
-    this._clearReviewedBtn.setAttribute('aria-label', 'Clear all reviewed changes');
+    // "Clear All" (was "Clear Completed Tasks"): clears the ENTIRE review list in
+    // one click and is ALWAYS visible while there are entries - the old button
+    // only appeared after you marked something done and only cleared the reviewed
+    // ones, so it was easy to lose ("where is the clear button?"). Matches the
+    // queue panel's "Clear All".
+    this._clearReviewedBtn.textContent = 'Clear All';
+    this._clearReviewedBtn.setAttribute('aria-label', 'Clear all changes from the review panel');
     this._clearReviewedBtn.style.cssText =
       'border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.45);font-size:11px;cursor:pointer;' +
       'padding:6px 14px;border-radius:8px;font-family:JustifySans,system-ui,sans-serif;outline:none;transition:background 120ms ease,color 120ms ease,border-color 120ms ease';
     this._clearReviewedBtn.addEventListener('mouseenter', () => { this._clearReviewedBtn!.style.background = '#D97757'; this._clearReviewedBtn!.style.color = '#1a1a1a'; this._clearReviewedBtn!.style.borderColor = '#D97757'; });
     this._clearReviewedBtn.addEventListener('mouseleave', () => { this._clearReviewedBtn!.style.background = 'rgba(255,255,255,0.04)'; this._clearReviewedBtn!.style.color = 'rgba(255,255,255,0.45)'; this._clearReviewedBtn!.style.borderColor = 'rgba(255,255,255,0.12)'; });
     this._clearReviewedBtn.addEventListener('click', () => {
-      this.entries = this.entries.filter(e => !e.reviewed);
-      if (this.onClearReviewedCallback) this.onClearReviewedCallback();
-      this.filterEntries();
-      if (this.filteredEntries.length === 0) {
-        this.hide();
-      } else {
-        this.render();
-        this._updateClearBtn();
-      }
+      this.entries = [];
+      this.filteredEntries = [];
+      if (this.onClearAllCallback) this.onClearAllCallback();
+      this.hide();
     });
     this.bottomBar.appendChild(this._clearReviewedBtn);
     this.container.appendChild(this.bottomBar);
@@ -234,6 +247,7 @@ export class ChangesPanel {
   setOnUndoDone(cb: (promptId: string, entry: ChangeEntry) => void) { this.onUndoDoneCallback = cb; }
   setOnRevert(cb: (promptId: string, changes: any[]) => void) { this.onRevertCallback = cb; }
   setOnClearReviewed(cb: () => void) { this.onClearReviewedCallback = cb; }
+  setOnClearAll(cb: () => void) { this.onClearAllCallback = cb; }
   setOnSelect(cb: (selectors: string[]) => void) { this.onSelectCallback = cb; }
   setOnItemClick(cb: (index: number) => void) { this.onItemClickCallback = cb; }
   setOnHide(cb: () => void) { this.onHideCallback = cb; }
@@ -330,6 +344,246 @@ export class ChangesPanel {
     replyWrap.style.opacity = '1';
     replyWrap.style.transform = 'translateY(0)';
     input.focus();
+  }
+
+  // The original "Open With" split button (icon opens the file; chevron picks the
+  // editor). Shared by the legacy CSS-tweak render and the real-diff render. When
+  // `line` > 0 the open request carries it so code/cursor jump to that line.
+  private _buildOpenWith(filename: string, line: number): HTMLDivElement {
+    const openWrap = document.createElement('div');
+    openWrap.style.cssText = 'display:flex;align-items:center;gap:4px;flex-shrink:0;position:relative';
+
+    const openLabel = document.createElement('span');
+    openLabel.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.3);white-space:nowrap';
+    openLabel.textContent = 'Open With';
+    openWrap.appendChild(openLabel);
+
+    // Split button container: [icon side | chevron side]
+    const splitBtn = document.createElement('div');
+    splitBtn.style.cssText =
+      'display:flex;align-items:stretch;background:rgba(255,255,255,0.06);border-radius:6px;overflow:hidden';
+
+    // Left side: icon that opens file
+    const iconSide = document.createElement('button');
+    iconSide.style.cssText =
+      'display:flex;align-items:center;justify-content:center;border:none;background:transparent;' +
+      'padding:4px 6px;cursor:pointer;color:rgba(255,255,255,0.5);' +
+      'transition:background 120ms ease;outline:none';
+    iconSide.addEventListener('mouseenter', () => { iconSide.style.background = 'rgba(255,255,255,0.1)'; });
+    iconSide.addEventListener('mouseleave', () => { iconSide.style.background = 'transparent'; });
+    iconSide.addEventListener('mousedown', () => { iconSide.style.transform = 'scale(0.92)'; });
+    iconSide.addEventListener('mouseup', () => { iconSide.style.transform = ''; });
+
+    const btnIcon = document.createElement('span');
+    btnIcon.style.cssText = 'width:14px;height:14px;display:flex;align-items:center;justify-content:center';
+    btnIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="14" height="14" fill="currentColor"><path d="M 5 5 A 1.0001 1.0001 0 0 0 4.78125 5.0214844 C 3.7808601 5.1318811 3 5.9700688 3 7 L 3 23 C 3 24.030595 3.7818815 24.868998 4.7832031 24.978516 A 1.0001 1.0001 0 0 0 5 25 L 17 25 L 25 25 C 26.093063 25 27 24.093063 27 23 L 27 7 C 27 5.9069372 26.093063 5 25 5 L 16 5 L 5 5 z M 14.888672 7 L 25 7 L 25 23 L 16.697266 23 C 16.603409 22.358906 16.508612 21.714695 16.408203 20.917969 C 15.958203 20.968969 15.49 21 15 21 C 10.808 21 8.007625 18.882969 7.890625 18.792969 C 7.452625 18.455969 7.3700313 17.827625 7.7070312 17.390625 C 8.0430312 16.952625 8.6694219 16.870078 9.1074219 17.205078 C 9.1524219 17.238078 11.53 19 15 19 C 15.412 19 15.803641 18.972688 16.181641 18.929688 C 16.074641 17.852688 16 16.815 16 16 L 13.685547 16 C 13.309547 16 12.998766 15.685594 13.009766 15.308594 C 13.117156 11.534421 14.082118 8.7333804 14.888672 7 z M 16.181641 18.929688 C 16.247641 19.591687 16.326203 20.266969 16.408203 20.917969 C 19.808203 20.530969 22.005375 18.872969 22.109375 18.792969 C 22.546375 18.455969 22.629969 17.827625 22.292969 17.390625 C 21.955969 16.951625 21.327625 16.871031 20.890625 17.207031 C 20.870625 17.223031 19.032641 18.605688 16.181641 18.929688 z M 20.984375 9.9863281 A 1.0001 1.0001 0 0 0 20 11 L 20 12 A 1.0001 1.0001 0 1 0 22 12 L 22 11 A 1.0001 1.0001 0 0 0 20.984375 9.9863281 z M 9 10 C 9.552 10 10 10.447 10 11 L 10 12 C 10 12.553 9.552 13 9 13 C 8.448 13 8 12.553 8 12 L 8 11 C 8 10.447 8.448 10 9 10 z"/></svg>';
+    iconSide.appendChild(btnIcon);
+
+    let selectedCmd = 'open';
+    iconSide.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fetch('http://localhost:9223/open-file', {
+        method: 'POST',
+        body: JSON.stringify({ file: filename, cmd: selectedCmd, line })
+      }).catch(() => {});
+    });
+
+    // Divider between icon and chevron
+    const splitDiv = document.createElement('div');
+    splitDiv.style.cssText = 'width:1px;background:rgba(255,255,255,0.1);flex-shrink:0';
+
+    // Right side: chevron that opens dropdown
+    const chevSide = document.createElement('button');
+    chevSide.style.cssText =
+      'display:flex;align-items:center;justify-content:center;border:none;background:transparent;' +
+      'padding:4px 4px;cursor:pointer;color:rgba(255,255,255,0.5);' +
+      'transition:background 120ms ease;outline:none';
+    chevSide.addEventListener('mouseenter', () => { chevSide.style.background = 'rgba(255,255,255,0.1)'; });
+    chevSide.addEventListener('mouseleave', () => { chevSide.style.background = 'transparent'; });
+    chevSide.innerHTML = '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+
+    splitBtn.appendChild(iconSide);
+    splitBtn.appendChild(splitDiv);
+    splitBtn.appendChild(chevSide);
+
+    const editorIcons: Record<string, string> = {
+      cursor: '<svg fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" width="14" height="14" xmlns="http://www.w3.org/2000/svg"><path d="M22.106 5.68L12.5.135a.998.998 0 00-.998 0L1.893 5.68a.84.84 0 00-.419.726v11.186c0 .3.16.577.42.727l9.607 5.547a.999.999 0 00.998 0l9.608-5.547a.84.84 0 00.42-.727V6.407a.84.84 0 00-.42-.726zm-.603 1.176L12.228 22.92c-.063.108-.228.064-.228-.061V12.34a.59.59 0 00-.295-.51l-9.11-5.26c-.107-.062-.063-.228.062-.228h18.55c.264 0 .428.286.296.514z"></path></svg>',
+      vscode: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M22 5.75v12.48c0 .49-.28.94-.72 1.15-.91.43-2.46 1.18-3.33 1.59.03-.16.05-.33.05-.5V3.53C18 3.3 17.97 3.12 17.94 3c.94.46 2.44 1.18 3.33 1.6C21.72 4.81 22 5.26 22 5.75zM3.91 13.35c.89.8 1.73 1.56 2.51 2.28l-1.48 1.12c-.37.28-.89.27-1.25-.03l-.94-.79c-.46-.39-.48-1.09-.03-1.5C3.05 14.13 3.46 13.76 3.91 13.35zM16 3.53v4.81l-3.16 2.4-3.3-2.5c2.29-2.07 4.46-4.05 5.59-5.1.23-.22.56-.16.74.04.05.06.09.13.11.22C15.99 3.44 16 3.48 16 3.53zM16 20.47v-4.81L4.938 7.252c-.372-.283-.889-.27-1.247.03L2.754 8.066C2.289 8.456 2.271 9.162 2.72 9.569c2.747 2.488 9.998 9.06 12.41 11.291C15.462 21.167 16 20.93 16 20.47z"/></svg>',
+      finder: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="14" height="14" fill="currentColor"><path d="M 5 5 A 1.0001 1.0001 0 0 0 4.78125 5.0214844 C 3.7808601 5.1318811 3 5.9700688 3 7 L 3 23 C 3 24.030595 3.7818815 24.868998 4.7832031 24.978516 A 1.0001 1.0001 0 0 0 5 25 L 17 25 L 25 25 C 26.093063 25 27 24.093063 27 23 L 27 7 C 27 5.9069372 26.093063 5 25 5 L 16 5 L 5 5 z M 14.888672 7 L 25 7 L 25 23 L 16.697266 23 C 16.603409 22.358906 16.508612 21.714695 16.408203 20.917969 C 15.958203 20.968969 15.49 21 15 21 C 10.808 21 8.007625 18.882969 7.890625 18.792969 C 7.452625 18.455969 7.3700313 17.827625 7.7070312 17.390625 C 8.0430312 16.952625 8.6694219 16.870078 9.1074219 17.205078 C 9.1524219 17.238078 11.53 19 15 19 C 15.412 19 15.803641 18.972688 16.181641 18.929688 C 16.074641 17.852688 16 16.815 16 16 L 13.685547 16 C 13.309547 16 12.998766 15.685594 13.009766 15.308594 C 13.117156 11.534421 14.082118 8.7333804 14.888672 7 z M 16.181641 18.929688 C 16.247641 19.591687 16.326203 20.266969 16.408203 20.917969 C 19.808203 20.530969 22.005375 18.872969 22.109375 18.792969 C 22.546375 18.455969 22.629969 17.827625 22.292969 17.390625 C 21.955969 16.951625 21.327625 16.871031 20.890625 17.207031 C 20.870625 17.223031 19.032641 18.605688 16.181641 18.929688 z M 20.984375 9.9863281 A 1.0001 1.0001 0 0 0 20 11 L 20 12 A 1.0001 1.0001 0 1 0 22 12 L 22 11 A 1.0001 1.0001 0 0 0 20.984375 9.9863281 z M 9 10 C 9.552 10 10 10.447 10 11 L 10 12 C 10 12.553 9.552 13 9 13 C 8.448 13 8 12.553 8 12 L 8 11 C 8 10.447 8.448 10 9 10 z"/></svg>',
+      opencode: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>'
+    };
+
+    let dropdownOpen = false;
+    let dropdown: HTMLDivElement | null = null;
+
+    chevSide.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (dropdownOpen && dropdown) {
+        dropdown.remove();
+        dropdown = null;
+        dropdownOpen = false;
+        return;
+      }
+
+      dropdown = document.createElement('div');
+      const btnRect = splitBtn.getBoundingClientRect();
+      dropdown.style.cssText =
+        'position:fixed;background:#1a1a1a;' +
+        'border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:4px;' +
+        'box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:2147483647;min-width:120px;' +
+        'opacity:0;transform:translateY(-4px);transition:opacity 120ms ease,transform 120ms ease';
+      dropdown.style.top = (btnRect.bottom + 4) + 'px';
+      dropdown.style.right = (window.innerWidth - btnRect.right) + 'px';
+
+      const editors = [
+        { key: 'cursor', label: 'Cursor', cmd: 'cursor' },
+        { key: 'vscode', label: 'VS Code', cmd: 'code' },
+        { key: 'opencode', label: 'OpenCode', cmd: 'opencode' },
+        { key: 'finder', label: 'Finder', cmd: 'open' },
+      ];
+
+      for (const ed of editors) {
+        const row = document.createElement('button');
+        row.style.cssText =
+          'display:flex;align-items:center;gap:8px;width:100%;border:none;background:none;' +
+          'padding:6px 10px;cursor:pointer;border-radius:6px;color:rgba(255,255,255,0.7);' +
+          'font-size:12px;font-family:JustifySans,system-ui,sans-serif;outline:none;' +
+          'transition:background 80ms ease';
+        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(255,255,255,0.08)'; });
+        row.addEventListener('mouseleave', () => { row.style.background = 'none'; });
+
+        const icon = document.createElement('span');
+        icon.style.cssText = 'width:16px;height:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0';
+        icon.innerHTML = editorIcons[ed.key];
+        row.appendChild(icon);
+
+        const lbl = document.createElement('span');
+        lbl.textContent = ed.label;
+        row.appendChild(lbl);
+
+        row.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          btnIcon.innerHTML = editorIcons[ed.key];
+          selectedCmd = ed.cmd;
+          if (dropdown) { dropdown.remove(); dropdown = null; }
+          dropdownOpen = false;
+        });
+
+        dropdown.appendChild(row);
+      }
+
+      document.body.appendChild(dropdown);
+      dropdown.getBoundingClientRect();
+      dropdown.style.opacity = '1';
+      dropdown.style.transform = 'translateY(0)';
+      dropdownOpen = true;
+
+      const closeDropdown = (ev: MouseEvent) => {
+        const path = ev.composedPath();
+        const hitDropdown = dropdown && path.some(n => n === dropdown);
+        const hitSplit = path.some(n => n === splitBtn);
+        if (dropdown && !hitDropdown && !hitSplit) {
+          dropdown.remove();
+          dropdown = null;
+          dropdownOpen = false;
+          document.removeEventListener('click', closeDropdown, true);
+        }
+      };
+      setTimeout(() => {
+        document.addEventListener('click', closeDropdown, true);
+      }, 0);
+    });
+
+    openWrap.appendChild(splitBtn);
+    return openWrap;
+  }
+
+  // First *actually changed* line of a file as a new-file line number, for the
+  // open-at-line jump. Walks past leading context so the editor lands on the real
+  // change, not the hunk's context start. For a deletion (no new line of its own),
+  // returns the new-file position where the deletion occurred.
+  private _firstChangedLine(fd: FileDiff): number {
+    for (const h of fd.hunks) {
+      let lastNew = h.newStart - 1;
+      for (const ln of h.lines) {
+        if (ln.t === '+') return ln.newNo != null ? ln.newNo : lastNew + 1;
+        if (ln.t === '-') return lastNew + 1;
+        if (ln.newNo != null) lastNew = ln.newNo;
+      }
+      return h.newStart;
+    }
+    return 0;
+  }
+
+  // Render real unified-diff hunks - standard +/- rows with an old|new line-number
+  // gutter - per file, with an "Open" button that jumps the editor to the first
+  // changed line. This is the standardized code-diff view for the Review panel.
+  private _renderFileDiffs(scrollArea: HTMLElement, fileDiffs: FileDiff[]) {
+    for (const fd of fileDiffs) {
+      const firstLine = this._firstChangedLine(fd);
+      const fileSection = document.createElement('div');
+      fileSection.style.cssText = 'margin-bottom:16px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.06)';
+
+      const fileHeader = document.createElement('div');
+      fileHeader.style.cssText =
+        'font-size:12px;color:rgba(255,255,255,0.5);font-family:JustifySans,system-ui,sans-serif;' +
+        'padding:6px 8px 6px 12px;background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.06);' +
+        'display:flex;align-items:center;justify-content:space-between;gap:8px';
+
+      const fileLabel = document.createElement('span');
+      fileLabel.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      // Filename only (basename), in ImprovSans - matches the original header.
+      fileLabel.textContent = fd.file.split('/').pop() || fd.file;
+      fileLabel.title = fd.file;
+      fileHeader.appendChild(fileLabel);
+
+      // The original "Open With" split-button picker, carrying the first changed
+      // line so a selected editor (code/cursor) jumps straight to it.
+      fileHeader.appendChild(this._buildOpenWith(fd.file, firstLine));
+      fileSection.appendChild(fileHeader);
+
+      for (const hunk of fd.hunks) {
+        const hunkHeader = document.createElement('div');
+        hunkHeader.style.cssText =
+          'font-size:11px;color:rgba(125,211,252,0.75);font-family:JustifyMono,ui-monospace,monospace;' +
+          'padding:4px 12px;background:rgba(56,189,248,0.06);white-space:pre-wrap;word-break:break-word';
+        hunkHeader.textContent = `@@ -${hunk.oldStart} +${hunk.newStart} @@` + (hunk.header ? ' ' + hunk.header : '');
+        fileSection.appendChild(hunkHeader);
+
+        for (const ln of hunk.lines) {
+          const row = document.createElement('div');
+          const bg = ln.t === '+' ? 'rgba(34,197,94,0.12)' : ln.t === '-' ? 'rgba(239,68,68,0.12)' : 'transparent';
+          row.style.cssText =
+            'display:flex;font-size:12px;font-family:JustifyMono,ui-monospace,monospace;line-height:1.5;background:' + bg;
+
+          const gutter = document.createElement('span');
+          gutter.style.cssText = 'flex-shrink:0;display:flex;user-select:none;border-right:1px solid rgba(255,255,255,0.06)';
+          const oldG = document.createElement('span');
+          oldG.style.cssText = 'width:34px;text-align:right;padding:1px 6px;color:rgba(255,255,255,0.22)';
+          oldG.textContent = ln.oldNo != null ? String(ln.oldNo) : '';
+          const newG = document.createElement('span');
+          newG.style.cssText = 'width:34px;text-align:right;padding:1px 6px;color:rgba(255,255,255,0.32)';
+          newG.textContent = ln.newNo != null ? String(ln.newNo) : '';
+          gutter.appendChild(oldG);
+          gutter.appendChild(newG);
+          row.appendChild(gutter);
+
+          const mark = document.createElement('span');
+          mark.style.cssText = 'flex-shrink:0;width:16px;text-align:center;user-select:none;color:' +
+            (ln.t === '+' ? '#22c55e' : ln.t === '-' ? '#ef4444' : 'rgba(255,255,255,0.3)');
+          mark.textContent = ln.t === ' ' ? '' : ln.t;
+          row.appendChild(mark);
+
+          const code = document.createElement('span');
+          code.style.cssText = 'white-space:pre-wrap;word-break:break-word;color:rgba(255,255,255,0.82);padding-right:10px;flex:1';
+          code.textContent = ln.text;
+          row.appendChild(code);
+
+          fileSection.appendChild(row);
+        }
+      }
+      scrollArea.appendChild(fileSection);
+    }
   }
 
   showDetail(entry: ChangeEntry, index: number) {
@@ -447,6 +701,13 @@ export class ChangesPanel {
       }
     }
 
+    // Real unified diffs (standard +/- with line numbers) are the requested
+    // format and take precedence; the selector/property pseudo-diff below is the
+    // fallback for visual CSS tweaks that carry no real diff.
+    const fileDiffs = entry.diffs || [];
+    if (fileDiffs.length > 0) {
+      this._renderFileDiffs(scrollArea, fileDiffs);
+    } else {
     // Render each file group as inline diffs
     changesByFile.forEach((fileChanges, filename) => {
       const fileSection = document.createElement('div');
@@ -614,11 +875,23 @@ export class ChangesPanel {
       fileSection.appendChild(fileHeader);
 
       for (const c of fileChanges) {
+        // Tolerant row: payloads that carry a prose description (or only a
+        // file reference) instead of a selector/property diff render as a
+        // plain description line - never as an undefined-filled diff.
+        const loose = c as { selector?: string; property?: string; oldValue?: string; newValue?: string; description?: string; file?: string };
+        if (!loose.selector && !loose.property) {
+          const descEl = document.createElement('div');
+          descEl.style.cssText =
+            'font-size:12px;color:rgba(255,255,255,0.7);padding:8px 12px;line-height:1.45';
+          descEl.textContent = loose.description || loose.file || '(no detail provided)';
+          fileSection.appendChild(descEl);
+          continue;
+        }
         const selectorEl = document.createElement('div');
         selectorEl.style.cssText =
           'font-size:10px;color:rgba(255,255,255,0.35);font-family:JustifyMono,ui-monospace,monospace;' +
           'padding:6px 12px 2px;word-break:break-all';
-        selectorEl.textContent = c.selector + ' {';
+        selectorEl.textContent = (c.selector || '(page)') + ' {';
         fileSection.appendChild(selectorEl);
 
         const oldLine = document.createElement('div');
@@ -631,8 +904,8 @@ export class ChangesPanel {
         oldLine.appendChild(oldMark);
         const oldText = document.createElement('span');
         oldText.style.cssText = 'color:rgba(255,255,255,0.7)';
-        oldText.innerHTML = c.property + ': <span style="color:#ef4444;background:rgba(239,68,68,0.2);padding:0 3px;border-radius:2px">' +
-          this.escapeHtml(c.oldValue) + '</span>;';
+        oldText.innerHTML = (c.property || 'value') + ': <span style="color:#ef4444;background:rgba(239,68,68,0.2);padding:0 3px;border-radius:2px">' +
+          this.escapeHtml(c.oldValue ?? '') + '</span>;';
         oldLine.appendChild(oldText);
         fileSection.appendChild(oldLine);
 
@@ -646,8 +919,8 @@ export class ChangesPanel {
         newLine.appendChild(newMark);
         const newText = document.createElement('span');
         newText.style.cssText = 'color:rgba(255,255,255,0.7)';
-        newText.innerHTML = c.property + ': <span style="color:#22c55e;background:rgba(34,197,94,0.2);padding:0 3px;border-radius:2px">' +
-          this.escapeHtml(c.newValue) + '</span>;';
+        newText.innerHTML = (c.property || 'value') + ': <span style="color:#22c55e;background:rgba(34,197,94,0.2);padding:0 3px;border-radius:2px">' +
+          this.escapeHtml(c.newValue ?? '') + '</span>;';
         newLine.appendChild(newText);
         fileSection.appendChild(newLine);
 
@@ -661,6 +934,7 @@ export class ChangesPanel {
 
       scrollArea.appendChild(fileSection);
     });
+    } // end legacy selector/property render (real-diff path handled above)
 
     // Action buttons underneath the diffs
     if (!entry.reviewed) {
@@ -670,7 +944,7 @@ export class ChangesPanel {
       const doneBtn = this.makeActionBtn('Mark Done', () => { this.markDone(entry.promptId, entry); this.hideDetail(); });
       detailActions.appendChild(doneBtn);
 
-      if (changes.length > 0) {
+      if (changes.length > 0 || (entry.diffs || []).length > 0) {
         const isReverted = this.revertedPrompts.has(entry.promptId);
         if (isReverted) {
           const revertedBtn = this.makeActionBtn('Reverted', () => {});
@@ -810,16 +1084,35 @@ export class ChangesPanel {
       summaryText.textContent = entry.summary;
       summaryEl.appendChild(summaryText);
 
+      // Subtitle line: CSS selectors for tweak entries, or the filename(s) for
+      // real-diff entries - shown plainly above (like the selectors), not boxed.
       const selectors = [...new Set((entry.changes || []).map(c => c.selector))];
-      if (selectors.length > 0) {
+      const diffFiles = [...new Set((entry.diffs || []).map(d => d.file.split('/').pop() || d.file))];
+      const subtitle = selectors.length > 0 ? selectors.join(', ')
+        : diffFiles.length > 0 ? diffFiles.join(', ') : '';
+      if (subtitle) {
         const targets = document.createElement('div');
         targets.style.cssText = 'font-size:10px;color:rgba(255,255,255,0.35);margin-top:3px';
-        targets.textContent = selectors.join(', ');
+        targets.textContent = subtitle;
         summaryEl.appendChild(targets);
       }
 
-      // Diff stats: +N -N
-      if ((entry.changes || []).length > 0) {
+      // Diff stats: +adds -dels. Real added/removed line counts for diff entries;
+      // for CSS-tweak entries, the number of property changes.
+      let listAdds = 0, listDels = 0;
+      if ((entry.diffs || []).length > 0) {
+        for (const d of (entry.diffs || [])) {
+          for (const h of d.hunks) {
+            for (const ln of h.lines) {
+              if (ln.t === '+') listAdds++;
+              else if (ln.t === '-') listDels++;
+            }
+          }
+        }
+      } else {
+        listAdds = listDels = (entry.changes || []).length;
+      }
+      if (listAdds > 0 || listDels > 0) {
         const statsWrap = document.createElement('div');
         statsWrap.style.cssText = 'margin-top:4px';
 
@@ -828,7 +1121,7 @@ export class ChangesPanel {
 
         const addSpan = document.createElement('span');
         addSpan.style.cssText = 'color:#22c55e';
-        addSpan.textContent = '+' + (entry.changes || []).length;
+        addSpan.textContent = '+' + listAdds;
 
         const sepSpan = document.createElement('span');
         sepSpan.style.cssText = 'color:rgba(255,255,255,0.25)';
@@ -836,7 +1129,7 @@ export class ChangesPanel {
 
         const delSpan = document.createElement('span');
         delSpan.style.cssText = 'color:#ef4444';
-        delSpan.textContent = '-' + (entry.changes || []).length;
+        delSpan.textContent = '-' + listDels;
 
         statsSpan.appendChild(addSpan);
         statsSpan.appendChild(sepSpan);
@@ -845,11 +1138,21 @@ export class ChangesPanel {
         summaryEl.appendChild(statsWrap);
       }
 
-      if ((entry.changes || []).length === 0 && entry.status === 'completed') {
+      if ((entry.changes || []).length === 0 && (entry.diffs || []).length === 0 && entry.status === 'completed') {
+        // A payload without property diffs is NOT the same as "nothing
+        // changed" - if filesChanged is populated, report the files instead
+        // of falsely claiming no changes were made.
+        const looseFiles = entry.filesChanged || [];
         const noChanges = document.createElement('div');
-        noChanges.style.cssText = 'margin-top:6px;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.5;' +
-          'background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.45);font-style:italic';
-        noChanges.textContent = 'No file changes were made.';
+        if (looseFiles.length > 0) {
+          noChanges.style.cssText = 'margin-top:6px;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.5;' +
+            'background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.55)';
+          noChanges.textContent = 'Files changed: ' + looseFiles.map(f => f.split('/').pop()).join(', ');
+        } else {
+          noChanges.style.cssText = 'margin-top:6px;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.5;' +
+            'background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.45);font-style:italic';
+          noChanges.textContent = 'No file changes were made.';
+        }
         summaryEl.appendChild(noChanges);
       }
 
@@ -874,7 +1177,7 @@ export class ChangesPanel {
         doneBtn.setAttribute('aria-label', 'Mark change as reviewed');
         actions.appendChild(doneBtn);
 
-        if (entry.changes && (entry.changes || []).length > 0) {
+        if ((entry.changes || []).length > 0 || (entry.diffs || []).length > 0) {
           // Bug fix #4: reverted state for revert button
           if (isReverted) {
             const revertedBtn = this.makeActionBtn('Reverted', () => {});
@@ -920,11 +1223,23 @@ export class ChangesPanel {
         if (target.closest('button') || target.closest('input')) return;
 
         this.focusedIndex = i;
-        const selectors = [...new Set((entry.changes || []).map(c => c.selector))];
+        // Issue #1: union per-change selectors with the prompt's target
+        // selectors so diff-only results (no per-change selectors) still scroll
+        // to + select the element the task was about.
+        const changeSelectors = (entry.changes || []).map(c => c.selector).filter(Boolean);
+        const selectors = [...new Set([...changeSelectors, ...(entry.targetSelectors || [])])];
         if (this.onSelectCallback) this.onSelectCallback(selectors);
 
-        if ((entry.changes || []).length > 0 && this.onItemClickCallback) {
-          this.onItemClickCallback(i);
+        // Detail must be reachable whenever there is ANYTHING to show -
+        // property diffs OR a files-changed list. Gating on changes alone
+        // made thin payloads (summary + filesChanged only) unclickable.
+        // The panel opens its own detail with the entry it already holds:
+        // the old host callback re-filtered the history on changes.length
+        // and indexed into THAT list, so thin entries opened nothing and
+        // later entries could open the WRONG breakdown (index skew).
+        const hasDetail = (entry.changes || []).length > 0 || (entry.filesChanged || []).length > 0;
+        if (hasDetail) {
+          this.showDetail(entry, i);
         }
       });
 
@@ -939,8 +1254,9 @@ export class ChangesPanel {
 
   private _updateClearBtn(): void {
     if (!this._clearReviewedBtn || !this.bottomBar) return;
-    const hasReviewed = this.entries.some(e => e.reviewed);
-    this.bottomBar.style.display = hasReviewed ? '' : 'none';
+    // "Clear All" is available whenever the panel has any entries - not gated on
+    // having marked something done first (the old behavior that hid the button).
+    this.bottomBar.style.display = this.filteredEntries.length > 0 ? '' : 'none';
   }
 
   private makeActionBtn(label: string, onClick: () => void): HTMLButtonElement {

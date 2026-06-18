@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Improv - tools for working with Claude Code</title>
-  <meta name="description" content="A toolkit for Claude Code: justify for visual micro-adjustment, sidecoach for design orchestration, beats for cross-session continuity, plus a half-dozen other tools that keep the loop tight." />
+  <meta name="description" content="A toolkit for Claude Code: Justify for visual micro-adjustment, Sidecoach for design orchestration, Beats for cross-session continuity, plus a half-dozen other tools that keep the loop tight." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,32 +22,42 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css" />
+  <!-- ?v= busts stale stylesheet caches - bump alongside structural CSS changes -->
+  <link rel="stylesheet" href="styles.css?v=33" />
   <script src="nav.js" defer></script>
-</head>
+  <script src="http://localhost:9223/justify-core.js?v=5"></script>
+  </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <div class="container">
-    <header class="topbar">
+  <header class="site-header">
+    <div class="container">
+      <div class="topbar">
       <a class="wordmark" href="index.html" aria-label="Yes&amp; - Improv">
         <img class="wordmark__img wordmark__img--light" src="assets/and-dev-black.svg" alt="and-dev - Improv" width="150" height="54" />
         <img class="wordmark__img wordmark__img--dark" src="assets/and-dev-white.svg" alt="" aria-hidden="true" width="150" height="54" />
       </a>
       <div class="topbar__cluster">
         <nav aria-label="Primary" id="primary-nav">
-          <a href="justify.html">justify</a>
-          <a href="sidecoach.html">sidecoach</a>
-          <a href="cheatsheet.html">cheatsheet</a>
-          <a href="beats.html">beats</a>
-          <a href="reference.html">reference</a>
-          <a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a>
+          <ul class="nav-list">
+            <li><a href="https://yesandagency.com" rel="noreferrer noopener">Yes&amp;</a></li>
+            <li><a href="justify.html">justify</a></li>
+            <li><a href="sidecoach.html">sidecoach</a></li>
+            <li><a href="cheatsheet.html">cheatsheet</a></li>
+            <li><a href="beats.html">beats</a></li>
+            <li><a href="foundation.html">foundation</a></li>
+            <li><a href="reference.html">reference</a></li>
+            <li><a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a></li>
+            <li><a href="#top">Back to top</a></li>
+          </ul>
         </nav>
         <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
-          <svg class="theme-toggle__icon theme-toggle__icon--moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <!-- source: lucide "moon" - path verbatim from lucide.dev -->
+          <svg class="theme-toggle__icon theme-toggle__icon--moon lucide-moon" data-icon-source="lucide:moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
           </svg>
-          <svg class="theme-toggle__icon theme-toggle__icon--sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <!-- source: lucide "sun" - paths verbatim from lucide.dev -->
+          <svg class="theme-toggle__icon theme-toggle__icon--sun lucide-sun" data-icon-source="lucide:sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="4" />
             <path d="M12 2v2" />
             <path d="M12 20v2" />
@@ -63,16 +73,18 @@
           <span class="nav-toggle__icon" aria-hidden="true"></span>
         </button>
       </div>
-    </header>
-  </div>
+      </div>
+    </div>
+  </header>
 
   <main id="main">
-    <section class="hero">
-      <div class="container">
-        <p class="hero__eyebrow stagger" style="--i: 0">Improv</p>
-        <h1 class="hero__title stagger" style="--i: 1">A toolkit for working with <span class="accent">Claude Code</span>.</h1>
+    <section class="hero hero--fx">
+      <div class="container hero__inner">
+        <div class="hero__fx" aria-hidden="true"></div>
+        <p class="hero__kicker stagger" style="--i: 0">build the scene with</p>
+        <h1 class="hero__wordmark stagger" style="--i: 1">Improv</h1>
         <p class="hero__lede stagger" style="--i: 2">
-          Small, focused tools that fit into the loop you already have. No platform, no SaaS, no demos to request. Clone the repo, run the installer, keep what you use.
+          A toolkit for Claude Code. Small, focused tools for design, craft, and memory - clone the repo, keep what you use.
         </p>
         <div class="hero__cta-row stagger" style="--i: 3">
           <div class="install-block" role="group" aria-label="Install command">
@@ -84,105 +96,281 @@
       </div>
     </section>
 
-    <section class="section">
+    <section class="section section--mission">
+      <div class="container">
+        <p class="section__eyebrow">What this is</p>
+        <h2 class="section__title">Improv is how we work with Claude.</h2>
+        <div class="mission__body">
+          <p>
+            It covers what the bare model doesn't: planning against a brief, holding to a design system, adjusting a live page from the browser, and remembering decisions between sessions. We made it for ourselves, we use it daily, and it's a folder you can clone.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--alt section--toolkit">
       <div class="container">
         <p class="section__eyebrow">The toolkit</p>
-        <h2 class="section__title">Three tools that earn their place. A handful more in the wings.</h2>
+        <h2 class="section__title">Three tools that earn their place. A foundation underneath.</h2>
         <p class="section__lede">
-          Every entry is something we use day to day. Equal billing - no hero tool, no consolation prize. Pick the one that maps to your problem and ignore the rest.
+          These three are the center of the toolkit. Each owns a part of the loop - Sidecoach plans and designs, Justify validates and tunes in the browser, Beats records and recalls across sessions - and everything else in the package supports them.
         </p>
 
         <div class="toolkit">
-          <a class="tool-card" href="justify.html">
-            <span class="tool-card__tag">visual</span>
-            <h3 class="tool-card__name">justify</h3>
+          <a class="tool-card" href="sidecoach.html">
+            <span class="tool-card__tag">plan + design</span>
+            <h3 class="tool-card__name">Sidecoach</h3>
             <p class="tool-card__desc">
-              A microadjustment toolbar for Claude Code. Pick an element, queue a change through prompt mode or manipulate mode, and Claude works the scene in the background. The browser refreshes when it's done.
+              The plan-and-design step. An opinionated orchestrator that runs from brief to polish and holds every pass to your PRODUCT.md and DESIGN.md.
             </p>
-            <span class="tool-card__cta">See justify -&gt;</span>
+            <span class="tool-card__cta">See Sidecoach <svg class="tool-card__cta-icon" data-icon-source="lucide:chevron-right" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span>
           </a>
 
-          <a class="tool-card" href="sidecoach.html">
-            <span class="tool-card__tag">design</span>
-            <h3 class="tool-card__name">sidecoach</h3>
+          <a class="tool-card" href="justify.html">
+            <span class="tool-card__tag">validate + tune</span>
+            <h3 class="tool-card__name">Justify</h3>
             <p class="tool-card__desc">
-              An opinionated design orchestrator. Eight flows, 159 validators, one chain from brief to polish. If you have a DESIGN.md, sidecoach will hold it to you.
+              The adjust step, in the browser. Click any element on the live page, describe the change or move it by hand, and Claude works the scene in the background.
             </p>
-            <span class="tool-card__cta">See sidecoach -&gt;</span>
+            <span class="tool-card__cta">See Justify <svg class="tool-card__cta-icon" data-icon-source="lucide:chevron-right" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span>
           </a>
 
           <a class="tool-card" href="beats.html">
-            <span class="tool-card__tag">continuity</span>
-            <h3 class="tool-card__name">beats</h3>
+            <span class="tool-card__tag">record + recall</span>
+            <h3 class="tool-card__name">Beats</h3>
             <p class="tool-card__desc">
-              A layered memory system Claude writes to per task and reads on every session start. Survives compactions, forks across machines through the dotfiles repo, indexed by a single MEMORY.md you actually read.
+              The memory step. A layered record Claude writes after every task and reads at every session start - it survives resets and rides across machines through the repo.
             </p>
-            <span class="tool-card__cta">See beats -&gt;</span>
+            <span class="tool-card__cta">See Beats <svg class="tool-card__cta-icon" data-icon-source="lucide:chevron-right" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span>
           </a>
         </div>
       </div>
     </section>
 
-    <section class="section section--paper">
+    <section class="section section--loop">
+      <div class="loop__fx" aria-hidden="true"></div>
       <div class="container">
-        <p class="section__eyebrow">In the wings</p>
-        <h2 class="section__title">Smaller things that earn their keep.</h2>
+        <p class="section__eyebrow">The loop</p>
+        <h2 class="section__title">Every build moves through the same loop.</h2>
         <p class="section__lede">
-          The dotfiles ship a handful of supporting components - some hooks, some MCP servers, some shell glue. They're not pitched, they're documented in the README. Naming them here so you know they exist.
+          Five steps, each one handing off to the next - and you stay in Claude and in the browser the whole way. Step through them below.
+        </p>
+
+        <div class="process-stage">
+        <ol class="process">
+          <li class="process__step">
+            <h3 class="process__name"><svg class="process__icon" data-icon-source="lucide:clipboard-list" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Plan"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></h3>
+            <span class="process__num" aria-hidden="true">01</span>
+            <p class="process__desc">
+              Sidecoach turns a plain-language brief into a plan you approve before any code is written.
+            </p>
+            <p class="process__hook"></p>
+          </li>
+          <li class="process__step">
+            <h3 class="process__name"><svg class="process__icon" data-icon-source="lucide:palette" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Design"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></svg></h3>
+            <span class="process__num" aria-hidden="true">02</span>
+            <p class="process__desc">
+              The design pass runs against your own tokens and references, never a generic template.
+            </p>
+            <p class="process__hook"></p>
+          </li>
+          <li class="process__step">
+            <h3 class="process__name"><svg class="process__icon" data-icon-source="lucide:code" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Build"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg></h3>
+            <span class="process__num" aria-hidden="true">03</span>
+            <p class="process__desc">
+              Claude Code writes working code straight into your own repo.
+            </p>
+            <p class="process__hook"></p>
+          </li>
+          <li class="process__step">
+            <h3 class="process__name"><svg class="process__icon" data-icon-source="lucide:circle-check" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Validate"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></h3>
+            <span class="process__num" aria-hidden="true">04</span>
+            <p class="process__desc">
+              Justify turns clicks on the live page into real, verified changes.
+            </p>
+            <p class="process__hook"></p>
+          </li>
+          <li class="process__step">
+            <h3 class="process__name"><svg class="process__icon" data-icon-source="lucide:brain" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Remember"><path d="M12 18V5"/><path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4"/><path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"/><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"/><path d="M18 18a4 4 0 0 0 2-7.464"/><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"/><path d="M6 18a4 4 0 0 1-2-7.464"/><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"/></svg></h3>
+            <span class="process__num" aria-hidden="true">05</span>
+            <p class="process__desc">
+              Beats records the work as it happens and reads it back next session, on any machine.
+            </p>
+            <p class="process__hook"></p>
+          </li>
+        </ol>
+        <div class="process__focus" aria-live="polite" hidden>
+          <div class="process__focus-controls">
+            <button class="process__nav process__nav--prev" type="button" aria-label="Previous step">&#8249;</button>
+            <p class="process__focus-name"></p>
+            <button class="process__nav process__nav--next" type="button" aria-label="Next step">&#8250;</button>
+          </div>
+          <p class="process__focus-desc"></p>
+          <p class="process__focus-hook"></p>
+        </div>
+        <div class="process__dots" role="group" aria-label="Loop steps" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--alt">
+      <div class="container">
+        <p class="section__eyebrow">The foundation</p>
+        <h2 class="section__title">What holds the loop together.</h2>
+        <p class="section__lede">
+          A short Improv glossary: the deeper layer that does the quiet work. It isn't pitched separately - it's the substrate everything else runs on.
         </p>
 
         <ul class="minor-list">
           <li>
-            <span class="minor-list__name">cmux</span>
-            <span class="minor-list__desc">Multi-pane terminal surface. The browser pane is the visual-verification path for any UI work.</span>
+            <a class="minor-list__item" href="reference.html">
+              <span class="minor-list__name">skills</span>
+              <span class="minor-list__desc">On-demand capabilities Claude pulls in when a task needs them: design orchestration, icon sourcing, motion patterns, memory analysis. They load when relevant and stay out of the way otherwise.</span>
+              <span class="minor-list__link">See in reference<span aria-hidden="true"> &rsaquo;</span></span>
+            </a>
           </li>
           <li>
-            <span class="minor-list__name">voice</span>
-            <span class="minor-list__desc">Whisper.cpp transcription plus OpenAI TTS. Discord voice memos in, voice notes back.</span>
+            <a class="minor-list__item" href="reference.html#tab-hooks">
+              <span class="minor-list__name">hooks</span>
+              <span class="minor-list__desc">Pre- and post-tool guards that enforce the rules at write time, not after: no skipped verification, no synthetic clicks during QA, no AI attribution in the output.</span>
+              <span class="minor-list__link">See in reference<span aria-hidden="true"> &rsaquo;</span></span>
+            </a>
           </li>
           <li>
-            <span class="minor-list__name">discord</span>
-            <span class="minor-list__desc">A bot bridge so you can DM Claude from your phone. Per-user pairing, no group chats.</span>
+            <a class="minor-list__item" href="reference.html#tab-cmux">
+              <span class="minor-list__name">plugins</span>
+              <span class="minor-list__desc">Optional bridges. A browser pane (cmux) for visual checks, voice in and out, a Discord bot so you can reach Claude from your phone. Each one is opt-in.</span>
+              <span class="minor-list__link">See in reference<span aria-hidden="true"> &rsaquo;</span></span>
+            </a>
           </li>
           <li>
-            <span class="minor-list__name">hooks</span>
-            <span class="minor-list__desc">A dozen pre- and post-tool hooks that enforce the team-rules: no emojis, no AI attribution, no skipped verification.</span>
+            <a class="minor-list__item" href="reference.html">
+              <span class="minor-list__name">reference</span>
+              <span class="minor-list__desc">A curated catalog of design references plus a single-page cheatsheet, so research starts from patterns that already work instead of a blank page.</span>
+              <span class="minor-list__link">See in reference<span aria-hidden="true"> &rsaquo;</span></span>
+            </a>
           </li>
           <li>
-            <span class="minor-list__name">validation-guard</span>
-            <span class="minor-list__desc">Blocks synthetic clicks and DOM probing during verification. Real input only.</span>
+            <a class="minor-list__item" href="reference.html">
+              <span class="minor-list__name">tilt-lab</span>
+              <span class="minor-list__desc">A local workbench for shader and animated backgrounds. Audition an effect, tune it live, export it, and mount it behind a section. The hero on this page came out of it.</span>
+              <span class="minor-list__link">See in reference<span aria-hidden="true"> &rsaquo;</span></span>
+            </a>
           </li>
         </ul>
       </div>
     </section>
 
-    <section class="section section--ink">
+    <section class="section">
       <div class="container">
-        <p class="section__eyebrow">Posture</p>
-        <h2 class="section__title">What this is not.</h2>
+        <p class="section__eyebrow">By the numbers</p>
+        <h2 class="section__title">The scale of it, counted.</h2>
         <p class="section__lede">
-          Worth being explicit. There are categories of "developer tool" that we're deliberately not.
+          Each number measures depth, not marketing: validators, hooks, flows, and skills that accumulated through daily use, layer over layer.
         </p>
 
-        <div class="feature-row">
-          <h3 class="feature-row__title">Lives in your home directory.</h3>
-          <div class="feature-row__body">
-            <p>There is no account, no dashboard, no telemetry. The whole thing is a folder you clone into <code>~/.claude</code>. Uninstall is <code>rm -rf</code>.</p>
-            <p>If you fork it, your changes stay yours. Nothing phones home.</p>
+        <dl class="stats">
+          <div class="stat">
+            <dt class="stat__label">Design flows</dt>
+            <dd class="stat__value"><span data-countup>26</span></dd>
+            <dd class="stat__caption">Brief to polish, one chain.</dd>
           </div>
-        </div>
-
-        <div class="feature-row">
-          <h3 class="feature-row__title">Components stand alone.</h3>
-          <div class="feature-row__body">
-            <p>The components are independent. Install <code>justify</code> without <code>sidecoach</code>. Disable <code>voice</code> if you don't want the TTS bill. The installer breaks each piece out so you can opt in component by component.</p>
+          <div class="stat">
+            <dt class="stat__label">Validators</dt>
+            <dd class="stat__value"><span data-countup>30</span></dd>
+            <dd class="stat__caption">Design and code checks, run automatically.</dd>
           </div>
-        </div>
+          <div class="stat">
+            <dt class="stat__label">Enforcement hooks</dt>
+            <dd class="stat__value"><span data-countup>51</span></dd>
+            <dd class="stat__caption">Team rules checked at write time.</dd>
+          </div>
+          <div class="stat">
+            <dt class="stat__label">Skills</dt>
+            <dd class="stat__value"><span data-countup>17</span></dd>
+            <dd class="stat__caption">Specialized capabilities, loaded on demand.</dd>
+          </div>
+          <div class="stat">
+            <dt class="stat__label">Installable components</dt>
+            <dd class="stat__value"><span data-countup>27</span></dd>
+            <dd class="stat__caption">Opt in one piece at a time.</dd>
+          </div>
+          <div class="stat">
+            <dt class="stat__label">Design verbs</dt>
+            <dd class="stat__value"><span data-countup>22</span></dd>
+            <dd class="stat__caption">One shared vocabulary, shape to ship.</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
 
-        <div class="feature-row">
-          <h3 class="feature-row__title">A personal workstation setup.</h3>
-          <div class="feature-row__body">
-            <p>This is a personal workstation setup that grew up enough to share. Opinionated about things you may disagree with. Read the rules at <code>CLAUDE.md</code> before you decide.</p>
+    <section class="section section--alt">
+      <div class="container">
+        <p class="section__eyebrow">FAQ</p>
+        <h2 class="section__title">Common questions.</h2>
+
+        <div class="faq">
+          <details class="faq__item" name="faq">
+            <summary class="faq__q"><h3>What is this, exactly?</h3></summary>
+            <div class="faq__a">
+              <p>A toolkit for Claude Code - the tool Anthropic ships for working with Claude in your codebase. Improv adds focused tools on top of it for planning, designing, building, adjusting, and remembering work across sessions. It's a folder you clone, not a product you sign up for.</p>
+            </div>
+          </details>
+          <details class="faq__item" name="faq">
+            <summary class="faq__q"><h3>Do I need to know the terminal?</h3></summary>
+            <div class="faq__a">
+              <p>For the day-to-day loop, mostly no. Planning happens in plain language and adjustments happen by clicking on the live page in the browser. Someone does the one-time install at a terminal, but the work itself - describe it, watch it build, point at what to change - doesn't require the command line.</p>
+            </div>
+          </details>
+          <details class="faq__item" name="faq">
+            <summary class="faq__q"><h3>Does it replace my designer?</h3></summary>
+            <div class="faq__a">
+              <p>No. It enforces design decisions someone already made - the tokens, type, and rules in your DESIGN.md. It's faster at applying a system than inventing one. The taste still comes from a person; the tool just holds the work to it.</p>
+            </div>
+          </details>
+          <details class="faq__item" name="faq">
+            <summary class="faq__q"><h3>What does it cost, and does it phone home?</h3></summary>
+            <div class="faq__a">
+              <p>The tools are open source under the MIT license. There's no account, no dashboard, and no telemetry - nothing reports back. The only running costs are the model usage you already pay for through Claude Code, plus optional extras like voice, which bills against your own keys and is off unless you turn it on.</p>
+            </div>
+          </details>
+          <details class="faq__item" name="faq">
+            <summary class="faq__q"><h3>Can I adopt just one tool?</h3></summary>
+            <div class="faq__a">
+              <p>Yes. Every component installs on its own. Take Justify for in-browser adjustments and skip the rest, or run Beats for memory without the design stack. The installer breaks each piece out so you opt in component by component.</p>
+            </div>
+          </details>
+          <details class="faq__item" name="faq">
+            <summary class="faq__q"><h3>How does a team share memory?</h3></summary>
+            <div class="faq__a">
+              <p>Beats are plain files committed to your repo. When a teammate pulls the repo on their own machine, they get the same record of what was decided and done. Open Claude there and it reads the same history. The shared context rides along with the code, so there's no separate service to sync.</p>
+            </div>
+          </details>
+          <details class="faq__item" name="faq">
+            <summary class="faq__q"><h3>Is it safe to let it change the site?</h3></summary>
+            <div class="faq__a">
+              <p>It works on your local copy and the changes are ordinary commits you review like any other - nothing ships until you push. Guardrails block the genuinely destructive things, like force-pushes to main and production deploys, at the tool level. You watch each change land in the browser before it goes anywhere.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+        <section class="section">
+      <div class="container">
+        <div class="cta-banner">
+          <div>
+            <h2 class="cta-banner__title">Clone it and keep what you use.</h2>
+            <p class="cta-banner__body">
+              One command drops it in your home directory. Take the whole loop or a single tool - either way, it's yours to read, fork, and change.
+            </p>
+          </div>
+          <div class="cta-banner__actions">
+            <div class="install-block" role="group" aria-label="Install command">
+              <span class="install-block__cmd" id="install-cmd-closing">curl -fsSL get.improv.dev | bash</span>
+              <button type="button" class="install-block__copy" data-copy-target="#install-cmd-closing" aria-label="Copy install command">Copy</button>
+            </div>
+            <a class="btn btn--secondary" href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">Read the source</a>
           </div>
         </div>
       </div>
@@ -192,7 +380,11 @@
   <footer class="site-footer">
     <div class="container">
       <div class="site-footer__row">
-        <span>Yes<span style="color: var(--color-red); font-style: italic;">&amp;</span> Improv. Open source, MIT.</span>
+        <div class="site-footer__brand">
+          <img class="wordmark__img wordmark__img--light" src="assets/and-dev-black.svg" alt="and-dev" width="100" height="36" />
+          <img class="wordmark__img wordmark__img--dark" src="assets/and-dev-white.svg" alt="" aria-hidden="true" width="100" height="36" />
+          <p class="site-footer__copyright">Copyright (c) 2026 Yes&amp;. Released under the MIT License.</p>
+        </div>
         <nav aria-label="Footer">
           <a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a>
         </nav>
@@ -222,6 +414,327 @@
         });
       });
     })();
+  </script>
+
+  <script>
+    // Stat band count-up. Final values live in the markup (correct with JS
+    // off and for reduced-motion, which skips the tween entirely). Fires
+    // once per element via IntersectionObserver, then unobserves.
+    (function () {
+      var els = document.querySelectorAll('[data-countup]');
+      if (!els.length || !('IntersectionObserver' in window)) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      // Stagger the stats in with a fade; each stat's top border doubles as a
+      // progress bar that fills left-to-right in step with its own count-up.
+      var grid = document.querySelector('.stats');
+      if (!grid) return;
+      grid.classList.add('stats--animate');
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          io.unobserve(entry.target);
+          var spans = entry.target.querySelectorAll('[data-countup]');
+          spans.forEach(function (el, i) {
+            var stat = el.closest('.stat');
+            setTimeout(function () {
+              if (stat) stat.classList.add('is-in');
+              var target = parseInt(el.textContent, 10);
+              if (!isFinite(target)) return;
+              var start = null;
+              var dur = 900;
+              function tick(ts) {
+                if (start === null) start = ts;
+                var p = Math.min((ts - start) / dur, 1);
+                var eased = 1 - Math.pow(1 - p, 4);
+                el.textContent = Math.round(eased * target);
+                if (stat) stat.style.setProperty('--count-progress', eased);
+                if (p < 1) requestAnimationFrame(tick);
+              }
+              requestAnimationFrame(tick);
+            }, i * 140);
+          });
+        });
+      }, { threshold: 0.3 });
+      io.observe(grid);
+    })();
+  </script>
+
+  <script>
+    // Arc-focus carousel for The Loop (desktop only). Five step cards pin
+    // to a circle: focused card upright top-center, neighbors fan down and
+    // outward, rotated along the arc tangent. Infinite wrap via shortest-
+    // path offsets; autoplays every 4s, pauses on hover, click/chevrons/
+    // dots navigate. Reduced motion disables autoplay (manual nav stays).
+    // Below 1025px the markup falls back to the stacked list untouched.
+    (function () {
+      var list = document.querySelector('.process');
+      var panel = document.querySelector('.process__focus');
+      if (!list || !panel) return;
+      var steps = Array.prototype.slice.call(list.querySelectorAll('.process__step'));
+      var n = steps.length;
+      if (n < 3) return;
+      var nameEl = panel.querySelector('.process__focus-name');
+      var descEl = panel.querySelector('.process__focus-desc');
+      var hookEl = panel.querySelector('.process__focus-hook');
+      var controlsEl = panel.querySelector('.process__focus-controls');
+      var dotsEl = list.parentElement.querySelector('.process__dots');
+      var prevBtn = panel.querySelector('.process__nav--prev');
+      var nextBtn = panel.querySelector('.process__nav--next');
+      var mq = window.matchMedia('(min-width: 1025px)');
+      var reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+      var ANGLE = 30;
+      var RADIUS = 760;
+      var focus = 0;
+      var lastFocus = -1;
+      var timer = null;
+      var dots = [];
+
+      steps.forEach(function (step, i) {
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'process__dot';
+        dot.setAttribute('aria-label', 'Go to step ' + (i + 1));
+        dot.addEventListener('click', function () { go(i); });
+        dotsEl.appendChild(dot);
+        dots.push(dot);
+        step.addEventListener('click', function () {
+          if (list.classList.contains('process--arc') && i !== focus) go(i);
+        });
+      });
+
+      function text(parent, sel) {
+        var el = parent.querySelector(sel);
+        return el ? el.textContent.trim() : '';
+      }
+
+      // process__name now holds an icon; the term lives on the icon's aria-label
+      function stepName(step) {
+        var ic = step.querySelector('.process__icon');
+        if (ic && ic.getAttribute('aria-label')) return ic.getAttribute('aria-label');
+        return text(step, '.process__name');
+      }
+
+      function render() {
+        steps.forEach(function (step, i) {
+          var d = ((i - focus) % n + n) % n;
+          if (d > n / 2) d -= n;
+          var rad = (ANGLE * d * Math.PI) / 180;
+          var tx = Math.sin(rad) * RADIUS;
+          var ty = (1 - Math.cos(rad)) * RADIUS;
+          var dist = Math.abs(d);
+          // A card wrapping between the two outermost slots must not sweep
+          // through the center. Teleport it (no transition) to a virtual
+          // slot one step FURTHER along the arc - fully below the section
+          // clip - then let it glide up into its real corner slot, so the
+          // entering card animates like every other card on the ring.
+          var prev = step.dataset.prevD;
+          var wraps = prev !== undefined && Math.abs(d - Number(prev)) > 2;
+          if (wraps) {
+            var vd = d > 0 ? d + 1 : d - 1;
+            var vrad = (ANGLE * vd * Math.PI) / 180;
+            step.style.transition = 'none';
+            step.style.transform = 'translate(' + (Math.sin(vrad) * RADIUS).toFixed(1) + 'px,' + ((1 - Math.cos(vrad)) * RADIUS).toFixed(1) + 'px) rotate(' + ANGLE * vd + 'deg) scale(0.9)';
+            step.style.opacity = '1';
+            void step.offsetWidth;
+            step.style.transition = '';
+          }
+          step.style.transform = 'translate(' + tx.toFixed(1) + 'px,' + ty.toFixed(1) + 'px) rotate(' + ANGLE * d + 'deg) scale(' + (1 - dist * 0.05).toFixed(2) + ')';
+          step.style.opacity = '1';
+          step.style.zIndex = String(10 - dist);
+          step.setAttribute('data-focused', d === 0 ? 'true' : 'false');
+          step.dataset.prevD = String(d);
+        });
+        nameEl.textContent = stepName(steps[focus]);
+        descEl.textContent = text(steps[focus], '.process__desc');
+        hookEl.textContent = text(steps[focus], '.process__hook');
+        if (lastFocus !== focus) {
+          [controlsEl, descEl, hookEl].forEach(function (el) {
+            el.classList.remove('is-in');
+            void el.offsetWidth;
+            el.classList.add('is-in');
+          });
+          lastFocus = focus;
+        }
+        dots.forEach(function (dot, i) {
+          if (i === focus) dot.setAttribute('aria-current', 'true');
+          else dot.removeAttribute('aria-current');
+        });
+      }
+
+      function go(i) {
+        focus = ((i % n) + n) % n;
+        render();
+        restart();
+      }
+
+      function play() {
+        if (timer || reduced.matches || !list.classList.contains('process--arc')) return;
+        timer = setInterval(function () { focus = (focus + 1) % n; render(); }, 4000);
+      }
+      function stop() { clearInterval(timer); timer = null; }
+      function restart() { stop(); play(); }
+
+      prevBtn.addEventListener('click', function () { go(focus - 1); });
+      nextBtn.addEventListener('click', function () { go(focus + 1); });
+      list.addEventListener('mouseenter', stop);
+      list.addEventListener('mouseleave', play);
+      panel.addEventListener('mouseenter', stop);
+      panel.addEventListener('mouseleave', play);
+
+      function enable() {
+        list.classList.add('process--arc');
+        panel.hidden = false;
+        dotsEl.hidden = false;
+        render();
+        play();
+      }
+      function disable() {
+        stop();
+        list.classList.remove('process--arc');
+        panel.hidden = true;
+        dotsEl.hidden = true;
+        steps.forEach(function (step) {
+          step.style.transform = '';
+          step.style.opacity = '';
+          step.style.zIndex = '';
+          step.removeAttribute('data-focused');
+          delete step.dataset.prevD;
+        });
+      }
+      if (mq.matches) enable();
+      if (mq.addEventListener) mq.addEventListener('change', function (e) { if (e.matches) { enable(); } else { disable(); } });
+    })();
+  </script>
+
+  <!-- Hero background FX: tilt-lab stack. svg-3d (midground) is the 8-bit
+       ampersand extruded to 3D; dithered-image (post) dithers it with a
+       TRANSPARENT background (#17181a00) so the page shows through the off-pixels.
+       Tuned in tilt-lab and exported; two swaps from the raw export:
+         - svg-3d.source: the export's blob: handle -> vendored ./assets/ampersand.svg
+         - svg-3d.offsetX: kept at 0.22 (export had 0/centered, which collides with
+           the left-set headline) so the ampersand stays in the right quadrant.
+       mountStack honors prefers-reduced-motion (paints one static frame). -->
+  <script type="module">
+    // ?v= busts the browser module cache when the runtime is re-vendored -
+    // bump it on every copy from tilt-lab/dist or stale bundles ignore new params.
+    import { mountStack } from './tilt-runtime.js?v=2';
+    const host = document.querySelector('.hero__fx');
+    if (host) {
+      mountStack(host, {
+        format: 'tilt-lab/stack',
+        version: 1,
+        layers: [
+          {
+            effectId: 'svg-3d',
+            layerRole: 'midground',
+            params: {
+              source: './assets/ampersand.svg',
+              depth: 1,
+              smoothness: 0.2,
+              color: '#e32400',
+              material: 'default',
+              metalness: 0.6,
+              roughness: 0.35,
+              opacity: 1,
+              wireframe: false,
+              rotationX: 0,
+              rotationY: 0,
+              zoom: 5,
+              fov: 50,
+              offsetX: 0.1,
+              offsetY: 0,
+              cursorOrbit: false,
+              orbitStrength: 0.15,
+              lightIntensity: 1.1,
+              ambientIntensity: 0.45,
+              shadowOpacity: 0,
+              animate: 'spinFloat',
+              animateSpeed: 1,
+              intro: 'fade',
+            },
+            blendMode: 'source-over',
+            enabled: true,
+            opacity: 1,
+          },
+          {
+            effectId: 'dithered-image',
+            layerRole: 'post',
+            params: {
+              src: '',
+              ditherMap: 'bayer4x4',
+              pixelSize: 1,
+              threshold: -0.02,
+              color: '#e32400',
+              backgroundColor: '#17181a00',
+            },
+            blendMode: 'source-over',
+            enabled: true,
+            opacity: 1,
+          },
+        ],
+      });
+    }
+
+    // Loop section FX: grain-gradient ripple + dither post (tilt-lab export)
+    // behind the carousel; ripple origin anchored to the bottom center of
+    // the section (originY 1) per Jonah.
+    const loopHost = document.querySelector('.loop__fx');
+    if (loopHost) {
+      mountStack(loopHost, {
+        format: 'tilt-lab/stack',
+        version: 1,
+        layers: [
+          {
+            effectId: 'grain-gradient',
+            layerRole: 'background',
+            params: {
+              preset: 'Custom',
+              color1: '#ffffff',
+              color2: '#eba8ff00',
+              color3: '#00bfff00',
+              color4: '#2a00ff00',
+              color5: '#7300ff00',
+              color6: '#eba8ff00',
+              color7: '#00bfff00',
+              colorsCount: 1,
+              colorBack: '#ffffff00',
+              shape: 'ripple',
+              softness: 1,
+              intensity: 0.49,
+              noise: 0.14,
+              speed: 1,
+              scale: 1.17,
+              rotation: 0,
+              offsetX: 0,
+              offsetY: 0.5,
+              originX: 0.5,
+              originY: 0.5,
+              worldWidth: 0,
+              worldHeight: 0,
+              fit: 'contain',
+            },
+            blendMode: 'source-over',
+            enabled: true,
+            opacity: 0.22,
+          },
+          {
+            effectId: 'dithered-image',
+            layerRole: 'post',
+            params: {
+              src: '',
+              ditherMap: 'bayer4x4',
+              pixelSize: 2,
+              threshold: 0,
+              color: '#02272B',
+              backgroundColor: '#00000000',
+            },
+            blendMode: 'source-over',
+            enabled: true,
+            opacity: 0.5,
+          },
+        ],
+      });
+    }
   </script>
 </body>
 </html>

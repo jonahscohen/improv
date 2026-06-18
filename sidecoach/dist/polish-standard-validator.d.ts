@@ -46,6 +46,30 @@ export interface PolishValidationReport {
     results: PolishCheckResult[];
     summary: string;
 }
+export declare const joinCssRules: (ctx: PolishCheckContext) => string;
+export declare const hasScaleOnPress: (css: string) => boolean;
+export declare const hasCompoundIconTransition: (css: string) => boolean;
+export declare const hasImageOutlineRule: (css: string) => boolean;
+export declare const hasNoImages: (text: string) => boolean;
+export declare const hasTransitionAll: (css: string) => boolean;
+export declare const hasTabularNums: (css: string) => boolean;
+export declare const hasDynamicNumberSelectors: (css: string) => boolean;
+export declare const hasTextWrapBalance: (css: string) => boolean;
+export declare const hasStaggerDelay: (css: string) => boolean;
+export declare const hasExitOpacity: (css: string) => boolean;
+export declare const hasExitScale: (css: string) => boolean;
+export declare const hasAnyMotion: (css: string) => boolean;
+export declare const hasFontSmoothing: (css: string) => boolean;
+export declare const hasFramerSignal: (text: string) => boolean;
+export declare const hasWillChangeAll: (css: string) => boolean;
+export declare const hasBoxShadowElevation: (css: string) => boolean;
+export declare const hasShadowTokenTiers: (css: string) => boolean;
+export declare const countBoxShadowRules: (css: string) => number;
+export declare const hasOpticalPadding: (css: string) => boolean;
+export declare const POLISH_STATES: string[];
+export declare const countDefinedStates: (css: string) => number;
+export declare const hasFocusVisible: (css: string) => boolean;
+export declare const hasReducedMotion: (css: string) => boolean;
 export declare class PolishStandardValidator {
     static validateAll(context: PolishCheckContext): PolishValidationReport;
     static getRules(): PolishValidationRule[];

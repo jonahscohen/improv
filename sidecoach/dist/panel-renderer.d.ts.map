@@ -1,0 +1,1 @@
+{"version":3,"file":"panel-renderer.d.ts","sourceRoot":"","sources":["../src/panel-renderer.ts"],"names":[],"mappings":"AAQA,OAAO,EAAE,mBAAmB,EAAE,MAAM,eAAe,CAAC;AAyBpD,MAAM,WAAW,eAAe;IAC9B,KAAK,CAAC,EAAE,OAAO,CAAC;IAChB,KAAK,CAAC,EAAE,MAAM,CAAC;CAChB;AAED,wBAAgB,oBAAoB,CAAC,KAAK,EAAE,mBAAmB,EAAE,IAAI,GAAE,eAAoB,GAAG,MAAM,CAmEnG"}

@@ -47,10 +47,42 @@ if not reason:
         reason = "Legacy model ID forbidden by CLAUDE.md - use latest model versions only"
 
 if not reason:
-    for ch in content:
-        cp = ord(ch)
-        if (0x1F300 <= cp <= 0x1FAFF) or (0x1F600 <= cp <= 0x1F64F) or (0x1F680 <= cp <= 0x1F6FF) or cp == 0x1F916:
-            reason = "Emoji (" + repr(ch) + ") forbidden by CLAUDE.md"; break
+    # Emoji detection by EMOJI-PRESENTATION, not by Unicode block. Terminal
+    # typography is allowed - check (U+2713), ballot-x (U+2717), stars, arrows,
+    # box-drawing, geometric shapes, dingbat asterisks - because these are
+    # text-presentation symbols, not emoji. A character is treated as emoji only
+    # when it is genuinely a color pictograph:
+    #   - the supplementary emoji planes (U+1F000..U+1FAFF);
+    #   - it carries a Variation-Selector-16 (U+FE0F) or combining keycap
+    #     (U+20E3) - these force/define emoji presentation (warning+VS16, etc.);
+    #   - it is one of the BMP code points that are color-emoji BY DEFAULT
+    #     (Unicode Emoji_Presentation=Yes), enumerated below.
+    # Everything else passes. KEEP IN SYNC with content-guard-stop.sh.
+    _EMOJI_PRES = (
+        (0x231A, 0x231B), (0x23E9, 0x23EC), (0x23F0, 0x23F0), (0x23F3, 0x23F3),
+        (0x25FD, 0x25FE), (0x2614, 0x2615), (0x2648, 0x2653), (0x267F, 0x267F),
+        (0x2693, 0x2693), (0x26A1, 0x26A1), (0x26AA, 0x26AB), (0x26BD, 0x26BE),
+        (0x26C4, 0x26C5), (0x26CE, 0x26CE), (0x26D4, 0x26D4), (0x26EA, 0x26EA),
+        (0x26F2, 0x26F3), (0x26F5, 0x26F5), (0x26FA, 0x26FA), (0x26FD, 0x26FD),
+        (0x2705, 0x2705), (0x270A, 0x270B), (0x2728, 0x2728), (0x274C, 0x274C),
+        (0x274E, 0x274E), (0x2753, 0x2755), (0x2757, 0x2757), (0x2795, 0x2797),
+        (0x27B0, 0x27B0), (0x27BF, 0x27BF), (0x2B1B, 0x2B1C), (0x2B50, 0x2B50),
+        (0x2B55, 0x2B55),
+    )
+    def _emoji(s):
+        for ch in s:
+            cp = ord(ch)
+            if cp == 0xFE0F or cp == 0x20E3:        # VS16 / combining keycap -> emoji
+                return ch
+            if 0x1F000 <= cp <= 0x1FAFF:            # supplementary emoji planes
+                return ch
+            for lo, hi in _EMOJI_PRES:
+                if lo <= cp <= hi:
+                    return ch
+        return None
+    bad = _emoji(content)
+    if bad:
+        reason = "Emoji (" + repr(bad) + ") forbidden by CLAUDE.md"
 
 if reason:
     print(json.dumps({

@@ -597,7 +597,10 @@ export class PromptMode {
     const promptData = {
       context: o,
       prompt: e,
-      elementCount: t.length
+      elementCount: t.length,
+      // Issue #1: structured selectors of the selected target(s) so the result
+      // entry can scroll to + reselect them in the Changes panel.
+      selectors: t.map(r => r.selector).filter(Boolean)
     };
     if (this._core) {
       this._core._lastPromptData = promptData;
@@ -642,7 +645,9 @@ export class PromptMode {
     const promptData = {
       context: o,
       prompt: promptText,
-      elementCount: elements.length
+      elementCount: elements.length,
+      // Issue #1: structured selectors of the queued target(s).
+      selectors: elements.map(r => r.selector).filter(Boolean)
     };
     if (this._core) {
       this._core._lastPromptData = promptData;
@@ -1389,31 +1394,51 @@ export class PromptMode {
   _confirmRemoveItem(idx: number) {
     var item = this._changeQueue[idx];
     var d = document.createElement("div");
-    d.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2147483648;display:flex;align-items:center;justify-content:center;pointer-events:all";
+    d.dataset.justify = "";
+    d.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2147483648;display:flex;align-items:center;justify-content:center;pointer-events:all;opacity:0;transition:opacity 160ms ease";
 
     var box = document.createElement("div");
-    box.style.cssText = "background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:20px;max-width:300px;font-family:JustifySans,system-ui,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,0.5)";
+    // Symmetrical, centered card: centered message + equal-width buttons, even
+    // padding all round, with an entrance pop.
+    box.style.cssText = "background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:22px;width:300px;max-width:calc(100vw - 40px);box-sizing:border-box;font-family:JustifySans,system-ui,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,0.55);text-align:center;opacity:0;transform:scale(0.94);transition:opacity 160ms ease,transform 180ms cubic-bezier(0.34,1.56,0.64,1)";
 
     var msg = document.createElement("div");
-    msg.style.cssText = "font-size:13px;color:rgba(255,255,255,0.85);margin-bottom:16px";
+    msg.style.cssText = "font-size:13px;line-height:1.5;color:rgba(255,255,255,0.85);margin:0 0 18px";
     msg.textContent = 'Remove "' + item.prompt.slice(0, 40) + (item.prompt.length > 40 ? "..." : "") + '"?';
     box.appendChild(msg);
 
     var btns = document.createElement("div");
-    btns.style.cssText = "display:flex;gap:8px;justify-content:flex-end";
+    btns.style.cssText = "display:flex;gap:10px";
+
+    function _cleanup() { document.removeEventListener("keydown", _onKey, true); }
+    function _close() {
+      d.style.opacity = "0";
+      box.style.opacity = "0";
+      box.style.transform = "scale(0.94)";
+      _cleanup();
+      setTimeout(function () { d.remove(); }, 170);
+    }
+    function _onKey(e: KeyboardEvent) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); _close(); } }
 
     var cancel = document.createElement("button");
-    cancel.style.cssText = "border:1px solid rgba(255,255,255,0.15);background:none;color:rgba(255,255,255,0.65);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:JustifySans,system-ui,sans-serif";
+    cancel.style.cssText = "flex:1;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.02);color:rgba(255,255,255,0.7);border-radius:9px;padding:9px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:JustifySans,system-ui,sans-serif;outline:none;transition:background 120ms ease,border-color 120ms ease,color 120ms ease,transform 80ms ease";
     cancel.textContent = "Cancel";
-    cancel.addEventListener("click", function () {
-      d.remove();
-    });
+    cancel.addEventListener("mouseenter", function () { cancel.style.background = "rgba(255,255,255,0.08)"; cancel.style.borderColor = "rgba(255,255,255,0.3)"; cancel.style.color = "#fff"; });
+    cancel.addEventListener("mouseleave", function () { cancel.style.background = "rgba(255,255,255,0.02)"; cancel.style.borderColor = "rgba(255,255,255,0.15)"; cancel.style.color = "rgba(255,255,255,0.7)"; });
+    cancel.addEventListener("mousedown", function () { cancel.style.transform = "scale(0.96)"; });
+    cancel.addEventListener("mouseup", function () { cancel.style.transform = "scale(1)"; });
+    cancel.addEventListener("click", function () { _close(); });
     btns.appendChild(cancel);
 
     var confirmBtn = document.createElement("button");
-    confirmBtn.style.cssText = "border:none;background:#ef4444;color:#fff;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:JustifySans,system-ui,sans-serif;font-weight:600";
+    confirmBtn.style.cssText = "flex:1;border:none;background:#ef4444;color:#fff;border-radius:9px;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:JustifySans,system-ui,sans-serif;outline:none;transition:background 120ms ease,box-shadow 120ms ease,transform 80ms ease";
     confirmBtn.textContent = "Remove";
+    confirmBtn.addEventListener("mouseenter", function () { confirmBtn.style.background = "#dc2626"; confirmBtn.style.boxShadow = "0 4px 14px rgba(239,68,68,0.45)"; });
+    confirmBtn.addEventListener("mouseleave", function () { confirmBtn.style.background = "#ef4444"; confirmBtn.style.boxShadow = "none"; });
+    confirmBtn.addEventListener("mousedown", function () { confirmBtn.style.transform = "scale(0.96)"; });
+    confirmBtn.addEventListener("mouseup", function () { confirmBtn.style.transform = "scale(1)"; });
     confirmBtn.addEventListener("click", function (this: PromptMode) {
+      _cleanup();
       d.remove();
       this._changeQueue.splice(idx, 1);
       // Discarding a Manipulate task: revert its live preview to the original look.
@@ -1441,7 +1466,12 @@ export class PromptMode {
     btns.appendChild(confirmBtn);
     box.appendChild(btns);
     d.appendChild(box);
+    // Dismiss on backdrop click (the overlay itself, never the box) + Escape.
+    d.addEventListener("mousedown", function (e: MouseEvent) { if (e.target === d) _close(); });
+    document.addEventListener("keydown", _onKey, true);
     this.overlay.getContainer().appendChild(d);
+    // Entrance pop.
+    requestAnimationFrame(function () { d.style.opacity = "1"; box.style.opacity = "1"; box.style.transform = "scale(1)"; });
   }
 
   _editQueueItem(idx: number) {

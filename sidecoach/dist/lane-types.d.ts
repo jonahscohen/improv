@@ -82,6 +82,7 @@ export interface LaneStepResult {
     flowIds: FlowId[];
     revision: number;
     message: string;
+    panel?: string;
     gate?: {
         status: GateStatus;
         validators: {

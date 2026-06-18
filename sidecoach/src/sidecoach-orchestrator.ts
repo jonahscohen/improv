@@ -68,6 +68,8 @@ import { FlowConditionalRouter } from './flow-conditional-router';
 import { ClaudemdMandateValidator } from './clausemd-mandate-validator';
 import { BuildReport } from './build-report-types';
 import { generateBuildReport, renderBuildReportMarkdown } from './build-report-aggregator';
+import { assemblePanelModel, laneStepToPanelModel } from './panel-model';
+import { renderSidecoachPanel } from './panel-renderer';
 import { CheckpointStore, SidecoachCheckpoint } from './checkpoint-store';
 import { getVerbEntry, VerbCommandEntry } from './verb-command-registry';
 
@@ -430,6 +432,7 @@ export class FlowExecutionEngine {
       checklist: aggregatedChecklist.length > 0 ? aggregatedChecklist : undefined,
       artifacts: [buildReportArtifact],
       buildReport,
+      panel: renderSidecoachPanel(assemblePanelModel({ flowResults, report: buildReport, confidence: 1.0 })),
     };
   }
 
@@ -1068,6 +1071,7 @@ export class FlowExecutionEngine {
         flowResults,
         guidance: chainGuidance.length > 0 ? chainGuidance : undefined,
         buildReport: chainBuildReport,
+        panel: renderSidecoachPanel(assemblePanelModel({ flowResults, report: chainBuildReport, confidence: detectedFlow?.confidence })),
       };
     }
 
@@ -1521,6 +1525,7 @@ export class FlowExecutionEngine {
       checklist: flowResults.flatMap((r) => r.checklist || []),
       artifacts: flowResults.flatMap((r) => r.artifacts || []),
       buildReport: buildReportSingle,
+      panel: renderSidecoachPanel(assemblePanelModel({ flowResults, report: buildReportSingle, confidence: match.confidence })),
     };
   }
 
@@ -1646,10 +1651,14 @@ export class FlowExecutionEngine {
       const pf = await convergencePreflight(projectPath, laneId);
       if (!pf.ok) throw new Error(pf.message);
     }
-    return laneRunner.startLane(laneId, target, { ...context, projectPath }, startRequestId, this.laneDeps(projectPath), renderUrl);
+    const started = await laneRunner.startLane(laneId, target, { ...context, projectPath }, startRequestId, this.laneDeps(projectPath), renderUrl);
+    try { started.panel = renderSidecoachPanel(laneStepToPanelModel(started)); } catch { /* panel is best-effort */ }
+    return started;
   }
   async advanceLane(projectPath: string, checkpointId: string, transition: LaneTransition): Promise<LaneStepResult> {
-    return laneRunner.advanceLane(projectPath, checkpointId, transition, this.laneDeps(projectPath));
+    const advanced = await laneRunner.advanceLane(projectPath, checkpointId, transition, this.laneDeps(projectPath));
+    try { advanced.panel = renderSidecoachPanel(laneStepToPanelModel(advanced)); } catch { /* panel is best-effort */ }
+    return advanced;
   }
   laneStatus(projectPath: string, checkpointId: string) { return laneRunner.laneStatus(projectPath, checkpointId, this.laneDeps(projectPath)); }
   listLanes(projectPath: string, options?: { all?: boolean }) { return laneRunner.listLanes(projectPath, this.laneDeps(projectPath), options); }
@@ -1734,6 +1743,9 @@ export interface SidecoachResult {
   artifacts?: any[];
   ambiguousCandidates?: Array<{ flowId: FlowId; flowName: string; confidence: number }>;
   buildReport?: BuildReport;
+  // Pre-rendered compact panel (route/flow/checklist/gates/verdict) the caller
+  // prints verbatim - the at-a-glance progress card that replaces verbose output.
+  panel?: string;
   // Phase 6 disambiguation: when set, the caller should render an AskUserQuestion
   // with `ambiguousCandidates` and re-invoke engine.process(utterance, {metadata: {forceFlowId: chosenFlowId}}).
   needsDisambiguation?: boolean;

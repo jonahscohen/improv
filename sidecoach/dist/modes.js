@@ -4,29 +4,25 @@
 // compiled ../../dist/modes). TODO(P4): delete this file AND dist/modes.js when
 // the MCP `list-modes` -> `list-lanes` rename lands and ModeEntry is retired.
 //
-// Sidecoach modes (T-0011)
+// DEPRECATED - Sidecoach modes (originally T-0011), RETIRED 2026-06-12.
 //
-// Modes are higher-level than verbs. A verb runs one focused flow chain
-// (audit -> flowK + flowI). A mode bundles 3-7 verbs into a recognizable
-// "shape of work" with a sticky one-word name - analogs of oh-my-claudecode's
-// autopilot / ralph / ultrawork, but design-coded.
+// The one-word mode keywords (forge / kiln / bloom / canvas / trim / ralph) are
+// gone. They were optimized for hook-detectability (distinctive single tokens),
+// not for how a person actually talks - "kiln this release" is not a sentence
+// anyone types - so Jonah cut the whole vocabulary in favor of NATURAL-LANGUAGE
+// INTENT DETECTION (intent-detector.ts / lane-classifier.ts -> lanes.generated.ts,
+// surfaced as the MCP tools classify_intent / list_lanes / sidecoach_lane). You
+// describe what you want in plain English; sidecoach classifies the intent, asks
+// one clarifying question if it is a close call, and runs the task to convergence.
 //
-// Names were chosen for these properties:
-//   - One word, memorable, no collision with the 22 sidecoach verbs
-//   - Distinct from oh-my-claudecode's modes (autopilot, ralph, ultrawork,
-//     deep-interview, planning, team)
-//   - Material/craft metaphors that match sidecoach's design vocabulary
-//   - Each name implies a *direction* of work, not just a phase
+// This file is retained ONLY as the legacy feed for the MCP server's soon-to-be-
+// removed `list-modes` tool (mcp-server/src/registries.ts imports the compiled
+// ../../dist/modes). Do NOT add modes, document them as a feature, or surface them
+// to users. Delete this file AND dist/modes.js when the `list-modes` -> `list-lanes`
+// rename lands and ModeEntry is retired.
 //
-// Each mode is magic-keyword triggerable via claude/hooks/sidecoach-keyword.sh
-// (sidecoach-modes.json mirrors this registry for the bash hook). When a mode
-// keyword matches, the hook injects additionalContext naming the mode and the
-// verb chain so the receiving session knows what sequence of flows to run.
-//
-// The FlowId chain below is the DEDUPED UNION of each verb's flowIds in the
-// order they should execute. Where multiple verbs map to the same flow, the
-// underlying flow handler runs once; the verb-specific guidance is appended
-// by the orchestrator's verb-parity layer at run time.
+// The structures below are frozen as-is for that legacy feed; the FlowId chains are
+// the deduped union of each former mode's verb flowIds.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MODE_LIST = exports.MODES = void 0;
 exports.getMode = getMode;

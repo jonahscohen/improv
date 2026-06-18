@@ -30,6 +30,8 @@ import { createHaloEffect } from './effects/halo/index';
 import haloManifest from './effects/halo/manifest.json';
 import { createInteractiveGridEffect } from './effects/interactive-grid/index';
 import interactiveGridManifest from './effects/interactive-grid/manifest.json';
+import { createSvg3dEffect } from './effects/svg-3d/index';
+import svg3dManifest from './effects/svg-3d/manifest.json';
 import { createLavaLampEffect } from './effects/lava-lamp/index';
 import lavaLampManifest from './effects/lava-lamp/manifest.json';
 import { createMeshGradientEffect } from './effects/mesh-gradient/index';
@@ -55,6 +57,8 @@ import { createMcGlobeEffect } from './effects/mc-globe/index';
 import mcGlobeManifest from './effects/mc-globe/manifest.json';
 import { createMediaEffect } from './effects/media/index';
 import mediaManifest from './effects/media/manifest.json';
+import { createPixelEffect } from './effects/pixel/index';
+import pixelManifest from './effects/pixel/manifest.json';
 
 /** Every built-in effect: a raw manifest + its factory. Acquisition adds entries here. */
 const RAW: Array<[unknown, EffectFactory]> = [
@@ -72,6 +76,7 @@ const RAW: Array<[unknown, EffectFactory]> = [
   [halftonePostManifest, createHalftonePostEffect],
   [haloManifest, createHaloEffect],
   [interactiveGridManifest, createInteractiveGridEffect],
+  [svg3dManifest, createSvg3dEffect],
   [lavaLampManifest, createLavaLampEffect],
   [meshGradientManifest, createMeshGradientEffect],
   [neuralNoiseManifest, createNeuralNoiseEffect],
@@ -84,6 +89,7 @@ const RAW: Array<[unknown, EffectFactory]> = [
   [infiniteGalleryManifest, createInfiniteGalleryEffect],
   [mcGlobeManifest, createMcGlobeEffect],
   [mediaManifest, createMediaEffect],
+  [pixelManifest, createPixelEffect],
 ];
 
 /**

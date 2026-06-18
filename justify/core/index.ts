@@ -56,7 +56,7 @@ export class JustifyCore {
   private _claudeSpark: HTMLDivElement | null = null;
   private _claudeLabel: HTMLSpanElement | null = null;
   private _claudeAnim: Animation | null = null;
-  _claudeState: 'none' | 'connected' | 'sending' | 'working' | 'review' | 'review-active' | 'retry' | 'retrying' = 'none';
+  _claudeState: 'none' | 'connected' | 'sending' | 'working' | 'validating' | 'review' | 'review-active' | 'retry' | 'retrying' = 'none';
   _pendingResponses: number = 0;
   private _claudeTimeout: number | null = null;
   _lastPromptData: any = null;
@@ -104,6 +104,17 @@ export class JustifyCore {
       }
     });
 
+    // Explicit, ungated Working (POST /working). Unlike the auto-fire above,
+    // this forces "Working" from any state - survives a disconnect/reconnect
+    // that dropped the browser out of 'sending'. Symmetric with justify_validating.
+    this.transport.on('justify_working_force', () => {
+      this._claudeToWorking();
+    });
+
+    this.transport.on('justify_validating', () => {
+      this._claudeToValidating();
+    });
+
     this.transport.on('justify_response', (data: unknown) => {
       const response = data as Record<string, unknown>;
       response.reviewed = false;
@@ -114,8 +125,25 @@ export class JustifyCore {
       this._updateClaudeBadge();
       const status = response.status as string;
       if (status === 'completed') {
-        this._highlightChangedElements(response.changes as any[]);
         this._previewChanges(response.changes as any[]);
+        // Never send a change up to review without showing what changed: scroll
+        // to + persistently select the changed object. The hot-refresh below
+        // reloads the page (to reflect new code) and would wipe this, so relay
+        // the target across the reload via sessionStorage - on load we re-locate.
+        const sels = this._changeSelectors(response);
+        if (sels.length > 0) {
+          try { sessionStorage.setItem('justify:locate', JSON.stringify(sels)); } catch {}
+          this._locateAndSelect(sels);
+        } else {
+          this._highlightChangedElements(response.changes as any[]);
+        }
+        // MANDATORY (Jonah 2026-06-11): a completed task hot-refreshes the page
+        // in EVERY tab/instance running this project, so the live page always
+        // reflects the latest code. The server broadcasts justify_response to
+        // all connected clients; each schedules its own reload, debounced so a
+        // batch of responses lands as a single refresh. Panel state survives:
+        // history is server-persisted and the review bar re-surfaces on load.
+        this._scheduleHotRefresh();
       }
       // Decrement pending count and only transition to review when all responses are in
       this._pendingResponses = Math.max(0, this._pendingResponses - 1);
@@ -128,7 +156,25 @@ export class JustifyCore {
     fetch(`${this.justifyBaseUrl}/responses`).then(r => r.json()).then((data: any[]) => {
       this._changeHistory = data;
       this._updateClaudeBadge();
+      // Surface the "Review Changes" bar for any pending (unreviewed) changes so
+      // the panel is reachable after a reload or any interruption - the bar must
+      // follow the persisted history, not a transient in-memory pill.
+      this._surfaceReviewIfPending();
     }).catch(() => {});
+
+    // Hot-refresh relay: a change sent up just before the reload stashed its
+    // target selector(s); after the page reloads, scroll to + select the changed
+    // object so the user lands on exactly what changed. Cleared after one use.
+    try {
+      const raw = sessionStorage.getItem('justify:locate');
+      if (raw) {
+        sessionStorage.removeItem('justify:locate');
+        const sels = JSON.parse(raw);
+        if (Array.isArray(sels) && sels.length > 0) {
+          setTimeout(() => this._locateAndSelect(sels), 800);
+        }
+      }
+    } catch {}
 
     // Restore Claudebar state if mid-job on reload
     this._loadSprites();
@@ -321,6 +367,16 @@ export class JustifyCore {
       });
     });
 
+    this._changesPanel.setOnClearAll(() => {
+      this._changeHistory = [];
+      try { fetch('http://localhost:9223/responses',{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
+      this._updateClaudeBadge();
+      this._clearTaskHighlights();
+      if (this._claudeState === 'review' || this._claudeState === 'review-active') {
+        this._removeClaudeBar(false);
+      }
+    });
+
     this._changesPanel.setOnClearReviewed(() => {
       this._changeHistory = this._changeHistory.filter(e => !e.reviewed);
       try { fetch('http://localhost:9223/responses',{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
@@ -338,55 +394,18 @@ export class JustifyCore {
       // Deactivate Claudebar icon when panel hides
       if (this._claudePill && this._claudeState === 'review-active') {
         const icon = this._claudePill.querySelector('div') as HTMLElement;
-        if (icon) { icon.style.background = 'rgba(255,255,255,0.08)'; icon.style.color = '#D97757'; }
+        if (icon) { icon.style.background = 'rgba(255,255,255,0.08)'; icon.style.color = '#D97757'; icon.dataset.barActive = ''; }
         if (this._claudeSpark) this._setSpark(this._claudeSpark, JustifyCore._staticSvg, '#D97757');
       }
     });
 
     this._changesPanel.setOnSelect((selectors: string[]) => {
-      this._clearTaskHighlights();
-      if (selectors.length === 0) return;
-
-      for (const sel of selectors) {
-        let els: Element[];
-        try { els = Array.from(document.querySelectorAll(sel)); } catch { continue; }
-        for (const el of els) {
-          const rect = (el as HTMLElement).getBoundingClientRect();
-          if (rect.width === 0 || rect.height === 0) continue;
-
-          const highlight = document.createElement('div');
-          highlight.dataset.justify = '';
-          highlight.style.cssText =
-            'position:fixed;pointer-events:none;z-index:2147483646;' +
-            'border:2px solid #D97757;border-radius:4px;' +
-            'transition:top 60ms ease,left 60ms ease,width 60ms ease,height 60ms ease';
-
-          const label = document.createElement('div');
-          label.dataset.justify = '';
-          label.style.cssText =
-            'position:absolute;top:-22px;left:0;padding:2px 6px;border-radius:3px;' +
-            'background:#D97757;color:#fff;font-size:9px;font-weight:600;' +
-            'font-family:JustifyMono,ui-monospace,monospace;white-space:nowrap;pointer-events:none;' +
-            'max-width:200px;overflow:hidden;text-overflow:ellipsis';
-          label.textContent = sel;
-          highlight.appendChild(label);
-
-          document.body.appendChild(highlight);
-          (this._taskHighlights as any[]).push({ el: el as HTMLElement, box: highlight });
-        }
-      }
-      this._startHighlightTracking();
+      this._locateAndSelect(selectors);
     });
 
-    this._changesPanel.setOnItemClick((index: number) => {
-      const entries = this._changeHistory.filter((e: any) =>
-        (e.status === 'completed' && e.changes && e.changes.length > 0) || e.status === 'needsInfo'
-      );
-      const entry = entries[index];
-      if (entry) {
-        this._changesPanel!.showDetail(entry as any, index);
-      }
-    });
+    // Detail-view opening now lives inside ChangesPanel itself (it holds the
+    // clicked entry); the old re-filter-and-reindex wiring here opened the
+    // wrong entry whenever thin payloads (changes: []) sat earlier in the list.
 
     this._changesPanel.setOnRevert((promptId: string, changes: any[]) => {
       const revertDetails = changes.map((ch: any) =>
@@ -522,11 +541,45 @@ export class JustifyCore {
     this._updateClaudeBadge();
   }
 
+  // Launcher-style hover for the bottom bar pills (claudebar spark, queue badge):
+  // a warm tint fill + scale-pop on the 32px circle, matching the activation
+  // button's hover. Background is saved/restored so it never clobbers the pill's
+  // state-driven background (connected/working/review, or the queue active fill).
+  //
+  // ACTIVE-state guard: when the pill is in its engaged/active state (changes
+  // panel open -> circle.dataset.barActive, or queue panel open -> dataset.qactive)
+  // the SOLID active fill (#D97757) owns the background. The hover must not paint
+  // its translucent tint over it or restore a stale value on leave - otherwise the
+  // hover look becomes the active look. So hover is a no-op (scale only) while active.
+  private _addBarPillHover(hoverTarget: HTMLElement, circle: HTMLElement): void {
+    var _active = () => circle.dataset.barActive === '1' || circle.dataset.qactive === '1';
+    hoverTarget.addEventListener('mouseenter', () => {
+      if (_active()) { circle.style.transform = 'scale(1.08)'; return; }
+      if (circle.dataset.justifyHovBg === undefined) circle.dataset.justifyHovBg = circle.style.background || '';
+      circle.style.background = 'rgba(217,119,87,0.30)';
+      circle.style.transform = 'scale(1.08)';
+    });
+    hoverTarget.addEventListener('mouseleave', () => {
+      circle.style.transform = 'scale(1)';
+      if (_active()) { delete circle.dataset.justifyHovBg; return; }
+      circle.style.background = circle.dataset.justifyHovBg || '';
+      delete circle.dataset.justifyHovBg;
+    });
+    hoverTarget.addEventListener('mousedown', () => { circle.style.transform = 'scale(0.92)'; });
+    hoverTarget.addEventListener('mouseup', () => { circle.style.transform = 'scale(1.08)'; });
+  }
+
   private _showScreenGlow(color?: string): void {
     if (!this._screenGlow) {
       this._screenGlow = document.createElement('div');
       this._screenGlow.id = 'justify-screen-glow';
-      this._screenGlow.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2147483646;opacity:0;transition:opacity 1.2s ease-in-out';
+      // [data-justify] makes the glow invisible to selection (lasso _findIntersecting
+      // and the hover/click path both skip [data-justify]); it is decorative chrome,
+      // not a page element. pointer-events:none is forced !important so the
+      // event-intercept rule ([data-justify]{pointer-events:auto !important}) cannot
+      // turn this full-viewport overlay into a click-eating layer.
+      this._screenGlow.dataset.justify = '';
+      this._screenGlow.style.cssText = 'position:fixed;inset:0;pointer-events:none !important;z-index:2147483646;opacity:0;transition:opacity 1.2s ease-in-out';
       if (!document.getElementById('justify-glow-style')) {
         const gs = document.createElement('style');
         gs.id = 'justify-glow-style';
@@ -813,6 +866,15 @@ export class JustifyCore {
     this.registry.register(adapter);
   }
 
+  private _hotRefreshTimer: number | null = null;
+
+  private _scheduleHotRefresh(): void {
+    if (this._hotRefreshTimer !== null) window.clearTimeout(this._hotRefreshTimer);
+    this._hotRefreshTimer = window.setTimeout(() => {
+      window.location.reload();
+    }, 1200);
+  }
+
   private _previewChanges(changes: Array<{ selector: string; property: string; oldValue: string; newValue: string }>): void {
     if (!changes || changes.length === 0 || !this.previewEngine) return;
     this.previewEngine.attach();
@@ -882,6 +944,79 @@ export class JustifyCore {
   }
 
   private _highlightRaf: number | null = null;
+
+  // Scroll to + persistently select the element(s) a change was about. Shared by
+  // the Changes-panel click handler AND the on-arrival auto-locate, so a change is
+  // never sent to review without the user being shown what changed. A DELETED
+  // target (selector no longer resolves) walks up the descendant path to the
+  // nearest surviving ancestor and marks it with a DASHED box ("removed near").
+  private _locateAndSelect(selectors: string[]): void {
+    this._clearTaskHighlights();
+    if (!selectors || selectors.length === 0) return;
+
+    const firstMatch = (sel: string): Element | null => {
+      try { return document.querySelector(sel); } catch { return null; }
+    };
+    const resolveTarget = (sel: string): { el: Element | null; deleted: boolean } => {
+      const exact = firstMatch(sel);
+      if (exact) return { el: exact, deleted: false };
+      const parts = sel.split(/\s+/).filter(p => p && p !== '>' && p !== '+' && p !== '~');
+      for (let n = parts.length - 1; n >= 1; n--) {
+        const el = firstMatch(parts.slice(0, n).join(' '));
+        if (el) return { el, deleted: true };
+      }
+      return { el: null, deleted: true };
+    };
+
+    let scrollTarget: Element | null = null;
+    for (const sel of selectors) {
+      const { el, deleted } = resolveTarget(sel);
+      if (!el) continue;
+      if (!scrollTarget) scrollTarget = el;
+
+      const rect = (el as HTMLElement).getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+
+      const highlight = document.createElement('div');
+      highlight.dataset.justify = '';
+      highlight.style.cssText =
+        'position:fixed;pointer-events:none;z-index:2147483646;' +
+        'border:2px ' + (deleted ? 'dashed' : 'solid') + ' #D97757;border-radius:4px;' +
+        'transition:top 60ms ease,left 60ms ease,width 60ms ease,height 60ms ease';
+
+      const label = document.createElement('div');
+      label.dataset.justify = '';
+      label.style.cssText =
+        'position:absolute;top:-22px;left:0;padding:2px 6px;border-radius:3px;' +
+        'background:#D97757;color:#fff;font-size:9px;font-weight:600;' +
+        'font-family:JustifyMono,ui-monospace,monospace;white-space:nowrap;pointer-events:none;' +
+        'max-width:240px;overflow:hidden;text-overflow:ellipsis';
+      label.textContent = (deleted ? 'removed near ' : '') + sel;
+      highlight.appendChild(label);
+
+      document.body.appendChild(highlight);
+      (this._taskHighlights as any[]).push({ el: el as HTMLElement, box: highlight });
+    }
+    this._startHighlightTracking();
+
+    if (scrollTarget) {
+      const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      try {
+        (scrollTarget as HTMLElement).scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center', inline: 'nearest' });
+      } catch {
+        (scrollTarget as HTMLElement).scrollIntoView();
+      }
+    }
+  }
+
+  // Selectors a completed response was about: per-change selectors unioned with
+  // the prompt's target selectors (joined onto the response by the daemon).
+  private _changeSelectors(response: Record<string, unknown>): string[] {
+    const changeSel = ((response.changes as Array<{ selector?: string }>) || [])
+      .map(c => c && c.selector).filter((s): s is string => !!s);
+    const targetSel = (response.targetSelectors as string[]) || [];
+    return [...new Set([...changeSel, ...targetSel])];
+  }
 
   private _startHighlightTracking(): void {
     if (this._highlightRaf !== null) return;
@@ -1160,6 +1295,9 @@ export class JustifyCore {
         count.textContent = String(this._changeQueue.length);
         btn.appendChild(count);
         this._queuePill.appendChild(btn);
+        // Hover target is the WHOLE pill (icon + label), warming the badge circle -
+        // matches the claudebar pill, which hovers from anywhere on the button.
+        this._addBarPillHover(this._queuePill, btn);
 
         const label = document.createElement('span');
         label.dataset.queueLabel = '';
@@ -1186,17 +1324,22 @@ export class JustifyCore {
             qPill.style.gap = '0';
             qPill.style.padding = '6px';
             // Active state on circle
+            btn.dataset.qactive = '1';
             btn.style.background = '#D97757';
             btn.style.color = '#fff';
             count.style.color = '#fff';
           } else {
-            // Toggle active styling
-            const isActive = btn.style.background === 'rgb(217, 119, 87)';
+            // Toggle active styling. Use a dataset flag, NOT a brittle
+            // background-string compare - the warm hover tint would otherwise
+            // fool the comparison and flip the toggle the wrong way.
+            const isActive = btn.dataset.qactive === '1';
             if (isActive) {
+              btn.dataset.qactive = '';
               btn.style.background = 'rgba(255,255,255,0.08)';
               btn.style.color = '#D97757';
               count.style.color = '#D97757';
             } else {
+              btn.dataset.qactive = '1';
               btn.style.background = '#D97757';
               btn.style.color = '#fff';
               count.style.color = '#fff';
@@ -1255,6 +1398,7 @@ export class JustifyCore {
     spark.querySelector?.('svg')?.setAttribute('fill', 'currentColor');
     icon.appendChild(spark);
     pill.appendChild(icon);
+    this._addBarPillHover(pill, icon);
 
     const label = document.createElement('span');
     label.style.cssText =
@@ -1409,6 +1553,12 @@ export class JustifyCore {
   }
 
   _claudeToWorking(): void {
+    // Create the pill if there isn't one (e.g. forced via POST /working after a
+    // disconnect dropped the prior pill), mirroring _claudeToValidating - so an
+    // explicit Working always shows, not just when a pill already exists.
+    if (!this._claudePill || !this._claudeSpark || !this._claudeLabel) {
+      this._showClaudeBar('Working', 'shimmer', false);
+    }
     if (!this._claudePill || !this._claudeSpark || !this._claudeLabel) return;
     this._claudeState = 'working';
     this._persistClaudeState();
@@ -1431,10 +1581,65 @@ export class JustifyCore {
     this._claudeLabel.appendChild(dots);
   }
 
-  _claudeToReview(): void {
+  // "Validating" - the gap between Claude applying the change (Working) and the
+  // changes being ready to review (Review). Surfaces the work Claude does
+  // verifying the change in a browser, so the bar never drifts to "Connected".
+  _claudeToValidating(): void {
+    // Create the pill if there isn't one (e.g. this client didn't send the prompt).
+    if (!this._claudePill || !this._claudeSpark || !this._claudeLabel) {
+      this._showClaudeBar('Validating', 'shimmer', false);
+    }
     if (!this._claudePill || !this._claudeSpark || !this._claudeLabel) return;
+    this._claudeState = 'validating';
+    this._persistClaudeState();
+    // Clear the retry timeout - Claude is active (validating), not stalled.
+    if (this._claudeTimeout !== null) { clearTimeout(this._claudeTimeout); this._claudeTimeout = null; }
+    if (this._claudeAnim) { this._claudeAnim.cancel(); this._claudeAnim = null; }
+    if (this._spriteSvgs.shimmer) {
+      this._claudeAnim = this._animateSpark(this._claudeSpark, 'shimmer');
+    }
+    this._claudeLabel.textContent = 'Validating';
+    const dots = document.createElement('span');
+    dots.style.cssText = 'display:inline-block;width:1.2em;text-align:left;vertical-align:baseline';
+    const after = document.createElement('span');
+    dots.appendChild(after);
+    let dotState = 0;
+    const dotFrames = ['', '.', '..', '...'];
+    const dotInterval = setInterval(() => { dotState = (dotState + 1) % 4; after.textContent = dotFrames[dotState]; }, 375);
+    if ((this._claudePill as any)._dotInterval) clearInterval((this._claudePill as any)._dotInterval);
+    (this._claudePill as any)._dotInterval = dotInterval;
+    this._claudeLabel.appendChild(dots);
+  }
+
+  // Show the "Review Changes" bar whenever there are pending (unreviewed) changes
+  // and no job is in flight. Retries until the bar tray exists (created in
+  // activate()), so a reload or interruption never leaves the changes orphaned.
+  private _surfaceReviewIfPending(attempts: number = 12): void {
+    const actionable = this._changeHistory.filter(e => !e.reviewed);
+    if (actionable.length === 0) return;
+    // Don't override an in-flight job or an already-open review.
+    if (this._claudeState === 'sending' || this._claudeState === 'working' ||
+        this._claudeState === 'retrying' || this._claudeState === 'retry' ||
+        (this._claudeState as string) === 'validating' ||
+        this._claudeState === 'review' || this._claudeState === 'review-active') return;
+    if (!this._barTray) {
+      if (attempts > 0) window.setTimeout(() => this._surfaceReviewIfPending(attempts - 1), 300);
+      return;
+    }
+    this._claudeToReview();
+  }
+
+  _claudeToReview(): void {
     const actionable = this._changeHistory.filter(e => !e.reviewed);
     if (actionable.length === 0) { this._removeClaudeBar(false); return; }
+    // The Review affordance must derive from the persisted change history, not a
+    // transient pill that connection events (a "Connected" flash, a reload, a
+    // disconnect mid-validate) can destroy. If no pill exists, create one so the
+    // changes are always reachable.
+    if (!this._claudePill || !this._claudeSpark || !this._claudeLabel) {
+      this._showClaudeBar('Review Changes', 'waiting', false);
+    }
+    if (!this._claudePill || !this._claudeSpark || !this._claudeLabel) return;
     this._claudeState = 'review';
     this._persistClaudeState();
     // Clear timeout - Claude responded
@@ -1470,7 +1675,7 @@ export class JustifyCore {
       this._claudeState = 'review-active';
       this._claudePill.style.animation = 'none';
       const icon = this._claudePill.querySelector('div') as HTMLElement;
-      if (icon) { icon.style.background = '#D97757'; icon.style.color = '#fff'; }
+      if (icon) { icon.style.background = '#D97757'; icon.style.color = '#fff'; icon.dataset.barActive = '1'; delete icon.dataset.justifyHovBg; }
       if (this._claudeAnim) { this._claudeAnim.cancel(); this._claudeAnim = null; }
       this._setSpark(this._claudeSpark, JustifyCore._staticSvg, '#fff');
 
@@ -1495,13 +1700,13 @@ export class JustifyCore {
       const isOpen = this._changesPanel?.isVisible();
       if (isOpen) {
         this._changesPanel?.hide();
-        if (icon) { icon.style.background = 'rgba(255,255,255,0.08)'; icon.style.color = '#D97757'; }
+        if (icon) { icon.style.background = 'rgba(255,255,255,0.08)'; icon.style.color = '#D97757'; icon.dataset.barActive = ''; }
         this._setSpark(this._claudeSpark, JustifyCore._staticSvg, '#D97757');
       } else {
         const actionable = this._changeHistory.filter(e => !e.reviewed);
         if (actionable.length > 0) {
           this._changesPanel?.toggle(this._changeHistory as any);
-          if (icon) { icon.style.background = '#D97757'; icon.style.color = '#fff'; }
+          if (icon) { icon.style.background = '#D97757'; icon.style.color = '#fff'; icon.dataset.barActive = '1'; delete icon.dataset.justifyHovBg; }
           this._setSpark(this._claudeSpark, JustifyCore._staticSvg, '#fff');
         } else {
           this._removeClaudeBar(false);

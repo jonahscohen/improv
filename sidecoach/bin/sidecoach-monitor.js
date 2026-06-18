@@ -105,8 +105,14 @@ async function executeFlow(utterance) {
       projectPath: process.cwd(),
     });
 
-    // Output results as JSON
-    console.log(JSON.stringify(result, null, 2));
+    // --render: designed, low-noise presentation (the product surface).
+    // Default stays JSON so the skill's programmatic parsing is untouched.
+    if (process.argv.includes('--render')) {
+      const { render } = require('./sidecoach-present');
+      console.log(render(result, utterance));
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
 
     // Exit with appropriate code
     if (result.success) {

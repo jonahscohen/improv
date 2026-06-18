@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>reference - the full kit and kaboodle | Improv</title>
-  <meta name="description" content="The comprehensive reference for every component of Improv. Tab through justify, sidecoach, beats, cmux, voice, discord, hooks, and validation-guard." />
+  <title>reference - how to use Improv</title>
+  <meta name="description" content="How to use every part of Improv - Justify, Sidecoach, Beats, and the foundation underneath. The one move that gets you going, the everyday workflow, and the details when you need them. Written for the whole team." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,8 +12,6 @@
 
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
   <script>
-    // Set data-theme BEFORE stylesheet loads to avoid FOUC. Reads
-    // localStorage('theme'), falls back to prefers-color-scheme.
     (function () {
       try {
         var stored = localStorage.getItem('theme');
@@ -22,8 +20,9 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=35" />
   <script src="nav.js" defer></script>
+  <script src="http://localhost:9223/justify-core.js?v=5"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -36,27 +35,26 @@
       </a>
       <div class="topbar__cluster">
         <nav aria-label="Primary" id="primary-nav">
-          <a href="justify.html">justify</a>
-          <a href="sidecoach.html">sidecoach</a>
-          <a href="cheatsheet.html">cheatsheet</a>
-          <a href="beats.html">beats</a>
-          <a href="reference.html" aria-current="page">reference</a>
-          <a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a>
+          <ul class="nav-list">
+            <li><a href="https://yesandagency.com" rel="noreferrer noopener">Yes&amp;</a></li>
+            <li><a href="justify.html">justify</a></li>
+            <li><a href="sidecoach.html">sidecoach</a></li>
+            <li><a href="cheatsheet.html">cheatsheet</a></li>
+            <li><a href="beats.html">beats</a></li>
+            <li><a href="foundation.html">foundation</a></li>
+            <li><a href="reference.html" aria-current="page">reference</a></li>
+            <li><a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a></li>
+          </ul>
         </nav>
         <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
-          <svg class="theme-toggle__icon theme-toggle__icon--moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <!-- source: lucide "moon" - path verbatim from lucide.dev -->
+          <svg class="theme-toggle__icon theme-toggle__icon--moon lucide-moon" data-icon-source="lucide:moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
           </svg>
-          <svg class="theme-toggle__icon theme-toggle__icon--sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <!-- source: lucide "sun" - paths verbatim from lucide.dev -->
+          <svg class="theme-toggle__icon theme-toggle__icon--sun lucide-sun" data-icon-source="lucide:sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2" />
-            <path d="M12 20v2" />
-            <path d="m4.93 4.93 1.41 1.41" />
-            <path d="m17.66 17.66 1.41 1.41" />
-            <path d="M2 12h2" />
-            <path d="M20 12h2" />
-            <path d="m6.34 17.66-1.41 1.41" />
-            <path d="m19.07 4.93-1.41 1.41" />
+            <path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />
           </svg>
         </button>
         <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation menu">
@@ -70,302 +68,172 @@
     <section class="page-hero">
       <div class="container">
         <p class="page-hero__tag stagger" style="--i: 0">reference</p>
-        <h1 class="page-hero__title stagger" style="--i: 1">The whole kit. <span style="text-decoration: underline; text-decoration-color: var(--color-red); text-decoration-thickness: 4px; text-underline-offset: 0.1em;">Every component, documented.</span></h1>
+        <h1 class="page-hero__title stagger" style="--i: 1">How to <span style="text-decoration: underline; text-decoration-color: var(--color-red); text-decoration-thickness: 4px; text-underline-offset: 0.12em;">use</span> Improv, tool by tool.</h1>
         <p class="page-hero__lede stagger" style="--i: 2">
-          Tab through every component shipped in the dotfiles. Install, usage, commands, examples, and links to the source. No marketing, just specifics.
+          A working guide to every part of the kit: the one move that gets you going, the everyday workflow, and the details when you need them. Written so anyone on the team can follow, not just the people who live in a terminal.
         </p>
       </div>
     </section>
 
-    <section class="section">
+    <div class="ref-subnav" role="navigation" aria-label="Component">
       <div class="container">
-        <div class="reference">
-          <nav class="reference__tabs" role="tablist" aria-label="Component reference">
-            <button class="reference__tab" role="tab" aria-selected="true" aria-controls="panel-justify" id="tab-justify" data-tab="justify">justify</button>
-            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-sidecoach" id="tab-sidecoach" data-tab="sidecoach">sidecoach</button>
-            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-memory" id="tab-memory" data-tab="memory">beats</button>
-            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-cmux" id="tab-cmux" data-tab="cmux">cmux</button>
-            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-voice" id="tab-voice" data-tab="voice">voice</button>
-            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-discord" id="tab-discord" data-tab="discord">discord</button>
-            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-hooks" id="tab-hooks" data-tab="hooks">hooks</button>
-            <button class="reference__tab" role="tab" aria-selected="false" aria-controls="panel-guard" id="tab-guard" data-tab="guard">validation-guard</button>
-          </nav>
+        <div class="ref-subnav__inner" role="tablist">
+          <button class="ref-subnav__btn" type="button" role="tab" data-component="justify" aria-selected="true">Justify</button>
+          <button class="ref-subnav__btn" type="button" role="tab" data-component="sidecoach" aria-selected="false">Sidecoach</button>
+          <button class="ref-subnav__btn" type="button" role="tab" data-component="beats" aria-selected="false">Beats</button>
+          <button class="ref-subnav__btn" type="button" role="tab" data-component="foundation" aria-selected="false">Foundation</button>
+        </div>
+      </div>
+    </div>
 
-          <div class="reference__panels">
+    <section>
+      <div class="container">
+        <div class="ref-layout">
+          <aside class="ref-sidebar">
+      <nav class="ref-chapters" data-component="justify" aria-label="justify chapters" data-active="true">
+        <a class="ref-chapter-link" href="#justify-the-one-move" data-chapter="justify-the-one-move">The one move</a>
+        <a class="ref-chapter-link" href="#justify-start-it-on-your-project" data-chapter="justify-start-it-on-your-project">Start it on your project</a>
+        <a class="ref-chapter-link" href="#justify-tweak-the-page" data-chapter="justify-tweak-the-page">Tweak the page</a>
+        <a class="ref-chapter-link" href="#justify-hand-off-and-review" data-chapter="justify-hand-off-and-review">Hand off and review</a>
+        <a class="ref-chapter-link" href="#justify-when-something-is-off" data-chapter="justify-when-something-is-off">When something is off</a>
+      </nav>
+      <nav class="ref-chapters" data-component="sidecoach" aria-label="sidecoach chapters">
+        <a class="ref-chapter-link" href="#sidecoach-sidecoach-just-say-what-you-want" data-chapter="sidecoach-sidecoach-just-say-what-you-want">Just say what you want</a>
+        <a class="ref-chapter-link" href="#sidecoach-sidecoach-set-it-up-once" data-chapter="sidecoach-sidecoach-set-it-up-once">Set it up once</a>
+        <a class="ref-chapter-link" href="#sidecoach-sidecoach-everyday-workflow" data-chapter="sidecoach-sidecoach-everyday-workflow">The everyday workflow</a>
+        <a class="ref-chapter-link" href="#sidecoach-sidecoach-explicit-verbs" data-chapter="sidecoach-sidecoach-explicit-verbs">If you would rather be explicit</a>
+        <a class="ref-chapter-link" href="#sidecoach-sidecoach-what-you-get-back" data-chapter="sidecoach-sidecoach-what-you-get-back">What you get back</a>
+      </nav>
+      <nav class="ref-chapters" data-component="beats" aria-label="beats chapters">
+        <a class="ref-chapter-link" href="#beats-it-remembers" data-chapter="beats-it-remembers">It remembers so you do not have to</a>
+        <a class="ref-chapter-link" href="#beats-reading-the-record" data-chapter="beats-reading-the-record">Reading the record</a>
+        <a class="ref-chapter-link" href="#beats-across-machines" data-chapter="beats-across-machines">Across machines</a>
+        <a class="ref-chapter-link" href="#beats-steering-it" data-chapter="beats-steering-it">Steering what it keeps</a>
+      </nav>
+      <nav class="ref-chapters" data-component="foundation" aria-label="foundation chapters">
+        <p class="ref-group">Install</p>
+        <a class="ref-chapter-link" href="#foundation-install-improv" data-chapter="foundation-install-improv">Install Improv</a>
+        <a class="ref-chapter-link" href="#foundation-pick-just-what-you-want" data-chapter="foundation-pick-just-what-you-want">Pick just what you want</a>
+        <p class="ref-group">Voice &amp; Discord</p>
+        <a class="ref-chapter-link" href="#foundation-talk-to-it-hear-it-back" data-chapter="foundation-talk-to-it-hear-it-back">Talk to it, hear it back</a>
+        <a class="ref-chapter-link" href="#foundation-use-it-from-your-phone-via-discord" data-chapter="foundation-use-it-from-your-phone-via-discord">Use it from your phone via Discord</a>
+        <p class="ref-group">cmux</p>
+        <a class="ref-chapter-link" href="#foundation-the-browser-pane" data-chapter="foundation-the-browser-pane">The browser pane</a>
+        <p class="ref-group">The design stack</p>
+        <a class="ref-chapter-link" href="#foundation-design-peer-skills" data-chapter="foundation-design-peer-skills">The design peer skills</a>
+        <a class="ref-chapter-link" href="#foundation-tilt-lab" data-chapter="foundation-tilt-lab">tilt-lab</a>
+        <p class="ref-group">What runs for you</p>
+        <a class="ref-chapter-link" href="#foundation-guardrails" data-chapter="foundation-guardrails">Guardrails you do not have to think about</a>
+      </nav>
+          </aside>
+          <div class="ref-content">
+      <div class="ref-panel" data-component="justify" data-active="true">
+        <section class="ref-chapter" id="justify-the-one-move">
+          <h2 class="ref-chapter__title">The one move</h2>
+          <p>Justify lets you change a live web page by pointing at it, then hands those changes to Claude to make real. You open your running site, click the thing you want different, say what should change in plain English, and pass the queue to Claude. Claude edits your actual source files and the page refreshes itself. No copying selectors, no describing locations over chat, no trying to explain which button you mean.</p><p>That is the whole loop, and it is worth saying plainly before any setup: <strong>you tweak in the browser, Claude writes the code.</strong> The page you are looking at is the interface. The changes you make are not throwaway previews - they land as real edits to your files.</p><div class="ref-callout"><p>Justify is for refining a page that already exists - nudging spacing, swapping a label, fixing a color, raising a background that reads too faint. For larger design work that needs strategy and research, see <a class="ref-xlink" data-component="sidecoach">Sidecoach</a>, which hands live page tweaks back to Justify.</p></div>
+        </section>
+        <section class="ref-chapter" id="justify-start-it-on-your-project">
+          <h2 class="ref-chapter__title">Start it on your project</h2>
+          <p>Justify runs as a small toolbar layered over your running site. It does not replace your dev setup or take over the page - it loads one script alongside whatever you are already building and stays out of the way until you summon it.</p><h3 class="ref-h3">The fastest way</h3><p>In Claude, say <code>/justify</code> (or just "start justify"). That one command starts the background service, wires the script into your project, and switches the toolbar on. If your site is already running, you are tweaking within a minute.</p><h3 class="ref-h3">What that runs, step by step</h3><p>If you would rather do it by hand, or want to know what <code>/justify</code> is doing, it is three plain commands:</p><ol><li><strong>Start the service.</strong> <code>justify-serve</code> starts a small background server on port 9223 - the thing your browser and Claude both talk to. Running it twice is harmless; if it is already up, it does nothing.</li><li><strong>Wire it into your project.</strong> <code>justify-init &lt;project-root&gt;</code> adds the Justify script to your site. It detects your stack (Vite, Next.js, WordPress, Drupal, or plain HTML) and puts the right tag in the right place. The only change to your project is that one script reference.</li><li><strong>Open your site and switch it on.</strong> With your dev server running, open the page over http. The toolbar appears at the edge of the screen. Toggle it any time with <code>CMD+SHIFT+.</code>, and press <code>Escape</code> to leave whatever mode you are in.</li></ol><div class="ref-callout"><p><strong>First time on a machine?</strong> Install the Justify tools once with <code>./install.sh --only justify</code>, and the commands above are available everywhere. Loading your site over http keeps setup simple; an https-only site needs the secure core (<code>JUSTIFY_URL=https://localhost:9224/justify-core.js justify-init &lt;project-root&gt;</code>) and a one-time trusted certificate.</p></div>
+        </section>
+        <section class="ref-chapter" id="justify-tweak-the-page">
+          <h2 class="ref-chapter__title">Tweak the page</h2>
+          <p>There are two ways to change something, and you pick based on whether you know exactly what you want or just know it needs to be different.</p><h3 class="ref-h3">Point and describe (Prompt mode)</h3><p>Press <code>p</code>, click the element you want to change, and a small input appears right on it reading "Describe the change...". Type what you want in normal language and press Enter to add it to the queue. This is the right mode when you know the intent but not the exact CSS - you are telling Claude what to do, not how.</p><p>Real examples, each typed straight onto the element:</p><ul><li><em>"make this caret into an actual icon from our icon library"</em></li><li><em>"this section's background layer is practically invisible, raise it"</em></li><li><em>"make this paragraph max-width 75% and full width below that"</em></li></ul><p>You can queue several of these across the page before handing any of them off. Each one remembers which element you pointed at, so Claude knows exactly where it lands.</p><h3 class="ref-h3">Point and adjust (Manipulate mode)</h3><p>When you know the exact property, click an element and scrub its value directly - drag a number, change a color, adjust spacing or radius. The page updates as you go, and the changes buffer until you send them. This is for precise, known adjustments: "this is 16px and should be 20px," not "this feels cramped."</p>
+        </section>
+        <section class="ref-chapter" id="justify-hand-off-and-review">
+          <h2 class="ref-chapter__title">Hand off and review</h2>
+          <p>When your queue is ready, hand it to Claude. In the browser, the toolbar shows a <strong>Send All</strong> button while Claude is listening; in chat you can simply say "watch justify" to put Claude into listening mode. Either way, Claude picks up the queued changes and starts working on your real source.</p><h3 class="ref-h3">Watch the bar move</h3><p>A status bar tracks the handoff through three stages, so you always know where a change is:</p><table class="ref-table"><thead><tr><th>Stage</th><th>What is happening</th></tr></thead><tbody><tr><td><strong>Working</strong></td><td>Claude has claimed the task and is editing your source files.</td></tr><tr><td><strong>Validating</strong></td><td>Claude checks the change against your live page - the same page you are looking at, not a screenshot off to the side.</td></tr><tr><td><strong>Review</strong></td><td>The edit is done and ready to inspect. The page hot-refreshes on its own, so what you see is the new code - in every open tab.</td></tr></tbody></table><h3 class="ref-h3">Read the diff in the Changes panel</h3><p>The bottom-left <strong>Changes</strong> panel fills with a real before/after diff - a standard unified diff, with old and new line numbers down the side and red and green +/- lines, exactly as you would see it in any code review. This is the actual edit to your files, not a paraphrase of it.</p><p>Each entry shows the file name, the size of the change (for example <code>+583 -71</code>), and an <strong>Open With</strong> control. Click it to jump straight into your editor at the exact line that changed - not the top of the file, the changed line. Every entry also carries <strong>Revert</strong> to undo the change and <strong>Reply</strong> to send Claude a follow-up.</p>
+        </section>
+        <section class="ref-chapter" id="justify-when-something-is-off">
+          <h2 class="ref-chapter__title">When something is off</h2>
+          <p>A few things go wrong predictably. Each has a quick fix.</p><table class="ref-table"><thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead><tbody><tr><td>The toolbar never appears</td><td>The script did not load into the page. Hard-reload first. If it still does not show, re-run <code>justify-init &lt;project-root&gt;</code> and confirm your site is served over http. An https-only site needs the secure core and a trusted certificate (see Start it on your project).</td></tr><tr><td>You send changes but nothing happens</td><td>Claude is not listening yet. Say "watch justify" in chat to start the loop, then hit Send All again.</td></tr><tr><td>The status bar drifts to "Connected"</td><td>The loop dropped. Saying "watch justify" re-arms it; the bar returns to Working the moment a change is picked up.</td></tr><tr><td>A command reports the service is down</td><td>The background server stopped. Run <code>justify-serve</code> to bring it back - it is safe to run anytime.</td></tr></tbody></table><div class="ref-callout"><p>Justify is deliberately narrow: it refines pages that already exist. When a change is part of a larger design pass - a new section, a type system, a full review - reach for <a class="ref-xlink" data-component="sidecoach">Sidecoach</a>, which runs the broader design flow and delegates live page tweaks back to Justify.</p></div>
+        </section>
+      </div>
+      <div class="ref-panel" data-component="sidecoach">
+        <section class="ref-chapter" id="sidecoach-sidecoach-just-say-what-you-want">
+          <h2 class="ref-chapter__title">Just say what you want</h2>
+          <p>Sidecoach is the design layer of Improv, and there is one move to learn: <strong>describe the design task in plain English.</strong> You do not pick a command or memorize a keyword. You say what you want the way you would say it to a colleague, and Sidecoach recognizes which kind of design work you mean and runs it.</p><ul><li><code>make this feel better</code> - runs a polish and motion pass</li><li><code>this page is cluttered</code> - runs a pass that reduces noise and tightens the hierarchy</li><li><code>review the checkout flow</code> - runs a design and accessibility review</li><li><code>build a pricing table for the three plans</code> - builds the component from scratch</li></ul><p>Behind the request, Sidecoach reads what you wrote, matches it to the right design task, and runs that task to a finish. When two tasks are a genuinely close call - say <code>tighten the type</code> could mean a typography pass or a general cleanup - it asks <strong>one</strong> quick clarifying question rather than guessing. That single confirm is the point, not a detour: it gets you to specificity without making you learn a syntax.</p><div class="ref-callout"><strong>There are no trigger words.</strong> Earlier versions used short, distinctive keywords you had to memorize and type exactly. Those are gone. If a phrase does not read as something you would actually say out loud, that is not how Sidecoach works anymore. You describe the task; it figures out the rest.</div><p>For nudging pixels around on an already-built page in the live browser, Sidecoach hands off to <a class="ref-xlink" data-component="justify">Justify</a>. Sidecoach decides what to build and checks that it is right; Justify is the hands-on surface for fine visual tweaks.</p>
+        </section>
+        <section class="ref-chapter" id="sidecoach-sidecoach-set-it-up-once">
+          <h2 class="ref-chapter__title">Set it up once</h2>
+          <p>Sidecoach does its best work when it knows your product. It reads two files from your project root, and you create them once.</p><ul><li><strong>PRODUCT.md</strong> - who the product is for, the brand voice, and what it should <em>not</em> look like (the anti-references). This is the strategic context: register, target users, personality, and the patterns to avoid.</li><li><strong>DESIGN.md</strong> - the design tokens: colors, typography, spacing, rounding, and component specs. This is the visual source of truth.</li></ul><h3 class="ref-h3">Creating them</h3><p>You do not write these from a blank page. Ask Sidecoach to set them up.</p><ul><li><strong>For PRODUCT.md</strong>, say something like <code>teach Sidecoach about this project</code>. It interviews you for the gaps - it reads anything you already told it and only asks about what is missing - then writes the file. It will not overwrite a real PRODUCT.md unless you tell it to. For a brand-new project, a deeper interview adds problem framing, success metrics, business model, technical constraints, and brand voice, and it flags vague answers like <code>modern</code> or <code>professional</code> so you sharpen them.</li><li><strong>For DESIGN.md</strong>, say <code>document the design system</code>. If the project already has CSS, Sidecoach scans it for color tokens, fonts, type sizes, and spacing, then writes the file for you.</li></ul><h3 class="ref-h3">Why it matters</h3><p>Without these files, Sidecoach has nothing to anchor to and produces generic output - the kind of design that could belong to any product. With them, every pass is measured against your brand and your tokens. <strong>If you do one thing before your first real design task, do this.</strong></p><p>DESIGN.md follows the open <a href="https://github.com/google-labs-code/design.md" rel="noreferrer noopener">design.md spec</a>: token definitions up top, then a prose body in a fixed section order. Generated code references tokens by name (for example <code>{colors.brand.red}</code>) rather than pasting hex values, so the tokens stay the single source of truth, and a linter checks the file for broken references and contrast failures.</p>
+        </section>
+        <section class="ref-chapter" id="sidecoach-sidecoach-everyday-workflow">
+          <h2 class="ref-chapter__title">The everyday workflow</h2>
+          <p>Day to day, the rhythm is simple: <strong>build something, then have it reviewed and polished.</strong> You do both in plain language, and the quality checks run as part of the pass - you do not have to remember to ask for them.</p><h3 class="ref-h3">A real session</h3><pre><code>You:        Build a pricing table for the three plans.
+Sidecoach:  Builds it - tokens, layout, every interaction
+            state, motion with a reduced-motion fallback.
 
-            <!-- justify -->
-            <section class="reference__panel" id="panel-justify" role="tabpanel" aria-labelledby="tab-justify" data-active="true">
-              <header>
-                <h2>justify</h2>
-                <p>A microadjustment toolbar for Claude Code. Queue changes through prompt mode or manipulate mode; Claude works the scene in the background and refreshes the browser when done.</p>
-              </header>
-
-              <h3>Install</h3>
-              <pre><code>./install.sh --only justify</code></pre>
-              <p>The installer wires the toolbar, the MCP server registration in <code>~/.claude/settings.json</code>, and the queue. Symlinks the source into <code>~/.claude/skills/justify/</code> so future dotfiles pulls pick up upstream changes.</p>
-
-              <h3>How it works</h3>
-              <p>Two modes share one queue. Prompt mode lets you select an element and type the change as plain English ("heavier heading," "tighter padding"). Manipulate mode lets you select an element and reach for the exact property to change (font weight, color, radius, spacing, shadow). Either way, the change lands in the queue scoped to the element you picked.</p>
-              <p>Hand the queue to Claude. It works through the whole stack in the background, through your real source code and your real build pipeline. The browser refreshes when the scene is done. The MCP server exposes the toolbar's state to Claude (selection, queue contents, dev server connection) so it can act without a screenshot round-trip.</p>
-
-              <h3>Commands</h3>
-              <ul>
-                <li><code>justify start</code> - mounts the toolbar over your dev server and registers it with the running session</li>
-                <li><code>justify stop</code> - tears down the toolbar and clears the queue</li>
-                <li><code>justify status</code> - prints the current selection, queue length, and connection state</li>
-              </ul>
-
-              <h3>Posture</h3>
-              <ul>
-                <li>No live mutation - changes never go directly to the DOM; every change is queued and applied by Claude through your real source code</li>
-                <li>No imposed design system - reads your DESIGN.md tokens, falls back to free input with a console warning</li>
-                <li>No remote - the toolbar runs in your browser against your dev server; nothing leaves the machine</li>
-                <li>Selection and queue survive context compactions and session restarts</li>
-              </ul>
-
-              <h3>Source</h3>
-              <p><a href="https://github.com/jonahscohen/improv/tree/main/justify" rel="noreferrer noopener">github.com/jonahscohen/improv/tree/main/justify</a></p>
-            </section>
-
-            <!-- sidecoach -->
-            <section class="reference__panel" id="panel-sidecoach" role="tabpanel" aria-labelledby="tab-sidecoach">
-              <header>
-                <h2>sidecoach</h2>
-                <p>An opinionated design orchestrator. Eight craft flows, 22 verb commands, 159 validators across ten design domains.</p>
-              </header>
-
-              <h3>Install</h3>
-              <pre><code>./install.sh --only sidecoach
-# Add PRODUCT.md and DESIGN.md to your project root
-/sidecoach craft .</code></pre>
-
-              <h3>The craft chain</h3>
-              <p>When you run <code>/sidecoach craft</code> against a project, the chain executes in dependency order:</p>
-              <ul>
-                <li><code>flowA_brand_verify</code> - reads PRODUCT.md, resolves register (brand vs product), caches design laws</li>
-                <li><code>flowB_component_research</code> - pulls component patterns vetted against AI-slop heuristics</li>
-                <li><code>flowE_motion_patterns</code> - researches easing curves, exponential-only, with six reduced-motion strategies</li>
-                <li><code>flowF_design_tokens</code> - validates DESIGN.md across all seven design domains</li>
-                <li><code>flowG_component_implementation</code> - generates token-backed component specs with eight interaction states</li>
-                <li><code>flowH_motion_integration</code> - wires motion into components with stack-aware templates</li>
-                <li><code>flowI_accessibility</code> - seven WCAG 2.1 AA domain audits with a screen reader testing plan</li>
-                <li><code>flowJ_tactical_polish</code> - sixteen-point refinement pass</li>
-              </ul>
-
-              <h3>Verb commands</h3>
-              <p>Twenty-two slash commands covering the full design pipeline:</p>
-              <pre><code>/sidecoach craft     /sidecoach polish    /sidecoach audit
-/sidecoach critique  /sidecoach shape     /sidecoach typeset
-/sidecoach layout    /sidecoach adapt     /sidecoach clarify
-/sidecoach optimize  /sidecoach harden    /sidecoach onboard
-/sidecoach extract   /sidecoach live      /sidecoach teach
-/sidecoach document  /sidecoach help</code></pre>
-
-              <h3>Validator framework</h3>
-              <p>159 rules across the polish standard (22) and extended domains (137). Each validator has a soft-fail mode that records findings in the build report under the relevant domain's letter grade.</p>
-
-              <h3>Posture</h3>
-              <ul>
-                <li>No fabricated icons - SVG paths must come byte-for-byte from a registered library source</li>
-                <li>No hardcoded colors - every CSS value resolves through a DESIGN.md token</li>
-                <li>No "request a demo" - the category-reflex detector watches for AI-template phrases</li>
-                <li>No silent failures - the chain doesn't half-finish; missing prereqs raise structured errors</li>
-              </ul>
-
-              <h3>Source</h3>
-              <p><a href="https://github.com/jonahscohen/improv/tree/main/sidecoach" rel="noreferrer noopener">github.com/jonahscohen/improv/tree/main/sidecoach</a></p>
-            </section>
-
-            <!-- beats -->
-            <section class="reference__panel" id="panel-memory" role="tabpanel" aria-labelledby="tab-memory">
-              <header>
-                <h2>beats</h2>
-                <p>A layered, file-based memory system. Five durability levels, typed frontmatter, a small relationship graph, indexed in a file you actually read.</p>
-              </header>
-
-              <h3>Layers</h3>
-              <ul>
-                <li><code>TaskCreate / TaskUpdate</code> - in-session ephemeral task tracking, lives for one conversation</li>
-                <li><code>.claude/memory/*.md</code> - per-task notes, persistent in the repo, written after every discrete change</li>
-                <li><code>.claude/memory/MEMORY.md</code> - one-line index loaded at every session start</li>
-                <li>Dotfiles git sync - the entire <code>.claude</code> directory ships with the repo</li>
-                <li><code>~/.claude/projects/&lt;path&gt;/memory/</code> - the auto-memory store with five frontmatter types</li>
-              </ul>
-
-              <h3>Frontmatter types</h3>
-              <ul>
-                <li><code>user</code> - facts about the human collaborator</li>
-                <li><code>feedback</code> - corrections AND validated approaches with Why + How-to-apply</li>
-                <li><code>project</code> - in-flight work state, dated absolutely</li>
-                <li><code>decision</code> - resolved trade-offs with rejected alternatives and revisit conditions</li>
-                <li><code>reference</code> - pointers to external systems (Linear, Grafana, etc.)</li>
-              </ul>
-
-              <h3>Relationship fields</h3>
-              <ul>
-                <li><code>relates_to</code> - list of memories sharing topic or context</li>
-                <li><code>supersedes</code> - this memory replaces an older file (which gets a matching <code>superseded_by</code>)</li>
-                <li><code>superseded_by</code> - the back-link, set when this memory is replaced</li>
-              </ul>
-
-              <h3>The discipline</h3>
-              <ul>
-                <li>Write per task, not per session - batching loses work when the session ends unexpectedly</li>
-                <li>No permission gate - settings grant standing write access; never ask "should I save this?"</li>
-                <li>Self-analysis after every correction - feedback memories include the failure mode, not just the fix</li>
-                <li>Write-time link check - update <code>relates_to</code> and <code>supersedes</code> as the file is written, not in a separate pass</li>
-              </ul>
-
-              <h3>Source</h3>
-              <p><a href="beats.html">The beats subpage</a> covers the layered system in more depth.</p>
-              <p><a href="https://github.com/jonahscohen/improv/tree/main/claude/memory" rel="noreferrer noopener">github.com/jonahscohen/improv/tree/main/claude/memory</a></p>
-            </section>
-
-            <!-- cmux -->
-            <section class="reference__panel" id="panel-cmux" role="tabpanel" aria-labelledby="tab-cmux">
-              <header>
-                <h2>cmux</h2>
-                <p>A multi-pane terminal surface with a built-in browser pane and markdown renderer. The visual-verification path for any UI work.</p>
-              </header>
-
-              <h3>Install</h3>
-              <pre><code>./install.sh --only cmux</code></pre>
-
-              <h3>Browser pane</h3>
-              <p>Each project has its own cmux browser surface, declared in the project's memory directory. Screenshot, navigate, click - the verification commands round-trip through a real headless browser.</p>
-              <pre><code>cmux browser --surface &lt;id&gt; screenshot --out /tmp/page.png
-cmux browser --surface &lt;id&gt; navigate "http://localhost:3000"
-cmux browser --surface &lt;id&gt; snapshot --interactive</code></pre>
-
-              <h3>Markdown panes</h3>
-              <p>Open documents inline rather than launching an editor. cmux renders markdown natively in a dedicated surface.</p>
-              <pre><code>cmux open /absolute/path/to/document.md</code></pre>
-
-              <h3>Why it matters</h3>
-              <p>cmux is the surface where the verification protocol gets enforced. Screenshots saved to <code>/tmp</code> get tracked by a hook so they can't be claimed-verified without being read.</p>
-
-              <h3>Source</h3>
-              <p><a href="https://github.com/jonahscohen/improv/tree/main/cmux" rel="noreferrer noopener">github.com/jonahscohen/improv/tree/main/cmux</a></p>
-            </section>
-
-            <!-- voice -->
-            <section class="reference__panel" id="panel-voice" role="tabpanel" aria-labelledby="tab-voice">
-              <header>
-                <h2>voice</h2>
-                <p>Whisper.cpp transcription plus OpenAI TTS. Voice memos in, voice notes back. Built around the Discord bridge but works anywhere.</p>
-              </header>
-
-              <h3>Install</h3>
-              <pre><code>./install.sh --only voice-input voice-output</code></pre>
-              <p>Installs whisper.cpp locally, downloads the ggml-base.en model, registers the OpenAI TTS MCP server, and symlinks the <code>~/.claude/transcribe</code> CLI.</p>
-
-              <h3>Transcribe an audio file</h3>
-              <pre><code>~/.claude/transcribe /path/to/audio.ogg
-# Stdout: the transcript
-# Stderr: ffmpeg diagnostics</code></pre>
-              <p>Supports OGG/Opus (Discord voice memos), m4a (iOS), mp3, flac, wav. Auto-converts to 16 kHz mono PCM via ffmpeg before whisper.</p>
-
-              <h3>Speak a response</h3>
-              <p>When voice output is unmuted (controlled by the <code>~/.claude/.voice-enabled</code> flag), the <code>mcp__voice-output__speak</code> tool generates spoken audio. The SessionStart <code>voice-mandate</code> hook injects the active mandate per turn so Claude knows whether to call it.</p>
-
-              <h3>Mid-session toggle</h3>
-              <pre><code># In the chat
-voice on
-voice off</code></pre>
-
-              <h3>Source</h3>
-              <p><a href="https://github.com/jonahscohen/improv/tree/main/voice-input" rel="noreferrer noopener">github.com/jonahscohen/improv/tree/main/voice-input</a></p>
-            </section>
-
-            <!-- discord -->
-            <section class="reference__panel" id="panel-discord" role="tabpanel" aria-labelledby="tab-discord">
-              <header>
-                <h2>discord</h2>
-                <p>A state-aware Discord bot bridge. DM Claude from your phone, pair per user, no group chats. The launcher's prompt adapts to whether you have a token, paired users, both, or neither.</p>
-              </header>
-
-              <h3>Onboard a new machine</h3>
-              <pre><code>bash ~/.claude/discord-onboard.sh</code></pre>
-              <p>Walks you through either "I already have a Discord bot" (prompts for token) or "Walk me through making a new one" (numbered Developer Portal steps). Stores the token in macOS Keychain.</p>
-
-              <h3>Pair a user</h3>
-              <p>Start a Claude session with the Discord channel attached. DM the bot. It returns a 6-character pairing code. Run <code>/discord:access pair &lt;code&gt;</code> in the terminal session. The bot writes a one-shot signal file at <code>~/.claude/channels/discord/approved/&lt;userId&gt;</code> containing the chat ID, and re-arms its in-memory allowlist on its next poll.</p>
-
-              <h3>Voice-on-Discord</h3>
-              <p>Discord voice memos arrive as OGG attachments. The transcribe script ingests them automatically. Claude replies in text or, when voice output is active, attaches a generated OGG voice note.</p>
-
-              <h3>Recovery</h3>
-              <p>If the bot restarts and the in-memory allowlist drops out of sync with <code>access.json</code>, run <code>bash ~/.claude/discord-onboard.sh --repair</code>. It walks the allowFrom list and prompts for the chat_id of any user missing a marker, then writes the file.</p>
-
-              <h3>Source</h3>
-              <p><a href="https://github.com/jonahscohen/improv/tree/main/discord" rel="noreferrer noopener">github.com/jonahscohen/improv/tree/main/discord</a></p>
-            </section>
-
-            <!-- hooks -->
-            <section class="reference__panel" id="panel-hooks" role="tabpanel" aria-labelledby="tab-hooks">
-              <header>
-                <h2>hooks</h2>
-                <p>The enforcement layer. A dozen pre- and post-tool hooks that turn team-rule violations into actual blocks rather than gentle reminders.</p>
-              </header>
-
-              <h3>Content guards</h3>
-              <ul>
-                <li><code>content-guard.sh</code> - blocks emojis, em-dashes, AI-attribution lines, legacy model IDs in file writes</li>
-                <li><code>bash-guard.sh</code> - same patterns in bash commands plus force-push protection and JS-validation-bypass detection</li>
-              </ul>
-
-              <h3>Discipline reminders</h3>
-              <ul>
-                <li><code>memory-nudge.sh</code> - fires after Write/Edit/MultiEdit to non-memory files; reminds the dirty-state memory write</li>
-                <li><code>verify-manual.sh</code> - clears the screenshot-pending flag when the user types "verified"</li>
-                <li><code>screenshot-open-mandate.sh</code> - sets a pending flag when a screenshot is captured but not Read</li>
-                <li><code>validation-guard.sh</code> - blocks synthetic clicks, dispatched events, getComputedStyle probes during validation</li>
-              </ul>
-
-              <h3>Voice and Discord</h3>
-              <ul>
-                <li><code>voice-mandate.sh</code> - SessionStart hook that injects voice availability + mute state into context</li>
-                <li><code>voice-toggle.sh</code> - UserPromptSubmit hook that flips the mute flag on "voice on" / "voice off"</li>
-                <li><code>resume-guard.sh</code> - SessionEnd hook that blocks cmux auto-resume unless toggled</li>
-              </ul>
-
-              <h3>Override protocol</h3>
-              <p>Hooks block. When a legitimate edit needs to write the exact patterns the hooks reject (documentation that quotes a forbidden phrase, hook source that references its own blockers), ask the user for permission to bypass rather than rephrasing. Some gates can be suppressed for a window via <code>touch ~/.claude/.suppress-fix-gate</code>.</p>
-
-              <h3>Source</h3>
-              <p><a href="https://github.com/jonahscohen/improv/tree/main/claude/hooks" rel="noreferrer noopener">github.com/jonahscohen/improv/tree/main/claude/hooks</a></p>
-            </section>
-
-            <!-- validation-guard -->
-            <section class="reference__panel" id="panel-guard" role="tabpanel" aria-labelledby="tab-guard">
-              <header>
-                <h2>validation-guard</h2>
-                <p>A hook that turns "test like a user, not like a developer" into actual enforcement. Blocks synthetic clicks, dispatched events, private-API invocations, and DOM-state probing during validation.</p>
-              </header>
-
-              <h3>What it blocks</h3>
-              <ul>
-                <li><code>element.click()</code> - synthetic click on a DOM node</li>
-                <li><code>element.dispatchEvent(...)</code> - any synthesized event</li>
-                <li><code>obj._privateMethod(...)</code> - private API invocation</li>
-                <li><code>window.__app.method(...)</code> - application-namespace method calls</li>
-                <li><code>getComputedStyle</code>, <code>getBoundingClientRect</code>, <code>.scrollTop</code>, <code>.textContent</code> - DOM-state probes used to substitute for a screenshot</li>
-              </ul>
-
-              <h3>What it allows</h3>
-              <ul>
-                <li>cmux <code>click --selector</code>, <code>type --selector</code>, <code>press --key</code>, <code>screenshot</code></li>
-                <li>chrome MCP <code>left_click</code> with coordinates, <code>type</code>, <code>key</code>, <code>screenshot</code></li>
-                <li>Bundle setup (e.g., injecting a script tag a mixed-content page couldn't load) - that's setup, not validation</li>
-              </ul>
-
-              <h3>Escape hatches</h3>
-              <p>None. If a click can't reach what you need (shadow DOM with no exposed selector, element off-screen), stop and tell the user. The guard will block the workaround. The bug you're chasing may be exactly in the event path you'd skip.</p>
-
-              <h3>Source</h3>
-              <p><a href="https://github.com/jonahscohen/improv/blob/main/claude/hooks/validation-guard.sh" rel="noreferrer noopener">github.com/jonahscohen/improv/blob/main/claude/hooks/validation-guard.sh</a></p>
-            </section>
-
+You:        Now review it and tighten it up.
+Sidecoach:  Runs the quality gate, reports what it found,
+            and applies the fixes.</code></pre><p>That second step is where the standards live. The review runs in three stages, in order:</p><ol><li><strong>A technical check</strong> - accessibility, theming (light and dark), responsiveness across breakpoints, and common anti-patterns. Anything serious is a blocker, not a suggestion.</li><li><strong>An independent design critique</strong> - a fresh look at the result for cognitive load, visual hierarchy, the emotional read, and the tell-tale signs of generic, templated design.</li><li><strong>A final polish</strong> - the tactical craft pass that always runs last: optical alignment, concentric rounding, press states, balanced headings, tabular numbers, and real hit-target sizes.</li></ol><p>You can ask for any one of these on its own - <code>just audit this</code>, <code>give it a critique</code>, <code>polish the nav</code> - but for a substantive change, asking to <code>review and tighten</code> runs the whole gate so nothing ships half-checked.</p><div class="ref-callout">For pixel-level adjustments after the pass - nudging a margin, trying two shades, resizing a gap by eye - move to <a class="ref-xlink" data-component="justify">Justify</a> and iterate live in the browser.</div>
+        </section>
+        <section class="ref-chapter" id="sidecoach-sidecoach-explicit-verbs">
+          <h2 class="ref-chapter__title">If you would rather be explicit</h2>
+          <p>Plain language is the default, but if you already know exactly which pass you want, you can name it directly. Sidecoach understands a set of ordinary design verbs - the same words you would use describing the work anyway - and each one maps to a specific pass with no guesswork in between. Saying <code>polish the pricing table</code> or <code>audit the signup form</code> goes straight to that pass.</p><p>The verbs, grouped by the phase of work they belong to:</p><table class="ref-table"><thead><tr><th>Phase</th><th>Verbs</th><th>What they do</th></tr></thead><tbody><tr><td>Plan</td><td><code>shape</code>, <code>onboard</code></td><td>Plan a feature's design before any code; design first-run and empty states.</td></tr><tr><td>Build</td><td><code>craft</code>, <code>layout</code>, <code>typeset</code>, <code>animate</code>, <code>colorize</code>, <code>clarify</code>, <code>delight</code>, <code>bolder</code>, <code>overdrive</code></td><td>Build a component from scratch, restructure layout, set type, add motion or color, sharpen the message, add personality, or push the visual weight up.</td></tr><tr><td>Review</td><td><code>audit</code>, <code>critique</code>, <code>polish</code>, <code>harden</code>, <code>adapt</code>, <code>optimize</code></td><td>Technical audit, design critique, tactical polish, production hardening, a responsive pass, and a performance pass.</td></tr><tr><td>Tone</td><td><code>quieter</code>, <code>distill</code></td><td>Reduce noise and complexity, or strip a design down to its essentials.</td></tr><tr><td>Document</td><td><code>document</code>, <code>extract</code></td><td>Generate DESIGN.md from existing CSS, or pull reusable tokens and components out of an implementation.</td></tr><tr><td>Live</td><td><code>live</code></td><td>Iterate on a target in the browser in real time.</td></tr></tbody></table><p>These name the same passes the plain-language route reaches - a shortcut for when you are sure, not a separate system. If you live in the terminal, each verb also works as a command (for example <code>/sidecoach polish</code>); if you do not, just use the word in a sentence.</p>
+        </section>
+        <section class="ref-chapter" id="sidecoach-sidecoach-what-you-get-back">
+          <h2 class="ref-chapter__title">What you get back</h2>
+          <p>Every pass ends with a readable <strong>build report</strong>, not a wall of logs. It grades the work area by area - accessibility, theming, responsiveness, motion, and craft - so you can see at a glance where the result is strong and where it needs another look.</p><ul><li><strong>Graded per area.</strong> Each dimension gets its own mark, so a good overall result never hides one weak spot.</li><li><strong>Backed by real checks.</strong> The grades come from actual tests - contrast measured against WCAG, tap targets measured in pixels, tokens checked for completeness - not a model's impression that it looks fine. Sidecoach can open your actual rendered page in a browser and catch real problems there, and that check runs server-side, so it works whether you are on the command line, the desktop app, or your phone.</li><li><strong>It remembers the work.</strong> When a pass finishes, Sidecoach records what it did to your project's <a class="ref-xlink" data-component="beats">Beats</a> - the running memory of the project - so the next session knows what was built, what was decided, and why, instead of starting cold.</li></ul><p>Sidecoach is one layer in a larger design system. It leans on a set of peer skills for the specialized parts of a build - component research, typeface selection, motion patterns, icon sourcing, generated backgrounds, and a full multi-role design sprint when a whole page is in play. For the map of that whole stack and what each piece owns, see <a class="ref-xlink" data-component="foundation">the design stack</a>.</p>
+        </section>
+      </div>
+      <div class="ref-panel" data-component="beats">
+        <section class="ref-chapter" id="beats-it-remembers">
+          <h2 class="ref-chapter__title">It remembers so you do not have to</h2>
+          <p>The single most useful thing to know about Beats is that you do not have to do anything to use it. As you work, Claude keeps a running record of what got done, what was decided, and why. The next time you open the project, it reads that record back before it touches anything. There is no command to run, no note to file, no checkbox to remember.</p><p>Think of it as a colleague who writes down what happened at the end of each task and reviews those notes before starting the next one. Finish a fix, and a short entry lands in the record: what changed, what broke, how it was resolved. Make a call between two approaches, and the reasoning gets written down alongside the choice. None of this interrupts you.</p><p>This matters most across time. A week later, when you ask Claude to pick up where you left off, it is not guessing from the code or the commit log. It is reading its own account of the work: the dead ends, the decisions, the things that turned out to be true. That is the whole move. The rest of this guide is just how to read those notes, how they follow you between machines, and how to point Claude at something specific when you want it kept a certain way.</p><div class="ref-callout"><p><strong>You never run a command for this.</strong> Recording happens as part of doing the work, and reading happens at the start of every session. The only time you step in is when you want to steer what gets kept, which is covered later in this guide.</p></div>
+        </section>
+        <section class="ref-chapter" id="beats-reading-the-record">
+          <h2 class="ref-chapter__title">Reading the record</h2>
+          <h3 class="ref-h3">Where the notes live</h3><p>The record is a folder of plain text files inside your project, at <code>.claude/memory/</code>. Each file is a short note written in Markdown. Most are session notes, one per topic per day, with names like <code>session_2026-06-15_review-panel.md</code>. You can open any of them in any editor and read them like a journal entry, because that is what they are.</p><h4 class="ref-h4">The index that loads everything</h4><p>One file sits above the rest: <code>MEMORY.md</code>. It is a one-line-per-entry index of every note, newest first. At the start of a session Claude reads this index, then reads the notes it points to. That is how a fresh session catches up on months of work in seconds: the index is the table of contents, and each line is a pointer to the full account.</p><p>A line in the index reads like this:</p><pre><code>- [Review panel - real unified diffs (2026-06-15)](session_2026-06-15_review-panel.md): replaced the fake property-by-property diff with a standard unified diff and open-at-exact-line...</code></pre><h3 class="ref-h3">Just ask</h3><p>You do not need to open the folder. The natural way to read the record is to ask. Try:</p><ul><li><em>What did we work on last?</em></li><li><em>Why did we choose this approach for the review panel?</em></li><li><em>What have we already tried for this bug?</em></li></ul><p>The answer comes from the notes, not from a guess and not from the commit history. If the work is in the record, Claude reads it back to you in plain language. This is the fastest way to rebuild your own context after time away, on a feature someone else touched, or after a long break.</p>
+        </section>
+        <section class="ref-chapter" id="beats-across-machines">
+          <h2 class="ref-chapter__title">Across machines</h2>
+          <p>The record is not stored on your laptop. It lives inside the project, in the same place as the code, which means it travels with the project. When the project moves, the notes move with it.</p><p>The practical effect: open the same project on a different machine, or hand it to a teammate, and the full history of decisions and work shows up there too. There is nothing to sync by hand, no separate database, no per-machine setup. If you have the project, you have its memory.</p><p>This is what makes Beats a shared record rather than a private one. Each note records who did the work, so when you read an entry from another machine you can see whose hands last touched a feature. Two people on the same project are reading from and adding to one continuous account, not two separate ones that quietly drift apart.</p><div class="ref-callout"><p><strong>Because the record lives with the project, treat it like the code.</strong> It moves when the project moves and it is visible to anyone who has the project. That is exactly why notes are written in plain, professional language.</p></div>
+        </section>
+        <section class="ref-chapter" id="beats-steering-it">
+          <h2 class="ref-chapter__title">Steering what it keeps</h2>
+          <p>Most of the time you let the record build itself. But sometimes you want Claude to remember a specific thing a specific way. You do that the same way you do everything else here: you say so.</p><h3 class="ref-h3">Asking for something to be remembered</h3><p>If you tell Claude something that should outlast the current conversation, say it plainly:</p><ul><li><em>Remember that we never use broad CSS rules on this project.</em></li><li><em>Note for next time: the dev server runs on port 4831.</em></li><li><em>Write down why we picked the polling approach over the socket one.</em></li></ul><p>It becomes a note, and it comes back the next time the topic is relevant. You can also correct the record. If Claude wrote something down that is wrong or out of date, tell it, and the note gets updated or replaced.</p><h3 class="ref-h3">The kinds of notes it keeps</h3><p>Not every note is the same. The record sorts what it keeps into a few plain categories, so a decision reads differently from a passing status update. You rarely need to name these yourself, but knowing they exist helps you ask for the right thing.</p><table class="ref-table"><tr><th>Kind</th><th>What it captures</th></tr><tr><td>About you</td><td>How you like to work, your preferences, things that hold true across the whole project.</td></tr><tr><td>Feedback</td><td>A correction or standing instruction you gave, so the same mistake is not repeated.</td></tr><tr><td>Project state</td><td>What is happening right now: what shipped, what is wired up, what is still in progress.</td></tr><tr><td>Decisions</td><td>A choice made between real alternatives, with the reasoning and the conditions that would call for revisiting it.</td></tr><tr><td>References</td><td>Durable facts worth keeping on hand: ports, file locations, how a tool is set up.</td></tr></table><p>The distinction that matters most is between project state and decisions. A project note says what is true now. A decision note says what you chose and why, and that reasoning stays useful long after the state has moved on. When you find yourself facing the same fork twice, the decision notes are what tell you whether the original reasoning still holds.</p><h3 class="ref-h3">It is not the only thing that writes</h3><p><a class="ref-xlink" data-component="sidecoach">Sidecoach</a>, the design system, keeps its own entries in the same record when it runs a design pass, so the reasoning behind a visual change lands next to the rest of the work. And when the record grows large, <a class="ref-xlink" data-component="foundation">the reflect tool</a> reads back across all of it at once to surface patterns, tensions, and gaps you might have missed. The record is the shared substrate: these tools both write to it and read from it.</p>
+        </section>
+      </div>
+      <div class="ref-panel" data-component="foundation">
+        <section class="ref-chapter" id="foundation-install-improv">
+          <h2 class="ref-chapter__title">Install Improv</h2>
+          <p>One command sets up Improv on a Mac. Paste it into your terminal and press enter:</p><pre><code>curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash</code></pre><p>This downloads Improv, installs a single shortcut called <code>ampersand</code>, and reloads your shell so the shortcut is live right away. When it finishes you will see <strong>Type 'ampersand' to begin.</strong></p><h3 class="ref-h3">The picker</h3><p>Type <code>ampersand</code> and a checklist appears. Every piece of Improv is listed with a one-line description of what it does. Use the arrow keys to move, the space bar to toggle a piece on or off, and enter to confirm. Everything starts ticked, so if you want the whole set, just press enter.</p><p>Improv shows you the final selection, asks you to confirm, then installs. It is safe to run as many times as you like. Re-running only touches what changed, and anything you had configured before is left in place.</p><div class="ref-callout"><p>Improv is built for macOS. It expects a recent Mac with the standard developer tools. If something it needs is missing, such as <code>git</code>, the installer stops and tells you exactly what to install first.</p></div><h3 class="ref-h3">Coming back later</h3><p>The <code>ampersand</code> shortcut is your way back in. Run it any time to change what is installed, add a piece you skipped, or pull the newest version before you do:</p><pre><code>ampersand            # open the picker again
+ampersand --pull     # pull the latest, then open the picker</code></pre>
+        </section>
+        <section class="ref-chapter" id="foundation-pick-just-what-you-want">
+          <h2 class="ref-chapter__title">Pick just what you want</h2>
+          <p>You do not have to take everything. If you already know what you want, name it directly instead of clicking through the picker. Each piece has a short <em>key</em> you pass on the command line.</p><h3 class="ref-h3">Install only certain pieces</h3><p>Pass <code>--only</code> with a comma-separated list of keys:</p><pre><code>ampersand --only memory,config
+ampersand --only sidecoach</code></pre><h3 class="ref-h3">Presets</h3><p>Three presets cover the common cases:</p><pre><code>ampersand --preset all       # everything
+ampersand --preset minimal   # a lean core working set
+ampersand --preset none      # nothing (handy for turning pieces back off)</code></pre><h3 class="ref-h3">Preview before you commit</h3><p>Add <code>--dry-run</code> to any command to print exactly what would happen and then exit without touching a single file:</p><pre><code>ampersand --only memory,config --dry-run</code></pre><h3 class="ref-h3">The main pieces</h3><p>The picker lists every available piece. This table covers the ones most people reach for, with the key you use after <code>--only</code>.</p><table class="ref-table"><thead><tr><th>Key</th><th>What you get</th></tr></thead><tbody><tr><td><code>brain</code></td><td>The shared team rules and working style, added to your global Claude instructions.</td></tr><tr><td><code>config</code></td><td>The safety hooks, guard rails, and permissions that keep Claude on the rails.</td></tr><tr><td><code>memory</code></td><td>The <a class="ref-xlink" data-component="beats">beats</a> system: persistent, cross-session project memory.</td></tr><tr><td><code>skills</code></td><td>The design pipeline and its peer skills (research, typography, motion, icons, and more).</td></tr><tr><td><code>sidecoach</code></td><td>The <a class="ref-xlink" data-component="sidecoach">sidecoach</a> design orchestration that guides Claude through polish, review, and build work.</td></tr><tr><td><code>voice-input</code></td><td>Local voice transcription, so you can talk to Claude instead of typing.</td></tr><tr><td><code>voice-output</code></td><td>Spoken replies through a text-to-speech voice.</td></tr><tr><td><code>discord</code></td><td>Chat with Claude from Discord, including from your phone.</td></tr><tr><td><code>cmux</code></td><td>The browser pane Claude uses to take screenshots and verify your UI.</td></tr><tr><td><code>reflect</code></td><td>Analysis that reads across your beats to surface patterns and gaps.</td></tr></tbody></table><p>A few pieces are large enough to have their own page in this reference. For the full story on each, see <a class="ref-xlink" data-component="beats">beats</a>, <a class="ref-xlink" data-component="sidecoach">sidecoach</a>, and <a class="ref-xlink" data-component="justify">justify</a>.</p>
+        </section>
+        <section class="ref-chapter" id="foundation-talk-to-it-hear-it-back">
+          <h2 class="ref-chapter__title">Talk to it, hear it back</h2>
+          <p>Improv can listen and talk back. The listening side works as soon as the voice transcription piece is installed and runs entirely on your machine. The speaking side needs an OpenAI key and stays off until you turn it on.</p><h3 class="ref-h3">Talk instead of typing</h3><p>Record a voice memo on your phone or your Mac and hand the file to Claude. Improv transcribes it locally and treats the words as if you had typed them. There is no cloud service and no API key involved. It understands the common audio formats, including the voice memos from your phone and the voice messages Discord sends.</p><p>If you installed Improv with the picker, make sure the <code>voice-input</code> piece is ticked. To add it later:</p><pre><code>ampersand --only voice-input</code></pre><h3 class="ref-h3">Hear replies out loud</h3><p>With the speaking side on, Claude reads a short summary of its replies aloud while keeping code and technical detail on screen as text. This piece uses OpenAI's text-to-speech, so it needs your own OpenAI key. Without a key it simply stays silent.</p><p>Add it with the picker or directly:</p><pre><code>ampersand --only voice-output</code></pre><h3 class="ref-h3">Turn the voice on and off</h3><p>Spoken replies start muted. Flip them from any terminal:</p><pre><code>voice-on     # start speaking replies
+voice-off    # go quiet again</code></pre><p>You can also say <strong>voice on</strong> or <strong>voice off</strong> to Claude mid-conversation, or ask it to <strong>mute yourself</strong>. The setting sticks until you change it, so muting once keeps things quiet across sessions.</p><div class="ref-callout"><p>Speaking is the only piece that needs a paid key. Everything else, including the listening side, runs locally at no cost.</p></div>
+        </section>
+        <section class="ref-chapter" id="foundation-use-it-from-your-phone-via-discord">
+          <h2 class="ref-chapter__title">Use it from your phone via Discord</h2>
+          <p>Improv can put Claude in your pocket. Pair a Discord bot once, then message Claude from Discord on any device, including your phone, and the replies come straight back in the chat.</p><h3 class="ref-h3">Set it up once</h3><p>If you skipped Discord during install, add it:</p><pre><code>ampersand --only discord</code></pre><p>Then run the guided walkthrough. It takes about five minutes and handles either case, whether you already have a Discord bot or need to make one:</p><pre><code>bash ~/.claude/discord-onboard.sh</code></pre><p>The walkthrough stores your bot token securely in the macOS Keychain, never in a file. If you do not have a bot yet, it steps you through creating one in Discord's developer portal, including the one setting the bot needs to read your messages.</p><h3 class="ref-h3">Pair your account</h3><p>Pairing tells Claude that messages from you are trusted. You do this once:</p><ol><li>Start a Claude session in a terminal and answer <strong>Yes</strong> when it asks to connect to Discord.</li><li>Find your bot in Discord and send it any message. It replies with a six-character code.</li><li>Back in the terminal, run <code>/discord:access pair &lt;code&gt;</code> with that code.</li></ol><p>The bot confirms you are in, and from then on you can simply send it a direct message.</p><h3 class="ref-h3">Chatting from your phone</h3><p>Open Discord on your phone, message your bot, and Claude answers in the thread. Send a voice message and Improv transcribes it the same way it handles any audio. If spoken replies are on, the answer comes back as both text and a short audio clip you can play right in the chat.</p><div class="ref-callout"><p>Pairing is deliberately a one-time, terminal-only step. Claude will never add a new person just because a Discord message asks it to. That approval has to come from you, at your own machine.</p></div>
+        </section>
+        <section class="ref-chapter" id="foundation-the-browser-pane">
+          <h2 class="ref-chapter__title">The browser pane</h2>
+          <p>cmux is a split-pane terminal with a real browser built into it. When Claude changes something visual, such as a layout, a color, or a component, it can open the page in that pane, take a screenshot, and look at the result instead of guessing.</p><h3 class="ref-h3">What it gives you</h3><p>The point is honest verification. With the browser pane, Claude can:</p><ul><li>Take a screenshot of your running site and actually read it back.</li><li>Open and reload any local address to see a change live.</li><li>Click, type, hover, and scroll the way a person would, so it confirms that interactions truly work rather than assuming they do.</li></ul><p>For you, this means the work you get back has been seen, not just compiled. A passing build is not proof that a page looks right. A screenshot is.</p><h3 class="ref-h3">Using it</h3><p>Add the cmux piece during install, or later:</p><pre><code>ampersand --only cmux</code></pre><p>From there it works in the background. Ask Claude to take a screenshot of what it built, or to refresh the tab after a change, and it drives the pane for you. You rarely run cmux commands yourself. It is the surface Claude uses to check its own work before handing it back.</p>
+        </section>
+        <section class="ref-chapter" id="foundation-design-peer-skills">
+          <h2 class="ref-chapter__title">The design peer skills</h2>
+          <p>Sidecoach is the front door for design work. Sitting beside it are four specialist skills, each good at one kind of output. You do not memorize them or call them by name. You say what you want in plain language and the right one steps in. Each reads your project's <code>PRODUCT.md</code> and <code>DESIGN.md</code> first, so what it makes matches your brand instead of a generic default. <a class="ref-xlink" data-component="sidecoach">Sidecoach</a> is what reaches for them.</p><p>Use this as a rough map of which one fits which want.</p><table class="ref-table"><thead><tr><th>When you want</th><th>What steps in</th></tr></thead><tbody><tr><td>An image sized exactly right for a platform</td><td>Platform-correct social assets</td></tr><tr><td>A whole page or campaign designed end to end</td><td>A multi-role design sprint</td></tr><tr><td>A living, animated, or shader backdrop</td><td>Generative backgrounds, tuned in tilt-lab</td></tr><tr><td>An icon</td><td>Real icon sourcing</td></tr></tbody></table><h3 class="ref-h3">Platform-correct social assets</h3><p>Use this when you want an asset built to a platform's exact spec: an Instagram carousel, a YouTube thumbnail, an Open Graph card, a LinkedIn banner. It knows the precise pixel dimensions, the safe zones a platform's own interface covers, and the smallest text size that stays readable at thumbnail scale. It is the spec sheet, not the paintbrush. It hands over the constraints so nothing important gets cropped or shrunk past legibility; the visual itself is still built from your brand.</p><h3 class="ref-h3">A multi-role design sprint</h3><p>Use this when the task is large: a full landing page, a multi-section page, a campaign whose pieces need to match. Instead of one straight pass, it runs a small team. Researchers and copywriters go first, then several builders work in parallel on different sections, then a creative-director review runs the quality checks and makes sure the sections hang together as one page. Reach for it on whole pages and campaigns, not single components. A lone button does not need a sprint.</p><h3 class="ref-h3">Generative and shader backgrounds</h3><p>Use this when a hero or section wants a backdrop that moves: an animated gradient, a fluid surface, a drifting dot field, a fine grain. It ships real, tested effect source rather than improvising shader code on the spot. It also runs the other direction, applying an effect to an image you already have, such as a halftone, dither, glitch, or ASCII treatment. To watch one of these run and dial it in before it ships, you go to tilt-lab, covered next.</p><h3 class="ref-h3">Real icon sourcing</h3><p>Use this any time you need an icon. Rather than drawing one, it pulls the exact artwork from an established library, such as Heroicons, Lucide, Tabler, or Phosphor, and copies it verbatim. It holds a project to a single library so the icons stay visually consistent instead of mixing stroke weights and corner styles. This is also the check that keeps a made-up, slightly-off icon from ever reaching your page.</p><div class="ref-callout"><p>You will rarely name any of these out loud. Behind them sit deeper layers that <a class="ref-xlink" data-component="sidecoach">Sidecoach</a> pulls in for you when a task needs them: a vetted catalog of component patterns, a typeface catalog that steers away from overused defaults, canonical motion patterns, and a final pass for the small details. You describe the outcome; the stack assembles the right specialists.</p></div>
+        </section>
+        <section class="ref-chapter" id="foundation-tilt-lab">
+          <h2 class="ref-chapter__title">tilt-lab</h2>
+          <p>tilt-lab is a local workbench for backgrounds. When a section calls for a moving or shader backdrop, this is where you watch it run and tune it before it ever lands in your page. It is driven from the design flow: <a class="ref-xlink" data-component="sidecoach">Sidecoach</a> delegates here whenever a backdrop is part of the work, so you reach it through the task rather than as a separate side trip.</p><h3 class="ref-h3">The loop, in plain terms</h3><p>The workbench does four things, fast:</p><ul><li><strong>Browse</strong> a catalog of around twenty-five effects, grouped by the role they play: background, midground, pointer, and post-process.</li><li><strong>Layer</strong> compatible effects into a stack and watch them composite together in one live preview.</li><li><strong>Tune</strong> each effect's parameters in real time with sliders, so you feel the change as you make it.</li><li><strong>Export</strong> the finished stack as a single self-contained package you drop into your project.</li></ul><p>There is no build step, no account, and no network round trip. The whole loop, from "I wonder what that looks like" to "it is in my project", is meant to take seconds.</p><h3 class="ref-h3">The preview is honest</h3><p>What you see in the workbench canvas is exactly what the exported component renders. There is no separate preview mode that approximates the result and then surprises you later. When the stack looks right in the lab, it looks the same in your page.</p><h3 class="ref-h3">How it lands behind your content</h3><p>The export is a framework-agnostic web component. It mounts behind your section: positioned underneath the content rather than over it, matched to your design tokens so its colors belong to your palette, and aware of a reduced-motion preference so it falls still for anyone who has asked for less movement. You audition and tune the effect in the lab; the finished component is then mounted behind the section, with the text and controls sitting cleanly on top.</p>
+        </section>
+        <section class="ref-chapter" id="foundation-guardrails">
+          <h2 class="ref-chapter__title">Guardrails you do not have to think about</h2>
+          <p>As Claude works, a layer of quiet checks runs alongside it. You do not switch these on, configure them, or call for them. Their entire job is to keep small, avoidable mistakes from reaching you, the kind that are easy to wave through in the moment and tedious to clean up later. It is worth knowing what they cover, mostly so you can trust that the floor is always the floor.</p><h3 class="ref-h3">What they keep out of your work</h3><table class="ref-table"><thead><tr><th>The check</th><th>What it prevents</th></tr></thead><tbody><tr><td>House style</td><td>Emojis and em-dashes do not slip into anything that ships.</td></tr><tr><td>Real icons only</td><td>An icon either comes verbatim from a real library or it does not ship. Nothing hand-drawn or approximated gets through.</td></tr><tr><td>Live design tokens</td><td>Generated interface code points at your real <code>DESIGN.md</code> tokens instead of hard-coded colors that quietly drift away from the system.</td></tr><tr><td>Seeing before done</td><td>If the interface changed, it is opened in a real browser and looked at, and interactive parts are actually clicked, before the work is called finished. A passing build is not the same as a working screen.</td></tr><tr><td>Current models, no credit-taking</td><td>Outdated model versions are kept out, and Claude never signs your commits or takes credit in your work.</td></tr><tr><td>Nothing lost</td><td>Each finished piece of work is recorded as it happens, so if a session ends abruptly the record is already written. See <a class="ref-xlink" data-component="beats">Beats</a>.</td></tr></tbody></table><h3 class="ref-h3">When a rule is wrong for the moment</h3><p>Now and then a guard gets in the way of legitimate work. You genuinely need to write the very thing it screens for: documenting one of these rules in plain text, say, or storing a value the token check would normally flag. When that happens, Claude does not quietly route around the guard or soften your wording to slip past it. It stops and asks you whether to allow it this once.</p><div class="ref-callout"><p>The default is safe and the exception is explicit. You stay in control of the override. The guard never silently bends, and it never silently blocks you without saying so.</p></div>
+        </section>
+      </div>
           </div>
         </div>
       </div>
@@ -381,6 +249,7 @@ voice off</code></pre>
           <a href="justify.html">justify</a>
           <a href="sidecoach.html">sidecoach</a>
           <a href="beats.html">beats</a>
+          <a href="foundation.html">foundation</a>
           <a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a>
         </nav>
       </div>
@@ -388,53 +257,77 @@ voice off</code></pre>
   </footer>
 
   <script>
-    // ARIA tabs - keyboard navigation + click switches panel
     (function () {
-      const tabs = Array.from(document.querySelectorAll('.reference__tab'));
-      const panels = Array.from(document.querySelectorAll('.reference__panel'));
+      var subnavBtns = Array.prototype.slice.call(document.querySelectorAll('.ref-subnav__btn'));
+      var chapterNavs = Array.prototype.slice.call(document.querySelectorAll('.ref-chapters'));
+      var panels = Array.prototype.slice.call(document.querySelectorAll('.ref-panel'));
 
-      function activate(tab, focus) {
-        const target = tab.getAttribute('aria-controls');
-        tabs.forEach(function (t) {
-          t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
-          t.setAttribute('tabindex', t === tab ? '0' : '-1');
-        });
-        panels.forEach(function (p) {
-          p.setAttribute('data-active', p.id === target ? 'true' : 'false');
-        });
-        if (focus) tab.focus();
-        try {
-          const url = new URL(window.location);
-          url.hash = tab.dataset.tab || '';
-          history.replaceState(null, '', url);
-        } catch (e) { /* ignore */ }
+      function setComponent(key, opts) {
+        opts = opts || {};
+        subnavBtns.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.component === key ? 'true' : 'false'); });
+        chapterNavs.forEach(function (n) { n.setAttribute('data-active', n.dataset.component === key ? 'true' : 'false'); });
+        panels.forEach(function (p) { p.setAttribute('data-active', p.dataset.component === key ? 'true' : 'false'); });
+        if (!opts.keepHash) {
+          try { var u = new URL(window.location); u.hash = key; history.replaceState(null, '', u); } catch (e) {}
+        }
+        if (opts.scrollTop) {
+          var sub = document.querySelector('.ref-subnav');
+          var y = sub ? (sub.getBoundingClientRect().bottom + window.scrollY - sub.offsetHeight) : 0;
+          window.scrollTo({ top: opts.atTop ? 0 : y, behavior: 'auto' });
+        }
+        observeActivePanel();
       }
 
-      tabs.forEach(function (tab, idx) {
-        tab.addEventListener('click', function () { activate(tab, false); });
-        tab.addEventListener('keydown', function (e) {
-          let next = null;
-          if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-            next = tabs[(idx + 1) % tabs.length];
-          } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-            next = tabs[(idx - 1 + tabs.length) % tabs.length];
-          } else if (e.key === 'Home') {
-            next = tabs[0];
-          } else if (e.key === 'End') {
-            next = tabs[tabs.length - 1];
-          }
-          if (next) {
-            e.preventDefault();
-            activate(next, true);
-          }
-        });
+      subnavBtns.forEach(function (b) {
+        b.addEventListener('click', function () { setComponent(b.dataset.component, { scrollTop: true }); });
       });
 
-      // Honor a fragment if present on first load
-      const initial = window.location.hash ? window.location.hash.slice(1) : null;
-      if (initial) {
-        const match = tabs.find(function (t) { return t.dataset.tab === initial; });
-        if (match) activate(match, false);
+      // Cross-component links inside content jump to the target component.
+      document.addEventListener('click', function (e) {
+        var x = e.target.closest && e.target.closest('.ref-xlink[data-component]');
+        if (x) { e.preventDefault(); setComponent(x.dataset.component, { scrollTop: true, atTop: true }); }
+      });
+
+      // Scroll-spy: highlight the chapter link for the chapter nearest the top.
+      var spy = null;
+      function observeActivePanel() {
+        if (spy) { spy.disconnect(); spy = null; }
+        var panel = document.querySelector('.ref-panel[data-active="true"]');
+        var nav = document.querySelector('.ref-chapters[data-active="true"]');
+        if (!panel || !nav) return;
+        var links = {};
+        Array.prototype.forEach.call(nav.querySelectorAll('.ref-chapter-link'), function (l) { links[l.dataset.chapter] = l; });
+        var chapters = Array.prototype.slice.call(panel.querySelectorAll('.ref-chapter'));
+        if (!chapters.length) return;
+        var visible = {};
+        spy = new IntersectionObserver(function (entries) {
+          entries.forEach(function (en) { visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+          var topId = null, best = -1;
+          chapters.forEach(function (ch) { var v = visible[ch.id] || 0; if (v > best) { best = v; topId = ch.id; } });
+          if (best <= 0) { // none intersecting; pick the last one above the fold
+            for (var i = chapters.length - 1; i >= 0; i--) { if (chapters[i].getBoundingClientRect().top < 120) { topId = chapters[i].id; break; } }
+          }
+          Object.keys(links).forEach(function (id) { links[id].setAttribute('aria-current', id === topId ? 'true' : 'false'); });
+        }, { rootMargin: '-70px 0px -65% 0px', threshold: [0, 0.25, 0.5, 1] });
+        chapters.forEach(function (ch) { spy.observe(ch); });
+      }
+
+      // Initial load: honor #component or #component-chapter.
+      var hash = window.location.hash ? window.location.hash.slice(1) : '';
+      var initial = 'justify';
+      if (hash) {
+        var compMatch = subnavBtns.find(function (b) { return b.dataset.component === hash; });
+        if (compMatch) { initial = hash; }
+        else {
+          var dash = hash.indexOf('-');
+          var maybe = dash > 0 ? hash.slice(0, dash) : null;
+          if (maybe && subnavBtns.find(function (b) { return b.dataset.component === maybe; })) { initial = maybe; }
+        }
+      }
+      setComponent(initial, { keepHash: true });
+      // If the hash points at a specific chapter, scroll to it after layout.
+      if (hash && hash.indexOf('-') > 0 && document.getElementById(hash)) {
+        requestAnimationFrame(function () { document.getElementById(hash).scrollIntoView(); });
       }
     })();
   </script>

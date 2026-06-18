@@ -137,6 +137,19 @@ export class LassoSelect {
   }
 
   private _onMousedown(e: MouseEvent): void {
+    // Never start a lasso drag from inside Justify's own UI (toolbar, panel,
+    // inline prompt input) or from an editable field. The prompt input lives in
+    // the overlay's open shadow root whose host carries [data-justify], so the
+    // composed path surfaces both the input and the marked host - dragging there
+    // must do native text selection, not DOM element selection.
+    const path = (typeof e.composedPath === 'function' ? e.composedPath() : []) as EventTarget[];
+    for (const n of path) {
+      if (n instanceof HTMLElement) {
+        if (n.hasAttribute('data-justify')) return;
+        const tag = n.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || n.isContentEditable) return;
+      }
+    }
     this.startX = e.clientX;
     this.startY = e.clientY;
     this.dragging = false;

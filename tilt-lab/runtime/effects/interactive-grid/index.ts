@@ -170,6 +170,19 @@ export function createInteractiveGridEffect(): Effect {
       currentVY = 0;
       pointerSeen = false;
     },
+    // As a `post` layer the compositor hands us the composited scene beneath
+    // (e.g. a whole hero section) each frame. Upload it as the texture the grid
+    // distorts so the cursor warps the real content below, not a bundled image.
+    // uTextureSize drives the cover-fit UV (the canvas is viewport-sized, ~1:1).
+    onBeneath(source: HTMLCanvasElement) {
+      if (dead || !imageTexture) return;
+      const sw = source.width || w;
+      const sh = source.height || h;
+      if (sw < 1 || sh < 1) return;
+      imageTexture.image = source as unknown as Texture['image'];
+      imageTexture.needsUpdate = true;
+      (uniforms.uTextureSize.value as Vec2).set(sw, sh);
+    },
     frame(t: number) {
       if (dead || !renderer || !scene || !dataTexture) return;
 

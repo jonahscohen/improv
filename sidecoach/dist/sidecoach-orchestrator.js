@@ -88,6 +88,8 @@ const flow_metrics_tracker_1 = require("./flow-metrics-tracker");
 const flow_conditional_router_1 = require("./flow-conditional-router");
 const clausemd_mandate_validator_1 = require("./clausemd-mandate-validator");
 const build_report_aggregator_1 = require("./build-report-aggregator");
+const panel_model_1 = require("./panel-model");
+const panel_renderer_1 = require("./panel-renderer");
 const checkpoint_store_1 = require("./checkpoint-store");
 const verb_command_registry_1 = require("./verb-command-registry");
 // Flows that produce HTML output and must clear the taste gate before declaring success.
@@ -406,6 +408,7 @@ class FlowExecutionEngine {
             checklist: aggregatedChecklist.length > 0 ? aggregatedChecklist : undefined,
             artifacts: [buildReportArtifact],
             buildReport,
+            panel: (0, panel_renderer_1.renderSidecoachPanel)((0, panel_model_1.assemblePanelModel)({ flowResults, report: buildReport, confidence: 1.0 })),
         };
     }
     /**
@@ -975,6 +978,7 @@ class FlowExecutionEngine {
                 flowResults,
                 guidance: chainGuidance.length > 0 ? chainGuidance : undefined,
                 buildReport: chainBuildReport,
+                panel: (0, panel_renderer_1.renderSidecoachPanel)((0, panel_model_1.assemblePanelModel)({ flowResults, report: chainBuildReport, confidence: detectedFlow?.confidence })),
             };
         }
         // Step 2.5: /sidecoach <phrase> live wiring. Known verbs/phase commands were
@@ -1375,6 +1379,7 @@ class FlowExecutionEngine {
             checklist: flowResults.flatMap((r) => r.checklist || []),
             artifacts: flowResults.flatMap((r) => r.artifacts || []),
             buildReport: buildReportSingle,
+            panel: (0, panel_renderer_1.renderSidecoachPanel)((0, panel_model_1.assemblePanelModel)({ flowResults, report: buildReportSingle, confidence: match.confidence })),
         };
     }
     /**
@@ -1496,10 +1501,20 @@ class FlowExecutionEngine {
             if (!pf.ok)
                 throw new Error(pf.message);
         }
-        return laneRunner.startLane(laneId, target, { ...context, projectPath }, startRequestId, this.laneDeps(projectPath), renderUrl);
+        const started = await laneRunner.startLane(laneId, target, { ...context, projectPath }, startRequestId, this.laneDeps(projectPath), renderUrl);
+        try {
+            started.panel = (0, panel_renderer_1.renderSidecoachPanel)((0, panel_model_1.laneStepToPanelModel)(started));
+        }
+        catch { /* panel is best-effort */ }
+        return started;
     }
     async advanceLane(projectPath, checkpointId, transition) {
-        return laneRunner.advanceLane(projectPath, checkpointId, transition, this.laneDeps(projectPath));
+        const advanced = await laneRunner.advanceLane(projectPath, checkpointId, transition, this.laneDeps(projectPath));
+        try {
+            advanced.panel = (0, panel_renderer_1.renderSidecoachPanel)((0, panel_model_1.laneStepToPanelModel)(advanced));
+        }
+        catch { /* panel is best-effort */ }
+        return advanced;
     }
     laneStatus(projectPath, checkpointId) { return laneRunner.laneStatus(projectPath, checkpointId, this.laneDeps(projectPath)); }
     listLanes(projectPath, options) { return laneRunner.listLanes(projectPath, this.laneDeps(projectPath), options); }

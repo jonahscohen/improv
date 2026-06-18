@@ -16,53 +16,81 @@ export class Transport {
   private listeners = new Map<string, Set<EventCallback>>();
   private connectionId: string | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  // Quiet, capped backoff for reconnects. Starts small so a momentary daemon
+  // blip recovers fast, then doubles up to a ceiling so a daemon that stays
+  // down does not produce a steady stream of console errors. Reset to the floor
+  // on every successful (re)connect.
+  private reconnectDelay = 1000;
+  private static readonly RECONNECT_MIN = 1000;
+  private static readonly RECONNECT_MAX = 30000;
 
   constructor(port = 9223) {
     this.port = port;
   }
 
   async connect(): Promise<void> {
-    await this.tryConnect(this.port, 9232);
+    // Connect to the EXACT port the daemon serves on. The port is derived
+    // deterministically from the <script src> the core was loaded from (see
+    // detectJustifyUrl in core/index.ts): the page loaded the bundle from the
+    // daemon, so the daemon's ws port is that same port. There is no need to
+    // probe a range of candidate ports - the old base..9232 scan opened a
+    // socket per port and logged one ERR_CONNECTION_REFUSED to the browser
+    // console for every dead port on every page load. One socket, one known
+    // port, no visual retries.
+    try {
+      await this.openSocket(this.port);
+      this.reconnectDelay = Transport.RECONNECT_MIN;
+    } catch (err) {
+      // Daemon not up yet. Retry quietly in the background with capped backoff
+      // (a single socket per attempt, not a port sweep). Re-throw so the
+      // caller's existing try/catch - which renders the toolbar in a
+      // disconnected state - still runs.
+      this.scheduleReconnect();
+      throw err;
+    }
   }
 
-  private tryConnect(port: number, maxPort: number): Promise<void> {
+  private openSocket(port: number): Promise<void> {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const attempts: Promise<void>[] = [];
+    return new Promise<void>((resolve, reject) => {
+      let settled = false;
+      let ws: WebSocket;
+      try {
+        ws = new WebSocket(`${protocol}://localhost:${port}`);
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error('WebSocket construction failed'));
+        return;
+      }
 
-    for (let p = port; p <= maxPort; p++) {
-      attempts.push(
-        new Promise<void>((resolve, reject) => {
-          const ws = new WebSocket(`${protocol}://localhost:${p}`);
-          let resolved = false;
+      ws.onopen = () => {
+        if (settled) return;
+        settled = true;
+        this.ws = ws;
+        this.handshake().then(resolve).catch(reject);
+      };
 
-          ws.onopen = () => {
-            if (resolved) return;
-            resolved = true;
-            this.ws = ws;
-            this.handshake().then(resolve).catch(reject);
-          };
+      ws.onmessage = (event: MessageEvent) => {
+        this.handleMessage(event.data as string);
+      };
 
-          ws.onmessage = (event: MessageEvent) => {
-            this.handleMessage(event.data as string);
-          };
+      ws.onclose = () => {
+        if (this.ws === ws) {
+          this.ws = null;
+          this.emit('disconnected', null);
+          this.scheduleReconnect();
+        }
+        if (!settled) {
+          settled = true;
+          reject(new Error(`Justify daemon not reachable on port ${port}`));
+        }
+      };
 
-          ws.onclose = () => {
-            if (this.ws === ws) {
-              this.ws = null;
-              this.emit('disconnected', null);
-              this.scheduleReconnect();
-            }
-          };
-
-          ws.onerror = () => {
-            if (!resolved) reject(new Error(`Port ${p} failed`));
-          };
-        })
-      );
-    }
-
-    return Promise.any(attempts).catch(() => {
-      return Promise.reject(new Error(`Could not connect on ports ${port}-${maxPort}`));
+      ws.onerror = () => {
+        if (!settled) {
+          settled = true;
+          reject(new Error(`Justify daemon not reachable on port ${port}`));
+        }
+      };
     });
   }
 
@@ -138,14 +166,22 @@ export class Transport {
 
   private scheduleReconnect(): void {
     if (this.reconnectTimer !== null) return;
+    const delay = this.reconnectDelay;
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectTimer = null;
       try {
-        await this.connect();
+        // Single-socket reconnect to the known port (NOT connect(), which would
+        // re-arm a second backoff timer on failure and double the cadence).
+        await this.openSocket(this.port);
+        // Recovered: reset the backoff floor and re-light any connection-aware
+        // UI (the toolbar listens for 'connected').
+        this.reconnectDelay = Transport.RECONNECT_MIN;
+        this.emit('connected', null);
       } catch {
+        this.reconnectDelay = Math.min(this.reconnectDelay * 2, Transport.RECONNECT_MAX);
         this.scheduleReconnect();
       }
-    }, 3000);
+    }, delay);
   }
 
   isConnected(): boolean {

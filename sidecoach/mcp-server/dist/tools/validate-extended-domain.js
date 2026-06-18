@@ -8,12 +8,13 @@ const errors_1 = require("../errors");
 const schemas_1 = require("../schemas");
 exports.definition = {
     name: 'sidecoach_validate_extended_domain',
-    description: 'Run sidecoach\'s 112-rule Extended Domain validator across 10 design domains: typography, ' +
-        'color, spacing, motion, accessibility, contrast, performance, data visualization, ' +
-        'internationalization, and Polish Standard subset. Provide any subset of inputs (HTML, CSS, ' +
-        'designTokens, typography, colors, spacing, motion, accessibility, contrast, performance, ' +
-        'visualization, internationalization). Returns per-domain pass rates and the full result set. ' +
-        'If no inputs are provided, returns a skipped-status report instead of synthesizing pass rates.',
+    description: 'Run sidecoach\'s 163-rule Extended Domain validator across 11 design domains: typography, ' +
+        'color, spatial, motion (incl. gesture/drag physics), interaction, responsive, ux-writing, ' +
+        'performance, data-visualization, internationalization, forms, and the Polish Standard subset. ' +
+        'Provide any subset of inputs (HTML, CSS, designTokens, typography, colors, spacing, motion, ' +
+        'accessibility, contrast, performance, visualization, internationalization). The forms domain ' +
+        'and gesture rules scan the raw HTML markup. Returns per-domain pass rates and the full result ' +
+        'set. If no inputs are provided, returns a skipped-status report instead of synthesizing pass rates.',
     inputSchema: schemas_1.validateExtendedDomainShape,
     timeoutMs: 30000,
 };
@@ -48,6 +49,11 @@ const handler = async (input, _deps) => {
         visualization: input.visualization,
         internationalization: input.internationalization,
     };
+    // T-0030: pass raw markup so the forms domain + gesture rules can scan
+    // attribute-level HTML that does not surface through extracted cssRules.
+    // Assigned via cast so it type-checks against the prebuilt dist d.ts; the
+    // field is read by the validator once dist is rebuilt by the full build.
+    context.html = input.html;
     let report;
     try {
         report = extended_domain_validator_1.ExtendedDomainValidator.validateAll(context);

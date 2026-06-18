@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Watch the full loop - a Claude Code session | Improv</title>
+  <meta name="description" content="A simulated Claude Code session running a full agentic loop: explore the codebase, plan, edit, run tests, fix what fails, verify, and commit." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <script>
+    // Set data-theme BEFORE stylesheet loads to avoid FOUC.
+    (function () {
+      try {
+        var stored = localStorage.getItem('theme');
+        var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css?v=33" />
+  <link rel="stylesheet" href="demo.css?v=1" />
+  <script src="nav.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="container">
+      <div class="topbar">
+        <a class="wordmark" href="index.html" aria-label="Yes&amp; - Improv">
+          <img class="wordmark__img wordmark__img--light" src="assets/and-dev-black.svg" alt="and-dev - Improv" width="150" height="54" />
+          <img class="wordmark__img wordmark__img--dark" src="assets/and-dev-white.svg" alt="" aria-hidden="true" width="150" height="54" />
+        </a>
+        <div class="topbar__cluster">
+          <nav aria-label="Primary" id="primary-nav">
+            <ul class="nav-list">
+              <li><a href="justify.html">justify</a></li>
+              <li><a href="sidecoach.html">sidecoach</a></li>
+              <li><a href="beats.html">beats</a></li>
+              <li><a href="foundation.html">foundation</a></li>
+              <li><a href="cheatsheet.html">cheatsheet</a></li>
+              <li><a href="reference.html">reference</a></li>
+              <li><a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a></li>
+            </ul>
+          </nav>
+          <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
+            <svg class="theme-toggle__icon theme-toggle__icon--moon lucide-moon" data-icon-source="lucide:moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+            </svg>
+            <svg class="theme-toggle__icon theme-toggle__icon--sun lucide-sun" data-icon-source="lucide:sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2" />
+              <path d="m19.07 4.93-1.41 1.41" />
+              <path d="M20 12h2" />
+              <path d="m17.66 17.66 1.41 1.41" />
+              <path d="M12 20v2" />
+              <path d="m6.34 17.66-1.41 1.41" />
+              <path d="M2 12h2" />
+              <path d="m4.93 4.93 1.41 1.41" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="scd-section">
+      <div class="container scd-stage-wrap">
+        <div class="scd-intro">
+          <p class="scd-eyebrow">Live demo</p>
+          <h1 class="scd-title">Watch the full loop.</h1>
+          <p class="scd-lede">You describe a task in plain English. Claude Code explores the codebase, makes a plan, edits the files, runs the tests, fixes what breaks, verifies the result, and commits. Here is one task, start to finish.</p>
+        </div>
+
+        <div class="scd-term" id="scd-term">
+          <div class="scd-term__bar">
+            <span class="scd-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="scd-term__title"><b>claude</b> &middot; acme-api</span>
+            <span class="scd-sim" aria-hidden="true">simulated</span>
+            <button class="scd-replay" id="scd-replay" type="button" aria-label="Replay the demo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icon-source="lucide:rotate-ccw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              Replay
+            </button>
+          </div>
+          <div class="scd-term__body" id="scd-body" data-lenis-prevent aria-hidden="true"></div>
+        </div>
+
+        <p class="scd-caption">A simulated session for illustration, not a recording. Real sessions run in your terminal, at your own pace, on your own code.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="site-footer__row">
+        <span>Yes<span style="color: var(--color-red); font-style: italic;">&amp;</span> Improv. Open source, MIT.</span>
+        <nav aria-label="Footer">
+          <a href="index.html">Home</a>
+          <a href="justify.html">justify</a>
+          <a href="sidecoach.html">sidecoach</a>
+          <a href="beats.html">beats</a>
+          <a href="reference.html">reference</a>
+          <a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+  (function () {
+    var body = document.getElementById('scd-body');
+    var term = document.getElementById('scd-term');
+    var replayBtn = document.getElementById('scd-replay');
+    if (!body) return;
+
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var token = 0;            // cancels an in-flight run when replay is pressed
+
+    var sleep = function (ms) { return new Promise(function (res) { setTimeout(res, reduce ? 0 : ms); }); };
+    var alive = function (my) { return my === token; };
+
+    // working spinner: <spark> Verb… (Xm Ys · N tokens), pinned under the output
+    var SPARKS = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'];
+    var spinEl = null, spinTimer = null, spinSecs = 0, spinTok = 0, spinVerb = '', sparkIdx = 0;
+
+    function fmtTok(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n); }
+    function fmtTime(s) {
+      s = Math.max(1, Math.round(s));
+      return s >= 60 ? Math.floor(s / 60) + 'm ' + (s % 60) + 's' : s + 's';
+    }
+    function paintSpin() {
+      if (!spinEl) return;
+      spinEl.innerHTML =
+        '<span class="scd-spark">' + SPARKS[sparkIdx] + '</span> ' +
+        '<span class="scd-verb">' + spinVerb + '</span>… ' +
+        '<span class="scd-hint">(' + fmtTime(spinSecs) + ' · ' + fmtTok(spinTok) + ' tokens)</span>';
+    }
+    function startSpin(verb) {
+      spinVerb = verb; sparkIdx = 0;
+      spinEl = document.createElement('div');
+      spinEl.className = 'scd-line scd-spin';
+      body.appendChild(spinEl);
+      void spinEl.offsetWidth; spinEl.classList.add('is-in');
+      paintSpin();
+      if (reduce) return;
+      spinTimer = setInterval(function () {
+        sparkIdx = (sparkIdx + 1) % SPARKS.length;
+        spinSecs += 0.8;
+        spinTok += 80 + Math.floor(Math.random() * 130);
+        paintSpin(); toBottom();
+      }, 120);
+    }
+    function setVerb(v) { spinVerb = v; paintSpin(); }
+    function stopSpin() {
+      if (spinTimer) { clearInterval(spinTimer); spinTimer = null; }
+      if (spinEl) { spinEl.remove(); spinEl = null; }
+    }
+
+    function place(el) { if (spinEl) body.insertBefore(el, spinEl); else body.appendChild(el); }
+    function add(html, cls) {
+      var el = document.createElement('div');
+      el.className = 'scd-line' + (cls ? ' ' + cls : '');
+      el.innerHTML = html;
+      place(el);
+      void el.offsetWidth; el.classList.add('is-in');
+      toBottom();
+      return el;
+    }
+    function gap() { add('', 'scd-gap'); }
+    function toBottom() { body.scrollTop = body.scrollHeight; }
+
+    async function type(el, text, my, cps) {
+      if (reduce) { el.insertAdjacentText('beforeend', text); return; }
+      var delay = 1000 / (cps || 24);
+      for (var i = 0; i < text.length; i++) {
+        if (!alive(my)) return;
+        el.insertAdjacentText('beforeend', text[i]);
+        toBottom();
+        await sleep(delay + (text[i] === ' ' ? 24 : 0));
+      }
+    }
+    async function stream(el, text, my, wpm) {
+      if (reduce) { el.innerHTML = render(text); return; }
+      var words = text.split(' ');
+      var delay = 60000 / (wpm || 360);
+      var buf = '';
+      for (var i = 0; i < words.length; i++) {
+        if (!alive(my)) return;
+        buf += (i ? ' ' : '') + words[i];
+        el.innerHTML = render(buf);
+        toBottom();
+        await sleep(delay + (/[.,:]/.test(words[i]) ? 110 : 0));
+      }
+    }
+    function render(t) { return t.replace(/\{\{(.+?)\}\}/g, '<span class="scd-em">$1</span>'); }
+
+    // primitives
+    function tool(name, args) {
+      add('<span class="scd-dot-tool">●</span> <span class="scd-tname">' + name + '</span><span class="scd-args">(' + args + ')</span>');
+    }
+    function branch(html) { add('<span class="scd-res">  <span class="scd-branch">└</span> ' + html + '</span>'); }
+    function li(html) { add('<span class="scd-li">  <span class="scd-dash">-</span> ' + html + '</span>'); }
+    async function say(text, my, wpm) {
+      var el = add('<span class="scd-dot-asst">●</span> <span class="scd-asst"></span>');
+      await stream(el.querySelector('.scd-asst'), text, my, wpm || 360);
+      return el;
+    }
+
+    async function run() {
+      token++;
+      var my = token;
+      stopSpin();
+      body.innerHTML = '';
+
+      // 1. the task
+      var inp = add('<span class="scd-input" id="scd-in"></span><span class="scd-caret"></span>');
+      var caret = inp.querySelector('.scd-caret');
+      await sleep(340);
+      await type(inp.querySelector('#scd-in'), 'logins are getting hammered by credential stuffing. add rate limiting to the login endpoint.', my, 30);
+      if (!alive(my)) return;
+      await sleep(440); caret.remove(); gap();
+
+      // 2. acknowledge + explore
+      startSpin('Exploring');
+      await say('On it. Let me see how auth and the middleware stack are wired up before I touch anything.', my);
+      if (!alive(my)) return; gap();
+      await sleep(420);
+      tool('Grep', 'rateLimit|rate-limit'); branch('no matches - nothing exists yet');
+      await sleep(360);
+      tool('Grep', 'POST /auth/login'); branch('3 matches in src/routes/auth.ts');
+      await sleep(360);
+      tool('Read', 'src/routes/auth.ts'); branch('Read 94 lines');
+      await sleep(420);
+      tool('Read', 'src/server.ts'); branch('Read 121 lines');
+      await sleep(380);
+      tool('Read', 'src/middleware/index.ts'); branch('Read 38 lines');
+      if (!alive(my)) return; gap();
+
+      // 3. the plan
+      setVerb('Planning');
+      await sleep(500);
+      await say('Here is the plan:', my);
+      if (!alive(my)) return;
+      li('a token-bucket limiter middleware, keyed on client IP');
+      li('5 attempts per 15 minutes, then 429 with a Retry-After header');
+      li('applied to POST /auth/login only, before the handler runs');
+      li('a test that exhausts the bucket and asserts the 429');
+      gap();
+
+      // 4. implement
+      setVerb('Implementing');
+      await sleep(620);
+      tool('Write', 'src/middleware/rate-limit.ts'); branch('Wrote 47 lines');
+      await sleep(560);
+      tool('Update', 'src/routes/auth.ts'); branch('Updated src/routes/auth.ts with 5 additions');
+      await sleep(520);
+      tool('Update', 'src/config.ts'); branch('Updated src/config.ts with 4 additions');
+      await sleep(540);
+      tool('Write', 'test/rate-limit.test.ts'); branch('Wrote 62 lines');
+      if (!alive(my)) return; gap();
+
+      // 5. test -> failure
+      setVerb('Testing');
+      await sleep(700);
+      tool('Bash', 'npm test');
+      branch('Tests: <span class="scd-fail">1 failed</span>, 58 passed (59 total) in 2.6s');
+      branch('<span class="scd-fail">✗</span> rate-limit › returns 429 after 5 attempts (expected 429, got 200)');
+      if (!alive(my)) return; gap();
+
+      // 6. diagnose + fix
+      setVerb('Diagnosing');
+      await sleep(520);
+      await say('The bucket resets every request because I created it inside the handler. It needs to live at {{module scope}} so the count survives across calls.', my);
+      if (!alive(my)) return;
+      await sleep(360);
+      tool('Update', 'src/middleware/rate-limit.ts'); branch('Updated src/middleware/rate-limit.ts with 3 additions and 4 removals');
+      gap();
+
+      // 7. re-test -> pass, verify, typecheck
+      setVerb('Testing');
+      await sleep(640);
+      tool('Bash', 'npm test');
+      branch('Tests: <span class="scd-ok">59 passed</span> (59 total) in 2.4s');
+      if (!alive(my)) return; gap();
+      setVerb('Verifying');
+      await sleep(520);
+      tool('Bash', 'seq 6 | xargs -I_ curl -s -o /dev/null -w "%{http_code} " :3000/auth/login');
+      branch('200 200 200 200 200 <span class="scd-hl">429</span>');
+      await sleep(420);
+      tool('Bash', 'npx tsc --noEmit'); branch('no errors');
+      if (!alive(my)) return; gap();
+
+      // 8. summary
+      await sleep(560);
+      stopSpin();
+      await say('Done. The login endpoint is rate limited now:', my);
+      if (!alive(my)) return;
+      li('src/middleware/rate-limit.ts: token bucket, 5 per 15 min per IP, 429 + Retry-After');
+      li('src/routes/auth.ts: limiter applied to POST /auth/login');
+      li('src/config.ts: RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS');
+      li('test/rate-limit.test.ts: exhausts the bucket, asserts the 429');
+      await sleep(200);
+      await say('All 59 tests pass, typecheck is clean, and a live curl shows the 6th attempt blocked.', my);
+      if (!alive(my)) return; gap();
+
+      // 9. commit
+      await sleep(420);
+      tool('Bash', 'git commit -am "rate limit the login endpoint"');
+      branch('[main 7f3c1a9] rate limit the login endpoint · 4 files changed, +120 -3');
+      gap();
+
+      // 10. idle prompt
+      if (!alive(my)) return;
+      add('<span class="scd-input"></span><span class="scd-caret"></span>');
+      toBottom();
+    }
+
+    var started = false;
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting && !started) { started = true; run(); io.disconnect(); }
+        });
+      }, { threshold: 0.3 });
+      io.observe(term);
+    } else { run(); }
+    replayBtn.addEventListener('click', function () { body.scrollTop = 0; run(); });
+  })();
+  </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import { Renderer, Program, Mesh, Triangle, Texture, Vec2, Vec3 } from 'ogl';
 import type { Effect, EffectOpts } from '../../types';
-import { rgb01 } from '../../color';
+import { rgba01 } from '../../color';
 
 /**
  * Dithered Image - ordered-dithering post effect: pixelate to a grid, sample a
@@ -44,6 +44,8 @@ uniform float uPixelSize;
 uniform float uThreshold;
 uniform vec3 uColor;
 uniform vec3 uBackgroundColor;
+uniform float uColorAlpha;
+uniform float uBackgroundColorAlpha;
 
 varying vec2 vUv;
 
@@ -76,18 +78,23 @@ void main() {
   float lum = getLuminance(texColor.rgb);
   float dither = step(thresholdValue + uThreshold, lum);
   vec3 ditheredColor = mix(uBackgroundColor, uColor, dither);
-
-  gl_FragColor = vec4(linearToSrgb(ditheredColor), 1.0);
+  // Alpha: off-pixels take the background alpha, on-pixels the foreground alpha.
+  // A post layer with a transparent background lets the layers beneath show
+  // through. Premultiplied output (canvas premultipliedAlpha defaults true), so
+  // a fully transparent background (a=0) yields vec4(0) with no colour fringe.
+  float a = mix(uBackgroundColorAlpha, uColorAlpha, dither);
+  gl_FragColor = vec4(linearToSrgb(ditheredColor) * a, a);
 }`;
 
 function srgbToLinearChannel(c: number): number {
   return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
-function hexToLinearRgb(hex: string): [number, number, number] {
-  // Shared parser handles 8-digit #rrggbbaa (transparent picker values); alpha
-  // is dropped here (the shader takes linear RGB).
-  const [r, g, b] = rgb01(hex, { r: 0, g: 0, b: 0, a: 1 });
-  return [srgbToLinearChannel(r), srgbToLinearChannel(g), srgbToLinearChannel(b)];
+// Parses a hex colour to linear RGB + 0..1 alpha, carrying the picker's alpha
+// through (the shared parser handles 8-digit #rrggbbaa and `transparent`) so a
+// transparent background/foreground reaches the shader instead of being dropped.
+function hexToLinearRgba(hex: string): [number, number, number, number] {
+  const [r, g, b, a] = rgba01(hex, { r: 0, g: 0, b: 0, a: 1 });
+  return [srgbToLinearChannel(r), srgbToLinearChannel(g), srgbToLinearChannel(b), a];
 }
 
 // Canonical Bayer ordered-dither matrix via the standard recurrence.
@@ -418,10 +425,10 @@ export function createDitheredImageEffect(): Effect {
         return;
       }
       const p = opts.params;
-      const color = hexToLinearRgb(String(p.color ?? '#ff6900'));
-      const bg = hexToLinearRgb(String(p.backgroundColor ?? '#17181A'));
+      const color = hexToLinearRgba(String(p.color ?? '#ff6900'));
+      const bg = hexToLinearRgba(String(p.backgroundColor ?? '#17181A'));
 
-      renderer = new Renderer({ canvas, dpr: 1, alpha: false });
+      renderer = new Renderer({ canvas, dpr: 1, alpha: true });
       const rgl = renderer.gl;
       viewW = Math.max(1, canvas.width || 1);
       viewH = Math.max(1, canvas.height || 1);
@@ -449,6 +456,8 @@ export function createDitheredImageEffect(): Effect {
         uThreshold: { value: Number(p.threshold ?? 0) },
         uColor: { value: new Vec3(color[0], color[1], color[2]) },
         uBackgroundColor: { value: new Vec3(bg[0], bg[1], bg[2]) },
+        uColorAlpha: { value: color[3] },
+        uBackgroundColorAlpha: { value: bg[3] },
       };
 
       makeThreshold(String(p.ditherMap ?? 'bayer4x4'));
@@ -504,13 +513,15 @@ export function createDitheredImageEffect(): Effect {
           uniforms.uThreshold.value = Number(value);
           break;
         case 'color': {
-          const c = hexToLinearRgb(String(value));
+          const c = hexToLinearRgba(String(value));
           uniforms.uColor.value.set(c[0], c[1], c[2]);
+          uniforms.uColorAlpha.value = c[3];
           break;
         }
         case 'backgroundColor': {
-          const c = hexToLinearRgb(String(value));
+          const c = hexToLinearRgba(String(value));
           uniforms.uBackgroundColor.value.set(c[0], c[1], c[2]);
+          uniforms.uBackgroundColorAlpha.value = c[3];
           break;
         }
         case 'ditherMap':

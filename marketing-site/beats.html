@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>beats - layered continuity for Claude Code | Improv</title>|<title>beats - layered continuity for Claude Code | Improv</title>
-  <meta name="description" content="beats - the layered memory system for Claude Code. Ephemeral task tracking, per-project file memory, cross-machine sync, indexed by MEMORY.md, typed via frontmatter, linked into a graph." />
+  <title>beats - the running memory for Claude Code | Improv</title>
+  <meta name="description" content="beats is the running record Claude keeps as it works. It writes down what got done, what was decided, and why, then reads it back at the start of every session - so a project never starts cold." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,214 +22,168 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css" />
+  <!-- ?v= busts stale stylesheet caches - bump alongside structural CSS changes -->
+  <link rel="stylesheet" href="styles.css?v=33" />
   <script src="nav.js" defer></script>
+  <script src="http://localhost:9223/justify-core.js?v=5"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <div class="container">
-    <header class="topbar">
-      <a class="wordmark" href="index.html" aria-label="Yes&amp; - Improv">
-        <img class="wordmark__img wordmark__img--light" src="assets/and-dev-black.svg" alt="and-dev - Improv" width="150" height="54" />
-        <img class="wordmark__img wordmark__img--dark" src="assets/and-dev-white.svg" alt="" aria-hidden="true" width="150" height="54" />
-      </a>
-      <div class="topbar__cluster">
-        <nav aria-label="Primary" id="primary-nav">
-          <a href="justify.html">justify</a>
-          <a href="sidecoach.html">sidecoach</a>
-          <a href="cheatsheet.html">cheatsheet</a>
-          <a href="beats.html" aria-current="page">beats</a>
-          <a href="reference.html">reference</a>
-          <a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a>
-        </nav>
-        <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
-          <svg class="theme-toggle__icon theme-toggle__icon--moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
-          </svg>
-          <svg class="theme-toggle__icon theme-toggle__icon--sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2" />
-            <path d="M12 20v2" />
-            <path d="m4.93 4.93 1.41 1.41" />
-            <path d="m17.66 17.66 1.41 1.41" />
-            <path d="M2 12h2" />
-            <path d="M20 12h2" />
-            <path d="m6.34 17.66-1.41 1.41" />
-            <path d="m19.07 4.93-1.41 1.41" />
-          </svg>
-        </button>
-        <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation menu">
-          <span class="nav-toggle__icon" aria-hidden="true"></span>
-        </button>
+  <header class="site-header">
+    <div class="container">
+      <div class="topbar">
+        <a class="wordmark" href="index.html" aria-label="Yes&amp; - Improv">
+          <img class="wordmark__img wordmark__img--light" src="assets/and-dev-black.svg" alt="and-dev - Improv" width="150" height="54" />
+          <img class="wordmark__img wordmark__img--dark" src="assets/and-dev-white.svg" alt="" aria-hidden="true" width="150" height="54" />
+        </a>
+        <div class="topbar__cluster">
+          <nav aria-label="Primary" id="primary-nav">
+            <ul class="nav-list">
+              <li><a href="justify.html">justify</a></li>
+              <li><a href="sidecoach.html">sidecoach</a></li>
+              <li><a href="beats.html" aria-current="page">beats</a></li>
+              <li><a href="foundation.html">foundation</a></li>
+              <li><a href="cheatsheet.html">cheatsheet</a></li>
+              <li><a href="reference.html">reference</a></li>
+              <li><a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a></li>
+            </ul>
+          </nav>
+          <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
+            <!-- source: lucide "moon" - path verbatim from lucide.dev -->
+            <svg class="theme-toggle__icon theme-toggle__icon--moon lucide-moon" data-icon-source="lucide:moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+            </svg>
+            <!-- source: lucide "sun" - paths verbatim from lucide.dev -->
+            <svg class="theme-toggle__icon theme-toggle__icon--sun lucide-sun" data-icon-source="lucide:sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2" />
+              <path d="M12 20v2" />
+              <path d="m4.93 4.93 1.41 1.41" />
+              <path d="m17.66 17.66 1.41 1.41" />
+              <path d="M2 12h2" />
+              <path d="M20 12h2" />
+              <path d="m6.34 17.66-1.41 1.41" />
+              <path d="m19.07 4.93-1.41 1.41" />
+            </svg>
+          </button>
+          <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation menu">
+            <span class="nav-toggle__icon" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
-    </header>
-  </div>
+    </div>
+  </header>
 
   <main id="main">
     <section class="page-hero">
       <div class="container">
         <p class="page-hero__tag stagger" style="--i: 0">continuity / beats</p>
-        <h1 class="page-hero__title stagger" style="--i: 1">Five layers of memory, <span style="text-decoration: underline; text-decoration-color: var(--color-red); text-decoration-thickness: 4px; text-underline-offset: 0.1em;">written every task</span>.</h1>
+        <h1 class="page-hero__title stagger" style="--i: 1">It remembers so you <span style="text-decoration: underline; text-decoration-color: var(--color-red); text-decoration-thickness: 4px; text-underline-offset: 0.1em;">don't have to</span>.</h1>
         <p class="page-hero__lede stagger" style="--i: 2">
-          Claude forgets at the end of every conversation. The dotfiles' memory system is the answer to that - a stack of progressively-durable layers, each with its own write cadence and lifespan, indexed in one file you actually read.
+          Claude forgets at the end of every conversation. Beats is the answer: a running record of what got done, what was decided, and why. The next time you open the project, Claude reads that record back before it touches anything.
         </p>
       </div>
     </section>
 
     <section class="section">
       <div class="container">
-        <p class="section__eyebrow">The stack</p>
-        <h2 class="section__title">Five layers. Each one outlives the one above it.</h2>
+        <p class="section__eyebrow">The whole move</p>
+        <h2 class="section__title">You do not run a command. It just keeps the record.</h2>
         <p class="section__lede">
-          Memory isn't a single store. The dotfiles use five distinct layers, each tuned to a different question: "what am I doing right now?", "what did we learn this week?", "what about this project?", "what about this user?", "what does Claude need to know everywhere?"
+          The single most useful thing to know about Beats is that you do nothing to use it. As you work, Claude keeps notes. The next time you open the project, it reads them back. There is no command to run, no note to file, no checkbox to remember.
         </p>
 
-        <ol class="layer-list" aria-label="Memory layers">
-          <li class="layer-row">
-            <span class="layer-row__num">01</span>
-            <div class="layer-row__head">
-              <span class="layer-row__tag">ephemeral</span>
-              <h3 class="layer-row__title">In-session task tracking</h3>
-            </div>
-            <div class="layer-row__body">
-              <p>
-                <code>TaskCreate</code>, <code>TaskUpdate</code>, <code>TaskList</code>. Lives only as long as the current conversation. Shows up in the spinner so you can see what Claude is doing right now. Vanishes when the session ends.
-              </p>
-              <p class="layer-row__meta">
-                <span>Lifespan</span><span>this conversation</span>
-                <span>Written by</span><span>Claude, automatically</span>
-                <span>Read by</span><span>you, in the UI</span>
-              </p>
-            </div>
-          </li>
+        <div class="feature-row">
+          <h3 class="feature-row__title">Like a colleague who takes notes.</h3>
+          <div class="feature-row__body">
+            <p>Finish a fix, and a short entry lands in the record: what changed, what broke, how it was resolved. Make a call between two approaches, and the reasoning gets written down alongside the choice. None of this interrupts you.</p>
+          </div>
+        </div>
 
-          <li class="layer-row">
-            <span class="layer-row__num">02</span>
-            <div class="layer-row__head">
-              <span class="layer-row__tag">per-task</span>
-              <h3 class="layer-row__title">File-based session memory</h3>
-            </div>
-            <div class="layer-row__body">
-              <p>
-                After every discrete task - a fix, a refactor, a copy change, a decision - Claude writes a short note to <code>.claude/memory/session_YYYY-MM-DD_topic.md</code>. The team rules treat this as mandatory. Batching is a failure mode.
-              </p>
-              <p>
-                These files survive context compactions, cross-session restarts, and machine swaps. They're plain markdown with YAML frontmatter and they live in the repo, so they ride along with the code.
-              </p>
-              <p class="layer-row__meta">
-                <span>Lifespan</span><span>forever (or until you delete)</span>
-                <span>Written by</span><span>Claude, per task</span>
-                <span>Read by</span><span>future Claudes, at session start</span>
-              </p>
-            </div>
-          </li>
-
-          <li class="layer-row">
-            <span class="layer-row__num">03</span>
-            <div class="layer-row__head">
-              <span class="layer-row__tag">index</span>
-              <h3 class="layer-row__title">MEMORY.md - the table of contents</h3>
-            </div>
-            <div class="layer-row__body">
-              <p>
-                One file per memory directory, one line per memory file. The hook system loads <code>MEMORY.md</code> into every session start, so Claude opens the conversation already knowing the shape of what's been written before.
-              </p>
-              <p>
-                Entries are short by rule: under 200 characters, link plus a hook sentence. Detail belongs in the topic file, not the index. The system enforces a 24KB limit; over that the index is truncated and you get a warning.
-              </p>
-              <p class="layer-row__meta">
-                <span>Lifespan</span><span>matches the topic files it points at</span>
-                <span>Written by</span><span>Claude, alongside each topic write</span>
-                <span>Read by</span><span>every session, automatically</span>
-              </p>
-            </div>
-          </li>
-
-          <li class="layer-row">
-            <span class="layer-row__num">04</span>
-            <div class="layer-row__head">
-              <span class="layer-row__tag">cross-machine</span>
-              <h3 class="layer-row__title">Dotfiles git sync</h3>
-            </div>
-            <div class="layer-row__body">
-              <p>
-                The entire <code>.claude</code> directory ships in the dotfiles repo. Pull on a new machine and Claude opens with the same memory you wrote on the last one. No upload, no cloud, no auth - just <code>git clone</code> and a symlink.
-              </p>
-              <p>
-                When a memory write notes "this happened on the laptop", you can pull on the desktop the next day and Claude already knows. The dotfiles bring their own continuity.
-              </p>
-              <p class="layer-row__meta">
-                <span>Lifespan</span><span>as long as the repo exists</span>
-                <span>Synced by</span><span>regular git push / pull</span>
-                <span>Read by</span><span>every machine you clone to</span>
-              </p>
-            </div>
-          </li>
-
-          <li class="layer-row">
-            <span class="layer-row__num">05</span>
-            <div class="layer-row__head">
-              <span class="layer-row__tag">global</span>
-              <h3 class="layer-row__title">Auto-memory project store</h3>
-            </div>
-            <div class="layer-row__body">
-              <p>
-                A second memory directory at <code>~/.claude/projects/&lt;path&gt;/memory/</code>. Separate from the repo memory. Holds durable user-level facts, validated decisions, and behavioral feedback that should follow Claude across projects.
-              </p>
-              <p>
-                Five frontmatter types live here: <code>user</code>, <code>feedback</code>, <code>project</code>, <code>decision</code>, <code>reference</code>. Each has its own writing protocol - feedback memories include a "Why" line, decision memories list rejected alternatives, project memories convert relative dates to absolute.
-              </p>
-              <p class="layer-row__meta">
-                <span>Lifespan</span><span>spans the user, not the repo</span>
-                <span>Written by</span><span>Claude, when patterns emerge</span>
-                <span>Read by</span><span>every conversation on this machine</span>
-              </p>
-            </div>
-          </li>
-        </ol>
+        <div class="feature-row">
+          <h3 class="feature-row__title">It matters most across time.</h3>
+          <div class="feature-row__body">
+            <p>A week later, when you ask Claude to pick up where you left off, it is not guessing from the code or the commit log. It is reading its own account of the work: the dead ends, the decisions, the things that turned out to be true. Recording happens as part of doing the work; reading happens at the start of every session.</p>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="section section--paper">
       <div class="container">
-        <p class="section__eyebrow">The shape</p>
-        <h2 class="section__title">Frontmatter, typed. A graph, not a pile.</h2>
+        <p class="section__eyebrow">Reading the record</p>
+        <h2 class="section__title">Plain text files, and one index that loads them all.</h2>
         <p class="section__lede">
-          Every memory file opens with YAML frontmatter that tells future-Claude what kind of memory this is and how it relates to others. The system reads these and walks the relationships when the topic comes up.
+          The record is a folder of plain Markdown files inside your project, at <code>.claude/memory/</code>. Most are session notes, one per topic per day. You can open any of them in any editor and read them like a journal entry, because that is what they are.
         </p>
 
-        <pre><code>---
-name: session-2026-05-25-sprint12-closed
-description: Sprint 12 closed - first clean dogfood, 8/8 flows
-type: project
-relates_to:
-  - session_2026-05-25_sprint12_design.md
-  - feedback_chief_architect_autonomous_dogfood_loop.md
-supersedes:
-  - session_2026-05-24_dogfood_first_attempt.md
----
-
-Human collaborator: Jonah. Executed autonomously...</code></pre>
-
-        <div class="feature-row" style="padding-block: var(--space-12);">
-          <h3 class="feature-row__title">Five types.</h3>
+        <div class="feature-row">
+          <h3 class="feature-row__title">MEMORY.md, the table of contents.</h3>
           <div class="feature-row__body">
-            <p><code>user</code> - facts about the human: role, responsibilities, preferences, knowledge depth.</p>
-            <p><code>feedback</code> - corrections AND validated approaches. Each one carries a Why and a How-to-apply.</p>
-            <p><code>project</code> - state of in-flight work: who is doing what, by when, why it matters. Dated.</p>
-            <p><code>decision</code> - resolved trade-offs. Names the chosen approach, the rejected alternatives, the conditions that would warrant revisiting.</p>
-            <p><code>reference</code> - pointers to external systems: Linear projects, Grafana dashboards, doc folders.</p>
+            <p>One file sits above the rest: a one-line-per-entry index of every note, newest first. At the start of a session Claude reads the index, then reads the notes it points to. That is how a fresh session catches up on months of work in seconds.</p>
           </div>
         </div>
 
-        <div class="feature-row" style="padding-block: var(--space-12);">
-          <h3 class="feature-row__title">Three relationships.</h3>
+        <div class="feature-row">
+          <h3 class="feature-row__title">Just ask.</h3>
           <div class="feature-row__body">
-            <p><code>relates_to</code> - a list. The memory shares topic or context with these other entries. Not symmetric by default.</p>
-            <p><code>supersedes</code> - a single pointer. This memory replaces an older one. When written, the old file gets a matching <code>superseded_by</code> back-link.</p>
-            <p><code>superseded_by</code> - the back-link. Tells you a file is historical and points at what replaced it.</p>
-            <p>The result is a small graph, not a pile of files. When Claude reads a topic, it can walk the links to find related context without dumping the whole memory directory into the conversation.</p>
+            <p>You never need to open the folder. The natural way to read the record is to ask: <em>"What did we work on last?"</em>, <em>"Why did we choose this approach?"</em>, <em>"What have we already tried for this bug?"</em> The answer comes from the notes, not from a guess and not from the commit history.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <p class="section__eyebrow">Across machines</p>
+        <h2 class="section__title">The record lives with the project, so it travels with it.</h2>
+        <p class="section__lede">
+          The notes are not stored on your laptop. They live inside the project, in the same place as the code. When the project moves, the record moves with it - nothing to sync by hand, no separate database, no per-machine setup. If you have the project, you have its memory.
+        </p>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">A shared record, not a private one.</h3>
+          <div class="feature-row__body">
+            <p>Open the same project on a different machine, or hand it to a teammate, and the full history of decisions shows up there too. Each note records who did the work, so you can see whose hands last touched a feature. Two people on the same project read from and add to one continuous account, not two that quietly drift apart.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Treat it like the code.</h3>
+          <div class="feature-row__body">
+            <p>Because the record lives with the project and is visible to anyone who has it, notes are written in plain, professional language. It is part of the repo, and it reads like it.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--paper">
+      <div class="container">
+        <p class="section__eyebrow">Steering what it keeps</p>
+        <h2 class="section__title">Most of the time it builds itself. When you want to steer, you say so.</h2>
+        <p class="section__lede">
+          If you tell Claude something that should outlast the conversation, say it plainly: <em>"Remember that we never use broad CSS rules here,"</em> <em>"Note for next time: the dev server runs on port 4831."</em> It becomes a note and comes back when the topic is relevant. If something it wrote is wrong, tell it, and the note gets updated or replaced.
+        </p>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">The kinds of notes it keeps.</h3>
+          <div class="feature-row__body">
+            <p><strong>About you</strong> - how you like to work, preferences that hold across the whole project. <strong>Feedback</strong> - a correction or standing instruction, so the same mistake is not repeated. <strong>Project state</strong> - what is happening right now: what shipped, what is wired up, what is in progress. <strong>Decisions</strong> - a choice between real alternatives, with the reasoning. <strong>References</strong> - durable facts worth keeping: ports, file locations, how a tool is set up.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">State versus decision.</h3>
+          <div class="feature-row__body">
+            <p>The distinction that matters most: a project note says what is true now; a decision note says what you chose and why. That reasoning stays useful long after the state has moved on. When you find yourself facing the same fork twice, the decision notes tell you whether the original reasoning still holds.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">It is not the only thing that writes.</h3>
+          <div class="feature-row__body">
+            <p><a href="sidecoach.html">Sidecoach</a> keeps its own entries in the same record when it runs a design pass, so the reasoning behind a visual change lands next to the rest of the work. The record is the shared substrate the rest of the toolkit reads from and writes to.</p>
           </div>
         </div>
       </div>
@@ -240,34 +194,27 @@ Human collaborator: Jonah. Executed autonomously...</code></pre>
         <p class="section__eyebrow">The discipline</p>
         <h2 class="section__title">When you write matters more than what you write.</h2>
         <p class="section__lede">
-          The team rules treat memory writing as mandatory, frequent, and never permission-gated. Failures are mistakes you fix; they are not optional.
+          The team rules treat recording as mandatory, frequent, and never permission-gated. The moment a fix lands or a decision gets made - before the next thing - the relevant note gets a one-line update. Batching is what loses work when a session ends unexpectedly.
         </p>
-
-        <div class="feature-row">
-          <h3 class="feature-row__title">Per task, not per session.</h3>
-          <div class="feature-row__body">
-            <p>The moment a fix lands, a copy change ships, or a decision gets made - before the next thing, before responding to the user - the relevant session memory gets a one-line update. Batching is what loses work when a session ends unexpectedly.</p>
-          </div>
-        </div>
 
         <div class="feature-row">
           <h3 class="feature-row__title">No permission gate.</h3>
           <div class="feature-row__body">
-            <p>The settings file grants standing write permission to every memory path. Claude does not ask "should I save this?" - it just saves. The team rules call out the pause-to-confirm pattern as a configuration bug, not a question.</p>
+            <p>Claude does not ask "should I save this?" - it just saves. The pause-to-confirm pattern is treated as a configuration bug, not a question.</p>
           </div>
         </div>
 
         <div class="feature-row">
-          <h3 class="feature-row__title">Self-analysis after every correction.</h3>
+          <h3 class="feature-row__title">Self-analysis after a correction.</h3>
           <div class="feature-row__body">
-            <p>When Claude misses a step or breaks a rule, the response isn't an apology - it's a two-question analysis written into a feedback memory: why did this happen, what shortcut did I take? The fix is downstream of understanding the failure mode.</p>
+            <p>When Claude misses a step or breaks a rule, the response is not an apology - it is a short analysis written into the record: why did this happen, what shortcut did I take? The fix is downstream of understanding the failure.</p>
           </div>
         </div>
 
         <div class="feature-row">
-          <h3 class="feature-row__title">Write-time link check.</h3>
+          <h3 class="feature-row__title">A graph, not a pile.</h3>
           <div class="feature-row__body">
-            <p>When a memory is written or updated, Claude scans the MEMORY.md index already in context for related entries and adds <code>relates_to</code> links where they fit. If this memory replaces an older one, the <code>supersedes</code> field gets set and the old file is updated with a matching back-link. The graph stays consistent without a separate cleanup pass.</p>
+            <p>When a note is written, Claude links it to related entries and, if it replaces an older one, marks the old file superseded. The record stays a small, navigable graph instead of a heap of files - so reading one topic surfaces its context without dumping the whole folder into the conversation.</p>
           </div>
         </div>
       </div>
@@ -278,12 +225,16 @@ Human collaborator: Jonah. Executed autonomously...</code></pre>
         <p class="section__eyebrow">Why bother</p>
         <h2 class="section__title">Because the alternative is starting over every morning.</h2>
         <p class="section__lede">
-          Without this layer, Claude opens every conversation cold - no idea what was decided yesterday, which approaches failed, which user preferences are settled. The memory system is the difference between a tool you teach once and a tool you teach every time.
+          Without this layer, Claude opens every conversation cold - no idea what was decided yesterday, which approaches failed, which preferences are settled. Beats is the difference between a tool you teach once and a tool you teach every time.
         </p>
 
+        <pre><code>ampersand --only memory
+# then, in any later session:
+What did we work on last?</code></pre>
+
         <div style="margin-top: var(--space-8); display: flex; gap: var(--space-3); flex-wrap: wrap;">
-          <a class="btn btn--primary" href="https://github.com/jonahscohen/improv/tree/main/claude/memory" rel="noreferrer noopener">Read the source</a>
-          <a class="btn btn--secondary" href="reference.html">See the full reference</a>
+          <a class="btn btn--primary" href="reference.html">See the full reference</a>
+          <a class="btn btn--secondary" href="https://github.com/jonahscohen/improv/tree/main/claude/memory" rel="noreferrer noopener">Read the source</a>
           <a class="btn btn--secondary" href="index.html">Back to the toolkit</a>
         </div>
       </div>
@@ -298,6 +249,7 @@ Human collaborator: Jonah. Executed autonomously...</code></pre>
           <a href="index.html">Home</a>
           <a href="justify.html">justify</a>
           <a href="sidecoach.html">sidecoach</a>
+          <a href="foundation.html">foundation</a>
           <a href="reference.html">reference</a>
           <a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a>
         </nav>

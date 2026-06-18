@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Watch Sidecoach steer - a Claude Code session | Improv</title>
+  <meta name="description" content="A simulated Claude Code session routed through Sidecoach: see the flow it picks, the phases it runs, the checklist it hands over, and the gates that catch issues." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('theme');
+        var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css?v=33" />
+  <link rel="stylesheet" href="demo.css?v=7" />
+  <script src="nav.js" defer></script>
+  <script src="demo.js?v=1" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="container">
+      <div class="topbar">
+        <a class="wordmark" href="index.html" aria-label="Yes&amp; - Improv">
+          <img class="wordmark__img wordmark__img--light" src="assets/and-dev-black.svg" alt="and-dev - Improv" width="150" height="54" />
+          <img class="wordmark__img wordmark__img--dark" src="assets/and-dev-white.svg" alt="" aria-hidden="true" width="150" height="54" />
+        </a>
+        <div class="topbar__cluster">
+          <nav aria-label="Primary" id="primary-nav">
+            <ul class="nav-list">
+              <li><a href="justify.html">justify</a></li>
+              <li><a href="sidecoach.html">sidecoach</a></li>
+              <li><a href="beats.html">beats</a></li>
+              <li><a href="foundation.html">foundation</a></li>
+              <li><a href="cheatsheet.html">cheatsheet</a></li>
+              <li><a href="reference.html">reference</a></li>
+              <li><a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a></li>
+            </ul>
+          </nav>
+          <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
+            <svg class="theme-toggle__icon theme-toggle__icon--moon lucide-moon" data-icon-source="lucide:moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+            </svg>
+            <svg class="theme-toggle__icon theme-toggle__icon--sun lucide-sun" data-icon-source="lucide:sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2" />
+              <path d="m19.07 4.93-1.41 1.41" />
+              <path d="M20 12h2" />
+              <path d="m17.66 17.66 1.41 1.41" />
+              <path d="M12 20v2" />
+              <path d="m6.34 17.66-1.41 1.41" />
+              <path d="M2 12h2" />
+              <path d="m4.93 4.93 1.41 1.41" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="scd-section">
+      <div class="container scd-stage-wrap">
+        <div class="scd-intro">
+          <p class="scd-eyebrow">Live demo</p>
+          <h1 class="scd-title">Watch Sidecoach steer.</h1>
+          <p class="scd-lede">Same terminal, same plain-English request - but routed through Sidecoach you can see the machinery: the flow it picks and how sure it is, the phases it runs, the checklist it hands Claude, and the gates that catch what slips through. This is the part that looks like nothing in a normal session.</p>
+        </div>
+
+        <div class="scd-term" id="scd-term">
+          <div class="scd-term__bar">
+            <span class="scd-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="scd-term__title"><b>claude</b> &middot; acme-web</span>
+            <span class="scd-sim" aria-hidden="true">simulated</span>
+            <button class="scd-replay" id="scd-replay" type="button" aria-label="Replay the demo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icon-source="lucide:rotate-ccw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              Replay
+            </button>
+          </div>
+          <div class="scd-term__body" id="scd-body" data-lenis-prevent aria-hidden="true"></div>
+          <div class="scd-term__foot" aria-hidden="true">
+            <div class="scd-foot-spin" id="scd-spin"></div>
+            <div class="scd-foot-rule"></div>
+            <div class="scd-foot-input"><span id="scd-cmd"></span><span class="scd-caret"></span></div>
+          </div>
+        </div>
+
+        <p class="scd-caption">A simulated session for illustration, not a recording. The Sidecoach panel mirrors the engine's real <code>--render</code> output - routed flow, phases, checklist, and gates.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="site-footer__row">
+        <span>Yes<span style="color: var(--color-red); font-style: italic;">&amp;</span> Improv. Open source, MIT.</span>
+        <nav aria-label="Footer">
+          <a href="index.html">Home</a>
+          <a href="justify.html">justify</a>
+          <a href="sidecoach.html">sidecoach</a>
+          <a href="beats.html">beats</a>
+          <a href="reference.html">reference</a>
+          <a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

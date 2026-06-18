@@ -2,7 +2,7 @@
   "id": "interactive-grid",
   "name": "Interactive Grid",
   "category": "image-distortion",
-  "layerRole": "midground",
+  "layerRole": "post",
   "params": [
     {
       "name": "grid",
@@ -37,9 +37,7 @@
       "step": 0.01
     }
   ],
-  "requiredAssets": [
-    "image"
-  ],
+  "requiredAssets": [],
   "origin": "https://github.com/motion-core/motion-core (motion-core.dev/docs/interactive-grid)",
   "license": "MIT",
   "attribution": "Motion Core (github.com/motion-core/motion-core)",
@@ -53,7 +51,8 @@
     "grid",
     "physics",
     "data-texture",
-    "midground"
+    "post",
+    "overlay"
   ],
   "interactions": [
     "Move the cursor to distort the grid"

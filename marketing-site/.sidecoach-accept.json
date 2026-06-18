@@ -1,0 +1,10 @@
+{
+  "_comment": "Per-project sidecoach taste-gate exceptions. Each entry suppresses one named absolute-ban finding from the BLOCKING gate (sidecoach-taste-gate.sh). The raw detector (scanForAbsoluteBans) still reports the pattern - this only tells the enforcement layer the pattern is a deliberate, accepted design call, not an oversight. Match is by ban name + file basename; line numbers are ignored because they drift. Keep a reason on every entry so the acceptance is on the record.",
+  "accept": [
+    {
+      "ban": "hero-metric-template",
+      "file": "index.html",
+      "reason": "Jonah's explicit design call (2026-06-15): the 3-up stat card band ('By the numbers') is the chosen treatment. The ledger alternative that cleared the ban was rejected on taste. This grid is accepted, not an oversight - do not auto-flag it as a failure."
+    }
+  ]
+}

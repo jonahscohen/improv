@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>foundation - the rest of the Improv stack | Improv</title>
+  <meta name="description" content="The quiet layer under Justify, Sidecoach, and Beats: the one-command install, the on-demand skills, the guardrails, the bridges to your phone and browser, and the background workbench. A high-level map of the rest of the stack." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <script>
+    // Set data-theme BEFORE stylesheet loads to avoid FOUC. Reads
+    // localStorage('theme'), falls back to prefers-color-scheme.
+    (function () {
+      try {
+        var stored = localStorage.getItem('theme');
+        var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
+  <!-- ?v= busts stale stylesheet caches - bump alongside structural CSS changes -->
+  <link rel="stylesheet" href="styles.css?v=33" />
+  <script src="nav.js" defer></script>
+  <script src="http://localhost:9223/justify-core.js?v=5"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="container">
+      <div class="topbar">
+        <a class="wordmark" href="index.html" aria-label="Yes&amp; - Improv">
+          <img class="wordmark__img wordmark__img--light" src="assets/and-dev-black.svg" alt="and-dev - Improv" width="150" height="54" />
+          <img class="wordmark__img wordmark__img--dark" src="assets/and-dev-white.svg" alt="" aria-hidden="true" width="150" height="54" />
+        </a>
+        <div class="topbar__cluster">
+          <nav aria-label="Primary" id="primary-nav">
+            <ul class="nav-list">
+              <li><a href="justify.html">justify</a></li>
+              <li><a href="sidecoach.html">sidecoach</a></li>
+              <li><a href="beats.html">beats</a></li>
+              <li><a href="foundation.html" aria-current="page">foundation</a></li>
+              <li><a href="cheatsheet.html">cheatsheet</a></li>
+              <li><a href="reference.html">reference</a></li>
+              <li><a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a></li>
+            </ul>
+          </nav>
+          <button class="theme-toggle" type="button" aria-label="Switch to dark theme">
+            <!-- source: lucide "moon" - path verbatim from lucide.dev -->
+            <svg class="theme-toggle__icon theme-toggle__icon--moon lucide-moon" data-icon-source="lucide:moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+            </svg>
+            <!-- source: lucide "sun" - paths verbatim from lucide.dev -->
+            <svg class="theme-toggle__icon theme-toggle__icon--sun lucide-sun" data-icon-source="lucide:sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2" />
+              <path d="M12 20v2" />
+              <path d="m4.93 4.93 1.41 1.41" />
+              <path d="m17.66 17.66 1.41 1.41" />
+              <path d="M2 12h2" />
+              <path d="M20 12h2" />
+              <path d="m6.34 17.66-1.41 1.41" />
+              <path d="m19.07 4.93-1.41 1.41" />
+            </svg>
+          </button>
+          <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation menu">
+            <span class="nav-toggle__icon" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="page-hero">
+      <div class="container">
+        <p class="page-hero__tag stagger" style="--i: 0">the rest of the stack / foundation</p>
+        <h1 class="page-hero__title stagger" style="--i: 1">The quiet layer under the <span style="text-decoration: underline; text-decoration-color: var(--color-red); text-decoration-thickness: 4px; text-underline-offset: 0.1em;">three tools</span>.</h1>
+        <p class="page-hero__lede stagger" style="--i: 2">
+          Justify, Sidecoach, and Beats sit on a foundation of smaller pieces: the install, the on-demand skills, the guardrails, the bridges to your phone and browser, and a workbench for backgrounds. Most of it runs without you thinking about it. This is the map - for the full detail on any piece, the reference goes deeper.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <p class="section__eyebrow">Install</p>
+        <h2 class="section__title">One command, then a picker.</h2>
+        <p class="section__lede">
+          Improv installs on a Mac with a single command. It downloads the toolkit, installs one shortcut called <code>ampersand</code>, and reloads your shell so the shortcut is live right away.
+        </p>
+
+        <div class="install-block" role="group" aria-label="Install command">
+          <span class="install-block__cmd" id="install-cmd-foundation">curl -fsSL get.improv.dev | bash</span>
+          <button type="button" class="install-block__copy" data-copy-target="#install-cmd-foundation" aria-label="Copy install command">Copy</button>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">The picker.</h3>
+          <div class="feature-row__body">
+            <p>Type <code>ampersand</code> and a checklist appears, every piece listed with a one-line description. Arrow keys to move, space to toggle, enter to confirm. Everything starts ticked, so if you want the whole set, just press enter. It is safe to run as many times as you like - re-running only touches what changed.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Pick just what you want.</h3>
+          <div class="feature-row__body">
+            <p>If you already know, name it directly. <code>ampersand --only sidecoach,memory</code> installs a subset; <code>--preset minimal</code> takes a lean core; <code>--dry-run</code> prints what would happen without touching a file; <code>ampersand --pull</code> grabs the latest first. Come back to the shortcut any time to add a piece you skipped.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--paper">
+      <div class="container">
+        <p class="section__eyebrow">The skills</p>
+        <h2 class="section__title">Specialists that step in when the work needs them.</h2>
+        <p class="section__lede">
+          Sidecoach is the front door for design work. Sitting beside it are a handful of specialist skills, each good at one kind of output. You do not memorize them or call them by name - you say what you want, and the right one steps in. Each reads your <code>PRODUCT.md</code> and <code>DESIGN.md</code> first, so what it makes matches your brand.
+        </p>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Platform-correct social assets.</h3>
+          <div class="feature-row__body">
+            <p>When you want an asset built to a platform's exact spec - an Instagram carousel, a YouTube thumbnail, an Open Graph card. It knows the pixel dimensions, the safe zones a platform's own interface covers, and the smallest text that stays readable at thumbnail scale.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">A multi-role design sprint.</h3>
+          <div class="feature-row__body">
+            <p>When the task is large - a full landing page, a campaign whose pieces need to match. Instead of one straight pass, it runs a small team: research and copy first, builders in parallel on different sections, then a creative-director review that makes the sections hang together. For whole pages, not single components.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Generative backgrounds and real icons.</h3>
+          <div class="feature-row__body">
+            <p>One skill ships real, tested effect source for animated and shader backdrops, tuned in tilt-lab. Another pulls icon artwork verbatim from an established library and holds a project to a single one, so a made-up, slightly-off icon never reaches your page.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Reflect.</h3>
+          <div class="feature-row__body">
+            <p>When the <a href="beats.html">Beats</a> record grows large, reflect reads back across all of it at once to surface patterns, tensions, and gaps you might have missed. It is how a long-running project notices what it has been circling.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <p class="section__eyebrow">The bridges</p>
+        <h2 class="section__title">Reach Claude from your browser, your voice, your phone.</h2>
+        <p class="section__lede">
+          A few optional pieces connect Claude to the rest of how you work. Each is opt-in, added from the picker or with <code>--only</code>.
+        </p>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">The browser pane.</h3>
+          <div class="feature-row__body">
+            <p>cmux is a split-pane terminal with a real browser built in. When Claude changes something visual, it opens the page in that pane, takes a screenshot, and looks at the result instead of guessing. It can click, type, and scroll the way a person would. The work you get back has been seen, not just compiled - a passing build is not proof a page looks right.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Talk to it, hear it back.</h3>
+          <div class="feature-row__body">
+            <p>Hand Claude a voice memo and it transcribes the audio locally, no cloud and no key, treating the words as if you typed them. With the speaking side on, it reads a short summary of its replies aloud while keeping code on screen as text. Speaking uses OpenAI's text-to-speech, so it is the one piece that needs your own key; everything else, including listening, runs locally at no cost.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Claude in your pocket.</h3>
+          <div class="feature-row__body">
+            <p>Pair a Discord bot once and message Claude from any device, including your phone, with replies coming straight back in the chat. Send a voice message and it transcribes the same way. Pairing is a deliberate, one-time, terminal-only step: Claude will never add a new person just because a Discord message asks it to.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--paper">
+      <div class="container">
+        <p class="section__eyebrow">tilt-lab</p>
+        <h2 class="section__title">A local workbench for backgrounds.</h2>
+        <p class="section__lede">
+          When a hero or section wants a backdrop that moves, tilt-lab is where you watch it run and tune it before it ever lands in your page. It is driven from the design flow - <a href="sidecoach.html">Sidecoach</a> delegates here whenever a backdrop is part of the work - so you reach it through the task rather than as a side trip.
+        </p>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">Browse, layer, tune, export.</h3>
+          <div class="feature-row__body">
+            <p>Browse a catalog of around twenty-five effects grouped by role, layer compatible ones into a stack and watch them composite in one live preview, tune each effect's parameters in real time with sliders, then export the finished stack as a single self-contained package. No build step, no account, no network round trip.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">The preview is honest.</h3>
+          <div class="feature-row__body">
+            <p>What you see in the workbench canvas is exactly what the exported component renders. The export mounts behind your section - underneath the content, matched to your design tokens, and aware of a reduced-motion preference so it falls still for anyone who has asked for less movement.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--ink">
+      <div class="container">
+        <p class="section__eyebrow">The guardrails</p>
+        <h2 class="section__title">Checks you never have to think about.</h2>
+        <p class="section__lede">
+          As Claude works, a layer of quiet checks runs alongside it. You do not switch these on or call for them. Their whole job is to keep small, avoidable mistakes from reaching you - the kind that are easy to wave through in the moment and tedious to clean up later.
+        </p>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">What they keep out of your work.</h3>
+          <div class="feature-row__body">
+            <p>No emojis or em-dashes in anything that ships. Icons that come verbatim from a real library or do not ship at all. Generated interface code that points at your real <code>DESIGN.md</code> tokens instead of hard-coded colors. An interface that is opened in a real browser and looked at before the work is called done. Current model versions only, and never a commit signed in Claude's name. And every finished piece of work recorded as it happens, so nothing is lost if a session ends abruptly.</p>
+          </div>
+        </div>
+
+        <div class="feature-row">
+          <h3 class="feature-row__title">When a rule is wrong for the moment.</h3>
+          <div class="feature-row__body">
+            <p>Now and then a guard gets in the way of legitimate work - you genuinely need to write the very thing it screens for. When that happens, Claude does not quietly route around the guard or soften your wording to slip past it. It stops and asks whether to allow it this once. The default is safe; the exception is explicit; you stay in control of the override.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <p class="section__eyebrow">Where to go next</p>
+        <h2 class="section__title">Install the whole set, or read the manual.</h2>
+        <p class="section__lede">
+          Run the picker and take everything, or name the pieces you want. When you need the exhaustive detail on any one of these, the reference is the full manual.
+        </p>
+
+        <pre><code>ampersand                 # open the picker
+ampersand --preset all    # take everything
+ampersand --only cmux,voice-input,discord</code></pre>
+
+        <div style="margin-top: var(--space-8); display: flex; gap: var(--space-3); flex-wrap: wrap;">
+          <a class="btn btn--primary" href="reference.html">See the full reference</a>
+          <a class="btn btn--secondary" href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">Read the source</a>
+          <a class="btn btn--secondary" href="index.html">Back to the toolkit</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="site-footer__row">
+        <span>Yes<span style="color: var(--color-red); font-style: italic;">&amp;</span> Improv. Open source, MIT.</span>
+        <nav aria-label="Footer">
+          <a href="index.html">Home</a>
+          <a href="justify.html">justify</a>
+          <a href="sidecoach.html">sidecoach</a>
+          <a href="beats.html">beats</a>
+          <a href="reference.html">reference</a>
+          <a href="https://github.com/jonahscohen/improv" rel="noreferrer noopener">GitHub</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

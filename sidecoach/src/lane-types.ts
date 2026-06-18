@@ -81,6 +81,9 @@ export interface LaneStepResult {
   flowIds: FlowId[];
   revision: number;                     // pass as expectedRevision next advance
   message: string;
+  // Pre-rendered compact progress panel (the model prints it verbatim). Optional
+  // so existing callers/tests are unaffected; populated by the engine wrappers.
+  panel?: string;
   // Validator gate surface (optional so closed/serve results omit it). Present on
   // a `complete` result that ran product validators.
   gate?: { status: GateStatus; validators: { validatorId: string; status: GateStatus }[]; findings: ProductFinding[] };

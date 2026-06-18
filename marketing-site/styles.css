@@ -43,6 +43,13 @@
   --surface-canvas: #F4EFE4;
   --surface-raised: #FAF7EE;
   --surface-inverse: #02272B;
+  /* the alternate section plane: slightly darker cream in light mode,
+     a slightly lifted dark green in dark mode. Sections alternate
+     canvas / alt down the page - no flipped-contrast planes. */
+  --surface-alt: #ECE5D4;
+  /* inline-code chip fill: one clear step darker than the surfaces code sits
+     on. In light, surface-alt reads well; dark gets a darker value below. */
+  --code-bg: var(--surface-alt);
 
   /* colors.border */
   --border-soft: rgba(2, 39, 43, 0.08);
@@ -145,6 +152,10 @@
   --surface-canvas: #02272B;
   --surface-raised: #0A3036;
   --surface-inverse: #F4EFE4;
+  --surface-alt: #073035;
+  /* dark: surface-alt is barely darker than the paper sections code sits on,
+     so code chips disappear. Drop to the darkest surface for real contrast. */
+  --code-bg: var(--surface-canvas);
 
   /* text */
   --text-primary: #F4EFE4;
@@ -266,6 +277,18 @@ p {
   color: var(--text-inverse);
 }
 
+/* The alternate plane in the shade-alternation system: sections run
+   canvas / alt / canvas / alt down the page in BOTH themes; text tokens
+   never flip because no section inverts. */
+.section--alt {
+  background: var(--surface-alt);
+}
+
+/* retired: the flipped-contrast composite (kept inert for history). */
+.section--ink.section--contrast {
+  background: var(--surface-alt);
+}
+
 .section--ink h1,
 .section--ink h2,
 .section--ink h3,
@@ -274,6 +297,15 @@ p {
 }
 
 /* Top nav */
+/* Sticky site header: full-width plane matching the hero (both ride the
+   alt shade), so nav and hero read as one surface. */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--surface-alt);
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -376,10 +408,20 @@ p {
 
 .topbar nav {
   display: flex;
-  gap: var(--space-6);
   font-size: var(--size-sm);
   font-weight: var(--weight-medium);
   color: var(--text-secondary);
+}
+
+/* Semantic list of nav links - the flex row that spaces the items lives on
+   the list, so the <nav> can keep owning the drawer panel on mobile. */
+.nav-list {
+  display: flex;
+  gap: var(--space-6);
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .topbar nav a {
@@ -434,7 +476,7 @@ p {
   width: 22px;
   height: 2px;
   background: var(--text-primary);
-  border-radius: 2px;
+  border-radius: var(--radius-full);
   transform: translateX(-50%);
   transition: transform var(--duration-medium) var(--ease-out),
               opacity var(--duration-fast) var(--ease-out),
@@ -544,6 +586,18 @@ p {
                 visibility 0s linear 0s;
   }
 
+  /* In the drawer the list stacks full-width to match the old flow. */
+  .nav-list {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    width: 100%;
+  }
+
+  .nav-list li {
+    width: 100%;
+  }
+
   .topbar nav a {
     width: 100%;
     padding: var(--space-4) var(--space-3);
@@ -582,6 +636,81 @@ p {
 /* Hero */
 .hero {
   padding-block: var(--space-32) var(--space-24);
+  /* The page opens on the alt (darker) shade; sections alternate from here. */
+  background: var(--surface-alt);
+}
+
+/* FX hero: the tilt-lab svg-3d stack (the extruded 3D ampersand) mounts into
+   .hero__fx as a decorative backdrop. isolate + overflow:hidden clip the canvas
+   to the section. The object is non-interactive (cursorOrbit off), so the host
+   is pointer-events:none and sits in the RIGHT quadrant, clear of the left-set
+   text. The text block keeps normal pointer events (selectable, CTA clickable). */
+.hero--fx {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: clamp(540px, 82vh, 860px);
+  display: flex;
+  align-items: center;
+}
+
+.hero__fx {
+  /* The ampersand owns a reserved right-side column INSIDE the container:
+     its right edge aligns with the container edge (= the theme toggle in the
+     topbar, which shares the same container) at every width, and the text
+     can never run under it because .hero__inner reserves the column with
+     padding. Below 1025px the column is dropped and the effect hidden. */
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: clamp(360px, 34vw, 460px);
+  height: min(640px, 110%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hero__fx canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hero__inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  /* reserve the ampersand column + breathing room so text never touches it */
+  padding-right: calc(clamp(360px, 34vw, 460px) + var(--space-8));
+}
+
+@media (max-width: 1024px) {
+  .hero__fx {
+    display: none;
+  }
+
+  .hero__inner {
+    padding-right: 0;
+  }
+}
+
+.hero__kicker {
+  font-family: var(--font-mono);
+  font-size: var(--size-sm);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-bottom: var(--space-3);
+}
+
+.hero__wordmark {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: clamp(3.75rem, 19.5vw, 13.5rem);
+  line-height: 0.86;
+  letter-spacing: -0.03em;
+  margin: 0 0 var(--space-8);
+  text-wrap: balance;
 }
 
 .hero__eyebrow {
@@ -612,11 +741,11 @@ p {
 
 .hero__lede {
   font-family: var(--font-display);
-  font-size: var(--size-xl);
+  font-size: var(--size-2xl);
   font-weight: var(--weight-regular);
   line-height: 1.4;
   color: var(--text-secondary);
-  max-width: 52ch;
+  max-width: 42ch;
   margin-bottom: var(--space-10);
 }
 
@@ -624,28 +753,33 @@ p {
   display: flex;
   gap: var(--space-4);
   flex-wrap: wrap;
-  align-items: center;
+  /* stretch, not center: the install block and the CTA button equalize to the
+     same rendered height regardless of font metrics */
+  align-items: stretch;
 }
 
 /* Curl install card - the special component.
-   Anti-ban refactor: removed the 3px red side-stripe (caught by
-   sidecoach absolute-ban-detector as a side-stripe-borders violation).
-   Replaced with a full subtle red-tinted border for the brand anchor,
-   so the brand color still touches the component but as a full surround,
-   not a stripe. */
+   Borderless: the red Copy button is the brand anchor (the earlier
+   red-tinted full border was removed by request). Height is not fixed;
+   .hero__cta-row { align-items: stretch } keeps it equal to the
+   adjacent CTA button, with 44px as the floor. */
 .install-block {
   display: inline-flex;
-  align-items: center;
-  gap: var(--space-3);
+  align-items: stretch;
+  gap: var(--space-4);
   background: var(--surface-inverse);
   color: var(--text-inverse);
-  border: 1px solid var(--accent-red-border);
   border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-5);
+  padding: 0 0 0 var(--space-5);
   font-family: var(--font-mono);
   font-size: var(--size-sm);
   min-height: 44px;
+  overflow: hidden;
   box-shadow: var(--shadow-md);
+}
+
+.install-block__cmd {
+  align-self: center;
 }
 
 .install-block__cmd {
@@ -654,24 +788,22 @@ p {
 
 .install-block__copy {
   border: 0;
-  background: transparent;
-  color: var(--text-inverse);
+  background: var(--color-red);
+  color: var(--color-cream);
   font-family: var(--font-mono);
   font-size: var(--size-xs);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
+  padding: 0 var(--space-4);
+  border-radius: 0;
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  min-height: 32px;
   min-width: 56px;
   transition: background-color var(--duration-fast) var(--ease-out),
-              color var(--duration-fast) var(--ease-out),
-              transform var(--duration-medium) var(--ease-spring-quick);
+              color var(--duration-fast) var(--ease-out);
 }
 
 .install-block__copy:hover {
-  background: var(--color-red);
+  background: color-mix(in srgb, var(--color-red) 82%, black);
 }
 
 .install-block__copy:focus-visible {
@@ -680,7 +812,7 @@ p {
 }
 
 .install-block__copy:active {
-  transform: scale(0.96);
+  background: color-mix(in srgb, var(--color-red) 70%, black);
 }
 
 .install-block__copy[data-copied="true"] {
@@ -740,7 +872,9 @@ p {
 /* Inline code + pre */
 code {
   font-family: var(--font-mono);
-  background: var(--surface-raised);
+  /* --code-bg is surface-alt in light, the darkest surface in dark, so inline
+     code always reads as an inset chip against the paper/canvas behind it. */
+  background: var(--code-bg);
   padding: var(--space-0_5) var(--space-2);
   border-radius: var(--radius-sm);
   font-size: 0.88em;
@@ -807,6 +941,428 @@ pre code {
   color: var(--text-on-inverse-secondary);
 }
 
+/* "The one move" intro split: copy left, live terminal demo right, centered */
+.one-move {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12);
+  align-items: center;
+  margin-bottom: var(--space-16);
+}
+
+.one-move__text .section__lede {
+  margin-bottom: 0;
+}
+
+.one-move__demo .scd-term {
+  width: 100%;
+  max-width: none;
+  /* zoom-fade in when the section scrolls into view (demo.js adds .is-revealed
+     as the terminal enters the viewport). Scoped here so only this terminal
+     animates - the install terminal and standalone demo are untouched. */
+  opacity: 0;
+  transform: scale(0.92);
+  transform-origin: center;
+  transition: opacity var(--duration-slow) var(--ease-out),
+              transform var(--duration-slow) var(--ease-out);
+}
+
+.one-move__demo .scd-term.is-revealed {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .one-move__demo .scd-term {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+@media (max-width: 880px) {
+  .one-move {
+    grid-template-columns: 1fr;
+    gap: var(--space-10);
+  }
+}
+
+/* Setup section: PRODUCT.md + DESIGN.md presented as two side-by-side cards
+   (each stacks title over body); collapses to one column on mobile. */
+.setup-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-8);
+}
+
+.setup-pair .feature-row {
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  padding-block: 0;
+  border-bottom: 0;
+  /* cards are equal-height (stretch); pack each card's rows to the top so the
+     shorter card does not stretch its title->body gap. Without this, the card
+     with less text shows a bigger gap under its heading. */
+  align-content: start;
+}
+
+@media (max-width: 768px) {
+  .setup-pair {
+    grid-template-columns: 1fr;
+    gap: var(--space-10);
+  }
+}
+
+/* "Why it matters": its own centered section - a proper section heading + lede,
+   on the normal page shade (no inverted/ink plane). */
+/* Verb categories as a bento card grid - browsable and a little delightful.
+   Build (the most verbs) is the wide card. Cards lift + accent on hover. */
+.verb-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-6);
+  margin-top: var(--space-12);
+}
+
+.verb-card--wide {
+  grid-column: span 2;
+}
+
+.verb-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-8);
+  background: var(--surface-canvas);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  transition: box-shadow var(--duration-medium) var(--ease-out),
+              border-color var(--duration-medium) var(--ease-out);
+}
+
+/* lift via shadow + accent border only - no translateY on hover (taste ban) */
+.verb-card:hover {
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-red);
+}
+
+.verb-card__phase {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--size-2xl);
+  font-weight: var(--weight-semibold);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.verb-card:hover .verb-card__phase {
+  color: var(--color-red);
+}
+
+.verb-card__verbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.verb-card__verbs li {
+  display: flex;
+}
+
+.verb-chip {
+  font-family: var(--font-mono);
+  font-size: var(--size-sm);
+  color: var(--text-primary);
+  background: var(--surface-alt);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-3);
+}
+
+.verb-card__desc {
+  margin: 0;
+  margin-top: auto;
+  font-size: var(--size-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 880px) {
+  .verb-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  /* drop Build's 2-col span at 2-col, otherwise it wraps and leaves a gap */
+  .verb-card--wide {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 560px) {
+  .verb-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Everyday-workflow: clickable vertical stepper (left) wired to a terminal
+   (right). stepper-demo.js plays each step's segment and toggles is-active/
+   is-done on the steps. */
+.workflow {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: var(--space-12);
+  align-items: center;
+  margin-top: var(--space-12);
+}
+
+.stepper {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stepper__step {
+  position: relative;
+}
+
+/* connecting line: a static gray track (::before) with a red progress fill
+   (::after) that grows from this dot to the next as the step completes. */
+.stepper__step::before,
+.stepper__step::after {
+  content: "";
+  position: absolute;
+  left: 0.8em;
+  top: 1.7em;
+  height: 100%;
+  width: 2px;
+  transform: translateX(-50%);
+}
+
+.stepper__step::before {
+  background: var(--border-firm);
+}
+
+.stepper__step::after {
+  background: var(--color-red);
+  transform: translateX(-50%) scaleY(0);
+  transform-origin: top center;
+  transition: transform var(--duration-slow) var(--ease-out);
+}
+
+.stepper__step:last-child::before,
+.stepper__step:last-child::after {
+  display: none;
+}
+
+.stepper__step.is-done::after {
+  transform: translateX(-50%) scaleY(1);
+}
+
+.stepper__btn {
+  display: grid;
+  grid-template-columns: 1.6em 1fr;
+  gap: var(--space-4);
+  align-items: start;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: var(--space-4) 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.stepper__marker {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.42em;
+}
+
+.stepper__dot {
+  position: relative;
+  z-index: 1;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--border-firm);
+  background: var(--surface-canvas);
+  transition: border-color var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.stepper__btn:hover .stepper__dot {
+  border-color: var(--color-red);
+}
+
+.stepper__btn:focus-visible {
+  outline: 2px solid var(--color-red);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.stepper__step.is-active .stepper__dot {
+  border-color: var(--color-red);
+  background: var(--color-red);
+  box-shadow: 0 0 0 4px rgba(220, 38, 24, 0.16);
+}
+
+.stepper__step.is-done .stepper__dot {
+  border-color: var(--color-red);
+  background: var(--color-red);
+}
+
+.stepper__text {
+  display: block;
+}
+
+.stepper__title {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--size-xl);
+  font-weight: var(--weight-semibold);
+  line-height: 1.1;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.stepper__step.is-active .stepper__title,
+.stepper__btn:hover .stepper__title {
+  color: var(--text-primary);
+}
+
+.stepper__desc {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: var(--size-sm);
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  max-width: 42ch;
+}
+
+.workflow__demo .scd-term {
+  width: 100%;
+  max-width: none;
+  height: 440px;
+}
+
+@media (max-width: 880px) {
+  .workflow {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+}
+
+/* Phrase marquee: full-bleed horizontal scroll of example requests. Two
+   identical groups per row make the loop seamless; rows run opposite ways.
+   Pauses on hover; wraps statically under reduced-motion. */
+.marquee-section {
+  overflow: hidden;
+}
+
+.marquee {
+  --marquee-duration: 38s;
+  --marquee-gap: var(--space-4);
+  display: flex;
+  gap: var(--marquee-gap);
+  overflow: hidden;
+  margin-top: var(--space-8);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.marquee + .marquee {
+  margin-top: var(--space-4);
+}
+
+.marquee__group {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--marquee-gap);
+  /* content-width (not min-width:100%) so a row that does not fill the screen
+     leaves no trailing space before the next copy - that trailing space was the
+     gap at the loop seam. Three copies per row (below) guarantee coverage even
+     on wide screens. */
+  width: max-content;
+  animation: marquee-scroll var(--marquee-duration) linear infinite;
+}
+
+.marquee--reverse .marquee__group {
+  animation-direction: reverse;
+}
+
+@keyframes marquee-scroll {
+  to { transform: translateX(calc(-100% - var(--marquee-gap))); }
+}
+
+.marquee__chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--size-sm);
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  border-radius: var(--radius-full);
+  padding: var(--space-2) var(--space-4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    flex-wrap: wrap;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .marquee__group {
+    min-width: 0;
+    flex-wrap: wrap;
+    animation: none;
+  }
+
+  .marquee__group[aria-hidden="true"] {
+    display: none;
+  }
+}
+
+.section--loop {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* Loop section FX: tilt-lab stack (grain-gradient ripple + dither post)
+   mounts into .loop__fx behind the carousel, ripple anchored to the
+   section's bottom center. Composites normally (no multiply) - the white
+   ripple must GLOW on the dark plane to read at all. */
+.loop__fx {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.loop__fx canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.section--loop .container {
+  position: relative;
+  z-index: 1;
+}
+
+.section--toolkit .section__eyebrow {
+  color: var(--color-red);
+}
+
 /* Toolkit cards */
 .toolkit {
   display: grid;
@@ -826,19 +1382,24 @@ pre code {
   flex-direction: column;
   gap: var(--space-4);
   padding: var(--space-8);
-  background: var(--surface-raised);
+  background: var(--surface-inverse);
   border-radius: var(--radius-xl);
   text-decoration: none;
   color: inherit;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
   transition: box-shadow var(--duration-medium) var(--ease-out),
-              transform var(--duration-medium) var(--ease-spring-quick);
+              transform var(--duration-medium) var(--ease-out);
   min-height: 280px;
 }
 
+/* Hover lift via shadow only - no translateY (a named taste-validator ban:
+   transform motion belongs on :active as scale-on-press, not on :hover). */
 .tool-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.tool-card:hover .tool-card__cta {
+  color: var(--color-red);
 }
 
 .tool-card:active {
@@ -864,24 +1425,45 @@ pre code {
   font-weight: var(--weight-semibold);
   letter-spacing: -0.01em;
   margin: 0;
+  color: var(--text-inverse);
 }
 
 .tool-card__desc {
   font-size: var(--size-base);
-  color: var(--text-secondary);
+  color: var(--text-on-inverse-secondary);
   flex: 1;
   margin: 0;
 }
 
 .tool-card__cta {
   font-size: var(--size-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-  text-decoration: underline;
+  font-weight: var(--weight-bold);
+  color: var(--text-inverse);
+  text-decoration: none;
   text-decoration-color: var(--color-red);
   text-decoration-thickness: 2px;
   text-underline-offset: 0.18em;
   margin-top: var(--space-2);
+}
+
+/* inline Lucide chevron-right replacing the old caret in the card CTA */
+.tool-card__cta-icon {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  vertical-align: -0.08em;
+  margin-left: 0.2em;
+  transition: transform 0.15s ease;
+}
+
+.tool-card:hover .tool-card__cta-icon,
+.tool-card:focus-visible .tool-card__cta-icon {
+  transform: translateX(2px);
+}
+
+.tool-card:hover .tool-card__cta,
+.tool-card:focus-visible .tool-card__cta {
+  text-decoration: underline;
 }
 
 /* Feature row (used on subpages and the bottom-of-landing rest section) */
@@ -950,11 +1532,38 @@ pre code {
 }
 
 .minor-list li {
-  padding: var(--space-3) 0;
+  position: relative;
   border-bottom: 1px solid var(--border-soft);
+}
+
+/* The whole item is the link. On hover the item's bottom hairline fills
+   left-to-right in red (scaleX bar laid exactly over the resting border). */
+.minor-list__item {
   display: flex;
-  gap: var(--space-3);
-  align-items: baseline;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+  padding: var(--space-3) 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.minor-list li::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--color-red);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--duration-medium) var(--ease-out);
+}
+
+.minor-list li:hover::after,
+.minor-list li:focus-within::after {
+  transform: scaleX(1);
 }
 
 .section--ink .minor-list li {
@@ -966,10 +1575,29 @@ pre code {
   font-size: var(--size-sm);
   color: var(--text-primary);
   min-width: 7ch;
+  flex-shrink: 0;
 }
 
 .section--ink .minor-list__name {
   color: var(--text-inverse);
+}
+
+/* The jump label inside the full-item link: color shift only on hover -
+   the moving element is the item's bottom hairline, not an underline here. */
+.minor-list__link {
+  display: inline-block;
+  margin-top: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--size-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.minor-list li:hover .minor-list__link,
+.minor-list__item:focus-visible .minor-list__link {
+  color: var(--color-red);
 }
 
 .minor-list__desc {
@@ -995,6 +1623,24 @@ pre code {
   justify-content: space-between;
   gap: var(--space-6);
   flex-wrap: wrap;
+}
+
+.site-footer__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.site-footer__brand .wordmark__img {
+  width: 100px;
+  height: auto;
+}
+
+.site-footer__copyright {
+  font-size: var(--size-sm);
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 .site-footer a {
@@ -1043,6 +1689,589 @@ pre code {
   .tool-card:active,
   .install-block__copy:active {
     transform: none;
+  }
+}
+
+/* ============================================================
+   Homepage narrative components
+   mission / process loop / stat band / faq / closing cta
+   All values resolve through DESIGN.md tokens. Dark theme works
+   through the same semantic tokens; no per-theme overrides here.
+   ============================================================ */
+
+/* Mission opener - centered statement, slightly wider measure than the
+   default text column (per Jonah via Justify: center it, a little wider) */
+.mission__body p {
+  font-size: var(--size-lg);
+  color: var(--text-secondary);
+  max-width: 56ch;
+  margin-bottom: var(--space-5);
+}
+
+.mission__body p:last-child {
+  margin-bottom: 0;
+}
+
+.section--mission .container {
+  text-align: center;
+}
+
+/* Mission block stands ~30% taller (Jonah 2026-06-11): scaled block
+   padding rather than a fixed height, so it grows with its content. */
+.section--mission {
+  padding-block: calc(var(--space-section) * 1.7);
+}
+
+/* Mission runs inverted (section--ink) with the eyebrow in brand red -
+   per Jonah via Justify: "completely flip in contrast, 'what this is'
+   text in red". Body text follows the on-inverse token. */
+.section--mission .section__eyebrow {
+  color: var(--color-red);
+}
+
+.section--ink .mission__body p {
+  color: var(--text-on-inverse-secondary);
+}
+
+.section--mission .section__title {
+  margin-inline: auto;
+}
+
+.section--mission .mission__body p {
+  max-width: 64ch;
+  margin-inline: auto;
+}
+
+/* Process loop - ordered list of 5 steps, horizontal at LG,
+   vertical stack below. The "loop closes" return path is a
+   decorative CSS channel, aria-hidden; the ol carries order. */
+.process {
+  list-style: none;
+  margin: var(--space-12) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-8);
+}
+
+.process__step {
+  padding-top: var(--space-5);
+  border-top: 2px solid var(--border-firm);
+}
+
+.process__num {
+  font-family: var(--font-mono);
+  font-size: var(--size-sm);
+  color: var(--color-red);
+  letter-spacing: 0.08em;
+}
+
+.process__name {
+  font-size: var(--size-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+/* process step term shown as a Lucide icon (label text moved to aria-label) */
+.process__icon {
+  display: block;
+  width: 6rem;
+  height: 6rem;
+  color: var(--color-red);
+}
+
+.process__desc {
+  font-size: var(--size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+.process__hook {
+  font-size: var(--size-sm);
+  color: var(--text-secondary);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--accent-red-border);
+}
+
+/* Arc-focus carousel (desktop, JS-armed via .process--arc): the five steps
+   pin to a curved path - focused card upright top-center, neighbors fan
+   down and outward, rotated along the arc tangent, dimming with distance.
+   JS owns transform/opacity/z-index per card; this block owns the stage,
+   card chrome, and transitions. No JS (or narrow viewport) falls back to
+   the grid/stack below. */
+/* Positioning context for the carousel's absolute focus panel - the
+   stage starts where the step list starts, so panel offsets are stable. */
+.process-stage {
+  position: relative;
+}
+
+@media (min-width: 1025px) {
+  /* The loop section clips the arc: the outer two cards hang halfway off
+     the section bottom, bleeding off-screen; the dots are the section's
+     absolute bottom with a sliver of breathing room. */
+  .section--loop {
+    overflow: hidden;
+    padding-block: var(--space-section) var(--space-4);
+  }
+
+  .process--arc {
+    display: block;
+    position: relative;
+    height: 510px;
+    overflow: visible;
+  }
+
+  .process--arc .process__step {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 250px;
+    height: 260px;
+    margin-left: -125px;
+    padding: var(--space-6);
+    border-top: 0;
+    border-radius: var(--radius-xl);
+    /* SOLID opaque card (Jonah: cards at 100% opacity), inverse plane in
+       both themes - ink card on cream, cream card on dark green. */
+    background: var(--surface-inverse);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-3);
+    transition: transform var(--duration-glacial) var(--ease-out),
+                opacity var(--duration-glacial) var(--ease-out);
+    cursor: pointer;
+  }
+
+  .process--arc .process__step[data-focused="true"] {
+    cursor: default;
+  }
+
+  /* Cards carry only number + name on the arc; the focused step's
+     desc/hook render in the hollow center panel instead. */
+  .process--arc .process__desc,
+  .process--arc .process__hook {
+    display: none;
+  }
+
+  .process--arc .process__name {
+    font-size: var(--size-2xl);
+    margin: 0;
+    color: var(--text-inverse);
+  }
+
+  /* The hollow center of the arc: focused step name, chevrons, desc,
+     hook, dots - mirrors the reference component's anatomy. */
+  .process__focus {
+    position: absolute;
+    left: 50%;
+    /* centered between the focused card's bottom (260px) and the stage
+       bottom (510px): panel ~110px tall -> top = 260 + (250 - 110) / 2 */
+    top: 330px;
+    transform: translateX(-50%);
+    width: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    text-align: center;
+    z-index: 11;
+  }
+
+  /* Per-slide stagger: JS re-arms .is-in on each focus change so the
+     caption contents fade up in sequence. */
+  .process__focus-controls.is-in {
+    animation: fade-up var(--duration-slow) var(--ease-out) both;
+  }
+
+  .process__focus-desc.is-in {
+    animation: fade-up var(--duration-slow) var(--ease-out) both;
+    animation-delay: 90ms;
+  }
+
+  .process__focus-hook.is-in {
+    animation: fade-up var(--duration-slow) var(--ease-out) both;
+    animation-delay: 180ms;
+  }
+
+  .process__focus-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+  }
+
+  .process__nav {
+    background: transparent;
+    border: 0;
+    color: var(--text-tertiary);
+    font-size: var(--size-xl);
+    line-height: 1;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-out),
+                transform var(--duration-medium) var(--ease-spring-quick);
+  }
+
+  .process__nav:hover {
+    color: var(--color-red);
+  }
+
+  .process__nav:focus-visible {
+    outline: 2px solid var(--color-red);
+    outline-offset: 3px;
+  }
+
+  .process__nav:active {
+    transform: scale(0.96);
+  }
+
+  .process__focus-name {
+    font-family: var(--font-display);
+    font-size: var(--size-2xl);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    margin: 0;
+    min-width: 9ch;
+  }
+
+  .process__focus-desc {
+    color: var(--text-secondary);
+    max-width: 52ch;
+    margin: 0;
+  }
+
+  .process__focus-hook {
+    font-size: var(--size-sm);
+    color: var(--text-tertiary);
+    margin: 0;
+  }
+
+  /* Dots are the absolute bottom of the section, centered in the stage. */
+  .process__dots {
+    /* indicator dots removed per Jonah 2026-06-11; JS still manages the
+       (invisible) element so the carousel logic stays untouched */
+    display: none;
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    gap: var(--space-3);
+    z-index: 12;
+  }
+
+  .process__dots[hidden] {
+    display: none;
+  }
+
+  .process__dot {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: var(--text-tertiary);
+    cursor: pointer;
+    position: relative;
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  /* 44px hit area without growing the dot */
+  .process__dot::after {
+    content: "";
+    position: absolute;
+    inset: -18px;
+  }
+
+  .process__dot[aria-current="true"] {
+    background: var(--color-red);
+  }
+
+  .process__dot:focus-visible {
+    outline: 2px solid var(--color-red);
+    outline-offset: 3px;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .process--arc .process__step,
+  .process__nav,
+  .process__dot {
+    transition: none;
+  }
+
+  .process__focus-controls.is-in,
+  .process__focus-desc.is-in,
+  .process__focus-hook.is-in {
+    animation: none;
+  }
+}
+
+/* Loop on a flipped section: borders and secondary text move to the
+   on-inverse tokens; the return label's mask matches the section surface. */
+.section--ink .process__step {
+  border-top-color: var(--border-inverse);
+}
+
+.section--ink .process__desc,
+.section--ink .process__hook {
+  color: var(--text-on-inverse-secondary);
+}
+
+@media (max-width: 1024px) {
+  .process {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    max-width: 56ch;
+  }
+}
+
+/* Stat band - description-list statistics on the ink section.
+   DOM order per dl spec is dt (label) then dd (value, caption);
+   flex order puts the value visually first. Editorial ruled
+   blocks, deliberately not floating KPI cards. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-10) var(--space-8);
+  margin: var(--space-12) 0 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-firm);
+}
+
+.stat__label {
+  order: 2;
+  font-family: var(--font-mono);
+  font-size: var(--size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+}
+
+.stat__value {
+  order: 1;
+  font-family: var(--font-display);
+  font-size: var(--size-3xl);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-3);
+}
+
+.stat__caption {
+  order: 3;
+  font-size: var(--size-sm);
+  color: var(--text-tertiary);
+  margin: var(--space-2) 0 0;
+}
+
+/* Entrance choreography (added via JS only when motion is allowed, so
+   reduced-motion and no-JS render the band fully visible): stats fade up
+   staggered, and each stat's top border carries a red progress bar that
+   tracks its own count-up, filling left to right. */
+.stat {
+  position: relative;
+}
+
+.stat::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--color-red);
+  transform: scaleX(var(--count-progress, 0));
+  transform-origin: left;
+}
+
+.stats--animate .stat {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity var(--duration-slow) var(--ease-out),
+              transform var(--duration-slow) var(--ease-out);
+}
+
+.stats--animate .stat.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Stat band on a flipped (ink) section - the alternation rebalance after
+   the foundation moved above it. Base colors remain the default. */
+.section--ink .stat {
+  border-top-color: var(--border-inverse);
+}
+
+.section--ink .stat__label,
+.section--ink .stat__value {
+  color: var(--text-inverse);
+}
+
+.section--ink .stat__caption {
+  color: var(--text-on-inverse-tertiary);
+}
+
+@media (max-width: 1024px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 540px) {
+  .stats {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+}
+
+/* FAQ - native details/summary, exclusive-open via shared name
+   attribute. Summary is the toggle (44px+ hit area via padding);
+   the +/x indicator rotates on open. */
+.faq {
+  margin-top: var(--space-12);
+  border-top: 1px solid var(--border-soft);
+}
+
+.faq__item {
+  border-bottom: 1px solid var(--border-soft);
+}
+
+/* FAQ answer paragraphs constrained for readable line length (all answers, for consistency) */
+.faq__a p {
+  width: 100%;
+  max-width: 75%;
+}
+
+.faq__q {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-5) var(--space-2);
+  cursor: pointer;
+  list-style: none;
+}
+
+.faq__q::-webkit-details-marker {
+  display: none;
+}
+
+.faq__q:focus-visible {
+  outline: 2px solid var(--color-red);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.faq__q h3 {
+  font-size: var(--size-xl);
+  font-weight: var(--weight-semibold);
+  margin: 0;
+}
+
+.faq__q::after {
+  content: "+";
+  font-family: var(--font-mono);
+  font-size: var(--size-xl);
+  line-height: 1;
+  color: var(--color-red);
+  flex-shrink: 0;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.faq__item[open] > .faq__q::after {
+  transform: rotate(45deg);
+}
+
+.faq__a {
+  padding: 0 var(--space-2) var(--space-6);
+}
+
+.faq__a p {
+  max-width: 56ch;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-3);
+}
+
+.faq__a p:last-child {
+  margin-bottom: 0;
+}
+
+/* Open/close animation - enhancement only, requires
+   interpolate-size + ::details-content (Baseline 2025).
+   Degrades to instant snap elsewhere. */
+@supports (interpolate-size: allow-keywords) {
+  :root {
+    interpolate-size: allow-keywords;
+  }
+
+  .faq__item::details-content {
+    opacity: 0;
+    block-size: 0;
+    overflow-y: clip;
+    transition:
+      content-visibility var(--duration-medium) allow-discrete,
+      opacity var(--duration-medium) var(--ease-out),
+      block-size var(--duration-medium) var(--ease-out);
+  }
+
+  .faq__item[open]::details-content {
+    opacity: 1;
+    block-size: auto;
+  }
+}
+
+/* Closing CTA - ink banner card on the canvas */
+/* Full-bleed CTA: the section carries the flipped surface (ink+contrast,
+   restoring the alternation slot the posture section vacated); the banner
+   is now a centered content block, not a card. */
+.cta-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-6);
+}
+
+.cta-banner__title {
+  color: var(--text-primary);
+  font-size: var(--size-2xl);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-3);
+}
+
+.cta-banner__body {
+  color: var(--text-secondary);
+  max-width: 44ch;
+}
+
+.cta-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+
+
+@media (prefers-reduced-motion: reduce) {
+  .faq__q::after {
+    transition: none;
+  }
+
+  .faq__item::details-content {
+    transition: none;
   }
 }
 
@@ -1527,3 +2756,233 @@ pre code {
     margin-bottom: var(--space-1);
   }
 }
+
+/* ============================================================
+   Reference (gospel) - two-level nav:
+   component subnav (Justify/Sidecoach/Beats/Foundation) ->
+   per-component chapter sidebar + content
+   ============================================================ */
+
+:root { --ref-subnav-h: 61px; }
+
+/* Component subnav, sticks under the topbar once scrolled to */
+.ref-subnav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--surface-canvas);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.ref-subnav__inner {
+  display: flex;
+  gap: var(--space-2);
+  padding-block: var(--space-3);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ref-subnav__inner::-webkit-scrollbar { display: none; }
+
+.ref-subnav__btn {
+  font-family: var(--font-mono);
+  font-size: var(--size-sm);
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  min-height: 40px;
+  white-space: nowrap;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              transform var(--duration-medium) var(--ease-spring-quick);
+}
+.ref-subnav__btn:hover { background: var(--accent-red-subtle); color: var(--text-primary); }
+.ref-subnav__btn:active { transform: scale(0.97); }
+.ref-subnav__btn:focus-visible { outline: 2px solid var(--color-red); outline-offset: 3px; }
+.ref-subnav__btn[aria-selected="true"] { background: var(--surface-inverse); color: var(--text-inverse); }
+
+/* Layout: chapter sidebar + content */
+.ref-layout {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: var(--space-12);
+  padding-block: var(--space-6) var(--space-20);
+  align-items: start;
+}
+@media (max-width: 880px) {
+  .ref-layout { grid-template-columns: 1fr; gap: var(--space-6); }
+}
+
+/* Sidebar: holds one chapter-nav per component, only the active one shows */
+.ref-sidebar {
+  position: sticky;
+  top: calc(var(--ref-subnav-h) + var(--space-4));
+  max-height: calc(100vh - var(--ref-subnav-h) - var(--space-6));
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+@media (max-width: 880px) {
+  .ref-sidebar {
+    position: static;
+    max-height: none;
+    border-bottom: 1px solid var(--border-soft);
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+}
+
+.ref-chapters { display: none; flex-direction: column; gap: var(--space-0_5); }
+.ref-chapters[data-active="true"] { display: flex; }
+
+.ref-group {
+  font-family: var(--font-mono);
+  font-size: var(--size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  margin: var(--space-5) 0 var(--space-2);
+  padding-left: var(--space-3);
+}
+.ref-group:first-child { margin-top: 0; }
+
+.ref-chapter-link {
+  font-family: var(--font-body);
+  font-size: var(--size-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  line-height: 1.35;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+.ref-chapter-link:hover { color: var(--text-primary); background: var(--accent-red-subtle); }
+.ref-chapter-link:focus-visible { outline: 2px solid var(--color-red); outline-offset: 2px; }
+.ref-chapter-link[aria-current="true"] {
+  /* Active state = fill tint + weight + high-contrast text. No colored side
+     border (the side-stripe AI-slop tell); no red text (fails WCAG AA). */
+  color: var(--text-primary);
+  background: var(--accent-red-subtle);
+  font-weight: var(--weight-semibold);
+}
+
+/* Content: one panel per component, only the active one shows */
+.ref-content { min-width: 0; }
+.ref-panel { display: none; }
+.ref-panel[data-active="true"] { display: block; animation: fade-up var(--duration-medium) var(--ease-out); }
+
+.ref-chapter {
+  padding-block: var(--space-10);
+  border-top: 1px solid var(--border-soft);
+  scroll-margin-top: calc(var(--ref-subnav-h) + var(--space-5));
+}
+.ref-chapter:first-child { border-top: 0; padding-top: var(--space-2); }
+
+.ref-chapter__title {
+  font-family: var(--font-display);
+  font-size: var(--size-2xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--space-4);
+  text-wrap: balance;
+}
+
+.ref-chapter p {
+  font-size: var(--size-base);
+  line-height: 1.62;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-4);
+  max-width: 68ch;
+  text-wrap: pretty;
+}
+
+.ref-chapter .ref-h3 {
+  font-family: var(--font-body);
+  font-size: var(--size-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: var(--space-8) 0 var(--space-3);
+  letter-spacing: -0.01em;
+}
+.ref-chapter .ref-h4 {
+  font-size: var(--size-base);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: var(--space-5) 0 var(--space-2);
+}
+
+.ref-chapter ul,
+.ref-chapter ol {
+  margin: 0 0 var(--space-4);
+  padding-left: var(--space-5);
+  color: var(--text-secondary);
+  max-width: 68ch;
+}
+.ref-chapter li { margin-bottom: var(--space-2); line-height: 1.55; }
+.ref-chapter li::marker { color: var(--text-tertiary); }
+
+.ref-chapter pre { margin: 0 0 var(--space-4); }
+.ref-chapter > p:last-child,
+.ref-chapter > ul:last-child { margin-bottom: 0; }
+
+.ref-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 var(--space-4);
+  font-size: var(--size-sm);
+  font-variant-numeric: tabular-nums;
+}
+.ref-table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: var(--size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-firm);
+}
+.ref-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-secondary);
+  vertical-align: top;
+  line-height: 1.5;
+}
+.ref-table tr:last-child td { border-bottom: 0; }
+
+.ref-callout {
+  /* No side-stripe (a named AI-slop tell). The subtle red tint alone signals
+     "note"; definition comes from the fill + radius, not a colored side border. */
+  background: var(--accent-red-subtle);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  margin: 0 0 var(--space-4);
+  font-size: var(--size-sm);
+  line-height: 1.55;
+  color: var(--text-secondary);
+  max-width: 68ch;
+}
+.ref-callout strong { color: var(--text-primary); }
+.ref-callout :last-child { margin-bottom: 0; }
+
+.ref-xlink {
+  /* High-contrast text; the red underline carries the link affordance, not the
+     text color (red text fails WCAG AA on both theme surfaces). */
+  color: var(--text-primary);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-red);
+  cursor: pointer;
+}
+.ref-xlink:hover { background: var(--accent-red-subtle); }
+
+.ref-chapter a:not(.ref-xlink) {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-red-border);
+  text-underline-offset: 2px;
+}
+.ref-chapter a:not(.ref-xlink):hover { text-decoration-color: var(--color-red); }

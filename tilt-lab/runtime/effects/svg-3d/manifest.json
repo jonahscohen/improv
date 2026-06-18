@@ -1,0 +1,217 @@
+{
+  "id": "svg-3d",
+  "name": "SVG 3D",
+  "category": "geometry",
+  "layerRole": "midground",
+  "params": [
+    {
+      "name": "source",
+      "type": "file",
+      "default": ""
+    },
+    {
+      "name": "depth",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 5,
+      "step": 0.05
+    },
+    {
+      "name": "smoothness",
+      "type": "range",
+      "default": 0.2,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "color",
+      "type": "color",
+      "default": "#ffffff"
+    },
+    {
+      "name": "material",
+      "type": "select",
+      "default": "default",
+      "options": [
+        "default",
+        "plastic",
+        "metal",
+        "glass",
+        "rubber",
+        "chrome",
+        "gold",
+        "clay",
+        "emissive",
+        "holographic"
+      ]
+    },
+    {
+      "name": "metalness",
+      "type": "range",
+      "default": 0.15,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "roughness",
+      "type": "range",
+      "default": 0.35,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "opacity",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "wireframe",
+      "type": "toggle",
+      "default": false
+    },
+    {
+      "name": "rotationX",
+      "type": "range",
+      "default": 0,
+      "min": -3.14159,
+      "max": 3.14159,
+      "step": 0.01
+    },
+    {
+      "name": "rotationY",
+      "type": "range",
+      "default": 0,
+      "min": -3.14159,
+      "max": 3.14159,
+      "step": 0.01
+    },
+    {
+      "name": "zoom",
+      "type": "range",
+      "default": 8,
+      "min": 2,
+      "max": 20,
+      "step": 0.1
+    },
+    {
+      "name": "fov",
+      "type": "range",
+      "default": 50,
+      "min": 20,
+      "max": 90,
+      "step": 1
+    },
+    {
+      "name": "offsetX",
+      "type": "range",
+      "default": 0,
+      "min": -0.5,
+      "max": 0.5,
+      "step": 0.01
+    },
+    {
+      "name": "offsetY",
+      "type": "range",
+      "default": 0,
+      "min": -0.5,
+      "max": 0.5,
+      "step": 0.01
+    },
+    {
+      "name": "cursorOrbit",
+      "type": "toggle",
+      "default": true
+    },
+    {
+      "name": "orbitStrength",
+      "type": "range",
+      "default": 0.15,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "lightIntensity",
+      "type": "range",
+      "default": 1.2,
+      "min": 0,
+      "max": 4,
+      "step": 0.05
+    },
+    {
+      "name": "ambientIntensity",
+      "type": "range",
+      "default": 0.3,
+      "min": 0,
+      "max": 2,
+      "step": 0.05
+    },
+    {
+      "name": "shadowOpacity",
+      "type": "range",
+      "default": 0.4,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "name": "animate",
+      "type": "select",
+      "default": "none",
+      "options": [
+        "none",
+        "spin",
+        "float",
+        "pulse",
+        "wobble",
+        "spinFloat",
+        "swing"
+      ]
+    },
+    {
+      "name": "animateSpeed",
+      "type": "range",
+      "default": 1,
+      "min": 0,
+      "max": 4,
+      "step": 0.05
+    },
+    {
+      "name": "intro",
+      "type": "select",
+      "default": "zoom",
+      "options": [
+        "zoom",
+        "fade",
+        "none"
+      ]
+    }
+  ],
+  "requiredAssets": [],
+  "origin": "https://github.com/renatoworks/3dsvg (3dsvg.design)",
+  "license": "MIT",
+  "attribution": "3dsvg (c) 2026 Renato Costa - github.com/renatoworks/3dsvg",
+  "redistribution": "ok",
+  "tags": [
+    "webgl",
+    "three",
+    "svg",
+    "3d",
+    "extrude",
+    "geometry",
+    "pbr",
+    "orbit",
+    "midground"
+  ],
+  "interactions": [
+    "Move the cursor to orbit the object",
+    "Drag to rotate it"
+  ]
+}

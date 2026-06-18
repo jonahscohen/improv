@@ -1,0 +1,277 @@
+/* ── Claude Code session demo (scd-) ────────────────────────────────────
+   A faithful, animated replay of a full Claude Code agentic loop (explore ->
+   plan -> edit -> test -> fix -> verify -> commit). Palette matches the real
+   Claude Code TUI: warm near-black screen, off-white text, GREEN tool bullets,
+   ORANGE working spinner + prompt. The page chrome around it stays on-brand;
+   the terminal looks like a terminal. Classes are prefixed scd- to stay
+   isolated from site components. */
+.scd-stage-wrap {
+  --scd-bg: #191815;             /* warm near-black terminal screen */
+  --scd-bar: #211F1B;            /* slightly lifted title bar */
+  --scd-fg: #E7E4DF;             /* off-white terminal text */
+  --scd-dim: rgba(231, 228, 223, 0.58);
+  --scd-faint: rgba(231, 228, 223, 0.40);
+  --scd-line: rgba(231, 228, 223, 0.10);
+  --scd-green: #8FB573;          /* Claude Code success / tool bullet */
+  --scd-orange: #D9794E;         /* working spinner + prompt + emphasis */
+}
+
+.scd-section { padding: var(--space-16) 0 var(--space-24); }
+.scd-intro { max-width: 58ch; }
+.scd-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--size-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-red);
+  margin: 0 0 var(--space-4);
+}
+.scd-title {
+  font-family: var(--font-display);
+  font-size: var(--size-4xl);
+  font-weight: var(--weight-bold);
+  line-height: 1.05;
+  text-wrap: balance;
+  margin: 0 0 var(--space-5);
+}
+.scd-lede {
+  font-size: var(--size-lg);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+  margin: 0 0 var(--space-10);
+}
+
+/* ── the terminal ── */
+.scd-term {
+  background: var(--scd-bg);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  max-width: 880px;
+  color: var(--scd-fg);
+  display: flex;
+  flex-direction: column;
+  height: 580px;
+}
+/* The How-it-Works terminal reads as a flush screen, not a lifted card:
+   no box shadow, no outer border. Scoped to the id so the install terminal
+   is untouched. (Requested via Justify; the component carried neither in the
+   stylesheets, so this locks the intended flush state.) */
+#scd-term {
+  box-shadow: none;
+  border: none;
+}
+.scd-term__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--scd-bar);
+  border-bottom: 1px solid var(--scd-line);
+}
+.scd-dots { display: inline-flex; gap: 7px; }
+.scd-dots i {
+  width: 11px; height: 11px; border-radius: var(--radius-full);
+  background: var(--scd-faint);
+}
+.scd-dots i:first-child { background: #E0664E; }
+.scd-dots i:nth-child(2) { background: #E0A23E; }
+.scd-dots i:nth-child(3) { background: var(--scd-green); }
+.scd-term__title {
+  font-family: var(--font-mono);
+  font-size: var(--size-xs);
+  color: var(--scd-dim);
+  letter-spacing: 0.02em;
+}
+.scd-term__title b { color: var(--scd-fg); font-weight: var(--weight-medium); }
+.scd-sim {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--scd-dim);
+  border: 1px solid var(--scd-line);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+}
+.scd-replay {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--size-xs);
+  color: var(--scd-dim);
+  background: transparent;
+  border: 1px solid var(--scd-line);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out);
+}
+.scd-replay:hover { color: var(--scd-fg); border-color: var(--scd-faint); background: rgba(231,228,223,0.04); }
+.scd-replay:focus-visible { outline: 2px solid var(--scd-orange); outline-offset: 2px; }
+.scd-replay:active { transform: scale(0.96); }
+.scd-replay svg { width: 13px; height: 13px; }
+
+.scd-term__body {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  line-height: 1.6;
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scd-faint) transparent;
+  white-space: pre-wrap;
+}
+
+/* persistent footer: spinner -> divider -> input bar, pinned like the real Claude TUI */
+.scd-term__foot {
+  flex: 0 0 auto;
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.scd-foot-spin { color: var(--scd-dim); padding-bottom: var(--space-3); }
+.scd-foot-spin:empty { display: none; }
+.scd-foot-spin .spark { color: var(--scd-orange); }
+.scd-foot-spin .verb { color: var(--scd-orange); }
+.scd-foot-spin .hint { color: var(--scd-faint); }
+.scd-foot-rule { border-top: 1px solid var(--scd-line); margin: 0 calc(-1 * var(--space-5)) var(--space-3); }
+.scd-foot-input { color: var(--scd-fg); display: flex; align-items: center; }
+.scd-foot-input::before { content: "❯"; color: var(--scd-orange); margin-right: 0.6ch; }
+/* caret sits inside the centered input row; override the transcript caret's
+   baseline alignment so the block lines up with the ❯ */
+.scd-foot-input .scd-caret { margin-left: 1px; }
+.scd-term__body::-webkit-scrollbar { width: 10px; }
+.scd-term__body::-webkit-scrollbar-thumb {
+  background: var(--scd-faint); border-radius: var(--radius-full);
+  border: 3px solid var(--scd-bg);
+}
+
+/* a line reveals with a small rise; the engine toggles .is-in */
+.scd-line {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity var(--duration-medium) var(--ease-out),
+              transform var(--duration-medium) var(--ease-out);
+  margin: 0;
+}
+.scd-line.is-in { opacity: 1; transform: none; }
+/* stepper rewind/restart: gently fade + lift a line out before it is removed */
+.scd-line.scd-collapsing { opacity: 0; transform: translateY(-6px); }
+.scd-gap { height: 0.66em; }
+
+/* ── faithful TUI primitives ── */
+
+/* user input: ❯ prompt + typed text */
+.scd-input { color: var(--scd-fg); }
+.scd-input::before { content: "❯ "; color: var(--scd-orange); }
+
+/* ● turn / tool bullets: green for a tool call, off-white for assistant text */
+.scd-dot-tool { color: var(--scd-green); }
+.scd-dot-asst { color: var(--scd-fg); }
+.scd-tname { color: var(--scd-fg); }
+.scd-args { color: var(--scd-dim); }
+.scd-asst { color: var(--scd-fg); }
+
+/* the └ result line under a tool call: indented, dimmed */
+.scd-res { color: var(--scd-dim); }
+.scd-res .scd-branch { color: var(--scd-faint); }
+
+/* assistant list item: "  - text" (plan / summary) */
+.scd-li { color: var(--scd-dim); }
+.scd-li .scd-dash { color: var(--scd-faint); }
+
+/* status accents inside result lines */
+.scd-fail { color: var(--scd-orange); }
+.scd-ok { color: var(--scd-green); }
+.scd-hl { color: var(--scd-orange); }
+.scd-em { color: var(--scd-fg); border-bottom: 1px solid rgba(217,121,78,0.5); }
+
+/* ── the Sidecoach panel: the designed product surface (mirrors --render) ──
+   A left-accented, faintly-tinted block so a routed session is unmistakably
+   Sidecoach, not vanilla Claude output. */
+.scd-sc {
+  margin: 0.35em 0 0.5em;
+  padding: 0.5em 0.9em 0.65em;
+  border-left: 2px solid var(--scd-orange);
+  background: rgba(217, 121, 78, 0.05);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.scd-sc__head { color: var(--scd-fg); }
+.scd-sc__head .mark { color: var(--scd-orange); }
+.scd-sc__head .verb { color: var(--scd-dim); }
+.scd-sc__row { display: flex; gap: 0.6em; }
+.scd-sc__row .k { color: var(--scd-dim); flex: 0 0 5.4em; }
+.scd-sc__row .v { color: var(--scd-fg); }
+.scd-sc__row .v .d { color: var(--scd-dim); }
+.scd-sc .sep { color: var(--scd-faint); }
+.scd-sc__phase .ph { color: var(--scd-orange); }
+.scd-sc__phase .nm { color: var(--scd-fg); }
+.scd-sc__dims { color: var(--scd-dim); padding-left: 1.5em; }
+.scd-sc__st { font-size: 0.92em; }
+.scd-sc__st.run { color: var(--scd-dim); animation: scd-pulse 1.1s ease-in-out infinite; }
+.scd-sc__st.done { color: var(--scd-green); }
+.scd-sc__st.skip { color: var(--scd-faint); }
+.scd-sc__st.fail { color: var(--scd-orange); }
+@keyframes scd-pulse { 50% { opacity: 0.4; } }
+.scd-sc__bar .on { color: var(--scd-orange); }
+.scd-sc__bar .off { color: var(--scd-faint); }
+.scd-sc__bar .n { color: var(--scd-dim); }
+.scd-sc__gate .ok { color: var(--scd-green); }
+.scd-sc__gate .no { color: var(--scd-orange); }
+.scd-sc__gate .nm { color: var(--scd-fg); }
+.scd-sc__verdict .mark { color: var(--scd-orange); }
+.scd-sc__verdict .clean { color: var(--scd-green); }
+.scd-sc__verdict .find { color: var(--scd-orange); }
+.scd-sc__verdict .d { color: var(--scd-dim); }
+
+/* working spinner: <spark> Verb… (Xm Ys · N tokens) */
+.scd-spin { color: var(--scd-dim); }
+.scd-spin .scd-spark { color: var(--scd-orange); }
+.scd-spin .scd-verb { color: var(--scd-orange); }
+.scd-spin .scd-hint { color: var(--scd-faint); }
+
+/* blinking caret on the idle prompt */
+.scd-caret {
+  display: inline-block;
+  width: 8px; height: 1.05em;
+  vertical-align: text-bottom;
+  background: var(--scd-orange);
+  margin-left: 2px;
+  animation: scd-blink 1s steps(1) infinite;
+}
+@keyframes scd-blink { 50% { opacity: 0; } }
+:root[data-still] .scd-caret { animation: none; }
+
+.scd-caption {
+  margin-top: var(--space-5);
+  font-size: var(--size-sm);
+  color: var(--text-tertiary);
+  max-width: 64ch;
+}
+.scd-caption code {
+  font-family: var(--font-mono);
+  background: var(--surface-raised);
+  padding: 1px 5px; border-radius: var(--radius-sm);
+  font-size: 0.85em;
+}
+
+@media (max-width: 640px) {
+  .scd-term { height: 520px; }
+  .scd-term__body { font-size: 12.5px; }
+  .scd-term__foot { font-size: 12.5px; }
+  .scd-sim { display: none; }
+}
+
+/* Reduced motion: no blink, no rise; the engine renders the transcript in its
+   final state with no typing/streaming and a static spinner snapshot. */
+@media (prefers-reduced-motion: reduce) {
+  .scd-caret { animation: none; }
+  .scd-line { opacity: 1; transform: none; transition: none; }
+}

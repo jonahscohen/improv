@@ -3,7 +3,61 @@
 // Utility for validating UI implementations against 22-point proprietary polish framework
 // Separate from flow handlers - used by Flow J (Tactical Polish) and audit flows
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PolishStandardValidator = void 0;
+exports.PolishStandardValidator = exports.hasReducedMotion = exports.hasFocusVisible = exports.countDefinedStates = exports.POLISH_STATES = exports.hasOpticalPadding = exports.countBoxShadowRules = exports.hasShadowTokenTiers = exports.hasBoxShadowElevation = exports.hasWillChangeAll = exports.hasFramerSignal = exports.hasFontSmoothing = exports.hasAnyMotion = exports.hasExitScale = exports.hasExitOpacity = exports.hasStaggerDelay = exports.hasTextWrapBalance = exports.hasDynamicNumberSelectors = exports.hasTabularNums = exports.hasTransitionAll = exports.hasNoImages = exports.hasImageOutlineRule = exports.hasCompoundIconTransition = exports.hasScaleOnPress = exports.joinCssRules = void 0;
+// ============================================================================
+// Shared static source predicates (P4a-2). Extracted so the live POLISH_RULES
+// callbacks below AND the four-status adapter in validators/checks/polish-checks.ts
+// call the SAME predicate - no regex/threshold is implemented twice. Each operates
+// on a joined CSS-family string; the callbacks join ctx.cssRules before calling.
+// ============================================================================
+const joinCssRules = (ctx) => (ctx.cssRules || []).join('\n');
+exports.joinCssRules = joinCssRules;
+const hasScaleOnPress = (css) => css.includes('scale(0.96)');
+exports.hasScaleOnPress = hasScaleOnPress;
+const hasCompoundIconTransition = (css) => css.includes('opacity') && css.includes('scale');
+exports.hasCompoundIconTransition = hasCompoundIconTransition;
+const hasImageOutlineRule = (css) => /img\s*\{[^}]*(?:outline|border)[^}]*rgba\s*\(\s*0\s*,\s*0\s*,\s*0/i.test(css)
+    || /(?:img|\.image)[^{]*\{[^}]*box-shadow[^}]*inset[^}]*rgba/i.test(css);
+exports.hasImageOutlineRule = hasImageOutlineRule;
+const hasNoImages = (text) => !/img\s*\{|\.image\b|<img\b/.test(text);
+exports.hasNoImages = hasNoImages;
+const hasTransitionAll = (css) => css.includes('transition: all');
+exports.hasTransitionAll = hasTransitionAll;
+const hasTabularNums = (css) => /font-variant-numeric\s*:\s*(?:[^;]*\b)?tabular-nums/i.test(css);
+exports.hasTabularNums = hasTabularNums;
+const hasDynamicNumberSelectors = (css) => /\.(?:counter|timer|stat|price|count|metric|number|kpi|tabular)\b/i.test(css);
+exports.hasDynamicNumberSelectors = hasDynamicNumberSelectors;
+const hasTextWrapBalance = (css) => css.includes('text-wrap: balance');
+exports.hasTextWrapBalance = hasTextWrapBalance;
+const hasStaggerDelay = (css) => css.includes('animation-delay');
+exports.hasStaggerDelay = hasStaggerDelay;
+const hasExitOpacity = (css) => css.includes('opacity: 0');
+exports.hasExitOpacity = hasExitOpacity;
+const hasExitScale = (css) => css.includes('scale(0.8)') || css.includes('scale(0.96)');
+exports.hasExitScale = hasExitScale;
+const hasAnyMotion = (css) => /transition\s*:|@keyframes\b|animation\s*:/.test(css);
+exports.hasAnyMotion = hasAnyMotion;
+const hasFontSmoothing = (css) => css.includes('-webkit-font-smoothing');
+exports.hasFontSmoothing = hasFontSmoothing;
+const hasFramerSignal = (text) => /framer-motion|<AnimatePresence/.test(text);
+exports.hasFramerSignal = hasFramerSignal;
+const hasWillChangeAll = (css) => css.includes('will-change: all');
+exports.hasWillChangeAll = hasWillChangeAll;
+const hasBoxShadowElevation = (css) => /box-shadow\s*:\s*[^;]*\(/.test(css);
+exports.hasBoxShadowElevation = hasBoxShadowElevation;
+const hasShadowTokenTiers = (css) => /--shadow-(?:sm|xs|md|lg|xl|2xl|small|medium|large)/i.test(css);
+exports.hasShadowTokenTiers = hasShadowTokenTiers;
+const countBoxShadowRules = (css) => (css.match(/box-shadow\s*:/g) || []).length;
+exports.countBoxShadowRules = countBoxShadowRules;
+const hasOpticalPadding = (css) => css.includes('padding');
+exports.hasOpticalPadding = hasOpticalPadding;
+exports.POLISH_STATES = ['default', 'hover', 'focus', 'active', 'disabled', 'loading', 'error', 'success'];
+const countDefinedStates = (css) => exports.POLISH_STATES.filter((s) => css.includes(`:${s}`)).length;
+exports.countDefinedStates = countDefinedStates;
+const hasFocusVisible = (css) => css.includes(':focus-visible');
+exports.hasFocusVisible = hasFocusVisible;
+const hasReducedMotion = (css) => css.includes('@media (prefers-reduced-motion');
+exports.hasReducedMotion = hasReducedMotion;
 // 22-Point Polish Rules (14 baseline + 8 proprietary)
 const POLISH_RULES = [
     {
@@ -13,7 +67,7 @@ const POLISH_RULES = [
         description: 'Interactive elements scale to 0.96 on press state',
         checkFunction: (ctx) => ({
             ruleId: 1,
-            passed: ctx.cssRules?.some(r => r.includes('scale(0.96)')) ?? false,
+            passed: (0, exports.hasScaleOnPress)((0, exports.joinCssRules)(ctx)),
             message: 'Scale on press effect should be present',
             remediation: 'Add :active { transform: scale(0.96); }'
         }),
@@ -39,8 +93,7 @@ const POLISH_RULES = [
         description: 'Icon transitions use compound animation',
         checkFunction: (ctx) => ({
             ruleId: 3,
-            passed: ((ctx.cssRules?.some(r => r.includes('opacity'))) ?? false) &&
-                ((ctx.cssRules?.some(r => r.includes('scale'))) ?? false),
+            passed: (0, exports.hasCompoundIconTransition)((0, exports.joinCssRules)(ctx)),
             message: 'Icon transitions need opacity, scale, and blur',
             remediation: 'Use: opacity, transform scale, and filter blur in transitions'
         }),
@@ -56,13 +109,12 @@ const POLISH_RULES = [
             // computed style has rgba border OR (b) the project has no images
             // OR (c) the CSS shows image-aware rules using rgba(0,0,0,0.x).
             const hasComputedRgba = ctx.computedStyle?.borderColor?.includes('rgba') ?? false;
-            const cssText = (ctx.cssRules || []).join('\n');
-            const hasImageOutlineRule = /img\s*\{[^}]*(?:outline|border)[^}]*rgba\s*\(\s*0\s*,\s*0\s*,\s*0/i.test(cssText)
-                || /(?:img|\.image)[^{]*\{[^}]*box-shadow[^}]*inset[^}]*rgba/i.test(cssText);
-            const noImagesInProject = !/img\s*\{|\.image\b|<img\b/.test(cssText);
+            const cssText = (0, exports.joinCssRules)(ctx);
+            const imageOutlineRule = (0, exports.hasImageOutlineRule)(cssText);
+            const noImagesInProject = (0, exports.hasNoImages)(cssText);
             return {
                 ruleId: 4,
-                passed: hasComputedRgba || hasImageOutlineRule || noImagesInProject,
+                passed: hasComputedRgba || imageOutlineRule || noImagesInProject,
                 message: noImagesInProject ? 'Image outlines: not applicable (no img rules in project)' : 'Image outlines should use neutral transparency',
                 remediation: 'When images are added: border: 1px solid rgba(0,0,0,0.1) - never tinted neutrals.'
             };
@@ -105,7 +157,7 @@ const POLISH_RULES = [
         description: 'Explicit property transitions only',
         checkFunction: (ctx) => ({
             ruleId: 6,
-            passed: !(ctx.cssRules?.some(r => r.includes('transition: all')) ?? false),
+            passed: !(0, exports.hasTransitionAll)((0, exports.joinCssRules)(ctx)),
             message: 'Should use explicit property transitions',
             remediation: 'Replace transition: all with specific properties'
         }),
@@ -117,13 +169,12 @@ const POLISH_RULES = [
         category: 'baseline',
         description: 'Dynamic numeric fields use font-variant-numeric: tabular-nums',
         checkFunction: (ctx) => {
-            const cssText = (ctx.cssRules || []).join('\n');
-            const hasTabular = /font-variant-numeric\s*:\s*(?:[^;]*\b)?tabular-nums/i.test(cssText)
+            const cssText = (0, exports.joinCssRules)(ctx);
+            const hasTabular = (0, exports.hasTabularNums)(cssText)
                 || !!(ctx.computedStyle && ctx.computedStyle.fontVariantNumeric?.includes('tabular'));
             // Not applicable: no dynamic numeric content selectors (no counter,
             // timer, stat, price, count, metric class anywhere)
-            const hasDynamicNumberSelectors = /\.(?:counter|timer|stat|price|count|metric|number|kpi|tabular)\b/i.test(cssText);
-            const notApplicable = !hasDynamicNumberSelectors;
+            const notApplicable = !(0, exports.hasDynamicNumberSelectors)(cssText);
             return {
                 ruleId: 7,
                 passed: hasTabular || notApplicable,
@@ -140,7 +191,7 @@ const POLISH_RULES = [
         description: 'Headings use text-wrap: balance',
         checkFunction: (ctx) => {
             const isHeading = ctx.htmlElement && ['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(ctx.htmlElement.tagName);
-            const hasBalance = ctx.cssRules?.some(r => r.includes('text-wrap: balance')) ?? false;
+            const hasBalance = (0, exports.hasTextWrapBalance)((0, exports.joinCssRules)(ctx));
             return {
                 ruleId: 8,
                 passed: !isHeading || hasBalance,
@@ -157,7 +208,7 @@ const POLISH_RULES = [
         description: 'Multiple elements use stagger delay (30ms-80ms)',
         checkFunction: (ctx) => ({
             ruleId: 9,
-            passed: ctx.cssRules?.some(r => r.includes('animation-delay')) ?? false,
+            passed: (0, exports.hasStaggerDelay)((0, exports.joinCssRules)(ctx)),
             message: 'Animations should use stagger delays',
             remediation: 'Apply animation-delay: calc(30ms * var(--index))'
         }),
@@ -169,16 +220,15 @@ const POLISH_RULES = [
         category: 'baseline',
         description: 'Exiting elements fade and scale down',
         checkFunction: (ctx) => {
-            const cssText = (ctx.cssRules || []).join('\n');
-            const hasExitOpacity = ctx.cssRules?.some((r) => r.includes('opacity: 0')) ?? false;
-            const hasExitScale = ctx.cssRules?.some((r) => r.includes('scale(0.8)') || r.includes('scale(0.96)')) ?? false;
+            const cssText = (0, exports.joinCssRules)(ctx);
+            const exitOpacity = (0, exports.hasExitOpacity)(cssText);
+            const exitScale = (0, exports.hasExitScale)(cssText);
             // Not applicable: no transition or animation declarations at all
             // (a static page without animated exits doesn't need exit choreography)
-            const hasAnyTransition = /transition\s*:|@keyframes\b|animation\s*:/.test(cssText);
-            const notApplicable = !hasAnyTransition;
+            const notApplicable = !(0, exports.hasAnyMotion)(cssText);
             return {
                 ruleId: 10,
-                passed: (hasExitOpacity && hasExitScale) || notApplicable,
+                passed: (exitOpacity && exitScale) || notApplicable,
                 message: notApplicable ? 'Exit animations: not applicable (no animations or transitions on the project)' : 'Exit animations need opacity + scale',
                 remediation: 'When elements animate out, fade opacity to 0 and scale toward 0.96 (not below 0.8). Symmetric exits look like reverse-entrance; asymmetric (faster + softer) is the absorbed prescription.'
             };
@@ -192,7 +242,7 @@ const POLISH_RULES = [
         description: 'Text rendering optimized with font-smoothing',
         checkFunction: (ctx) => ({
             ruleId: 11,
-            passed: ctx.cssRules?.some(r => r.includes('-webkit-font-smoothing')) ?? false,
+            passed: (0, exports.hasFontSmoothing)((0, exports.joinCssRules)(ctx)),
             message: 'Should apply font smoothing',
             remediation: 'Add: -webkit-font-smoothing: antialiased (desktop)'
         }),
@@ -207,8 +257,8 @@ const POLISH_RULES = [
             const componentTreeOk = (ctx.componentTree?.initial ?? undefined) === false;
             // Not applicable: no React + Framer Motion in the project (static HTML
             // sites have no AnimatePresence to configure)
-            const cssText = (ctx.cssRules || []).join('\n');
-            const isReactProject = /framer-motion|<AnimatePresence|use[A-Z]/.test(cssText) || ctx.componentTree?.usesFramerMotion === true;
+            const cssText = (0, exports.joinCssRules)(ctx);
+            const isReactProject = (0, exports.hasFramerSignal)(cssText) || /use[A-Z]/.test(cssText) || ctx.componentTree?.usesFramerMotion === true;
             const notApplicable = !isReactProject;
             return {
                 ruleId: 12,
@@ -226,7 +276,7 @@ const POLISH_RULES = [
         description: 'will-change used selectively',
         checkFunction: (ctx) => ({
             ruleId: 13,
-            passed: !(ctx.cssRules?.some(r => r.includes('will-change: all')) ?? false),
+            passed: !(0, exports.hasWillChangeAll)((0, exports.joinCssRules)(ctx)),
             message: 'Avoid will-change: all',
             remediation: 'Use will-change for specific properties only'
         }),
@@ -244,7 +294,7 @@ const POLISH_RULES = [
             // systems in their stylesheet pass without needing a headless
             // browser to evaluate computed styles.
             const hasComputed = !!(ctx.computedStyle?.boxShadow && ctx.computedStyle.boxShadow !== 'none');
-            const hasCssDeclaration = ctx.cssRules?.some((r) => /box-shadow\s*:\s*[^;]*\(/.test(r)) ?? false;
+            const hasCssDeclaration = (0, exports.hasBoxShadowElevation)((0, exports.joinCssRules)(ctx));
             return {
                 ruleId: 14,
                 passed: hasComputed || hasCssDeclaration,
@@ -261,7 +311,7 @@ const POLISH_RULES = [
         description: 'Correct visual imbalance from letter shapes',
         checkFunction: (ctx) => ({
             ruleId: 15,
-            passed: ctx.cssRules?.some(r => r.includes('padding')) ?? false,
+            passed: (0, exports.hasOpticalPadding)((0, exports.joinCssRules)(ctx)),
             message: 'Apply optical alignment adjustments',
             remediation: 'Subtract 2-4px from top padding for descender allowance'
         }),
@@ -291,9 +341,9 @@ const POLISH_RULES = [
             // shadow elevation system in tokens passes without needing a live DOM.
             const shadow = ctx.computedStyle?.boxShadow || '';
             const hasElevationInComputed = ['1px 2px', '4px 6px', '10px 25px', '20px 40px', '40px 80px'].some((level) => shadow.includes(level));
-            const cssText = (ctx.cssRules || []).join('\n');
-            const hasTokenizedTiers = /--shadow-(?:sm|xs|md|lg|xl|2xl|small|medium|large)/i.test(cssText);
-            const hasMultipleShadowRules = (cssText.match(/box-shadow\s*:/g) || []).length >= 3;
+            const cssText = (0, exports.joinCssRules)(ctx);
+            const hasTokenizedTiers = (0, exports.hasShadowTokenTiers)(cssText);
+            const hasMultipleShadowRules = (0, exports.countBoxShadowRules)(cssText) >= 3;
             return {
                 ruleId: 17,
                 passed: hasElevationInComputed || hasTokenizedTiers || hasMultipleShadowRules,
@@ -310,7 +360,7 @@ const POLISH_RULES = [
         description: 'Keyboard focus visible with outline-offset: 2px',
         checkFunction: (ctx) => ({
             ruleId: 18,
-            passed: ctx.cssRules?.some(r => r.includes(':focus-visible')) ?? false,
+            passed: (0, exports.hasFocusVisible)((0, exports.joinCssRules)(ctx)),
             message: 'Implement :focus-visible for keyboard navigation',
             remediation: 'Add: :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }'
         }),
@@ -323,7 +373,7 @@ const POLISH_RULES = [
         description: 'Animations disabled for motion-sensitive users',
         checkFunction: (ctx) => ({
             ruleId: 19,
-            passed: ctx.cssRules?.some(r => r.includes('@media (prefers-reduced-motion')) ?? false,
+            passed: (0, exports.hasReducedMotion)((0, exports.joinCssRules)(ctx)),
             message: 'Respect prefers-reduced-motion',
             remediation: 'Add: @media (prefers-reduced-motion: reduce) { animation: none; }'
         }),
@@ -348,8 +398,7 @@ const POLISH_RULES = [
         category: 'proprietary',
         description: 'All 8 states defined (default, hover, focus, active, disabled, loading, error, success)',
         checkFunction: (ctx) => {
-            const states = ['default', 'hover', 'focus', 'active', 'disabled', 'loading', 'error', 'success'];
-            const defined = states.filter(s => ctx.cssRules?.some(r => r.includes(`:${s}`)) ?? false).length;
+            const defined = (0, exports.countDefinedStates)((0, exports.joinCssRules)(ctx));
             return {
                 ruleId: 21,
                 passed: defined >= 8,

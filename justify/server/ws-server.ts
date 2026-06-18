@@ -302,15 +302,41 @@ IP.1 = 127.0.0.1
         req.on('end', () => {
           try {
             const data = JSON.parse(body);
-            this.broadcastToClients('justify_response', {
+            // Issue #1: a result must always be visually locatable. The submit
+            // payload records which DOM element(s) the prompt was about; join the
+            // original prompt by promptId and carry its selectors onto the
+            // response so clicking the Changes entry can scroll to + select the
+            // target even for diff-only responses that have no per-change
+            // selectors. An explicit targetSelectors on the body wins if given.
+            let targetSelectors: string[] = Array.isArray(data.targetSelectors) ? data.targetSelectors : [];
+            if (targetSelectors.length === 0 && data.promptId) {
+              const orig = this.readPromptsFile().find((p) => p.id === data.promptId);
+              if (orig && Array.isArray((orig as { selectors?: string[] }).selectors)) {
+                targetSelectors = (orig as { selectors?: string[] }).selectors as string[];
+              }
+            }
+            const responseObj = {
               promptId: data.promptId + '-' + Date.now(),
               summary: data.summary,
               filesChanged: data.filesChanged || [],
               changes: data.changes || [],
+              diffs: data.diffs || [],
+              targetSelectors,
               status: data.status || 'completed',
               question: data.question,
               timestamp: Date.now(),
-            });
+            };
+            this.broadcastToClients('justify_response', responseObj);
+            // Issue #2 (headless durability): if no browser is connected right
+            // now, the broadcast lands nowhere and the result would be lost. The
+            // connected client is what normally persists history to
+            // responses.json; with zero clients, persist it here so the result
+            // surfaces in the Changes panel the moment a tab (re)connects. When
+            // a client IS connected it owns the write, so we skip to avoid
+            // double-appends.
+            if (this.manager.size() === 0) {
+              this.appendResponseFile({ ...responseObj, reviewed: false });
+            }
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
           } catch {
@@ -326,6 +352,34 @@ IP.1 = 127.0.0.1
       // session-independent (server-as-daemon + curl), no MCP required.
       if (req.method === 'POST' && req.url === '/activate') {
         this.broadcastToClients('activate');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+        return;
+      }
+
+      // POST /working - Claude has claimed the task and is applying it. The
+      // auto-fire on GET /prompts only advances a browser still in 'sending';
+      // a disconnect/reconnect (browser falls back to 'connected') swallows it,
+      // so "Working" never shows. This explicit, UNGATED channel forces the bar
+      // to "Working" regardless of current state - the symmetric partner to
+      // /validating - so the loop always reads Working -> Validating -> Review.
+      if (req.method === 'POST' && req.url === '/working') {
+        this.lastMcpActivity = Date.now();
+        this.watchSessionActive = true;
+        this.broadcastToClients('justify_working_force');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+        return;
+      }
+
+      // POST /validating - Claude is verifying the applied change in a browser.
+      // Surfaces the gap between "Working" (applying) and "Review" (done) so the
+      // claudebar shows "Validating" instead of drifting to "Connected". Keeps
+      // watch-status fresh (validating is active work, not idleness).
+      if (req.method === 'POST' && req.url === '/validating') {
+        this.lastMcpActivity = Date.now();
+        this.watchSessionActive = true;
+        this.broadcastToClients('justify_validating');
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
         return;
@@ -394,10 +448,36 @@ IP.1 = 127.0.0.1
       if (req.method === 'POST' && req.url === '/prompts/clear') {
         this.lastMcpActivity = Date.now();
         this.watchSessionActive = true;
-        const promptFile = join(this.distDir, '..', 'prompts.json');
-        try { writeFileSync(promptFile, '[]'); } catch {}
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true }));
+        // Issue #3: NEVER drop a task. A blanket clear after finishing one task
+        // erased every prompt that arrived in the queue WHILE that task was
+        // being worked - the user fires several, the first justify-done wipes
+        // the rest, they are forgotten. Make clear id-aware: a body of
+        // {"ids":[...]} or {"id":"..."} removes ONLY those handled prompts and
+        // leaves everything that arrived since. An empty body keeps the old
+        // clear-all behavior for back-compat (raw fallback callers).
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', () => {
+          const promptFile = join(this.distDir, '..', 'prompts.json');
+          let ids: string[] = [];
+          try {
+            if (body.trim()) {
+              const parsed = JSON.parse(body);
+              if (Array.isArray(parsed?.ids)) ids = parsed.ids.map(String);
+              else if (parsed?.id) ids = [String(parsed.id)];
+            }
+          } catch {}
+          try {
+            if (ids.length > 0) {
+              const remaining = this.readPromptsFile().filter((p) => !ids.includes(p.id));
+              writeFileSync(promptFile, JSON.stringify(remaining));
+            } else {
+              writeFileSync(promptFile, '[]');
+            }
+          } catch {}
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        });
         return;
       }
 
@@ -440,25 +520,50 @@ IP.1 = 127.0.0.1
                 }
               } catch {}
             }
-            process.stderr.write(`[justify] open-file: resolved "${file}" -> "${fullPath}" cmd="${cmd}"\n`);
-            let args: string[];
-            if (cmd === 'open') {
-              args = ['-R', fullPath];
-            } else if (cmd === 'code') {
-              args = ['-a', 'Visual Studio Code', fullPath];
-            } else if (cmd === 'cursor') {
-              args = ['-a', 'Cursor', fullPath];
-            } else if (cmd === 'opencode') {
-              args = ['-a', 'OpenCode', fullPath];
+            // Optional line (and column) to jump to. Editors with a CLI
+            // (code/cursor) support `--goto file:line:col`; that needs the CLI
+            // binary, not `open -a`, so when a line is given we invoke the CLI
+            // directly and fall back to `open -a` if the binary is missing.
+            const rawLine = Number(data.line);
+            const line = Number.isFinite(rawLine) && rawLine > 0 ? Math.floor(rawLine) : 0;
+            const rawCol = Number(data.column);
+            const col = Number.isFinite(rawCol) && rawCol > 0 ? Math.floor(rawCol) : 1;
+            process.stderr.write(`[justify] open-file: resolved "${file}" -> "${fullPath}" cmd="${cmd}" line=${line}\n`);
+
+            const openWithLauncher = () => {
+              let args: string[];
+              if (cmd === 'open') {
+                args = ['-R', fullPath];
+              } else if (cmd === 'code') {
+                args = ['-a', 'Visual Studio Code', fullPath];
+              } else if (cmd === 'cursor') {
+                args = ['-a', 'Cursor', fullPath];
+              } else if (cmd === 'opencode') {
+                args = ['-a', 'OpenCode', fullPath];
+              } else {
+                args = [fullPath];
+              }
+              execFile('open', args, (err, _stdout, stderr) => {
+                if (err) process.stderr.write(`[justify] open-file error: ${err.message}\n`);
+                if (stderr) process.stderr.write(`[justify] open-file stderr: ${stderr}\n`);
+              });
+            };
+
+            // Line-jump path: code/cursor CLIs accept `--goto <file>:<line>:<col>`.
+            if (line > 0 && (cmd === 'code' || cmd === 'cursor')) {
+              const cli = cmd === 'code' ? 'code' : 'cursor';
+              execFile(cli, ['--goto', `${fullPath}:${line}:${col}`], (err) => {
+                if (err) {
+                  // CLI not on PATH (or failed) - fall back to opening the file.
+                  process.stderr.write(`[justify] open-file goto via ${cli} failed (${err.message}); falling back to launcher\n`);
+                  openWithLauncher();
+                }
+              });
             } else {
-              args = [fullPath];
+              openWithLauncher();
             }
-            execFile('open', args, (err, stdout, stderr) => {
-              if (err) process.stderr.write(`[justify] open-file error: ${err.message}\n`);
-              if (stderr) process.stderr.write(`[justify] open-file stderr: ${stderr}\n`);
-            });
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ ok: true, resolved: fullPath }));
+            res.end(JSON.stringify({ ok: true, resolved: fullPath, line }));
           } catch {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Invalid JSON' }));
@@ -616,6 +721,38 @@ IP.1 = 127.0.0.1
 
   getConnections() {
     return this.manager.getAll();
+  }
+
+  // Prompt queue lives at <install-root>/prompts.json (same file the MCP layer
+  // writes via push_prompt). Tolerant read for the id-aware clear and the
+  // /respond -> targetSelectors join.
+  private readPromptsFile(): Array<{ id: string; selectors?: string[]; [k: string]: unknown }> {
+    const promptFile = join(this.distDir, '..', 'prompts.json');
+    try {
+      if (!existsSync(promptFile)) return [];
+      const parsed = JSON.parse(readFileSync(promptFile, 'utf-8'));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  // Headless durability (issue #2): when no browser is connected, append a
+  // finished response to responses.json so it is restored into the Changes
+  // panel as soon as a tab connects. Mirrors the array shape the browser's
+  // _changeHistory persists, so a connected client's later full-array write is
+  // a clean superset.
+  private appendResponseFile(response: Record<string, unknown>): void {
+    const respFile = join(this.distDir, '..', 'responses.json');
+    try {
+      let arr: unknown[] = [];
+      if (existsSync(respFile)) {
+        const parsed = JSON.parse(readFileSync(respFile, 'utf-8'));
+        if (Array.isArray(parsed)) arr = parsed;
+      }
+      arr.push(response);
+      writeFileSync(respFile, JSON.stringify(arr));
+    } catch {}
   }
 
   recordMcpActivity(): void {

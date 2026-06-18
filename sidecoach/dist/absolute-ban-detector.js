@@ -55,6 +55,12 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.scanSideStripeBorders = scanSideStripeBorders;
+exports.scanGradientText = scanGradientText;
+exports.scanGlassmorphism = scanGlassmorphism;
+exports.scanIdenticalCardGrids = scanIdenticalCardGrids;
+exports.scanHeroMetricTemplate = scanHeroMetricTemplate;
+exports.scanModalAsFirstThought = scanModalAsFirstThought;
 exports.scanForAbsoluteBans = scanForAbsoluteBans;
 exports.absoluteBanToValidationResult = absoluteBanToValidationResult;
 exports.banFindingsToGuidance = banFindingsToGuidance;
@@ -109,7 +115,9 @@ function scanSideStripeBorders(content, file) {
         if (!borderMatch)
             continue;
         // Filter to ban targets: card / list / alert / callout / install / banner / notice
-        const targetable = /\.(?:card|alert|callout|notice|banner|install|tile|list-item|message|toast|tip)\b|aside\b|blockquote\b/i.test(selector);
+        // Match the keyword anywhere in a class token so namespaced/BEM names like
+        // `.ref-callout`, `.tool-card`, `.foo__alert` are caught, not only bare `.card`.
+        const targetable = /\.[\w-]*(?:card|alert|callout|notice|banner|install|tile|message|toast|tip|panel)[\w-]*\b|aside\b|blockquote\b/i.test(selector);
         if (!targetable)
             continue;
         findings.push(findingFromBan('side-stripe-borders', file, lineNumberAt(content, m.index), `${selector} { ${borderMatch[0].trim()} }`, 'P1'));

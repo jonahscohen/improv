@@ -7,3 +7,7 @@ public/justify-core.js
 # transient / dependency dirs (added during tilt-lab work)
 node_modules/
 .claude/scheduled_tasks.lock
+
+# justify daemon's self-signed TLS cert + PRIVATE KEY - generated per-machine on
+# first run (ws-server ensureCert); never commit the key.
+justify/server/certs/
