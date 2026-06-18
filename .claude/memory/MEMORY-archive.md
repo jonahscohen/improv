@@ -563,3 +563,6 @@
 
 <!-- archived 2026-06-18 (moved from MEMORY.md to stay under load budget) -->
 - [P4d COMPLETE (merged) - lanes on the model-facing MCP surface; Codex SHIP zero defects - PROJECT (2026-06-14)](session_2026-06-14_p4d-COMPLETE.md): classify_intent/list_lanes/sidecoach_lane; faith…
+
+<!-- archived 2026-06-18 (moved from MEMORY.md to stay under load budget) -->
+- [P4d MCP migration EXECUTION (lane-p4d) - PROJECT (2026-06-14)](session_2026-06-14_p4d-mcp-migration-exec.md): TDD execution log (superseded by P4d COMPLETE).
