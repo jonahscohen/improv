@@ -942,16 +942,12 @@ pre code {
 }
 
 /* "The one move" intro split: copy left, live terminal demo right, centered */
-.one-move {
+/* Hero 50/50: hero copy left, the live terminal demo right, vertically centered. */
+.hero-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-12);
   align-items: center;
-  margin-bottom: var(--space-16);
-}
-
-.one-move__text .section__lede {
-  margin-bottom: 0;
 }
 
 .one-move__demo .scd-term {
@@ -981,7 +977,7 @@ pre code {
 }
 
 @media (max-width: 880px) {
-  .one-move {
+  .hero-split {
     grid-template-columns: 1fr;
     gap: var(--space-10);
   }

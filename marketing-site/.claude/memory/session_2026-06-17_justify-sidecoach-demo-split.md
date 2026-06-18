@@ -172,6 +172,17 @@ User critiqued the verb-grid I built. Real issues, all fixed:
 
 VERIFICATION-TOOL LIMIT (important): `resize_window` in claude-in-chrome does NOT change the render viewport - the page keeps rendering at the wide width and screenshots stay ~1400px regardless. So I CANNOT eyes-on verify narrow/responsive layouts here; I fix them by CSS reasoning and flag that the user should check real phone/tablet widths. (Tried 760px and 1920px - render didn't change either way.)
 
+## Hero became the terminal home (50/50) + How-it-Works section deleted
+
+The big arc this session: the terminal demo started life as a right-column in a "How it Works" section (the original /justify task), got iterated heavily, and now the user moved it into the HERO as a 50/50 (copy left, terminal right, centered) and deleted the How-it-Works section entirely. So:
+- `.page-hero` now has `.hero-split` (1fr 1fr, align-items center): `.hero-split__text` (the original hero tag/h1/lede) + `.one-move__demo.scd-stage-wrap.hero-split__demo` (the #scd-term terminal, unchanged ids so demo.js still drives it). Terminal auto-runs on load (it's above the fold now -> demo.js IO fires immediately).
+- Deleted `.section:nth-child(2)` (How-it-Works). Section count 9 -> 8.
+- Renamed the `.one-move` grid CSS to `.hero-split`; kept `.one-move__demo .scd-term` (zoom-fade + width, still used in hero); removed dead `.one-move`/`.one-move__text` rules.
+- The How-it-Works lede ("You say what you want in plain language...") was relocated to the marquee section as its new subtext (prompt-2).
+
+### Dark-mode terminal blend (flagged, not fixed)
+The terminal is borderless/shadowless (user's earlier explicit "remove box shadow and outer border"). On the dark hero in DARK mode its frame blends with the bg - the empty/mid-typing state looked blank in my first screenshot. Once the demo runs, the off-white content + lifted title bar read fine in dark mode, and in light mode it stands out fully. I did NOT re-add a border (respecting their explicit choice) but flagged offering a dark-mode-only faint border. Lesson: a borderless dark terminal needs a delineator on a dark bg; only relevant now that it moved onto the (sometimes-dark) hero.
+
 ## Operational finding - dev server dies on session resume
 
 On resume, the static server (`serve.py` on :4830) was DEAD (curl -> HTTP 000, no listener) though the Justify daemon (:9223) was up. curl-grep verification returned all-zeros until I noticed. Restarted durably with `nohup python3 serve.py 4830 &; disown` (PID survives the Bash tool call). Lesson: if Justify curl-grep verification returns empty/zeros, FIRST check the 4830 listener before assuming the edits failed - the no-cache static server is not auto-revived on resume.
