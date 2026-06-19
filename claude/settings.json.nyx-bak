@@ -144,6 +144,14 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.nyx/hook-bridge.cjs\" claude-code tool-start"
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -171,6 +179,14 @@
             "type": "command",
             "command": "~/.claude/hooks/node-shim-heal.sh",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.nyx/hook-bridge.cjs\" claude-code session-start"
           }
         ]
       },
@@ -308,6 +324,14 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node \"$HOME/.nyx/hook-bridge.cjs\" claude-code prompt-submit"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
             "command": "~/.claude/hooks/sidecoach-postuserp.sh"
           }
         ]
@@ -360,6 +384,14 @@
         ]
       },
       {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.nyx/hook-bridge.cjs\" claude-code tool-end"
+          }
+        ]
+      },
+      {
         "matcher": "Bash|mcp__claude-in-chrome__computer",
         "hooks": [
           {
@@ -385,9 +417,23 @@
         ]
       }
     ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.nyx/hook-bridge.cjs\" claude-code notify"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.nyx/hook-bridge.cjs\" claude-code stop"
+          },
           {
             "type": "command",
             "command": "~/.claude/hooks/node-shim-heal.sh",
@@ -431,6 +477,16 @@
         ]
       }
     ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.nyx/hook-bridge.cjs\" claude-code subagent-stop"
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "hooks": [
@@ -443,6 +499,14 @@
             "type": "command",
             "command": "~/.claude/hooks/team-reaper.sh session-end",
             "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.nyx/hook-bridge.cjs\" claude-code session-end"
           }
         ]
       }

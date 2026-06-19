@@ -1599,6 +1599,10 @@ if picked config; then
     second-fix-gate.sh validation-guard.sh
     verify-before-done.sh verify-clear.sh verify-manual.sh
     voice-gate.sh
+    block-clickup-writes.sh consolidate-nudge.sh content-guard-stop.sh
+    grounding-gate.sh grounding-guard.sh justify-source-guard.sh
+    justify-watch-guard.sh memory-compact.sh model-router-guard.sh
+    node-shim-heal.sh sidecoach-taste-gate.sh
   )
   for f in "${CONFIG_HOOKS[@]}"; do
     if [ -f "$REPO_DIR/claude/hooks/$f" ]; then
