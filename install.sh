@@ -49,6 +49,12 @@ warn()  { printf "${YELLOW}[warn]${NC}  %s\n" "$1"; }
 err()   { printf "${RED}[error]${NC} %s\n" "$1"; }
 log()   { printf "${CYAN}[info]${NC}  %s\n" "$1"; }  # alias for info (used by sidecoach block)
 
+# Copy from repo to ~/.claude, clearing any pre-existing destination first.
+# Without this, an old install that symlinked the destination back to the same
+# source file would cause `cp` to bail with "are identical (not copied)" under
+# `set -e`. Use everywhere we copy a tracked file from $REPO_DIR into the user dir.
+safe_cp() { rm -f "$2"; cp "$1" "$2"; }
+
 # ============================================================
 # Component catalogue (parallel arrays for bash 3.2 compatibility)
 # ============================================================
@@ -1596,14 +1602,14 @@ if picked config; then
   )
   for f in "${CONFIG_HOOKS[@]}"; do
     if [ -f "$REPO_DIR/claude/hooks/$f" ]; then
-      cp "$REPO_DIR/claude/hooks/$f" "$CLAUDE_DIR/hooks/$f"
+      safe_cp "$REPO_DIR/claude/hooks/$f" "$CLAUDE_DIR/hooks/$f"
       chmod +x "$CLAUDE_DIR/hooks/$f"
       ok "hooks/$f"
     fi
   done
 
   # Copy startup-check.sh
-  cp "$REPO_DIR/claude/startup-check.sh" "$CLAUDE_DIR/startup-check.sh"
+  safe_cp "$REPO_DIR/claude/startup-check.sh" "$CLAUDE_DIR/startup-check.sh"
   chmod +x "$CLAUDE_DIR/startup-check.sh"
   ok "startup-check.sh"
 
@@ -1813,41 +1819,41 @@ if picked skills; then
   # Bundled skill: component-gallery-reference (shipped with dotfiles, no npx needed)
   info "Installing component-gallery-reference (UI component research via component.gallery)..."
   mkdir -p "$CLAUDE_DIR/skills/component-gallery-reference"
-  cp "$REPO_DIR/claude/skills/component-gallery-reference/SKILL.md" \
+  safe_cp "$REPO_DIR/claude/skills/component-gallery-reference/SKILL.md" \
      "$CLAUDE_DIR/skills/component-gallery-reference/SKILL.md"
   ok "component-gallery-reference installed"
 
   # Bundled skill: fontshare-reference (shipped with dotfiles, no npx needed)
   info "Installing fontshare-reference (typeface research via fontshare.com)..."
   mkdir -p "$CLAUDE_DIR/skills/fontshare-reference"
-  cp "$REPO_DIR/claude/skills/fontshare-reference/SKILL.md" \
+  safe_cp "$REPO_DIR/claude/skills/fontshare-reference/SKILL.md" \
      "$CLAUDE_DIR/skills/fontshare-reference/SKILL.md"
   ok "fontshare-reference installed"
 
   # Bundled skill: motion-reference (canonical GSAP + Lenis patterns)
   info "Installing motion-reference (GSAP + Lenis animation/scroll patterns)..."
   mkdir -p "$CLAUDE_DIR/skills/motion-reference"
-  cp "$REPO_DIR/claude/skills/motion-reference/SKILL.md" \
+  safe_cp "$REPO_DIR/claude/skills/motion-reference/SKILL.md" \
      "$CLAUDE_DIR/skills/motion-reference/SKILL.md"
   ok "motion-reference installed"
 
   # Bundled skill: design-build (the design pipeline orchestrator)
   info "Installing design-build (the design pipeline orchestrator - /design-build runs the full sequence)..."
   mkdir -p "$CLAUDE_DIR/skills/design-build"
-  cp "$REPO_DIR/claude/skills/design-build/SKILL.md" \
+  safe_cp "$REPO_DIR/claude/skills/design-build/SKILL.md" \
      "$CLAUDE_DIR/skills/design-build/SKILL.md"
   ok "design-build installed"
 
   # Bundled skill pair: curate + design-references (personal design-reference catalog system)
   info "Installing curate (design-reference capture wizard)..."
   mkdir -p "$CLAUDE_DIR/skills/curate"
-  cp "$REPO_DIR/claude/skills/curate/SKILL.md" \
+  safe_cp "$REPO_DIR/claude/skills/curate/SKILL.md" \
      "$CLAUDE_DIR/skills/curate/SKILL.md"
   ok "curate installed"
 
   info "Installing design-references (auto-consult personal catalog on UI builds)..."
   mkdir -p "$CLAUDE_DIR/skills/design-references"
-  cp "$REPO_DIR/claude/skills/design-references/SKILL.md" \
+  safe_cp "$REPO_DIR/claude/skills/design-references/SKILL.md" \
      "$CLAUDE_DIR/skills/design-references/SKILL.md"
   ok "design-references installed"
 
@@ -1883,14 +1889,14 @@ VOCABEOF
   # Bundled skill: social-media (platform specs for 13 social platforms)
   info "Installing social-media (social platform specs + safe zones)..."
   mkdir -p "$CLAUDE_DIR/skills/social-media"
-  cp "$REPO_DIR/claude/skills/social-media/SKILL.md" \
+  safe_cp "$REPO_DIR/claude/skills/social-media/SKILL.md" \
      "$CLAUDE_DIR/skills/social-media/SKILL.md"
   ok "social-media installed"
 
   # Bundled skill: design-team (multi-agent design sprints)
   info "Installing design-team (multi-agent design sprints + CD review)..."
   mkdir -p "$CLAUDE_DIR/skills/design-team"
-  cp "$REPO_DIR/claude/skills/design-team/SKILL.md" \
+  safe_cp "$REPO_DIR/claude/skills/design-team/SKILL.md" \
      "$CLAUDE_DIR/skills/design-team/SKILL.md"
   ok "design-team installed"
 
@@ -1903,14 +1909,14 @@ VOCABEOF
   # Bundled skill: icon-source (8-library icon selection protocol)
   info "Installing icon-source (8 libraries, selection protocol)..."
   mkdir -p "$CLAUDE_DIR/skills/icon-source"
-  cp "$REPO_DIR/claude/skills/icon-source/SKILL.md" \
+  safe_cp "$REPO_DIR/claude/skills/icon-source/SKILL.md" \
      "$CLAUDE_DIR/skills/icon-source/SKILL.md"
   ok "icon-source installed"
 
   # Bundled skill: voice-output (behavioral guidance for TTS)
   info "Installing voice-output (TTS behavioral guidance)..."
   mkdir -p "$CLAUDE_DIR/skills/voice-output"
-  cp "$REPO_DIR/claude/skills/voice-output/SKILL.md" \
+  safe_cp "$REPO_DIR/claude/skills/voice-output/SKILL.md" \
      "$CLAUDE_DIR/skills/voice-output/SKILL.md"
   ok "voice-output installed"
 fi
@@ -1934,7 +1940,7 @@ install_bundled_skill() {
   if [ "$recursive" = "1" ]; then
     cp -r "$REPO_DIR/claude/skills/$name/." "$CLAUDE_DIR/skills/$name/"
   else
-    cp "$REPO_DIR/claude/skills/$name/SKILL.md" "$CLAUDE_DIR/skills/$name/SKILL.md"
+    safe_cp "$REPO_DIR/claude/skills/$name/SKILL.md" "$CLAUDE_DIR/skills/$name/SKILL.md"
   fi
   ok "skills/$name installed"
 }
@@ -2398,8 +2404,8 @@ if picked voice-output; then
 
   # Copy MCP server
   mkdir -p "$CLAUDE_DIR/voice-output"
-  cp "$REPO_DIR/claude/voice-output/server.js" "$CLAUDE_DIR/voice-output/server.js"
-  cp "$REPO_DIR/claude/voice-output/package.json" "$CLAUDE_DIR/voice-output/package.json"
+  safe_cp "$REPO_DIR/claude/voice-output/server.js" "$CLAUDE_DIR/voice-output/server.js"
+  safe_cp "$REPO_DIR/claude/voice-output/package.json" "$CLAUDE_DIR/voice-output/package.json"
 
   # TTS file generator (text -> OGG Opus via OpenAI speech API)
   chmod +x "$REPO_DIR/claude/voice-output/tts-generate.sh"
@@ -2538,13 +2544,13 @@ if picked reflect; then
   # Skill file
   info "Installing reflect skill..."
   mkdir -p "$CLAUDE_DIR/skills/reflect"
-  cp "$REPO_DIR/claude/skills/reflect/SKILL.md" \
+  safe_cp "$REPO_DIR/claude/skills/reflect/SKILL.md" \
      "$CLAUDE_DIR/skills/reflect/SKILL.md"
   ok "reflect skill installed"
 
   # Nudge hook
   info "Installing reflect-nudge hook..."
-  cp "$REPO_DIR/claude/hooks/reflect-nudge.sh" "$CLAUDE_DIR/hooks/reflect-nudge.sh"
+  safe_cp "$REPO_DIR/claude/hooks/reflect-nudge.sh" "$CLAUDE_DIR/hooks/reflect-nudge.sh"
   chmod +x "$CLAUDE_DIR/hooks/reflect-nudge.sh"
   ok "reflect-nudge hook installed"
 
@@ -2564,7 +2570,7 @@ fi
 if picked task-list; then
   info "Installing /task-list skill..."
   mkdir -p "$CLAUDE_DIR/skills/task-list"
-  cp "$REPO_DIR/claude/skills/task-list/SKILL.md" \
+  safe_cp "$REPO_DIR/claude/skills/task-list/SKILL.md" \
      "$CLAUDE_DIR/skills/task-list/SKILL.md"
   ok "/task-list skill installed"
 fi
