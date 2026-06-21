@@ -20,6 +20,7 @@ ACCOUNT="$USER"
 STATE_DIR="$HOME/.claude/channels/discord"
 ACCESS_FILE="$STATE_DIR/access.json"
 SKIP_FILE="$STATE_DIR/.skip-launcher"
+RC_SKIP_FILE="$HOME/.claude/.skip-remote-control"
 ONBOARD_SCRIPT="$HOME/.claude/discord-onboard.sh"
 
 function _claude_has_discord_token() {
@@ -72,6 +73,30 @@ function claude() {
       *) break ;;
     esac
   done
+
+  # Remote Control (independent of Discord). Asked first; opting in launches a
+  # `claude --remote-control` session and short-circuits the Discord prompt
+  # entirely. Opting out (or 'never') falls through to the Discord flow below.
+  # Bare --remote-control auto-names the session by hostname prefix - useful
+  # when working portably so the session name tells you which machine it's on.
+  if [ ! -f "$RC_SKIP_FILE" ]; then
+    local rc
+    printf "Start with Remote Control enabled? [y/N, or 'never' to stop asking] "
+    read rc
+    case "$rc" in
+      [Yy]*)
+        command claude --remote-control "$@"
+        return $?
+        ;;
+      [Nn][Ee][Vv][Ee][Rr])
+        mkdir -p "${RC_SKIP_FILE:h}"
+        : > "$RC_SKIP_FILE"
+        printf "Got it. Created %s - this prompt won't appear again.\n" "$RC_SKIP_FILE"
+        printf "(Delete that file to re-enable.)\n"
+        ;;
+      *) : ;;  # default N: fall through to the Discord flow
+    esac
+  fi
 
   # Hard opt-out: marker file means "stop asking, just run claude".
   if [ -f "$SKIP_FILE" ]; then
