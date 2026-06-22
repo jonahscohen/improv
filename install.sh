@@ -751,7 +751,8 @@ deactivate_config() {
   for f in bash-guard.sh content-guard.sh memory-approve.sh destructive-ops-guard.sh destructive-confirm-detect.sh \
            agent-teams-guard.sh memory-nudge.sh multiple-choice-detect-stop.sh multiple-choice-inject-prompt.sh \
            multiple-choice-enforce.sh question-enforcement.sh screenshot-open-mandate.sh screenshot-open-clear.sh \
-           second-fix-gate.sh validation-guard.sh verify-before-done.sh verify-clear.sh verify-manual.sh voice-gate.sh; do
+           second-fix-gate.sh validation-guard.sh verify-before-done.sh verify-before-done-stop.sh verify-clear.sh verify-manual.sh \
+           api-drift-detector.sh api-drift-stop.sh api-drift-ack.sh voice-gate.sh; do
     if [ -L "$CLAUDE_DIR/hooks/$f" ] && [[ "$(readlink "$CLAUDE_DIR/hooks/$f")" == "$REPO_DIR/"* ]]; then
       rm -f "$CLAUDE_DIR/hooks/$f"
     elif [ -f "$CLAUDE_DIR/hooks/$f" ] && grep -Fq "Improv" "$CLAUDE_DIR/hooks/$f" 2>/dev/null; then
@@ -1597,12 +1598,13 @@ if picked config; then
     multiple-choice-enforce.sh question-enforcement.sh
     screenshot-open-mandate.sh screenshot-open-clear.sh
     second-fix-gate.sh validation-guard.sh
-    verify-before-done.sh verify-clear.sh verify-manual.sh
+    verify-before-done.sh verify-before-done-stop.sh verify-clear.sh verify-manual.sh
     voice-gate.sh
     block-clickup-writes.sh consolidate-nudge.sh content-guard-stop.sh
     grounding-gate.sh grounding-guard.sh justify-source-guard.sh
     justify-watch-guard.sh memory-compact.sh model-router-guard.sh
     node-shim-heal.sh sidecoach-taste-gate.sh
+    api-drift-detector.sh api-drift-stop.sh api-drift-ack.sh
   )
   for f in "${CONFIG_HOOKS[@]}"; do
     if [ -f "$REPO_DIR/claude/hooks/$f" ]; then

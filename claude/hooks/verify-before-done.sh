@@ -105,11 +105,48 @@ def is_code_file(path):
     _, ext = os.path.splitext(path)
     return ext.lower() in CODE_EXTS
 
+# Visual files render UI - a change to one demands a REAL screenshot, never a
+# curl/test/log off-ramp. Subset of CODE_EXTS.
+VISUAL_EXTS = {
+    ".css", ".scss", ".sass", ".less",
+    ".html", ".htm", ".ejs", ".hbs", ".pug", ".twig",
+    ".vue", ".svelte", ".jsx", ".tsx",
+}
+
+def is_visual_file(path):
+    if not path:
+        return False
+    for exempt in EXEMPT_PATHS:
+        if exempt in path:
+            return False
+    _, ext = os.path.splitext(path)
+    return ext.lower() in VISUAL_EXTS
+
+def flag_content():
+    try:
+        return open(verify_flag).read().strip()
+    except Exception:
+        return None
+
+def set_flag(kind):
+    # kind is "visual" or "code". Never downgrade an existing visual flag to code.
+    if flag_content() == "visual" and kind != "visual":
+        return
+    try:
+        with open(verify_flag, "w") as fh:
+            fh.write(kind)
+    except Exception:
+        pass
+
+def is_visual_verification_command(cmd):
+    """Real VISUAL verification from the terminal: a cmux browser screenshot or
+    snapshot. Clears ANY pending flag, including a visual one."""
+    return "cmux browser" in cmd and ("screenshot" in cmd or "snapshot" in cmd)
+
 def is_verification_command(cmd):
-    """Check if a Bash command is performing verification."""
+    """LOGIC/content verification (NOT visual): curl-localhost, test runners,
+    HTTP probes. Clears the flag only when the pending change is not visual."""
     import re
-    if "cmux browser" in cmd and ("screenshot" in cmd or "snapshot" in cmd):
-        return True
     if "curl " in cmd and ("localhost" in cmd or "127.0.0.1" in cmd):
         return True
     # --- Test runners ---
@@ -297,8 +334,9 @@ if tool == "Read":
     cleared = False
     if ext.lower() in img_exts:
         cleared = True
-    # /tmp/ stdout-capture files: test logs, probe output, server logs
-    elif file_path.startswith("/tmp/") or file_path.startswith("/private/tmp/"):
+    # /tmp/ stdout-capture files: test logs, probe output, server logs.
+    # LOGIC proof only - these do NOT clear a visual-pending flag.
+    elif (file_path.startswith("/tmp/") or file_path.startswith("/private/tmp/")) and flag_content() != "visual":
         base = os.path.basename(file_path).lower()
         capture_markers = ["test", "probe", "verify", "check", "spec",
                            "server.log", ".log", "stdout", "stderr", "output"]
@@ -316,12 +354,25 @@ if tool == "Read":
 if tool == "Bash":
     cmd = data.get("tool_input", {}).get("command", "")
 
-    # If this IS a verification action, clear the flag
-    if is_verification_command(cmd):
+    # Real visual verification (cmux screenshot) clears ANY pending flag.
+    if is_visual_verification_command(cmd):
         try:
             os.remove(verify_flag)
         except FileNotFoundError:
             pass
+        print("{}"); sys.exit(0)
+
+    # Logic verification (curl-localhost, test runners, HTTP probes) clears the
+    # flag ONLY when the pending change is not visual. A visual change needs a
+    # real screenshot - curl/tests are not visual proof. This was the 2026-06-22
+    # hole: a CSS change got reported done off a curl-localhost that cleared the
+    # flag right here.
+    if is_verification_command(cmd):
+        if flag_content() != "visual":
+            try:
+                os.remove(verify_flag)
+            except FileNotFoundError:
+                pass
         print("{}"); sys.exit(0)
 
     # Skip read-only commands
@@ -338,10 +389,7 @@ if tool == "Bash":
     write_indicators = ["cp ", "mv ", "> ", ">> ", "tee ", "sed -i",
                         "node build", "npm run build", "npx ", "make "]
     if any(w in cmd for w in write_indicators):
-        try:
-            open(verify_flag, "w").close()
-        except Exception:
-            pass
+        set_flag("code")
         if recently_verified() or IS_SUBAGENT:
             print("{}"); sys.exit(0)
         print(json.dumps({
@@ -358,10 +406,7 @@ if tool == "Bash":
 file_path = data.get("tool_input", {}).get("file_path", "")
 
 if is_code_file(file_path):
-    try:
-        open(verify_flag, "w").close()
-    except Exception:
-        pass
+    set_flag("visual" if is_visual_file(file_path) else "code")
     if recently_verified() or IS_SUBAGENT:
         print("{}")
     else:

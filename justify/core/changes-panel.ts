@@ -38,10 +38,12 @@ export class ChangesPanel {
   private onRevertCallback: ((promptId: string, changes: any[]) => void) | null = null;
   private onClearReviewedCallback: (() => void) | null = null;
   private onClearAllCallback: (() => void) | null = null;
+  private onClearCompletedCallback: (() => void) | null = null;
   private onHideCallback: (() => void) | null = null;
   private onSelectCallback: ((selectors: string[]) => void) | null = null;
   private onItemClickCallback: ((index: number) => void) | null = null;
   private _clearReviewedBtn: HTMLButtonElement | null = null;
+  private _clearAllTasksBtn: HTMLButtonElement | null = null;
   private revertedPrompts = new Set<string>();
   private getMarkerColor: () => string;
   private boundKeydown: (e: KeyboardEvent) => void;
@@ -124,26 +126,59 @@ export class ChangesPanel {
     this.bottomBar = document.createElement('div');
     this.bottomBar.style.cssText =
       'padding:10px 16px;border-top:1px solid rgba(255,255,255,0.1);flex-shrink:0;display:none';
-    this._clearReviewedBtn = document.createElement('button');
-    // "Clear All" (was "Clear Completed Tasks"): clears the ENTIRE review list in
-    // one click and is ALWAYS visible while there are entries - the old button
-    // only appeared after you marked something done and only cleared the reviewed
-    // ones, so it was easy to lose ("where is the clear button?"). Matches the
-    // queue panel's "Clear All".
-    this._clearReviewedBtn.textContent = 'Clear All';
-    this._clearReviewedBtn.setAttribute('aria-label', 'Clear all changes from the review panel');
-    this._clearReviewedBtn.style.cssText =
+    // Two clear actions, side by side:
+    //  - "Clear All Completed" (neutral): removes ONLY status==='completed'
+    //    entries, leaving needsInfo / failed in place.
+    //  - "Clear All Tasks" (red / destructive): wipes every entry regardless
+    //    of status.
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;align-items:center';
+
+    const neutralCss =
       'border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.45);font-size:11px;cursor:pointer;' +
-      'padding:6px 14px;border-radius:8px;font-family:JustifySans,system-ui,sans-serif;outline:none;transition:background 120ms ease,color 120ms ease,border-color 120ms ease';
+      'padding:6px 14px;border-radius:8px;font-family:JustifySans,system-ui,sans-serif;outline:none;white-space:nowrap;transition:background 120ms ease,color 120ms ease,border-color 120ms ease';
+
+    // Clear All Completed (neutral) - removes only completed entries.
+    this._clearReviewedBtn = document.createElement('button');
+    this._clearReviewedBtn.textContent = 'Clear All Completed';
+    this._clearReviewedBtn.setAttribute('aria-label', 'Clear only completed tasks from the review panel');
+    this._clearReviewedBtn.style.cssText = neutralCss;
     this._clearReviewedBtn.addEventListener('mouseenter', () => { this._clearReviewedBtn!.style.background = '#D97757'; this._clearReviewedBtn!.style.color = '#1a1a1a'; this._clearReviewedBtn!.style.borderColor = '#D97757'; });
     this._clearReviewedBtn.addEventListener('mouseleave', () => { this._clearReviewedBtn!.style.background = 'rgba(255,255,255,0.04)'; this._clearReviewedBtn!.style.color = 'rgba(255,255,255,0.45)'; this._clearReviewedBtn!.style.borderColor = 'rgba(255,255,255,0.12)'; });
     this._clearReviewedBtn.addEventListener('click', () => {
+      // "Completed" == the user has marked it done (reviewed), NOT the response
+      // status. Mark Done sets reviewed=true regardless of status (a needsInfo
+      // task can be marked done too), so clear by reviewed to match intent.
+      this.entries = this.entries.filter(e => !e.reviewed);
+      if (this.onClearCompletedCallback) this.onClearCompletedCallback();
+      this.filterEntries();
+      if (this.filteredEntries.length === 0) {
+        this.hide();
+      } else {
+        this.render();
+        this._updateClearBtn();
+      }
+    });
+
+    // Clear All Tasks (red / destructive) - wipes everything.
+    this._clearAllTasksBtn = document.createElement('button');
+    this._clearAllTasksBtn.textContent = 'Clear All Tasks';
+    this._clearAllTasksBtn.setAttribute('aria-label', 'Delete every task from the review panel');
+    this._clearAllTasksBtn.style.cssText =
+      'border:1px solid rgba(239,68,68,0.55);background:rgba(239,68,68,0.10);color:#ef4444;font-size:11px;cursor:pointer;' +
+      'padding:6px 14px;border-radius:8px;font-family:JustifySans,system-ui,sans-serif;font-weight:600;outline:none;white-space:nowrap;transition:background 120ms ease,color 120ms ease,border-color 120ms ease,box-shadow 120ms ease';
+    this._clearAllTasksBtn.addEventListener('mouseenter', () => { this._clearAllTasksBtn!.style.background = '#ef4444'; this._clearAllTasksBtn!.style.color = '#fff'; this._clearAllTasksBtn!.style.borderColor = '#ef4444'; this._clearAllTasksBtn!.style.boxShadow = '0 4px 14px rgba(239,68,68,0.45)'; });
+    this._clearAllTasksBtn.addEventListener('mouseleave', () => { this._clearAllTasksBtn!.style.background = 'rgba(239,68,68,0.10)'; this._clearAllTasksBtn!.style.color = '#ef4444'; this._clearAllTasksBtn!.style.borderColor = 'rgba(239,68,68,0.55)'; this._clearAllTasksBtn!.style.boxShadow = 'none'; });
+    this._clearAllTasksBtn.addEventListener('click', () => {
       this.entries = [];
       this.filteredEntries = [];
       if (this.onClearAllCallback) this.onClearAllCallback();
       this.hide();
     });
-    this.bottomBar.appendChild(this._clearReviewedBtn);
+
+    btnRow.appendChild(this._clearReviewedBtn);
+    btnRow.appendChild(this._clearAllTasksBtn);
+    this.bottomBar.appendChild(btnRow);
     this.container.appendChild(this.bottomBar);
 
     this.boundKeydown = this.handleKeydown.bind(this);
@@ -248,6 +283,7 @@ export class ChangesPanel {
   setOnRevert(cb: (promptId: string, changes: any[]) => void) { this.onRevertCallback = cb; }
   setOnClearReviewed(cb: () => void) { this.onClearReviewedCallback = cb; }
   setOnClearAll(cb: () => void) { this.onClearAllCallback = cb; }
+  setOnClearCompleted(cb: () => void) { this.onClearCompletedCallback = cb; }
   setOnSelect(cb: (selectors: string[]) => void) { this.onSelectCallback = cb; }
   setOnItemClick(cb: (index: number) => void) { this.onItemClickCallback = cb; }
   setOnHide(cb: () => void) { this.onHideCallback = cb; }

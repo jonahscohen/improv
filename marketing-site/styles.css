@@ -569,11 +569,11 @@ p {
     overflow-y: auto;
 
     /* Hidden by default; slide in when [data-mobile-open] */
-    transform: translateY(-100%);
+    transform: translateY(-10px);
     visibility: hidden;
     opacity: 0;
     transition: transform var(--duration-medium) var(--ease-out),
-                opacity var(--duration-fast) var(--ease-out),
+                opacity var(--duration-medium) var(--ease-out),
                 visibility 0s linear var(--duration-medium);
   }
 
@@ -582,7 +582,7 @@ p {
     visibility: visible;
     opacity: 1;
     transition: transform var(--duration-medium) var(--ease-out),
-                opacity var(--duration-fast) var(--ease-out),
+                opacity var(--duration-medium) var(--ease-out),
                 visibility 0s linear 0s;
   }
 
@@ -596,7 +596,24 @@ p {
 
   .nav-list li {
     width: 100%;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity var(--duration-medium) var(--ease-out),
+                transform var(--duration-medium) var(--ease-out);
   }
+
+  /* Staggered link reveal when the drawer opens. Delays live on the open state
+     only, so closing is snappy (all links fade out together, undelayed). */
+  .topbar nav[data-mobile-open] .nav-list li {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .topbar nav[data-mobile-open] .nav-list li:nth-child(1) { transition-delay: 90ms; }
+  .topbar nav[data-mobile-open] .nav-list li:nth-child(2) { transition-delay: 130ms; }
+  .topbar nav[data-mobile-open] .nav-list li:nth-child(3) { transition-delay: 170ms; }
+  .topbar nav[data-mobile-open] .nav-list li:nth-child(4) { transition-delay: 210ms; }
+  .topbar nav[data-mobile-open] .nav-list li:nth-child(5) { transition-delay: 250ms; }
+  .topbar nav[data-mobile-open] .nav-list li:nth-child(6) { transition-delay: 290ms; }
 
   .topbar nav a {
     width: 100%;
@@ -706,7 +723,7 @@ p {
 .hero__wordmark {
   font-family: var(--font-display);
   font-weight: var(--weight-bold);
-  font-size: clamp(3.75rem, 19.5vw, 13.5rem);
+  font-size: clamp(2.8125rem, 14.625vw, 10.125rem);
   line-height: 0.86;
   letter-spacing: -0.03em;
   margin: 0 0 var(--space-8);
@@ -942,10 +959,12 @@ pre code {
 }
 
 /* "The one move" intro split: copy left, live terminal demo right, centered */
-/* Hero 50/50: hero copy left, the live terminal demo right, vertically centered. */
+/* Hero 60/40: hero copy left (wider), the live terminal demo right, vertically
+   centered. 3fr 2fr = a true 60/40 split of the track space that respects the
+   gap (literal 60% 40% would overflow by the gap width). */
 .hero-split {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 3fr 2fr;
   gap: var(--space-12);
   align-items: center;
 }
@@ -974,6 +993,16 @@ pre code {
     transform: none;
     transition: none;
   }
+  /* Mobile nav: no slide/stagger - the drawer just appears/hides instantly. */
+  .topbar nav,
+  .topbar nav[data-mobile-open],
+  .nav-list li,
+  .topbar nav[data-mobile-open] .nav-list li {
+    transition: none;
+    transition-delay: 0s;
+    transform: none;
+  }
+  .nav-list li { opacity: 1; }
 }
 
 @media (max-width: 880px) {
@@ -2595,7 +2624,11 @@ pre code {
   line-height: 1.02;
   letter-spacing: -0.02em;
   margin-bottom: var(--space-6);
-  max-width: 16ch;
+  max-width: none;
+  /* Override the global h1 text-wrap:balance (line ~241) - balance equalizes
+     line widths and ignores the column, which kept "Say what you want." split
+     across lines. Greedy wrap fills line 1 to the column width instead. */
+  text-wrap: wrap;
 }
 
 .page-hero__lede {

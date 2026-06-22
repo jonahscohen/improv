@@ -311,6 +311,15 @@
             "command": "~/.claude/hooks/sidecoach-postuserp.sh"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/api-drift-ack.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -350,7 +359,7 @@
         ]
       },
       {
-        "matcher": "mcp__claude-in-chrome__javascript_tool|mcp__claude-in-chrome__read_page|mcp__claude-in-chrome__get_page_text|mcp__claude-in-chrome__navigate|mcp__claude-in-chrome__get_screenshot",
+        "matcher": "mcp__claude-in-chrome__javascript_tool|mcp__claude-in-chrome__read_page|mcp__claude-in-chrome__get_page_text|mcp__claude-in-chrome__navigate|mcp__claude-in-chrome__get_screenshot|mcp__claude-in-chrome__computer",
         "hooks": [
           {
             "type": "command",
@@ -381,6 +390,15 @@
             "type": "command",
             "command": "~/.claude/hooks/verify-before-done.sh",
             "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/api-drift-detector.sh"
           }
         ]
       }
@@ -427,6 +445,24 @@
             "type": "command",
             "command": "~/.claude/hooks/justify-watch-guard.sh",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/verify-before-done-stop.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/api-drift-stop.sh"
           }
         ]
       }

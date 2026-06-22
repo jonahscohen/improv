@@ -377,6 +377,21 @@ export class JustifyCore {
       }
     });
 
+    // "Clear All Completed": drop the entries the user has MARKED DONE (reviewed),
+    // keep the un-reviewed ones, and re-push the survivors so they do not repopulate.
+    // ("Completed" == marked done, not the response status - a needsInfo task can
+    // be marked done too.)
+    this._changesPanel.setOnClearCompleted(() => {
+      this._changeHistory = this._changeHistory.filter(e => !e.reviewed);
+      try { fetch('http://localhost:9223/responses',{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
+      this._updateClaudeBadge();
+      this._clearTaskHighlights();
+      const actionable = this._changeHistory.filter(e => !e.reviewed);
+      if (actionable.length === 0 && (this._claudeState === 'review' || this._claudeState === 'review-active')) {
+        this._removeClaudeBar(false);
+      }
+    });
+
     this._changesPanel.setOnClearReviewed(() => {
       this._changeHistory = this._changeHistory.filter(e => !e.reviewed);
       try { fetch('http://localhost:9223/responses',{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
