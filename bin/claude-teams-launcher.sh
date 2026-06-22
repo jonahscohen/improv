@@ -5,8 +5,10 @@
 # (after the Discord launcher, if present) to optionally launch via
 # `cmux claude-teams` instead of plain `claude` when running inside cmux.
 #
-# When Teams is selected and Discord is configured, also asks about Discord
-# and appends the channel flag to the cmux claude-teams command.
+# When Teams is selected, asks about Remote Control (after the Teams prompt,
+# per Jonah) and appends --remote-control if enabled. RC takes precedence over
+# Discord: opting into RC skips the Discord question. If RC is declined and
+# Discord is configured, asks about Discord and appends the channel flag.
 #
 # Source this in .zshrc:  source ~/.claude/claude-teams-launcher.sh
 
@@ -47,7 +49,38 @@ function _claude_teams_maybe_discord() {
   _CLAUDE_TEAMS_DISCORD=0
 }
 
+function _claude_teams_maybe_rc() {
+  # Remote Control prompt for the cmux/Teams path. Mirrors the terminal
+  # launcher's RC question but is asked AFTER the Teams prompt (per Jonah).
+  # Honors the same opt-out marker the terminal launcher writes.
+  _CLAUDE_TEAMS_RC=0
+  local rc_skip="${RC_SKIP_FILE:-$HOME/.claude/.skip-remote-control}"
+  [ -f "$rc_skip" ] && return
+  local rc
+  printf "Start with Remote Control enabled? [y/N, or 'never' to stop asking] "
+  read rc
+  case "$rc" in
+    [Yy]*) _CLAUDE_TEAMS_RC=1 ;;
+    [Nn][Ee][Vv][Ee][Rr])
+      mkdir -p "${rc_skip:h}"
+      : > "$rc_skip"
+      printf "Got it. Created %s - this prompt won't appear again.\n" "$rc_skip"
+      printf "(Delete that file to re-enable.)\n"
+      ;;
+    *) : ;;
+  esac
+}
+
 function _claude_teams_launch() {
+  # RC is asked first within the launch (i.e. right after the Teams prompt) and,
+  # matching the terminal launcher, takes precedence over Discord: opting into
+  # Remote Control skips the Discord question entirely.
+  _CLAUDE_TEAMS_RC=0
+  _claude_teams_maybe_rc
+  if [ "$_CLAUDE_TEAMS_RC" = "1" ]; then
+    cmux claude-teams --remote-control "$@"
+    return $?
+  fi
   _CLAUDE_TEAMS_DISCORD=0
   _claude_teams_maybe_discord
   if [ "$_CLAUDE_TEAMS_DISCORD" = "1" ]; then
