@@ -35,6 +35,8 @@ exports.VERB_REGISTRY = {
         flowIds: [
             'flowA_brand_verify',
             'flowB_component_research',
+            'flowC_font_research',
+            'flowD_reference_inspiration',
             'flowE_motion_patterns',
             'flowF_design_tokens',
             'flowG_component_implementation',
@@ -246,7 +248,7 @@ exports.VERB_REGISTRY = {
         description: 'Replace timid grayscale or single-accent designs with a strategic palette. Pick a color strategy, choose a hue family that fits the brand, then apply color with intent. Strategic color beats rainbow vomit.',
         skillRefPath: `${SKILL_REF}/colorize.md`,
         phase: 'craft',
-        flowIds: ['flowF_design_tokens'],
+        flowIds: ['flowD_reference_inspiration', 'flowF_design_tokens'],
         guidanceAppend: [
             'Color strategy chosen explicitly (Restrained / Committed / Full palette / Drenched) before any hue decisions.',
             'OKLCH used for color generation so equal lightness steps look perceptually equal.',
@@ -365,7 +367,7 @@ exports.VERB_REGISTRY = {
         description: 'Replace generic defaults (Inter, Roboto, system fallback at flat scale) with type that reflects the brand and scales with intentional contrast. Typography carries most of the information on the page.',
         skillRefPath: `${SKILL_REF}/typeset.md`,
         phase: 'craft',
-        flowIds: ['flowS_typography_excellence'],
+        flowIds: ['flowC_font_research', 'flowS_typography_excellence'],
         guidanceAppend: [
             'Type scale built with a consistent ratio (1.25, 1.333, or 1.5) and 5 sizes covering caption through heading.',
             'Fluid clamp() reserved for marketing/content headings; app UIs used a fixed rem scale for spatial predictability.',

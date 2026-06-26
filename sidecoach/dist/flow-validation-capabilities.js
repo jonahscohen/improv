@@ -17,6 +17,12 @@ exports.VALIDATOR_REGISTRATIONS = [
     { validatorId: 'theming', label: 'Theming / Token Consistency', validateProduct: (0, run_validator_1.makeProductValidator)('theming') },
     { validatorId: 'anti-pattern', label: 'CSS Anti-Patterns', validateProduct: (0, run_validator_1.makeProductValidator)('anti-pattern') },
     { validatorId: 'static-a11y', label: 'Static Accessibility', validateProduct: (0, run_validator_1.makeProductValidator)('static-a11y') },
+    // forms-a11y: absorbed from ExtendedDomainValidator's real FORMS rules (Stage 2 convergence). Registered +
+    // fixture-tested; not yet in a lane gate (non-gating) so lane behavior is unchanged this slice.
+    { validatorId: 'forms', label: 'Forms Accessibility', validateProduct: (0, run_validator_1.makeProductValidator)('forms') },
+    // page-quality: the genuinely-strong DOM-evidence Tier-2 keepers (img perf, text overflow, dark-mode
+    // color-scheme, chart a11y fallback, button-label specificity). Non-gating; registered + fixture-tested.
+    { validatorId: 'page-quality', label: 'Page Quality', validateProduct: (0, run_validator_1.makeProductValidator)('page-quality') },
 ];
 // lane_converge's FIVE derived member flows (spec 939-950). ONLY Flow J binds a
 // product validator (the Flow J static polish/copy/bans validator). M/K/I/L are
@@ -50,6 +56,8 @@ exports.FIXTURE_MANIFEST = [
     { validatorId: 'theming', fixtures: { clean: 'fixtures/theming/clean', findings: 'fixtures/theming/findings', inconclusive: 'fixtures/theming/inconclusive' } },
     { validatorId: 'anti-pattern', fixtures: { clean: 'fixtures/anti-pattern/clean', findings: 'fixtures/anti-pattern/findings', inconclusive: 'fixtures/anti-pattern/inconclusive' } },
     { validatorId: 'static-a11y', fixtures: { clean: 'fixtures/static-a11y/clean', findings: 'fixtures/static-a11y/findings', inconclusive: 'fixtures/static-a11y/inconclusive' } },
+    { validatorId: 'forms', fixtures: { clean: 'fixtures/forms/clean', findings: 'fixtures/forms/findings', inconclusive: 'fixtures/forms/inconclusive' } },
+    { validatorId: 'page-quality', fixtures: { clean: 'fixtures/page-quality/clean', findings: 'fixtures/page-quality/findings', inconclusive: 'fixtures/page-quality/inconclusive' } },
 ];
 function getValidatorRegistration(id) {
     return exports.VALIDATOR_REGISTRATIONS.find((v) => v.validatorId === id) ?? null;

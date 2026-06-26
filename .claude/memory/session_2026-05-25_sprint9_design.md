@@ -9,7 +9,7 @@ Human collaborator: Jonah.
 
 ## Trigger
 
-After Sprint 8 closed (impeccable parity + brief-driven teach), retried the marketing-site dogfood. Three bugs surfaced from real end-to-end use that unit tests + parameterized parity test didn't catch.
+After Sprint 8 closed (oracle parity + brief-driven teach), retried the marketing-site dogfood. Three bugs surfaced from real end-to-end use that unit tests + parameterized parity test didn't catch.
 
 ## Three bugs
 

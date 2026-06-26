@@ -39,6 +39,27 @@ function explicit() {
     if (f && f(empty).status !== 'inconclusive') throw new Error(`${k} must be inconclusive (browser-only)`);
     if (f && f({ ...empty, computedStyle: { lineHeight: '1.5' }, designTokens: { genericityScore: 10 } }).status !== 'inconclusive') throw new Error(`${k} must not be bypassed by ad hoc fields`);
   }
+
+  // #4 Interruptible Animations: a keyframe `animation` bound to an interactive state cannot be
+  // interrupted mid-flight -> fail; a transition on the same state is interruptible -> pass. Pure
+  // presence check (no not_applicable path), so it lives here rather than in the 4-case table.
+  if (get('polish/interruptible-animations')(ctxCss('.btn:hover { animation: pulse 1s; }')).status !== 'fail') throw new Error('keyframe animation on :hover must fail interruptible-animations');
+  if (get('polish/interruptible-animations')(ctxCss('.btn:hover{animation:pulse 1s}')).status !== 'fail') throw new Error('minified keyframe animation on :hover must fail interruptible-animations');
+  if (get('polish/interruptible-animations')(ctxCss('.btn:hover { -webkit-animation: spin 1s; }')).status !== 'fail') throw new Error('vendor-prefixed animation on :hover must fail interruptible-animations');
+  if (get('polish/interruptible-animations')(ctxCss('.btn:hover { transition: transform .2s; }')).status !== 'pass') throw new Error('transition on :hover must pass interruptible-animations');
+  // a `--animation` custom property declared on :hover must NOT false-match (it is not the animation property)
+  if (get('polish/interruptible-animations')(ctxCss('.btn:hover { --animation: x; --animation-name: y; }')).status !== 'pass') throw new Error('a --animation custom property on :hover must not be flagged as a keyframe animation');
+  if (get('polish/interruptible-animations')(empty).status !== 'inconclusive') throw new Error('interruptible-animations no-css must be inconclusive');
+
+  // #13 folded Codex findings. (a) Brace-scoped entrance detection: a `.from` utility class with opacity:0
+  // sitting after an unrelated @keyframes must NOT be read as an entrance keyframe (the prior unbounded-span
+  // regex false-matched this across blocks) -> not_applicable.
+  if (get('polish/skip-load-animation')(ctxCss('@keyframes spin { 50% { transform: none; } } .from { opacity: 0; }')).status !== 'not_applicable') throw new Error('a .from class with opacity:0 after an unrelated @keyframes must be N/A, not a flagged entrance');
+  // (b) initial={false} gating proxy must require the JSX braces.
+  const entranceCss = '@keyframes fade { from { opacity: 0; } } .x { animation: fade 1s; }';
+  const ctxBoth = (css: string, html: string): ProductCheckContext => ({ cssText: css, markup: html, files: [{ path: 'a.tsx', sourceKind: 'html', cssText: css, markup: html, evidenceKindsPresent: ['css', 'html'] }] });
+  if (get('polish/skip-load-animation')(ctxBoth(entranceCss, '<AnimatePresence initial={false}><div/></AnimatePresence>')).status !== 'pass') throw new Error('entrance keyframe gated by initial={false} must pass');
+  if (get('polish/skip-load-animation')(ctxBoth(entranceCss, '<X initial=falseThing/>')).status !== 'fail') throw new Error('a stray initial=falseThing must NOT count as gated (must still fail)');
 }
 
 // Table: every static Polish not_applicable rule across the 4-case contract.
@@ -61,6 +82,7 @@ const ROWS: Row[] = [
   { key: 'polish/state-completeness', noTarget: '.prose { color: red; }', missing: '.btn:hover { color: red; }', satisfied: '.s:default {} .s:hover {} .s:focus {} .s:active {} .s:disabled {} .s:loading {} .s:error {} .s:success {}' },
   { key: 'polish/reduced-motion-respect', noTarget: '.x { color: red; }', missing: '.x { transition: opacity 1s; }', satisfied: '@media (prefers-reduced-motion: reduce) { * { animation: none; } }' },
   { key: 'polish/animatepresence-initial', markup: true, noTarget: '<div>hi</div>', missing: '<AnimatePresence><div/></AnimatePresence>', satisfied: '<AnimatePresence initial={false}><div/></AnimatePresence>' },
+  { key: 'polish/skip-load-animation', noTarget: '.x { color: red; }', missing: '@keyframes fade { from { opacity: 0; } to { opacity: 1; } } .x { animation: fade 1s; }', satisfied: '@keyframes fade { from { opacity: 0; } } @media (prefers-reduced-motion: reduce) { .x { animation: none; } }' },
 ];
 
 function table() {

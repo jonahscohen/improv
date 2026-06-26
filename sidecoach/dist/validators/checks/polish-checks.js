@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.POLISH_CHECKS = exports.checkGenericity = exports.checkTypographyRhythm = exports.checkConcentricRadius = exports.checkOpticalAlignment = exports.checkTextWrapBalance = exports.checkFontSmoothing = exports.checkStaggeredEnter = exports.checkStateCompleteness = exports.checkShadowHierarchy = exports.checkShadowsOverBorders = exports.checkAnimatePresenceInitial = exports.checkImageOutline = exports.checkSubtleExit = exports.checkTabularNums = exports.checkSparseWillChange = exports.checkNoTransitionAll = exports.checkIconSwapCompound = exports.checkScaleOnPress = exports.checkReducedMotion = void 0;
+exports.POLISH_CHECKS = exports.checkGenericity = exports.checkTypographyRhythm = exports.checkConcentricRadius = exports.checkOpticalAlignment = exports.checkTextWrapBalance = exports.checkFontSmoothing = exports.checkStaggeredEnter = exports.checkStateCompleteness = exports.checkShadowHierarchy = exports.checkShadowsOverBorders = exports.checkSkipLoadAnimation = exports.checkInterruptibleAnimations = exports.checkAnimatePresenceInitial = exports.checkImageOutline = exports.checkSubtleExit = exports.checkTabularNums = exports.checkSparseWillChange = exports.checkNoTransitionAll = exports.checkIconSwapCompound = exports.checkScaleOnPress = exports.checkReducedMotion = void 0;
 const check_context_1 = require("../check-context");
 const polish_standard_validator_1 = require("../../polish-standard-validator");
 // A css-rule presence verdict: no CSS -> inconclusive; needle present -> pass; absent -> fail.
@@ -66,6 +66,33 @@ const checkAnimatePresenceInitial = (ctx) => {
         : (0, check_context_1.fail)('AnimatePresence children need initial={false}', [], 'Set initial={false} on AnimatePresence children');
 };
 exports.checkAnimatePresenceInitial = checkAnimatePresenceInitial;
+// #4 Interruptible Animations. FAIL when an interactive state (:hover/:focus/:active) uses a keyframe
+// animation - those run to completion and can't be interrupted when the state reverts; a transition can.
+const checkInterruptibleAnimations = (ctx) => {
+    if (!(0, check_context_1.hasCss)(ctx))
+        return (0, check_context_1.inconclusive)('no CSS source collected', 'unreadable_input');
+    return (0, polish_standard_validator_1.hasKeyframeAnimationOnInteractiveState)(ctx.cssText)
+        ? (0, check_context_1.fail)('interactive state (:hover/:focus/:active) uses a keyframe animation, which cannot be interrupted', [], 'Use a CSS transition for interactive state changes (interruptible); reserve @keyframes/animation for run-once staged sequences')
+        : (0, check_context_1.pass)('no keyframe animation on interactive states');
+};
+exports.checkInterruptibleAnimations = checkInterruptibleAnimations;
+// #13 Skip Animation on Page Load (CSS-only complement to AnimatePresence initial={false}). N/A when
+// there is no entrance keyframe to gate; PASS when an entrance animation is gated (reduced-motion guard
+// or AnimatePresence initial={false}); FAIL when an entrance animation is present but ungated (it replays
+// on every page load). JS-trigger-class gating can't be confirmed statically, so this flags for review.
+const checkSkipLoadAnimation = (ctx) => {
+    if (!(0, check_context_1.hasCss)(ctx) && !(0, check_context_1.hasMarkup)(ctx))
+        return (0, check_context_1.inconclusive)('no source collected', 'unreadable_input');
+    if (!(0, polish_standard_validator_1.hasEntranceKeyframe)(ctx.cssText))
+        return (0, check_context_1.notApplicable)('no entrance keyframe (opacity:0 from/0%) to gate');
+    // Require the JSX braces around false so `initial={false}` / `initial={ false }` gate, but a stray
+    // `initial=falseThing` does NOT falsely count as gated.
+    const gated = (0, polish_standard_validator_1.hasReducedMotion)(ctx.cssText) || /initial\s*=\s*\{\s*false\s*\}/.test(ctx.markup);
+    return gated
+        ? (0, check_context_1.pass)('entrance animation is gated (reduced-motion or initial={false})')
+        : (0, check_context_1.fail)('entrance animation will replay on every page load (ungated)', [], 'Gate entrance animations: AnimatePresence initial={false}, a JS-added trigger class, or a prefers-reduced-motion guard');
+};
+exports.checkSkipLoadAnimation = checkSkipLoadAnimation;
 const checkShadowsOverBorders = (ctx) => cssPresence(ctx, polish_standard_validator_1.hasBoxShadowElevation, 'box-shadow elevation present', 'use box-shadow for elevation', 'Add box-shadow: 0 1px 3px rgba(0,0,0,0.1) or elevation tokens');
 exports.checkShadowsOverBorders = checkShadowsOverBorders;
 const checkShadowHierarchy = (ctx) => {
@@ -136,6 +163,8 @@ const RAW_POLISH_CHECKS = {
     'polish/subtle-exit': exports.checkSubtleExit,
     'polish/font-smoothing': exports.checkFontSmoothing,
     'polish/animatepresence-initial': exports.checkAnimatePresenceInitial,
+    'polish/interruptible-animations': exports.checkInterruptibleAnimations,
+    'polish/skip-load-animation': exports.checkSkipLoadAnimation,
     'polish/sparse-will-change': exports.checkSparseWillChange,
     'polish/shadows-over-borders': exports.checkShadowsOverBorders,
     'polish/optical-alignment': exports.checkOpticalAlignment,

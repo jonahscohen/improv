@@ -264,7 +264,7 @@ Validation warnings: [performance] has_optimization_guidance
 - Dimension 4: Responsive (breakpoints, touch targets, viewport behavior)
 - Dimension 5: Anti-patterns (hardcoded values, dead code, deprecated APIs)
 - Address all Critical and High findings; document trade-offs for Medium
-- Note: Impeccable detect error: Command failed: npx impeccable detect /Users/spare3/Documents/Github/claude-dotfiles/reference --json
+- Note: Oracle detect error: Command failed: npx oracle detect /Users/spare3/Documents/Github/claude-dotfiles/reference --json
 
 
 ### Design Critique (Nielsen heuristics) (flowL_design_critique)

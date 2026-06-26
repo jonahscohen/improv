@@ -178,4 +178,4 @@ Application order when all three trigger:
 - component-gallery-reference first - get the standard skeleton right
 - design-references next - layer in personal-eye detail
 - fontshare-reference if type is in scope
-- Then impeccable/sidecoach for brand strategy, make-interfaces-feel-better for tactical polish
+- Then oracle/sidecoach for brand strategy, make-interfaces-feel-better for tactical polish

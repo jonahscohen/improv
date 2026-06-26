@@ -87,6 +87,14 @@ export interface LaneStepResult {
   // Validator gate surface (optional so closed/serve results omit it). Present on
   // a `complete` result that ran product validators.
   gate?: { status: GateStatus; validators: { validatorId: string; status: GateStatus }[]; findings: ProductFinding[] };
+  // Reference-system preflight (deliverable B): reference artifacts gathered at lane
+  // START for build/refinement lanes, REGARDLESS of which verbs the chain routes.
+  // Additive + soft-fail (never blocks lane start); optional so existing callers/tests
+  // are unaffected. Populated by the orchestrator's startLane wrapper.
+  referencePreflight?: {
+    artifacts: { kind: string; title: string; content: string; source: string }[];
+    warnings: string[];
+  };
   // Loop-lane convergence surface (present on a loop boundary result). The summary
   // is GENERATED from the run coverage record for a converged result (truthful).
   convergence?: {

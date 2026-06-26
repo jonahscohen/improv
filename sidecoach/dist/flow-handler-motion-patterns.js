@@ -18,7 +18,6 @@ const flow_handler_1 = require("./flow-handler");
 const motion_reference_1 = require("./motion-reference");
 const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
-const extended_domain_validator_1 = require("./extended-domain-validator");
 const reference_loader_1 = require("./reference-loader");
 const model_routing_1 = require("./model-routing");
 class FlowEMotionPatternsHandler extends flow_handler_1.BaseFlowHandler {
@@ -113,25 +112,12 @@ class FlowEMotionPatternsHandler extends flow_handler_1.BaseFlowHandler {
                 reducedMotionStrategies,
                 validationResults,
             };
-            // Domain validation integration
-            const domainCheckContext = {
-                designTokens: context.metadata?.designTokens || {},
-                componentTree: context.metadata?.componentTree || { motionPatterns: easingPatterns.length },
-                cssRules: context.metadata?.cssRules || [],
-                motion: context.metadata?.motion,
-                accessibility: context.metadata?.accessibility,
-            };
-            const extendedValidationReport = extended_domain_validator_1.ExtendedDomainValidator.validateAll(domainCheckContext);
-            const motionDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('motion');
-            const motionPassRate = extendedValidationReport.passRateByDomain['motion'] || '0%';
-            const motionPassed = Math.round((parseFloat(motionPassRate) / 100) * motionDomainRules.length);
             // Build checklist
             const checklist = this.createChecklist([
                 { label: 'Brand personality defined', required: true, description: brandPersonality || 'Not specified' },
                 { label: 'Register specified', required: true, description: register },
                 { label: 'Motion intensity determined', required: true, description: `${intensity} (for ${register} register)` },
                 { label: 'Motion domain rules reviewed', required: true, description: `${motionRules.length} rules loaded` },
-                { label: 'Motion domain validation', required: false, description: `${motionPassed}/${motionDomainRules.length} rules passing (${motionPassRate})` },
                 { label: 'Easing curves validated (exponential only)', required: false, description: `${easingPatterns.length} patterns` },
                 { label: 'Reduced-motion strategies defined', required: false, description: '6 strategies for accessibility' },
                 { label: 'Motion patterns validated against rules', required: false, description: `${validationResults.length} patterns validated` },
@@ -144,8 +130,6 @@ class FlowEMotionPatternsHandler extends flow_handler_1.BaseFlowHandler {
                 '',
                 'Motion Domain Rules (Duration, Easing, No Layout Animation):',
                 ...motionRules,
-                '',
-                'Domain Validation Results:',
                 '',
                 'PRESCRIBED NAMED EASINGS (use these by name, do not improvise):',
                 ...prescribedEasings.map((e) => `- ${e.name}: ${e.cssValue}`),
@@ -186,15 +170,13 @@ class FlowEMotionPatternsHandler extends flow_handler_1.BaseFlowHandler {
             const exponentialPassCount = validationResults.filter((r) => r.easingExpOnential).length;
             const reducedMotionPassCount = validationResults.filter((r) => r.hasReducedMotion).length;
             const memoryBuilder = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())
-                .setSummary(`Motion patterns: ${easingPatterns.length} easing curves with motion domain validation (${motionPassRate}) + ${reducedMotionStrategies.length} reduced-motion strategies`)
+                .setSummary(`Motion patterns: ${easingPatterns.length} easing curves + ${reducedMotionStrategies.length} reduced-motion strategies`)
                 .addRule('motion', motionRules)
                 .addDecision(`Motion intensity: ${intensity}`, `${register === 'brand' ? 'Playful/ambitious' : 'Restrained'} motion for ${register} register with ${brandPersonality} personality`)
                 .addMetric('easing-curves-researched', easingPatterns.length, 'pass')
-                .addMetric('motion-domain-validation', motionPassed, 'pass', motionDomainRules.length)
                 .addMetric('motion-patterns-validated', validationResults.length, 'pass')
                 .addMetric('exponential-easing-pass', exponentialPassCount, 'pass', validationResults.length)
                 .addMetric('reduced-motion-strategies', reducedMotionStrategies.length, 'pass', 6)
-                .addValidation('Motion domain compliance', motionPassed === motionDomainRules.length ? 'pass' : 'warning', `${motionPassed}/${motionDomainRules.length} pass`)
                 .addValidation('Exponential-only easing', exponentialPassCount === validationResults.length ? 'pass' : 'warning', `${exponentialPassCount}/${validationResults.length} pass`)
                 .addValidation('Reduced-motion coverage', reducedMotionPassCount === validationResults.length ? 'pass' : 'warning', `${reducedMotionPassCount}/${validationResults.length} patterns`)
                 .addReference('motion-reference', easingPatterns.length, 'easing curve patterns')

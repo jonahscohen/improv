@@ -32,7 +32,7 @@ Codex caught this. `--help` fell through to the catch-all in the flag parser, go
 
 Decision: keep the settings (intentional Yes&-machine velocity tradeoff), but document it explicitly in CLAUDE.md so new developers see what they're inheriting and how to change it.
 
-- Added a new `## Permission Posture (deliberate choice)` section between the Impeccable QA gate and Code Quality. Documents what bypassPermissions does, why we chose it, what the hook layer still blocks regardless, and exactly how to change to per-tool prompting (`defaultMode: default` / `acceptEdits` and remove `skipDangerousModePermissionPrompt`).
+- Added a new `## Permission Posture (deliberate choice)` section between the Oracle QA gate and Code Quality. Documents what bypassPermissions does, why we chose it, what the hook layer still blocks regardless, and exactly how to change to per-tool prompting (`defaultMode: default` / `acceptEdits` and remove `skipDangerousModePermissionPrompt`).
 
 ### Memory loader load-order didn't match the CLAUDE.md contract
 

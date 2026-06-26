@@ -39,7 +39,7 @@ Continuing from completed intent detector. Building flow handler layer and orche
 
 ## Next Phase: Implement High-Priority Handlers
 
-Starting with 4 flows that consolidate /impeccable and /make-interfaces-feel-better:
+Starting with 4 flows that consolidate /oracle and /make-interfaces-feel-better:
 
 ### Flow 2: Polish/Enhance Interaction
 - Trigger: /make-interfaces-feel-better
@@ -47,12 +47,12 @@ Starting with 4 flows that consolidate /impeccable and /make-interfaces-feel-bet
 - Artifacts: before/after comparison template
 
 ### Flow 5: Review/QA Mode  
-- Trigger: /impeccable audit
+- Trigger: /oracle audit
 - Guidance: 5-lens review framework (a11y, perf, theming, responsive, anti-patterns)
 - Artifacts: issue prioritization checklist
 
 ### Flow 7: Design a New Component
-- Trigger: /impeccable craft + QA triad (audit → critique → polish)
+- Trigger: /oracle craft + QA triad (audit → critique → polish)
 - Guidance: Component extraction + validation process
 - Artifacts: design vs code comparison
 

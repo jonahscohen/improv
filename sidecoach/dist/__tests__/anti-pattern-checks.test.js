@@ -9,9 +9,11 @@ function run() {
     const gt = anti_pattern_checks_1.ANTI_PATTERN_CHECKS['anti-pattern/gradient-text'];
     const gl = anti_pattern_checks_1.ANTI_PATTERN_CHECKS['anti-pattern/glassmorphism-default'];
     const ss = anti_pattern_checks_1.ANTI_PATTERN_CHECKS['anti-pattern/side-stripe-borders'];
-    const cg = anti_pattern_checks_1.ANTI_PATTERN_CHECKS['anti-pattern/identical-card-grids'];
     const mo = anti_pattern_checks_1.ANTI_PATTERN_CHECKS['anti-pattern/modal-as-first-thought'];
-    for (const [k, f] of Object.entries({ gt, gl, ss, cg, mo }))
+    // (identical-card-grids check deleted Stage-2 2026-06-24 - ReDoS + low-precision)
+    if (anti_pattern_checks_1.ANTI_PATTERN_CHECKS['anti-pattern/identical-card-grids'])
+        throw new Error('identical-card-grids should be DELETED (Stage-2)');
+    for (const [k, f] of Object.entries({ gt, gl, ss, mo }))
         if (!f)
             throw new Error(`missing ${k}`);
     // gradient-text: clip + gradient -> fail; clean css -> pass; no css -> inconclusive
@@ -29,14 +31,6 @@ function run() {
         throw new Error('modal-as-first-thought must fail');
     if (mo(empty).status !== 'inconclusive')
         throw new Error('markup detector with no markup must be inconclusive');
-    if (cg(ctxMarkup('<main><p>hi</p></main>')).status !== 'pass')
-        throw new Error('clean markup must pass');
-    const repeatedCardsWithoutRepeatGrid = '<main><article class="card"><h2>A</h2><p>x</p></article><article class="card"><h2>B</h2><p>x</p></article><article class="card"><h2>C</h2><p>x</p></article></main>';
-    if (cg(ctxMarkup(repeatedCardsWithoutRepeatGrid)).status !== 'pass')
-        throw new Error('identical cards without repeat(...) grid precondition must not find');
-    const repeatedCardsWithRepeatGrid = '<style>.grid{display:grid;grid-template-columns:repeat(3,1fr)}</style><main class="grid"><article class="card"><h2>A</h2><p>x</p></article><article class="card"><h2>B</h2><p>x</p></article><article class="card"><h2>C</h2><p>x</p></article></main>';
-    if (cg(ctxMarkup(repeatedCardsWithRepeatGrid)).status !== 'fail')
-        throw new Error('repeat(...) grid plus repeated cards must preserve source finding');
     // P2#4: findings must carry the REAL file path (not a placeholder) and preserve ALL
     // rewrite options in remediation.
     const gtFail = gt(ctxCss('.h { background-clip: text; background: linear-gradient(#a,#b); }'));

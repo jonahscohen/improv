@@ -4,7 +4,7 @@ Source: `/Users/spare3/.claude/skills/design-build/SKILL.md`
 
 ## What this skill provides
 
-A **pipeline orchestrator** that explicitly walks the 6 design skills (component-gallery-reference, fontshare-reference, design-references, motion-reference, icon-source, make-interfaces-feel-better) plus the impeccable QA triad as ONE coordinated build, instead of relying on each skill's auto-trigger keywords.
+A **pipeline orchestrator** that explicitly walks the 6 design skills (component-gallery-reference, fontshare-reference, design-references, motion-reference, icon-source, make-interfaces-feel-better) plus the oracle QA triad as ONE coordinated build, instead of relying on each skill's auto-trigger keywords.
 
 The skill exists because of an empirical finding from the 2026-05-20 marketing-site build:
 1. **Auto-triggering didn't fire reliably.** `component-gallery-reference`, `design-references`, and `icon-source` never auto-triggered during the build. `make-interfaces-feel-better` only fired because the agent had read it recently.
@@ -32,11 +32,11 @@ DO NOT trigger on:
 ## The 10-phase orchestration (with 2 gate checkpoints)
 
 ### Phase 0: Pre-flight
-1. Check `<project>/PRODUCT.md`. If missing/stub/<200 chars/contains `[TODO]`: run `/impeccable teach` first. Block until it returns.
-2. Check `<project>/DESIGN.md`. If missing AND project has existing code: nudge ONCE: "Run /impeccable document to capture the current visual system."
+1. Check `<project>/PRODUCT.md`. If missing/stub/<200 chars/contains `[TODO]`: run `/oracle teach` first. Block until it returns.
+2. Check `<project>/DESIGN.md`. If missing AND project has existing code: nudge ONCE: "Run /oracle document to capture the current visual system."
 3. Read both files in full. Capture brand-voice words, register, anti-references, existing tokens.
 
-### Phase 1: Strategy (Impeccable)
+### Phase 1: Strategy (Oracle)
 Compose a brief direction. Present via AskUserQuestion as the **FIRST GATE CHECKPOINT**:
 - Approved as proposed (Recommended)
 - Edit one specific aspect
@@ -62,11 +62,11 @@ ONLY if icons needed. Check existing project library (one per project). Pick fro
 Generate code WITH the 14-rule checklist applied as build-time guidance, NOT as post-pass cleanup. Concentric radii, optical centering, shadows over borders, interruptible animations, split+stagger enters, subtle exits, opacity+scale+blur swaps, font smoothing, tabular nums, text-wrap balance, image outlines, scale(0.96) press, initial={false} on AnimatePresence, no `transition: all`, sparse will-change, 40x40px hit areas.
 
 ### Phase 8: QA triad (MANDATORY - the part that never fired before)
-1. `/impeccable audit <target>` - 5-dimension scan + `npx impeccable detect`. Address Critical + High.
-2. `/impeccable critique <target>` - design review via sub-agents. Address anything above "minor".
-3. `/impeccable polish <target>` - final design-system alignment.
+1. `/oracle audit <target>` - 5-dimension scan + `npx oracle detect`. Address Critical + High.
+2. `/oracle critique <target>` - design review via sub-agents. Address anything above "minor".
+3. `/oracle polish <target>` - final design-system alignment.
 
-If can't run impeccable: record "QA triad SKIPPED because <reason>" in build memory.
+If can't run oracle: record "QA triad SKIPPED because <reason>" in build memory.
 
 **SECOND GATE CHECKPOINT** after triad findings surfaced:
 - Address all findings before reporting done (Recommended)
@@ -88,7 +88,7 @@ Write session memory at `<project>/.claude/memory/session_YYYY-MM-DD_<feature>.m
 |---|---|---|
 | Surface | Slash-command + natural-language triggers | 22-verb command surface + phase commands |
 | Phases | 10 explicit phases with 2 gate checkpoints | 36 flows organized by phase (craft/shape/polish/audit/animate/critique) |
-| Skills consulted | 6 design skills + impeccable triad | Aims to replace impeccable; consults same 8 skills audited here |
+| Skills consulted | 6 design skills + oracle triad | Aims to replace oracle; consults same 8 skills audited here |
 | QA enforcement | Mandatory triad in Phase 8 | Built-in via Flow N (audit/critique/polish) + 159-rule validators |
 | Memory | Session memory in Phase 10 | SessionMemoryWriter in orchestrator |
 | Gate checkpoints | 2 (after strategy, after QA) | AskUserQuestion gates between flow phases |
@@ -120,7 +120,7 @@ Sidecoach should treat design-build as a **specification document for orchestrat
 ### What sidecoach should NOT duplicate
 
 - Don't ship `/design-build` as a sidecoach verb. The user has it as a separate orchestrator; sidecoach is the deeper system.
-- Don't re-invent the impeccable triad - sidecoach already replaces it via Flow N + 159-rule validators.
+- Don't re-invent the oracle triad - sidecoach already replaces it via Flow N + 159-rule validators.
 
 ### Sidecoach's relationship to design-build going forward
 

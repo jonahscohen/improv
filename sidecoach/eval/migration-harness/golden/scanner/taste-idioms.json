@@ -1,0 +1,38 @@
+[
+  {
+    "source": "taste-validator",
+    "rule": "taste/border-radius-inconsistency",
+    "severity": "error",
+    "category": "design-system-consistency",
+    "message": "3 distinct border-radius literals found (4px, 9px, 13px). Use 1-2 named tokens from a radius scale; concentric radii (outer = inner + padding) should derive from those tokens, not be hand-picked per component.",
+    "excerpt": null,
+    "lineNumbers": null
+  },
+  {
+    "source": "taste-validator",
+    "rule": "taste/hero-radial-blob",
+    "severity": "error",
+    "category": "ai-slop",
+    "message": "radial-gradient inside a hero/banner selector (\".hero\") is the canonical AI-slop hero background. Replace with an editorial image, real product screenshot, or typography-first hero.",
+    "excerpt": "background: radial-gradient(circle, #ffffff, #eeeeee);",
+    "lineNumbers": null
+  },
+  {
+    "source": "taste-validator",
+    "rule": "taste/hex-in-interactive-state",
+    "severity": "error",
+    "category": "design-tokens",
+    "message": ":hover/:active state uses hardcoded hex (#2244ee) while the file defines CSS custom properties. Derive the interactive state from a token (e.g. var(--c-brand-red-hover)) so theming and dark mode propagate. Selector: \".btn:hover\"",
+    "excerpt": "transform: translateY(-2px); background: #2244ee;",
+    "lineNumbers": null
+  },
+  {
+    "source": "taste-validator",
+    "rule": "taste/translatey-in-hover",
+    "severity": "error",
+    "category": "motion",
+    "message": ":hover uses transform: translateY(...) for a hover-lift. The make-interfaces-feel-better tactical layer specifies scale-on-press (transform: scale(0.96) on :active), not translateY motion on hover. Selector: \".btn:hover\"",
+    "excerpt": "transform: translateY(-2px); background: #2244ee;",
+    "lineNumbers": null
+  }
+]

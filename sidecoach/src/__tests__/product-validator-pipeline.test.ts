@@ -271,7 +271,10 @@ async function browserPromotion() {
       },
     }),
   });
-  for (const id of ['a11y.min-hit-area', 'a11y.color-contrast']) {
+  // a11y.color-contrast dropped from this collector-promotion check: Stage 6 migrated it to the rendered scan, so
+  // it is promoted by renderUrl (activateRenderedPolicy) + the low-contrast finding, not by the browser collector.
+  // The dom-backed min-hit-area still exercises the collector promote-and-fail path.
+  for (const id of ['a11y.min-hit-area']) {
     if (!detail.activePolicy.requiredRuleIds.includes(id)) throw new Error(`${id}: successful collector must promote browser rule`);
     const x = detail.executions.find((e) => e.result.ruleId === id);
     if (!x || x.result.status !== 'fail' || !x.sufficientlyCovered) throw new Error(`${id}: promoted browser rule must fail with real coverage`);

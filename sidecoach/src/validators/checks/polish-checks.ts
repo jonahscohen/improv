@@ -11,6 +11,7 @@ import {
   hasTransitionAll, hasTabularNums, hasTextWrapBalance, hasStaggerDelay, hasExitOpacity, hasExitScale,
   hasFontSmoothing, hasFramerSignal, hasWillChangeAll, hasBoxShadowElevation, hasShadowTokenTiers,
   countBoxShadowRules, hasOpticalPadding, countDefinedStates, hasReducedMotion,
+  hasKeyframeAnimationOnInteractiveState, hasEntranceKeyframe,
 } from '../../polish-standard-validator';
 
 // A css-rule presence verdict: no CSS -> inconclusive; needle present -> pass; absent -> fail.
@@ -70,6 +71,30 @@ export const checkAnimatePresenceInitial = (ctx: ProductCheckContext): RuleVerdi
   return /initial\s*=\s*\{?\s*false/.test(ctx.markup)
     ? pass('AnimatePresence initial={false} present')
     : fail('AnimatePresence children need initial={false}', [], 'Set initial={false} on AnimatePresence children');
+};
+
+// #4 Interruptible Animations. FAIL when an interactive state (:hover/:focus/:active) uses a keyframe
+// animation - those run to completion and can't be interrupted when the state reverts; a transition can.
+export const checkInterruptibleAnimations = (ctx: ProductCheckContext): RuleVerdict => {
+  if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
+  return hasKeyframeAnimationOnInteractiveState(ctx.cssText)
+    ? fail('interactive state (:hover/:focus/:active) uses a keyframe animation, which cannot be interrupted', [], 'Use a CSS transition for interactive state changes (interruptible); reserve @keyframes/animation for run-once staged sequences')
+    : pass('no keyframe animation on interactive states');
+};
+
+// #13 Skip Animation on Page Load (CSS-only complement to AnimatePresence initial={false}). N/A when
+// there is no entrance keyframe to gate; PASS when an entrance animation is gated (reduced-motion guard
+// or AnimatePresence initial={false}); FAIL when an entrance animation is present but ungated (it replays
+// on every page load). JS-trigger-class gating can't be confirmed statically, so this flags for review.
+export const checkSkipLoadAnimation = (ctx: ProductCheckContext): RuleVerdict => {
+  if (!hasCss(ctx) && !hasMarkup(ctx)) return inconclusive('no source collected', 'unreadable_input');
+  if (!hasEntranceKeyframe(ctx.cssText)) return notApplicable('no entrance keyframe (opacity:0 from/0%) to gate');
+  // Require the JSX braces around false so `initial={false}` / `initial={ false }` gate, but a stray
+  // `initial=falseThing` does NOT falsely count as gated.
+  const gated = hasReducedMotion(ctx.cssText) || /initial\s*=\s*\{\s*false\s*\}/.test(ctx.markup);
+  return gated
+    ? pass('entrance animation is gated (reduced-motion or initial={false})')
+    : fail('entrance animation will replay on every page load (ungated)', [], 'Gate entrance animations: AnimatePresence initial={false}, a JS-added trigger class, or a prefers-reduced-motion guard');
 };
 
 export const checkShadowsOverBorders = (ctx: ProductCheckContext): RuleVerdict =>
@@ -139,6 +164,8 @@ const RAW_POLISH_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdic
   'polish/subtle-exit': checkSubtleExit,
   'polish/font-smoothing': checkFontSmoothing,
   'polish/animatepresence-initial': checkAnimatePresenceInitial,
+  'polish/interruptible-animations': checkInterruptibleAnimations,
+  'polish/skip-load-animation': checkSkipLoadAnimation,
   'polish/sparse-will-change': checkSparseWillChange,
   'polish/shadows-over-borders': checkShadowsOverBorders,
   'polish/optical-alignment': checkOpticalAlignment,

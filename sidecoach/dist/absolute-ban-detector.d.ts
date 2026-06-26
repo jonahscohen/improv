@@ -38,7 +38,6 @@ export interface AbsoluteBanReport {
 export declare function scanSideStripeBorders(content: string, file: string): AbsoluteBanFinding[];
 export declare function scanGradientText(content: string, file: string): AbsoluteBanFinding[];
 export declare function scanGlassmorphism(content: string, file: string): AbsoluteBanFinding[];
-export declare function scanIdenticalCardGrids(content: string, file: string): AbsoluteBanFinding[];
 export declare function scanHeroMetricTemplate(content: string, file: string): AbsoluteBanFinding[];
 export declare function scanModalAsFirstThought(content: string, file: string): AbsoluteBanFinding[];
 export declare function scanForAbsoluteBans(projectPath: string): AbsoluteBanReport;

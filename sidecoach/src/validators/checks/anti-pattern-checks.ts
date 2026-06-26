@@ -9,7 +9,7 @@ import type { ProductCheckContext, RuleVerdict } from '../check-context';
 import { pass, fail, inconclusive, hasCss, hasMarkup } from '../check-context';
 import {
   scanGradientText, scanGlassmorphism, scanSideStripeBorders,
-  scanIdenticalCardGrids, scanHeroMetricTemplate, scanModalAsFirstThought,
+  scanHeroMetricTemplate, scanModalAsFirstThought,
 } from '../../absolute-ban-detector';
 import type { AbsoluteBanFinding } from '../../absolute-ban-detector';
 
@@ -61,11 +61,8 @@ export const checkSideStripeBorders = (ctx: ProductCheckContext): RuleVerdict =>
 };
 
 // --- HTML-structural heuristics (declared minor; still emit fail when matched) ---
-export const checkIdenticalCardGrids = (ctx: ProductCheckContext): RuleVerdict => {
-  if (!hasMarkup(ctx)) return inconclusive('no markup source collected', 'unreadable_input');
-  return verdictFromBanFindings(scanMarkupPerFile(ctx, scanIdenticalCardGrids), 'no identical-card-grids shape');
-};
-
+// (checkIdenticalCardGrids deleted Stage-2 2026-06-24 - the underlying scanIdenticalCardGrids had a ReDoS + was a
+// low-precision over-firing detector; removed, no replacement.)
 export const checkHeroMetricTemplate = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasMarkup(ctx)) return inconclusive('no markup source collected', 'unreadable_input');
   return verdictFromBanFindings(scanMarkupPerFile(ctx, scanHeroMetricTemplate), 'no hero-metric-template shape');
@@ -80,7 +77,6 @@ export const ANTI_PATTERN_CHECKS: Record<string, (ctx: ProductCheckContext) => R
   'anti-pattern/gradient-text': checkGradientText,
   'anti-pattern/glassmorphism-default': checkGlassmorphism,
   'anti-pattern/side-stripe-borders': checkSideStripeBorders,
-  'anti-pattern/identical-card-grids': checkIdenticalCardGrids,
   'anti-pattern/hero-metric-template': checkHeroMetricTemplate,
   'anti-pattern/modal-as-first-thought': checkModalAsFirstThought,
 };

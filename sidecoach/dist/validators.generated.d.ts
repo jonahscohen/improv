@@ -6,6 +6,8 @@ export interface GeneratedValidator {
     supportedSourceKinds: SourceKindSupport[];
     browserRuleIds: string[];
     browserCoverageByScope: import('./product-rule-types').RequiredCoverageRecord[];
+    renderedRuleIds: string[];
+    renderedCoverageByScope: import('./product-rule-types').RequiredCoverageRecord[];
     cleanPolicy: CleanPolicy;
 }
 export interface GeneratedFlowCapability {

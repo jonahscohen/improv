@@ -73,9 +73,12 @@ run();
     const domOnly = (0, product_rule_registry_1.getRuleById)('a11y.min-hit-area');
     if (!domOnly || (0, product_rule_types_1.isStaticallySatisfiable)(domOnly.evidenceRequirements))
         throw new Error('a11y.min-hit-area must be DOM-only (not statically satisfiable)');
-    const override = (0, product_rule_registry_1.getRuleById)('anti-pattern.identical-card-grids');
+    // (identical-card-grids DELETED Stage-2 2026-06-24; hero-metric-template carries the same minor-override shape.)
+    if ((0, product_rule_registry_1.getRuleById)('anti-pattern.identical-card-grids'))
+        throw new Error('anti-pattern.identical-card-grids should be DELETED (Stage-2)');
+    const override = (0, product_rule_registry_1.getRuleById)('anti-pattern.hero-metric-template');
     if (!override || override.severity !== 'minor' || !override.severityOverrideReason)
-        throw new Error('identical-card-grids must declare a minor override with a reason');
+        throw new Error('hero-metric-template must declare a minor override with a reason');
     if (product_rule_types_1.SEVERITY_TABLE[override.sourceSeverity] === override.severity)
         throw new Error('override rule must diverge from the table default');
     console.log('product-rule-registry: OK');
@@ -90,7 +93,8 @@ run();
         supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)(evidence), scope: '__scope__', narrowTargetBehavior: 'evaluate_expanded_context',
         applicability,
     });
-    // owner polish-standard (19)
+    // owner polish-standard (23): 21 static polish rules + polish.tiny-text + polish.marketing-buzzword
+    // (rendered-scan: Stage 1 tiny-text, Stage 5a marketing-buzzword)
     const polish = [
         { ...P('polish.scale-on-press', 1, 'polish/scale-on-press', 'high', 'major', '', 'css-rule', 'not_applicable'), registryScope: 'polished-press-feedback', scope: 'file' },
         { ...P('polish.concentric-radius', 2, 'polish/concentric-radius', 'medium', 'minor', '', 'computed-style', 'inconclusive'), registryScope: 'polished-radius-concentricity', scope: 'component' },
@@ -103,6 +107,8 @@ run();
         { ...P('polish.subtle-exit', 10, 'polish/subtle-exit', 'medium', 'minor', '', 'css-rule', 'not_applicable'), registryScope: 'polished-exit-choreography', scope: 'file' },
         { ...P('polish.font-smoothing', 11, 'polish/font-smoothing', 'low', 'advisory', '', 'css-rule', 'not_applicable'), registryScope: 'polished-font-smoothing', scope: 'file' },
         { ...P('polish.animatepresence-initial', 12, 'polish/animatepresence-initial', 'medium', 'minor', '', 'markup', 'not_applicable'), registryScope: 'polished-first-load-suppression', scope: 'file' },
+        { ...P('polish.interruptible-animations', 23, 'polish/interruptible-animations', 'medium', 'minor', '', 'css-rule', 'not_applicable'), registryScope: 'polished-interruptible-state', scope: 'file' },
+        { ...P('polish.skip-load-animation', 24, 'polish/skip-load-animation', 'medium', 'minor', '', 'css-rule', 'not_applicable'), registryScope: 'polished-load-animation-gating', scope: 'file' },
         { ...P('polish.sparse-will-change', 13, 'polish/sparse-will-change', 'low', 'advisory', '', 'css-rule', 'not_applicable'), registryScope: 'polished-sparse-will-change', scope: 'file' },
         { ...P('polish.shadows-over-borders', 14, 'polish/shadows-over-borders', 'medium', 'minor', '', 'css-rule', 'not_applicable'), registryScope: 'polished-elevation-shadow', scope: 'file' },
         { ...P('polish.optical-alignment', 15, 'polish/optical-alignment', 'medium', 'minor', '', 'css-rule', 'not_applicable'), registryScope: 'polished-optical-alignment', scope: 'file' },
@@ -111,12 +117,37 @@ run();
         { ...P('polish.reduced-motion-respect', 19, 'polish/reduced-motion-respect', 'critical', 'blocker', '', 'css-rule', 'not_applicable'), registryScope: 'polished-motion-respect', scope: 'file' },
         { ...P('polish.state-completeness', 21, 'polish/state-completeness', 'high', 'major', '', 'css-rule', 'not_applicable'), registryScope: 'polished-state-completeness', scope: 'file' },
         { ...P('polish.anti-pattern-genericity', 22, 'polish/anti-pattern-genericity', 'medium', 'minor', '', 'dom', 'inconclusive'), registryScope: 'polished-genericity-floor', scope: 'component' },
+        { ruleId: 'polish.tiny-text', sourceRuleAliases: ['rendered-scanner:tiny-text'], canonicalRuleKey: 'polish/tiny-text', ownerValidatorId: 'polish-standard', sourceVocabulary: 'rendered-scanner', sourceSeverity: 'medium', severity: 'minor', findingClass: 'polish', registryScope: 'rendered-tiny-text', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
+        { ruleId: 'polish.marketing-buzzword', sourceRuleAliases: ['rendered-scanner:marketing-buzzword'], canonicalRuleKey: 'polish/marketing-buzzword', ownerValidatorId: 'polish-standard', sourceVocabulary: 'rendered-scanner', sourceSeverity: 'medium', severity: 'minor', findingClass: 'polish', registryScope: 'rendered-marketing-buzzword', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
     ];
-    // owner static-a11y (3): aliases stay polish-standard:N / POLISH_0NN
+    // owner static-a11y (7): focus-visible (css) + min-hit-area (dom collector) + 5 rendered-scan classes
+    // (broken-image, skipped-heading, gray-on-color, justified-text, and - Stage 6 - color-contrast, MIGRATED off
+    // the collector contrast probe onto the rendered scanner's low-contrast finding to close the one-engine hole).
     const a11y = [
         { ruleId: 'a11y.focus-visible', sourceRuleAliases: ['polish-standard:18', 'POLISH_018'], canonicalRuleKey: 'a11y/focus-visible', ownerValidatorId: 'static-a11y', sourceVocabulary: 'polish-extended-antipattern', sourceSeverity: 'critical', severity: 'blocker', findingClass: 'a11y', registryScope: 'keyboard-accessibility-floor', evidenceRequirements: ['css-rule'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('css-rule'), scope: 'file', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
         { ruleId: 'a11y.min-hit-area', sourceRuleAliases: ['polish-standard:5', 'POLISH_005'], canonicalRuleKey: 'a11y/min-hit-area', ownerValidatorId: 'static-a11y', sourceVocabulary: 'polish-extended-antipattern', sourceSeverity: 'critical', severity: 'blocker', findingClass: 'a11y', registryScope: 'touch-target-floor', evidenceRequirements: ['dom'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('dom'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
-        { ruleId: 'a11y.color-contrast', sourceRuleAliases: ['polish-standard:20', 'POLISH_020'], canonicalRuleKey: 'a11y/color-contrast', ownerValidatorId: 'static-a11y', sourceVocabulary: 'polish-extended-antipattern', sourceSeverity: 'critical', severity: 'blocker', findingClass: 'a11y', registryScope: 'contrast-floor', evidenceRequirements: ['contrast'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('contrast'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
+        { ruleId: 'a11y.color-contrast', sourceRuleAliases: ['polish-standard:20', 'POLISH_020'], canonicalRuleKey: 'a11y/color-contrast', ownerValidatorId: 'static-a11y', sourceVocabulary: 'polish-extended-antipattern', sourceSeverity: 'critical', severity: 'blocker', findingClass: 'a11y', registryScope: 'contrast-floor', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
+        { ruleId: 'a11y.broken-image', sourceRuleAliases: ['rendered-scanner:broken-image'], canonicalRuleKey: 'a11y/broken-image', ownerValidatorId: 'static-a11y', sourceVocabulary: 'rendered-scanner', sourceSeverity: 'high', severity: 'major', findingClass: 'a11y', registryScope: 'rendered-broken-image', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
+        { ruleId: 'a11y.skipped-heading', sourceRuleAliases: ['rendered-scanner:skipped-heading'], canonicalRuleKey: 'a11y/heading-order', ownerValidatorId: 'static-a11y', sourceVocabulary: 'rendered-scanner', sourceSeverity: 'high', severity: 'major', findingClass: 'a11y', registryScope: 'rendered-heading-order', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
+        { ruleId: 'a11y.gray-on-color', sourceRuleAliases: ['rendered-scanner:gray-on-color'], canonicalRuleKey: 'a11y/gray-on-color', ownerValidatorId: 'static-a11y', sourceVocabulary: 'rendered-scanner', sourceSeverity: 'high', severity: 'major', findingClass: 'a11y', registryScope: 'rendered-gray-on-color', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
+        { ruleId: 'a11y.justified-text', sourceRuleAliases: ['rendered-scanner:justified-text'], canonicalRuleKey: 'a11y/justified-text', ownerValidatorId: 'static-a11y', sourceVocabulary: 'rendered-scanner', sourceSeverity: 'medium', severity: 'minor', findingClass: 'a11y', registryScope: 'rendered-justified-text', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
+        // absorbed forms-a11y (Stage 2): markup-evidence, scope project, N/A when no form controls
+        { ruleId: 'a11y.form-control-labelled', sourceRuleAliases: ['extended-domain:FORMS_016', 'FORMS_016'], canonicalRuleKey: 'a11y/form-control-labelled', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'critical', severity: 'blocker', findingClass: 'a11y', registryScope: 'forms-labelling', evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: 'a11y.form-error-association', sourceRuleAliases: ['extended-domain:FORMS_018', 'FORMS_018'], canonicalRuleKey: 'a11y/form-error-association', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'high', severity: 'major', findingClass: 'a11y', registryScope: 'forms-error-association', evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: 'a11y.form-placeholder-not-label', sourceRuleAliases: ['extended-domain:FORMS_019', 'FORMS_019'], canonicalRuleKey: 'a11y/form-placeholder-not-label', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'high', severity: 'major', findingClass: 'a11y', registryScope: 'forms-placeholder', evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: 'a11y.form-input-type', sourceRuleAliases: ['extended-domain:FORMS_002', 'FORMS_002'], canonicalRuleKey: 'a11y/form-input-type', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'high', severity: 'minor', severityOverrideReason: 'input-type is a UX keyboard/validation hint, not a blocking a11y failure; advisory-not-gating by design', findingClass: 'a11y', registryScope: 'forms-input-type', evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: 'a11y.form-choice-label-target', sourceRuleAliases: ['extended-domain:FORMS_015', 'FORMS_015'], canonicalRuleKey: 'a11y/form-choice-label-target', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'high', severity: 'major', findingClass: 'a11y', registryScope: 'forms-choice-target', evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "a11y.form-autocomplete", sourceRuleAliases: ["extended-domain:FORMS_001", "FORMS_001"], canonicalRuleKey: "a11y/form-autocomplete", ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: "high", severity: "major", findingClass: 'a11y', registryScope: "forms-autocomplete", evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "a11y.form-inputmode", sourceRuleAliases: ["extended-domain:FORMS_003", "FORMS_003"], canonicalRuleKey: "a11y/form-inputmode", ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: "medium", severity: "minor", findingClass: 'a11y', registryScope: "forms-inputmode", evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "a11y.form-never-block-paste", sourceRuleAliases: ["extended-domain:FORMS_004", "FORMS_004"], canonicalRuleKey: "a11y/form-never-block-paste", ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: "high", severity: "major", findingClass: 'a11y', registryScope: "forms-paste", evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "a11y.form-spellcheck-off", sourceRuleAliases: ["extended-domain:FORMS_005", "FORMS_005"], canonicalRuleKey: "a11y/form-spellcheck-off", ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: "medium", severity: "minor", findingClass: 'a11y', registryScope: "forms-spellcheck", evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "a11y.form-idempotent-submit", sourceRuleAliases: ["extended-domain:FORMS_007", "FORMS_007"], canonicalRuleKey: "a11y/form-idempotent-submit", ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: "medium", severity: "minor", findingClass: 'a11y', registryScope: "forms-idempotent-submit", evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "a11y.form-inline-errors", sourceRuleAliases: ["extended-domain:FORMS_008", "FORMS_008"], canonicalRuleKey: "a11y/form-inline-errors", ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: "high", severity: "major", findingClass: 'a11y', registryScope: "forms-inline-errors", evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "a11y.form-focus-first-error", sourceRuleAliases: ["extended-domain:FORMS_009", "FORMS_009"], canonicalRuleKey: "a11y/form-focus-first-error", ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: "high", severity: "minor", severityOverrideReason: "detected via keyword-presence proxy (focus/setFocus/scrollIntoView near error); advisory-not-gating until a stronger signal exists", findingClass: 'a11y', registryScope: "forms-focus-first-error", evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "a11y.form-no-pm-non-auth", sourceRuleAliases: ["extended-domain:FORMS_011", "FORMS_011"], canonicalRuleKey: "a11y/form-no-pm-non-auth", ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: "medium", severity: "minor", findingClass: 'a11y', registryScope: "forms-no-pm", evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "a11y.form-textarea-submit", sourceRuleAliases: ["extended-domain:FORMS_014", "FORMS_014"], canonicalRuleKey: "a11y/form-textarea-submit", ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: "medium", severity: "minor", findingClass: 'a11y', registryScope: "forms-textarea-submit", evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "a11y.form-no-pre-disable-submit", sourceRuleAliases: ["extended-domain:FORMS_017", "FORMS_017"], canonicalRuleKey: "a11y/form-no-pre-disable-submit", ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: "medium", severity: "minor", findingClass: 'a11y', registryScope: "forms-no-pre-disable", evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "a11y.form-autofocus-sparingly", sourceRuleAliases: ["extended-domain:FORMS_020", "FORMS_020"], canonicalRuleKey: "a11y/form-autofocus-sparingly", ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: "low", severity: "advisory", findingClass: 'a11y', registryScope: "forms-autofocus", evidenceRequirements: ['markup'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
     ];
     // owner theming (2)
     const theming = [
@@ -134,11 +165,19 @@ run();
         ap('anti-pattern.gradient-text', 'anti-pattern/gradient-text', 'gradient-text', 'P1', 'major', 'file', 'css-rule'),
         ap('anti-pattern.glassmorphism-default', 'anti-pattern/glassmorphism-default', 'glassmorphism-default', 'P1', 'major', 'file', 'css-rule'),
         ap('anti-pattern.side-stripe-borders', 'anti-pattern/side-stripe-borders', 'side-stripe-borders', 'P1', 'major', 'file', 'css-rule'),
-        ap('anti-pattern.identical-card-grids', 'anti-pattern/identical-card-grids', 'identical-card-grids', 'P1', 'minor', 'project', 'markup', OVERRIDE_REASON),
         ap('anti-pattern.hero-metric-template', 'anti-pattern/hero-metric-template', 'hero-metric-template', 'P1', 'minor', 'project', 'markup', OVERRIDE_REASON),
         ap('anti-pattern.modal-as-first-thought', 'anti-pattern/modal-as-first-thought', 'modal-as-first-thought', 'P2', 'minor', 'project', 'markup'),
     ];
-    const EXPECTED_RULES = [...polish, ...a11y, ...theming, ...antiPattern];
+    // owner page-quality (6): cherry-picked DOM-evidence Tier-2 keepers (Stage 2 convergence)
+    const pageQuality = [
+        { ruleId: "perf.image-dimensions", sourceRuleAliases: ["extended-domain:IMGPERF_001", "IMGPERF_001"], canonicalRuleKey: "perf/image-dimensions", ownerValidatorId: 'page-quality', sourceVocabulary: 'extended-domain', sourceSeverity: "high", severity: "major", findingClass: "polish", registryScope: "pq-image-dimensions", evidenceRequirements: ["markup"], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)("markup"), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "perf.image-lazy-load", sourceRuleAliases: ["extended-domain:IMGPERF_002", "IMGPERF_002"], canonicalRuleKey: "perf/image-lazy-load", ownerValidatorId: 'page-quality', sourceVocabulary: 'extended-domain', sourceSeverity: "medium", severity: "minor", findingClass: "polish", registryScope: "pq-image-lazy", evidenceRequirements: ["markup"], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)("markup"), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "polish.text-overflow-strategy", sourceRuleAliases: ["extended-domain:CONTENT_002", "CONTENT_002"], canonicalRuleKey: "polish/text-overflow-strategy", ownerValidatorId: 'page-quality', sourceVocabulary: 'extended-domain', sourceSeverity: "medium", severity: "minor", findingClass: "polish", registryScope: "pq-text-overflow", evidenceRequirements: ["css-rule"], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)("css-rule"), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "theming.color-scheme-dark", sourceRuleAliases: ["extended-domain:DARKMODE_001", "DARKMODE_001"], canonicalRuleKey: "theming/color-scheme-dark", ownerValidatorId: 'page-quality', sourceVocabulary: 'extended-domain', sourceSeverity: "medium", severity: "minor", findingClass: "theming", registryScope: "pq-color-scheme", evidenceRequirements: ["css-rule"], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)("css-rule"), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "a11y.chart-text-fallback", sourceRuleAliases: ["extended-domain:CHART_003", "CHART_003"], canonicalRuleKey: "a11y/chart-text-fallback", ownerValidatorId: 'page-quality', sourceVocabulary: 'extended-domain', sourceSeverity: "medium", severity: "minor", findingClass: "a11y", registryScope: "pq-chart-fallback", evidenceRequirements: ["markup"], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)("markup"), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+        { ruleId: "a11y.button-label-specific", sourceRuleAliases: ["extended-domain:COPY_003", "COPY_003"], canonicalRuleKey: "a11y/button-label-specific", ownerValidatorId: 'page-quality', sourceVocabulary: 'extended-domain', sourceSeverity: "medium", severity: "minor", findingClass: "a11y", registryScope: "pq-button-label", evidenceRequirements: ["markup"], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)("markup"), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+    ];
+    const EXPECTED_RULES = [...polish, ...a11y, ...theming, ...antiPattern, ...pageQuality];
     const FIELD_ORDER = [
         'ruleId', 'sourceRuleAliases', 'canonicalRuleKey', 'ownerValidatorId', 'sourceVocabulary', 'sourceSeverity',
         'severity', 'severityOverrideReason', 'findingClass', 'registryScope', 'evidenceRequirements',
@@ -176,6 +215,8 @@ run();
         ['polish-standard:20', 'POLISH_020', 'a11y/color-contrast'],
         ['polish-standard:21', 'POLISH_021', 'polish/state-completeness'],
         ['polish-standard:22', 'POLISH_022', 'polish/anti-pattern-genericity'],
+        ['polish-standard:23', 'POLISH_023', 'polish/interruptible-animations'],
+        ['polish-standard:24', 'POLISH_024', 'polish/skip-load-animation'],
     ];
     for (const [numeric, extended, key] of EXPECTED_POLISH_ALIAS_PAIRS) {
         if ((0, product_rule_registry_1.resolveSourceAlias)(numeric)?.canonicalRuleKey !== key)
@@ -183,22 +224,29 @@ run();
         if ((0, product_rule_registry_1.resolveSourceAlias)(extended)?.canonicalRuleKey !== key)
             throw new Error(`bad alias ${extended}`);
     }
-    if (product_rule_registry_1.RULES.length !== 30)
-        throw new Error(`expected 30 canonical rules, got ${product_rule_registry_1.RULES.length}`);
+    if (product_rule_registry_1.RULES.length !== 59)
+        throw new Error(`expected 59 canonical rules, got ${product_rule_registry_1.RULES.length}`); // 58 -> 59: +polish.marketing-buzzword (Stage 5a rendered-scan, 2026-06-25); 52 -> 58: +6 page-quality Tier-2 keepers (Stage 2, 2026-06-25); 41->52 = 11 more forms; 36->41 = first 5 forms; 31->36 = Stage 1 rendered
     const owners = (id) => product_rule_registry_1.RULES.filter((r) => r.ownerValidatorId === id);
-    if (owners('polish-standard').length !== 19)
-        throw new Error('polish-standard must own 19 rules');
-    if (owners('static-a11y').length !== 3)
-        throw new Error('static-a11y must own 3 rules');
+    if (owners('polish-standard').length !== 23)
+        throw new Error('polish-standard must own 23 rules');
+    if (owners('static-a11y').length !== 7)
+        throw new Error('static-a11y must own 7 rules');
+    if (owners('forms').length !== 16)
+        throw new Error('forms must own 16 absorbed forms-a11y rules'); // Stage 2 dedicated forms validator (5 + 11 batch 2)
+    if (owners('page-quality').length !== 6)
+        throw new Error('page-quality must own 6 Tier-2 keeper rules'); // Stage 2 cherry-picked DOM-evidence keepers
     if (owners('theming').length !== 2)
         throw new Error('theming must own 2 rules');
-    if (owners('anti-pattern').length !== 6)
-        throw new Error('anti-pattern must own 6 rules');
+    if (owners('anti-pattern').length !== 5)
+        throw new Error('anti-pattern must own 5 rules'); // 6 -> 5: identical-card-grids DELETED (Stage-2)
     const contrast = (0, product_rule_registry_1.getRuleById)('a11y.color-contrast');
     if (!contrast || contrast.ownerValidatorId !== 'static-a11y')
         throw new Error('color-contrast owned by static-a11y');
+    // Stage 6: color-contrast is rendered-scan-backed (non-static), promoted-required only when a renderUrl is present.
     if ((0, product_rule_types_1.isStaticallySatisfiable)(contrast.evidenceRequirements))
-        throw new Error('color-contrast must be non-required (contrast-only)');
+        throw new Error('color-contrast must be non-static (rendered-scan-backed)');
+    if (contrast.evidenceRequirements[0] !== 'rendered-scan')
+        throw new Error('color-contrast must declare rendered-scan evidence after Stage 6 migration');
     const hero = (0, product_rule_registry_1.getRuleById)('anti-pattern.hero-metric-template');
     if (!hero || hero.severity !== 'minor' || !hero.severityOverrideReason)
         throw new Error('hero-metric-template must declare a minor override with a reason');

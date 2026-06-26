@@ -1,0 +1,178 @@
+{
+  "generatedUtc": "2026-06-24T15:33:35.801Z",
+  "mode": "dev",
+  "note": "CSS-observable motion GT (scripts-stripped). layout-transition = observed sibling/own-size reflow; bounce-easing = observed overshoot OR overshoot timing-function.",
+  "labels": {
+    "linear": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "framer": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "loom": {
+      "layoutTransition": true,
+      "layoutEvidence": {
+        "sel": "div.ChatUnfurlAnimation_myBubble___VLkE",
+        "siblingTopRange": 32
+      },
+      "bounceEasing": true,
+      "bounceObserved": true,
+      "bounceCurve": false
+    },
+    "retool": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "clerk": {
+      "layoutTransition": true,
+      "layoutEvidence": {
+        "sel": "div",
+        "ownWidthRange": 134,
+        "ownHeightRange": 145
+      },
+      "bounceEasing": true,
+      "bounceObserved": true,
+      "bounceCurve": false
+    },
+    "resend": {
+      "layoutTransition": true,
+      "layoutEvidence": {
+        "sel": "a.relative",
+        "siblingTopRange": 8
+      },
+      "bounceEasing": true,
+      "bounceObserved": true,
+      "bounceCurve": false
+    },
+    "railway": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "supabase": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "posthog": {
+      "layoutTransition": true,
+      "layoutEvidence": {
+        "sel": "svg",
+        "ownWidthRange": 20,
+        "ownHeightRange": 15
+      },
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "calcom": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "dub": {
+      "layoutTransition": true,
+      "layoutEvidence": {
+        "sel": "a.group",
+        "siblingTopRange": 19
+      },
+      "bounceEasing": true,
+      "bounceObserved": true,
+      "bounceCurve": false
+    },
+    "raycast": {
+      "layoutTransition": true,
+      "layoutEvidence": {
+        "sel": "div.ExtensionHighlight_extensionCardWrapper__BE6OW",
+        "siblingTopRange": 49
+      },
+      "bounceEasing": true,
+      "bounceObserved": true,
+      "bounceCurve": false
+    },
+    "neon": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "upstash": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "liveblocks": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "trigger": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "inngest": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "knock": {
+      "layoutTransition": true,
+      "layoutEvidence": {
+        "sel": "span",
+        "ownWidthRange": 7,
+        "ownHeightRange": 7
+      },
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "hightouch": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mintlify": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "fly": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    }
+  }
+}

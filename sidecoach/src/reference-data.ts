@@ -510,6 +510,74 @@ export class ReferenceDataService {
         variants: ['closeable', 'non_closeable', 'input_chip'],
         constraints: ['40x40px minimum delete button', 'Keyboard delete support'],
       },
+
+      // APPENDED 2026-06-23 (Jonah Cohen): real component.gallery types from the
+      // component-gallery-reference skill's Step-1 type table. PROVENANCE (self-documenting):
+      //  - name + "user says" synonyms + gallery slug: VERBATIM from the component-gallery skill.
+      //  - systems: the single honest provenance 'component.gallery' (no unverified systems claimed).
+      //  - accessibility / variants / constraints: follow the W3C ARIA Authoring Practices
+      //    Guide (APG) conventions for each pattern (an authoritative source) - not invented.
+      // Purely additive: no existing entry was modified.
+      combobox: {
+        name: 'Combobox',
+        type: 'form_component',
+        systems: ['component.gallery'],
+        description: 'Text input combined with a filtered list of suggestions (autocomplete / autosuggest)',
+        accessibility: 'ARIA combobox pattern: role="combobox", aria-expanded, aria-controls, aria-activedescendant; arrow-key navigation of options',
+        implementation: 'Input + popup listbox, filters options as the user types; gallery slug /components/combobox/',
+        variants: ['single_select', 'multi_select', 'async_loaded'],
+        constraints: ['Keyboard arrow + Enter selection', 'Announce result count to screen readers', 'Visible focus on active option'],
+      },
+      spinner: {
+        name: 'Spinner',
+        type: 'feedback_component',
+        systems: ['component.gallery'],
+        description: 'Indeterminate loading indicator (loading / loader)',
+        accessibility: 'role="status" with aria-live="polite" and an accessible label; respect prefers-reduced-motion',
+        implementation: 'Animated indicator shown while content loads; gallery slug /components/spinner/',
+        variants: ['indeterminate', 'determinate', 'inline', 'overlay'],
+        constraints: ['Accessible loading label', 'Honor prefers-reduced-motion', 'Avoid layout shift when content arrives'],
+      },
+      separator: {
+        name: 'Separator',
+        type: 'data_display_component',
+        systems: ['component.gallery'],
+        description: 'Visual divider between content groups (divider / horizontal rule)',
+        accessibility: 'Semantic <hr> or role="separator" with aria-orientation; decorative separators marked aria-hidden',
+        implementation: 'Thin rule or spacing between sections; gallery slug /components/separator/',
+        variants: ['horizontal', 'vertical', 'with_label'],
+        constraints: ['1px hairline, not heavier', 'Do not overuse - whitespace often suffices'],
+      },
+      hero: {
+        name: 'Hero',
+        type: 'container_component',
+        systems: ['component.gallery'],
+        description: 'Prominent above-the-fold introductory section (jumbotron)',
+        accessibility: 'Semantic landmark/section with a single h1, sufficient contrast over any background media',
+        implementation: 'Headline + supporting copy + primary CTA, optionally over media or a background; gallery slug /components/hero/',
+        variants: ['centered', 'split', 'with_media', 'with_background'],
+        constraints: ['One primary CTA', 'Maintain contrast over imagery', 'text-wrap: balance on the headline'],
+      },
+      carousel: {
+        name: 'Carousel',
+        type: 'data_display_component',
+        systems: ['component.gallery'],
+        description: 'Rotating set of slides or cards (content slider)',
+        accessibility: 'ARIA carousel: role="group"/region, tablist for dot controls, keyboard navigation, pause control, respect prefers-reduced-motion',
+        implementation: 'Horizontally paged slides with prev/next + indicators; gallery slug /components/carousel/',
+        variants: ['slides', 'cards', 'autoplay'],
+        constraints: ['Provide pause/stop for autoplay', 'Keyboard reachable controls', 'Honor prefers-reduced-motion'],
+      },
+      segmented_control: {
+        name: 'Segmented Control',
+        type: 'action_component',
+        systems: ['component.gallery'],
+        description: 'Compact set of mutually-exclusive options shown inline (toggle button group)',
+        accessibility: 'role="radiogroup" with role="radio" segments (or a styled radio set); arrow-key navigation between segments',
+        implementation: 'Inline segments where exactly one is selected; gallery slug /components/segmented-control/',
+        variants: ['two_segment', 'multi_segment', 'icon', 'with_label'],
+        constraints: ['44x44px minimum per segment', 'Single selection enforced', 'Clear selected-state contrast'],
+      },
     };
   }
 

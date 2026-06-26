@@ -1,0 +1,24 @@
+#!/bin/sh
+# cmux PATH shim.
+#
+# Why this exists: cmux launches `claude` with hooks of the form
+#   "${CMUX_CLAUDE_HOOK_CMUX_BIN:-cmux}" hooks claude stop
+# When CMUX_CLAUDE_HOOK_CMUX_BIN is empty/unset at hook-run time the command
+# falls back to the bare name `cmux`, which is not installed on PATH anywhere
+# on this machine, producing "/bin/sh: cmux: command not found" (exit 127) so
+# every cmux Stop/SessionStart/etc. hook fails. This shim lives in
+# ~/.claude/cmux (a dir already on PATH, symlinked into the dotfiles repo), so
+# the bare-name fallback always resolves to the real bundled binary instead.
+# It only ever exec's an absolute path, never the bare name, so no recursion.
+# Verified + reproduced 2026-06-25.
+for c in \
+  "${CMUX_CLAUDE_HOOK_CMUX_BIN:-}" \
+  "${CMUX_BUNDLED_CLI_PATH:-}" \
+  "${CMUX_CLAUDE_TEAMS_CMUX_BIN:-}" \
+  "${CMUX_AGENT_LAUNCH_EXECUTABLE:-}" \
+  "/Applications/cmux.app/Contents/Resources/bin/cmux"
+do
+  [ -n "$c" ] && [ -x "$c" ] && exec "$c" "$@"
+done
+echo "cmux shim: no cmux binary found (checked CMUX_* env + /Applications/cmux.app)" >&2
+exit 127

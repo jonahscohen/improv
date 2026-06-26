@@ -50,6 +50,7 @@ const session_memory_writer_1 = require("./session-memory-writer");
 const slash_command_router_1 = require("./slash-command-router");
 const lanes_generated_1 = require("./lanes.generated");
 const lane_convergence_preflight_1 = require("./lane-convergence-preflight");
+const reference_preflight_artifacts_1 = require("./reference-preflight-artifacts");
 const path = __importStar(require("path"));
 const crypto_1 = require("crypto");
 const sidecoach_entry_point_1 = require("./sidecoach-entry-point");
@@ -496,7 +497,19 @@ class FlowExecutionEngine {
         const enrichedProjectContext = {
             ...(context.projectContext || {}),
             register: context.projectContext?.register || loaded.register,
-            product: context.projectContext?.product || { content: loaded.productContent },
+            // MERGE the STRUCTURED product (brandPersonality, antiReferences, ...) parsed from
+            // PRODUCT.md UNDER any caller-supplied product. Six handlers (flowC font-research,
+            // flowB component-research, flowE motion-patterns, copywriting, motion-integration,
+            // brand-verify) gate on product.brandPersonality and silently saw undefined when
+            // only { content } was set - so e.g. flowC degraded to needs_input in production even
+            // after being routed into a lane. Merging (not replacing) also fills brandPersonality
+            // for a PARTIAL caller product like {} or { content }; caller fields win; raw content
+            // is always retained. (Codex review 2026-06-23, findings 2 + 6.)
+            product: {
+                ...(loaded.product || {}),
+                content: loaded.productContent,
+                ...(context.projectContext?.product || {}),
+            },
         };
         return {
             ...context,
@@ -1502,6 +1515,22 @@ class FlowExecutionEngine {
                 throw new Error(pf.message);
         }
         const started = await laneRunner.startLane(laneId, target, { ...context, projectPath }, startRequestId, this.laneDeps(projectPath), renderUrl);
+        // Deliverable B: auto-inject the reference-system preflight for build/refinement
+        // lanes, REGARDLESS of which verbs the chain routes. Additive + soft-fail: the
+        // gatherer runs every system under Promise.allSettled and this try/catch is a final
+        // belt-and-braces guard so a reference failure can never block lane start.
+        if (REFERENCE_PREFLIGHT_LANES.has(laneId)) {
+            try {
+                started.referencePreflight = await (0, reference_preflight_artifacts_1.gatherReferencePreflightArtifacts)({
+                    projectPath,
+                    register: context?.projectContext?.register,
+                    target,
+                });
+            }
+            catch (e) {
+                started.referencePreflight = { artifacts: [], warnings: [`reference-preflight error: ${e.message}`] };
+            }
+        }
         try {
             started.panel = (0, panel_renderer_1.renderSidecoachPanel)((0, panel_model_1.laneStepToPanelModel)(started));
         }
@@ -1580,6 +1609,12 @@ class FlowExecutionEngine {
     }
 }
 exports.FlowExecutionEngine = FlowExecutionEngine;
+// Build + refinement lanes that receive the lane-start reference preflight
+// (deliverable B). Every sidecoach lane is design build/refinement work, so all six
+// qualify; listed explicitly so a future non-design lane is opted in deliberately.
+const REFERENCE_PREFLIGHT_LANES = new Set([
+    'lane_build', 'lane_delight', 'lane_live', 'lane_calm', 'lane_ship', 'lane_converge',
+]);
 // module-level helper: deterministic start-request id from phrase + project so a
 // literal retry of the same phrase does not create a second lane. Canonicalize the
 // project path (realpath) so it keys on the SAME canonical path the checkpoint

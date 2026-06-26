@@ -52,6 +52,6 @@ Sidecoach has tier 1 (DESIGN.md) and tier 3 (the 36 flows). Tier 2 has been impl
 
 ---
 
-## SECTION 3: What this covers that impeccable + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
 
-The three-tier mental model (system / fundamentals / vertical) and the explicit conflict-resolution priority. Impeccable's commands implicitly operate across all three tiers without naming the distinction. Make-interfaces-feel-better is tier 2 (fundamentals) tactical-only. TypeUI separates the layers so when an audit flags a conflict, you know which tier overrides.
+The three-tier mental model (system / fundamentals / vertical) and the explicit conflict-resolution priority. Oracle's commands implicitly operate across all three tiers without naming the distinction. Make-interfaces-feel-better is tier 2 (fundamentals) tactical-only. TypeUI separates the layers so when an audit flags a conflict, you know which tier overrides.

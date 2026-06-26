@@ -49,7 +49,7 @@ The skill maintains an explicit list of typefaces that are training-data default
 
 (Identity-preservation still wins if the brand has already committed to one of these.)
 
-## Anti-reflex rules (from impeccable's typography.md)
+## Anti-reflex rules (from oracle's typography.md)
 
 | Brief type | Common reflex | Why wrong |
 |---|---|---|

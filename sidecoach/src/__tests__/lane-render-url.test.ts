@@ -12,7 +12,8 @@ import { makeProductValidator } from '../validators/run-validator';
 import type { StepReport, LaneStepResult } from '../lane-types';
 import type { ProductValidationResult } from '../product-rule-types';
 
-const BROWSER_RULES = ['polish.concentric-radius', 'polish.typography-rhythm', 'a11y.min-hit-area', 'a11y.color-contrast'];
+// a11y.color-contrast dropped: Stage 6 migrated it to the rendered scan, so it is no longer browser-backed.
+const BROWSER_RULES = ['polish.concentric-radius', 'polish.typography-rhythm', 'a11y.min-hit-area'];
 
 const mkproj = () => fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-ru-')));
 const cleanResult = (): ProductValidationResult => ({

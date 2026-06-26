@@ -28,7 +28,7 @@ Human collaborator: Jonah.
 - ContextLoader.load() now recognizes PRODUCT.md in teach v2 section-header format. Existing YAML-style or key:value-style PRODUCT.md files still parse via the existing path.
 - engine.process() auto-stages context.metadata.designTokens from DESIGN.md when DESIGN.md is present and caller hasn't pre-staged. Explicit caller metadata wins.
 - flow-prerequisites.ts::validateContextRequirements now consults `context.metadata[req]` as a fallback when `context[req]` is absent.
-- Chain executor (for impeccable verb commands) does NOT halt on a flow error. Errored flows produce error-status FlowExecutionResults; downstream flows still attempt.
+- Chain executor (for oracle verb commands) does NOT halt on a flow error. Errored flows produce error-status FlowExecutionResults; downstream flows still attempt.
 
 ## Dogfood comparison (Sprint 8 -> Sprint 9)
 
@@ -46,7 +46,7 @@ All 3 targeted bugs are demonstrably fixed.
 
 ## Bug surfaced during dogfood verification (filed for Sprint 10)
 
-The impeccable registry's craft entry declares 5 flowIds: `[flowF, flowG, flowH, flowI, flowJ]`. Sprint 9's dogfood + T3 test both observe only 4 flows actually running: `[flowA prereq, flowF, flowG, flowJ]`. flowH (motion-integration) and flowI (accessibility) are missing from the chain output.
+The oracle registry's craft entry declares 5 flowIds: `[flowF, flowG, flowH, flowI, flowJ]`. Sprint 9's dogfood + T3 test both observe only 4 flows actually running: `[flowA prereq, flowF, flowG, flowJ]`. flowH (motion-integration) and flowI (accessibility) are missing from the chain output.
 
 Possible causes (Sprint 10 should investigate):
 - Handlers for flowH or flowI may not be registered in the engine's handlers map
@@ -60,7 +60,7 @@ This is a HIGH-confidence bug to investigate first in Sprint 10. The fact that b
 ## Out of scope / future (Sprint 10 + beyond)
 
 - Investigate why flowH and flowI aren't appearing in the craft chain (filed above)
-- BuildReport verdict shows "(none)" for impeccable verb chains - metadata.emitBuildReport may not propagate through the chain executor path
+- BuildReport verdict shows "(none)" for oracle verb chains - metadata.emitBuildReport may not propagate through the chain executor path
 - Refactoring ContextLoader (in project-context.ts) and buildProjectContext (in context-loader.ts) into a single context system - they currently duplicate
 - Dependency-aware chain execution (e.g. flowG declares "requires designTokens"; if flowF errored, flowG skips automatically)
 - flowA still shows "Personality: " empty in output even though PRODUCT.md has the Brand Personality section - parser captures `brandpersonality` lowercased key but flowA reads a different key. Minor parser/consumer mismatch.

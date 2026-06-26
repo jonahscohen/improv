@@ -125,7 +125,7 @@ exports.FLOW_MODELS = {
     flowJ_tactical_polish: {
         minTier: 'sonnet',
         preferredTier: 'opus',
-        rationale: 'POLISH - 112-rule synthesis across Polish Standard + Extended Domains + linguistic bans',
+        rationale: 'POLISH - multi-rule synthesis across Polish Standard + Extended Domains + linguistic bans',
     },
     flowK_multi_lens_audit: {
         minTier: 'haiku',

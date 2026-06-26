@@ -1,0 +1,143 @@
+{
+  "pinned": true,
+  "pinnedUtc": "2026-06-24T18:30:00.000Z",
+  "pinnedReason": "Lead-reviewed roll frozen for reproducibility: the tool-blind Codex pass is non-deterministic on borderline rules (oracle border-accent-on-rounded). scorecard-semantic-pass.mjs refuses to regenerate while pinned; map+score fold this committed artifact deterministically. Re-roll with --force, then re-pin after lead review.",
+  "generatedUtc": "2026-06-24T18:07:04.815Z",
+  "labeledBy": "codex",
+  "method": "symmetric per-rule Codex semantic pass over UNMAPPED rules of BOTH tools; identical tool-agnostic prompt template; namespace prefix stripped so the model is blind to tool lineage; each rule described in its OWN tool source words (rule-descriptions.json, cited); Codex decides matchedClass/null + confidence + reasoning; NOTHING auto-mapped by the architect",
+  "rubricSha": "41d3a966a90a5076",
+  "descriptionsSha": "1772932f0f184e98",
+  "promptTemplateSample": "You are judging whether a design-lint RULE detects the SAME design idiom as any class in a fixed ground-truth taxonomy. Judge ONLY by the underlying idiom the rule targets versus what each class describes. IGNORE name similarity and wording overlap - a shared word is not a match, and a different name is not a non-match. Two entries match only if a designer would say they flag the same visual/textual idiom.\n\nRULE: <RULE>\nWhat it flags: <DESC>\n\nGROUND-TRUTH CLASSES:\n- broken-image: an image element that renders as a broken or placeholder box (empty, missing, or placeholder source).\n- justified-text: body text set with justified alignment, producing uneven inter-word spacing.\n- skipped-heading: the heading outline skips a level (for example an h1 followed directly by an h3).\n- low-contrast: text whose contrast against its background falls below the WCAG AA ratio.\n- gray-on-color: gray text placed on a colored background, reading as washed out / low contrast.\n- cream-palette: the dominant background is an off-white cream / sand / ivory tone rather than pure white or a saturated color.\n- ai-color-palette: the color scheme reads as a generic \"AI-generated default\" combination (e.g. purple/indigo-to-blue with teal or violet accents) of the kind default AI design tools tend to produce.\n- hero-eyebrow-chip: a small pill or chip sits above the main hero headline as an introductory tag/label (\"eyebrow\").\n- repeated-section-kickers: most sections are introduced by a small repeated label/kicker above the heading, used as a template across the page.\n- numbered-section-markers: sections or items are marked with prominent decorative numerals (01, 02, 03...) as an organizing motif.\n- icon-tile-stack: features are presented as a uniform grid/row of tiles, each led by a small icon in a rounded square, stacked consistently.\n- italic-serif-display: large display headings use an italic serif as the signature typographic gesture.\n- nested-cards: cards appear inside other cards - layered bordered containers holding sub-containers.\n- side-stripe-borders: a colored vertical stripe / side accent border on cards or callouts recurs as a motif.\n- glassmorphism-default: frosted-glass surfaces (semi-transparent panels with a blurred backdrop) are used as the default surface treatment.\n- hero-metric-template: the hero showcases a row of large numbers/stats (users, uptime, ratings) as a templated trust device.\n- gradient-text: headline or display text is filled with a color gradient instead of a single solid color.\n- marketing-buzzword: the copy leans on generic marketing buzzwords (seamless, powerful, innovative, effortless, revolutionary) rather than concrete specifics.\n- aphoristic-cadence: copy is written as short punchy fragments in a clipped rhythmic cadence (\"Build faster. Ship smarter. Scale effortlessly.\").\n- dark-glow: a dark theme with glowing / neon accents (glow shadows, neon gradients, luminous buttons) as the signature look.\n- tiny-text: text set small enough that it strains readability for typical users (notably small body or interface text).\n- wide-tracking: letter-spacing loosened enough to noticeably space out words beyond comfortable reading (set aside conventional small-caps/label spacing, which is normal).\n- all-caps-body: running body text (sentences/paragraphs, not short labels) set entirely in capitals, which slows reading.\n- layout-transition: animated motion that changes elements' size or position in a way that shifts the surrounding content (as opposed to motion that only fades or transforms in place).\n- bounce-easing: motion that overshoots and springs back - a bouncy / elastic animation character.\n- tight-leading: line spacing on running text set tight enough that the lines feel crowded and harder to read.\n- extreme-negative-tracking: letters pulled together strongly enough that they crowd or visually touch.\n\nDoes this rule detect the same idiom as exactly one of these classes? If it could fit more than one, pick the single closest. If it fits none, answer null. Do NOT force a match.\n\nOutput ONLY this JSON object on the final line, nothing after it:\n{\"matchedClass\": <exact class name in quotes, or null>, \"confidence\": \"high\"|\"medium\"|\"low\", \"reasoning\": \"<one sentence>\"}",
+  "classesPresented": {
+    "objective": [
+      "broken-image",
+      "justified-text",
+      "skipped-heading",
+      "low-contrast",
+      "gray-on-color"
+    ],
+    "subjective": [
+      "cream-palette",
+      "ai-color-palette",
+      "hero-eyebrow-chip",
+      "repeated-section-kickers",
+      "numbered-section-markers",
+      "icon-tile-stack",
+      "italic-serif-display",
+      "nested-cards",
+      "side-stripe-borders",
+      "glassmorphism-default",
+      "hero-metric-template",
+      "gradient-text",
+      "marketing-buzzword",
+      "aphoristic-cadence",
+      "dark-glow",
+      "tiny-text",
+      "wide-tracking",
+      "all-caps-body",
+      "layout-transition",
+      "bounce-easing",
+      "tight-leading",
+      "extreme-negative-tracking"
+    ]
+  },
+  "results": [
+    {
+      "tool": "sidecoach",
+      "rule": "modal-as-first-thought",
+      "source": "src/reference-loader.ts:323",
+      "matchedClass": null,
+      "confidence": "high",
+      "reasoning": "The rule targets interaction-pattern overuse of modals instead of inline/progressive UI, which is not the same idiom as any listed visual, typography, copy, motion, or layout class."
+    },
+    {
+      "tool": "sidecoach",
+      "rule": "taste/border-radius-inconsistency",
+      "source": "src/taste-validator.ts:306",
+      "matchedClass": null,
+      "confidence": "high",
+      "reasoning": "The rule targets inconsistent use of border-radius values/design tokens, which is not the same visual or textual idiom as any listed class."
+    },
+    {
+      "tool": "sidecoach",
+      "rule": "taste/hero-radial-blob",
+      "source": "src/taste-validator.ts:216",
+      "matchedClass": null,
+      "confidence": "high",
+      "reasoning": "The rule targets a radial-gradient blob backdrop in a hero/banner, while none of the classes specifically describe hero gradient blobs or decorative radial backgrounds."
+    },
+    {
+      "tool": "sidecoach",
+      "rule": "taste/large-inline-style",
+      "source": "src/taste-validator.ts:197",
+      "matchedClass": null,
+      "confidence": "high",
+      "reasoning": "The rule targets a code organization issue for CSS placement, not any visible visual or textual design idiom in the taxonomy."
+    },
+    {
+      "tool": "sidecoach",
+      "rule": "taste/translatey-in-hover",
+      "source": "src/taste-validator.ts:177",
+      "matchedClass": null,
+      "confidence": "high",
+      "reasoning": "The rule targets a hover lift microinteraction using translateY, while none of the taxonomy classes describe that idiom."
+    },
+    {
+      "tool": "oracle",
+      "rule": "border-accent-on-rounded",
+      "source": "detector/registry/antipatterns.mjs:13 (verbatim)",
+      "matchedClass": null,
+      "confidence": "high",
+      "reasoning": "The rule targets a thick all-around accent border on a rounded card, while the closest taxonomy item is specifically a recurring vertical side stripe/side accent motif, which is a different idiom."
+    },
+    {
+      "tool": "oracle",
+      "rule": "em-dash-overuse",
+      "source": "detector/registry/antipatterns.mjs:159",
+      "matchedClass": null,
+      "confidence": "high",
+      "reasoning": "The rule targets overuse of em-dash punctuation in body copy, which is not the same idiom as any listed visual or copy-pattern class."
+    },
+    {
+      "tool": "oracle",
+      "rule": "flat-type-hierarchy",
+      "source": "detector/registry/antipatterns.mjs:40",
+      "matchedClass": null,
+      "confidence": "high",
+      "reasoning": "The rule targets insufficient contrast between typographic sizes in a visual hierarchy, which is distinct from semantic heading skips, tiny text, or other typography issues listed."
+    },
+    {
+      "tool": "oracle",
+      "rule": "monotonous-spacing",
+      "source": "detector/registry/antipatterns.mjs:85",
+      "matchedClass": null,
+      "confidence": "high",
+      "reasoning": "The rule targets repetitive uniform layout spacing/rhythm, while none of the taxonomy classes describe that same spacing-system idiom."
+    },
+    {
+      "tool": "oracle",
+      "rule": "overused-font",
+      "source": "detector/registry/antipatterns.mjs:22",
+      "matchedClass": null,
+      "confidence": "high",
+      "reasoning": "The rule targets generic overused font-family choices, while none of the taxonomy classes flag font-family distinctiveness as the idiom."
+    },
+    {
+      "tool": "oracle",
+      "rule": "side-tab",
+      "source": "detector/registry/antipatterns.mjs:4 (verbatim)",
+      "matchedClass": "side-stripe-borders",
+      "confidence": "high",
+      "reasoning": "Both target the same one-sided colored accent stripe or border used on cards/callouts as a recurring visual motif."
+    }
+  ],
+  "semanticMatches": [
+    {
+      "tool": "oracle",
+      "rule": "side-tab",
+      "matchedClass": "side-stripe-borders",
+      "confidence": "high"
+    }
+  ],
+  "errors": []
+}

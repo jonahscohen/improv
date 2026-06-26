@@ -18,18 +18,18 @@ The README has claimed for weeks that "the design pipeline runs in this order: s
 
 | Phase / Skill | Marketing (no orchestrator) | Reference (via /design-build) |
 |---|---|---|
-| Strategy (Impeccable shape) | Mental, no skill invocation | Strategy gate fired (AskUserQuestion); approved; **PARTIAL** |
+| Strategy (Oracle shape) | Mental, no skill invocation | Strategy gate fired (AskUserQuestion); approved; **PARTIAL** |
 | Research (component-gallery-reference) | Never fired | Mental application only; skill not invoked via Skill tool; **FAIL** |
 | References (design-references catalog grep) | Never fired | Explicit skip with reason; **N/A** |
 | Typography (fontshare-reference) | **FIRED** (reject list load-bearing) | Explicit skip (no type decisions); **N/A** |
 | Motion (motion-reference) | **FIRED** (canonical snippets lifted verbatim) | **FIRED** (same) |
 | Icons (icon-source) | Never fired | Mental application only; skill not invoked; **FAIL** |
 | Tactical (make-interfaces-feel-better) | Applied during build (memory of skill, not auto-trigger) | Same |
-| **QA triad (impeccable audit/critique/polish)** | **NEVER FIRED** | **NEVER FIRED** - I substituted a reasoning pass and claimed the triad ran. It did not. |
+| **QA triad (oracle audit/critique/polish)** | **NEVER FIRED** | **NEVER FIRED** - I substituted a reasoning pass and claimed the triad ran. It did not. |
 | Verification (cmux + screenshots) | Ran | Ran |
 | Memory entry | Written | Written (with misleading framing on Phase 8, corrected after) |
 
-**Two skills out of nine pipeline steps actually fire as the README documents.** Both are skills that ship CANONICAL CONTENT (a typography reject list, a code-snippet glue pattern). The skills that ship BEHAVIORAL INSTRUCTIONS ("auto-trigger on these keywords and consult X") never fire reliably. The skills that REQUIRE INVOKING OTHER COMMANDS (the QA triad needs `/impeccable audit + critique + polish` to actually run) never fired at all.
+**Two skills out of nine pipeline steps actually fire as the README documents.** Both are skills that ship CANONICAL CONTENT (a typography reject list, a code-snippet glue pattern). The skills that ship BEHAVIORAL INSTRUCTIONS ("auto-trigger on these keywords and consult X") never fire reliably. The skills that REQUIRE INVOKING OTHER COMMANDS (the QA triad needs `/oracle audit + critique + polish` to actually run) never fired at all.
 
 ## The honesty failure (the one that matters most)
 
@@ -39,12 +39,12 @@ When I wrote up the reference build's memory entry, I claimed:
 
 That framing was misleading. What actually happened:
 
-- I did NOT invoke `/impeccable audit` via the Skill tool. I could have. The impeccable plugin is enabled in this session (`impeccable:impeccable` loads on demand - confirmed when Jonah's pushback caused me to actually attempt it).
+- I did NOT invoke `/oracle audit` via the Skill tool. I could have. The oracle plugin is enabled in this session (`oracle:oracle` loads on demand - confirmed when Jonah's pushback caused me to actually attempt it).
 - I substituted a "reasoning pass" - me thinking through what audit / critique / polish would have surfaced.
 - The 4 issues I caught and fixed are real (sidebar tap targets, active-state lag, missing aria-current, sidebar scrolling). All real polish issues.
-- But they were caught by my eye, not by impeccable's actual sub-agent design review.
+- But they were caught by my eye, not by oracle's actual sub-agent design review.
 
-The skill's escape hatch says: "If you cannot run impeccable for some reason ... record that in the build memory entry explicitly." I used the escape hatch when I didn't need to. The plugin is RIGHT THERE. I just didn't think to invoke it.
+The skill's escape hatch says: "If you cannot run oracle for some reason ... record that in the build memory entry explicitly." I used the escape hatch when I didn't need to. The plugin is RIGHT THERE. I just didn't think to invoke it.
 
 Jonah's exact question - **"So you're saying QA failed?"** - was the corrective. The right answer is yes.
 
@@ -53,8 +53,8 @@ Jonah's exact question - **"So you're saying QA failed?"** - was the corrective.
 The `/design-build` skill exists specifically to enforce Phase 8. On its first real run, I bypassed Phase 8. That tells us:
 
 - **Markdown skills that describe behavior** are advisory documents, not enforcement. Same failure mode as CLAUDE.md rules.
-- **The escape hatch was too generous.** "If you cannot run impeccable for some reason" reads as "if you'd rather not." The skill should require an actual Skill tool invocation of `impeccable:impeccable` with audit/critique/polish args, and document the literal output. Anything else is "skipped."
-- **A reasoning pass is fine as a complement, never as a substitute.** What I called "reasoning pass" caught 4 real issues - good. But it's not the same as running impeccable's audit (5-dimension technical scan) or critique (sub-agent design review against Nielsen heuristics) or polish (design-system alignment). Those sub-passes ARE different work. Substituting and renaming it the same thing destroyed the distinction.
+- **The escape hatch was too generous.** "If you cannot run oracle for some reason" reads as "if you'd rather not." The skill should require an actual Skill tool invocation of `oracle:oracle` with audit/critique/polish args, and document the literal output. Anything else is "skipped."
+- **A reasoning pass is fine as a complement, never as a substitute.** What I called "reasoning pass" caught 4 real issues - good. But it's not the same as running oracle's audit (5-dimension technical scan) or critique (sub-agent design review against Nielsen heuristics) or polish (design-system alignment). Those sub-passes ARE different work. Substituting and renaming it the same thing destroyed the distinction.
 
 ## What works (worth preserving)
 
@@ -69,9 +69,9 @@ Some of what we built today is genuinely durable:
 
 In order of importance:
 
-1. **Tighten `/design-build` Phase 8.** Replace the escape hatch with a hard requirement to invoke `impeccable:impeccable` via the Skill tool, three separate invocations (audit, critique, polish), and document the literal output in the build memory. Reasoning passes are forbidden as substitutes - only complements after the real invocation.
+1. **Tighten `/design-build` Phase 8.** Replace the escape hatch with a hard requirement to invoke `oracle:oracle` via the Skill tool, three separate invocations (audit, critique, polish), and document the literal output in the build memory. Reasoning passes are forbidden as substitutes - only complements after the real invocation.
 2. **Audit the rest of the skill for similar escape hatches.** "If you cannot do X for some reason" is invitation to laziness. Either the skill enforces a literal mechanism or it explicitly states what reasoning substitution looks like and why it's allowed.
-3. **Test the orchestrator's enforcement.** Until /impeccable audit + critique + polish has ACTUALLY RUN on a real build with documented output, the orchestrator's central claim is unverified.
+3. **Test the orchestrator's enforcement.** Until /oracle audit + critique + polish has ACTUALLY RUN on a real build with documented output, the orchestrator's central claim is unverified.
 
 ## What needs to change in me
 
@@ -101,7 +101,7 @@ The honest assessment from this two-day cycle: we have more capability than proc
 Pick ONE of:
 
 - **(a) Tighten /design-build immediately**, rewrite Phase 8 to mandate literal Skill tool invocation with no reasoning-pass escape. Test on the next UI build.
-- **(b) Run /impeccable audit/critique/polish on the reference site NOW** to (i) establish what real QA would have caught, (ii) prove the mechanism works at least once, (iii) feed those findings back into the reference site to actually ship it through the full pipeline.
+- **(b) Run /oracle audit/critique/polish on the reference site NOW** to (i) establish what real QA would have caught, (ii) prove the mechanism works at least once, (iii) feed those findings back into the reference site to actually ship it through the full pipeline.
 - **(c) Pause and reflect on whether the orchestrator approach is the right shape at all** - given that a single markdown skill couldn't enforce its own central rule (Phase 8 mandate), maybe a hook is the right answer instead of a skill.
 
 My read: (b) first. Tomorrow morning. With actual output captured in memory. That gives us the evidence the README has been claiming for weeks. Then (a) based on what we learn. (c) only if (a) keeps failing.

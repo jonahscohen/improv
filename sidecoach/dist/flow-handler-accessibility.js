@@ -6,7 +6,6 @@ exports.FlowIAccessibilityHandler = void 0;
 exports.createFlowIHandler = createFlowIHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
-const extended_domain_validator_1 = require("./extended-domain-validator");
 const model_routing_1 = require("./model-routing");
 class FlowIAccessibilityHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
@@ -158,44 +157,11 @@ class FlowIAccessibilityHandler extends flow_handler_1.BaseFlowHandler {
                 domainAuditResults,
                 screenReaderTests,
             };
-            // Domain validation integration
-            const domainCheckContext = {
-                designTokens: context.metadata?.designTokens || {},
-                componentTree: context.metadata?.componentTree || { wcagLevel: 'AA', domains: domainAuditResults.length },
-                cssRules: context.metadata?.cssRules || [],
-                accessibility: context.metadata?.accessibility,
-                colors: context.metadata?.colors,
-                typography: context.metadata?.typography,
-                spacing: context.metadata?.spacing,
-                motion: context.metadata?.motion,
-            };
-            const extendedValidationReport = extended_domain_validator_1.ExtendedDomainValidator.validateAll(domainCheckContext);
-            const colorDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('color');
-            const typographyDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('typography');
-            const spatialDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('spatial');
-            const motionDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('motion');
-            const interactionDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('interaction');
-            const responsiveDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('responsive');
-            const writingDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('writing');
-            const colorPassRate = extendedValidationReport.passRateByDomain['color'] || '0%';
-            const typographyPassRate = extendedValidationReport.passRateByDomain['typography'] || '0%';
-            const spatialPassRate = extendedValidationReport.passRateByDomain['spatial'] || '0%';
-            const motionPassRate = extendedValidationReport.passRateByDomain['motion'] || '0%';
-            const interactionPassRate = extendedValidationReport.passRateByDomain['interaction'] || '0%';
-            const responsivePassRate = extendedValidationReport.passRateByDomain['responsive'] || '0%';
-            const writingPassRate = extendedValidationReport.passRateByDomain['writing'] || '0%';
-            const colorPassed = Math.round((parseFloat(colorPassRate) / 100) * colorDomainRules.length);
-            const typographyPassed = Math.round((parseFloat(typographyPassRate) / 100) * typographyDomainRules.length);
-            const spatialPassed = Math.round((parseFloat(spatialPassRate) / 100) * spatialDomainRules.length);
-            const motionPassed = Math.round((parseFloat(motionPassRate) / 100) * motionDomainRules.length);
-            const interactionPassed = Math.round((parseFloat(interactionPassRate) / 100) * interactionDomainRules.length);
-            const responsivePassed = Math.round((parseFloat(responsivePassRate) / 100) * responsiveDomainRules.length);
-            const writingPassed = Math.round((parseFloat(writingPassRate) / 100) * writingDomainRules.length);
             const passCount = domainAuditResults.filter((d) => d.complianceStatus === 'pass').length;
             const needsTestingCount = domainAuditResults.filter((d) => d.complianceStatus === 'needs_testing').length;
             const screenReaderToolCount = screenReaderTests.length;
             const memoryBuilder = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())
-                .setSummary(`WCAG 2.1 AA accessibility validation: 7 domains with domain validation (color: ${colorPassRate}, typography: ${typographyPassRate}, spatial: ${spatialPassRate}, motion: ${motionPassRate}, interaction: ${interactionPassRate}, responsive: ${responsivePassRate}, writing: ${writingPassRate}) + ${screenReaderToolCount} screen reader testing plans`)
+                .setSummary(`WCAG 2.1 AA accessibility validation across 7 domains + ${screenReaderToolCount} screen reader testing plans`)
                 .addRule('color', ['1.4.3 Contrast (Minimum)', '1.4.11 Non-text Contrast', '2.4.7 Focus Visible'])
                 .addRule('typography', ['1.4.8 Visual Presentation', '1.4.4 Resize text', '3.3.1 Error Identification'])
                 .addRule('spatial', ['2.5.5 Target Size (Enhanced)', '2.4.3 Focus Order', '1.3.5 Identify Input Purpose'])
@@ -205,36 +171,15 @@ class FlowIAccessibilityHandler extends flow_handler_1.BaseFlowHandler {
                 .addRule('writing', ['2.4.2 Page Titled', '2.4.6 Headings and Labels', '3.2.4 Consistent Identification', '3.3.2 Labels or Instructions'])
                 .addDecision('WCAG Compliance Level', 'WCAG 2.1 Level AA - comprehensive accessibility validation across all 7 design domains')
                 .addMetric('wcag-domains-audited', domainAuditResults.length, 'pass', 7)
-                .addMetric('color-domain-validation', colorPassed, 'pass', colorDomainRules.length)
-                .addMetric('typography-domain-validation', typographyPassed, 'pass', typographyDomainRules.length)
-                .addMetric('spatial-domain-validation', spatialPassed, 'pass', spatialDomainRules.length)
-                .addMetric('motion-domain-validation', motionPassed, 'pass', motionDomainRules.length)
-                .addMetric('interaction-domain-validation', interactionPassed, 'pass', interactionDomainRules.length)
-                .addMetric('responsive-domain-validation', responsivePassed, 'pass', responsiveDomainRules.length)
-                .addMetric('writing-domain-validation', writingPassed, 'pass', writingDomainRules.length)
                 .addMetric('domains-pass', passCount, 'pass', domainAuditResults.length)
                 .addMetric('domains-needs-testing', needsTestingCount, 'warning', domainAuditResults.length)
                 .addMetric('screen-reader-tools', screenReaderToolCount, 'pass', 3)
                 .addValidation('All 7 domains covered', domainAuditResults.length === 7 ? 'pass' : 'warning', `${domainAuditResults.length}/7 domains`)
-                .addValidation('Color domain compliance', colorPassed === colorDomainRules.length ? 'pass' : 'warning', `${colorPassed}/${colorDomainRules.length} pass`)
-                .addValidation('Typography domain compliance', typographyPassed === typographyDomainRules.length ? 'pass' : 'warning', `${typographyPassed}/${typographyDomainRules.length} pass`)
-                .addValidation('Spatial domain compliance', spatialPassed === spatialDomainRules.length ? 'pass' : 'warning', `${spatialPassed}/${spatialDomainRules.length} pass`)
-                .addValidation('Motion domain compliance', motionPassed === motionDomainRules.length ? 'pass' : 'warning', `${motionPassed}/${motionDomainRules.length} pass`)
-                .addValidation('Interaction domain compliance', interactionPassed === interactionDomainRules.length ? 'pass' : 'warning', `${interactionPassed}/${interactionDomainRules.length} pass`)
-                .addValidation('Responsive domain compliance', responsivePassed === responsiveDomainRules.length ? 'pass' : 'warning', `${responsivePassed}/${responsiveDomainRules.length} pass`)
-                .addValidation('Writing domain compliance', writingPassed === writingDomainRules.length ? 'pass' : 'warning', `${writingPassed}/${writingDomainRules.length} pass`)
                 .addValidation('Screen reader testing plan', screenReaderToolCount >= 2 ? 'pass' : 'warning', `${screenReaderToolCount} tools (min 2)`)
                 .addValidation('WCAG 2.1 AA criteria documented', true ? 'pass' : 'warning', 'All criteria mapped to domains');
             const memory = memoryBuilder.build();
             // Build checklist
             const checklist = this.createChecklist([
-                { label: 'Color domain validation', required: false, description: `${colorPassed}/${colorDomainRules.length} rules passing (${colorPassRate})` },
-                { label: 'Typography domain validation', required: false, description: `${typographyPassed}/${typographyDomainRules.length} rules passing (${typographyPassRate})` },
-                { label: 'Spatial domain validation', required: false, description: `${spatialPassed}/${spatialDomainRules.length} rules passing (${spatialPassRate})` },
-                { label: 'Motion domain validation', required: false, description: `${motionPassed}/${motionDomainRules.length} rules passing (${motionPassRate})` },
-                { label: 'Interaction domain validation', required: false, description: `${interactionPassed}/${interactionDomainRules.length} rules passing (${interactionPassRate})` },
-                { label: 'Responsive domain validation', required: false, description: `${responsivePassed}/${responsiveDomainRules.length} rules passing (${responsivePassRate})` },
-                { label: 'Writing domain validation', required: false, description: `${writingPassed}/${writingDomainRules.length} rules passing (${writingPassRate})` },
                 { label: 'Run automated a11y audit (axe, Lighthouse, WebAIM)', required: true, description: 'No critical/serious issues' },
                 { label: 'Test keyboard-only navigation', required: true, description: 'All interactive elements reachable' },
                 { label: 'Test with screen reader (VoiceOver or NVDA)', required: true, description: 'Full semantic understanding' },
@@ -251,8 +196,6 @@ class FlowIAccessibilityHandler extends flow_handler_1.BaseFlowHandler {
             // Build guidance
             const guidance = [
                 'Accessibility Target: WCAG 2.1 Level AA (required standard)',
-                '',
-                'Domain Validation Results:',
                 '',
                 'Domain-by-Domain Accessibility Audit:',
                 '',

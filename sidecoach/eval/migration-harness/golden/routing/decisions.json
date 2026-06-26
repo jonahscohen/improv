@@ -1,0 +1,1182 @@
+[
+  {
+    "prompt": "make this production-ready",
+    "outcome": "CONTEXT_CHECK",
+    "winningLane": "lane_ship",
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 3,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": [
+          "production[- ]ready"
+        ]
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "make the landing page production-ready",
+    "outcome": "ROUTE",
+    "winningLane": "lane_ship",
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 3,
+        "scope": "IN_SCOPE",
+        "evidenceIds": [
+          "production[- ]ready"
+        ]
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "The landing page is done. Make the migration production-ready.",
+    "outcome": "NUDGE_ELIGIBLE",
+    "winningLane": null,
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "OUT_OF_SCOPE",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "Don't make the API production-ready; make the landing page production-ready.",
+    "outcome": "ROUTE",
+    "winningLane": "lane_ship",
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 3,
+        "scope": "IN_SCOPE",
+        "evidenceIds": [
+          "production[- ]ready"
+        ]
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "audit this and make it production-ready",
+    "outcome": "VERB",
+    "winningLane": null,
+    "verbMatch": "audit",
+    "diagnosticLane": "lane_ship",
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 3,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": [
+          "production[- ]ready"
+        ]
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "the dashboard should feel more fun",
+    "outcome": "CLASSIFY",
+    "winningLane": "lane_delight",
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 2,
+        "scope": "IN_SCOPE",
+        "evidenceIds": [
+          "more (?:fun|playful|joyful)"
+        ]
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "refactor the database migration script",
+    "outcome": "SILENT",
+    "winningLane": null,
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "I have a TypeScript interface I need to refactor",
+    "outcome": "SILENT",
+    "winningLane": null,
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "fix the packet header parsing in the network layer",
+    "outcome": "SILENT",
+    "winningLane": null,
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "tone the hero down, it's too busy",
+    "outcome": "ROUTE",
+    "winningLane": "lane_calm",
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 3,
+        "scope": "IN_SCOPE",
+        "evidenceIds": [
+          "too (?:busy|loud|noisy|cluttered)"
+        ]
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "keep iterating on the dashboard until it passes",
+    "outcome": "ROUTE",
+    "winningLane": "lane_converge",
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 3,
+        "scope": "IN_SCOPE",
+        "evidenceIds": [
+          "until it passes",
+          "keep iterating"
+        ]
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "restyle the navbar",
+    "outcome": "NUDGE_ELIGIBLE",
+    "winningLane": null,
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "/sidecoach make this production-ready",
+    "outcome": "SILENT",
+    "winningLane": null,
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "make it production-ready, butter the migration aside",
+    "outcome": "OUT_OF_SCOPE",
+    "winningLane": null,
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "OUT_OF_SCOPE",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "make the interface production-ready",
+    "outcome": "CONTEXT_CHECK",
+    "winningLane": "lane_ship",
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 3,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": [
+          "production[- ]ready"
+        ]
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "make the user interface production-ready",
+    "outcome": "ROUTE",
+    "winningLane": "lane_ship",
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 3,
+        "scope": "IN_SCOPE",
+        "evidenceIds": [
+          "production[- ]ready"
+        ]
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "the dashboard must be production-ready and ship-ready",
+    "outcome": "ROUTE",
+    "winningLane": "lane_ship",
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 3,
+        "scope": "IN_SCOPE",
+        "evidenceIds": [
+          "production[- ]ready",
+          "ship[- ]ready"
+        ]
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "build me a dashboard from scratch and make it production-ready",
+    "outcome": "ROUTE",
+    "winningLane": "lane_build",
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 5,
+        "scope": "IN_SCOPE",
+        "evidenceIds": [
+          "from scratch",
+          "build (?:me |out )?a"
+        ]
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 3,
+        "scope": "IN_SCOPE",
+        "evidenceIds": [
+          "production[- ]ready"
+        ]
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "the spec said \"polish it\"",
+    "outcome": "SILENT",
+    "winningLane": null,
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "tell me about design system",
+    "outcome": "SILENT",
+    "winningLane": null,
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "what design system does",
+    "outcome": "SILENT",
+    "winningLane": null,
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "what design system is",
+    "outcome": "SILENT",
+    "winningLane": null,
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  },
+  {
+    "prompt": "`restyle the navbar`",
+    "outcome": "SILENT",
+    "winningLane": null,
+    "verbMatch": null,
+    "diagnosticLane": null,
+    "laneScores": [
+      {
+        "lane": "lane_build",
+        "label": "a ground-up build",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_ship",
+        "label": "a release-readiness pass",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_delight",
+        "label": "a personality pass - color, motion, delight",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_live",
+        "label": "live in-browser iteration",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_calm",
+        "label": "a tone-down pass - quiet it to essentials",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      },
+      {
+        "lane": "lane_converge",
+        "label": "iterate-until-it-passes looping",
+        "score": 0,
+        "scope": "SCOPE_UNKNOWN",
+        "evidenceIds": []
+      }
+    ],
+    "schemaVersion": 1
+  }
+]

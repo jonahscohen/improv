@@ -20,11 +20,11 @@ Human collaborator: Jonah.
 
 **Status:** DONE - 2/2 PASS, tsc clean, sprint9 regression triad (product-md-parser, design-tokens-autoload, chain-continues-past-errors) all pass.
 
-**Why:** Chain executor's executionContext literal omitted `projectContext`, so flowI's canExecute (which reads `ctx.projectContext?.register`) always saw undefined and silently dropped from impeccable verb chains.
+**Why:** Chain executor's executionContext literal omitted `projectContext`, so flowI's canExecute (which reads `ctx.projectContext?.register`) always saw undefined and silently dropped from oracle verb chains.
 
 **How:** In `sidecoach-orchestrator.ts` chain branch (~line 904), before the executionContext literal, derive `projectContextForChain` from `(context as any).projectContext` and fall back to `buildProjectContext(projectPath)` when missing (mirrors Sprint 9 T2 designTokens auto-load pattern). Added `projectContext: projectContextForChain` to the executionContext spread. `FlowExecutionContext` already declared `projectContext?: ProjectContext`, no interface change needed.
 
-**Deviation:** Plan test invoked `/sidecoach craft`, but `craft` in the impeccable registry only includes [flowA, flowF, flowG, flowJ] - NOT flowI. The flowI spy never fired with the plan's command. Switched test to `/sidecoach audit` which routes to `[flowK_multi_lens_audit, flowI_accessibility]` via impeccable registry, so the spy actually exercises the bug. Test still verifies the same property (projectContext propagates into the chain executor's executionContext for flowI's canExecute).
+**Deviation:** Plan test invoked `/sidecoach craft`, but `craft` in the oracle registry only includes [flowA, flowF, flowG, flowJ] - NOT flowI. The flowI spy never fired with the plan's command. Switched test to `/sidecoach audit` which routes to `[flowK_multi_lens_audit, flowI_accessibility]` via oracle registry, so the spy actually exercises the bug. Test still verifies the same property (projectContext propagates into the chain executor's executionContext for flowI's canExecute).
 
 Files touched (so far):
 - `sidecoach/src/__tests__/sprint10-context-propagation.test.ts` (new)
@@ -34,7 +34,7 @@ Files touched (so far):
 
 **Bug:** Chain executor's `if (handler.canExecute(enrichedCtx))` block (around line 968) had no else branch. Flows that returned `canExecute=false` silently dropped from flowResults entirely. Contributed to flowH/flowI absence in Sprint 9 dogfood results.
 
-**Status:** DONE - 3/3 PASS, tsc clean, regression triad (sprint10-context-propagation 2/2, sprint9-chain-continues-past-errors 5/5, sprint8-impeccable-parity 197/197) all pass.
+**Status:** DONE - 3/3 PASS, tsc clean, regression triad (sprint10-context-propagation 2/2, sprint9-chain-continues-past-errors 5/5, sprint8-oracle-parity 197/197) all pass.
 
 **Why:** When a chain handler's `canExecute()` returns false, the result must be observable in flowResults so callers/dogfood can tell a flow ran-but-was-skipped vs. never-considered. Silent drops were misread as missing wiring during Sprint 9 dogfood.
 
@@ -94,6 +94,6 @@ Re-ran sidecoach/src/dogfood-craft-step2.ts. Outcome: success=true, 4 of 4 flows
 
 1. flowA "Personality: " still empty. Root cause: `productMetadata.brand_personality` (empty array from the existing markdown section parser - the header `## Brand Personality` creates a section key with empty body) preempts `productMetadata.brandPersonality` (real string from teach v2 post-pass) in flowA's `||` chain. Empty arrays are truthy in JS, so `[] || 'string'` returns `[]`. Two spots in flow-handler-brand-verify.ts: line 120 (display) and line 222 (pre-flight check). Fix: reverse the order to prefer brandPersonality first.
 
-2. Registry's craft entry has only 4 flowIds (A/F/G/J), but Sprint 8 spec said 5 (adding H/I for motion + accessibility). The implementer in Sprint 8 T1 entered only 4. Per impeccable's craft.md skill which covers "shape → tokens → components → motion → accessibility → polish", craft should include motion (flowH) and accessibility (flowI). Fix: extend the registry's craft entry to include both, plus extend parityChecklist + guidanceAppend to reference them.
+2. Registry's craft entry has only 4 flowIds (A/F/G/J), but Sprint 8 spec said 5 (adding H/I for motion + accessibility). The implementer in Sprint 8 T1 entered only 4. Per oracle's craft.md skill which covers "shape → tokens → components → motion → accessibility → polish", craft should include motion (flowH) and accessibility (flowI). Fix: extend the registry's craft entry to include both, plus extend parityChecklist + guidanceAppend to reference them.
 
 Both are well-localized. Sprint 11 will fix them and re-run the dogfood per chief-architect directive.

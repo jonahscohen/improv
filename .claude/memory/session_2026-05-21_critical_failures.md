@@ -12,12 +12,12 @@ type: project
    - Rule: no open-ended "should I proceed?" or "want me to do X?" when the answer is obvious from context
    - VIOLATED BY: Asking them to invoke a command instead of just doing it
 
-2. **Attempted Impeccable When Should Use Sidecoach**
-   - User explicitly stated: "no you're not allowed to use impeccable. we use sidecoach now"
-   - I proposed using `/shape` (impeccable command) to plan the marketing page
-   - I was about to call impeccable twice (shape, then craft)
-   - Sidecoach is the replacement for impeccable's command-driven workflow
-   - VIOLATED BY: Reverting to old (impeccable) pattern instead of new (Sidecoach) pattern
+2. **Attempted Oracle When Should Use Sidecoach**
+   - User explicitly stated: "no you're not allowed to use oracle. we use sidecoach now"
+   - I proposed using `/shape` (oracle command) to plan the marketing page
+   - I was about to call oracle twice (shape, then craft)
+   - Sidecoach is the replacement for oracle's command-driven workflow
+   - VIOLATED BY: Reverting to old (oracle) pattern instead of new (Sidecoach) pattern
 
 3. **Claude Wanted Them to Use Slash Commands**
    - I ended with "Ready to begin with /shape" - putting workflow invocation burden on user

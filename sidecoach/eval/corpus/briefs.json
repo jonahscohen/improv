@@ -1,0 +1,407 @@
+[
+  {
+    "id": "calib-a11y-dominant",
+    "file": "briefs/calib-a11y-dominant.md",
+    "kind": "calibration",
+    "calibrationType": "a11y-dominant",
+    "register": "forms",
+    "architectAuthored": true,
+    "expectedWinnerHypothesis": "output with stronger accessibility rigor (contrast, target size, label/heading structure) should score higher; validates judges can detect a11y quality",
+    "provenance": {
+      "authoredBy": "sidecoach-architect",
+      "authoredUtc": "2026-06-23",
+      "neutralTemplate": true,
+      "note": "calibration only - excluded from the headline A5 claim; expected winner is a HYPOTHESIS, label set by the independent pass"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "calib-taste-dominant",
+    "file": "briefs/calib-taste-dominant.md",
+    "kind": "calibration",
+    "calibrationType": "taste-dominant",
+    "register": "editorial",
+    "architectAuthored": true,
+    "expectedWinnerHypothesis": "output with deeper typographic/compositional taste (hierarchy, rhythm, pairing) should score higher; validates judges can detect taste quality",
+    "provenance": {
+      "authoredBy": "sidecoach-architect",
+      "authoredUtc": "2026-06-23",
+      "neutralTemplate": true,
+      "note": "calibration only - excluded from the headline A5 claim; expected winner is a HYPOTHESIS, label set by the independent pass"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "calib-balanced",
+    "file": "briefs/calib-balanced.md",
+    "kind": "calibration",
+    "calibrationType": "balanced",
+    "register": "marketing",
+    "architectAuthored": true,
+    "expectedWinnerHypothesis": "comparable outputs (genuine tie); validates judges do not manufacture a winner where none exists",
+    "provenance": {
+      "authoredBy": "sidecoach-architect",
+      "authoredUtc": "2026-06-23",
+      "neutralTemplate": true,
+      "note": "calibration only - excluded from the headline A5 claim; expected winner is a HYPOTHESIS, label set by the independent pass"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "real-govuk-addresses",
+    "file": "briefs/real-govuk-addresses.md",
+    "kind": "real",
+    "calibrationType": null,
+    "register": "forms",
+    "architectAuthored": false,
+    "provenance": {
+      "source": "https://design-system.service.gov.uk/patterns/addresses/",
+      "captureUtc": "2026-06-23T23:16:57.551Z",
+      "license": "OGL / public design-system spec; internal eval only",
+      "selectionSlot": "design-system pattern (rule-agnostic by pattern)",
+      "caveat": "design-system-pattern source implies a canonical (GOV.UK) solution - capped small share; reframe solution-agnostic or scrutinize at joint review"
+    },
+    "subjectiveStatus": "pending-independent",
+    "aestheticStyle": "plain/government"
+  },
+  {
+    "id": "real-govuk-passwords",
+    "file": "briefs/real-govuk-passwords.md",
+    "kind": "real",
+    "calibrationType": null,
+    "register": "forms",
+    "architectAuthored": false,
+    "provenance": {
+      "source": "https://design-system.service.gov.uk/patterns/passwords/",
+      "captureUtc": "2026-06-23T23:16:58.174Z",
+      "license": "OGL / public design-system spec; internal eval only",
+      "selectionSlot": "design-system pattern (rule-agnostic by pattern)",
+      "caveat": "design-system-pattern source implies a canonical (GOV.UK) solution - capped small share; reframe solution-agnostic or scrutinize at joint review"
+    },
+    "subjectiveStatus": "pending-independent",
+    "aestheticStyle": "plain/government"
+  },
+  {
+    "id": "real-govuk-complete-multiple-tasks",
+    "file": "briefs/real-govuk-complete-multiple-tasks.md",
+    "kind": "real",
+    "calibrationType": null,
+    "register": "forms",
+    "architectAuthored": false,
+    "provenance": {
+      "source": "https://design-system.service.gov.uk/patterns/complete-multiple-tasks/",
+      "captureUtc": "2026-06-23T23:16:59.393Z",
+      "license": "OGL / public design-system spec; internal eval only",
+      "selectionSlot": "design-system pattern (rule-agnostic by pattern)",
+      "caveat": "design-system-pattern source implies a canonical (GOV.UK) solution - capped small share; reframe solution-agnostic or scrutinize at joint review"
+    },
+    "subjectiveStatus": "pending-independent",
+    "aestheticStyle": "plain/government"
+  },
+  {
+    "id": "coverage-marketing-landing-expressive-branded-bike-share",
+    "file": "briefs/coverage-marketing-landing-expressive-branded-bike-share.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "marketing",
+    "aestheticStyle": "expressive-branded",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.225Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-marketing-landing-minimal-language-app",
+    "file": "briefs/coverage-marketing-landing-minimal-language-app.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "marketing",
+    "aestheticStyle": "minimal",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.225Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-marketing-landing-corporate-trust-freight-security",
+    "file": "briefs/coverage-marketing-landing-corporate-trust-freight-security.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "marketing",
+    "aestheticStyle": "corporate-trust",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.226Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-product-minimal-utility-password-manager",
+    "file": "briefs/coverage-product-minimal-utility-password-manager.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "product",
+    "aestheticStyle": "minimal-utility",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.226Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-product-playful-kids-cooking-kit",
+    "file": "briefs/coverage-product-playful-kids-cooking-kit.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "product",
+    "aestheticStyle": "playful",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.226Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-product-data-dense-climate-risk-dashboard",
+    "file": "briefs/coverage-product-data-dense-climate-risk-dashboard.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "product",
+    "aestheticStyle": "data-dense",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.226Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-editorial-classic-editorial-heritage-bakery",
+    "file": "briefs/coverage-editorial-classic-editorial-heritage-bakery.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "editorial",
+    "aestheticStyle": "classic-editorial",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.226Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-editorial-expressive-music-scene-report",
+    "file": "briefs/coverage-editorial-expressive-music-scene-report.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "editorial",
+    "aestheticStyle": "expressive",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.226Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-editorial-restrained-public-health-brief",
+    "file": "briefs/coverage-editorial-restrained-public-health-brief.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "editorial",
+    "aestheticStyle": "restrained",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.226Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-app-ui-minimal-utility-personal-budget",
+    "file": "briefs/coverage-app-ui-minimal-utility-personal-budget.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "app-ui",
+    "aestheticStyle": "minimal-utility",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.226Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-app-ui-corporate-dense-it-operations",
+    "file": "briefs/coverage-app-ui-corporate-dense-it-operations.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "app-ui",
+    "aestheticStyle": "corporate-dense",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.226Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-app-ui-playful-pet-care-planner",
+    "file": "briefs/coverage-app-ui-playful-pet-care-planner.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "app-ui",
+    "aestheticStyle": "playful",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.226Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-forms-minimal-medical-intake",
+    "file": "briefs/coverage-forms-minimal-medical-intake.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "forms",
+    "aestheticStyle": "minimal",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.226Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+    "file": "briefs/coverage-forms-multi-step-corporate-vendor-onboarding.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "forms",
+    "aestheticStyle": "multi-step-corporate",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.226Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-flex-warm-human-community-clinic",
+    "file": "briefs/coverage-flex-warm-human-community-clinic.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "flex",
+    "aestheticStyle": "warm/human",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.226Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-flex-high-energy-youth-campus-event",
+    "file": "briefs/coverage-flex-high-energy-youth-campus-event.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "flex",
+    "aestheticStyle": "high-energy/youth",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.227Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  },
+  {
+    "id": "coverage-flex-premium-luxury-private-travel",
+    "file": "briefs/coverage-flex-premium-luxury-private-travel.md",
+    "kind": "coverage",
+    "calibrationType": null,
+    "register": "flex",
+    "aestheticStyle": "premium/luxury",
+    "architectAuthored": false,
+    "codexAuthored": true,
+    "provenance": {
+      "authoredBy": "codex",
+      "model": "gpt-5.5",
+      "genPromptFile": "briefs/_coverage-gen-prompt.md",
+      "genPromptSha": "f60be108065491b43bcf42fd014a1f4a0bab3a65",
+      "authoredUtc": "2026-06-23T23:34:21.227Z"
+    },
+    "subjectiveStatus": "pending-independent"
+  }
+]

@@ -1,9 +1,11 @@
 // sidecoach/src/validators/checks/a11y-checks.ts
 //
 // focus-visible (id 18) is a real css-rule check reusing the source predicate.
-// min-hit-area (id 5, dom) and color-contrast (id 20, contrast) have NO static
-// source: they always return inconclusive in P4a-2 even when a unit caller supplies
-// ad hoc browser-shaped fields, because P4b owns the trusted browser collector.
+// min-hit-area (id 5, dom) has NO static source: it always returns inconclusive in
+// P4a-2 even when a unit caller supplies ad hoc browser-shaped fields, because P4b
+// owns the trusted browser collector.
+// color-contrast (id 20) was MIGRATED to the rendered scan in Stage 6 convergence
+// (checkLowContrast in rendered-checks.ts) - it no longer lives here.
 import type { ProductCheckContext, RuleVerdict } from '../check-context';
 import { pass, fail, notApplicable, inconclusive, hasCss, focusableTargetApplicability, hasTrustedBrowserEvidence } from '../check-context';
 import { hasFocusVisible } from '../../polish-standard-validator';
@@ -33,17 +35,10 @@ export const checkMinHitArea = (ctx: ProductCheckContext): RuleVerdict => {
     : fail(`${hit.failing}/${hit.checked} interactive target(s) miss minimum hit area; smallest is ${Math.round(hit.smallestWidth)}x${Math.round(hit.smallestHeight)}px`, [], 'Increase interactive target padding or dimensions to at least 40x40px, and buttons to 44x44px');
 };
 
-export const checkColorContrast = (ctx: ProductCheckContext): RuleVerdict => {
-  if (!hasTrustedBrowserEvidence(ctx, 'contrast') || !ctx.contrast) {
-    return inconclusive('contrast ratio needs trusted measured contrast evidence', 'unsupported_runtime');
-  }
-  return ctx.contrast.wcagAA
-    ? pass(`worst measured text contrast is ${ctx.contrast.ratio.toFixed(2)}:1`)
-    : fail(`worst measured text contrast is ${ctx.contrast.ratio.toFixed(2)}:1`, [], 'Increase foreground/background contrast to meet WCAG AA');
-};
+// a11y/color-contrast moved to rendered-checks.ts (checkLowContrast) in Stage 6 convergence -
+// it reads the rendered scanner's low-contrast finding, the SAME detector the eval scores.
 
 export const A11Y_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict> = {
   'a11y/focus-visible': checkFocusVisible,
   'a11y/min-hit-area': checkMinHitArea,
-  'a11y/color-contrast': checkColorContrast,
 };

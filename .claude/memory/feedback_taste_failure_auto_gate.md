@@ -7,7 +7,7 @@ relates_to: [session_2026-06-15_sidecoach-proof-of-concept.md, feedback_mode_wor
 
 Jonah (2026-06-15), pointing at the active chapter link, the cross-links, and an
 install paragraph: "Antipattern much? ... How do I make you recognize real taste
-failure before I even have to mention it? Why can't we do what Impeccable does
+failure before I even have to mention it? Why can't we do what Oracle does
 automatically?"
 
 THE ANTIPATTERN I SHIPPED: brand red (#DC2618) used as readable TEXT - the active
@@ -38,11 +38,11 @@ way bash-guard blocks emojis and em-dashes. That converts "I should run sidecoac
 "I cannot ship without sidecoach passing." That is the difference between a tool that
 CAN catch a taste failure and a system that ALWAYS does. PROPOSED next build.
 
-THE ACTUAL TASTE FAILURE (Jonah showed Impeccable's rule): "Side-tab accent border -
+THE ACTUAL TASTE FAILURE (Jonah showed Oracle's rule): "Side-tab accent border -
 thick colored border on one side of a card - the most recognizable tell of AI-generated
 UIs." I had red left-stripes on the .ref-callout boxes AND the active sidebar link. I
 chased contrast and walked past the AI-slop tell. Sidecoach HAS this exact rule
-(anti-pattern.side-stripe-borders, one of 6 absolute bans) - so it CAN do what Impeccable
+(anti-pattern.side-stripe-borders, one of 6 absolute bans) - so it CAN do what Oracle
 does - BUT it did not fire because:
 1. DETECTOR GAP (now fixed): scanForAbsoluteBans's `targetable` regex only matched class
    names STARTING with card/callout/etc (\.callout\b), so namespaced/BEM names like

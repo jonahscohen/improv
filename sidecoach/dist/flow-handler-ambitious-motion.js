@@ -6,7 +6,6 @@ exports.FlowTAmbitiousMotionHandler = void 0;
 exports.createFlowTHandler = createFlowTHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
-const extended_domain_validator_1 = require("./extended-domain-validator");
 const model_routing_1 = require("./model-routing");
 class FlowTAmbitiousMotionHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
@@ -20,31 +19,14 @@ class FlowTAmbitiousMotionHandler extends flow_handler_1.BaseFlowHandler {
         (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         try {
-            const domainCheckContext = {
-                designTokens: context.metadata?.designTokens || {},
-                motion: context.metadata?.motion || {},
-                accessibility: context.metadata?.accessibility || {},
-            };
-            const extendedValidationReport = extended_domain_validator_1.ExtendedDomainValidator.validateAll(domainCheckContext);
-            const motionDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('motion');
-            const interactionDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('interaction');
-            const motionPassRate = extendedValidationReport.passRateByDomain['motion'] || '0%';
-            const interactionPassRate = extendedValidationReport.passRateByDomain['interaction'] || '0%';
-            const motionPassed = Math.round((parseFloat(motionPassRate) / 100) * motionDomainRules.length);
-            const interactionPassed = Math.round((parseFloat(interactionPassRate) / 100) * interactionDomainRules.length);
             if (enhancedContext?.flowMetadata) {
                 enhancedContext.flowMetadata.tags = ['flowT', 'ambitious-motion', 'advanced-animations'];
                 enhancedContext.flowMetadata.customData = {
-                    'motion-rules': motionDomainRules.length,
-                    'motion-rules-passed': motionPassed,
-                    'interaction-rules-passed': interactionPassed,
                     'animation-sequences': 12,
                 };
             }
             const checklist = this.createChecklist([
                 { label: 'Define motion tokens (duration, easing)', required: true },
-                { label: 'Motion domain validation', required: false, description: `${motionPassed}/${motionDomainRules.length} rules passing (${motionPassRate})` },
-                { label: 'Interaction domain validation', required: false, description: `${interactionPassed}/${interactionDomainRules.length} rules passing (${interactionPassRate})` },
                 { label: 'Design entrance animations (fade, slide, scale)', required: true },
                 { label: 'Design exit animations (fade, scale, collapse)', required: true },
                 { label: 'Design state transitions (active, hover, focus, disabled)', required: true },
@@ -54,8 +36,6 @@ class FlowTAmbitiousMotionHandler extends flow_handler_1.BaseFlowHandler {
             ]);
             const guidance = [
                 'Ambitious Motion: Advanced animation sequences and micro-interactions for delight.',
-                '',
-                'Domain Validation Results:',
                 '',
                 'MOTION TOKENS:',
                 '- Duration: 150ms (micro), 300ms (standard), 500ms (deliberate)',
@@ -72,23 +52,9 @@ class FlowTAmbitiousMotionHandler extends flow_handler_1.BaseFlowHandler {
                 '- Provide instant fallback for unsupported browsers',
                 '- Ensure animation is not essential to understanding',
             ];
-            const getSeverity = (percentage) => {
-                const num = parseFloat(percentage);
-                if (num >= 80)
-                    return 'pass';
-                if (num >= 50)
-                    return 'warning';
-                return 'fail';
-            };
             const memoryBuilder = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())
                 .setSummary('Ambitious motion: advanced animation sequences and micro-interactions')
-                .addRule('motion', motionDomainRules.map((r) => r.name))
-                .addRule('interaction', interactionDomainRules.map((r) => r.name))
                 .addDecision('Motion strategy', 'Exponential easing with deliberate timing for entrance/exit/state animations')
-                .addMetric('motion-rules-passing', motionPassed, getSeverity(motionPassRate), motionDomainRules.length)
-                .addMetric('interaction-rules-passing', interactionPassed, getSeverity(interactionPassRate), interactionDomainRules.length)
-                .addValidation('Motion domain', getSeverity(motionPassRate), `${motionPassed}/${motionDomainRules.length} rules passing`)
-                .addValidation('Interaction domain', getSeverity(interactionPassRate), `${interactionPassed}/${interactionDomainRules.length} rules passing`)
                 .addArtifact('animation-library', 1);
             return {
                 flowId: this.flowId,

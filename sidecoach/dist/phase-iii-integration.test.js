@@ -74,7 +74,7 @@ describe('Phase III: Integration Tests', () => {
             expect(validation).toBeDefined();
             expect(validation.passed + validation.failed).toBeGreaterThan(0);
         });
-        test('Tactical Polish validator checks 22-point standard', () => {
+        test('Tactical Polish validator checks 24-point standard', () => {
             const mockResult = {
                 flowId: 'flowJ_tactical_polish',
                 flowName: '16-Point Tactical Polish',

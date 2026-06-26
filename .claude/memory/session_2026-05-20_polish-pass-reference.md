@@ -9,7 +9,7 @@ relates_to: [reflection_2026-05-20.md, session_2026-05-20_reference-site-pipelin
 
 The reflection (`reflection_2026-05-20.md`) called out the honesty failure: I had claimed Phase 8 (QA triad) ran on the reference build when it had not. Jonah's correction: "run the three commands now, act autonomously." That run produced real findings. This memory records the ACTUAL polish pass against those findings.
 
-This is the first time on either build (marketing or reference) where a real impeccable QA cycle drove concrete fixes. The mechanism finally ran end-to-end.
+This is the first time on either build (marketing or reference) where a real oracle QA cycle drove concrete fixes. The mechanism finally ran end-to-end.
 
 ## What the QA triad surfaced
 
@@ -17,7 +17,7 @@ The audit + critique + polish reading produced a unified finding set. Priorities
 
 ### P0 (absolute bans / WCAG fail / brief breach) - FIXED in this pass
 
-1. **Side-stripe red borders on 6 CSS rules** - `border-left: 3px solid var(--c-brand-red)` (and one 2px variant) on `.install-block`, `.codeblock`, `.defn`, `.callout`, `.reject-list`, `.rule`. This is impeccable's named absolute ban ("side-stripe borders: never intentional"). The detector flagged 17+ DOM instances because each rule applies to multiple elements.
+1. **Side-stripe red borders on 6 CSS rules** - `border-left: 3px solid var(--c-brand-red)` (and one 2px variant) on `.install-block`, `.codeblock`, `.defn`, `.callout`, `.reject-list`, `.rule`. This is oracle's named absolute ban ("side-stripe borders: never intentional"). The detector flagged 17+ DOM instances because each rule applies to multiple elements.
    - Fix: rewrote each per content role.
      - `.install-block`: removed stripe, added a red `$` leading prompt-glyph inside the dark code area via `::before`. Brand presence kept, structure changed.
      - `.codeblock`: removed stripe entirely. Dark ink background is differentiator enough.
@@ -37,7 +37,7 @@ The audit + critique + polish reading produced a unified finding set. Priorities
 
 ### P0 (structural, NOT FIXED - deferred as craft rework)
 
-5. **12-card identical components grid in Architecture section** - impeccable's named ban ("identical card grids: same-sized cards with icon + heading + text, repeated endlessly"). Polish can't fix this; it's a redesign. To address properly: rewrite as asymmetric layout (4 core / 8 support at smaller scale) OR convert to typeset list with annotations. Logged for next pass.
+5. **12-card identical components grid in Architecture section** - oracle's named ban ("identical card grids: same-sized cards with icon + heading + text, repeated endlessly"). Polish can't fix this; it's a redesign. To address properly: rewrite as asymmetric layout (4 core / 8 support at smaller scale) OR convert to typeset list with annotations. Logged for next pass.
 
 6. **Second-order AI slop** - the site landed in editorial-serif-blog template (cream + serif h1 + sticky sidebar + topbar). This is the second-order trap (the first reflex would have been SaaS-cream-card; the second is editorial-serif). Escaping the trap requires bigger structural moves: four-houses as homepage instead of section, ditching the cards-for-everything reflex, adding diagrams that no template ships with. Polish scope insufficient.
 
@@ -57,7 +57,7 @@ The audit + critique + polish reading produced a unified finding set. Priorities
 
 ### P2 (deferred)
 
-12. **Hex not OKLCH** - impeccable's shared design law says OKLCH always. Token file is hex. Would be a global refactor.
+12. **Hex not OKLCH** - oracle's shared design law says OKLCH always. Token file is hex. Would be a global refactor.
 13. **No diagrams** - "annotated engineering manual" brief says diagrams. Site has none.
 14. **No per-row anchor stability** on hook tables.
 15. **Multiple CDN round-trips** for GSAP+ScrollTrigger+Lenis - acceptable for dev, bundle for prod.
@@ -80,7 +80,7 @@ Dark mode verification: cmux's headless tab doesn't toggle prefers-color-scheme 
 
 ## What this run proves
 
-The /design-build orchestrator + /impeccable triad cycle CAN run end-to-end on a real build and produce concrete code fixes. The mechanism works. The honesty failure on the first attempt was about me skipping it, not the mechanism being broken. Now that it has run once with real output, future builds can use this as the reference cycle for how Phase 8 should look.
+The /design-build orchestrator + /oracle triad cycle CAN run end-to-end on a real build and produce concrete code fixes. The mechanism works. The honesty failure on the first attempt was about me skipping it, not the mechanism being broken. Now that it has run once with real output, future builds can use this as the reference cycle for how Phase 8 should look.
 
 What got tested in this run:
 - Audit catches absolute-ban violations (side-stripe) ✓

@@ -57,6 +57,14 @@ export const SUPPORTED_SOURCE_KINDS_BY_EVIDENCE: Record<EvidenceKind, SourceKind
     { kind: 'tsx', level: 'none' },
     { kind: 'html', level: 'none' },
   ],
+  // rendered-scan: satisfied ONLY by a live rendered scan of a renderUrl (scanRenderedLive),
+  // never by a static file - same browser-only shape as dom/contrast (the rendered kind at
+  // 'full' plus static kinds at 'none' so static-satisfiability derivation stays well-defined).
+  'rendered-scan': [
+    { kind: 'rendered-scan', level: 'full' },
+    { kind: 'tsx', level: 'none' },
+    { kind: 'html', level: 'none' },
+  ],
 };
 
 // The supported source-kind block for a rule's evidence requirements. Every rule

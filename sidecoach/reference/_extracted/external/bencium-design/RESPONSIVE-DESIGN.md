@@ -271,7 +271,7 @@ Sidecoach's `max-w-[1400px] mx-auto` rule from the taste-skill is the right ceil
 
 ---
 
-## SECTION 3: What this covers that impeccable + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
 
 **This is the foundational gap in sidecoach.** Sidecoach has a "responsive review" flow handler but no codified breakpoint TABLE with PATTERN TRANSITIONS per tier.
 

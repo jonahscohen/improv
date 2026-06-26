@@ -1,0 +1,10 @@
+<!doctype html>
+<!-- Contract-6 eval SEED fixture (known-defect class: gradient-text). SEED for the
+     dev/regression corpus + comparator smoke ONLY; NOT the externally-sourced LOCKED
+     heldout. label: { class: gradient-text }. NOTE: the oracle's static-html gradient
+     detection is formatting-sensitive (flags compact single-line CSS; misses the same
+     rule pretty-printed across lines) - a real datapoint for Stage 2 (our owned floor
+     should not regress, and can do better, on formatting variants). -->
+<html><head><style>
+.hero h1 { background: linear-gradient(90deg,#7c3aed,#06b6d4); -webkit-background-clip: text; color: transparent; }
+</style></head><body><div class="hero"><h1>Gradient headline</h1></div></body></html>

@@ -10,7 +10,7 @@ relates_to:
 # Phase 1 Implementation - Flow Architecture Expansion
 
 ## Goal
-Map all 23 impeccable design commands and all 16 make-interfaces-feel-better rules to comprehensive Sidecoach flows A-Q (17 new flows + 14 legacy = 31 total flows).
+Map all 23 oracle design commands and all 16 make-interfaces-feel-better rules to comprehensive Sidecoach flows A-Q (17 new flows + 14 legacy = 31 total flows).
 
 ## Work Completed
 
@@ -148,7 +148,7 @@ Ambiguity is expected and handled by orchestrator's disambiguation logic.
 
 ## Remaining Work (Post Phase 1)
 
-1. **Map 23 impeccable commands** to flows (verify 100% coverage)
+1. **Map 23 oracle commands** to flows (verify 100% coverage)
 2. **Verify all 16 rules** in Flow J are detectable
 3. **Wire reference data** (component.gallery, fontshare, etc.)
 4. **Test production flows** with real utterances

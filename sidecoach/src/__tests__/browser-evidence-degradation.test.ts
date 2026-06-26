@@ -5,7 +5,10 @@ const failedCollector = async (): Promise<BrowserEvidenceCollection> => ({ avail
 
 async function run() {
   const noUrl = await runValidatorForTest('static-a11y', { cssText: '', markup: '', files: [] });
-  for (const id of ['a11y.min-hit-area', 'a11y.color-contrast']) {
+  // a11y.color-contrast dropped: Stage 6 migrated it to the rendered scan, so it is no longer a browser/collector
+  // rule. Collector degradation is covered by the dom-backed min-hit-area; color-contrast's rendered degradation
+  // lives in the rendered-scan tests.
+  for (const id of ['a11y.min-hit-area']) {
     const x = noUrl.executions.find((e) => e.result.ruleId === id);
     if (!x || x.result.status !== 'inconclusive') throw new Error(`${id}: no URL must surface inconclusive`);
     if (noUrl.activePolicy.requiredRuleIds.includes(id)) throw new Error(`${id}: no URL must not promote browser rule`);
@@ -16,7 +19,10 @@ async function run() {
     { cssText: '', markup: '', files: [], renderUrl: 'data:text/html,test' },
     { collectBrowserEvidence: failedCollector },
   );
-  for (const id of ['a11y.min-hit-area', 'a11y.color-contrast']) {
+  // a11y.color-contrast dropped: Stage 6 migrated it to the rendered scan, so it is no longer a browser/collector
+  // rule. Collector degradation is covered by the dom-backed min-hit-area; color-contrast's rendered degradation
+  // lives in the rendered-scan tests.
+  for (const id of ['a11y.min-hit-area']) {
     const x = failed.executions.find((e) => e.result.ruleId === id);
     if (!x || x.result.status !== 'inconclusive') throw new Error(`${id}: collector failure must surface inconclusive`);
     if (failed.activePolicy.requiredRuleIds.includes(id)) throw new Error(`${id}: collector failure must not promote browser rule`);

@@ -57,7 +57,7 @@ All complete:
 - RegressionDetector (regression-detector.ts)
 - ProjectPersonaEngine (persona-engine.ts)
 - DesignDebtTracker (design-debt-tracker.ts)
-- ImpeccableDetectBridge (impeccable-detect-bridge.ts)
+- OracleDetectBridge (oracle-detect-bridge.ts)
 - FlowHistory v2 schema + methods
 - All wired into orchestrator execution flow
 
@@ -65,7 +65,7 @@ All complete:
 - RegressionDetector post-execution (blocking/warning handling)
 - DesignDebtTracker session-start debt summary
 - ProjectPersonaEngine async persona extraction in FlowL
-- ImpeccableDetectBridge CLI integration in FlowK
+- OracleDetectBridge CLI integration in FlowK
 - DeterministicValidator pre-execution hard gates
 
 **Phase 9 (Two Concrete Gaps): FlowU & FlowV**
@@ -76,7 +76,7 @@ All complete:
 
 ### Files Modified
 - `src/sidecoach-orchestrator.ts` - wired all 5 systems, added DI for orchestrator
-- `src/flow-handlers-tier3-tier4.ts` - PersonaEngine in FlowL, ImpeccableDetectBridge in FlowK
+- `src/flow-handlers-tier3-tier4.ts` - PersonaEngine in FlowL, OracleDetectBridge in FlowK
 - `src/orchestrator.ts` - added K-T dependency entries, FlowU/FlowV dependencies
 - `src/types.ts` - extended FlowId union with flowU_curate, flowV_all_seven_qa
 - `src/flow-handler.ts` - added flowNames entries for new flows
@@ -87,7 +87,7 @@ All complete:
 2. `src/regression-detector.ts` - status/guidance/message degradation detection
 3. `src/persona-engine.ts` - async LLM extraction of project personas
 4. `src/design-debt-tracker.ts` - persistent design debt tracking
-5. `src/impeccable-detect-bridge.ts` - CLI wrapper for npx impeccable detect
+5. `src/oracle-detect-bridge.ts` - CLI wrapper for npx oracle detect
 6. `src/flow-handlers-curate-qa.ts` - FlowU and FlowV handlers
 
 ### Build Status
@@ -123,13 +123,13 @@ Constructor modifications:
 **Sidecoach v3 Option A: COMPLETE AND VERIFIED**
 
 All 9 phases fully integrated:
-- Phases 1-7: Core systems (1,165 lines) - DeterministicValidator, RegressionDetector, PersonaEngine, DebtTracker, ImpeccableDetectBridge, FlowHistory v2
-- Phase 8: Orchestrator wiring (RegressionDetector, DebtTracker, PersonaEngine, ImpeccableDetectBridge integrated into execution flow)
+- Phases 1-7: Core systems (1,165 lines) - DeterministicValidator, RegressionDetector, PersonaEngine, DebtTracker, OracleDetectBridge, FlowHistory v2
+- Phase 8: Orchestrator wiring (RegressionDetector, DebtTracker, PersonaEngine, OracleDetectBridge integrated into execution flow)
 - Phase 9: FlowU (Curate) and FlowV (All-Seven QA) handlers implemented and registered
 - Phase 10: Intent detector patterns for FlowU and FlowV so they're discoverable via natural language
 
 ### Final Metrics
-- New system code: 1,047 lines (deterministic-validator, regression-detector, persona-engine, design-debt-tracker, impeccable-detect-bridge, flow-handlers-curate-qa)
+- New system code: 1,047 lines (deterministic-validator, regression-detector, persona-engine, design-debt-tracker, oracle-detect-bridge, flow-handlers-curate-qa)
 - Total new files: 9 (5 systems + 2 handlers + 2 orchestrators)
 - TypeScript compilation: ✓ Zero errors
 - Build artifacts: ✓ All compiled JavaScript present in dist/

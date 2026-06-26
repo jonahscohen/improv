@@ -59,7 +59,7 @@ Full README rewrite to match the safe installer: 14 specific changes across all 
 
 - Added RULES.md / CLAUDE.md / CLAUDE.local.md three-layer architecture explanation to "The Claude Code brain" reference section
 - Added three-layer mention to "What this is" overview
-- Added full component-gallery-reference section to the design stack detail (research layer between Impeccable and make-interfaces-feel-better)
+- Added full component-gallery-reference section to the design stack detail (research layer between Oracle and make-interfaces-feel-better)
 - Trimmed project root MEMORY.md index: removed 4 superseded memory-permission entries, shortened all entries to under 100 chars
 
 ## CLAUDE.md bloat fix (320e7bf)

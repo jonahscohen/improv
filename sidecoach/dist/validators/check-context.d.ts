@@ -1,4 +1,5 @@
 import type { ProductRuleDefinition, ProductRuleResult, RuleStatus, EvidenceKind, NormalizedErrorCategory } from '../product-rule-types';
+import type { RenderedScanCollection } from './rendered-live-scan';
 export interface CollectedFile {
     path: string;
     sourceKind: string;
@@ -44,6 +45,7 @@ export interface ProductCheckContext {
     renderUrl?: string;
     browserEvidence?: BrowserEvidenceMeta;
     dom?: BrowserDomEvidence;
+    renderedScan?: RenderedScanCollection;
 }
 export interface RuleVerdict {
     status: RuleStatus;

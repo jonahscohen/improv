@@ -50,7 +50,7 @@ Python http.server running at http://127.0.0.1:4830/. All three pages return 200
 
 All three pages screenshotted in chrome MCP, both at hero and scrolled through to footer.
 
-**index.html** - hero with cream canvas, red italic ampersand in Yes& wordmark, fluid Source Serif 4 h1 "A toolkit for working with Claude Code." with red underline beneath `Claude Code.`. Display-serif lede. Install block (ink bg + red left-border) plus secondary outlined Read-the-source button.  Toolkit section: 3 equal-width tool cards (improv / sidecoach / memory) - red mono tag, display-serif name, body description, red-underlined CTA. "In the wings" paper section: 2-col minor-list with mono tool names (cmux, voice, discord, hooks, impeccable, validation-guard). Posture ink section: "Not a platform" / "Not a framework" / "Not for everyone" feature-rows with cream-on-dark inline code chips.
+**index.html** - hero with cream canvas, red italic ampersand in Yes& wordmark, fluid Source Serif 4 h1 "A toolkit for working with Claude Code." with red underline beneath `Claude Code.`. Display-serif lede. Install block (ink bg + red left-border) plus secondary outlined Read-the-source button.  Toolkit section: 3 equal-width tool cards (improv / sidecoach / memory) - red mono tag, display-serif name, body description, red-underlined CTA. "In the wings" paper section: 2-col minor-list with mono tool names (cmux, voice, discord, hooks, oracle, validation-guard). Posture ink section: "Not a platform" / "Not a framework" / "Not for everyone" feature-rows with cream-on-dark inline code chips.
 
 **improv.html** - page-hero "Stop describing the UI. **Show it.**" with red underline. Three feature-rows in "What it does": Watch a region / Change a value / Loop it. How-to-start cream section with install snippet. Posture ink section with "No synthetic events" (inline code chips for element.click() and dispatchEvent), "No design system imposed", "No remote".
 
@@ -75,7 +75,7 @@ Brief from 2026-05-23: "I want a brand new (not a rehab of another landing page)
 Coverage:
 - [x] Brand-new landing page (no rehab of reference/) - index.html
 - [x] Advertises improv, sidecoach, memory tools - 3-card toolkit grid with equal billing
-- [x] Mentions of other tools - "In the wings" 2-col list (cmux, voice, discord, hooks, impeccable, validation-guard)
+- [x] Mentions of other tools - "In the wings" 2-col list (cmux, voice, discord, hooks, oracle, validation-guard)
 - [x] Subpage for improv - improv.html
 - [x] Subpage for sidecoach - sidecoach.html
 - [x] DESIGN.md tokens drive all CSS values - 760-line styles.css mirrors the YAML frontmatter
@@ -97,7 +97,7 @@ Page-hero "Stop describing the UI. Show it." with red underline on `Show it.`. T
 - Topbar with Yes&amp; wordmark (red italic ampersand) + minimal nav (improv, sidecoach, GitHub).
 - Hero: monospace eyebrow `claude-dotfiles`, fluid h1 "A toolkit for working with Claude Code." with `Claude Code` red-underlined, display-serif lede, install block + secondary read-the-source button.
 - Section "The toolkit": 3-card grid for improv / sidecoach / memory. Equal weight per PRODUCT.md rule.
-- Section "In the wings" (paper bg): 2-col list naming cmux, voice, discord, hooks, impeccable, validation-guard.
+- Section "In the wings" (paper bg): 2-col list naming cmux, voice, discord, hooks, oracle, validation-guard.
 - Section "Posture" (ink bg): 3 feature-rows naming what this is NOT - not a platform, not a framework, not for everyone.
 - Footer with GitHub link + Yes&amp; reference.
 - Inline JS: click-to-copy on the install block (no synthetic events, real button click, navigator.clipboard.writeText).

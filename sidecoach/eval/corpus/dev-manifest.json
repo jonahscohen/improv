@@ -1,0 +1,370 @@
+{
+  "generatedUtc": "2026-06-25T23:09:01.230Z",
+  "note": "self-contained taste dev corpus; rule-agnostic sample; disjoint from the frozen 90 (host + content-sha, fail-closed). DEV SIGNAL, not the held-out bar. Codex-labels all 22 classes BEFORE any detector (author!=labeler). [planetscale DROPPED 2026-06-24: degraded capture (CSS failed to inline -> 16px monospace wall); all 22 of its labels were on the broken render.] | EXTENDED 2026-06-25 with a register-diverse set for marketing-buzzword generalization (disjoint host+sha, fail-closed).",
+  "captured": 48,
+  "pages": [
+    {
+      "id": "linear",
+      "url": "https://linear.app/",
+      "host": "linear.app",
+      "contentSha": "12798139f09b0fd408f0286dd0f900eaad70d40cbe8c3f498e46a48be88dc479",
+      "bytes": 923412
+    },
+    {
+      "id": "framer",
+      "url": "https://www.framer.com/",
+      "host": "framer.com",
+      "contentSha": "ff7560f30885e03bf8bbe0952f932e82f71a6868a364281aeb9ef8e1b2a7acb8",
+      "bytes": 1429360
+    },
+    {
+      "id": "loom",
+      "url": "https://www.loom.com/",
+      "host": "loom.com",
+      "contentSha": "04f7ca76001c977f7fbd2275a4ae2edeb2ec57e85623b87dd1f310c5332306c9",
+      "bytes": 534728
+    },
+    {
+      "id": "retool",
+      "url": "https://retool.com/",
+      "host": "retool.com",
+      "contentSha": "46f859b1f6a5fb552f39b74bab07922c247202b0621850631636b013ea4300fa",
+      "bytes": 1190812
+    },
+    {
+      "id": "clerk",
+      "url": "https://clerk.com/",
+      "host": "clerk.com",
+      "contentSha": "cfb220594cfcd8f1cb82ae5be75c03cf8269da7e40ca097d260e32696e9a96df",
+      "bytes": 1782851
+    },
+    {
+      "id": "resend",
+      "url": "https://resend.com/",
+      "host": "resend.com",
+      "contentSha": "5d42ddaba5450ac46fb0810cb332043a86e24f583813687aa9111c287a42c56c",
+      "bytes": 1343218
+    },
+    {
+      "id": "railway",
+      "url": "https://railway.app/",
+      "host": "railway.app",
+      "contentSha": "84642097325c6cd7c0e7586fdab923f3a7339dabe1945d85ae83aec8a8ba24a8",
+      "bytes": 1743723
+    },
+    {
+      "id": "supabase",
+      "url": "https://supabase.com/",
+      "host": "supabase.com",
+      "contentSha": "b5222b70780dc76480bcc9155fae533d1a0bde2e61a6c2c67bcd8afbbdcde44f",
+      "bytes": 1061381
+    },
+    {
+      "id": "posthog",
+      "url": "https://posthog.com/",
+      "host": "posthog.com",
+      "contentSha": "42da8c080cfe60b31e93f9a6b2f9f21c5fe20b3230769f9eb4c3aefdb4208b2c",
+      "bytes": 2715831
+    },
+    {
+      "id": "calcom",
+      "url": "https://cal.com/",
+      "host": "cal.com",
+      "contentSha": "5667676719d708dc8ccaff7ef0c09798aaf7835583259743e5197e23dd58f307",
+      "bytes": 1379134
+    },
+    {
+      "id": "dub",
+      "url": "https://dub.co/",
+      "host": "dub.co",
+      "contentSha": "3ad98b70703b36ab7c5266176b09ca9797565db40728ebefa43ea6eac9935e89",
+      "bytes": 2013515
+    },
+    {
+      "id": "raycast",
+      "url": "https://www.raycast.com/",
+      "host": "raycast.com",
+      "contentSha": "7c5518da58e93db91cb1e8b0a9f411beb8bd8130077424f0ff495db94e932a06",
+      "bytes": 863634
+    },
+    {
+      "id": "neon",
+      "url": "https://neon.tech/",
+      "host": "neon.tech",
+      "contentSha": "298996354209318b599f9b6469de6b68cd4569681b8d51bc7765044906d24f8d",
+      "bytes": 1168023
+    },
+    {
+      "id": "upstash",
+      "url": "https://upstash.com/",
+      "host": "upstash.com",
+      "contentSha": "b7dbf556fd10162c8770c84b14568693d15e634baed731ac28f04b0d1e92172c",
+      "bytes": 309948
+    },
+    {
+      "id": "liveblocks",
+      "url": "https://liveblocks.io/",
+      "host": "liveblocks.io",
+      "contentSha": "bfd60f4d6689c1d138e58c9ff41da1e0dbdf33b4104f3106ff975631c812e3ff",
+      "bytes": 928709
+    },
+    {
+      "id": "trigger",
+      "url": "https://trigger.dev/",
+      "host": "trigger.dev",
+      "contentSha": "41fb4ea60fda78823e5392bdaf373cc79da04e839bf27139c384e801dcbb9eae",
+      "bytes": 646267
+    },
+    {
+      "id": "inngest",
+      "url": "https://www.inngest.com/",
+      "host": "inngest.com",
+      "contentSha": "7615812093054af66b67d87e1f4645806ad8ec47d42425eddb5ab3c2a9cbcbfa",
+      "bytes": 436293
+    },
+    {
+      "id": "knock",
+      "url": "https://knock.app/",
+      "host": "knock.app",
+      "contentSha": "26e28afd6d64a7325b964dfd90c0771a3f12e41a65385fcd072caf3289d16ca6",
+      "bytes": 670033
+    },
+    {
+      "id": "hightouch",
+      "url": "https://hightouch.com/",
+      "host": "hightouch.com",
+      "contentSha": "c26e2d50fef5415b25dcc42839947b25d90d0d02259e413535bc022637e43d46",
+      "bytes": 1482712
+    },
+    {
+      "id": "mintlify",
+      "url": "https://mintlify.com/",
+      "host": "mintlify.com",
+      "contentSha": "fd01cafd146e66499514c0b48679cf5e373c906030b46403c3b20a60cbf436a5",
+      "bytes": 632387
+    },
+    {
+      "id": "fly",
+      "url": "https://fly.io/",
+      "host": "fly.io",
+      "contentSha": "56bbf9e4be45d902ca1e507fe9cf32edf9a584f863488ffc44f935589f03d657",
+      "bytes": 858854
+    },
+    {
+      "id": "airtable",
+      "url": "https://www.airtable.com/",
+      "host": "airtable.com",
+      "register": "marketing",
+      "contentSha": "7a3b9e68fe0af444bf925c3ae968eaa98da01be7aa34cd9e48859258ef9870ab",
+      "bytes": 1940334
+    },
+    {
+      "id": "amplitude",
+      "url": "https://amplitude.com/",
+      "host": "amplitude.com",
+      "register": "marketing",
+      "contentSha": "33f24121204154685b32a5222fae0a7c5d0d0c7da17162994112fbbfbc9d17df",
+      "bytes": 834897
+    },
+    {
+      "id": "gong",
+      "url": "https://www.gong.io/",
+      "host": "gong.io",
+      "register": "marketing",
+      "contentSha": "ad90104e01ff5495a377ab3009b2bd44399ee2e018566cd6adc622f6c4dcc1fe",
+      "bytes": 620442
+    },
+    {
+      "id": "databricks",
+      "url": "https://www.databricks.com/",
+      "host": "databricks.com",
+      "register": "marketing",
+      "contentSha": "0b170d6f49efdbf4a8518a4c0af0b20ec9e267cd297cf042f19f9ecf8413aa5b",
+      "bytes": 7085033
+    },
+    {
+      "id": "polygon",
+      "url": "https://polygon.technology/",
+      "host": "polygon.technology",
+      "register": "marketing-crypto",
+      "contentSha": "d5cb80dbac7d5b6233daa8066ac110800af128ba2e10324d3313360fe0495ef2",
+      "bytes": 1954002
+    },
+    {
+      "id": "accenture",
+      "url": "https://www.accenture.com/us-en",
+      "host": "accenture.com",
+      "register": "marketing-enterprise",
+      "contentSha": "d9db3cf24a4e20835c4ac342b2f484f1f50a7fa2e3905ee4b1130e4d50fc771f",
+      "bytes": 2166567
+    },
+    {
+      "id": "overreacted",
+      "url": "https://overreacted.io/",
+      "host": "overreacted.io",
+      "register": "editorial",
+      "contentSha": "96825044648013676d6fb111aa1a9590dce93b28283407b42773a662b4977410",
+      "bytes": 60619
+    },
+    {
+      "id": "arstechnica",
+      "url": "https://arstechnica.com/",
+      "host": "arstechnica.com",
+      "register": "editorial",
+      "contentSha": "714386cf09418c83b4b6dea1aeb161a3fc84deba465d000aacc6bb091ee887cd",
+      "bytes": 782182
+    },
+    {
+      "id": "martinfowler",
+      "url": "https://martinfowler.com/",
+      "host": "martinfowler.com",
+      "register": "editorial",
+      "contentSha": "17dc5516abc4342fb80accddad71846de367d46881315785342ad8e33b0fa52a",
+      "bytes": 52716
+    },
+    {
+      "id": "nextjs-docs",
+      "url": "https://nextjs.org/docs",
+      "host": "nextjs.org",
+      "register": "docs",
+      "contentSha": "4d16d0f92a6f4c025faf9b815ecf711955b42f271574f0bc498e206430e63ef0",
+      "bytes": 870167
+    },
+    {
+      "id": "postgres-docs",
+      "url": "https://www.postgresql.org/docs/current/tutorial-start.html",
+      "host": "postgresql.org",
+      "register": "docs",
+      "contentSha": "ef559b0942f584217a52a61da1fafa7ca3ede6df32653b95d6c14c94ca12143e",
+      "bytes": 260600
+    },
+    {
+      "id": "census",
+      "url": "https://www.census.gov/",
+      "host": "census.gov",
+      "register": "gov-data",
+      "contentSha": "ffce26ed0442b4a3f6af894cc534da0e81916158b52b1efdf1f7d3ef72c511b1",
+      "bytes": 2518417
+    },
+    {
+      "id": "nasa",
+      "url": "https://www.nasa.gov/",
+      "host": "nasa.gov",
+      "register": "gov-data",
+      "contentSha": "4cfa7f07b72d3211a6d57b18859cc58594fcff4e06831381f11e26c70312886c",
+      "bytes": 535908
+    },
+    {
+      "id": "flowbite",
+      "url": "https://flowbite.com/",
+      "host": "flowbite.com",
+      "register": "dashboard",
+      "contentSha": "bea99157af6e56b23e1b3e5be4138bd4338444a5e71b0165654dfe6846c92c8c",
+      "bytes": 5874440
+    },
+    {
+      "id": "coreui",
+      "url": "https://coreui.io/",
+      "host": "coreui.io",
+      "register": "dashboard",
+      "contentSha": "0dd9f53c249c04bc84d561fc53d06b938313598f7d773ab13c363b02d0fa91a6",
+      "bytes": 675091
+    },
+    {
+      "id": "ghost",
+      "url": "https://ghost.org/",
+      "host": "ghost.org",
+      "register": "product",
+      "contentSha": "989f7830d0c0a31baa6c9147491521ebbd1d08cb3ef6cbe5e0ac267e6a294fdb",
+      "bytes": 233932
+    },
+    {
+      "id": "onepassword",
+      "url": "https://1password.com/",
+      "host": "1password.com",
+      "register": "product",
+      "contentSha": "470102cec670faf35f04402216faa1fbfa06ae805203129772d8a551473fc5e0",
+      "bytes": 3955718
+    },
+    {
+      "id": "monday",
+      "url": "https://monday.com/",
+      "host": "monday.com",
+      "register": "marketing",
+      "contentSha": "ad115372dd007975818f2ba28e2129651cf09c1c5084a7db8d8c0a7230cb3f15",
+      "bytes": 2940903
+    },
+    {
+      "id": "asana",
+      "url": "https://asana.com/",
+      "host": "asana.com",
+      "register": "marketing",
+      "contentSha": "6e87e184bbad1ce802cf2ce266c96a34e99c7232a442fa9e30f8951cf77d02c0",
+      "bytes": 1370458
+    },
+    {
+      "id": "segment",
+      "url": "https://segment.com/",
+      "host": "segment.com",
+      "register": "marketing",
+      "contentSha": "d93ed1843e3b0d9fb1ed389d4cb5c5597fbe0871732ef0c21d4bb5e8bbb70e8a",
+      "bytes": 939537
+    },
+    {
+      "id": "twilio",
+      "url": "https://www.twilio.com/",
+      "host": "twilio.com",
+      "register": "marketing",
+      "contentSha": "536e512cc21b2de7fd08a26fdccc56271d8bcbf295174bea1d6c622156d04921",
+      "bytes": 1554031
+    },
+    {
+      "id": "jasper",
+      "url": "https://www.jasper.ai/",
+      "host": "jasper.ai",
+      "register": "marketing-ai",
+      "contentSha": "1c7e5f0df41df385b0bbff6948af6b3898ed15187e3a7825e1885ff25277095d",
+      "bytes": 1269388
+    },
+    {
+      "id": "copyai",
+      "url": "https://www.copy.ai/",
+      "host": "copy.ai",
+      "register": "marketing-ai",
+      "contentSha": "9de81c2ec7e58b76774f92e6e264cda9eaf8e284362cddb24dc0498d8d7a3e63",
+      "bytes": 510056
+    },
+    {
+      "id": "scale",
+      "url": "https://scale.com/",
+      "host": "scale.com",
+      "register": "marketing-ai",
+      "contentSha": "15705af3d8d237428c196961cfe21d46311abfd9224fe51cad7366f02cd5f0d6",
+      "bytes": 1471977
+    },
+    {
+      "id": "solana",
+      "url": "https://solana.com/",
+      "host": "solana.com",
+      "register": "marketing-crypto",
+      "contentSha": "223e2d175c390a7bf29a591502918a8a2adaa3dfbd26637641b7b4f358f991c2",
+      "bytes": 514297
+    },
+    {
+      "id": "redis-docs",
+      "url": "https://redis.io/docs/latest/",
+      "host": "redis.io",
+      "register": "docs",
+      "contentSha": "88300a4b5d2f4068c619497b5c5cab65f098e4033ffa1ef37291e54d828c270b",
+      "bytes": 279687
+    },
+    {
+      "id": "tailscale",
+      "url": "https://tailscale.com/",
+      "host": "tailscale.com",
+      "register": "product",
+      "contentSha": "075f8eba2edf5d15e632a092b882f84b99da9e4d5918f42254ebba541dcaff80",
+      "bytes": 636957
+    }
+  ]
+}

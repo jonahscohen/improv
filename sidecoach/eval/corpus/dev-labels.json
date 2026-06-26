@@ -1,0 +1,343 @@
+{
+  "generatedUtc": "2026-06-24T06:31:37.773Z",
+  "refereeMeta": {
+    "engine": "chromium",
+    "browserVersion": "148.0.7778.96",
+    "viewport": "1280x800",
+    "pageScripts": "stripped",
+    "determinism": "page-scripts stripped + reduced-motion + animations zeroed + external aborted + srgb; font-metric-independent classes"
+  },
+  "note": "DEV CORPUS - disjoint from the frozen eval 90; referee-labeled GT for held-out-safe development. NOT the held-out bar.",
+  "sourcing": "RULE-AGNOSTIC: a fixed list of real pages (no detectability pre-filter); ALL fetched pages are kept (clean ones included) so the dev signal is not selection-biased toward detectable defects.",
+  "disjointness": {
+    "assertedDisjointFromEval90": true,
+    "basis": "zero content-sha overlap AND zero provenance-host overlap with candidates.json; build fails closed otherwise",
+    "overlapsFound": 0
+  },
+  "pages": 20,
+  "usable": 20,
+  "withSkippedHeading": 0,
+  "records": [
+    {
+      "id": "nodejs_about",
+      "url": "https://nodejs.org/en/about",
+      "host": "nodejs.org",
+      "contentSha": "6f02d0031800de97692581a7fd3f686179c7bd7f8ebd57807fc0b643a1db2d5b",
+      "available": true,
+      "objectiveClasses": [
+        null
+      ],
+      "raw": {
+        "labels": [
+          "low-contrast"
+        ],
+        "primaryDefects": [
+          "low-contrast"
+        ],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "typescript_home",
+      "url": "https://www.typescriptlang.org/",
+      "host": "typescriptlang.org",
+      "contentSha": "fded55886b1dc150e3c53626f1758ab824501b73810aab5f9acb86753fb29f38",
+      "available": true,
+      "objectiveClasses": [
+        null
+      ],
+      "raw": {
+        "labels": [
+          "low-contrast"
+        ],
+        "primaryDefects": [
+          "low-contrast"
+        ],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 17
+      }
+    },
+    {
+      "id": "eslint_home",
+      "url": "https://eslint.org/",
+      "host": "eslint.org",
+      "contentSha": "b55cb3976cf9e0e4c5d9d421f3f4bfdb56a19d67ee770679314641233757036e",
+      "available": true,
+      "objectiveClasses": [],
+      "raw": {
+        "labels": [],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "prettier_home",
+      "url": "https://prettier.io/",
+      "host": "prettier.io",
+      "contentSha": "22c856fcd1b0f624a7f684efbcac797a2513d58f6963d6806e7302fad8afeba7",
+      "available": true,
+      "objectiveClasses": [],
+      "raw": {
+        "labels": [],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "postgres_about",
+      "url": "https://www.postgresql.org/about/",
+      "host": "postgresql.org",
+      "contentSha": "ab0079f1d52e894fe10dcfa0303a2e703cd28a745ae00ed718948056f4d59f0b",
+      "available": true,
+      "objectiveClasses": [],
+      "raw": {
+        "labels": [],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "sqlite_about",
+      "url": "https://www.sqlite.org/about.html",
+      "host": "sqlite.org",
+      "contentSha": "4b99169565af75a3e637a2cba19c1a3f59ab770444239931c969f94ab218357e",
+      "available": true,
+      "objectiveClasses": [
+        null
+      ],
+      "raw": {
+        "labels": [
+          "skipped-heading"
+        ],
+        "primaryDefects": [
+          "skipped-heading"
+        ],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "lua_about",
+      "url": "https://www.lua.org/about.html",
+      "host": "lua.org",
+      "contentSha": "3aa05e5c88126b5937d5f0b4e98d1455574569712a2d953f880927eacf778d56",
+      "available": true,
+      "objectiveClasses": [],
+      "raw": {
+        "labels": [],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "ruby_home",
+      "url": "https://www.ruby-lang.org/en/",
+      "host": "ruby-lang.org",
+      "contentSha": "a8657ffe72dfcf01e157452444fb2efb5772ea1d18b921c1f9ebefffc65b1f58",
+      "available": true,
+      "objectiveClasses": [],
+      "raw": {
+        "labels": [],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "php_home",
+      "url": "https://www.php.net/",
+      "host": "php.net",
+      "contentSha": "76dd2911401c270db0462514ea9a0f9824a37dc49537baaa4a33f912ce90d970",
+      "available": true,
+      "objectiveClasses": [],
+      "raw": {
+        "labels": [],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "apache_home",
+      "url": "https://httpd.apache.org/",
+      "host": "httpd.apache.org",
+      "contentSha": "61423f9d2f57acd2d4e2687c0a368a59b36770cc377c9190a7074f135384ee36",
+      "available": true,
+      "objectiveClasses": [],
+      "raw": {
+        "labels": [],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "nginx_home",
+      "url": "https://nginx.org/en/",
+      "host": "nginx.org",
+      "contentSha": "4f8c2c1947aa516da30372c6c485d6069a292927052159cc7a933d00f109c0ad",
+      "available": true,
+      "objectiveClasses": [
+        null
+      ],
+      "raw": {
+        "labels": [
+          "skipped-heading"
+        ],
+        "primaryDefects": [
+          "skipped-heading"
+        ],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "gnu_home",
+      "url": "https://www.gnu.org/",
+      "host": "gnu.org",
+      "contentSha": "632765accb9c4075b8ccdeb25fde1ed3ea6f9225a0f0c51702e32f2ea7584bd5",
+      "available": true,
+      "objectiveClasses": [],
+      "raw": {
+        "labels": [],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 51
+      }
+    },
+    {
+      "id": "kernel_home",
+      "url": "https://www.kernel.org/",
+      "host": "kernel.org",
+      "contentSha": "19390cc2d3da1b029bf9de9f8bab9a13c86c014fb9694ae095f05949afaede2c",
+      "available": true,
+      "objectiveClasses": [],
+      "raw": {
+        "labels": [],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "unicode_home",
+      "url": "https://home.unicode.org/",
+      "host": "home.unicode.org",
+      "contentSha": "0b46b5ea9f7b8d2df86106747fa52bc351d4a1a26fefcbfa031d35a27b70e82f",
+      "available": true,
+      "objectiveClasses": [
+        null
+      ],
+      "raw": {
+        "labels": [
+          "low-contrast",
+          "skipped-heading"
+        ],
+        "primaryDefects": [
+          "low-contrast"
+        ],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "iana_home",
+      "url": "https://www.iana.org/",
+      "host": "iana.org",
+      "contentSha": "1873c412ad69ebc735a8bd765a3bc75d59094b872342d76c491b03b2fb72babf",
+      "available": true,
+      "objectiveClasses": [],
+      "raw": {
+        "labels": [],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "rfc_editor",
+      "url": "https://www.rfc-editor.org/",
+      "host": "rfc-editor.org",
+      "contentSha": "ceed9dcebb13a394b8e5d942cd8e250af90eb0d603abd05662091c5391e07d6e",
+      "available": true,
+      "objectiveClasses": [
+        null
+      ],
+      "raw": {
+        "labels": [
+          "low-contrast"
+        ],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "curl_home",
+      "url": "https://curl.se/",
+      "host": "curl.se",
+      "contentSha": "9d92a8dd3ce1ef09ddf34bea2894fdd9bbbafca67c78a911fae0f709299fd235",
+      "available": true,
+      "objectiveClasses": [],
+      "raw": {
+        "labels": [],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "git_scm",
+      "url": "https://git-scm.com/",
+      "host": "git-scm.com",
+      "contentSha": "c3a821bc77efac3253e4d4101302b83ffe06c22d20d248cb42ccfd1e72ec9ded",
+      "available": true,
+      "objectiveClasses": [],
+      "raw": {
+        "labels": [],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "vim_home",
+      "url": "https://www.vim.org/",
+      "host": "vim.org",
+      "contentSha": "27dbf1103067861a0ba90bcdb4469f7b8f98073400341ef6275664e766e2743c",
+      "available": true,
+      "objectiveClasses": [],
+      "raw": {
+        "labels": [],
+        "primaryDefects": [],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 0
+      }
+    },
+    {
+      "id": "gnome_home",
+      "url": "https://www.gnome.org/",
+      "host": "gnome.org",
+      "contentSha": "192141c15d6c1a222ff85e082deda3574a2bd331971e1d752e5c0d4e8d141b10",
+      "available": true,
+      "objectiveClasses": [
+        null
+      ],
+      "raw": {
+        "labels": [
+          "skipped-heading"
+        ],
+        "primaryDefects": [
+          "skipped-heading"
+        ],
+        "primaryContentIdentified": true,
+        "contrastIndeterminate": 2
+      }
+    }
+  ]
+}

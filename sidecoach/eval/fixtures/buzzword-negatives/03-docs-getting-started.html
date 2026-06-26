@@ -1,0 +1,34 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Getting Started</title>
+<style>
+  body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;max-width:780px;margin:0 auto;padding:48px 24px;line-height:1.65}
+  h1{font-size:54px;margin:0 0 8px}
+  .sub{font-size:22px;color:#555;margin:0 0 36px}
+  h2{font-size:30px;margin:34px 0 10px}
+  p,li{font-size:16px;margin:0 0 12px}
+  pre{font-size:13px;background:#0d1117;color:#e6edf3;padding:14px;border-radius:8px;overflow:auto}
+</style></head>
+<body>
+  <main>
+    <h1>Getting Started</h1>
+    <p class="sub">Install the client, connect to your database, and run your first query in under five minutes.</p>
+
+    <h2>Install the client</h2>
+    <p>Add the package to your project with your package manager of choice. The client has no runtime dependencies and works in Node.js 18 and later.</p>
+    <pre>npm install @example/client</pre>
+
+    <h2>Connect to your database</h2>
+    <p>Create a connection using the URL from your dashboard. Connections are pooled by default, so you can reuse the same client across requests without exhausting the connection limit.</p>
+    <pre>import { connect } from "@example/client";
+const db = connect(process.env.DATABASE_URL);</pre>
+
+    <h2>Powerful queries with SQL</h2>
+    <p>Write plain SQL and get typed results back. The client parses your query at build time and infers the return type from the column list, so a typo in a column name is caught before you run the code. Parameters are passed separately to prevent injection.</p>
+    <pre>const rows = await db.query("select id, email from users where id = $1", [42]);</pre>
+
+    <h2>Handle errors</h2>
+    <p>Every query returns a result object. Network failures and constraint violations throw typed errors you can catch and inspect. Use a transaction when you need several statements to succeed or fail together.</p>
+
+    <h2>Next steps</h2>
+    <p>Read the schema guide to learn how migrations work, or open the API reference for the full list of methods. The example repository contains a small application that ties these pieces together.</p>
+  </main>
+</body></html>

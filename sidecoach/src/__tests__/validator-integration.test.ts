@@ -91,7 +91,7 @@ function testPolishStandardValidator() {
   console.log(`  - Pass rate: ${report.passRate}`);
   console.log(`  - Critical violations: ${report.criticalViolations}`);
 
-  return report.totalRules === 22;
+  return report.totalRules === 24;
 }
 
 // Test 3: Extended Domain Validator
@@ -125,12 +125,15 @@ function testExtendedDomainValidator() {
   console.log(`  - Violations: ${report.violations}`);
   console.log(`  - Pass rate: ${report.passRate}`);
 
-  return report.totalRules >= 90;
+  // Stage 2 convergence: ExtendedDomainValidator is now a registry-backed facade over the absorbed forms (16)
+  // + page-quality (6) rules = EXACTLY 22, NOT the old 196-rule theater framework. Assert the exact migration
+  // contract (a tripwire that breaks if the absorbed set changes), plus the count invariant.
+  return report.totalRules === 22 && (report.passed + report.violations === report.totalRules);
 }
 
-// Test 4: Combined Validator (112 rules)
+// Test 4: Combined Validator (46 rules = 24 Polish + 22 Extended)
 function testCombinedValidation() {
-  console.log('\n[TEST] Combined Validation (112 rules)\n');
+  console.log('\n[TEST] Combined Validation (46 rules)\n');
 
   const context: DomainCheckContext = {
     designTokens: {
@@ -196,7 +199,11 @@ function testCombinedValidation() {
   console.log(`  - Extended Domains: ${extendedReport.passed}/${extendedReport.totalRules} (${extendedReport.passRate})`);
   console.log(`  - Combined: ${totalPassed}/${totalRules} (${combinedPassRate}%)`);
 
-  return totalRules >= 112;
+  // Stage 2 convergence: combined = PolishStandard (24) + the registry-backed ExtendedDomain facade (22) = 46,
+  // no longer 112/114. Assert the EXACT migration contract (Extended === 22, combined === 46) + the aggregation
+  // invariant. Exact literals are the regression tripwire; update them deliberately when the absorbed set changes.
+  const totalViolations = polishReport.violations + extendedReport.violations;
+  return extendedReport.totalRules === 22 && totalRules === 46 && (totalPassed + totalViolations === totalRules);
 }
 
 // Test 5: Flow J Integration

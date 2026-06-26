@@ -10,12 +10,13 @@ import type { ProductCheckContext } from './validators/check-context';
 const STRUCTURAL_OVERRIDE_REASON =
   'HTML-structural detector flags pattern shapes, not certainties; false positives are possible (absolute-ban-detector.ts:19-21). Demoted from the table default major to non-blocking minor.';
 
-// P4a-2 partial-static slice: 30 canonical rules across four owners. supportedSourceKinds
-// is sourced from the ONE shared matrix (supportedKindsFor) so registry generation and
-// project collection cannot drift. Browser-evidence rules (computed-style/dom/contrast)
-// are owned-but-non-required and surface inconclusive until a browser collector (P4b).
+// 36 canonical rules across four owners. supportedSourceKinds is sourced from the ONE shared matrix
+// (supportedKindsFor) so registry generation and project collection cannot drift. Browser-evidence rules
+// (computed-style/dom/contrast) are owned-but-non-required and surface inconclusive until the collector runs.
+// Rendered-scan rules (Stage 1 convergence: the 5 NEW classes) are promoted to required when a renderUrl is
+// present and read the live rendered scan (run-validator activateRenderedPolicy).
 const RAW_RULES: ProductRuleDefinition[] = [
-  // ====================== owner polish-standard (19) ======================
+  // ====================== owner polish-standard (23) ======================
   {
     ruleId: 'polish.scale-on-press',
     sourceRuleAliases: ['polish-standard:1', 'POLISH_001'],
@@ -193,6 +194,38 @@ const RAW_RULES: ProductRuleDefinition[] = [
     applicability: 'not_applicable',
   },
   {
+    ruleId: 'polish.interruptible-animations',
+    sourceRuleAliases: ['polish-standard:23', 'POLISH_023'],
+    canonicalRuleKey: 'polish/interruptible-animations',
+    ownerValidatorId: 'polish-standard',
+    sourceVocabulary: 'polish-extended-antipattern',
+    sourceSeverity: 'medium',
+    severity: 'minor',
+    findingClass: 'polish',
+    registryScope: 'polished-interruptible-state',
+    evidenceRequirements: ['css-rule'],
+    supportedSourceKinds: supportedKindsFor('css-rule'),
+    scope: 'file',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'not_applicable',
+  },
+  {
+    ruleId: 'polish.skip-load-animation',
+    sourceRuleAliases: ['polish-standard:24', 'POLISH_024'],
+    canonicalRuleKey: 'polish/skip-load-animation',
+    ownerValidatorId: 'polish-standard',
+    sourceVocabulary: 'polish-extended-antipattern',
+    sourceSeverity: 'medium',
+    severity: 'minor',
+    findingClass: 'polish',
+    registryScope: 'polished-load-animation-gating',
+    evidenceRequirements: ['css-rule'],
+    supportedSourceKinds: supportedKindsFor('css-rule'),
+    scope: 'file',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'not_applicable',
+  },
+  {
     ruleId: 'polish.sparse-will-change',
     sourceRuleAliases: ['polish-standard:13', 'POLISH_013'],
     canonicalRuleKey: 'polish/sparse-will-change',
@@ -322,7 +355,7 @@ const RAW_RULES: ProductRuleDefinition[] = [
     applicability: 'inconclusive',
   },
 
-  // ====================== owner static-a11y (3) ======================
+  // ============ owner static-a11y: 3 static/browser-backed here (+4 rendered a11y classes below = 7 total) ============
   {
     // SEED: id 18, css-rule blocker (the only required static-a11y rule).
     ruleId: 'a11y.focus-visible',
@@ -358,7 +391,13 @@ const RAW_RULES: ProductRuleDefinition[] = [
     applicability: 'inconclusive',
   },
   {
-    // id 20, contrast-only -> owned non-required -> inconclusive until P4b.
+    // id 20. Stage 6 convergence: MIGRATED off the collector contrast probe onto the rendered scanner's
+    // low-contrast finding - the SAME detector the eval harness scores (objective-rendered-scanner). This closes
+    // the eval-only hole the one-engine audit found (low-contrast was the biggest objective class but had no live
+    // consumer). Now rendered-scan-backed like its gray-on-color sibling: promoted-required when a renderUrl is
+    // present (activateRenderedPolicy); inconclusive when no scan (fail-closed). The old collector contrast probe
+    // is orphaned (no live rule reads ctx.contrast). DETECTION-PRESERVING for eval: the eval calls the scanner
+    // directly, not the registry, so frozen-90 numbers are unchanged.
     ruleId: 'a11y.color-contrast',
     sourceRuleAliases: ['polish-standard:20', 'POLISH_020'],
     canonicalRuleKey: 'a11y/color-contrast',
@@ -368,12 +407,232 @@ const RAW_RULES: ProductRuleDefinition[] = [
     severity: 'blocker',
     findingClass: 'a11y',
     registryScope: 'contrast-floor',
-    evidenceRequirements: ['contrast'],
-    supportedSourceKinds: supportedKindsFor('contrast'),
+    evidenceRequirements: ['rendered-scan'],
+    supportedSourceKinds: supportedKindsFor('rendered-scan'),
     scope: 'component',
     narrowTargetBehavior: 'evaluate_expanded_context',
     applicability: 'inconclusive',
   },
+  // ====================== owner rendered-scan classes (Stage 1 convergence) ======================
+  // Five NEW rendered-scan-backed rules driven by the live scan (scanRenderedLive) - the SAME detector logic the
+  // eval harness runs, now in the live path. Each declares evidenceRequirements ['rendered-scan'] and is promoted
+  // to required when a renderUrl is present (run-validator activateRenderedPolicy). These classes had ZERO live
+  // detection before Stage 1 (pure additions, detection-preserving). a11y.color-contrast (above) is NOT among
+  // them - its migration to the rendered engine is deferred to a later stage.
+  {
+    ruleId: 'a11y.broken-image',
+    sourceRuleAliases: ['rendered-scanner:broken-image'],
+    canonicalRuleKey: 'a11y/broken-image',
+    ownerValidatorId: 'static-a11y',
+    sourceVocabulary: 'rendered-scanner',
+    sourceSeverity: 'high',
+    severity: 'major',
+    findingClass: 'a11y',
+    registryScope: 'rendered-broken-image',
+    evidenceRequirements: ['rendered-scan'],
+    supportedSourceKinds: supportedKindsFor('rendered-scan'),
+    scope: 'component',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'inconclusive',
+  },
+  {
+    ruleId: 'a11y.skipped-heading',
+    sourceRuleAliases: ['rendered-scanner:skipped-heading'],
+    canonicalRuleKey: 'a11y/heading-order',
+    ownerValidatorId: 'static-a11y',
+    sourceVocabulary: 'rendered-scanner',
+    sourceSeverity: 'high',
+    severity: 'major',
+    findingClass: 'a11y',
+    registryScope: 'rendered-heading-order',
+    evidenceRequirements: ['rendered-scan'],
+    supportedSourceKinds: supportedKindsFor('rendered-scan'),
+    scope: 'component',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'inconclusive',
+  },
+  {
+    ruleId: 'a11y.gray-on-color',
+    sourceRuleAliases: ['rendered-scanner:gray-on-color'],
+    canonicalRuleKey: 'a11y/gray-on-color',
+    ownerValidatorId: 'static-a11y',
+    sourceVocabulary: 'rendered-scanner',
+    sourceSeverity: 'high',
+    severity: 'major',
+    findingClass: 'a11y',
+    registryScope: 'rendered-gray-on-color',
+    evidenceRequirements: ['rendered-scan'],
+    supportedSourceKinds: supportedKindsFor('rendered-scan'),
+    scope: 'component',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'inconclusive',
+  },
+  {
+    ruleId: 'a11y.justified-text',
+    sourceRuleAliases: ['rendered-scanner:justified-text'],
+    canonicalRuleKey: 'a11y/justified-text',
+    ownerValidatorId: 'static-a11y',
+    sourceVocabulary: 'rendered-scanner',
+    sourceSeverity: 'medium',
+    severity: 'minor',
+    findingClass: 'a11y',
+    registryScope: 'rendered-justified-text',
+    evidenceRequirements: ['rendered-scan'],
+    supportedSourceKinds: supportedKindsFor('rendered-scan'),
+    scope: 'component',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'inconclusive',
+  },
+  {
+    ruleId: 'polish.tiny-text',
+    sourceRuleAliases: ['rendered-scanner:tiny-text'],
+    canonicalRuleKey: 'polish/tiny-text',
+    ownerValidatorId: 'polish-standard',
+    sourceVocabulary: 'rendered-scanner',
+    sourceSeverity: 'medium',
+    severity: 'minor',
+    findingClass: 'polish',
+    registryScope: 'rendered-tiny-text',
+    evidenceRequirements: ['rendered-scan'],
+    supportedSourceKinds: supportedKindsFor('rendered-scan'),
+    scope: 'component',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'inconclusive',
+  },
+  {
+    // Stage 5a (reimplement-and-own): the rendered-subjective marketing-buzzword detector, now driving the live
+    // NL path too (same in-page logic the eval harness scores). findingClass 'polish' + owner 'polish-standard'
+    // mirror tiny-text (the registry has no dedicated taste class; this is the closest existing slot for a
+    // rendered taste finding). Precision-first operating point lives in subjective-rendered-scanner.ts.
+    ruleId: 'polish.marketing-buzzword',
+    sourceRuleAliases: ['rendered-scanner:marketing-buzzword'],
+    canonicalRuleKey: 'polish/marketing-buzzword',
+    ownerValidatorId: 'polish-standard',
+    sourceVocabulary: 'rendered-scanner',
+    sourceSeverity: 'medium',
+    severity: 'minor',
+    findingClass: 'polish',
+    registryScope: 'rendered-marketing-buzzword',
+    evidenceRequirements: ['rendered-scan'],
+    supportedSourceKinds: supportedKindsFor('rendered-scan'),
+    scope: 'component',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'inconclusive',
+  },
+
+  // ============ owner forms: absorbed FORMS rules (Stage 2 convergence) ============
+  // The 5 highest-signal forms-a11y rules absorbed from ExtendedDomainValidator's FORMS_* (the one genuinely-real
+  // domain it owned; the other ~190 rules were theater/redundant and are retired). Markup-evidence, scope:project
+  // (reason over the assembled page markup), N/A when the page has no form controls. Reimplemented registry-quality
+  // (forms-checks.ts), not the verbatim global-haystack regex. Aliases keep the old FORMS_NNN ids resolvable.
+  {
+    ruleId: 'a11y.form-control-labelled',
+    sourceRuleAliases: ['extended-domain:FORMS_016', 'FORMS_016'],
+    canonicalRuleKey: 'a11y/form-control-labelled',
+    ownerValidatorId: 'forms',
+    sourceVocabulary: 'extended-domain',
+    sourceSeverity: 'critical',
+    severity: 'blocker',
+    findingClass: 'a11y',
+    registryScope: 'forms-labelling',
+    evidenceRequirements: ['markup'],
+    supportedSourceKinds: supportedKindsFor('markup'),
+    scope: 'project',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'not_applicable',
+  },
+  {
+    ruleId: 'a11y.form-error-association',
+    sourceRuleAliases: ['extended-domain:FORMS_018', 'FORMS_018'],
+    canonicalRuleKey: 'a11y/form-error-association',
+    ownerValidatorId: 'forms',
+    sourceVocabulary: 'extended-domain',
+    sourceSeverity: 'high',
+    severity: 'major',
+    findingClass: 'a11y',
+    registryScope: 'forms-error-association',
+    evidenceRequirements: ['markup'],
+    supportedSourceKinds: supportedKindsFor('markup'),
+    scope: 'project',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'not_applicable',
+  },
+  {
+    ruleId: 'a11y.form-placeholder-not-label',
+    sourceRuleAliases: ['extended-domain:FORMS_019', 'FORMS_019'],
+    canonicalRuleKey: 'a11y/form-placeholder-not-label',
+    ownerValidatorId: 'forms',
+    sourceVocabulary: 'extended-domain',
+    sourceSeverity: 'high',
+    severity: 'major',
+    findingClass: 'a11y',
+    registryScope: 'forms-placeholder',
+    evidenceRequirements: ['markup'],
+    supportedSourceKinds: supportedKindsFor('markup'),
+    scope: 'project',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'not_applicable',
+  },
+  {
+    ruleId: 'a11y.form-input-type',
+    sourceRuleAliases: ['extended-domain:FORMS_002', 'FORMS_002'],
+    canonicalRuleKey: 'a11y/form-input-type',
+    ownerValidatorId: 'forms',
+    sourceVocabulary: 'extended-domain',
+    sourceSeverity: 'high',
+    severity: 'minor',
+    // DELIBERATE downgrade from the legacy FORMS_002 'high'/major (Codex P1): a bare type="text" where a typed
+    // input belongs is a keyboard/validation UX hint, not a blocking accessibility failure - it should advise,
+    // not gate convergence. Provenance kept as sourceSeverity 'high'; the override documents the intent.
+    severityOverrideReason: 'input-type is a UX keyboard/validation hint, not a blocking a11y failure; advisory-not-gating by design',
+    findingClass: 'a11y',
+    registryScope: 'forms-input-type',
+    evidenceRequirements: ['markup'],
+    supportedSourceKinds: supportedKindsFor('markup'),
+    scope: 'project',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'not_applicable',
+  },
+  {
+    ruleId: 'a11y.form-choice-label-target',
+    sourceRuleAliases: ['extended-domain:FORMS_015', 'FORMS_015'],
+    canonicalRuleKey: 'a11y/form-choice-label-target',
+    ownerValidatorId: 'forms',
+    sourceVocabulary: 'extended-domain',
+    sourceSeverity: 'high',
+    severity: 'major',
+    findingClass: 'a11y',
+    registryScope: 'forms-choice-target',
+    evidenceRequirements: ['markup'],
+    supportedSourceKinds: supportedKindsFor('markup'),
+    scope: 'project',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'not_applicable',
+  },
+  // forms batch 2 (FORMS_001/003/004/005/007/008/009/011/014/017/020). Weaker keyword-presence proxies stay
+  // non-blocking (minor/advisory); strong markup checks (paste-block, inline-errors, autocomplete) are major.
+  { ruleId: 'a11y.form-autocomplete', sourceRuleAliases: ['extended-domain:FORMS_001', 'FORMS_001'], canonicalRuleKey: 'a11y/form-autocomplete', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'high', severity: 'major', findingClass: 'a11y', registryScope: 'forms-autocomplete', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'a11y.form-inputmode', sourceRuleAliases: ['extended-domain:FORMS_003', 'FORMS_003'], canonicalRuleKey: 'a11y/form-inputmode', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'medium', severity: 'minor', findingClass: 'a11y', registryScope: 'forms-inputmode', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'a11y.form-never-block-paste', sourceRuleAliases: ['extended-domain:FORMS_004', 'FORMS_004'], canonicalRuleKey: 'a11y/form-never-block-paste', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'high', severity: 'major', findingClass: 'a11y', registryScope: 'forms-paste', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'a11y.form-spellcheck-off', sourceRuleAliases: ['extended-domain:FORMS_005', 'FORMS_005'], canonicalRuleKey: 'a11y/form-spellcheck-off', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'medium', severity: 'minor', findingClass: 'a11y', registryScope: 'forms-spellcheck', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'a11y.form-idempotent-submit', sourceRuleAliases: ['extended-domain:FORMS_007', 'FORMS_007'], canonicalRuleKey: 'a11y/form-idempotent-submit', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'medium', severity: 'minor', findingClass: 'a11y', registryScope: 'forms-idempotent-submit', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'a11y.form-inline-errors', sourceRuleAliases: ['extended-domain:FORMS_008', 'FORMS_008'], canonicalRuleKey: 'a11y/form-inline-errors', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'high', severity: 'major', findingClass: 'a11y', registryScope: 'forms-inline-errors', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'a11y.form-focus-first-error', sourceRuleAliases: ['extended-domain:FORMS_009', 'FORMS_009'], canonicalRuleKey: 'a11y/form-focus-first-error', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'high', severity: 'minor', severityOverrideReason: 'detected via keyword-presence proxy (focus/setFocus/scrollIntoView near error); advisory-not-gating until a stronger signal exists', findingClass: 'a11y', registryScope: 'forms-focus-first-error', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'a11y.form-no-pm-non-auth', sourceRuleAliases: ['extended-domain:FORMS_011', 'FORMS_011'], canonicalRuleKey: 'a11y/form-no-pm-non-auth', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'medium', severity: 'minor', findingClass: 'a11y', registryScope: 'forms-no-pm', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'a11y.form-textarea-submit', sourceRuleAliases: ['extended-domain:FORMS_014', 'FORMS_014'], canonicalRuleKey: 'a11y/form-textarea-submit', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'medium', severity: 'minor', findingClass: 'a11y', registryScope: 'forms-textarea-submit', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'a11y.form-no-pre-disable-submit', sourceRuleAliases: ['extended-domain:FORMS_017', 'FORMS_017'], canonicalRuleKey: 'a11y/form-no-pre-disable-submit', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'medium', severity: 'minor', findingClass: 'a11y', registryScope: 'forms-no-pre-disable', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'a11y.form-autofocus-sparingly', sourceRuleAliases: ['extended-domain:FORMS_020', 'FORMS_020'], canonicalRuleKey: 'a11y/form-autofocus-sparingly', ownerValidatorId: 'forms', sourceVocabulary: 'extended-domain', sourceSeverity: 'low', severity: 'advisory', findingClass: 'a11y', registryScope: 'forms-autofocus', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+
+  // ============ owner page-quality: the genuinely-strong DOM-evidence Tier-2 keepers (Stage 2 convergence) ============
+  // Cherry-picked from ExtendedDomainValidator's Tier-2 set; the rest (JS-keyword proxies, always-pass, NLP
+  // heuristics) were RETIRED with the theater. All non-blocking (minor) quality advisories - they advise, not
+  // gate - and N/A when their target element is absent. DOM-visible evidence only (img attrs / CSS props / aria).
+  { ruleId: 'perf.image-dimensions', sourceRuleAliases: ['extended-domain:IMGPERF_001', 'IMGPERF_001'], canonicalRuleKey: 'perf/image-dimensions', ownerValidatorId: 'page-quality', sourceVocabulary: 'extended-domain', sourceSeverity: 'high', severity: 'major', findingClass: 'polish', registryScope: 'pq-image-dimensions', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'perf.image-lazy-load', sourceRuleAliases: ['extended-domain:IMGPERF_002', 'IMGPERF_002'], canonicalRuleKey: 'perf/image-lazy-load', ownerValidatorId: 'page-quality', sourceVocabulary: 'extended-domain', sourceSeverity: 'medium', severity: 'minor', findingClass: 'polish', registryScope: 'pq-image-lazy', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'polish.text-overflow-strategy', sourceRuleAliases: ['extended-domain:CONTENT_002', 'CONTENT_002'], canonicalRuleKey: 'polish/text-overflow-strategy', ownerValidatorId: 'page-quality', sourceVocabulary: 'extended-domain', sourceSeverity: 'medium', severity: 'minor', findingClass: 'polish', registryScope: 'pq-text-overflow', evidenceRequirements: ['css-rule'], supportedSourceKinds: supportedKindsFor('css-rule'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'theming.color-scheme-dark', sourceRuleAliases: ['extended-domain:DARKMODE_001', 'DARKMODE_001'], canonicalRuleKey: 'theming/color-scheme-dark', ownerValidatorId: 'page-quality', sourceVocabulary: 'extended-domain', sourceSeverity: 'medium', severity: 'minor', findingClass: 'theming', registryScope: 'pq-color-scheme', evidenceRequirements: ['css-rule'], supportedSourceKinds: supportedKindsFor('css-rule'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'a11y.chart-text-fallback', sourceRuleAliases: ['extended-domain:CHART_003', 'CHART_003'], canonicalRuleKey: 'a11y/chart-text-fallback', ownerValidatorId: 'page-quality', sourceVocabulary: 'extended-domain', sourceSeverity: 'medium', severity: 'minor', findingClass: 'a11y', registryScope: 'pq-chart-fallback', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
+  { ruleId: 'a11y.button-label-specific', sourceRuleAliases: ['extended-domain:COPY_003', 'COPY_003'], canonicalRuleKey: 'a11y/button-label-specific', ownerValidatorId: 'page-quality', sourceVocabulary: 'extended-domain', sourceSeverity: 'medium', severity: 'minor', findingClass: 'a11y', registryScope: 'pq-button-label', evidenceRequirements: ['markup'], supportedSourceKinds: supportedKindsFor('markup'), scope: 'project', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
 
   // ====================== owner theming (2) ======================
   {
@@ -460,25 +719,8 @@ const RAW_RULES: ProductRuleDefinition[] = [
     narrowTargetBehavior: 'evaluate_expanded_context',
     applicability: 'not_applicable',
   },
-  {
-    // SEED: identical-card-grids, P1 default major DEMOTED to minor (heuristic).
-    // scope:project - its source scanner reasons over a page/project shape.
-    ruleId: 'anti-pattern.identical-card-grids',
-    sourceRuleAliases: ['identical-card-grids'],
-    canonicalRuleKey: 'anti-pattern/identical-card-grids',
-    ownerValidatorId: 'anti-pattern',
-    sourceVocabulary: 'p012',
-    sourceSeverity: 'P1',
-    severity: 'minor',
-    severityOverrideReason: STRUCTURAL_OVERRIDE_REASON,
-    findingClass: 'anti-pattern',
-    registryScope: 'named-ban-compliance',
-    evidenceRequirements: ['markup'],
-    supportedSourceKinds: supportedKindsFor('markup'),
-    scope: 'project',
-    narrowTargetBehavior: 'evaluate_expanded_context',
-    applicability: 'not_applicable',
-  },
+  // (anti-pattern.identical-card-grids registry entry DELETED Stage-2 2026-06-24 with its scanner - ReDoS +
+  // low-precision over-firing; no replacement.)
   {
     ruleId: 'anti-pattern.hero-metric-template',
     sourceRuleAliases: ['hero-metric-template'],

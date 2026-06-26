@@ -192,7 +192,7 @@ Any 3+ of these means the design is indistinguishable from GPT/Cursor/v0 output.
 
 ---
 
-## SECTION 3: What this covers that impeccable + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
 
 1. **The "ALWAYS ASK before deciding" protocol.** Sidecoach makes decisions and validates; Bencium proposes and waits. A different design conversation mode.
 

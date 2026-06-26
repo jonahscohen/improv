@@ -337,9 +337,9 @@ Replacement patterns:
 
 ---
 
-## SECTION 3: What this covers that impeccable + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
 
-**Make-interfaces-feel-better has tactical rules. Impeccable has process. Neither has the BANNED PATTERNS catalog.**
+**Make-interfaces-feel-better has tactical rules. Oracle has process. Neither has the BANNED PATTERNS catalog.**
 
 The taste-skill's unique contribution is **the canonical ban list as a defensive layer**. Sidecoach's tactical polish skill says "use balanced text wrap"; the taste-skill says "DO NOT use 'Elevate' in copy" and "DO NOT use Inter for premium vibes" and "DO NOT use 3 equal cards." These are pattern-matching bans, not principle bans.
 

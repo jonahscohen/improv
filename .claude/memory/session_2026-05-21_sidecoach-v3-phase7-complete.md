@@ -1,20 +1,20 @@
 ---
-name: Phase 7 Impeccable Detect integration complete
-description: Wire npx impeccable detect CLI into FlowK, achieve true 28-rule anti-pattern coverage
+name: Phase 7 Oracle Detect integration complete
+description: Wire npx oracle detect CLI into FlowK, achieve true 28-rule anti-pattern coverage
 type: project
 ---
 
-## Phase 7: Impeccable Detect Integration - COMPLETE
+## Phase 7: Oracle Detect Integration - COMPLETE
 
 ### New file created
-- `src/impeccable-detect-bridge.ts` - 160 lines
+- `src/oracle-detect-bridge.ts` - 160 lines
 
 ### Implementation: CLI bridge to 28-rule analyzer
 
 **Core flow:**
 
 1. Check project has HTML/CSS files (skip if web-less project)
-2. Run: `npx impeccable detect <projectPath> --json`
+2. Run: `npx oracle detect <projectPath> --json`
 3. Parse JSON output (handles 3 output formats)
 4. Transform findings to standard interface
 5. Return 28-rule coverage + guidance items
@@ -30,7 +30,7 @@ type: project
 ### Key interface
 
 ```typescript
-interface ImpeccableDetectFinding {
+interface OracleDetectFinding {
   rule: string;         // e.g. "color-contrast-aa"
   severity: 'critical' | 'high' | 'medium' | 'low';
   message: string;      // Human description
@@ -42,7 +42,7 @@ interface ImpeccableDetectFinding {
 
 interface DetectResult {
   success: boolean;
-  findings: ImpeccableDetectFinding[];
+  findings: OracleDetectFinding[];
   message: string;
   rulesCovered: number;  // Always 28
 }
@@ -58,7 +58,7 @@ Method `findingsToGuidance()` transforms findings to guidance items:
 ### Next: Wire into FlowKMultiLensAuditHandler
 
 In handler.execute():
-1. Create bridge: `const bridge = new ImpeccableDetectBridge();`
+1. Create bridge: `const bridge = new OracleDetectBridge();`
 2. Run detect: `const result = bridge.detect(context.projectPath || process.cwd());`
 3. Convert to guidance: `const guidance = bridge.findingsToGuidance(result.findings);`
 4. Include in handler result alongside other audit guidance
@@ -75,7 +75,7 @@ In handler.execute():
 | 4 | RegressionDetector | 120 | ✓ Verified |
 | 5 | ProjectPersonaEngine | 185 | ✓ Verified |
 | 6 | DesignDebtTracker | 180 | ✓ Verified |
-| 7 | Impeccable Detect Bridge | 160 | ✓ Verified |
+| 7 | Oracle Detect Bridge | 160 | ✓ Verified |
 
 **Total new code: 1,165 lines**
 **Build status: ✓ Zero errors**
@@ -93,7 +93,7 @@ These are beyond the core Sidecoach v3 architecture and require handler implemen
 
 ## What This Achieves
 
-**Before (Impeccable):**
+**Before (Oracle):**
 - Stateless command menus
 - 28 CSS/DOM rules only
 - 5 fixed personas
@@ -103,7 +103,7 @@ These are beyond the core Sidecoach v3 architecture and require handler implemen
 
 **After (Sidecoach v3):**
 - Orchestrated flow chains with phase gating
-- 28 rules (via impeccable detect) + deterministic gates + regression detection
+- 28 rules (via oracle detect) + deterministic gates + regression detection
 - 3 project-specific personas via LLM
 - Degradation blocking + cross-session baseline comparison
 - Hard prerequisite enforcement (real files, required sections, dependencies)

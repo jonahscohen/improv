@@ -369,7 +369,7 @@ In all other cases, `x`/`y` shorthand is fine and more readable. The Vercel dash
 
 ---
 
-## SECTION 3: What this covers that impeccable + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
 
 **make-interfaces-feel-better's 14-point checklist is structural** (concentric radius, optical alignment, hit-area minimums, scale-on-press). It tells you WHAT to do.
 
@@ -377,7 +377,7 @@ In all other cases, `x`/`y` shorthand is fine and more readable. The Vercel dash
 
 **Specific gap-fills Emil provides:**
 
-1. **The frequency matrix as a first-pass animation gate.** Impeccable's `/animate` command doesn't ask "is this a 100+/day surface?" before adding motion. Emil's matrix turns "should I animate this?" from a vibes call into a lookup.
+1. **The frequency matrix as a first-pass animation gate.** Oracle's `/animate` command doesn't ask "is this a 100+/day surface?" before adding motion. Emil's matrix turns "should I animate this?" from a vibes call into a lookup.
 
 2. **The three named custom easings with verbatim bezier curves.** Sidecoach references "exponential easing" generally; make-interfaces-feel-better mentions easing in passing. Neither names `(0.23, 1, 0.32, 1)` as the canonical ease-out, `(0.77, 0, 0.175, 1)` as ease-in-out, or `(0.32, 0.72, 0, 1)` as the iOS drawer curve. These are concrete, copyable values.
 
@@ -391,7 +391,7 @@ In all other cases, `x`/`y` shorthand is fine and more readable. The Vercel dash
 
 7. **clip-path as an animation primitive.** Hold-to-delete, image reveals, tab color transitions, comparison sliders - all using inset clipping rather than layered DOM. Sidecoach motion library doesn't reference clip-path patterns.
 
-8. **The Sonner principles for "loved components".** A philosophical layer about DX, defaults, naming, and edge-case handling that sits ABOVE Impeccable's tactical layer. This is the "why people choose to adopt your library" wisdom.
+8. **The Sonner principles for "loved components".** A philosophical layer about DX, defaults, naming, and edge-case handling that sits ABOVE Oracle's tactical layer. This is the "why people choose to adopt your library" wisdom.
 
 9. **The "review your work the next day" rule.** A workflow discipline that catches what fatigue hides.
 

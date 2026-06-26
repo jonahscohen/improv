@@ -24,7 +24,7 @@ relates_to: [session_2026-05-23_phase2_task8_9.md]
 - Max 10 iterations, screenshot-per-round capture mode
 - Test: PASS - Both modes work, artifacts created, structure valid
 
-## Task 11: Interactive Menu Equivalent to /impeccable - VERIFIED
+## Task 11: Interactive Menu Equivalent to /oracle - VERIFIED
 - Empty input or /sidecoach with no args shows menu
 - All commands grouped by phase with descriptions
 - Numbered menu items (1-13 shown)

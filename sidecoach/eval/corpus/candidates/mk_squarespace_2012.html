@@ -1,0 +1,3426 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"> 
+  
+   <meta name="Robots" content="index,follow"> 
+   <meta name="description" content="Build a website. Start a blog. Squarespace is the most stylish way to put your content on the web."> 
+  
+  <!-- www -->
+
+  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+
+  <style data-inlined-from="https://web.archive.org/display/common.css?styleId=292624&amp;RK=1335304529590&amp;CE=57">/* ------------------------------------------------------------------------------------------------
+
+   Squarespace Core CSS Definitions DO NOT REPLACE.  DO NOT IMPORT THIS FILE.  All definitions are needed.
+   Override as required from Custom CSS only!
+
+------------------------------------------------------------------------------------------------ */
+
+@media screen { 
+
+
+/* --- core elements --------------------------------------------------------------------------- */
+
+html { height: 100%; }
+img { border: 0 none; -ms-interpolation-mode: bicubic; }
+body { border: 0px; height: 100%; margin: 0px; padding: 0px; }
+td { background: transparent; border: 0px; margin: 0px; padding: 0px; }
+p { margin-bottom: 1em; margin-top: 0em; }
+h1, h2, h3, h4, h5, h6 { font-weight: normal; margin: 0px; padding: 0px; }
+ul { list-style-type: square; /* naturally. */ margin: 1em 0 1em; padding: 0; padding-left: 2em; }
+form { margin:0; padding: 0; }
+
+a { -moz-outline:none; } 
+  
+input.button, input.button[disabled] { font-size: 12px; padding: 2px 5px 3px 5px; -moz-outline: 0; }
+input.button-important { font-size: 12px; padding: 2px 5px 3px 5px; -moz-outline: 0; font-weight: bold; }  
+input.text, input.text-fixed, textarea, select { font: 8pt Arial, Tahoma, Verdana, Helvetica, sans-serif; }
+input.text { width: 300px; }
+input.text-fixed { width: 300px; }
+textarea { height: 120px; }
+
+.clearer { clear: both; line-height: 0; height: 0; }
+.templateErrors { display: none; }
+
+#bodyClearer { display: none; }
+
+ 
+/* --- image defaults -------------------------------------------------------------------------- */
+
+.thumbnail, .picture-full, .picture img, .thumbnail-image-float-left img, .thumbnail-image-float-right img, .thumbnail-image-float-none img { }
+#main-picture-wrapper { line-height: 1px; }
+
+     
+/* --- core squarespace elements --------------------------------------------------------------- */
+
+#sidebar2Wrapper { display: none; } 
+#siteTitle, #pageFooterWrapper, #pageBodyWrapper { clear: both; } 
+#canvasWrapper, #content, #sidebar1, #sidebar2 { overflow: hidden; }
+#bannerWrapper { line-height: 0; }
+#active-module-marker { display: none; }
+
+.folder-link { -moz-outline: 0; }
+
+.verticalNavigationBar .folder-open a.folder-link { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/folder-contract.png) center left no-repeat; padding-left: 15px; }
+.verticalNavigationBar .folder-open ul { }
+.verticalNavigationBar .folder-closed a.folder-link{ background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/folder-expand.png) center left no-repeat; padding-left: 15px; }
+
+.folder-closed .folder-wrapper ul { display: none; }
+
+.horizontalNavigationBar { width: 944px; }
+.horizontalNavigationBar .content-navigation { float: left; }
+  
+.horizontalNavigationBar .folder-open .folder-wrapper .module a { margin-left: 0; }
+.horizontalNavigationBar .folder-open .folder-wrapper a.folder-link { }
+.horizontalNavigationBar .folder-open .folder-wrapper { z-index: 999; } 
+.horizontalNavigationBar .folder-open .folder-wrapper ul { display: block; position: absolute; } 
+.horizontalNavigationBar .folder-open .folder-wrapper ul li { float: none; }
+
+.horizontalNavigationBar .folder-wrapper ul { position:relative; z-index:999;  } /* ensures flash works properly in headers */
+  
+.horizontalNavigationBar ul { list-style-type: none; padding: 0; margin: 0; }
+.horizontalNavigationBar ul li { float: left;  padding: 0; margin: 0; }
+.horizontalNavigationBar ul li a { display: block; }
+   
+.error-box { background-color: #990000; color: #$ErrorColorOpposite$; padding: 15px; margin-top: 1em; }
+.error-text, .error-text a:link, .error-text a:visited, .error-text a:active, .error-text a:hover { color: #990000; }
+.input-with-error { border: 2px solid #990000 !important; }
+.faded-text { color: #$InactiveTextColor$; }
+
+.offsite-link {         background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/open-off-site.png) center right no-repeat; padding-right: 13px; margin-right: 1px; }
+.offsite-link-inline {  background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/open-off-site.png) center right no-repeat; padding-right: 13px; margin-right: 1px; }
+.folder-link-expand {   background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/folder-expand.png) center center no-repeat;   padding: 0 6px 0 6px; line-height: 9px; font-size: 9px; cursor: pointer; }
+.folder-link-contract { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/folder-contract.png) center center no-repeat; padding: 0 6px 0 6px; line-height: 9px; font-size: 9px; cursor: pointer; }
+
+
+/* --- image floating / editor constructs ------------------------------------------------------ */
+
+.thumbnail-image-float-left { float: left; margin: 0px 10px 8px 0px; }
+.thumbnail-image-float-right { float: right; margin: 0px 0px 8px 10px; }
+.thumbnail-image-block { display: block; }
+.thumbnail-image-inline { display: inline; }
+  
+.thumbnail-image-float-left img, .thumbnail-image-float-right img , .thumbnail-image-float-none img { border: 1px solid #ccc; text-decoration: none; }
+
+.full-image-float-left { float: left; margin: 0px 10px 8px 0px; }
+.full-image-float-right { float: right; margin: 0px 0px 8px 10px; }
+.full-image-block { display: block; }
+.full-image-inline { display: inline; }
+ 
+.full-image-float-left img, .full-image-float-right img , .full-image-float-none img { text-decoration: none; }
+
+.thumbnail-caption { display: block; font-size: 9px; font-family: Verdana, sans-serif; line-height: 14px; padding-top: 5px; padding-bottom: 10px;  }
+   
+
+/* --- LEGACY constructs ----------------------------------------------------------------------- */
+
+.sizeLess40 { font-size: 60%; }
+.sizeLess20 { font-size: 80%; }
+.sizeGreater20 { font-size: 120%; }
+.sizeGreater40 { font-size: 140%; } 
+.sizeGreater60 { font-size: 160%; }
+.sizeGreater80 { font-size: 180%; }
+.sizeGreater100 { font-size: 200%; }
+
+
+/* --- squarespace document construction elements ---------------------------------------------- */
+
+.document-heading { margin-bottom: 1.8em; }
+.document-title { margin-bottom: .8em; }
+.header { margin-bottom: 2em; }
+.body { margin-bottom: 2em; margin-top: 1em; } 
+.body-direct { margin-bottom: 2em; }
+.footer { margin-top: 2em; clear: both; }
+.field { margin-bottom: 1em; clear: both; }
+
+
+/* --- squarespace form module components ----------------------------------------------------- */
+
+.form-body { list-style-type: none; padding: 0; margin: 0; }
+
+.form-body .fieldContainer {       padding: 5px 0px 5px 0px; margin: 0; clear: both; }
+.form-body .fieldContainerActive { padding: 5px 0px 5px 0px; margin: 0; clear: both; }
+.form-body .fieldContainerNew {    padding: 5px 0px 5px 0px; margin: 0; clear: both; }
+
+.form-body .fieldTitle { font-weight: bold; padding-bottom: 3px; font-size: 12px; }
+.form-body .fieldHelp { font-size: 9px; padding-top: 4px; }
+.form-body .fieldObjects { }
+.form-body .fieldRequiredStar { color: #990000; }
+.form-body .fieldAugmentedLink { font-weight: normal; font-size: 9px; } 
+
+.form-body .formTitle { font-weight: normal; font-size: 12px; padding-bottom: 1em; }
+.form-body .formCaption { font-weight: bold; font-size: 12px; padding-bottom: 3px; line-height: 17px; }
+.form-body .formErrorMessage { font-size: 12px; padding-top: 1em; }
+
+.form-body .sectionBreak { padding-top: 4px; }
+.form-body .optionRow { padding-top: 2px; }
+
+.form-body .singlelinetext-small  { width: 100px; }
+.form-body .singlelinetext-medium { width: 180px; }
+.form-body .singlelinetext-large  { width: 340px; }
+
+.form-body .singlelinetext-small-inline  { width: 94%; }
+.form-body .singlelinetext-medium-inline { width: 94%; }
+.form-body .singlelinetext-large-inline  { width: 94%; }
+
+.form-body .paragraphtext-small  { height: 70px;  width: 94%; }
+.form-body .paragraphtext-medium { height: 100px; width: 94%; }
+.form-body .paragraphtext-large  { height: 200px; width: 94%; }
+ 
+.form-body .paragraphtext-small-inline  { height: 70px;  width: 94%; }
+.form-body .paragraphtext-medium-inline { height: 100px; width: 94%; }
+.form-body .paragraphtext-large-inline  { height: 200px; width: 94%; }
+  
+.form-body #username, .form-body #password { width: 160px; }
+
+.submit-button { width: 120px; margin-top: 2em !important; }
+
+
+/* --- squarespace specifics ------------------------------------------------------------------- */
+
+.journal-filter-header { margin-bottom: 15px; padding-bottom: 10px; }
+.journal-navigation { margin-top: 2em; clear: both; }
+
+.journal-comment-area { margin-top: 25px; padding-top: 15px; }
+.journal-comment-area .caption { }
+.journal-comment-area .text { }
+.journal-comment-area-disabled-text { margin-top: 2em; }
+
+.journal-reference-area { margin-top: 25px; padding-top: 15px; }
+.journal-reference-area .caption { margin-bottom: 1em; }
+.journal-reference-area .text { }
+
+.journal-entry-navigation { margin-bottom: 2em; }
+
+.journal-entry { margin-bottom: 2em; }
+.journal-entry .title { }
+.journal-entry .tag { clear: both; }
+.journal-entry .body { margin: 1em 0 1em 0; }
+.journal-entry .enclosure { background-image: url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/file.png); background-position: left center; background-repeat: no-repeat; padding-left: 21px; }
+
+.journal-entry-follow-up { clear: both; margin-bottom: 1em; padding-left: 12px; } 
+.journal-entry-follow-up .follow-up-caption { margin-bottom: 1em; }
+.journal-entry-follow-up .follow-up-body { }
+ 
+.journal-entry-references { margin: 15px 0 15px 0; padding: 0; list-style-type: none; }
+.journal-entry-references li { margin: 0; clear: both; margin-bottom: 8px; height: 1%;  }
+.journal-entry-references li .icon-area { float: left; width: 19px; }
+.journal-entry-references li .text-area { margin-left: 19px; height: 1%;  }
+.journal-entry-references li .text-area .headline { }
+.journal-entry-references li .text-area .headline .type { font-weight: bold; }
+.journal-entry-references li .text-area .headline .title { }
+.journal-entry-references li .text-area .author-byline { font-size: 10px; line-height: 14px; margin: 2px 0 0 0; padding: 0; }
+.journal-entry-references li .text-area .excerpt { font-size: 10px; line-height: 14px; margin: 2px 0 0 0; padding: 0; }
+  
+.journal-entry-tag .posted-in .tag-element, .journal-entry-tag .posted-on, .journal-entry-tag .posted-by, .journal-entry-tag .post-comments, .journal-entry-tag .post-references { white-space: nowrap; }
+
+.journal-entry-tag-post-body { clear: both; }
+
+.journal-entry-float-date, .journal-entry-float-date span { display: none; }
+.journal-entry-float-day, .journal-entry-float-day span { display: none; }
+.journal-entry-float-time, .journal-entry-float-time span { display: none; }
+  
+.journal-archive-set ul { margin-top: 1em; }
+
+.unpublished { color: #$InactiveTextColor$; }
+
+.amazon-item-list { padding: 0; }
+.amazon-item-list li { list-style-type: none; margin-bottom: 10px; height: 1%; }
+.amazon-item-list li .picture { float: left; overflow: hidden; }
+.amazon-item-list li .description { height: 1%; margin-bottom: 15px; margin-left: 90px; }
+.amazon-item-list li .description .authors { margin-bottom: 15px; } 
+.amazon-item-list li .description .text { margin-bottom: 15px; }
+.amazon-item-list li .description .amazon-link { }
+
+.gallery-navigation { margin-bottom: 15px; margin-top: 15px; } /* compatibility */
+.gallery-description { margin-top: 5px; clear: both; }
+
+.gallery-navigation-top  { padding-bottom: 12px; text-align: left; }
+.gallery-navigation-bottom  { padding-top: 12px; text-align: left; }
+
+.picture-full { clear: both; }
+ 
+#main-picture-description-title { padding-bottom: 1em; }
+
+.picture-gallery-list { padding: 0; margin: 0; } 
+.picture-gallery-list li { list-style-type: none; margin-bottom: 12px; height: 1%;  }
+.picture-gallery-list li .thumbnail { }
+.picture-gallery-list li .thumbnail-wrapper { display: inline-block; }
+.picture-gallery-list li .thumbnail-wrapper a { display: block; }
+.picture-gallery-list li .thumbnail-container { float: left; line-height: 0; }
+.picture-gallery-list li .thumbnail-container-with-description, .picture-gallery-list li .thumbnail-container-tiled { line-height: 0; }
+.picture-gallery-list li .description { } 
+.picture-gallery-list li .description .caption { margin-bottom: 5px; }
+.picture-gallery-list li .description .author { margin-bottom: 5px; margin-top: 5px; } 
+.picture-gallery-list li .description .text {  }
+.picture-gallery-list li .description ul { margin-top: 1em; }
+.picture-gallery-list li .description ul li { list-style-type: square; display: list-item; }
+
+.picture-gallery-thumbnail-list { padding: 0; margin: 0; }
+.picture-gallery-thumbnail-list li { list-style-type: none; height: 1%; display: inline;  }
+.picture-gallery-thumbnail-list li .thumbnail { display: inline; }
+.picture-gallery-thumbnail-list li .thumbnail-container-tiled { float: left; margin-bottom: 12px; margin-right: 12px;  }
+.picture-gallery-thumbnail-list li .thumbnail-container-with-description { float: left; margin-bottom: 12px;  }
+.picture-gallery-thumbnail-list li .description { margin-bottom: 1em; height: 1%; overflow: hidden; }
+.picture-gallery-thumbnail-list li .description ul { margin-top: 1em; }
+.picture-gallery-thumbnail-list li .description ul li { list-style-type: square; display: list-item; }
+
+.picture-gallery-thumbnail-scroll-right, .picture-gallery-thumbnail-scroll-left { background-color: #D6D6D6; width: 10px; height: 55px; margin: 0; padding: 0; border: 0; -moz-outline: 0 }
+.picture-gallery-thumbnail-scroll-right { margin-left: 3px; }
+.picture-gallery-thumbnail-scroll-left { margin-right: 3px; }
+
+.file-item-list { padding: 0; }
+.file-item-list li { list-style-type: none; margin-bottom: 10px;  height: 1%; clear: both; }
+.file-item-list li .icon { float: left; display: block; line-height: 13px; }
+.file-item-list li .content { height: 1%; margin-left: 21px; }
+.file-item-list li .title { display: inline;  }
+
+.folder-item-list { }
+.folder-item-list li { margin-bottom: 1em; }
+
+.link-group-list { padding: 0; }
+.link-group-list li { list-style-type: none; margin-bottom: 1.5em; }
+.link-group-list li ul { margin-top: 1em; }
+.link-group-list li ul li { list-style-type: square; margin-bottom: .5em;  }
+.link-group-list li ul li .title { }
+.link-group-list li ul li .description { }
+ 
+ /* V1 */
+.discussion-comment-list { margin: 0; padding: 0;  }
+.discussion-comment-list li { list-style-type: none; background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/comment.png) no-repeat 0px 1px; padding-bottom: 10px; margin-top: 10px; padding-left: 21px; border-bottom: 1px solid #$LightBorderColor$;  }
+.discussion-comment-list li:last-child { border: 0; margin-bottom: 0; padding-bottom: 0; }
+.discussion-comment-list li .post-title { display: inline; }
+
+ /* V2 */
+ .discussion-table { width: 100%; }
+.discussion-table .inline-icon { display: none; }
+
+.discussion-table-header td { font-weight: bold; font-size: 12px; padding: 2px; }
+.discussion-table-header .replycount-cell, .discussion-table-header .viewcount-cell { text-align: center; }
+  
+.discussion-table-row td { padding: 2px; }
+
+.discussion-table-row .icon-cell { width: 22px; background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/comment.png) no-repeat 1px 10px; }
+  
+.discussion-table-row .topic-cell { padding: 7px 0 5px 0; }
+.discussion-table-row .topic-cell .topic-text { font-size: 14px; }
+.discussion-table-row .topic-cell .topic-author { font-size: 11px; }
+.discussion-table-row .topic-cell .topic-created { display: none; }
+ 
+.discussion-table-row .replycount-cell { text-align: center; font-size: 26px; }
+.discussion-table-row .viewcount-cell { text-align: center; }
+  
+.discussion-table-row .updated-cell { font-size: 10px; }
+.discussion-table-row .updated-cell .reply-author { display: none; }
+
+.discussion-table-header .viewcount-cell, .discussion-table-row .viewcount-cell { display: none; }
+   
+  
+.comment { margin-top: 1em; padding-bottom: 1em; }
+.comment .body { margin-top: 1em; }
+.comment .signature { margin-top: .5em; text-align: right; }
+
+.change-list { margin: 0; padding: 0; }
+.change-list li { background: no-repeat 0px 1px; border-bottom: 1px solid #CCCCCC; display: block; list-style-type: none; margin: 0; margin-bottom: 1.2em; padding: 0; padding-bottom: 1.2em; padding-left: 28px; }
+.change-list li:last-child { border: 0; margin-bottom: 0; padding-bottom: 0; }
+
+.input-field { margin-bottom: 1em;  }
+.input-field .title { margin-bottom: 5px; }
+.input-field .control { }
+
+.input-field-error { font-weight: bold; margin-bottom: 5px; }
+
+.table .row { clear: both; } 
+.table .left { float: left; margin: 5px; text-align: right; width: 100px; }
+.table .right { margin-bottom: 5px; margin-left: 100px; }
+
+.notice-box { margin-bottom: 2em; }
+.notice-box .caption { display: inline; }
+.notice-box .caption-text { margin-top: 1em; margin-bottom: 2em; }
+.notice-box .link-field-title { font-weight: bold; padding-bottom: 10px; margin-top: 1em; }
+.notice-box .link-field-text {  }
+
+.notice-box textarea { width: 99%; }
+  
+.notice-box-alert { margin-bottom: 1em; padding: 1em; }
+.notice-box-alert .icon { float: left; }
+.notice-box-alert .text { height: 1%; margin-left: 22px; }
+
+#squarespace-powered { padding: 0; }
+#squarespace-powered-text { padding: 0; font-size: 80%; }
+
+.search-form .queryFieldWrapper { display: block; float: left; }
+.search-form .queryField { font-size: 18px; padding: 3px; }
+.search-form .queryButtonWrapper { display: block; float: left; padding-left: 15px;  }
+.search-form .queryButton { }
+.search-form #advancedSearchOptionsLink { font-size: 9px; margin-top: 3px; }
+.search-form .advanced-search-group-label { margin: 1em 0 1em 0; }
+
+.search-results { margin-top: 2em; }
+.search-result { margin-bottom: 20px; }
+.search-result .search-result-number { display: none; float: left; font-size: 30px; }
+.search-result .search-result-entry { }
+.search-result .search-result-title { font-size: 18px; }
+
+.search-result .search-result-tag { font-size: 10px; font-weight: normal; } 
+.search-result .search-result-type { }
+.search-result .search-result-author { }
+.search-result .search-result-date { }
+
+.search-result .search-result-body { margin-top: 4px; font-size: 12px; }
+
+.search-result .search-result-title .hit-word-title { font-weight: bold; }
+.search-result .search-result-body .hit-word-body { font-weight: bold; font-size: 120%; }
+  
+.faq-category-list { padding: 0; margin: 0; }
+.faq-category-list li { list-style-type: none; margin-bottom: 20px; }
+.faq-category-list li { }
+
+.faq-question-list { margin-top: 1em; }
+.faq-question-list li { list-style-type: square; margin-bottom: 6px; }
+.faq-question-list li .title { } 
+.faq-question-list li .description { margin-bottom: 15px; }
+
+.faq-entry-count { font-size: 13px; }
+.faq-entry .text { }
+.faq-entry .tag { font-size: 10px; }
+
+.google-map { width: 100%; height: 400px; }
+
+
+/* --- journal summary ------------------------------------------------------------------------ */
+ 
+.nugget-item-list-pt .slug-above { display: none; }
+.nugget-item-list-pt .slug-below { display: none; }
+.nugget-item-list-pt .summary-item-wrapper { float: left; overflow: hidden; height: 175px; width: 175px; margin: 15px 15px 0 0; text-align: left; }
+.nugget-item-list-pt .summary-item{ padding: 15px; }
+.nugget-item-list-pt .title { font-weight: bold; } 
+
+.summary-item-list-pt .slug-above { display: none; }
+.summary-item-list-pt .slug-above, .summary-item-list-pt .slug-below { font-size: 9px; }
+.summary-item-list-pt .summary-item-wrapper {padding-bottom: 10px !important; display: block; }
+.summary-item-list-pt .pre-date-breaker { display: none; }
+.summary-item-list-pt .pre-comments-breaker { padding: 0 5px 0 5px; }
+.summary-item-list-pt .title { font-weight: bold; }
+.summary-item-list-pt .summary-item-wrapper.highlight .title { font-size: 22px; line-height: 24px; padding-bottom: 3px; }
+.summary-item-list-pt .summary-item-wrapper.highlight { padding-bottom: 20px !important; }
+.summary-item-list-pt .summary-item-wrapper.highlight .slug-above { display: block; }
+.summary-item-list-pt .summary-item-wrapper.highlight .slug-below { display: none; }
+
+/* --- tag clouds ----------------------------------------------------------------------------- */
+
+.tagcloud-widget-wrapper { min-height:18px; }
+.tagcloud a span { position:relative; display:inline-block; line-height:normal; }	
+.tagcloud a:hover span { opacity:1 !important; }
+				  
+/* --- microblogging -------------------------------------------------------------------------- */
+  
+.quick-post .description { margin-top: 1em; }
+.quick-post .embed { margin-top: 1em; }
+.quick-post .image { margin: 1em 0 1em 0; }
+.quick-post .dialogue { margin-top: 1em; }
+  
+.post-data-link .link-arrow, .post-data-delicious .link-arrow, .post-data-digg .link-arrow, .post-data-stumbleupon .link-arrow, .post-data-lastfm .link-arrow  { font-size: 80%; } 
+  
+.post-data-chat .dialogue .line { }
+.post-data-chat .dialogue .line .speaker { display: block; }
+
+.post-data-quote .source { display: inline; }
+.post-data-quote .source p { display: inline; }
+
+  
+/* --- packed / quick posts ------------------------------------------------------------------ */
+  
+.packed-posts-wrapper { display: none; }
+.packed-posts-wrapper .packed-post { padding-top: 10px; }
+
+.quick-post .packed-post-date { }
+.quick-post .packed-post-date-tight { margin-top: -12px; } 
+
+.journal-quickpost-tag-post-body .stacked-link, .journal-quickpost-tag-post-body .initial-stacked-link { float: left; }
+
+.quickpost-external-service-tag a { padding-left: 20px; background-repeat: no-repeat; background-position: center left; }
+  
+  
+/* --- feeds ----------------------------------------------------------------------------------- */
+
+.feed-list, .feed-list-inline { padding: 0; }
+.feed-list li, .feed-list-inline li { list-style-type: none; margin: 0; padding: 0; }
+
+.feed-list .feed-link { padding-left: 22px; background-image: url(/web/20120531210205im_/http://www.squarespace.com/universal/images/xml/feed-icon-16x16-orange.png); background-repeat: no-repeat; background-position: center left; }
+.feed-list-inline .feed-link { padding-left: 16px; background-image: url(/web/20120531210205im_/http://www.squarespace.com/universal/images/xml/feed-icon-12x12-orange.png); background-repeat: no-repeat; background-position: center left; }
+
+  
+/* --- social links ---------------------------------------------------------------------------- */
+  
+.social-link-list-pt li {  display: block; }
+.social-link-list-pt li a.icon-link { padding: 2px 0px 2px 20px; background-repeat: no-repeat; background-position: center left; }
+  
+
+/* --- social objects -------------------------------------------------------------------------- */
+
+.twitter-update-wrapper .item-date, .digg-link-wrapper .item-date, .delicious-link-wrapper .item-date, .imported-rss-article-wrapper .item-date { display: block; }
+.flickr-image-wrapper { display: block; float: left; line-height: 1px; }
+
+/* --- social widgets ---------------------------------------------------------------------- */
+
+/****** Twitter *******/
+.twitter-wrapper { overflow: hidden; }
+.twitter-wrapper .twitter-item-slug a, .twitter-wrapper .twitter-nav-buttons a { text-decoration:none; }
+.twitter-wrapper a:active { outline:none; }
+
+/****** Twitter Footer - Follow Me Links *******/
+#canvas .twitter-link a { display:block; -moz-border-radius:4px; -webkit-border-radius:4px; }
+.twitter-link img { float:left; width:16px; height:16px; margin-right:5px; }
+.twitter-link img.avatar { width:14px; height:14px; border:1px solid #fff; }
+
+/****** Twitter Widget Navigation *******/
+.twitter-nav-buttons { clear:both; font-size:11px; line-height:1em; overflow:hidden; }
+.twitter-wrapper .twitter-nav-buttons a { padding:10px 0; }
+a.twitter-button-newer { display:block; float:left; }
+a.twitter-button-older { display:block; float:right; }
+
+/******** General *********/
+.twitter-wrapper .primary, .twitter-wrapper .secondary .primary { overflow:hidden; }	
+#canvas .twitter-wrapper.wrapper .twitter-date a, #canvas .twitter-wrapper.wrapper .twitter-date a:hover { display:block; } 	
+.twitter-avatar { float:left; margin:0 0.9em 0 0; height:34px; }
+.twitter-avatar img { width:30px; height:30px; border:2px solid #fff; }
+
+/******** Basic Preset **********/
+.basic .twitter-username a { font-weight:bold; font-size:1.2em; }
+.basic .twitter-nav-buttons { padding:0 10px; margin:10px 0; -moz-border-radius:4px; -webkit-border-radius:4px; border:none; }
+
+/********* Bubble Preset ***********/
+.bubble .twitter-content { padding:15px 15px 0; margin-bottom:15px; -moz-border-radius:2px; -webkit-border-radius:2px; }
+.bubble .twitter-item-bubble { margin-top:15px; }
+.bubble .twitter-item-bubble.highlight { margin-top:0; }
+.bubble .twitter-item-content-bubble { background:#fff; color:#111; padding:1em; -moz-border-radius:8px; -webkit-border-radius:8px; overflow: hidden; }
+.bubble .twitter-item-slug { background:url(/web/20120531210205im_/http://www.squarespace.com/universal/images/social/bubble-stem.png) 22px top no-repeat; padding:22px 0 0; line-height:1.4em; }
+.bubble .twitter-nav-buttons { padding:0 10px; margin:10px 0; -moz-border-radius:4px; -webkit-border-radius:4px; border:none; }
+.bubble .twitter-content { padding:15px; margin-bottom:0; }
+
+/*********** Blocks Preset ***********/
+.block .twitter-content { margin-bottom:15px; -moz-border-radius:2px; -webkit-border-radius:2px; }
+.block .twitter-item { margin:0; }
+.block .twitter-item-content { padding:1em; }
+.block .twitter-item-slug { padding:10px; line-height:1.4em; }
+.block .twitter-username a { font-weight:bold; }
+.block .twitter-nav-buttons { padding:0 10px; margin:10px 0; -moz-border-radius:4px; -webkit-border-radius:4px; border:none; }
+.block .twitter-content { margin-bottom:0; }
+
+/******** Chunk Preset **********/
+.chunk .twitter-content { margin-bottom:15px; -moz-border-radius:4px; -webkit-border-radius:4px; }
+.chunk .twitter-header { padding:10px; }
+.chunk .twitter-avatar { height:44px; }
+.chunk .twitter-avatar img { width:40px; height:40px; }
+.chunk .twitter-name { font-weight:bold; font-size:15px; }
+.chunk .twitter-username a {  font-size:11px; }
+.chunk .twitter-item { padding:10px; margin-top:1px; }
+.chunk .twitter-item.highlight { margin-top:0; }
+.chunk .twitter-nav-buttons a { padding:10px; }
+
+/******** Wrapper Preset ***********/
+.wrapper .twitter-item { margin-bottom:10px; padding-bottom:15px; -moz-border-radius:4px; -webkit-border-radius:4px; }
+.wrapper .twitter-item-content { padding:1em; font-size:1.3em; line-height:1.6em; overflow:hidden; } 
+.wrapper .twitter-item-slug { margin-right:15px; padding:10px; padding-left:15px; line-height:1.4em; }
+.wrapper .twitter-name a { font-weight:bold; font-size:1.2em; }
+.wrapper .twitter-nav-buttons { padding:0 10px; margin:10px 0; -moz-border-radius:4px; -webkit-border-radius:4px; }
+	
+	
+/*** Flickr ***/
+
+/*** Grid Preset ***/
+.flickr-wrapper ul.flickr-grid, .flickr-wrapper ul.flickr-grid li { margin:0; padding:0; line-height:0; list-style:none; }
+.flickr-wrapper { width:100%; }
+.flickr-content { width:100%; }
+.flickr-grid-wrapper { margin:0 auto; margin:0 auto; width:100%; }
+
+
+/****** Flickr Footer - Photostream Link *******/
+#canvas .flickr-link a { display:block; -moz-border-radius:4px; -webkit-border-radius:4px; }
+.flickr-link img { float:left; width:16px; height:16px; margin-right:5px; }
+.flickr-link img.avatar { width:14px; height:14px; border:1px solid #fff; }
+
+/*** RSS Social ***/
+.rss-wrapper a { display:block; }
+.rss-wrapper .rss-description span a { display:inline; }
+
+/*** Delicious ***/ 
+.deli-wrapper-box { -moz-border-radius:10px; -webkit-border-radius:10px; border-radius:10px; }
+.deli-date-box span { display:inline-block; line-height:normal; }
+
+.deli-tags-bubble a, .deli-tags-bubble-box a { display:inline-block; line-height:normal; -moz-border-radius:10px; -webkit-border-radius:10px; border-radius:10px; }
+
+.deli-item-hang { position:relative; }
+.deli-date-hang { position: absolute; top: 0; left: 0; }
+
+#canvas .delicious-link a { display:block; -moz-border-radius:4px; -webkit-border-radius:4px; border-radius: 4px; }
+.delicious-link img { float:left; height:16px; margin-right:5px; width:16px; }
+
+/*** Location ***/
+
+.lw { overflow:hidden; border-radius: 6px; -moz-border-radius: 6px; }
+.lw-map { padding: 17px; }
+.lw-checkin { overflow: hidden; font-family: 'helvetica neue', lucida grande, arial, sans-serif; cursor: pointer; }
+.lw-checkin-infowin { overflow: hidden; font-family: 'helvetica neue', lucida grande, arial, sans-serif; cursor: pointer; }
+.lw-leftleft { float: left; width: 53px; padding-right: 17px; line-height: 1.2em; }
+.lw-left { float: left; width: 32px; padding-right: 17px; }
+.lw-venue-icon img { width: 32px; height: 32px; }
+.lw-right { width: 65px; margin-left: 17px; float: right; text-align: right; }
+.lw-main { margin-left: 49px; line-height: 1em; }
+.lw-main.ni { margin-left: 0; }
+.lw-main.dl { margin-left: 119px; }
+.lw-main.dl.ni { margin-left: 70px; }
+.lw-main.dr { margin-right: 82px; }
+.lw-main.dr.ni { margin-left: 0; }
+.lw-right .lw-date, .lw-leftleft .lw-date { display: inline-block; }
+.lw-date-infowin { display: inline-block; color: #999999; font-size: 9px; line-height: 1.5em; }
+
+#canvas .lw-slug a { display:block; -moz-border-radius:4px; -webkit-border-radius:4px; }
+.lw-slug img { float:left; width:16px; height:16px; margin-right:5px; }
+.lw-slug img.avatar { width:14px; height:14px; border:1px solid #fff; }
+
+#canvas .lw-venue-name a, #canvas .lw-venue-name a:hover { font-weight: 300; -webkit-font-smoothing: antialiased; }
+#canvas .lw-venue-name-infowin a, #canvas .lw-venue-name-infowin a:hover { font-weight: 300; -webkit-font-smoothing: antialiased; font-size: 14px; color: #333333; line-height: 1.2em; }
+
+/* --- navigation bar elements ----------------------------------------------------------------- */
+
+.content-passthrough .amazon-item-list-pt li { margin-bottom: 10px; }
+.content-passthrough .amazon-item-list-pt .picture { float: none; margin: 0; margin-bottom: .5em; padding: 0; }
+.content-passthrough .amazon-item-list-pt .description { margin: 0; }
+.content-passthrough .amazon-item-list-pt .description .title { }
+.content-passthrough .amazon-item-list-pt .description .authors { display: inline; }
+.content-passthrough .amazon-item-list-pt .description .text { margin-top: .5em; }
+
+.content-passthrough .change-list-pt { margin: 0; }
+.content-passthrough .change-list-pt li { margin-bottom: .4em; }
+
+.content-passthrough .archive-item-list-pt { margin: 0; margin-bottom: 1em; }
+.content-passthrough .archive-item-list-pt li { margin-bottom: .4em; }
+
+.content-passthrough .link-group-list-pt { margin-bottom: .5em;  }
+.content-passthrough .link-group-list-pt li .title { font-weight: bold; }
+.content-passthrough .link-group-list-pt li .description { }
+.content-passthrough .link-group-list-pt li ul { margin-bottom: 10px;  }
+.content-passthrough .link-group-list-pt li ul li { margin-bottom: 2px;  }
+.content-passthrough .link-group-list-pt li ul li .title { font-weight: normal; }
+.content-passthrough .link-group-list-pt li ul li .description { }
+
+.content-passthrough .search-form-pt { height: 1%; }
+.content-passthrough .search-form-pt .queryFieldWrapper { display: block; float: left; }
+.content-passthrough .search-form-pt .queryField { font-size: 10px; padding: 3px; }
+.content-passthrough .search-form-pt .queryButtonWrapper { display: block; float: left; padding-left: 10px;  }
+.content-passthrough .search-form-pt .queryButton { }
+
+#sidebar1 .content-passthrough .search-form-pt .queryField { width: 150px; }
+#sidebar2 .content-passthrough .search-form-pt .queryField { width: 175px; }
+
+.content-passthrough table.search-form-table { width:100%; border-collapse: collapse; }
+.content-passthrough tr.search-form-row { vertical-align: middle; }
+.content-passthrough td.search-form-cell {  }
+.content-passthrough td.queryFieldCell {  }
+.content-passthrough td.queryButtonCell { width: 1%; white-space: nowrap; }
+.content-passthrough span.queryFieldWrapper { width: 100%; }
+.content-passthrough span.queryButtonWrapper {  }
+.content-passthrough input.queryField, .content-passthrough input.queryButton {  }
+.content-passthrough input.queryField { width: 100% !important; height: 2.5em; }
+.content-passthrough input.queryButton { width: auto; border: 0px; height: 2.5em;  }
+
+.section ul { margin: 0; padding: 0; } 
+.section ul li { list-style-type: none; margin: 0; padding: 0; }
+
+.inline-icon { height: 13px; width: 13px; color:#FFF; opacity: 1; margin-right: 3px; vertical-align:middle; margin-top:-5px; }
+
+.date-icon { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/date.png) top left no-repeat; }
+.permalink-icon { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/permalink.png) top left no-repeat; }
+.comment-icon { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/comment.png) top left no-repeat; }
+.user-registered-icon { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/user-registered.png) top left no-repeat; }
+.reference-icon { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/reference.png) top left no-repeat; }
+.print-icon { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/print.png) top left no-repeat; }
+.email-icon { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/email.png) top left no-repeat; }
+.share-icon { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/share.png) top left no-repeat; }
+.category-icon { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/category.png) top left no-repeat;  }
+.tag-icon { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/core-resources/icons/smalllight/category.png) top left no-repeat;  }
+
+.social-link-controls .social-block-title { padding-bottom: 15px; font-family: Arial; letter-spacing: -1px; font-weight: bold; }
+.social-link-controls .social-block { height: 22px; width: 155px; float: left; display: block; }
+.social-link-controls { padding: 15px; height: 120px; border: 2px solid #ccc; font: 14px/16px Arial; background: #fefefe; color: #303030; text-align: left; }
+.social-link-controls-wrapper { display: block; opacity: 0; filter:alpha(opacity=0); width: 350px; position: absolute; overflow: hidden;  }
+     
+/* --- standard button definitions ---------------------------------------------------------- */
+  
+a.button {
+    background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/button/button-a.png) no-repeat scroll top right;
+    color: #151515 !important;
+    display: block;
+    float: left;
+    font: 12px arial, sans-serif !important;
+    height: 24px !important;
+    line-height: 18px  !important;
+    margin-right: 6px !important;
+    padding: 0 16px 0 0 !important;
+    text-decoration: none !important;
+}
+
+a.important {
+    font-weight: bold !important; 
+}
+
+a.button span {
+    background: transparent url(/web/20120531210205im_/http://www.squarespace.com/universal/images/button/button-span.png) no-repeat;
+    display: block;
+    line-height: 14px !important;
+    padding: 5px 0 5px 18px !important;
+}
+
+a.button:active {
+    background-position: bottom right;
+    color: #000;
+    -moz-outline: 0;
+}
+
+a.button:active span {
+    background-position: bottom left;
+    padding: 6px 0 4px 18px !important;
+}
+  
+}
+
+/* --- post snippet definitions ---------------------------------------------------------- */
+
+.journal-entry-tag-post-body-line1,
+.journal-entry-tag-post-body-line2,
+.journal-entry-tag-post-body-line3
+{
+    clear: both;
+}
+
+.post-snippet-1,
+.post-snippet-2,
+.post-snippet-3 
+{
+    float: left;
+    padding-right: 12px;
+}
+
+/* --- printer stylesheet definitions ---------------------------------------------------------- */
+
+@media print {
+
+  body { background: white; font-size: 12pt; width: 100%; }
+	
+  h1 { font-size: 24pt; margin-bottom: 0; padding-bottom: 0; }
+  .h1subtitle { font-size: 9pt; font-weight: normal; margin-bottom: 25px; border-bottom: 1px solid #ccc; padding-bottom: 10px; text-decoration: none; }
+  #pageFooter { font-size: 9pt; margin-top: 28px; border-top: 1px solid #ccc; padding-top: 8px; }
+
+  body div { width: 92%; }
+  img { border: 0px; }
+	
+  a:link, a:visited { color: #520; background: transparent; font-weight: bold; text-decoration: underline; }
+  strong { color: #000; }
+  #siteTitle a:link, #siteTitle a:visited { color: black; background: transparent; font-weight: bold; text-decoration: none; }
+  .journal-navigation, .horizontalNavigationBar, #sidebar1Wrapper, #sidebar2Wrapper #sidebar, .notice-box, .inline-icon, .journal-entry-navigation { display: none; }
+
+}
+
+
+.verticalNavigationBar .section .caption{font-size: 20px; border-bottom: 1px solid #CECECE; text-transform: uppercase; letter-spacing: 2px; font-weight: normal; padding-bottom: 9px; margin-bottom: 15px; color: #1A1A1A; border-color: #CECECE;}
+body{font-family: Arial, Helvetica, Geneva, sans-serif; font-size: 12px; line-height: 1.8em; margin-right: auto; margin-left: auto; background-color: #F4F4F4; color: #777777; background-position: 0px 0px; background-repeat: repeat-x;}
+a:link, a:visited, a:active{text-decoration: none; color: #262626;}
+h1 a:visited, h1 a:link, h1 a:active{font-family: Arial, Helvetica, Geneva, sans-serif; font-size: 55px; border-bottom: 0px null inherit; text-transform: uppercase; letter-spacing: 0px; line-height: 0.72em; font-weight: bold; color: #262626;}
+#navigationBottom .horizontalNavigationBar{border-bottom: 1px solid #000000; line-height: 1.7em; font-weight: bold; margin-right: 0px; margin-top: 18px; margin-bottom: 0px; border-color: #000000;}
+.notice-box{padding-right: 15px; padding-left: 15px; padding-top: 15px; padding-bottom: 15px;}
+h2, .h2, .journal-entry .title a{font-family: Arial, Helvetica, Geneva, sans-serif; font-size: 28px; text-transform: uppercase; letter-spacing: 0px; line-height: 1em; font-weight: normal; text-decoration: none; margin-bottom: 0px; color: #262626;}
+h3, .h3, .form-body .formCaption{font-size: 18px; font-weight: normal; padding-top: 0px; margin-top: -4px; color: #FFFFFF; background-repeat: no-repeat;}
+.verticalNavigationBar .section .module a{line-height: 2.86em; color: #5F5F5F;}
+.verticalNavigationBar .section .folder{border-left: 1px solid #ACACA3; padding-left: 11px; margin-left: 4px; border-color: #ACACA3;}
+#pageHeader{line-height: 1em; padding-top: 24px; padding-bottom: 0px;}
+.h1subtitle{font-family: Georgia, 'Times New Roman', serif; font-size: 18px; line-height: 1em; font-weight: normal; margin-top: 16px; color: #BF370A;}
+#canvasWrapper{margin-right: auto; margin-left: auto;}
+#pageFooter{font-size: 11px; line-height: 1em; color: #999999;}
+.verticalNavigationBar .section{padding-right: 10px; padding-left: 10px; padding-top: 10px; padding-bottom: 10px; margin-bottom: 20px;}
+.verticalNavigationBar .section .active-module a{font-weight: bold; color: #000000;}
+.horizontalNavigationBar .module a{font-size: 14px; text-transform: uppercase; letter-spacing: 2px; line-height: 1em; font-weight: normal; text-decoration: none; margin-right: 28px; margin-bottom: 6px; color: #8A8A8A;}
+.horizontalNavigationBar .active-module a{color: #FFFFFF;}
+.journal-entry-date-break{padding-right: 5px; padding-left: 5px; margin-bottom: 15px; background-color: #FFFFFF; color: #767676;}
+.journal-entry-tag-pre-title{font-size: 11px; padding-right: 5px; padding-left: 5px; margin-bottom: 15px; background-color: #FFFFFF; color: #767676;}
+.journal-entry-tag-post-title{font-size: 10px; text-transform: uppercase; padding-top: 0px; padding-bottom: 15px; color: #A6A6A6;}
+.journal-entry-tag-post-body{font-size: 11px; color: #999999;}
+.horizontalNavigationBar .folder{padding-right: 10px; padding-left: 18px; padding-top: 15px; padding-bottom: 5px; margin-top: 6px;}
+.comment{padding-right: 10px; padding-left: 10px; padding-top: 5px; padding-bottom: 5px; background-color: #E6F2F1;}
+.comment .signature{font-size: 10px; border-top: 1px solid #CED9D8; padding-top: 2px; padding-bottom: 0px; border-color: #CED9D8;}
+#navigationTop .horizontalNavigationBar{line-height: 1.7em; margin-right: 0px;}
+.journal-entry-wrapper{padding-right: 10px; padding-left: 10px; padding-top: 10px; padding-bottom: 10px; margin-bottom: 20px;}
+.verticalNavigationBar li{border-bottom: 1px solid #ACACA3; border-color: #ACACA3;}
+.verticalNavigationBar ul{border-top: 1px solid #ACACA3; border-color: #ACACA3;}
+#bannerWrapper{margin-left: -150px; margin-top: -113px;}
+blockquote{font-family: Georgia, 'Times New Roman', serif; font-style: italic;}
+h2{font-family: 'Trebuchet MS', Trebuchet, Verdana, sans-serif; font-size: 17px; font-weight: bold; padding-bottom: 6px; color: #2D2D2D;}
+input.text, textarea{border: 2px solid #AFAEAE; border-color: #AFAEAE;}
+.discussion-table-row .updated-cell{font-size: 10px;}
+.discussion-table-row .replycount-cell{font-size: 26px;}
+.discussion-table-row .viewcount-cell{font-size: 16px;}
+.discussion-table-row .topic-cell .topic-author{font-size: 11px;}
+.discussion-table-row .topic-cell .topic-title{font-size: 14px;}
+.discussion-table-row .topic-cell{padding-right: 0px; padding-left: 0px; padding-top: 7px; padding-bottom: 5px;}
+.discussion-table-row td{border-bottom: 1px solid #CCCCCC; padding-right: 2px; padding-left: 2px; padding-top: 2px; padding-bottom: 2px; border-color: #CCCCCC;}
+.discussion-table-header td{font-size: 12px; border-bottom: 1px solid #CCCCCC; font-weight: bold; padding-right: 2px; padding-left: 2px; padding-top: 2px; padding-bottom: 2px; border-color: #CCCCCC;}
+#navigationTop .horizontalNavigationBar .content-navigation{margin-right: -28px; margin-top: 69px; float: right;}
+.post-data-chat .dialogue .line{padding-bottom: 8px;}
+.post-data-chat .dialogue .line .speaker{font-weight: bold;}
+.post-data-quote .quote{font-size: 36px; line-height: 40px;}
+.post-data-quote .source{font-size: 16px; line-height: 18px; padding-left: 12px;}
+a:hover{text-decoration: none; color: #979797;}
+.verticalNavigationBar .section .module a:hover{border-bottom: 1px dotted #000000; color: #000000; border-color: #000000;}
+.horizontalNavigationBar .module a:hover{color: #FFFFFF;}
+h2.title a:hover{border-bottom: 0px null inherit; color: #BF370A;}
+#canvas .flickr-link a, #canvas .flickr-link a:hover{font-size: 12px; line-height: 16px; padding-right: 5px; padding-left: 5px; padding-top: 5px; padding-bottom: 5px; margin-top: 10px; background-color: #E7E7E7; color: #444;}
+
+
+.promotedContainer, #navigationBottom { display: none; } #navigationTop { display: block; }
+
+#canvasWrapper { width: 944px; padding: 0 0px 0 0px; } #sidebar1Wrapper { display: none; } #sidebar2Wrapper { display: none; } #contentWrapper { width: 944px; }
+
+*, body {
+  margin: 0; 
+  padding: 0;
+  }
+
+strong { color: #303030; }
+
+
+body#modulePage4273321 { background: #f4f4f4 url(/web/20120531210205im_/http://www.squarespace.com/storage/americanlife-bg.png) repeat-x top left; }
+
+body { background: #f4f4f4 url(/web/20120531210205im_/http://www.squarespace.com/storage/bg-blk-stripe-tall.jpg) repeat-x top left; } 
+
+.active-module span { background: #181818; padding: 6px 8px 6px 8px; -webkit-border-radius: 4px; -moz-border-radius: 4px; margin: 0 -8px 0 -8px; }
+
+.white { color: #fff; font-weight: normal; }
+
+.leoLanding { margin-top: -10px; }
+
+
+
+
+/* --------------- OPTIMIZER CODE ----------------------------------------------------------------------------------- */
+
+
+.WhoWhatWhy ul { margin-top: 0px; list-style-type: none !important; margin: 0 !important; padding: 0 !important; }
+
+.WhoWhatWhy li { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/plus-con-list.png) no-repeat 0 50%; padding-left: 20px; font-size: 13px; line-height: 1.8em !important; } 
+
+
+.wrapper270Three ul { margin-top: 10px; list-style-type: none !important; margin: 0 0 0 0px !important; padding: 0 !important; }
+
+.wrapper270Three li { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/plus-con-list.png) no-repeat 0 50%; padding-left: 20px; font-size: 12px; border-bottom: 1px solid #e6e6e6; line-height: 2.3em; }
+
+
+
+/* --------------- STRUCTURAL ----------------------------------------------------------------------------------- */
+
+#pageBodyWrapper { width: 944px; margin: 0 auto 0 auto; }
+
+#pageBody { width: 945px;  float: left; background: #transparent; height: 100%; margin-top: 0; padding-top: 0;  }
+
+#canvasWrapper { width: auto !important; padding: 0; margin: 0; overflow: visible;}
+
+
+/* #canvas { width: auto !important; padding: 0; margin: 0; background: url(/web/20120531210205im_/http://www.squarespace.com/storage/bokeh-header-bw.jpg) no-repeat 50% 0 !important; overflow: visible;} */
+
+#canvas { width: auto !important; padding: 0; margin: 0; overflow: visible;}
+
+#modulePage4273321 #canvas { width: 100% !important; padding: 0; margin: 0; background: url(/web/20120531210205im_/http://www.squarespace.com/storage/americanlife-header.png) no-repeat 50% 0 !important; }
+
+
+#pageHeaderWrapper { width: 944px; margin: 0 auto 0 auto; }
+
+#content { overflow: visible; 0px }
+
+body#modulePage2862657 #content { margin-top: 15px; }
+
+body#modulePage3003149 #content { margin-top: 15px; }
+
+#modulePage2862662 #content { overflow: visible; } /* allows for screenshots tag to sit outside of content */
+
+#content { margin-top: 18px; }
+
+#pageFooterWrapper { width: 100% !important; background: #000 url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/footer-bg.jpg) repeat-x top left; }
+
+#pageFooter { width: 944px; margin: 0 auto 0 auto; height: 350px; padding-top: 100px; }
+
+.featureChunk { margin: 40px 0 40px 0; clear: both; }
+
+.shotRight { float: right; margin-left: 30px; }
+
+.shotLeft { float: left; margin-right: 30px; }
+
+#modulePage2867170 #bannerWrapper { margin-top: 120px !important; } /* fixes the annoying logo issue on signup page */
+
+
+
+/* Landing page only ====================================== */
+
+
+
+
+.tour { float: left; width: 102px; height: 84px; background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/tour-squarebutton.png) 0 0 no-repeat; border: none; }
+
+.tour:hover { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/tour-squarebutton.png) 0 -84px no-repeat; color: transparent; cursor: pointer; }
+
+
+.try { float: right; width: 270px; height: 76px; background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/try-270.png) 0 0 no-repeat; border: none; margin-top: 28px; }
+
+.try:hover { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/try-270.png) 0 -76px no-repeat; color: transparent; cursor: pointer; }
+
+
+.try-b { float: right; width: 270px; height: 76px; background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/optimizer/bigButton-b.png) 0 0 no-repeat; border: none; margin-top: 28px; }
+
+.try-b:hover { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/optimizer/bigButton-b.png) 0 -76px no-repeat; color: transparent; cursor: pointer; }
+
+
+.try-c { float: right; width: 270px; height: 76px; background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/optimizer/bigButton-c.png) 0 0 no-repeat; border: none; margin-top: 28px; }
+
+.try-c:hover { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/optimizer/bigButton-c.png) 0 -76px no-repeat; color: transparent; cursor: pointer; }
+
+
+
+
+
+.mainLeft { width: 590px; float: left; }
+
+.mainLeftSub { width: 605px; float: left;  }
+
+.mainLeftSubWhite { width: 605px; float: left; margin: 0px 0 0 0; color: #aaa; font-size: 14px; }
+
+.mainRight { width: 300px; float: right; }
+
+.mainRightSub { width: 270px; float: right; }
+
+.signupText a { color: #8daa56 !important; }
+
+.landingIntroText { text-shadow: #000 0px -1px 1px; font-family: "HelveticaNeue-Light", "Helvetica Neue Light","Helvetica Neue", sans-serif; font-weight: 300; line-height: 1.6em; margin-top: -2px; padding-bottom: 15px; font-size: 15px; color: #929292; letter-spacing: 1px; }
+
+.threePoints { margin-top: 30px; }
+
+.tourVideo { margin-top: 115px; width: 270px; float: right; }
+
+.wrapper270Three { width: 940px; float: left; padding-bottom: 50px; }
+
+.innerWrapper270Two { width: 605px; float: left; }
+
+.col270Left { width: 270px; float: left; }
+
+.col270Right { width: 270px; float: right; }
+
+.floatLeft { float: left; }
+
+.floatRight { float: right; }
+
+.description270 { float: right; width: 270px; }
+
+.featureWrapper { width: 940px; margin: 50px 0 50px 0; }
+
+.learnMore a { margin-top: 10px; display:block; height:15px; width:70px; background:transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/learnmore-gray.png) no-repeat 0 0; text-indent:-9009px; }
+
+.learnMore a:hover { background-position: 0 -15px; }
+
+.shot270 { padding-bottom: 15px; }
+
+.landingQuoteSmall { margin-top: 40px; }
+
+.topPad { margin-top: 26px; }
+
+.smallShot { margin: 0 16px 0 0 !important; padding: 0 !important; width: 120px !important; border: 7px solid #fff; }
+
+.threePoints p { line-height: 1.4em; padding-left: 45px; }
+
+#openingImage { overflow: hidden; width: 455px; height: 614px; background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/opening.png) -55px 0px no-repeat; }
+
+.platform { padding-left: 45px; background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon-platform.png) no-repeat 0 50%; }
+
+.control { padding-left: 45px; background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon-youownit.png) no-repeat 0 50%; }
+
+.pricingpoint { padding-left: 45px; background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon-pricing.png) no-repeat 0 50%; }
+
+.wideSignup { margin-bottom: 50px;}
+
+.tourText { display: block; margin-top: 30px; }
+
+.learnMoreTour { margin-top: 10px; }
+
+.WhoWhatWhy { padding-top: 100px; }
+
+.topWrapper { width: 940px; display: block; }
+
+.WhoWhatWhy h2 { font-size: 20px; }
+
+.t1 { margin-top: -10px; }
+
+.bottomWrapperTop { padding-top: 30px; }
+
+
+
+
+/* GRID COLUMN CODE =========================================================================================== */
+
+.columnWrapper { width: 940px; float: left; margin-bottom: 60px; } /* wraps each horizontal sets of columns */
+
+.columnWrapperLandingHeader { margin-top: 25px; width: 970px; float: left; margin-bottom: 290px; } /* wraps each horizontal sets of columns */
+
+.columnWrapperLandingHeaderTwo { margin-top: 20px; width: 970px; float: left; margin-bottom: 125px; } /* wraps each horizontal sets of columns */
+
+.columnWrapperLandingHeaderThree { margin-top: 0px; width: 970px; float: left; margin-bottom: 40px; } /* wraps each horizontal sets of columns */
+
+.columnWrapperScreenshots { width: 970px; float: left; margin-bottom: 60px; padding: 20px 15px 15px 18px; background: #e2e2e2; margin-left: -70px; overflow: visible; } /* wraps each horizontal sets of columns */
+
+.columnWrapperTight { width: 940px; float: left; margin-bottom: 20px; } /* less margin between content chunks, for when two chunks are related */
+
+.columnWrapperNone { width: 940px; float: left; margin-bottom: 0; } /* less margin between content chunks, for when two chunks are related */
+
+.columnWrapperLanding { width: 700px; float: left; margin-bottom: 0px; } /* wraps each horizontal sets of columns */
+
+.columnWrapperLandingQuote { width: 700px; float: left; margin-bottom: 60px; } /* wraps each horizontal sets of columns */
+
+.columnWrapperRight { width: 220px; float: right; }
+
+.leftWrapper { width: 460px; float: left; }
+
+.leftWrapperOne { width: 220px; float: left; }
+
+.leftWrapperFeature { width: 450px; float: left; }
+
+.colOne { width: 220px; float: left; }
+
+.colOneSpanTwo { width: 460px; float: left; }
+
+.oneColSingle { width: 220px; float: left; }
+
+.colTwo { width: 220px; float: right; }
+
+.colTwoSpanTwo { width: 460px; float: right; }
+
+.columnWrapperLanding .rightWrapper { width: 220px; float: right; }
+
+.rightWrapper { width: 460px; float: right; }
+
+.rightWrapperFeature { width: 450px; float: right; }
+
+.colThree { width: 220px; float: left; }
+
+.threeColSpanRight { width: 700px; float: right; padding-bottom: 20px; }
+
+.colFour { width: 220px; float: right; }
+
+.col4by4 { width: 220px; float: left; }
+
+.colSmallLeft { width: 100px; float: left; font-size: 11px; margin-bottom: 20px; } /* add to a 220px wide column to split into two 100px columns */
+
+.colSmallRight { width: 100px; float: right; font-size: 11px; margin-bottom: 20px; } /* add to a 220px wide column to split into two 100px columns */
+
+.colthirdone { width: 300px; float: left; }
+
+.colthirdtwo { width: 300px; float: left; }
+
+.colthirdthree {width: 300px; float: right; }
+
+.columnWrapperFooter { width: 940px; float: left; margin-bottom: 40px; } /* wraps each horizontal sets of columns in the footer */
+
+.leftWrapperFooter { float: left; width: 700px; }
+
+.rightWrapperFooter { float: right; 220px; }
+
+.colOneFooter { float: left; width: 155px; margin-right: 20px; }
+
+.colTwoFooter { float: left; width: 155px; margin-right: 20px; }
+
+.colThreeFooter { float: left; width: 155px; margin-right: 20px; }
+
+.colFourFooter { float: left; width: 155px; }
+
+.colFiveFooter { float: right; width: 220px; color: #555; line-height: 1.8em; }
+
+.colLeft300 { width: 325px; height: 330px; float: left; }
+
+.colRight300 { width: 325px; height: 330px; float: right; }
+
+.col700 { width: 700px; float: left; height: 200px; }
+
+
+
+
+/* --------------- NAVIGATION / LINKS  ----------------------------------------------------------------------------------- */
+
+
+#topbarNav { float: right; margin-top: -160px; color: #606060; letter-spacing: 1px; font-size: 11px; }
+
+#topbarNav a:link { color: #606060; text-decoration: none; }
+#topbarNav a:visited { color: #606060; text-decoration: none; }
+#topbarNav a:hover { color: #777; text-decoration: none; }
+#topbarNav a:active { color: #606060; text-decoration: none; }
+
+.verticalNavigationBar li { border-bottom: 1px solid #dbdbdb !important; }
+
+.verticalNavigationBar ul { border-top: none !important; }
+
+.poundNav { font-size: 14px; font-weight: normal; padding-left: 25px; color: #ccc; }
+
+.poundNav a:link, .poundNav a:visited, .poundNav a:active { font-size: 14px; font-weight: normal; color: #555; text-decoration: none; }
+
+.poundNav a:hover { font-size: 14px; font-weight: normal; color: #ccc; text-decoration: none; }
+
+body#modulePage2894246 a#modulePage2894246Nav,
+body#modulePage2934934 a#modulePage2934934Nav,
+body#modulePage2934935 a#modulePage2934935Nav,
+body#modulePage2934936 a#modulePage2934936Nav { color: #333; font-weight: bold; } /* active state for vertical navs */
+
+.folder li a { line-height: 1.8em !important; }
+
+.offsite-link { background-image: none; padding-right: 0 !important; }
+
+//.colFiveFooter a:link { color: #555; background: none !important; padding: 0 0 0 0 !important; }
+
+.colFiveFooter a:visited { color: #555; background: none !important; padding: 0 0 0 0 !important; }
+
+.folder-wrapper { overflow: visible !important; }
+
+.folder { background: #000; margin-left: -17px !important; overflow: visible !important; -webkit-border-radius: 8px; -moz-border-radius: 8px; }
+
+.offsite-link { padding-bottom: 10px; background-image: none; }
+
+#pageFooter ul { list-type: none; padding: 0; margin: 0; }
+
+#pageFooter li { border-bottom: 1px solid #222; display: block; padding: 0 0 3px 0; margin: 0 0 3px 0; line-height: 1.8em; }
+
+#pageFooter a:link { color: #555; background: url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/icon-fillarrow-gray.gif) no-repeat 0 50%; padding: 0 0 0 10px; }
+
+#pageFooter a:visited { color: #333; background: url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/icon-visited.gif) no-repeat 0 50%; text-decoration: none; padding: 0 0 0 10px; }
+
+#pageFooter a:hover { color: #999; text-decoration: none; background: url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/icon-fillarrow-gray.gif) no-repeat 0 50%; padding: 0 0 0 10px; }
+
+#pageFooter a:active { color: #555; text-decoration: none; background: url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/icon-fillarrow-gray.gif) no-repeat 0 50%; padding: 0 0 0 10px; }
+
+.detail-row a { text-decoration: underline !important; }
+
+.feature-big a:visited { text-decoration: underline !important; }
+
+.feature-big a:active { text-decoration: underline !important; } 
+
+.detail-row a:hover { text-decoration: none !important; }
+
+.moreInfo a { font-size: 11px; }
+
+.whoLink a { color: #666; font-size: 11px; letter-spacing: 1px; font-weight: normal; text-transform: uppercase !important; }
+
+
+
+/* --------------- IMAGES ----------------------------------------------------------------------------------- */
+
+
+.full-image-float-left { padding-right: 20px !important; }
+
+.full-image-float-right { padding-left: 20px !important; }
+
+.full-image-block { padding-top: 15px; }
+
+
+
+
+/* --------------- TYPOGRAPHY ----------------------------------------------------------------------------------- */
+
+
+h1 { text-shadow: #000 0px -1px 1px; font-size: 35px; color: #222; font-family: "HelveticaNeue-Light", "Helvetica Neue Light","Helvetica Neue", sans-serif; font-weight: 300; padding-bottom: 15px; line-height: 1.8em;  }
+
+h1.whiteLanding { text-shadow: #000 0px -1px 1px; font-size: 35px; color: #fff; font-family: "HelveticaNeue-Light", "Helvetica Neue Light","Helvetica Neue", sans-serif; font-weight: 300; padding-bottom: 15px; line-height: 1.8em;  }
+
+h2 { margin: 0; padding: 0 0 12px 0; text-transform: none; }
+
+h2.steps { font-size: 24px; }
+
+h2.document-title { display: none; }
+
+h2.border { border-top: 3px solid #aaa; font-size: 22px; padding-top: 20px; }
+
+h2.noborder { border: none; font-size: 22px }
+
+h3 { font-size: 18px; color: #fff; font-family: "HelveticaNeue-Light", "Helvetica Neue Light","Helvetica Neue", sans-serif; font-weight: 300; padding-bottom: 0px; line-height: 1.8em; letter-spacing: 1px;  }
+
+h3.noPlus { background: none; padding: 0 0 0 0 !important;  margin: 0 0 -3px 0 !important; }
+
+h3.more { margin-top: 0px; font-weight: bold; display: inline; font-size: 10px; padding: 0; background: none !important; } /* adds a more info button */
+
+#modulePage2862662 h3 { font-size: 11px; }
+
+h4 { font-weight: normal; font-size: 14px; color: #787878; padding: 8px 0 0 0; border-top: 3px solid #d9d9d9; letter-spacing: 1px; }
+
+h4.naked { font-weight: normal; font-size: 14px; color: #787878; padding: 8px 0 15px 0; border-top: none; letter-spacing: 1px; } /* no top border */
+
+h5 { border-bottom: 1px solid #222; font-weight: normal; letter-spacing: 1px; text-transform: uppercase; font-size: 13px; color: #777; padding: 0 0 20px 0; margin: 0 0 5px 0; }
+
+h5.feature { border-bottom: none; font-weight: normal; letter-spacing: 0; text-transform: normal;  color: #000;  font-size: 18px; padding: 0 0 0 0;  margin: 0 0 18px 0; line-height: 27px; }
+
+h6 { font-weight: bold; text-transform: uppercase; color: #000; padding: 0 0 25px 0; font-size: 14px; margin: 0; line-height: 14px; }
+
+p.medium { font-size: 11px; color: #666; padding: 0 20px 20px 0; text-align: left; }
+
+p.large { font-size: 18px; line-height: 1.7em; color: #333; padding: 0 10px 10px 0; text-align: left; }
+
+.landingQuote { width: 460px; float: right; font-size: 19px; font-family: georgia; color: #666; line-height: 15px; border-bottom: 1px dotted #ccc; padding: 10px 0 2px 0; }
+
+.landingQuoteText { font-size: 16px; font-family: georgia; color: #666; line-height: 22px; padding: 10px 0 0 0; }
+
+.QuoteHeight { height: 170px; }
+
+.author { font-size: 12px; color: #363636; font-style: italic; }
+
+.who { width: 460px; float: right; border-bottom: 1px dotted #ccc; padding: 0 0 15px 0; color: #666; }
+
+.moreInfo { float: right; background: #ccc; padding: 7px; width: 200px; text-align: center; }
+
+.afterArrow { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/rightarrow.gif) no-repeat 100% 50%; padding: 0 11px 0 0; font-weight: bold; font-size: 12px; }
+
+.highlight { background: #FFFFCC; padding: 3px; }
+
+.intro { font-size: 18px; color: #777; line-height: 27px; }
+
+.featureFull p { padding-left: 35px;}
+
+.introText { font-size: 18px; color: #333; }
+
+.featureList { height: 145px; } /* Wraps each feature for a consistent height for horizontal grid */
+
+.sub { font-size: 11px; color: #666; line-height: 1.7em; padding-top: 6px; margin: 0 !important; } /* description text with normal line-height */
+
+.subLanding { font-size: 11px; color: #666; line-height: 1.5em; padding: 0 0 12px 0; margin: 0 !important; } /* description text for bullet points on landing page */
+
+.subTight { font-size: 10px; color: #555; line-height: 1.3em; } /* description text with a tight line-height */
+
+.subTight a { color: #777; font-size: 10px; }
+
+.moreDark { margin-top: 0px; width: 190px; display: block; font-size: 10px; background: url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/icon-fillarrow-gray.gif) no-repeat 0 60%; padding: 5px 0 0 15px; border-top: 1px solid #e2e2e2; } /* adds a more info button */
+
+a.moreDark { color: #ccc; }
+
+
+
+
+
+/* SECTIONS HEADERS PER PAGE ===================================================================== */
+
+
+.subHeaderWrapper { padding: 30px 0 10px 0; margin: 0 0 15px 0; }
+
+.subHeaderWrapperNone { padding: 30px 0 0 0; margin: 0 0 0 0; }
+
+.subHeaderContent { width: 940px; float: left; }
+
+.subHeaderContentNav { width: 700px; float: left; }
+
+.subHeaderNav { width: 220px; float: right; margin: 0 0 0 0; }
+
+.subHeaderWrapper .subHeaderNav { width: 220px; float: right; margin: 110px 0 0 0; }
+
+.subHeader { padding: 20px 0 10px 240px; display: block; } /* section title graphic positioning */
+
+.subHeaderDescription { margin: 0 0 0 240px; color: #555; font-size: 18px; padding: 0 0 45px 0; line-height: 1.5em; letter-spacing: 1px; }
+
+.subHeaderDescriptionWrap { margin: 0 0 0 0; color: #555; font-size: 18px; padding: 25px 0 45px 0; line-height: 1.5em; letter-spacing: 1px; }
+
+.infoGraphic {  padding-top: 45px;  } /* Landing page info graphic positioning */
+
+.subHeaderNav ul { list-type: none;  padding: 0; margin: 0; }
+
+.subHeaderNav li { border-bottom: 1px solid #d2d2d2; display: block; padding: 0 0 2px 10px; margin: 0 0 2px 0; line-height: 1.8em; font-weight: bold; background: url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/icon-fillarrow-gray.gif) no-repeat 0 50%; }
+
+.subHeaderNav a:link { color: #999; font-weight: bold; padding: 0; }
+
+.subHeaderNav a:visited { color: #999; text-decoration: none; padding: 0; }
+
+.subHeaderNav a:hover { color: #333; text-decoration: none; padding: 0; }
+
+.subHeaderNav a:active { color: #555; text-decoration: none; padding: 0; }
+
+.bio { height: 450px; }
+
+.bioShort { height: 350px; }
+
+#searchWrapper { background: #e2e2e2; padding: 30px; margin-bottom: 55px; }
+
+.notice-box { background: #e2e2e2; padding: 20px; margin-bottom: 35px; }
+
+
+
+
+
+/* --------------- LOGIN CODE ----------------------------------------------------------------------------------- */
+
+
+
+#loginBoxWrapper { position: absolute; top: 10px; left: 10px; display: none; overflow: hidden; }
+
+#loginBox { z-index: 10; background: #000000; padding: 25px; -moz-border-radius: 6px; -webkit-border-radius: 6px; }
+
+#loginBox .title { color: white; font-size: 16px; padding-bottom: 12px; }
+
+#loginBox .message { line-height: 15px; padding-bottom: 10px; }
+
+#loginBox #login_title, #loginBox #password_title { color: white; }
+
+#loginBox #login_messages, #loginBox #password_messages { margin: 10px 0 10px 0; font-weight: bold; }
+
+#loginBox input { width: 160px; }
+
+#loginBox { width: 220px; }
+
+#loginBox a { background: transparent; padding: 0 !important; margin: 0; color: white !important; }
+
+
+
+
+/* ---------------------???????------------??????????--------------- */
+
+
+#modulePage2862657 #content { width: 970px; margin-left: -15px; }
+#modulePage3003149 #content { width: 970px; margin-left: -15px; }
+#modulePage3005914 #content { width: 970px; margin-left: -15px; }
+#modulePage3006451 #content { width: 970px; margin-left: -15px; margin-top: 17px !important; overflow: visible; }
+
+#modulePage2862657 { background: #f4f4f4 url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/blacktop-bg.png) repeat-x top left; }
+#modulePage3003149 { background: #f4f4f4 url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/front-bg-2.1.png) repeat-x top left; }
+#modulePage3005914 { background: #f4f4f4 url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/blacktop-bg.png) repeat-x top left; }
+#modulePage3006451 { background: #f4f4f4 url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/bg-3.0.png) repeat-x top left; }
+
+
+
+/* --------------- VERTICAL ICONS ----------------------------------------------------------------------------------- */
+
+
+
+/*blog*/
+h3.seo { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-seo.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.podcasting { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-podcast.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.wysiwyg { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-wysiwyg.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.moblogging { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-moblogging.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.antispam { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-antispam.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.feedburner { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-rss.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.restructure { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-seo.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+h3.archive { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-archiving1.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+h3.schedule { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-schedule.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+h3.domains { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-domain.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+h3.stats { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-statistic1.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+h3.multieditor { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-multieditor.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+h3.realtime { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-realtime.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+
+
+/*business*/
+h3.uptime { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-uptime.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+h3.form { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-formbuilder1.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+h3.domain { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-domain.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.theme { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-themes.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+h3.member { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-members.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.permission { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-access.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.support { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-support1.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.search { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-search2.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.monitor { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-monitoring.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+
+
+/*artist*/
+h3.pro { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-pro.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.gallery { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-gallery.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.design { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-themes.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+h3.lightbox { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-lightbox.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.blog{ background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-blog.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.cleansimple{ background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-themes.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+h3.pointclick{ background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-pointclick2.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+h3.pricing{ background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-pricing1.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+
+
+/*developer*/
+h3.css { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-css.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.xhtml { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-validxhtml1.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }/*?*/
+h3.groupaccounttools { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-css.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.grid { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-grid.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+h3.export { background: url(/web/20120531210205im_/http://www.squarespace.com/storage/icon/icon-export.png) no-repeat 0 50%; padding: 3px 0 3px 35px; }
+
+
+
+
+
+/* CONTACT PAGE CODE ===================================================================== */
+
+
+.loginWrapper .button { float: right; margin: 10px 10px 0 0; }
+
+#login_title { padding-bottom: 5px; font-weight: bold; }
+
+#password_title { padding: 8px 0 5px 0; font-weight: bold; }
+
+.form-body .singlelinetext-xlarge { width: 700px; }
+
+.form-body .singlelinetext-large { width: 340px; padding: 5px; }
+
+.text { padding: 5px; width: 460px; }
+
+#login, #password { border: 2px solid #cfcfcf; width: 400px; }
+
+.loginWrapper { margin-top: 46px; clear: both; background: #e2e2e2; padding: 20px; float: left; width: 420px }
+
+
+
+
+
+/* VERTICAL LIST SUB NAVIGATION ===================================================================== */
+
+
+.crumbNav { background: #777; -moz-border-radius: 4px; -webkit-border-radius: 4px; padding: 9px 0px 9px 15px; margin: 0 0 20px 240px; font-size: 11px; letter-spacing: 1px; }
+
+.crumbNav ul { list-type: none; margin: 0; padding: 0; }
+
+.crumbNav li { display: inline; padding: 0 25px 0 12px; color: #fff; text-transform: uppercase; background: url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/icon-arrow-stick.png) no-repeat 0 50%; }
+
+
+
+
+
+/* SUB SIGN UP ===================================================================== */
+
+
+.bigSignup { background: #777; -moz-border-radius: 4px; -webkit-border-radius: 4px; padding: 13px 0px 13px 19px; margin: 0 0 20px 240px; font-size: 11px; letter-spacing: 1px; height: 100px; }
+
+
+
+
+
+/* WATCH VIDEO BUTTON CODE ========================================================================================== */
+
+
+#watchVideoWrapper { width: 190px; height: 100px; }
+
+.watchVideo { margin: 0 0 15px 0; width: 165px; height: 36px; background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/video-button.png) 0 0 no-repeat; border: none; }
+
+.watchVideo:hover { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/video-button.png) 0 -36px no-repeat; color: transparent; cursor: pointer; }
+
+.screenshots { width: 190px; height: 36px; background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/button-screenshots.png) 0 0 no-repeat; border: none; }
+
+.screenshots:hover { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/button-screenshots.png) 0 -36px no-repeat; color: transparent; cursor: pointer; }
+
+.signupButton2 { margin: 0; width: 322px; height: 91px; background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/signupButton-2.0.png) 0 0 no-repeat; border: none; }
+
+.signupButton2:hover { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/layout/signupButton-2.0.png) 0 -91px no-repeat; color: transparent; cursor: pointer; }
+
+.signupButton2Footer { margin: 0; width: 220px; height: 61px; background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/try-220.png) 0 0 no-repeat; border: none; }
+
+.signupButton2Footer:hover { background: transparent url(/web/20120531210205im_/http://www.squarespace.com/storage/try-220.png) 0 -61px no-repeat; color: transparent; cursor: pointer; }
+
+.signupButton2Footer a { display:block; margin: 0; width: 220px; height: 61px; }
+
+
+
+
+
+/* SIGN-UP & LOGIN BUTTON CODE ===================================================================================================== */
+
+
+#navigationTop-moduleContent2867170 a:link { color: #fff !important; }
+
+#navigationTop-moduleContent2867170 a:visited { color: #fff !important; }
+
+#navigationTop-moduleContent2867170 a:hover { color: #fff !important; }
+
+#navigationTop-moduleContent2867170 a:active { color: #fff !important; }
+
+
+
+
+/* MISC =========================================================================================== */
+
+
+#map { width: 680px; float: right; border: 10px solid #ccc; margin-top: -215px; margin-bottom: 20px; }
+
+.featureList .sub { padding-left: 35px; }
+
+.press { padding-bottom: 12px; border-bottom: 1px solid #ccc; }
+
+.screenTag { padding-right: 20px; }
+
+.group:after { content: "."; display: block; height: 0; clear: both; visibility: hidden; } /* clears floats */
+
+.questions { height: 145px; display: block; }
+
+.featureFull { margin-bottom: 20px; font-size: 11px; line-height: 1.7em; display: block; }
+
+.featureFull ul { line-height: 2.0em; }
+
+#hLink { display: none !important; }
+
+
+body, #canvasWrapper, #canvas {_height: 100%;} /* i hate you ie */
+
+
+/* Hides Careers Header */
+
+#careersHead { display: none; }
+
+/* ---- SIDEBAR SIGNUP BUTTON ---- */
+.landing { background: #e6eadf; border: 1px solid #d5dbcf; border-radius: 6px; -moz-border-radius: 6px; float:left; width:944px; margin-bottom:50px; }
+.landing img { padding:30px; float:left; }
+.landing .signup-button { padding: 30px 30px 30px 0; }
+
+.landing .signup-button a  { background-color: #698c2e; background-image: -moz-linear-gradient(top, #a7cf62, #698c2e); background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0, #a7cf62),color-stop(1, #698c2e));filter:  progid:DXImageTransform.Microsoft.gradient(startColorStr='#a7cf62', EndColorStr='#698c2e'); -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#a7cf62', EndColorStr='#698c2e')"; border-top-color: #c6f17a; border-bottom-color: #547125; -moz-border-radius: 6px; -webkit-border-radius: 6px; border-radius: 6px; cursor: pointer; width: 270px; text-align: center; float: right; border-style: solid; border-top-width: 0px; border-right-width: 0px; border-bottom-width: 1px; border-left-width: 0px; -moz-box-shadow: 0px 0px 4px #CCC; -webkit-box-shadow: 0px 0px 4px #CCC; box-shadow: 0px 0px 4px #CCC; margin-bottom: 5px; padding-top:0; text-transform: uppercase; text-shadow: 0px 1px 2px #393939; color: #ffffff; font-size: 22px !important; font-family: 'HelveticaNeue-Light','Helvetica Neue Light','Helvetica Neue',sans-serif; font-weight:bold; letter-spacing:1px; line-height: 2.5em; }
+
+.landing .signup-button a:hover{ text-decoration: none; background-color: #89a45b; background-image: -moz-linear-gradient(top, #bad884, #89a45b); background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0, #bad884),color-stop(1, #89a45b)); filter:  progid:DXImageTransform.Microsoft.gradient(startColorStr='#bad884', EndColorStr='#89a45b'); -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#bad884', EndColorStr='#89a45b')"; }
+
+.landing .signup-button .small-button-text { font-size: 11px; text-transform: uppercase; font-spacing: 2px; color: #363636;  display: block; text-shadow: 0px 1px 0px #a3c95e; line-height: .5em; margin: -1px 0 17px 0;  font-weight: normal; font-family: Arial, sans-serif; }
+
+
+
+/* ---- HEADER/FOOTER SIGNUP BUTTON ---- */
+
+.signup-button-footer .signup-footer-link, .signup-button-header .signup-header-link  { background-color: #698c2e !important; background-image: -moz-linear-gradient(top, #a7cf62, #698c2e) !important; background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0, #a7cf62),color-stop(1, #698c2e)) !important; filter:  progid:DXImageTransform.Microsoft.gradient(startColorStr='#a7cf62', EndColorStr='#698c2e'); -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#a7cf62', EndColorStr='#698c2e')"; border-top-color: #c6f17a; border-bottom-color: #344616; -moz-border-radius: 8px; -webkit-border-radius: 8px; border-radius: 8px; cursor: pointer; text-align: center; float: right; border-style: solid; border-top-width: 1px; border-right-width: 0px; border-bottom-width: 0px; border-left-width: 0px; -moz-box-shadow: 0px 0px 8px #15181b; -webkit-box-shadow: 0px 0px 8px #15181b; box-shadow: 0px 0px 8px #15181b; margin-bottom: 5px; padding: 0px !important; text-transform: uppercase; text-shadow: 0px 1px 2px #393939; color: #ffffff !important; font-family: 'HelveticaNeue-Light','Helvetica Neue Light','Helvetica Neue',sans-serif; font-weight:bold; letter-spacing:1px; line-height: 2.4em; }
+
+.signup-button-footer .signup-footer-link { width:218px; font-size:26px !important; }
+.signup-button-header .signup-header-link { width:268px; font-size:30px !important; padding:0 0 5px 0 !important; line-height:2.2em; }
+
+.signup-button-footer .signup-footer-link:hover, .signup-button-header .signup-header-link:hover { text-decoration: none; background-color: #89a45b !important; background-image: -moz-linear-gradient(top, #bad884, #89a45b) !important; background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0, #bad884),color-stop(1, #89a45b)) !important; filter:  progid:DXImageTransform.Microsoft.gradient(startColorStr='#bad884', EndColorStr='#89a45b'); -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#bad884', EndColorStr='#89a45b')"; }
+
+.signup-button-footer .small-button-text, .signup-button-header .small-button-text { text-transform: uppercase; font-spacing: 2px; color: #363636;  display: block; text-shadow: 0px 1px 0px #a3c95e; line-height: .5em; font-weight: normal; font-family: Arial, sans-serif; }
+
+.signup-button-footer .small-button-text { margin: -12px 0 17px 0; font-size: 10px; }
+.signup-button-header .small-button-text { margin: -13px 0 17px 0; font-size: 11px; }
+
+/*
+     FILE ARCHIVED ON 21:02:05 May 31, 2012 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 22:50:58 Jun 23, 2026.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+*/
+/*
+playback timings (ms):
+  capture_cache.get: 0.691
+  load_resource: 741.62 (2)
+  PetaboxLoader3.resolve: 238.514 (2)
+  PetaboxLoader3.datanode: 481.377 (2)
+*/</style>
+  
+  <style data-inlined-from="https://web.archive.org/universal/styles/squarespace-gallery-slideshow.css?CE=57">/*-- slider --*/
+
+.squarespace-slideshow-wrapper { overflow:hidden; -webkit-user-select:none; }
+.squarespace-slideshow-wrapper.outside { padding-left:50px; }
+.squarespace-slideshow { position: relative; }
+.squarespace-slideshow-frame { overflow:hidden; width:100%; height:100%; position:relative; }
+.squarespace-slideshow-animated-frame { overflow:hidden; }
+.squarespace-slideshow-wrapper img { max-width:none !important; }
+
+/*-- frame position --*/
+
+.squarespace-slideshow-animated-frame.type-swipe .sf { float:left; position:relative; }
+.squarespace-slideshow-animated-frame.type-fade .sf { float:left; position:absolute; }
+.squarespace-slideshow-animated-frame.type-swipe .sf .slide-content { position:absolute; display:block; visibility:hidden; }
+.squarespace-slideshow-animated-frame.type-fade .sf .slide-content { position:absolute; display:block; opacity:0; filter: alpha(opacity=0); }
+
+.squarespace-slideshow-animated-frame .sf { overflow:hidden; }
+.squarespace-slideshow-animated-frame .sf.active { border:none !important; }
+.squarespace-slideshow-animated-frame .sf.active .slide-content { visibility:visible; }
+.squarespace-slideshow-animated-frame.type-fade .sf.active .slide-content {  opacity:1; filter: alpha(opacity=100); }
+
+/*-- nav fast forward/rewind --*/
+
+.fnav { width:80px; height:100%; position:absolute; top:0px; background-repeat:no-repeat; background-position:50% 50%; cursor:pointer;  }
+.fnav.hidden { opacity:0; filter: alpha(opacity=0); } 
+.fnav.visible { opacity:0.6; filter: alpha(opacity=60); }
+.fnav.onhover { opacity:0; filter: alpha(opacity=0); } 
+.fnav.onhover:hover { opacity:0.6; -webkit-transition-property: opacity, -webkit-transform; -webkit-transition-duration: .8s, .8s; filter: alpha(opacity=60); }
+.frwd { left:0; background-image:url(/web/20120531210144im_/http://www.squarespace.com/universal/images/slideshow/previous-button.png); }
+.ffwd { right:0; background-image:url(/web/20120531210144im_/http://www.squarespace.com/universal/images/slideshow/next-button.png); }
+
+/*-- nav outside --*/
+
+.outside .fnav { width: 50px; }
+.outside .squarespace-slideshow .frwd { left: -50px; }
+.outside .squarespace-slideshow .ffwd { right: -50px; }
+
+
+/*-- description --*/
+
+.squarespace-slideshow-description-wrapper { width: 100%; position: absolute; bottom: 0; }
+.squarespace-slideshow-container { width: 100%; height: 100%; position: absolute; background-color: black; opacity: 0.4; filter: alpha(opacity=40); }
+.squarespace-slideshow-description-content { padding:9px 20px; overflow:hidden;}
+.squarespace-slideshow-title { color:#FFF; position:relative; z-index:10; font-size:16px; font-family:Helvetica;  }
+.squarespace-slideshow-description  { color:#FFF; position:relative; overflow:hidden; z-index:10; font-size:10px; font-family:Helvetica; display:block; line-height:1.2em; }
+
+/*-- slideshow indicator --*/
+
+.squarespace-slideshow-indicator-wrapper { position:relative; float: left;}
+.slide-indicator-box { position:relative; padding-top:10px; overflow: hidden; }
+.slide-indicator { line-height: 20px; border:none; outline:none; display: block; float: left; cursor:pointer; }
+
+.slide-indicator-type-hidden .slide-indicator-box { display:none;}
+
+.slide-indicator-type-paginated .slide-indicator { 	
+	padding-left: 0.8em;
+	padding-right: 0.8em;
+	margin: 0 3px 3px;
+	background-color:#CCC;
+	color:#000;
+	text-decoration:none;
+	-moz-border-radius: 3px;
+	-webkit-border-radius: 3px;
+	font-size:11px;
+}
+.slide-indicator-type-paginated .slide-indicator.si-first { margin-left:0;}
+.slide-indicator-type-paginated .slide-indicator.si-last { margin-right:0;}
+.slide-indicator-type-paginated .slide-indicator:hover { background-color:#D5D5D5; color:#000; text-decoration:none;} 
+.slide-indicator-type-paginated .slide-indicator.active { background-color:#999; color:#000; } 
+.slide-indicator-type-paginated .slide-indicator.active:hover { opacity:0.8; filter: alpha(opacity=80); }
+.slide-indicator-type-paginated .pagination-ellipsis { float:left; letter-spacing:1px }
+
+.slide-indicator-type-dotted .slide-indicator-box { margin:0 auto;}
+.slide-indicator-type-dotted .slide-indicator {	margin: 0 auto;	background:url(/web/20120531210144im_/http://www.squarespace.com/universal/images/slideshow/unselected.png) center center no-repeat;	width:20px;	height:20px; }
+.slide-indicator-type-dotted .slide-indicator:hover { } 
+.slide-indicator-type-dotted .slide-indicator.active { background:url(/web/20120531210144im_/http://www.squarespace.com/universal/images/slideshow/selected.png) center center no-repeat;} 
+.slide-indicator-type-dotted .slide-indicator.active:hover { opacity:0.8; filter: alpha(opacity=80);}
+
+.slide-indicator-textual {}
+.slide-indicator-textual span { }
+.slide-indicator-prev { cursor:pointer; }
+.slide-indicator-next { cursor:pointer; }
+
+/*
+     FILE ARCHIVED ON 21:01:44 May 31, 2012 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 22:51:04 Jun 23, 2026.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+*/
+/*
+playback timings (ms):
+  capture_cache.get: 21.868
+  load_resource: 50.932 (2)
+  PetaboxLoader3.datanode: 28.848 (2)
+*/</style>
+  
+  
+  
+  <!-- Google Web Fonts -->
+  
+
+  
+
+
+
+
+
+<style type="text/css">#configuration-container-title-text, #pageHeaderTitle, #manager-top-bar-wrapper, #manager-top-bar .main-site-title { font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', sans-serif; font-weight: 300; letter-spacing: 0.4px; }</style>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+      <title>Build a Website - Create a Blog - Squarespace</title>
+    <meta property="og:title" content="Build a Website - Create a Blog - Squarespace"> 
+  
+
+  
+
+  
+
+  <!-- End Heading -->
+
+  <!--[if lte IE 6]>
+
+<![endif]-->
+
+
+
+
+<!-- Squarespace Video Player -->
+
+
+<meta name="verify-v1" content="worK41C8KHUXdb4xODmKu9Aw+n1w6fRzZ3STyxqohA8=">
+<meta name="bitly-verification" content="a43d27b753f0">
+
+
+<!-- Begin Squarespace Tracking Code -->
+
+
+
+
+
+<!-- End Squarespace Tracking Code -->
+
+
+<!-- Start Visual Website Optimizer Code -->
+
+
+
+<!-- End Visual Website Optimizer Code -->
+
+
+<!-- Squarespace signup -->
+
+
+<style type="text/css" src="/storage/landing-pages/common-js/normal-ui.css"></style>
+
+
+
+<!--script type="text/javascript" src="/storage/landing-pages/signup-overlay.js?CE=15">
+</script-->
+
+
+
+
+<!-- Begin SearchForce tracking code for landing page (4.1) -->
+
+
+<!-- End SearchForce tracking code -->
+
+  
+  
+
+</head>
+
+<body id="modulePage13981776">
+
+  
+
+    
+
+  
+
+
+
+
+  
+
+  <div id="canvasWrapper"><div id="canvas">
+  
+  
+
+  <div id="pageHeaderWrapper"><div id="pageHeader">
+
+      <div id="navigationTop"><div id="navigationTop-sectionContent1497730" class="horizontalNavigationBar"><ul class="content-navigation">
+    
+  <li class="module   " id="navigationTop-moduleContentWrapper3054373">
+
+    <div id="navigationTop-moduleContent3054373">
+
+              <a id="navigationTop-moduleLink3054373" class=" " href="/tour/"><span>Tour</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="navigationTop-moduleContentWrapper8351829">
+
+    <div id="navigationTop-moduleContent8351829">
+
+              <a id="navigationTop-moduleLink8351829" class=" " href="http://www.squarespace.com/examples/category/featured"><span>Examples</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="navigationTop-moduleContentWrapper13619739">
+
+    <div id="navigationTop-moduleContent13619739">
+
+              <a id="navigationTop-moduleLink13619739" class=" " href="/pricing/"><span>Pricing</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="navigationTop-moduleContentWrapper10405706">
+
+    <div id="navigationTop-moduleContent10405706">
+
+              <a id="navigationTop-moduleLink10405706" class=" " href="javascript:Y.showSignupOverlay();"><span>Sign up</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  </ul><br class="clearer"></div></div>
+
+    
+        
+      
+  
+      <div id="bannerAreaWrapper"><div id="bannerArea">
+
+        
+        <div id="bannerWrapper">
+          <a href="http://www.squarespace.com/"><img id="banner" src="/storage/logo-transparent.png" alt="Squarespace | Smarter Website Publishing" title="Squarespace | Smarter Website Publishing"></a>
+        </div>  
+
+      
+      
+      </div></div>
+    
+    
+    
+
+      <div id="navigationBottom"><div id="navigationBottom-sectionContent1497730" class="horizontalNavigationBar"><ul class="content-navigation">
+    
+  <li class="module   " id="navigationBottom-moduleContentWrapper3054373">
+
+    <div id="navigationBottom-moduleContent3054373">
+
+              <a id="navigationBottom-moduleLink3054373" class=" " href="/tour/"><span>Tour</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="navigationBottom-moduleContentWrapper8351829">
+
+    <div id="navigationBottom-moduleContent8351829">
+
+              <a id="navigationBottom-moduleLink8351829" class=" " href="http://www.squarespace.com/examples/category/featured"><span>Examples</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="navigationBottom-moduleContentWrapper13619739">
+
+    <div id="navigationBottom-moduleContent13619739">
+
+              <a id="navigationBottom-moduleLink13619739" class=" " href="/pricing/"><span>Pricing</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="navigationBottom-moduleContentWrapper10405706">
+
+    <div id="navigationBottom-moduleContent10405706">
+
+              <a id="navigationBottom-moduleLink10405706" class=" " href="javascript:Y.showSignupOverlay();"><span>Sign up</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  </ul><br class="clearer"></div></div>
+
+
+  </div></div>
+  
+  
+
+      
+    <div class="page-wrapper">
+  
+
+  
+  <div id="pageBodyWrapper"><div id="pageBody">
+  
+  <div id="sidebar1Wrapper" class="verticalNavigationBarWrapper"><div class="iw-vnb1"><div class="iw-vnb2"><div class="iw-vnb3"><div class="iw-vnb4"><div id="sidebar1" class="verticalNavigationBar">
+
+  
+
+    <div id="sectionContent1497730" class="sectionWrapper promotedContainer "><div class="iw-s1"><div class="iw-s2"><div class="iw-s3"><div class="iw-s4"><div class="section">
+
+       <div class="caption">Top</div> 
+
+      
+        
+          <ul class="content-navigation">
+  <li class="module   " id="moduleContentWrapper3054373">
+
+    <div id="moduleContent3054373">
+
+              <a id="moduleLink3054373" class=" " href="/tour/"><span>Tour</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper8351829">
+
+    <div id="moduleContent8351829">
+
+              <a id="moduleLink8351829" class=" " href="http://www.squarespace.com/examples/category/featured"><span>Examples</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper13619739">
+
+    <div id="moduleContent13619739">
+
+              <a id="moduleLink13619739" class=" " href="/pricing/"><span>Pricing</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper10405706">
+
+    <div id="moduleContent10405706">
+
+              <a id="moduleLink10405706" class=" " href="javascript:Y.showSignupOverlay();"><span>Sign up</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+</ul>
+
+        
+
+      
+  
+    </div></div></div></div></div></div>
+
+  
+
+    <div id="sectionContent1561614" class="sectionWrapper  "><div class="iw-s1"><div class="iw-s2"><div class="iw-s3"><div class="iw-s4"><div class="section">
+
+      
+
+      
+        
+          <ul class="content-navigation">
+  <li class="module   " id="moduleContentWrapper3178845">
+
+    <div id="moduleContent3178845">
+
+              <a id="moduleLink3178845" class=" " href="/tour/"><span>Overview</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper3031489">
+
+    <div id="moduleContent3031489">
+
+              <a id="moduleLink3031489" class=" " href="/the-platform/"><span>Host</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper3031493">
+
+    <div id="moduleContent3031493">
+
+              <a id="moduleLink3031493" class=" " href="/the-site-builder/"><span>Build</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12909338">
+
+    <div id="moduleContent12909338">
+
+              <a id="moduleLink12909338" class=" " href="/total-creative-control/"><span>Design</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper3047401">
+
+    <div id="moduleContent3047401">
+
+              <a id="moduleLink3047401" class=" " href="/better-site-management/"><span>Manage</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper3031495">
+
+    <div id="moduleContent3031495">
+
+              <a id="moduleLink3031495" class=" " href="/unparalleled-support/"><span>Support</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12909368">
+
+    <div id="moduleContent12909368">
+
+              <a id="moduleLink12909368" class=" " href="/developer/"><span>Developer</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper8883273">
+
+    <div id="moduleContent8883273">
+
+              <a id="moduleLink8883273" class=" " href="/ipad"><span>Mobile</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper4451763">
+
+    <div id="moduleContent4451763">
+
+              <a id="moduleLink4451763" class=" " href="/blog-importer/"><span>Blog Importer</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper5133267">
+
+    <div id="moduleContent5133267">
+
+              <a id="moduleLink5133267" class=" " href="/support-new/"><span>Support-New</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper6602639">
+
+    <div id="moduleContent6602639">
+
+              <a id="moduleLink6602639" class=" " href="/social/"><span>Social</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+</ul>
+
+        
+
+      
+  
+    </div></div></div></div></div></div>
+
+  
+
+    <div id="sectionContent1632965" class="sectionWrapper  "><div class="iw-s1"><div class="iw-s2"><div class="iw-s3"><div class="iw-s4"><div class="section">
+
+      
+
+      
+        
+          <ul class="content-navigation">
+  <li class="module   " id="moduleContentWrapper2862662">
+
+    <div id="moduleContent2862662">
+
+              <a id="moduleLink2862662" class=" " href="/features/"><span>FULL FEATURE LIST</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+</ul>
+
+        
+
+      
+  
+    </div></div></div></div></div></div>
+
+  
+
+    <div id="sectionContent1634248" class="sectionWrapper  "><div class="iw-s1"><div class="iw-s2"><div class="iw-s3"><div class="iw-s4"><div class="section">
+
+      
+
+      
+        
+          <div class="content-passthrough"><div id="moduleContentWrapper3225740" class="widget-wrapper  widget-type-page"><div id="moduleContent3225740">
+
+
+
+
+
+  <div class="signup-button">
+    <a href="javascript:Y.showSignupOverlay();">Get Started</a>
+  </div>
+  
+
+</div></div></div>
+
+        
+
+      
+  
+    </div></div></div></div></div></div>
+
+  
+
+  
+
+</div></div></div></div></div></div>
+  <div id="sidebar2Wrapper" class="verticalNavigationBarWrapper"><div class="iw-vnb1"><div class="iw-vnb2"><div class="iw-vnb3"><div class="iw-vnb4"><div id="sidebar2" class="verticalNavigationBar">
+
+  
+
+    <div id="sectionContent3938703" class="sectionWrapper  "><div class="iw-s1"><div class="iw-s2"><div class="iw-s3"><div class="iw-s4"><div class="section">
+
+       <div class="caption">hidden</div> 
+
+      
+        
+          <ul class="content-navigation">
+  <li class="module   " id="moduleContentWrapper9396290">
+
+    <div id="moduleContent9396290">
+
+              <a id="moduleLink9396290" class=" " href="/pricing-2/"><span>pricing 2</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper2867170">
+
+    <div id="moduleContent2867170">
+
+              <a id="moduleLink2867170" class=" " href="https://www.squarespace.com/signup/"><span>Sign up</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper10572076">
+
+    <div id="moduleContent10572076">
+
+              <a id="moduleLink10572076" class=" " href="/about/"><span>about</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper10579044">
+
+    <div id="moduleContent10579044">
+
+              <a id="moduleLink10579044" class=" " href="/home-simple/"><span>home-simple</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper14030534">
+
+    <div id="moduleContent14030534">
+
+              <a id="moduleLink14030534" class=" " href="/home-tester/"><span>home-tester</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper16524100">
+
+    <div id="moduleContent16524100">
+
+              <a id="moduleLink16524100" class=" " href="/domain-tos/"><span>Domain-TOS</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+</ul>
+
+        
+
+      
+  
+    </div></div></div></div></div></div>
+
+  
+
+    <div id="sectionContent4761731" class="sectionWrapper  "><div class="iw-s1"><div class="iw-s2"><div class="iw-s3"><div class="iw-s4"><div class="section">
+
+       <div class="caption">Nik Hidden Pages</div> 
+
+      
+        
+          <ul class="content-navigation">
+  <li class="module   " id="moduleContentWrapper11488263">
+
+    <div id="moduleContent11488263">
+
+              <a id="moduleLink11488263" class=" " href="/mediafire2/"><span>mediafire</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12006309">
+
+    <div id="moduleContent12006309">
+
+              <a id="moduleLink12006309" class=" " href="/planner2/"><span>planner</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12034962">
+
+    <div id="moduleContent12034962">
+
+              <a id="moduleLink12034962" class=" " href="/sheffield2/"><span>Sheffield School</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12035010">
+
+    <div id="moduleContent12035010">
+
+              <a id="moduleLink12035010" class=" " href="/nyip3/"><span>NYIP</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12035284">
+
+    <div id="moduleContent12035284">
+
+              <a id="moduleLink12035284" class=" " href="/jewelry2/"><span>Sheffield Jewelry Design</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12190103">
+
+    <div id="moduleContent12190103">
+
+              <a id="moduleLink12190103" class=" " href="/hover2/"><span>Hover</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12208885">
+
+    <div id="moduleContent12208885">
+
+              <a id="moduleLink12208885" class=" " href="/constantcontact2/"><span>Constant Contact</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12211877">
+
+    <div id="moduleContent12211877">
+
+              <a id="moduleLink12211877" class=" " href="/marketingmerge2/"><span>Marketing Merge</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12232495">
+
+    <div id="moduleContent12232495">
+
+              <a id="moduleLink12232495" class=" " href="/mailchimp2/"><span>MailChimp</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12233078">
+
+    <div id="moduleContent12233078">
+
+              <a id="moduleLink12233078" class=" " href="/webtooltester2/"><span>Website Tool Tester</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12263223">
+
+    <div id="moduleContent12263223">
+
+              <a id="moduleLink12263223" class=" " href="/seomoz2/"><span>SEOmoz</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12322359">
+
+    <div id="moduleContent12322359">
+
+              <a id="moduleLink12322359" class=" " href="/fcib2/"><span>FCIB</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+
+  <li class="module   " id="moduleContentWrapper12660606">
+
+    <div id="moduleContent12660606">
+
+              <a id="moduleLink12660606" class=" " href="/1wd2/"><span>1st Web Designer</span></a>
+      
+
+      
+
+    </div>
+
+  </li>
+
+</ul>
+
+        
+
+      
+  
+    </div></div></div></div></div></div>
+
+  
+
+  
+
+</div></div></div></div></div></div>
+  
+      
+    <div id="topbarNav">
+<a href="/about/">About Us</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+<a href="http://blog.squarespace.com" onclick="window.open(this.href);return false;">Blog</a>&nbsp; |&nbsp; 
+<a href="http://help.squarespace.com/customer/portal/emails/new">Contact Us</a>&nbsp;&nbsp;<span id="externalLoginSpan">|</span>&nbsp;&nbsp;
+<span id="externalLogin"><a href="javascript:loginBox();">Member Login</a></span> 
+</div>
+
+<!--
+Start of DoubleClick Floodlight Tag: Please do not remove
+Activity name of this tag: WWW
+URL of the webpage where the tag is expected to be placed: http://www.squarespace.com
+This tag must be placed between the <body> and </body> tags, as close as possible to the opening tag.
+Creation Date: 02/15/2012
+-->
+<iframe src="http://fls.doubleclick.net/activityi;src=3465078;type=rosxh565;cat=wwwbt109;ord=2176970761667.3396?" width="1" height="1" frameborder="0" style="display:none"></iframe>
+<noscript>
+<iframe src="http://fls.doubleclick.net/activityi;src=3465078;type=rosxh565;cat=wwwbt109;ord=1?" width="1" height="1" frameborder="0" style="display:none"></iframe>
+</noscript>
+<!-- End of DoubleClick Floodlight Tag: Please do not remove -->
+  
+
+  <div id="contentWrapper"><div id="content">
+    
+          
+    
+
+
+  
+
+ 
+  
+    <!--
+Start of DoubleClick Floodlight Tag: Please do not remove
+Activity name of this tag: Homepage
+URL of the webpage where the tag is expected to be placed: http://www.squarespace.com
+This tag must be placed between the <body> and </body> tags, as close as possible to the opening tag.
+Creation Date: 02/15/2012
+-->
+<iframe src="http://fls.doubleclick.net/activityi;src=3465078;type=conve013;cat=homep737;ord=1;num=4920676177880.77?" width="1" height="1" frameborder="0" style="display:none"></iframe>
+<noscript>
+<iframe src="http://fls.doubleclick.net/activityi;src=3465078;type=conve013;cat=homep737;ord=1;num=1?" width="1" height="1" frameborder="0" style="display:none"></iframe>
+</noscript>
+<!-- End of DoubleClick Floodlight Tag: Please do not remove -->
+
+
+
+
+
+
+<img src="http://leadback.advertising.com/adcedge/lb?site=695501&amp;srvc=1&amp;betr=squarespace_cs=1&amp;betq=12302=429342" width="1" height="1" border="0"> 
+
+
+<div class="topWrapper group">
+
+<div class="mainLeftSub">
+
+
+<a href="/tour/">
+<img src="http://www.squarespace.com/storage/everything-headline.png" alt="Everything you need to create an amazing website." class="t1">
+</a>
+
+
+<div class="landingIntroText">
+Domains. Hosting. Analytics. 24/7 Support included.
+</div>
+
+
+</div>
+
+
+<div class="mainRightSub">
+
+<div class="signup-button-header"><a class="signup-header-link" href="javascript:Y.showSignupOverlay();">Try it free<span class="small-button-text">no credit card required</span></a></div>
+
+<a href="/tour/">
+<img src="/storage/learnmoreTour-bokeh.png" alt="learn more, take the tour" class="learnMoreTour">
+</a>
+
+</div>
+
+</div>
+
+
+
+
+
+<div class="WhoWhatWhy group">
+
+<div class="wrapper270Three">
+
+<div class="innerWrapper270Two">
+
+<div class="col270Left">
+
+<h2>What is it?</h2>
+A fully hosted, completely managed environment for creating and maintaining a beautiful website, blog, or portfolio.
+
+</div>
+
+
+<div class="col270Right">
+
+<h2>Who is it for?</h2>
+Anyone who wants to create an extraordinary website. Bloggers. Businesses. Photographers. Our flexible platform powers sites of all sizes.
+</div>
+</div>
+
+
+<div class="col270Right">
+
+<h2>Why use it?</h2>
+We give you full control over your content and site customization. You can build a website or create a blog 10X faster on our comprehensive platform.
+</div>
+
+
+</div>
+
+</div>
+
+
+
+
+
+
+<div class="bottomWrapperTop">
+
+<div class="wrapper270Three">
+
+<div class="innerWrapper270Two">
+
+<div class="col270Left">
+
+<a href="http://www.squarespace.com/total-creative-control/">
+<img src="http://www.squarespace.com/storage/template-home-card.png" alt="Website templates" class="shot270">
+</a>
+
+<h2>Templates That Aren't Templated</h2>
+
+85+ professionally designed style variants from brand-name designers, all with point-and-click control over every design element.
+
+
+
+</div>
+
+
+<div class="col270Right">
+
+
+
+<img src="http://www.squarespace.com/storage/tour/domain-block.png" alt="Free Custom Domain Names" class="shot270">
+
+
+
+<h2>Free Custom Domain Names</h2>
+
+Every annual and bi-annual account receives a free custom domain, giving you the most complete website service possible.
+
+
+</div>
+
+
+
+</div>
+
+<div class="col270Right">
+
+
+<a href="/social">
+<img src="/storage/social-home-card.png" alt="squarespace social widgets" class="shot270">
+</a>
+
+<h2>Social Integration</h2>
+
+Social widgets let you aggregate data from across your social networks completely within the Squarespace environment.
+
+
+
+
+</div>
+
+
+</div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="bottomWrapperTop">
+
+<div class="wrapper270Three">
+
+<div class="innerWrapper270Two">
+
+<div class="col270Left">
+
+<a href="http://www.squarespace.com/examples/category/portfolio">
+<img src="http://cachefly.squarespace.com/storage/gallery270.png" alt="Photo galleries for your website" class="shot270">
+</a>
+
+<h2>Beautiful Photo Galleries</h2>
+
+Customizable galleries let you choose how to present your work.
+Lightbox integration, hover effects, and image resizing are a few perks.
+
+</div>
+
+
+<div class="col270Right">
+
+<a href="/ipad">
+
+<img src="http://s3.media.squarespace.com/production/282162/2862548/4418/ipad-iphone-270-2.png" alt="Squarespace for iphone &amp; ipad" class="shot270">
+
+<!-- <img src="http://s3.media.squarespace.com/production/282162/2862548/3102/iphone270-4.png" alt="squarespace iphone app" class="shot270" /> -->
+</a>
+
+<h2>Squarespace for iOS and Android</h2>
+
+Our mobile apps are completely hand-built. Post to your blog, manage comments, and see detailed statistics, all while on the go.
+
+</div>
+
+
+
+</div>
+
+<div class="col270Right">
+
+<a href="http://www.squarespace.com/better-site-management/">
+<img src="http://s3.media.squarespace.com/production/282162/2862548/2402/stats270-new.png" alt="Website &amp; blog analytics" class="shot270">
+</a>
+
+<h2>Know Your Visitors</h2>
+
+Our powerful analytics tools let you view your site traffic in real time. Learn where visitors are coming from, and how they found you. 
+
+
+</div>
+
+
+</div>
+
+</div>
+
+
+
+
+
+
+
+
+<div class="bottomWrapper">
+
+<div class="wrapper270Three">
+
+<div class="innerWrapper270Two">
+
+<div class="col270Left">
+
+<a href="http://www.squarespace.com/blog-importer/">
+<img src="http://s3.media.squarespace.com/production/282162/2862548/1171/inandout270.png" alt="Create a blog with Squarespace" class="shot270">
+</a>
+
+
+<h2>Seamless Blog Importing</h2>
+
+Whatever platform you're coming from, we'll move over your images, copy your posts, and make sure all your links work.
+
+
+
+</div>
+
+
+<div class="col270Right">
+
+<a href="http://www.squarespace.com/the-site-builder/">
+<img src="http://cachefly.squarespace.com/storage/editor270.png" alt="Online website editor" class="shot270">
+</a>
+
+<h2>Intuitive Editing</h2>
+
+Want to add content? Edit something you already wrote? No problem. Our rapid content-editing tool will help you every step of the way.
+
+
+
+</div>
+
+
+
+</div>
+
+<div class="col270Right">
+
+<a href="/tour">
+<img src="/storage/form270.png" alt="Website form builder" class="shot270">
+</a>
+
+<h2>Form Building &amp; Data Collection</h2>
+
+Our Unlimited plan comes with an industrial-strength form builder, that contains 14 field types, and collects data via email or spreadsheet.
+
+
+</div>
+
+
+</div>
+
+</div>
+
+
+
+
+
+
+
+
+
+<style type="text/css">
+
+#canvas {
+	background-image: none !important;
+}
+h2 {
+	font-family: 'Helvetica Neue',helvetica,arial,sans-serif;
+	font-size: 15px;
+}
+.WhoWhatWhy h2 {
+	font-weight: normal;
+	font-size: 20px;
+}
+#new-bottom-section {
+	font-size: 13px;
+}
+#new-bottom-section img {
+	margin: 0;
+}
+
+#new-bottom-section h2 {
+	font-size: 24px;
+	line-height: 32px;
+}
+#new-bottom-section #signup {
+	clear: both;
+	background: #222;
+	-moz-border-radius: 4px;
+	-webkit-border-radius: 4px;
+	border-radius: 4px;
+	overflow: hidden;
+	padding: 30px;
+	margin-top: 60px; 
+}
+#new-bottom-section #signup-text {
+	float: left;
+}
+#new-bottom-section .signup-button a {
+	width: 310px;
+	float: right;
+	display: block;
+	text-align: center;
+	line-height: 70px;
+	background-color: #a7cf62;
+	background-image: -moz-linear-gradient(top, #a7cf62, #698c2e); 
+	background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0, #a7cf62),color-stop(1, #698c2e)); 
+	filter: progid:DXImageTransform.Microsoft.gradient(startColorStr='#a7cf62', EndColorStr='698c2e'); 
+	-ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#a7cf62', EndColorStr='698c2e')"; 
+	border-top-color: #c6f17a;
+	border-bottom-color: #000000;
+	-moz-border-radius: 6px;
+	-webkit-border-radius: 6px;
+	border-radius: 6px;
+	cursor: pointer;
+	text-align: center; 
+	float: right;
+	border-style: solid;
+	border-top-width: 1px;
+	border-right-width: 0px;
+	border-bottom-width: 0px;
+	border-left-width: 0px;
+	-moz-box-shadow: 0px 0px 8px #15181b;
+	-webkit-box-shadow: 0px 0px 8px #15181b;
+	box-shadow: 0px 0px 8px #15181b;
+	text-transform: uppercase;
+	text-shadow: 0px 1px 2px #393939;
+	color: #ffffff;
+	font-size: 26px !important;
+	font-family: 'HelveticaNeue-Light','Helvetica Neue Light','Helvetica Neue', Arial, sans-serif;
+	font-weight: bold;
+	letter-spacing: 1px;
+}
+#new-bottom-section .signup-button a:hover {
+	text-decoration: none;
+	background-color: ##89a45b;
+	background-image: -moz-linear-gradient(top, #bad884, #89a45b);
+	background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0, #bad884),color-stop(1, #89a45b));
+	filter:  progid:DXImageTransform.Microsoft.gradient(startColorStr='#bad884', EndColorStr='#89a45b');
+	-ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#bad884', EndColorStr='#89a45b')";
+}
+#new-bottom-section #no-experience-necessary {
+	height: 312px;
+	margin: 56px 0;
+}
+#new-bottom-section #no-experience-necessary .content {
+	width: 450px;
+	float: left;
+	padding-top: 40px;
+}
+#new-bottom-section #no-experience-necessary .content h2 {
+	font-family: 'Helvetica Neue',helvetica,arial,sans-serif;
+	font-weight: normal;
+}
+#new-bottom-section #no-experience-necessary .content p {
+	font-size: 19px;
+	line-height: 1.6em;
+	font-family: 'helvetica neue';
+	font-weight: 300;
+	color: #999;
+}
+#new-bottom-section img#dragging-animated {
+	float: right;
+	-moz-border-radius: 4px;
+	-webkit-border-radius: 4px;
+	border-radius: 4px;
+	-moz-box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+	-webkit-box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+	box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+}
+#new-bottom-section #more-examples {
+	clear: both;
+	margin: 60px 0;
+	float: left;
+}
+#new-bottom-section #more-examples .example {
+	width: 288px;
+	float: left;
+	margin-left: 38px;
+}
+#new-bottom-section #more-examples .example.one {
+	margin-left: 0;
+}
+#new-bottom-section #more-examples .example img {
+	background-color: #fff;
+	-moz-border-radius: 4px;
+	-webkit-border-radius: 4px;
+	border-radius: 4px;
+	-moz-box-shadow: 0 0 6px rgba(0, 0, 0, 0.15);
+	-webkit-box-shadow: 0 0 6px rgba(0, 0, 0, 0.15);
+	box-shadow: 0 0 6px rgba(0, 0, 0, 0.15);
+}
+#new-bottom-section #examples {
+	clear: both;
+	margin: 60px 0 0 0;
+}
+#new-bottom-section #examples .example {
+	width: 450px;
+}
+#new-bottom-section #examples .example.one {
+	float: left;
+}
+#new-bottom-section #examples .example.two {
+	float: right;
+}
+#new-bottom-section #examples .example-card-wrapper {
+	background-color: #fff;
+	padding: 15px;
+	-moz-box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+	-webkit-box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+	box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+}
+#new-bottom-section #more-examples h4 {
+	font-size: 13px;
+	color: #262626;
+	border: none;
+	letter-spacing: 0;
+	padding: 0;
+	margin-top: 10px;
+}
+#new-bottom-section #examples h4 {
+	font: 13px 'lucida grande';
+	color: #666;
+	border: none;
+	letter-spacing: 0;
+	padding: 0;
+	margin-top: 8px;
+}
+#new-bottom-section #examples .quote {
+	padding: 0 15px;
+}
+#new-bottom-section #examples blockquote {
+	font: italic 20px/32px georgia, serif;
+	padding-top: 1.8em;
+	color: #555555;
+}
+#new-bottom-section #examples p {
+	padding-top: 1.8em;
+}
+#new-bottom-section #examples span.name {
+	font-size: 14px;
+}
+#new-bottom-section .section-break-shadow {
+	width: 100%;
+	height: 60px;
+	clear: both;
+	float: left;
+	margin-top: 60px;
+}
+#new-bottom-section .section-break-shadow.top {
+        
+	background: url(/storage/vertical-specific/section-break-shadow-top-small.png) no-repeat;
+}
+#new-bottom-section #pressLogos {
+	clear: both;
+	float: left;
+	font-size: 14px;
+	color: #c2c2c2;
+	margin-bottom: 30px;
+}
+#new-bottom-section .press-logo {
+	margin-left: 0px;
+}
+#new-bottom-section .press-logo + .press-logo {
+	margin-left: 18px;
+}
+#new-bottom-section #logoImages {
+	margin-top: 20px;
+}
+
+</style>
+
+
+<div id="new-bottom-section">
+
+<div id="signup">
+	<img id="signup-text" src="/storage/vertical-specific/signup-text.png" alt="Try Squarespace Free for 14 Days. Get started in 30 seconds. No credit card, no commitment.">
+	<div class="signup-button"><a href="javascript:Y.showSignupOverlay();">Start Your Site</a></div>
+</div>
+
+<div id="no-experience-necessary">
+	<div class="content">
+		<h2>No experience necessary.</h2>
+		<p>No experience building websites? No problem. You don't need to be a professional to create a powerful website with Squarespace. We handle all the technical details, so you can focus on what matters most to you. With our easy-to-use controls, your site will be up and running in minutes.</p>
+	</div>
+	<img id="dragging-animated" src="/storage/vertical-specific/dragging-animated.gif">
+</div>
+
+<div id="examples">
+	<div class="example one">
+		<a target="_blank" href="http://www.quillscoffee.com" rel="nofollow">
+			<div class="example-card-wrapper">
+				<div class="example-card-content">
+					<img src="/storage/vertical-specific/business/quills-site.jpg">
+					<h4>Quills Coffee</h4>
+				</div>
+			</div>
+		</a>
+		<div class="quote">
+			<blockquote>"I'm into art and design, but not programming. So Squarespace has been perfect for me to build my company website. It's pretty rad."</blockquote>
+			<p><span class="name">Nathan Quillo, </span><a target="_blank" href="http://www.quillscoffee.com" rel="nofollow">Quills Coffee</a></p>
+		</div>
+	</div>
+	<div class="example two">
+		<a target="_blank" href="http://montessorium.com/" rel="nofollow">
+			<div class="example-card-wrapper">
+				<div class="example-card-content">
+					<img src="/storage/vertical-specific/business/montessorium-site.jpg">
+					<h4>Montessorium</h4>
+				</div>
+			</div>
+		</a>
+		<div class="quote">
+			<blockquote>"Squarespace offers the perfect blend of tools and support to ensure that we can promote our products in an attractive and trackable way. We love Squarespace!"</blockquote>
+			<p><span class="name">Bobby George, </span><a target="_blank" href="http://montessorium.com/" rel="nofollow">Montessorium</a></p>
+		</div>
+	</div>
+</div>
+
+<div class="section-break-shadow top"></div>
+
+<div id="pressLogos">
+	Featured In...
+	<div id="logoImages">
+		<img class="press-logo" src="/storage/watercolor/theNewYorkTimes.png">
+		<img class="press-logo" src="/storage/watercolor/cnet.png">
+		<img class="press-logo" src="/storage/watercolor/theWallStreetJournal.png">
+		<img class="press-logo" src="/storage/watercolor/businessWeek.png">
+		<img class="press-logo" src="/storage/watercolor/theWashingtonPost.png">
+	</div>
+</div>
+
+</div>
+
+  
+
+
+</div></div> <!-- Content -->
+  
+    
+  
+    </div></div> <!-- Page Body -->
+
+          
+      <div class="clearer"></div>
+</div>
+    
+    
+    <div id="pageFooterWrapper"><div id="pageFooter">
+  
+              <div class="columnWrapperFooter group">
+
+<div class="leftWrapperFooter">
+
+
+<div class="colOneFooter">
+
+<h5>PRODUCT</h5>
+
+<ul class="footerNav">
+
+<li><a href="/pricing/">Pricing</a></li>
+<li><a href="/examples/">Examples</a></li>
+<li><a href="/features/">Features</a></li>
+<li><a href="javascript:Y.showSignupOverlay();">Sign Up</a></li>
+
+</ul>
+
+
+</div><!-- closes colOneFooter -->
+
+
+<div class="colTwoFooter">
+
+<h5>TOUR</h5>
+
+<ul class="footerNav">
+
+<li><a href="/tour/">Overview</a></li>
+<li><a href="/the-platform/">Host</a></li>
+<li><a href="/the-site-builder/">Build</a></li>
+<li><a href="/total-creative-control/">Design</a></li>
+<li><a href="/better-site-management/">Manage</a></li>
+<li><a href="/unparalleled-support/">Support</a></li>
+<li><a href="/developer/">Developer</a></li>
+<li><a href="/iphone/">iPhone</a></li>
+<li><a href="/blog-importer/">Blog Importer</a></li>
+
+
+
+</ul>
+
+
+
+
+</div><!-- closes colTwoFooter -->
+
+
+<div class="colThreeFooter">
+
+<h5>COMPANY</h5>
+
+<ul class="footerNav">
+
+<li><a href="/about/">About Squarespace</a></li>
+<li><a href="http://help.squarespace.com/customer/portal/emails/new">Contact</a></li>
+<li><a href="/press/">Press Center</a></li>
+<li><a href="/terms/">Terms of Service</a></li>
+<li><a href="/privacy/">Privacy Policy</a></li>
+<li><a href="/green/">Environmental Impact</a></li>
+<li><a href="http://careers.squarespace.com/">Careers</a></li>
+<li id="hLink"><a href="/coupons/">Squarespace Coupons</a></li>
+<li id="hLink"><a href="/photography/">Photography Websites</a></li>
+<li id="hLink"><a href="/business/">Business Websites</a></li>
+<li id="hLink"><a href="/church/">Church Websites</a></li>
+<li><a href="/affiliates/">Affiliate Program</a></li>
+<li><a href="/">Made in New York City</a></li>
+
+
+</ul>
+
+
+</div><!-- closes colThreeFooter -->
+
+<div class="colFourFooter">
+
+<h5>COMMUNITY</h5>
+
+<ul class="footerNav">
+
+<li><a href="http://developers.squarespace.com/">Community Forum</a></li>
+<li><a href="http://blog.squarespace.com/">Squarespace Blog</a></li>
+<li><a href="http://help.squarespace.com">Help &amp; Support</a></li>
+<li><a href="http://service.squarespace.com/">Service Updates</a></li>
+
+</ul>
+
+
+</div><!-- closes colFourFooter -->
+
+
+</div><!-- closes leftWrapperFooter -->
+
+
+
+
+
+
+
+<div class="rightWrapperFooter">
+
+<style type="text/css">
+
+
+.colFiveFooter .full-image-float-left { padding: 3px !important; margin: 3px !important; }
+
+
+</style>
+
+
+<div class="colFiveFooter">
+
+<!--div class="signupButton2Footer"><a href="javascript:Y.showSignupOverlay();">&nbsp;</a></div-->
+
+<div class="signup-button-footer"><a class="signup-footer-link" href="javascript:Y.showSignupOverlay();">Try it free<span class="small-button-text">no credit card required</span></a></div>
+
+
+
+<a style="background: none !important; padding:0 !important;" href="http://help.squarespace.com/customer/portal/emails/new"><img src="/storage/haveaquestionFooter.png" alt="have a question?" class="signupQuestionFooter"></a>
+
+
+<p>
+This site is completely powered by the Squarespace platform. 
+All content Copyright © 2003-2012, Squarespace, Inc. 
+</p>
+
+<a style="background: none !important; padding:0 !important;" href="/privacy"><img src="/storage/truste-footer.png" alt="truste logo"></a>
+
+
+
+</div><!-- closes colFiveFooter -->
+
+</div><!-- closes rightWrapperFooter -->
+
+
+
+</div><!-- closes columnWrapperFooter group -->
+
+
+
+
+
+<div id="loginBoxWrapper">
+<div id="loginBox">
+<form name="loginform" method="post" action="https://www.squarespace.com/">
+
+<div class="title">Squarespace Account Login</div>
+<div class="message">Lost your Squarespace login URL?  You can still login using your account name below.  To restore your login on your website or find your login URL, <a href="http://help.squarespace.com/customer/portal/articles/10845-logging-in-to-your-account">follow this guide »</a></div>
+
+
+<div id="login_messages"></div> 
+<div id="login_title">Login (NOT email address):</div> 
+<div><input onkeypress="return Squarespace.Form.remapEnter(event, externalSquarespaceLogin);" type="text" class="text" name="login" id="login"></div> 
+
+<div id="password_messages"></div> 
+<div id="password_title">Password:</div> 
+<div><input onkeypress="return Squarespace.Form.remapEnter(event, externalSquarespaceLogin);" type="password" class="text" name="password" id="password"></div> 
+
+
+<br><br>
+<input style="width: 90px; float: left; margin-right: 10px;" type="button" class="button" name="submitButton" onclick="externalSquarespaceLogin();" value="Login"> 
+<div style="float: left; padding-top: 4px; padding-left: 2px;">
+<a href="javascript:loginBox();">Cancel</a></div>
+<div class="clearer"></div>
+
+</form>
+</div></div>
+
+
+
+
+
+
+
+
+
+<!-- Begin Squarespace Signup -->
+<style data-inlined-from="https://web.archive.org/storage/landing-pages/new/signup-overlay.css">.control #createAccountBtn, .control .button-view-site {
+	background-color: #698c2e;
+	background-image: -moz-linear-gradient(top, #a7cf62, #698c2e); 
+	background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0, #a7cf62),color-stop(1, #698c2e)); 
+	filter:  progid:DXImageTransform.Microsoft.gradient(startColorStr='#a7cf62', EndColorStr='#698c2e'); 
+	-ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#a7cf62', EndColorStr='#698c2e')"; 
+	border-top-color: #c6f17a;
+	border-bottom-color: #344616;
+	-moz-border-radius: 4px; -webkit-border-radius: 4px; border-radius: 4px;
+	cursor: pointer;
+	width: 240px; 
+	text-align: center; 
+	float: right; 
+	border-style: solid;
+	border-top-width: 2px;
+	border-right-width: 0px;
+	border-bottom-width: 1px;
+	border-left-width: 0px;
+	-moz-box-shadow: 0px 0px 8px #15181b; 
+	-webkit-box-shadow: 0px 0px 8px #15181b; 
+	box-shadow: 0px 0px 8px #15181b; 
+	margin-bottom: 5px;
+	padding: 0.5em 1.5em; 
+	text-transform: uppercase; text-shadow: 0px 1px 2px #393939; color: #ffffff; font-size: 14px !important;
+	font-family: 'HelveticaNeue-Light','Helvetica Neue Light','Helvetica Neue',sans-serif;
+	font-weight:bold;
+	letter-spacing:1px; 
+	line-height: normal;
+}
+
+.control #createAccountBtn.inputDisabled, .control #viewWebsiteBtn.inputDisabled { background-color: #6a6a6a; background-image: -moz-linear-gradient(top, #7e7e7e, #6a6a6a); background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0, #7e7e7e),color-stop(1, #6a6a6a)); filter:  progid:DXImageTransform.Microsoft.gradient(startColorStr='#7e7e7e', EndColorStr='#6a6a6a'); -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr='#7e7e7e', EndColorStr='#6a6a6a')"; border-top-color: #a1a1a1; border-bottom-color: #545454; }
+
+.control input { outline:0; }
+.dialog-screen-overlay { position:fixed; top:0; left:0; width:100%; height:100%; z-index:100; background-color:#000; }
+
+.dialog-screen-progress-spinner { opacity:0; filter:alpha(opacity=0); zoom:1;}
+.dialog-screen-progress-bar { height: 20px; width: 40%; position: fixed; border: 1px solid #333; left: 30%; bottom: 60px; z-index: 101; border-radius: 12px; -moz-border-radius: 12px; }
+.dialog-screen-progress-bar .inner-progress { background: #333; border-radius: 12px; -moz-border-radius: 12px; margin: 1px 0 0 1px; }
+
+.stage-message { -webkit-user-select: none; font-weight: 300; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; position: absolute; opacity: 0; -webkit-transform: scale(1.08); -webkit-transition-property: opacity, -webkit-transform; -webkit-transition-duration: .5s, .5s; -transition-timing-function: ease-out; color: white; }
+.stage-message .signup-fields { padding-top: 10px }
+.stage-message .wireframe-lhs { float: left; width: 380px; }
+.stage-message .wireframe-rhs { float: right; width: 500px; }
+.stage-message .control.text { font-size: 12px; padding-top: 10px; }
+.stage-message .sub-message { font-size: 11px; padding-top: 20px; padding-bottom: 10px; color: #999; }
+.stage-message .sub-message .right { width: 260px; float: right; }
+.stage-message .sub-message .left { width: 330px; float: left; }
+.stage-message .controls { padding-top: 15px; margin-left: -3px; clear: both; }
+.stage-message .controls a { color: #eee; text-decoration: none; }
+.stage-message .control { float: left; margin-right: 15px; }
+.stage-message .message { font-size: 16px; color: #999; line-height: 18px; padding-bottom: 20px; }
+.stage-message textarea { font-weight: 300; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; border: 0px; border-radius: 3px; -moz-border-radius: 3px; color: #222; background: #fff; resize: none; width: 500px; height: 60px; padding: 6px; border-radius: 4px; padding: 10px; }
+.stage-message .title { font-size: 30px; padding-bottom: 12px; color: #fff; margin:0; }
+.stage-message .title .steps { font-size: 16px; color: #383838; padding-left: 10px; }
+.stage-message.visible { -webkit-transform: scale(1); opacity: 1; }
+.stage-message.fading { -webkit-transition-duration: .2s, .2s; -webkit-transform: scale(0.95); opacity: 0; }
+.field-block { float:left; margin-right: 17px; position: relative; }
+.field-title { font-size: 11px; font-weight: bold; color: #ccc; padding-bottom: 2px; }
+.field-title-overlay { padding: 9px 10px 10px 10px; font-size: 18px; border: 0; color: #999; position: absolute; left: 0px; top: 1px; }
+.error-wrapper { overflow: hidden; height: 0px; width: 374px; }
+.error-wrapper .error { padding: 15px; border-radius: 2px; -moz-border-radius: 2px; font-size: 13px; background: #aea134 !important; color: #fff !important; }
+.field-input { padding-bottom: 10px; position: relative; }
+.field-input input.error { border: 3px solid #d1c030 !important; background: #fffdef; }
+.field-input input { font-weight: 300; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; border-radius: 3px; -moz-border-radius: 3px; padding: 8px; font-size: 18px; border: 1px solid white; }
+.field-input input:focus { outline:none; border-color:#42B1FF; -webkit-box-shadow:0 0 0 1px #42B1FF; -moz-box-shadow:0 0 0 1px #42b1ff; box-shadow: 0 0 0 1px #42B1FF;}
+.measurement-el { font-weight: 300; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 10px; font-size: 18px; border: 0; display: inline; color:#000; opacity: 0; filter: progid:DXImageTransform.Microsoft.Alpha(opacity=0);  zoom:1; }
+.clear:after { content: "."; clear: both; display: block; height: 0; visibility: hidden; }
+
+.inline-field-title { position:absolute; font-size:18px; color:#ccc; top:10px; left:10px;}
+
+@-moz-document url-prefix() {
+  .field-title-overlay { top: 1px; }
+}
+
+/* --- captcha --- */
+.captcha { display:none; opacity:0; }
+
+/* --- checkbox ---  */
+ 
+.updates-option { margin-top:5px; }
+.check-element { padding-left: 32px; cursor: pointer; background: transparent url(/web/20120531210251im_/http://www.squarespace.com/storage/landing-pages/images/check.png) 7px 6px no-repeat; margin-bottom: 15px; }
+.check-element .field-description { font-size: 12px; padding-top: 2px; color: #444; -webkit-transition-property: color; -webkit-transition-duration: .1s; -transition-timing-function: ease-out; }
+.check-element .field-title { font-size: 15px; padding-top: 2px; color: #999; -webkit-transition-property: color; -webkit-transition-duration: .1s; -transition-timing-function: ease-out; }
+.check-element.active { border: none; background: transparent url(/web/20120531210251im_/http://www.squarespace.com/storage/landing-pages/images/check-active.png) 0px 0px no-repeat; }
+.check-element.active .field-description { color: #666 }
+.check-element.active .field-title { color: #fff }
+
+/* --- www custom --- */
+.dialog-screen-overlay .control { padding:0; background:none; }
+.dialog-screen-overlay .field-title-overlay { top:0; }
+
+/* --- IE7 hack --- */
+.dialog-screen-overlay .control { *width: 234px; *margin-right: 20px; }
+.dialog-screen-overlay .control input { *width: 234px; }
+/*
+     FILE ARCHIVED ON 21:02:51 May 31, 2012 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 22:51:02 Jun 23, 2026.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+*/
+/*
+playback timings (ms):
+  capture_cache.get: 1.07
+  load_resource: 53.127 (2)
+  PetaboxLoader3.datanode: 48.388 (2)
+*/</style>
+<!-- End Squarespace Signup -->
+
+
+
+<!-- Begin Google Analytics Tracking Code -->
+
+
+
+<!-- End Google Analytics Tracking Code -->
+
+
+
+
+
+ 
+
+<!-- Start Fetchback Code -->
+<iframe src="http://pixel.fetchback.com/serve/fb/pdj?cat=&amp;name=landing&amp;sid=4251" scrolling="no" width="1" height="1" marginheight="0" marginwidth="0" frameborder="0"></iframe>
+<!-- End Fetchback Code -->
+
+<!-- Advertiser 'Square Space Inc', Include user in segment 'Square Space Dec Test-Site Retargeting Pixel' - DO NOT MODIFY THIS PIXEL IN ANY WAY -->
+<img src="http://ads.bluelithium.com/pixel?id=1592147&amp;t=2" width="1" height="1">
+<!-- End of segment tag -->
+      
+  
+      
+  
+    </div></div>
+  
+  </div></div> <!-- Canvas -->
+  
+      
+    <!-- Start Quantcast tag -->
+
+
+<noscript>
+<img src="//secure.quantserve.com/pixel/p-83jAwM_c04VUc.gif" style="display: none;" border="0" height="1" width="1" alt="Quantcast"/>
+</noscript>
+<!-- End Quantcast tag -->
+   
+
+
+  <div class="clearer" id="bodyClearer"></div>
+
+  
+
+
+
+
+<div id="sslightbox_title" class="squarespace-lightbox-description" style="color: rgb(233, 233, 233); font: 28px Arial; position: absolute; top: 0px; left: 0px; z-index: 950; display: none; cursor: pointer; opacity: 0;"></div><div id="sslightbox_description" style="color: rgb(233, 233, 233); position: absolute; font: 14px / 20px Arial; top: 0px; left: 0px; z-index: 950; display: none; cursor: pointer; opacity: 0;"></div><div id="sslightbox_overlay" title="Click to Close" style="background: rgb(0, 0, 0); width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; z-index: 900; display: none; cursor: pointer; opacity: 0;"></div><a id="sslightbox_previmg" href="javascript:SSLightbox.switchImage(-1);" style="background-color: transparent; background-image: url(&quot;/universal/images/overlay-arrow-left.png&quot;); position: absolute; display: none; width: 35px; height: 50px; left: 8px; z-index: 950; cursor: pointer; opacity: 0;"></a><a id="sslightbox_nextimg" href="javascript:SSLightbox.switchImage(1);" style="background-color: transparent; background-image: url(&quot;/universal/images/overlay-arrow-right.png&quot;); position: absolute; display: none; width: 35px; height: 50px; right: 8px; z-index: 950; cursor: pointer; opacity: 0;"></a><div id="sslightbox_imgholder" style="position: absolute; top: 260px; left: 540px; background-color: rgb(255, 255, 255); opacity: 0; z-index: 950; width: 200px; height: 200px; display: none;"><span id="sslightbox_imgwrapper" classname="thumbnail-wrapper" style="position: absolute; top: 14px; left: 14px;"><img id="sslightbox_img" style="position: absolute; top: 0px; left: 0px; opacity: 0; display: none; z-index: 995; padding: 0px; margin: 0px; border: 0px; cursor: pointer;"></span></div><img id="sslightbox_loadimg" src="/universal/images/manager/loading.gif" style="position: absolute; opacity: 0; width: 48px; height: 54px; z-index: 990; padding: 0px; margin: 0px; border: 0px; cursor: pointer; left: 616px; top: 333px; display: none;"><a id="sslightbox_scrollrightimg" href="javascript:SSLightbox.scrollThumbnails(1);" class="picture-gallery-thumbnail-scroll-right" style="position: absolute; display: block; z-index: 800; top: -5000px; left: -10000px;"></a><a id="sslightbox_scrollleftimg" href="javascript:SSLightbox.scrollThumbnails(-1);" class="picture-gallery-thumbnail-scroll-left" style="position: absolute; display: block; z-index: 800; top: -5000px; left: -10000px;"></a></body></html>

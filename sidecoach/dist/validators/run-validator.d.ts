@@ -1,8 +1,10 @@
 import type { ProductValidationResult, ProductRuleResult, CleanPolicy } from '../product-rule-types';
 import type { CoverageObservation, RunCoverage } from '../clean-evaluator';
 import type { BrowserEvidenceCollection } from './browser-evidence-collector';
+import type { RenderedScanCollection } from './rendered-live-scan';
 export interface ValidatorRuntimeDeps {
     collectBrowserEvidence?: (renderUrl: string | undefined, signal?: AbortSignal) => Promise<BrowserEvidenceCollection>;
+    scanRenderedLive?: (renderUrl: string | undefined, signal?: AbortSignal) => Promise<RenderedScanCollection>;
 }
 export interface RuleExecution {
     result: ProductRuleResult;

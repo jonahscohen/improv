@@ -8,7 +8,7 @@ Collaborator: Jonah Cohen
 
 # What
 
-Added a new top-level section to `claude/CLAUDE.md`: "Debugging Protocol (MANDATORY when something stops working)". Sits between Verification Protocol and Design Work / Impeccable. Six numbered steps and a closing paragraph. The core rule:
+Added a new top-level section to `claude/CLAUDE.md`: "Debugging Protocol (MANDATORY when something stops working)". Sits between Verification Protocol and Design Work / Oracle. Six numbered steps and a closing paragraph. The core rule:
 
 > When something that was working starts failing, your FIRST debugging step is to identify what changed between the last working state and now. Do not dive into source code, theorize about architecture, or hypothesize about edge cases until you have answered: when did it last work, when did it first fail, and what is different between those two moments?
 
@@ -38,7 +38,7 @@ The closing paragraph explicitly enumerates the kinds of failures the rule appli
 # Verification
 
 - `grep -c "Debugging Protocol" ~/.claude/CLAUDE.md` returns 1
-- The section sits between "If you cannot verify..." and "## Design Work and Impeccable"
+- The section sits between "If you cannot verify..." and "## Design Work and Oracle"
 - Symlinked deployment confirmed: change to `claude/CLAUDE.md` propagated to `~/.claude/CLAUDE.md` automatically
 
 # Files touched

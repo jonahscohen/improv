@@ -49,9 +49,9 @@ supersedes: [session_2026-05-23_phase2_task8_9.md, session_2026-05-23_phase2_com
 - Enrichment: command metadata prepended to guidance
 - Test: Class defined, all methods present, integration working
 
-### Task 14: Impeccable Soft-Deprecation - VERIFIED
+### Task 14: Oracle Soft-Deprecation - VERIFIED
 - DEPRECATION_NOTICE.md with soft-deprecation status (v2.1.9)
-- Migration path: Old /impeccable → New /sidecoach commands
+- Migration path: Old /oracle → New /sidecoach commands
 - Timeline: Current (soft), v2.2 (notice), v3.0 (removal)
 - Recommended actions for projects and teams
 - Test: File exists, migration path documented, timeline clear
@@ -84,7 +84,7 @@ Zero TypeScript errors. All tests passing.
 ### 2. Documentation & Routing (Tasks 12-14)
 - Command mapping: Complete reference documentation
 - Adapter layer: Routing with preprocessing and enrichment
-- Migration path: Soft-deprecation of /impeccable
+- Migration path: Soft-deprecation of /oracle
 
 ### 3. Quality Metrics
 - 11 tasks: 11 verified

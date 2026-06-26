@@ -50,8 +50,6 @@ export declare class AntiPatternValidator {
      * Get summary statistics across all patterns
      */
     getPatternStats(code: string): Record<string, number>;
-    private extractMatch;
-    private getSuggestedFix;
     private generateRecommendations;
     private severityRank;
 }

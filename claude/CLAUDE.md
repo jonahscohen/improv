@@ -183,6 +183,8 @@ You are BLOCKED from reporting task completion to the user until ALL of the foll
 
 7. **For non-UI tasks, state a verifiable plan first.** For refactors, CLI changes, scripts, build-tool work, or any multi-step non-UI task, write a brief plan as `<step> -> verify: <check>` lines before implementing. Each verify clause must be runnable (a command, a test, a grep, an expected exit code), not "looks right" or "should work." If you can't name the verify check, the goal isn't well-defined yet - clarify before coding.
 
+8. **Codex cross-model review required (substantial code/implementation).** Before reporting done on any substantial code change - a feature, a refactor, a multi-file or logic change, or a bug fix with real logic - you MUST run an independent-model Codex review of the diff: the `codex:rescue` agent, `/code-review`, or the codex plugin's `review` / `adversarial-review` (the stop-time review gate covers the per-stop pass). The model that produced a unit does not certify it - a different model checks it (per the standing 2026-06-13 produce-and-verify mandate). **FALLBACK when Codex is unavailable (REQUIRED - the gate always runs):** Codex may not be installed or connected on every machine. Probe it first (`codex --version` or `command -v codex`); if Codex is present, use it (a different MODEL is preferred). If Codex is genuinely unavailable, do NOT skip the gate - deploy an independent CLAUDE reviewer instead: a fresh agent/subagent that reviews the diff and was NOT the producer of the unit. A same-model INDEPENDENT review (different agent, clean context) is the floor; a different-model (Codex) review is the preference. The gate is non-negotiable; only the reviewer identity changes with availability. Fold every finding and re-verify the whole unit (build green, tests pass, behavior observed); do not just patch the flagged line. Trivial edits (copy tweaks, one-liners, pure docs, named-token swaps) are exempt. When work is produced by a spawned teammate/subagent, this Codex pass is part of that unit's verification gate before it is reported complete.
+
 If you cannot verify (no browser available, no dev server running), say so explicitly. Do not claim completion without proof.
 
 ## Debugging Protocol (MANDATORY when something stops working)
@@ -220,6 +222,19 @@ When a developer signals urgency, frustration, or is about to make a high-impact
 ## Hook Override Protocol
 
 The content-guard and bash-guard hooks enforce these rules at write time by blocking literal pattern matches. Occasionally, legitimate work requires writing the very strings the hooks block - documenting the rules themselves, writing config that references forbidden patterns, or updating hook logic. When a hook blocks a tool call and the content is clearly intentional (not an actual violation), ask the user for permission to bypass the hook rather than silently rephrasing, weakening the language, or burning turns on workarounds. The user will consent or deny based on context. Do not assume permission. Do not assume denial. Ask.
+
+## Hook Error Response Protocol (MANDATORY)
+
+A hook that errors is a broken tool in your own harness, not background noise to scroll past. When a hook error surfaces in your context - any "hook error", a non-zero hook exit code, a "command not found" from a hook, a 500 from a hook endpoint, or any hook that fails to run as intended - treat it as an actionable signal and act on it in the same turn it appears. Do not defer it, do not silently ignore it, and do not wait for the user to ask.
+
+When a hook error surfaces, do all of the following in the same turn:
+
+1. Root-cause it using the Debugging Protocol above. Identify what changed between the last working state and now - the failing command, the env it ran in, the binary it could not find - before theorizing about the source.
+2. Deploy an agent to permanently fix it. The fix must be durable and live in the dotfiles repo (a committed shim, a corrected hook, a PATH entry), never a one-off workaround that evaporates at the end of the session. A shell hook cannot itself "deploy an agent" - this rule is the behavioral mechanism that does, because the harness surfaces hook errors into your conversation context, which is exactly how they reach you.
+3. Write a session beat in the project's .claude/memory/ recording the error, the root cause, and the fix, with Jonah named as the collaborator.
+4. If the fix needs a session restart to take effect, tell the user to restart explicitly. If it is live immediately (for example a shim dropped into a directory already on PATH), say so and confirm with verification instead.
+
+Precedent (2026-06-25): cmux launches `claude` with hooks of the form `"${CMUX_CLAUDE_HOOK_CMUX_BIN:-cmux}" hooks claude stop`. When that env var was empty/unset at hook-run time the command fell back to the bare name `cmux`, which resolved to nothing on PATH, so every cmux Stop/SessionStart/UserPromptSubmit hook failed with "command not found" (exit 127). Root cause was the bare-name fallback plus no `cmux` on PATH. The durable fix was a `cmux` PATH shim committed at `claude/cmux/cmux` (live at `~/.claude/cmux/cmux`, a directory already on PATH via the dotfiles symlink) that resolves the CMUX_* env vars and the bundled binary, only ever exec'ing an absolute path so it cannot recurse. It was live immediately, no restart required.
 
 ## Style Guide and Component Library Rules
 
@@ -268,7 +283,7 @@ The `/sidecoach` skill is the front door for every design or QA task. It auto-tr
 1. `/sidecoach audit <target>` - address all Critical and High findings
 2. `/sidecoach critique <target>` - address anything above "minor"
 3. `/sidecoach polish <target>` - final alignment, must run last
-4. `make-interfaces-feel-better` 14-point checklist - auto-triggers on UI keywords; manually invoke `/make-interfaces-feel-better` if it doesn't fire. Record changes in its before/after table format grouped by principle.
+4. `make-interfaces-feel-better` 16-point checklist - auto-triggers on UI keywords; manually invoke `/make-interfaces-feel-better` if it doesn't fire. Record changes in its before/after table format grouped by principle.
 5. If DESIGN.md exists: `npx @google/design.md lint DESIGN.md` with zero findings.
 
 Trivial copy tweaks or named-token swaps can skip the gate. Substantive aesthetic work cannot. "I'll skip polish because it probably looks fine" is not a valid judgment.

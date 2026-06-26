@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.A11Y_CHECKS = exports.checkColorContrast = exports.checkMinHitArea = exports.checkFocusVisible = void 0;
+exports.A11Y_CHECKS = exports.checkMinHitArea = exports.checkFocusVisible = void 0;
 const check_context_1 = require("../check-context");
 const polish_standard_validator_1 = require("../../polish-standard-validator");
 const checkFocusVisible = (ctx) => {
@@ -32,18 +32,10 @@ const checkMinHitArea = (ctx) => {
         : (0, check_context_1.fail)(`${hit.failing}/${hit.checked} interactive target(s) miss minimum hit area; smallest is ${Math.round(hit.smallestWidth)}x${Math.round(hit.smallestHeight)}px`, [], 'Increase interactive target padding or dimensions to at least 40x40px, and buttons to 44x44px');
 };
 exports.checkMinHitArea = checkMinHitArea;
-const checkColorContrast = (ctx) => {
-    if (!(0, check_context_1.hasTrustedBrowserEvidence)(ctx, 'contrast') || !ctx.contrast) {
-        return (0, check_context_1.inconclusive)('contrast ratio needs trusted measured contrast evidence', 'unsupported_runtime');
-    }
-    return ctx.contrast.wcagAA
-        ? (0, check_context_1.pass)(`worst measured text contrast is ${ctx.contrast.ratio.toFixed(2)}:1`)
-        : (0, check_context_1.fail)(`worst measured text contrast is ${ctx.contrast.ratio.toFixed(2)}:1`, [], 'Increase foreground/background contrast to meet WCAG AA');
-};
-exports.checkColorContrast = checkColorContrast;
+// a11y/color-contrast moved to rendered-checks.ts (checkLowContrast) in Stage 6 convergence -
+// it reads the rendered scanner's low-contrast finding, the SAME detector the eval scores.
 exports.A11Y_CHECKS = {
     'a11y/focus-visible': exports.checkFocusVisible,
     'a11y/min-hit-area': exports.checkMinHitArea,
-    'a11y/color-contrast': exports.checkColorContrast,
 };
 //# sourceMappingURL=a11y-checks.js.map

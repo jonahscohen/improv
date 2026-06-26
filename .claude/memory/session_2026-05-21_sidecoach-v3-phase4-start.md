@@ -78,7 +78,7 @@ interface RegressionResult {
 - Baseline detection: first run establishes baseline, subsequent runs compare against it
 - Thresholds: 50% for counts, 25% for message quality, any status change for blocking
 
-**Impact:** Beyond impeccable - tracks output quality across runs and blocks degradation.
+**Impact:** Beyond oracle - tracks output quality across runs and blocks degradation.
 
 ---
 
@@ -99,4 +99,4 @@ interface RegressionResult {
 
 - **Phase 5**: ProjectPersonaEngine (async LLM extraction)
 - **Phase 6**: DesignDebtTracker (formal debt tracking)
-- **Phase 7**: Impeccable Detect integration
+- **Phase 7**: Oracle Detect integration

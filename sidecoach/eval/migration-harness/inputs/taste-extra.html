@@ -1,0 +1,64 @@
+<!doctype html>
+<!-- migration-harness INPUT (hand-authored compatibility fixture, NOT eval corpus): large-inline-style + fabricated-svg + observer-race -->
+<html><head><style>
+.sel1 { color: #0003e8; margin: 1px; }
+.sel2 { color: #0007d0; margin: 2px; }
+.sel3 { color: #000bb8; margin: 3px; }
+.sel4 { color: #000fa0; margin: 4px; }
+.sel5 { color: #001388; margin: 5px; }
+.sel6 { color: #001770; margin: 6px; }
+.sel7 { color: #001b58; margin: 7px; }
+.sel8 { color: #001f40; margin: 8px; }
+.sel9 { color: #002328; margin: 9px; }
+.sel10 { color: #002710; margin: 10px; }
+.sel11 { color: #002af8; margin: 11px; }
+.sel12 { color: #002ee0; margin: 12px; }
+.sel13 { color: #0032c8; margin: 13px; }
+.sel14 { color: #0036b0; margin: 14px; }
+.sel15 { color: #003a98; margin: 15px; }
+.sel16 { color: #003e80; margin: 16px; }
+.sel17 { color: #004268; margin: 17px; }
+.sel18 { color: #004650; margin: 18px; }
+.sel19 { color: #004a38; margin: 19px; }
+.sel20 { color: #004e20; margin: 20px; }
+.sel21 { color: #005208; margin: 21px; }
+.sel22 { color: #0055f0; margin: 22px; }
+.sel23 { color: #0059d8; margin: 23px; }
+.sel24 { color: #005dc0; margin: 24px; }
+.sel25 { color: #0061a8; margin: 25px; }
+.sel26 { color: #006590; margin: 26px; }
+.sel27 { color: #006978; margin: 27px; }
+.sel28 { color: #006d60; margin: 28px; }
+.sel29 { color: #007148; margin: 29px; }
+.sel30 { color: #007530; margin: 30px; }
+.sel31 { color: #007918; margin: 31px; }
+.sel32 { color: #007d00; margin: 32px; }
+.sel33 { color: #0080e8; margin: 33px; }
+.sel34 { color: #0084d0; margin: 34px; }
+.sel35 { color: #0088b8; margin: 35px; }
+.sel36 { color: #008ca0; margin: 36px; }
+.sel37 { color: #009088; margin: 37px; }
+.sel38 { color: #009470; margin: 38px; }
+.sel39 { color: #009858; margin: 39px; }
+.sel40 { color: #009c40; margin: 40px; }
+.sel41 { color: #00a028; margin: 41px; }
+.sel42 { color: #00a410; margin: 42px; }
+.sel43 { color: #00a7f8; margin: 43px; }
+.sel44 { color: #00abe0; margin: 44px; }
+.sel45 { color: #00afc8; margin: 45px; }
+.sel46 { color: #00b3b0; margin: 46px; }
+.sel47 { color: #00b798; margin: 47px; }
+.sel48 { color: #00bb80; margin: 48px; }
+.sel49 { color: #00bf68; margin: 49px; }
+.sel50 { color: #00c350; margin: 50px; }
+.sel51 { color: #00c738; margin: 51px; }
+.sel52 { color: #00cb20; margin: 52px; }
+.sel53 { color: #00cf08; margin: 53px; }
+.sel54 { color: #00d2f0; margin: 54px; }
+.sel55 { color: #00d6d8; margin: 55px; }
+.reveal { opacity: 0; transition: opacity .3s ease; }
+</style></head><body>
+<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0zoooooong"/><path d="M8 12l3 3 5-6 more-fabricated-path-data-here"/></svg>
+<div class="reveal">Revealed content</div>
+<script>const io=new IntersectionObserver(()=>{});document.querySelectorAll(".reveal").forEach(e=>io.observe(e));</script>
+</body></html>

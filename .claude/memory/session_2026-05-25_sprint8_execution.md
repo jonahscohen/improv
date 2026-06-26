@@ -1,6 +1,6 @@
 ---
 name: session-2026-05-25-sprint8-execution
-description: Sprint 8 (impeccable parity + teach rebuild) execution log.
+description: Sprint 8 (oracle parity + teach rebuild) execution log.
 type: project
 relates_to: [session_2026-05-25_sprint8_design.md]
 ---
@@ -9,9 +9,9 @@ Human collaborator: Jonah.
 
 ## T1: Registry skeleton + 5 prototype entries (DONE)
 
-- Created sidecoach/src/impeccable-command-registry.ts with ImpeccableCommandEntry interface (8 fields) + IMPECCABLE_VERB_REGISTRY table.
+- Created sidecoach/src/oracle-command-registry.ts with OracleCommandEntry interface (8 fields) + ORACLE_VERB_REGISTRY table.
 - 5 prototype entries: craft, polish, audit, critique, document.
-- parityChecklist strings derived from real impeccable .md files in `~/.claude/plugins/cache/impeccable/impeccable/3.1.1/skills/impeccable/reference/`. Each string is a verbatim section header / required deliverable name from the referenced file.
+- parityChecklist strings derived from real oracle .md files in `~/.claude/plugins/cache/oracle/oracle/3.1.1/skills/oracle/reference/`. Each string is a verbatim section header / required deliverable name from the referenced file.
 - parityPlus reflects sidecoach additions (BuildReport, taste validation, memory entry, polish-standard domain grade, category-reflex detector, Google spec lint, sidecoach brand verification gate).
 - Test sprint8-registry-shape.test.ts asserts all 5 verbs present + each has required fields; 36 assertions all PASS. Final: `sprint8-registry-shape PASS`.
 - tsc --noEmit exit 0.
@@ -23,10 +23,10 @@ Human collaborator: Jonah.
 - polish.md -> 'Design System Discovery' (header line 7), 'Pre-Polish Assessment' (header line 17), 'Polish Systematically' (header line 49), 'Polish Checklist' (header line 181), 'Final Verification' (header line 224).
 - audit.md -> 'Diagnostic Scan' (header line 5), 'Audit Health Score' (subsection line 61), 'Anti-Patterns Verdict' (subsection line 74), 'Executive Summary' (subsection line 77), 'Detailed Findings by Severity' (subsection line 83).
 - critique.md -> 'Gather Assessments' (header line 21), 'Assessment A: LLM Design Review' (subsection line 31), 'Assessment B: Automated Detection' (subsection line 58), 'Design Health Score' (subsection line 109), 'Persona Red Flags' (subsection line 155).
-- document.md -> 'frontmatter: token schema' (header line 5), 'six sections' (header line 51 paraphrased - matches 'six sections (exact order)' literal), 'Scan mode' (header line 78), 'Seed mode' (header line 338), 'design.json sidecar' (header line 240 - matches 'Step 4b: Write .impeccable/design.json sidecar').
+- document.md -> 'frontmatter: token schema' (header line 5), 'six sections' (header line 51 paraphrased - matches 'six sections (exact order)' literal), 'Scan mode' (header line 78), 'Seed mode' (header line 338), 'design.json sidecar' (header line 240 - matches 'Step 4b: Write .oracle/design.json sidecar').
 
 Files touched:
-- sidecoach/src/impeccable-command-registry.ts (new)
+- sidecoach/src/oracle-command-registry.ts (new)
 - sidecoach/src/__tests__/sprint8-registry-shape.test.ts (new)
 - .claude/memory/session_2026-05-25_sprint8_execution.md (new)
 
@@ -34,9 +34,9 @@ Cleared `~/.claude/.needs-verification` flag pre-commit.
 
 ## T2: Slash-router registry branch (DONE)
 
-- Added import for getImpeccableEntry from impeccable-command-registry at the top of slash-command-router.ts.
-- Inserted new branch in parseSlashCommand AFTER the composite block and BEFORE the SLASH_COMMANDS lookup. Branch returns CommandMatch with command/flowIds from the registry + reason mentioning "impeccable-parity".
-- craft now routes via the registry (impeccable-parity wins over the existing phase entry).
+- Added import for getOracleEntry from oracle-command-registry at the top of slash-command-router.ts.
+- Inserted new branch in parseSlashCommand AFTER the composite block and BEFORE the SLASH_COMMANDS lookup. Branch returns CommandMatch with command/flowIds from the registry + reason mentioning "oracle-parity".
+- craft now routes via the registry (oracle-parity wins over the existing phase entry).
 - Phase commands like research and list still work (regression assertion).
 - Composite colon-form still works (sprint7 regression assertion).
 - Unknown verbs still fall through to isCommand=false.
@@ -47,7 +47,7 @@ Cleared `~/.claude/.needs-verification` flag pre-commit.
 
 - Created teach-command-handler-v2.ts with hybrid brief parsing + gap-question fallback.
 - 7 scenarios all PASS (22 assertions): full brief, partial brief, no brief, brief+teachAnswers, existing PRODUCT.md without force, existing+force, product register no Brand Personality.
-- Output PRODUCT.md contains NO self-attribution + NO legacy /impeccable references.
+- Output PRODUCT.md contains NO self-attribution + NO legacy /oracle references.
 - Refuses to overwrite real existing PRODUCT.md (>=200 chars, no [TODO] markers) without metadata.forceOverwrite.
 - Orchestrator dispatch updated to use TeachCommandHandlerV2 (import + instantiation at sidecoach-orchestrator.ts).
 - Old stub teach-command-handler.ts deleted.
@@ -93,15 +93,15 @@ Files touched:
 
 ## T5: 17 remaining registry entries (IN PROGRESS)
 
-- Read all 17 impeccable .md files at ~/.claude/plugins/cache/impeccable/impeccable/3.1.1/skills/impeccable/reference/{shape,onboard,animate,bolder,colorize,delight,layout,overdrive,quieter,typeset,harden,adapt,clarify,distill,optimize,extract,live}.md.
+- Read all 17 oracle .md files at ~/.claude/plugins/cache/oracle/oracle/3.1.1/skills/oracle/reference/{shape,onboard,animate,bolder,colorize,delight,layout,overdrive,quieter,typeset,harden,adapt,clarify,distill,optimize,extract,live}.md.
 - Verified all referenced FlowIds exist in sidecoach/src/types.ts (flowA-flowX all present).
-- Updated sprint8-registry-shape.test.ts to assert all 22 verbs and per-verb shape (impeccableSkillPath ends with verb.md, phase from taxonomy, parityChecklist >= 3, parityPlus >= 1).
-- All 17 entries added to IMPECCABLE_VERB_REGISTRY in impeccable-command-registry.ts. Phase taxonomy assignments: shape (shape, onboard); craft (animate, bolder, colorize, delight, layout, overdrive, typeset, clarify); tone (quieter, distill); review (harden, adapt, optimize); docs (extract); tactical (live).
+- Updated sprint8-registry-shape.test.ts to assert all 22 verbs and per-verb shape (oracleSkillPath ends with verb.md, phase from taxonomy, parityChecklist >= 3, parityPlus >= 1).
+- All 17 entries added to ORACLE_VERB_REGISTRY in oracle-command-registry.ts. Phase taxonomy assignments: shape (shape, onboard); craft (animate, bolder, colorize, delight, layout, overdrive, typeset, clarify); tone (quieter, distill); review (harden, adapt, optimize); docs (extract); tactical (live).
 - Test sprint8-registry-shape.test.ts: 105/105 PASS, 0 FAIL. Final line: `sprint8-registry-shape PASS`.
 
 ### T5 audit trail (per-verb parityChecklist source lines)
 
-Each parityChecklist string is a verbatim substring from impeccable's reference .md at ~/.claude/plugins/cache/impeccable/impeccable/3.1.1/skills/impeccable/reference/<verb>.md. Source line numbers checked against the read at 2026-05-25.
+Each parityChecklist string is a verbatim substring from oracle's reference .md at ~/.claude/plugins/cache/oracle/oracle/3.1.1/skills/oracle/reference/<verb>.md. Source line numbers checked against the read at 2026-05-25.
 
 - **shape** (phase: shape, flow: flowA_brand_verify) - "Discovery Interview" (heading L11), "Visual Direction Probe" (heading L72), "Design Brief" (heading L112), "Primary User Action" (heading L130), "Anti-Goals" (heading L68).
 - **onboard** (phase: shape, flows: flowG, flowI, flowX) - "Time to Value" (heading L42), "Show, Don't Tell" (heading L32), "aha moment" (L13, L46, L234), "Empty State Design" (heading L168), "Respect User Intelligence" (heading L53).
@@ -135,8 +135,8 @@ Each parityChecklist string is a verbatim substring from impeccable's reference 
 
 ## T6: Parameterized parity test (DONE)
 
-- Created sidecoach/src/__tests__/sprint8-impeccable-parity.test.ts.
-- Iterates all 22 verbs in IMPECCABLE_VERB_REGISTRY.
+- Created sidecoach/src/__tests__/sprint8-oracle-parity.test.ts.
+- Iterates all 22 verbs in ORACLE_VERB_REGISTRY.
 - For each: builds a /tmp sandbox with real PRODUCT.md (>200 chars, no [TODO]) + copies the dotfiles' DESIGN.md, then calls FlowExecutionEngine.process('/sidecoach <verb>').
 - Flattens result.message + result.guidance + every flowResults[*].(message, guidance, nextSteps, checklist labels/descriptions, artifact name/content/description) into one big string.
 - Asserts each parityChecklist + parityPlus substring is present in that flattened output.
@@ -149,7 +149,7 @@ Each parityChecklist string is a verbatim substring from impeccable's reference 
 - Total assertions: 197.
 - Passed: 23 (11.7%).
 - Failed: 174 (88.3%).
-- Final line: `sprint8-impeccable-parity FAIL` (expected; T7 closes the gap).
+- Final line: `sprint8-oracle-parity FAIL` (expected; T7 closes the gap).
 - All 22 verbs returned a non-null result (no exceptions, no null/undefined returns); only the substring assertions fail.
 
 ### T6 per-verb breakdown (pass / fail)
@@ -187,30 +187,30 @@ Each parityChecklist string is a verbatim substring from impeccable's reference 
 - T7 target: append entry.guidanceAppend + entry.parityChecklist + entry.parityPlus content to result.guidance after the flow chain runs (or before result construction). The flatten() in the parity test reads result.guidance + every flowResults[*] field, so any of those surfaces works.
 
 Files touched:
-- sidecoach/src/__tests__/sprint8-impeccable-parity.test.ts (new)
+- sidecoach/src/__tests__/sprint8-oracle-parity.test.ts (new)
 
-Commit: `a1ebc0c` - "test(sidecoach): parameterized parity test across all 22 impeccable verbs (Sprint 8 T6)". 2 files changed, 251 insertions.
+Commit: `a1ebc0c` - "test(sidecoach): parameterized parity test across all 22 oracle verbs (Sprint 8 T6)". 2 files changed, 251 insertions.
 
 ## T7: Orchestrator guidance-append callback (DONE)
 
-Wired the impeccable-command-registry into the orchestrator so command-chain results carry the parityChecklist and parityPlus tokens for verbs that have a registry entry.
+Wired the oracle-command-registry into the orchestrator so command-chain results carry the parityChecklist and parityPlus tokens for verbs that have a registry entry.
 
 Before: parity test 23/197 passing (11.7%). Only the `result returned` assertion fired per verb; all 174 parity-string assertions failed because the orchestrator never surfaced the registry's guidanceAppend / parityChecklist / parityPlus strings.
 
-After: parity test 197/197 passing (100%). `sprint8-impeccable-parity PASS`.
+After: parity test 197/197 passing (100%). `sprint8-oracle-parity PASS`.
 
 Implementation:
-- Added import of `getImpeccableEntry` + `ImpeccableCommandEntry` from `./impeccable-command-registry`.
-- Added private helper `buildImpeccableGuidanceAppend(command)` to FlowExecutionEngine. Returns a string[] block with section headers, guidanceAppend body, `### Parity checklist (matches impeccable)` followed by each parityChecklist string prefixed with `- `, and `### Sidecoach additions (parity-plus)` followed by each parityPlus string prefixed with `- `. Returns null if no registry entry (phase commands like `/sidecoach research` are unaffected).
+- Added import of `getOracleEntry` + `OracleCommandEntry` from `./oracle-command-registry`.
+- Added private helper `buildOracleGuidanceAppend(command)` to FlowExecutionEngine. Returns a string[] block with section headers, guidanceAppend body, `### Parity checklist (matches oracle)` followed by each parityChecklist string prefixed with `- `, and `### Sidecoach additions (parity-plus)` followed by each parityPlus string prefixed with `- `. Returns null if no registry entry (phase commands like `/sidecoach research` are unaffected).
 - Wired two return paths:
-  1. Command-chain return (line ~915): after the flowResults loop, flatten each flow's guidance into a chain-level array, then append the impeccable block if `commandMatch.command` has a registry entry. Result returns `guidance: chainGuidance.length > 0 ? chainGuidance : undefined`. This is the path that fires for craft, polish, audit, critique, shape, onboard, animate, bolder, colorize, delight, layout, overdrive, quieter, typeset, clarify, harden, adapt, distill, optimize, extract, live (21 of 22 verbs).
-  2. `document` handler return (line ~744): the DocumentCommandHandler runs a special path (it does not iterate `commandMatch.flowIds`). Append the impeccable block after the handler returns, so `document` (the 22nd verb) gets parity coverage too.
-- Type fix: `commandMatch.command` is typed `string | undefined`, so the chain-path call is guarded `commandMatch.command ? buildImpeccableGuidanceAppend(commandMatch.command) : null`.
+  1. Command-chain return (line ~915): after the flowResults loop, flatten each flow's guidance into a chain-level array, then append the oracle block if `commandMatch.command` has a registry entry. Result returns `guidance: chainGuidance.length > 0 ? chainGuidance : undefined`. This is the path that fires for craft, polish, audit, critique, shape, onboard, animate, bolder, colorize, delight, layout, overdrive, quieter, typeset, clarify, harden, adapt, distill, optimize, extract, live (21 of 22 verbs).
+  2. `document` handler return (line ~744): the DocumentCommandHandler runs a special path (it does not iterate `commandMatch.flowIds`). Append the oracle block after the handler returns, so `document` (the 22nd verb) gets parity coverage too.
+- Type fix: `commandMatch.command` is typed `string | undefined`, so the chain-path call is guarded `commandMatch.command ? buildOracleGuidanceAppend(commandMatch.command) : null`.
 
-Why: the T2 router branch already routes the 22 impeccable verbs through the registry's flowIds (line 75 of slash-command-router.ts). What was missing was the post-execution surface of the registry's narrative strings - parityChecklist (matches impeccable verbatim) and parityPlus (sidecoach extensions). T7 closes that gap.
+Why: the T2 router branch already routes the 22 oracle verbs through the registry's flowIds (line 75 of slash-command-router.ts). What was missing was the post-execution surface of the registry's narrative strings - parityChecklist (matches oracle verbatim) and parityPlus (sidecoach extensions). T7 closes that gap.
 
 Phase commands NOT affected:
-- `/sidecoach research` -> getImpeccableEntry('research') returns undefined -> no append, identical behavior.
+- `/sidecoach research` -> getOracleEntry('research') returns undefined -> no append, identical behavior.
 - `/sidecoach review`, `/sidecoach tone`, `/sidecoach docs` -> same.
 - `/sidecoach list`, `/sidecoach composite:...` -> early-return paths that never reach the registry code.
 
@@ -230,7 +230,7 @@ Files touched:
 
 ## T8: list + help expansion (IN PROGRESS)
 
-Goal: expand `/sidecoach list` to include the 22 impeccable verb commands grouped under a heading, and add a brand new `/sidecoach help <verb>` command that dumps the registry entry detail.
+Goal: expand `/sidecoach list` to include the 22 oracle verb commands grouped under a heading, and add a brand new `/sidecoach help <verb>` command that dumps the registry entry detail.
 
 Step 1 (DONE): created sprint8-list-and-help.test.ts with 3 sub-tests (list contents, help <verb>, help unknown).
 
@@ -238,34 +238,34 @@ Files touched this step:
 - sidecoach/src/__tests__/sprint8-list-and-help.test.ts (new)
 
 Step 2 (DONE): ran test - confirmed FAIL with 6 assertions failing:
-- T8.1: list missing 'impeccable' heading, 'craft', 'document' verbs.
+- T8.1: list missing 'oracle' heading, 'craft', 'document' verbs.
 - T8.2: help polish does not exist (returns generic flow execution, no parity wording).
 
-Step 3 (IN PROGRESS): updating slash-command-router.ts to recognize `help` command and export getImpeccableCommandInfo().
+Step 3 (IN PROGRESS): updating slash-command-router.ts to recognize `help` command and export getOracleCommandInfo().
 
 Step 3 (DONE): slash-command-router.ts now:
-- Imports IMPECCABLE_VERB_REGISTRY (used by getImpeccableCommandInfo).
-- Recognizes `help` as a special command BEFORE the impeccable registry branch.
-- Exports getImpeccableCommandInfo() returning Record<verb, CommandInfo> for the list handler.
+- Imports ORACLE_VERB_REGISTRY (used by getOracleCommandInfo).
+- Recognizes `help` as a special command BEFORE the oracle registry branch.
+- Exports getOracleCommandInfo() returning Record<verb, CommandInfo> for the list handler.
 
-Step 4 (IN PROGRESS): updating the orchestrator's `list` handler to render both phase commands AND impeccable verbs, and adding a `help` dispatch.
+Step 4 (IN PROGRESS): updating the orchestrator's `list` handler to render both phase commands AND oracle verbs, and adding a `help` dispatch.
 
 Step 4 (DONE): orchestrator updated:
-- Imported getImpeccableCommandInfo from slash-command-router.
-- List handler now renders both `## Phase commands` and `## Impeccable parity verbs` sections, with all 22 verbs from the registry.
-- Added `if (commandMatch.command === 'help')` dispatch after list, with: usage banner when no target, unknown-verb failure, full registry dump for known verbs (description, phase, impeccable path, flow chain, parityChecklist, parityPlus).
+- Imported getOracleCommandInfo from slash-command-router.
+- List handler now renders both `## Phase commands` and `## Oracle parity verbs` sections, with all 22 verbs from the registry.
+- Added `if (commandMatch.command === 'help')` dispatch after list, with: usage banner when no target, unknown-verb failure, full registry dump for known verbs (description, phase, oracle path, flow chain, parityChecklist, parityPlus).
 
 Step 5 (NEXT): run sprint8-list-and-help test to confirm PASS.
 
 ## T8: list + help expansion (DONE)
 
-Goal: `/sidecoach list` now surfaces the 22 impeccable parity verbs alongside phase commands; new `/sidecoach help <verb>` shows registry detail.
+Goal: `/sidecoach list` now surfaces the 22 oracle parity verbs alongside phase commands; new `/sidecoach help <verb>` shows registry detail.
 
 What shipped:
-- slash-command-router.ts: imports IMPECCABLE_VERB_REGISTRY; special-cases `help` BEFORE the impeccable registry branch (so `help` is not itself looked up as a verb); exports new getImpeccableCommandInfo() that adapts the registry to CommandInfo shape for the list handler.
-- sidecoach-orchestrator.ts: imports getImpeccableCommandInfo; list handler rebuilt to emit two sections (`## Phase commands` + `## Impeccable parity verbs`) plus a hint pointing users at `/sidecoach help <verb>`. Added `if (commandMatch.command === 'help')` dispatch with three branches: no-target (usage banner), unknown verb (failure + nudge to /sidecoach list), known verb (registry dump: description, phase, impeccable path, flow chain, parity checklist, parity-plus).
+- slash-command-router.ts: imports ORACLE_VERB_REGISTRY; special-cases `help` BEFORE the oracle registry branch (so `help` is not itself looked up as a verb); exports new getOracleCommandInfo() that adapts the registry to CommandInfo shape for the list handler.
+- sidecoach-orchestrator.ts: imports getOracleCommandInfo; list handler rebuilt to emit two sections (`## Phase commands` + `## Oracle parity verbs`) plus a hint pointing users at `/sidecoach help <verb>`. Added `if (commandMatch.command === 'help')` dispatch with three branches: no-target (usage banner), unknown verb (failure + nudge to /sidecoach list), known verb (registry dump: description, phase, oracle path, flow chain, parity checklist, parity-plus).
 
-Why help is special-cased BEFORE the impeccable registry branch: `help` is not in IMPECCABLE_VERB_REGISTRY (it is meta), so without the early branch it would fall through to `Unknown command: /help`. The target (the verb being asked about) is parsed by the existing `/sidecoach <command> <target>` regex.
+Why help is special-cased BEFORE the oracle registry branch: `help` is not in ORACLE_VERB_REGISTRY (it is meta), so without the early branch it would fall through to `Unknown command: /help`. The target (the verb being asked about) is parsed by the existing `/sidecoach <command> <target>` regex.
 
 Test added:
 - sprint8-list-and-help.test.ts - 13 assertions: list contains both headings, all 5 spot-checked verbs (craft/polish/audit/critique/document) and both phases (research/review); `/sidecoach help polish` mentions polish/parity/flow; unknown verb returns failure.
@@ -275,7 +275,7 @@ Test output: 13/13 PASS, final line `sprint8-list-and-help PASS`.
 Regression status:
 - `npx tsc --noEmit` exit 0.
 - sprint8-router-registry-branch PASS (14/14 + final PASS line - help addition did not disturb existing routing).
-- sprint8-impeccable-parity PASS (197/197 - parity verbs still produce all expected parity tokens).
+- sprint8-oracle-parity PASS (197/197 - parity verbs still produce all expected parity tokens).
 
 Files touched:
 - sidecoach/src/slash-command-router.ts
@@ -289,10 +289,10 @@ T8 verification details:
 
 ## T9: Docs sync (IN PROGRESS)
 
-Baseline pre-edit: tsc --noEmit exit 0; sprint8-impeccable-parity 197/197 PASS.
+Baseline pre-edit: tsc --noEmit exit 0; sprint8-oracle-parity 197/197 PASS.
 
 In-flight edits:
-- claude/skills/sidecoach/SKILL.md - reframed frontmatter description to call out two command surfaces (phase + 22 impeccable-parity verbs) + teach/document/help commands. Added an opening paragraph describing the two surfaces and the parity-append behavior. Renamed Research-and-Strategy section to Setup-and-Strategy and updated teach (brief-driven hybrid) + document (Google-spec) + list (now mixed) + help (new) rows. Added an "Impeccable parity verbs (22 commands)" section. Replaced the project setup teach paragraph with brief-driven copy + document explanation. Workflow gates updated to mention teach-with-brief and /sidecoach document.
+- claude/skills/sidecoach/SKILL.md - reframed frontmatter description to call out two command surfaces (phase + 22 oracle-parity verbs) + teach/document/help commands. Added an opening paragraph describing the two surfaces and the parity-append behavior. Renamed Research-and-Strategy section to Setup-and-Strategy and updated teach (brief-driven hybrid) + document (Google-spec) + list (now mixed) + help (new) rows. Added an "Oracle parity verbs (22 commands)" section. Replaced the project setup teach paragraph with brief-driven copy + document explanation. Workflow gates updated to mention teach-with-brief and /sidecoach document.
 - sidecoach/README.md - rewrote opening to remove "no slash commands" stance; documents two surfaces. Rewrote the How-It-Works ASCII to lead with `/sidecoach polish` example (slash command path) and call out registry append flow. Rewrote Design Philosophy section to acknowledge slash commands as the primary supported interface. Replaced Status section with the slash command surface table (phase + setup + 22 verbs) and a Sprint 8 status block.
 - SIDECOACH_QUICKSTART.md - rewrote the "invisible infrastructure" opening with a historical note; documented two command surfaces, teach v2, document, list, help. Replaced Status table with Sprint 1-8 progression. Replaced internal-API How-It-Works code block with the current FlowExecutionEngine.process() routing. Replaced Integration Path (already-done speculation) with current Architecture and Key Files tables.
 - SIDECOACH_AUDIT_REPORT.md - preserved the 2026-05-23 snapshot in place; added a 2026-05-25 update banner at the top explaining the Primary Gap has been closed and pointing readers at the updated quickstart/README.
@@ -300,14 +300,14 @@ In-flight edits:
 ## T9: Docs sync (DONE)
 
 Files modified (4):
-- claude/skills/sidecoach/SKILL.md - frontmatter description, two-surface intro paragraph, Setup-and-Strategy table with brief-driven teach + Google-spec document + new help row + updated list row, 22-verb Impeccable Parity section, project setup paragraph rewritten, workflow gates expanded to 5 items including document.
+- claude/skills/sidecoach/SKILL.md - frontmatter description, two-surface intro paragraph, Setup-and-Strategy table with brief-driven teach + Google-spec document + new help row + updated list row, 22-verb Oracle Parity section, project setup paragraph rewritten, workflow gates expanded to 5 items including document.
 - sidecoach/README.md - opening rewritten to acknowledge two slash command surfaces, How-It-Works ASCII rewritten to lead with slash command path + registry append, Design Philosophy rewritten without "no slash commands" claim, Status section replaced with full Slash Command Surface table (phase + setup + 22 verbs) + Sprint 8 status block.
 - SIDECOACH_QUICKSTART.md - "invisible infrastructure" opening rewritten with historical note + current command surfaces, Status table replaced with Sprint 1-8 progression, How-It-Works code block updated to current FlowExecutionEngine.process() routing, Architecture + Key Files tables replaced the speculative Integration Path section.
 - SIDECOACH_AUDIT_REPORT.md - kept as historical snapshot; added 2026-05-25 update banner at the top pointing to the updated quickstart/README for current state.
 
 Verification:
 - tsc --noEmit exit 0 (post-edits, pre-commit).
-- sprint8-impeccable-parity 197/197 PASS.
+- sprint8-oracle-parity 197/197 PASS.
 
 No deviations from T9 scope. Stale claims beyond T9 (e.g. the audit report's deep internal-API speculation in the lower half of the file, the quickstart's Integration Path that I replaced with current Architecture, the README's "No slash commands" stance) were rewritten because they directly contradict the Sprint 8 surface. The root README.md does not mention sidecoach at all - no edit needed.
 

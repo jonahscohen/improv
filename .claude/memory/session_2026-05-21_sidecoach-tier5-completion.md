@@ -1,21 +1,21 @@
 ---
 name: sidecoach-tier5-completion
-description: Implemented 3 new flows (R, S, T) to achieve 100% impeccable v2.1.9 command coverage
+description: Implemented 3 new flows (R, S, T) to achieve 100% oracle v2.1.9 command coverage
 metadata:
   type: project
   relates_to:
-    - session_2026-05-21_impeccable_gap_analysis.md
+    - session_2026-05-21_oracle_gap_analysis.md
 ---
 
 # Sidecoach Tier 5: Specialized Refinement Flows
 
 ## Completion Status
 
-**Achieved:** 100% impeccable v2.1.9 command coverage (24/24)
+**Achieved:** 100% oracle v2.1.9 command coverage (24/24)
 
 Previously: 21/23 commands explicitly mapped, 91% coverage
 New: Added 3 specialized refinement flows (R, S, T)
-Result: All 24 impeccable commands now supported
+Result: All 24 oracle commands now supported
 
 ## Implementation
 
@@ -76,7 +76,7 @@ Guidance covers:
 - `sidecoach/src/flows.ts`
   - Added 3 flow definitions (flowR, flowS, flowT) with triggers
   - Inserted before legacy flows section
-  - Trigger patterns match impeccable command semantics
+  - Trigger patterns match oracle command semantics
 
 - `sidecoach/src/sidecoach-orchestrator.ts`
   - Added import: `FlowRLayoutOptimizationHandler, FlowSTypographyExcellenceHandler, FlowTAmbitiousMotionHandler`
@@ -103,7 +103,7 @@ Guidance covers:
 - Missing: layout, overdrive, typeset
 
 **After:** 24/24 commands (100%)
-- All impeccable v2.1.9 commands mapped
+- All oracle v2.1.9 commands mapped
 - 10 core flows (A-J): research/execution/polish
 - 4 multi-lens flows (K-N): audit/critique/responsive/iteration
 - 4 special flows (O-Q): clone/constraint/migration  

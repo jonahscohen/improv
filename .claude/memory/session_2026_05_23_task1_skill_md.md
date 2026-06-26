@@ -68,7 +68,7 @@ git commit -m "feat: add Sidecoach SKILL.md - 23 commands wired to FlowExecution
 
 ## Commands Mapped
 
-23 Impeccable-equivalent commands:
+23 Oracle-equivalent commands:
 - teach, shape, craft (research/strategy)
 - layout, typeset, animate, extract (implementation)
 - polish, colorize, delight, bolder, overdrive, quieter, distill, clarify (polish)

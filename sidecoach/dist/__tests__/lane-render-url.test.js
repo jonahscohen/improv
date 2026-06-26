@@ -44,7 +44,8 @@ const path = __importStar(require("path"));
 const lane_runner_1 = require("../lane-runner");
 const lane_checkpoint_store_1 = require("../lane-checkpoint-store");
 const run_validator_1 = require("../validators/run-validator");
-const BROWSER_RULES = ['polish.concentric-radius', 'polish.typography-rhythm', 'a11y.min-hit-area', 'a11y.color-contrast'];
+// a11y.color-contrast dropped: Stage 6 migrated it to the rendered scan, so it is no longer browser-backed.
+const BROWSER_RULES = ['polish.concentric-radius', 'polish.typography-rhythm', 'a11y.min-hit-area'];
 const mkproj = () => fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lane-ru-')));
 const cleanResult = () => ({
     status: 'clean', rules: [], findings: [],

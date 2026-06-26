@@ -187,7 +187,7 @@ A "clean" symmetric shake (25%/50%/75%/100%) actually looks WORSE because it's t
 
 ---
 
-## SECTION 3: What this covers that impeccable + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
 
 1. **The interaction-type duration table.** Make-interfaces-feel-better doesn't have a "Button press = 100ms, Hover = 150ms, Tab switch = 250ms" lookup. Bencium provides this as a cheat sheet.
 

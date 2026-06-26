@@ -16,7 +16,7 @@ Section order:
 1. The opinion (why this exists, what it's for)
 2. The components (ten of them, with the existing table preserved)
 3. The Claude Code brain (CLAUDE.md walkthrough section by section)
-4. The three-layer design stack (Impeccable + DESIGN.md + make-interfaces-feel-better)
+4. The three-layer design stack (Oracle + DESIGN.md + make-interfaces-feel-better)
 5. Memory: how Claude remembers
 6. Day-to-day workflows (ampersand, yesplease, bootstrap, custom locations)
 7. For yes& teams (collaboration, attribution, project-level CLAUDE.md, onboarding)

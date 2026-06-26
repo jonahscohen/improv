@@ -1,0 +1,33 @@
+{
+  "artifacts": [
+    {
+      "kind": "component",
+      "source": "component.gallery",
+      "title": "Component patterns: card",
+      "content": "Card: Container for grouped related content\nCarousel: Rotating set of slides or cards (content slider)"
+    },
+    {
+      "kind": "fonts",
+      "source": "fontshare.com",
+      "title": "Font candidates + pairing rules",
+      "content": "Inter (professional, weights 100,200,300,400,500,600,700,800,900)\nPoppins (friendly, weights 100,200,300,400,500,600,700,800,900)\nCrimson Text (elegant, weights 400,600)\nSpace Mono (monospace, weights 400,700)\n\nPairing rules:\nPair serif heading with sans-serif body for classic + modern blend\nStick to 1-2 font families maximum to avoid visual noise\nEnsure 1.25+ size ratio between heading and body for clear hierarchy\nUse geometric sans-serif for clean, minimal brands\nUse text serif for editorial, elegant, or premium personality"
+    },
+    {
+      "kind": "icon-source",
+      "source": "icon-source (8 approved libraries)",
+      "title": "Icon source libraries + selection protocol",
+      "content": "APPROVED ICON LIBRARIES (one per project, no cross-library mixing except animated/static parent pairs):\n\n- Heroicons (heroicons) [static] - ~300 icons - Clean UI chrome, nav, actions - repo: tailwindlabs/heroicons\n- Lucide (lucide) [static] - ~1500 icons - General purpose, broadest coverage - repo: lucide-icons/lucide\n- Tabler (tabler) [static] - ~5400 icons - Largest set, edge-case coverage - repo: tabler/tabler-icons\n- Bootstrap Icons (bootstrap-icons) [static] - ~2000 icons - Familiar web conventions - repo: twbs/icons\n- Phosphor (phosphor) [static] - ~7000 icons - Weight flexibility (6 weights), illustration-adjacent - repo: phosphor-icons/core - variants: thin, light, regular, bold, fill, duotone\n- Material Symbols (material-symbols) [static] - ~3000 icons - Variable font, 3 fills, 7 grades, Material convention - repo: google/material-design-icons - variants: outlined, rounded, sharp - each with fill 0/1, weight 100-700, grade -25/0/200, optical-size 20-48\n- Lucide Animated (lucide-animated) [animated] - ~1000 icons - Micro-interactions, state transitions (React + Framer Motion) - repo: pqoqubbw/icons\n- Heroicons Animated (heroicons-animated) [animated] - ~300 icons - Polished interactive states (React + Framer Motion) - repo: heroicons-animated/heroicons-animated\n\nSELECTION PROTOCOL:\n1. Check DESIGN.md first - if the project specifies an icon library, use that exclusively. Project consistency trumps individual icon quality.\n2. If no project preference, match the tech stack. React + framer-motion installed -> animated tier eligible. Vanilla HTML or non-React -> static SVG only.\n3. If the project already uses icons from a specific library (grep imports), use the same one - one library per project, no exceptions.\n4. Search by semantic intent (what the icon means in context), not visual shape. \"home\" not \"house\"; \"close\" or \"dismiss\" not \"circle with X\".\n5. Copy SVG path data verbatim from the library source. Never redraw, simplify, optimize, or approximate paths. Byte-for-byte equality with the library source is the rule.\n6. Animated variants ONLY when the icon represents a state change or feedback moment - never for static UI chrome. Animated icons must pair with their static parent library (Lucide + Lucide Animated, Heroicons + Heroicons Animated). No other cross-library mixing.\n7. Annotate every placed icon with a provenance marker: class=\"<library>-<name>\", data-icon-source=\"<library>\", or <!-- source: <library>/<filename> --> comment. The taste-validator (taste/fabricated-svg rule) enforces this on commit.\n\nPROVENANCE MARKERS REQUIRED (taste/fabricated-svg rule enforces these):\n- Heroicons: class=\"heroicon-*\" OR data-icon-source=\"heroicons\" OR <!-- source: heroicons/<icon-name>.svg -->\n- Lucide: class=\"lucide-*\" OR data-icon-source=\"lucide\" OR <!-- source: lucide/<icon-name>.svg -->\n- Tabler: class=\"tabler-*\" OR data-icon-source=\"tabler\" OR <!-- source: tabler/<icon-name>.svg -->\n- Bootstrap Icons: class=\"bi-*\" OR data-icon-source=\"bootstrap-icons\" OR <!-- source: bootstrap-icons/<icon-name>.svg -->\n- Phosphor: class=\"ph-*\" OR data-icon-source=\"phosphor\" OR <!-- source: phosphor/<icon-name>.svg -->\n- Material Symbols: class=\"ms-*\" OR data-icon-source=\"material-symbols\" OR <!-- source: material-symbols/<icon-name>.svg -->\n- Lucide Animated: class=\"lucide-*\" OR data-icon-source=\"lucide-animated\" OR <!-- source: lucide-animated/<icon-name>.svg -->\n- Heroicons Animated: class=\"heroicon-*\" OR data-icon-source=\"heroicons-animated\" OR <!-- source: heroicons-animated/<icon-name>.svg -->"
+    },
+    {
+      "kind": "motion",
+      "source": "motion-reference (GSAP/Lenis)",
+      "title": "Motion easings (restrained)",
+      "content": "ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94) (150ms, feedback)\nease-in-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94) (120ms, exit)"
+    }
+  ],
+  "warnings": [
+    "design-references: no live catalog match for voice \"modern clear focused usability\"",
+    "tilt-lab: skill not found (optional, read-only)",
+    "visual-effects: skill not found (optional, read-only)"
+  ]
+}

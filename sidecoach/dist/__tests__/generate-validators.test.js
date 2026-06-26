@@ -84,8 +84,12 @@ function run() {
         throw new Error('DOM-only rule must NOT be required');
     if (!a11y.browserRuleIds.includes('a11y.min-hit-area'))
         throw new Error('DOM rule must be generated as a browser rule');
-    if (!a11y.browserRuleIds.includes('a11y.color-contrast'))
-        throw new Error('contrast rule must be generated as a browser rule');
+    // Stage 6: a11y.color-contrast MIGRATED from the collector contrast probe to the rendered scan, so it is now a
+    // RENDERED rule (driven by scanRenderedLive's low-contrast finding), never a browser rule.
+    if (a11y.browserRuleIds.includes('a11y.color-contrast'))
+        throw new Error('contrast rule must NOT be a browser rule after Stage 6 migration');
+    if (!a11y.renderedRuleIds.includes('a11y.color-contrast'))
+        throw new Error('contrast rule must be generated as a rendered rule');
     if (a11y.browserCoverageByScope.find((c) => c.ruleId === 'a11y.min-hit-area')?.evidenceAlternativesByRequirement[0][0] !== 'dom') {
         throw new Error('DOM browser coverage must use the dom evidence kind');
     }

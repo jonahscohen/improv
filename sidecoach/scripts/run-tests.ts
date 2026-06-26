@@ -79,6 +79,14 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/anti-pattern-checks.test.ts', required: true },
   { rel: 'src/__tests__/validator-fixtures-e2e.test.ts', required: true },
   { rel: 'src/__tests__/panel-renderer.test.ts', required: true },                  // Sidecoach progress panel: model + renderer
+  { rel: 'src/__tests__/referee-independence.test.ts', required: true },             // Stage 1: product objective scanner has ZERO eval/ (referee) imports
+  { rel: 'src/__tests__/objective-rendered-calibration.test.ts', required: true },   // Stage 1: owned objective scanner spec-correctness (incl referee adversarial INPUTS)
+  { rel: 'src/__tests__/decouple-isolation.test.ts', required: true },               // Stage 1: objective/subjective scan decouple - subjective ReDoS can't starve objective
+  { rel: 'src/__tests__/subjective-rendered-calibration.test.ts', required: true },  // Stage 1 ST1: owned subjective (taste) scanner - tiny-text precision-first spec
+  { rel: 'src/__tests__/rendered-scan-integration.test.ts', required: true },        // Stage 1 convergence: rendered scanner findings surface through the LIVE run-validator path
+  { rel: 'src/__tests__/forms-checks.test.ts', required: true },                      // Stage 2 convergence: absorbed forms-a11y checks (FORMS_016/018/019/002/015)
+  { rel: 'src/__tests__/page-quality-checks.test.ts', required: true },               // Stage 2 convergence: cherry-picked DOM-evidence Tier-2 keepers (img/text/dark/chart/button)
+  { rel: 'src/__tests__/validator-integration.test.ts', required: true },             // Stage 2 convergence: registry-facade migration contract tripwire (Extended===22, Polish+Extended===46, honest Flow J display)
 ];
 
 // Pin Playwright to the SHARED real-home browser cache BEFORE we isolate HOME below.

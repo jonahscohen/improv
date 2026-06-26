@@ -1,0 +1,774 @@
+{
+  "stall": [
+    {
+      "perValidator": [
+        {
+          "validatorId": "polish-standard",
+          "status": "findings",
+          "failedRuleIds": [
+            "polish.no-transition-all"
+          ],
+          "inconclusiveRuleIds": [],
+          "coverageGapIdentities": [
+            "unverified-scope:scope-x"
+          ],
+          "ruleErrorCategories": []
+        }
+      ],
+      "iterationStatus": "findings",
+      "converged": false,
+      "signature": "5eea8cbac8224180",
+      "findings": [
+        {
+          "validatorId": "polish-standard",
+          "ruleId": "polish.no-transition-all",
+          "canonicalRuleKey": "polish.no-transition-all",
+          "severity": "major",
+          "findingClass": "polish",
+          "evidenceLocations": [
+            "x"
+          ],
+          "message": "m"
+        }
+      ],
+      "validatorErrors": [],
+      "requiredValidatorRuns": [
+        {
+          "validatorId": "polish-standard",
+          "status": "findings",
+          "coverage": {
+            "inspectedFiles": [
+              "a.css"
+            ],
+            "skippedFiles": [],
+            "supportedSourceKinds": [
+              "css"
+            ],
+            "unsupportedSourceKinds": [],
+            "ruleCounts": {
+              "pass": 0,
+              "fail": 1,
+              "notApplicable": 0,
+              "inconclusive": 0
+            },
+            "findingCounts": {
+              "blockingExcess": 1,
+              "withinTolerance": 0,
+              "nonBlocking": 0
+            },
+            "measuredScope": [],
+            "unverifiedScope": [
+              "scope-x"
+            ]
+          }
+        }
+      ],
+      "runCoverage": {
+        "discoveredFiles": [],
+        "inspectedFiles": [
+          "a.css"
+        ],
+        "skippedFiles": [],
+        "unreadableFiles": [],
+        "unsupportedSourceKinds": [],
+        "unsupportedFiles": [],
+        "measuredScope": [],
+        "unverifiedScope": [
+          "scope-x"
+        ],
+        "notApplicableRuleIds": []
+      },
+      "measuredScope": [],
+      "outcome": "running",
+      "consecutiveNoProgress": 1,
+      "nextIteration": 1
+    },
+    {
+      "perValidator": [
+        {
+          "validatorId": "polish-standard",
+          "status": "findings",
+          "failedRuleIds": [
+            "polish.no-transition-all"
+          ],
+          "inconclusiveRuleIds": [],
+          "coverageGapIdentities": [
+            "unverified-scope:scope-x"
+          ],
+          "ruleErrorCategories": []
+        }
+      ],
+      "iterationStatus": "findings",
+      "converged": false,
+      "signature": "5eea8cbac8224180",
+      "findings": [
+        {
+          "validatorId": "polish-standard",
+          "ruleId": "polish.no-transition-all",
+          "canonicalRuleKey": "polish.no-transition-all",
+          "severity": "major",
+          "findingClass": "polish",
+          "evidenceLocations": [
+            "x"
+          ],
+          "message": "m"
+        }
+      ],
+      "validatorErrors": [],
+      "requiredValidatorRuns": [
+        {
+          "validatorId": "polish-standard",
+          "status": "findings",
+          "coverage": {
+            "inspectedFiles": [
+              "a.css"
+            ],
+            "skippedFiles": [],
+            "supportedSourceKinds": [
+              "css"
+            ],
+            "unsupportedSourceKinds": [],
+            "ruleCounts": {
+              "pass": 0,
+              "fail": 1,
+              "notApplicable": 0,
+              "inconclusive": 0
+            },
+            "findingCounts": {
+              "blockingExcess": 1,
+              "withinTolerance": 0,
+              "nonBlocking": 0
+            },
+            "measuredScope": [],
+            "unverifiedScope": [
+              "scope-x"
+            ]
+          }
+        }
+      ],
+      "runCoverage": {
+        "discoveredFiles": [],
+        "inspectedFiles": [
+          "a.css"
+        ],
+        "skippedFiles": [],
+        "unreadableFiles": [],
+        "unsupportedSourceKinds": [],
+        "unsupportedFiles": [],
+        "measuredScope": [],
+        "unverifiedScope": [
+          "scope-x"
+        ],
+        "notApplicableRuleIds": []
+      },
+      "measuredScope": [],
+      "outcome": "running",
+      "consecutiveNoProgress": 2,
+      "nextIteration": 2
+    },
+    {
+      "perValidator": [
+        {
+          "validatorId": "polish-standard",
+          "status": "findings",
+          "failedRuleIds": [
+            "polish.no-transition-all"
+          ],
+          "inconclusiveRuleIds": [],
+          "coverageGapIdentities": [
+            "unverified-scope:scope-x"
+          ],
+          "ruleErrorCategories": []
+        }
+      ],
+      "iterationStatus": "findings",
+      "converged": false,
+      "signature": "5eea8cbac8224180",
+      "findings": [
+        {
+          "validatorId": "polish-standard",
+          "ruleId": "polish.no-transition-all",
+          "canonicalRuleKey": "polish.no-transition-all",
+          "severity": "major",
+          "findingClass": "polish",
+          "evidenceLocations": [
+            "x"
+          ],
+          "message": "m"
+        }
+      ],
+      "validatorErrors": [],
+      "requiredValidatorRuns": [
+        {
+          "validatorId": "polish-standard",
+          "status": "findings",
+          "coverage": {
+            "inspectedFiles": [
+              "a.css"
+            ],
+            "skippedFiles": [],
+            "supportedSourceKinds": [
+              "css"
+            ],
+            "unsupportedSourceKinds": [],
+            "ruleCounts": {
+              "pass": 0,
+              "fail": 1,
+              "notApplicable": 0,
+              "inconclusive": 0
+            },
+            "findingCounts": {
+              "blockingExcess": 1,
+              "withinTolerance": 0,
+              "nonBlocking": 0
+            },
+            "measuredScope": [],
+            "unverifiedScope": [
+              "scope-x"
+            ]
+          }
+        }
+      ],
+      "runCoverage": {
+        "discoveredFiles": [],
+        "inspectedFiles": [
+          "a.css"
+        ],
+        "skippedFiles": [],
+        "unreadableFiles": [],
+        "unsupportedSourceKinds": [],
+        "unsupportedFiles": [],
+        "measuredScope": [],
+        "unverifiedScope": [
+          "scope-x"
+        ],
+        "notApplicableRuleIds": []
+      },
+      "measuredScope": [],
+      "outcome": "stalled",
+      "consecutiveNoProgress": 3,
+      "nextIteration": 3
+    }
+  ],
+  "converge": [
+    {
+      "perValidator": [
+        {
+          "validatorId": "polish-standard",
+          "status": "findings",
+          "failedRuleIds": [
+            "polish.no-transition-all"
+          ],
+          "inconclusiveRuleIds": [],
+          "coverageGapIdentities": [
+            "unverified-scope:scope-x"
+          ],
+          "ruleErrorCategories": []
+        }
+      ],
+      "iterationStatus": "findings",
+      "converged": false,
+      "signature": "5eea8cbac8224180",
+      "findings": [
+        {
+          "validatorId": "polish-standard",
+          "ruleId": "polish.no-transition-all",
+          "canonicalRuleKey": "polish.no-transition-all",
+          "severity": "major",
+          "findingClass": "polish",
+          "evidenceLocations": [
+            "x"
+          ],
+          "message": "m"
+        }
+      ],
+      "validatorErrors": [],
+      "requiredValidatorRuns": [
+        {
+          "validatorId": "polish-standard",
+          "status": "findings",
+          "coverage": {
+            "inspectedFiles": [
+              "a.css"
+            ],
+            "skippedFiles": [],
+            "supportedSourceKinds": [
+              "css"
+            ],
+            "unsupportedSourceKinds": [],
+            "ruleCounts": {
+              "pass": 0,
+              "fail": 1,
+              "notApplicable": 0,
+              "inconclusive": 0
+            },
+            "findingCounts": {
+              "blockingExcess": 1,
+              "withinTolerance": 0,
+              "nonBlocking": 0
+            },
+            "measuredScope": [],
+            "unverifiedScope": [
+              "scope-x"
+            ]
+          }
+        }
+      ],
+      "runCoverage": {
+        "discoveredFiles": [],
+        "inspectedFiles": [
+          "a.css"
+        ],
+        "skippedFiles": [],
+        "unreadableFiles": [],
+        "unsupportedSourceKinds": [],
+        "unsupportedFiles": [],
+        "measuredScope": [],
+        "unverifiedScope": [
+          "scope-x"
+        ],
+        "notApplicableRuleIds": []
+      },
+      "measuredScope": [],
+      "outcome": "running",
+      "consecutiveNoProgress": 1,
+      "nextIteration": 1
+    },
+    {
+      "perValidator": [
+        {
+          "validatorId": "polish-standard",
+          "status": "clean",
+          "failedRuleIds": [],
+          "inconclusiveRuleIds": [],
+          "coverageGapIdentities": [],
+          "ruleErrorCategories": []
+        }
+      ],
+      "iterationStatus": "clean",
+      "converged": true,
+      "signature": "47df18e00188f732",
+      "findings": [],
+      "validatorErrors": [],
+      "requiredValidatorRuns": [
+        {
+          "validatorId": "polish-standard",
+          "status": "clean",
+          "coverage": {
+            "inspectedFiles": [
+              "a.css"
+            ],
+            "skippedFiles": [],
+            "supportedSourceKinds": [
+              "css"
+            ],
+            "unsupportedSourceKinds": [],
+            "ruleCounts": {
+              "pass": 1,
+              "fail": 0,
+              "notApplicable": 0,
+              "inconclusive": 0
+            },
+            "findingCounts": {
+              "blockingExcess": 0,
+              "withinTolerance": 0,
+              "nonBlocking": 0
+            },
+            "measuredScope": [
+              "s1"
+            ],
+            "unverifiedScope": []
+          }
+        }
+      ],
+      "runCoverage": {
+        "discoveredFiles": [],
+        "inspectedFiles": [
+          "a.css"
+        ],
+        "skippedFiles": [],
+        "unreadableFiles": [],
+        "unsupportedSourceKinds": [],
+        "unsupportedFiles": [],
+        "measuredScope": [
+          "s1"
+        ],
+        "unverifiedScope": [],
+        "notApplicableRuleIds": []
+      },
+      "measuredScope": [
+        "s1"
+      ],
+      "outcome": "converged",
+      "consecutiveNoProgress": 1,
+      "nextIteration": 1
+    }
+  ],
+  "progress_then_converge": [
+    {
+      "perValidator": [
+        {
+          "validatorId": "polish-standard",
+          "status": "findings",
+          "failedRuleIds": [
+            "polish.no-transition-all"
+          ],
+          "inconclusiveRuleIds": [],
+          "coverageGapIdentities": [
+            "unverified-scope:scope-x"
+          ],
+          "ruleErrorCategories": []
+        }
+      ],
+      "iterationStatus": "findings",
+      "converged": false,
+      "signature": "5eea8cbac8224180",
+      "findings": [
+        {
+          "validatorId": "polish-standard",
+          "ruleId": "polish.no-transition-all",
+          "canonicalRuleKey": "polish.no-transition-all",
+          "severity": "major",
+          "findingClass": "polish",
+          "evidenceLocations": [
+            "x"
+          ],
+          "message": "m"
+        }
+      ],
+      "validatorErrors": [],
+      "requiredValidatorRuns": [
+        {
+          "validatorId": "polish-standard",
+          "status": "findings",
+          "coverage": {
+            "inspectedFiles": [
+              "a.css"
+            ],
+            "skippedFiles": [],
+            "supportedSourceKinds": [
+              "css"
+            ],
+            "unsupportedSourceKinds": [],
+            "ruleCounts": {
+              "pass": 0,
+              "fail": 1,
+              "notApplicable": 0,
+              "inconclusive": 0
+            },
+            "findingCounts": {
+              "blockingExcess": 1,
+              "withinTolerance": 0,
+              "nonBlocking": 0
+            },
+            "measuredScope": [],
+            "unverifiedScope": [
+              "scope-x"
+            ]
+          }
+        }
+      ],
+      "runCoverage": {
+        "discoveredFiles": [],
+        "inspectedFiles": [
+          "a.css"
+        ],
+        "skippedFiles": [],
+        "unreadableFiles": [],
+        "unsupportedSourceKinds": [],
+        "unsupportedFiles": [],
+        "measuredScope": [],
+        "unverifiedScope": [
+          "scope-x"
+        ],
+        "notApplicableRuleIds": []
+      },
+      "measuredScope": [],
+      "outcome": "running",
+      "consecutiveNoProgress": 1,
+      "nextIteration": 1
+    },
+    {
+      "perValidator": [
+        {
+          "validatorId": "polish-standard",
+          "status": "findings",
+          "failedRuleIds": [
+            "a11y.contrast"
+          ],
+          "inconclusiveRuleIds": [],
+          "coverageGapIdentities": [
+            "unverified-scope:scope-x"
+          ],
+          "ruleErrorCategories": []
+        }
+      ],
+      "iterationStatus": "findings",
+      "converged": false,
+      "signature": "2cd9e892a2145522",
+      "findings": [
+        {
+          "validatorId": "polish-standard",
+          "ruleId": "a11y.contrast",
+          "canonicalRuleKey": "a11y.contrast",
+          "severity": "major",
+          "findingClass": "polish",
+          "evidenceLocations": [
+            "x"
+          ],
+          "message": "m"
+        }
+      ],
+      "validatorErrors": [],
+      "requiredValidatorRuns": [
+        {
+          "validatorId": "polish-standard",
+          "status": "findings",
+          "coverage": {
+            "inspectedFiles": [
+              "a.css"
+            ],
+            "skippedFiles": [],
+            "supportedSourceKinds": [
+              "css"
+            ],
+            "unsupportedSourceKinds": [],
+            "ruleCounts": {
+              "pass": 0,
+              "fail": 1,
+              "notApplicable": 0,
+              "inconclusive": 0
+            },
+            "findingCounts": {
+              "blockingExcess": 1,
+              "withinTolerance": 0,
+              "nonBlocking": 0
+            },
+            "measuredScope": [],
+            "unverifiedScope": [
+              "scope-x"
+            ]
+          }
+        }
+      ],
+      "runCoverage": {
+        "discoveredFiles": [],
+        "inspectedFiles": [
+          "a.css"
+        ],
+        "skippedFiles": [],
+        "unreadableFiles": [],
+        "unsupportedSourceKinds": [],
+        "unsupportedFiles": [],
+        "measuredScope": [],
+        "unverifiedScope": [
+          "scope-x"
+        ],
+        "notApplicableRuleIds": []
+      },
+      "measuredScope": [],
+      "outcome": "running",
+      "consecutiveNoProgress": 1,
+      "nextIteration": 2
+    },
+    {
+      "perValidator": [
+        {
+          "validatorId": "polish-standard",
+          "status": "clean",
+          "failedRuleIds": [],
+          "inconclusiveRuleIds": [],
+          "coverageGapIdentities": [],
+          "ruleErrorCategories": []
+        }
+      ],
+      "iterationStatus": "clean",
+      "converged": true,
+      "signature": "47df18e00188f732",
+      "findings": [],
+      "validatorErrors": [],
+      "requiredValidatorRuns": [
+        {
+          "validatorId": "polish-standard",
+          "status": "clean",
+          "coverage": {
+            "inspectedFiles": [
+              "a.css"
+            ],
+            "skippedFiles": [],
+            "supportedSourceKinds": [
+              "css"
+            ],
+            "unsupportedSourceKinds": [],
+            "ruleCounts": {
+              "pass": 1,
+              "fail": 0,
+              "notApplicable": 0,
+              "inconclusive": 0
+            },
+            "findingCounts": {
+              "blockingExcess": 0,
+              "withinTolerance": 0,
+              "nonBlocking": 0
+            },
+            "measuredScope": [
+              "s1"
+            ],
+            "unverifiedScope": []
+          }
+        }
+      ],
+      "runCoverage": {
+        "discoveredFiles": [],
+        "inspectedFiles": [
+          "a.css"
+        ],
+        "skippedFiles": [],
+        "unreadableFiles": [],
+        "unsupportedSourceKinds": [],
+        "unsupportedFiles": [],
+        "measuredScope": [
+          "s1"
+        ],
+        "unverifiedScope": [],
+        "notApplicableRuleIds": []
+      },
+      "measuredScope": [
+        "s1"
+      ],
+      "outcome": "converged",
+      "consecutiveNoProgress": 1,
+      "nextIteration": 2
+    }
+  ],
+  "error_running": [
+    {
+      "perValidator": [
+        {
+          "validatorId": "polish-standard",
+          "status": "error",
+          "failedRuleIds": [],
+          "inconclusiveRuleIds": [],
+          "coverageGapIdentities": [],
+          "validatorErrorCategory": "aborted",
+          "ruleErrorCategories": []
+        }
+      ],
+      "iterationStatus": "error",
+      "converged": false,
+      "signature": "4fbbb19fdc3bf17a",
+      "findings": [],
+      "validatorErrors": [
+        {
+          "validatorId": "polish-standard",
+          "category": "aborted",
+          "message": "lease lost"
+        }
+      ],
+      "requiredValidatorRuns": [
+        {
+          "validatorId": "polish-standard",
+          "status": "error",
+          "coverage": {
+            "inspectedFiles": [],
+            "skippedFiles": [],
+            "supportedSourceKinds": [],
+            "unsupportedSourceKinds": [],
+            "ruleCounts": {
+              "pass": 0,
+              "fail": 0,
+              "notApplicable": 0,
+              "inconclusive": 0
+            },
+            "findingCounts": {
+              "blockingExcess": 0,
+              "withinTolerance": 0,
+              "nonBlocking": 0
+            },
+            "measuredScope": [],
+            "unverifiedScope": []
+          }
+        }
+      ],
+      "runCoverage": {
+        "discoveredFiles": [],
+        "inspectedFiles": [],
+        "skippedFiles": [],
+        "unreadableFiles": [],
+        "unsupportedSourceKinds": [],
+        "unsupportedFiles": [],
+        "measuredScope": [],
+        "unverifiedScope": [],
+        "notApplicableRuleIds": []
+      },
+      "measuredScope": [],
+      "outcome": "running",
+      "consecutiveNoProgress": 1,
+      "nextIteration": 1
+    },
+    {
+      "perValidator": [
+        {
+          "validatorId": "polish-standard",
+          "status": "error",
+          "failedRuleIds": [],
+          "inconclusiveRuleIds": [],
+          "coverageGapIdentities": [],
+          "validatorErrorCategory": "aborted",
+          "ruleErrorCategories": []
+        }
+      ],
+      "iterationStatus": "error",
+      "converged": false,
+      "signature": "4fbbb19fdc3bf17a",
+      "findings": [],
+      "validatorErrors": [
+        {
+          "validatorId": "polish-standard",
+          "category": "aborted",
+          "message": "lease lost"
+        }
+      ],
+      "requiredValidatorRuns": [
+        {
+          "validatorId": "polish-standard",
+          "status": "error",
+          "coverage": {
+            "inspectedFiles": [],
+            "skippedFiles": [],
+            "supportedSourceKinds": [],
+            "unsupportedSourceKinds": [],
+            "ruleCounts": {
+              "pass": 0,
+              "fail": 0,
+              "notApplicable": 0,
+              "inconclusive": 0
+            },
+            "findingCounts": {
+              "blockingExcess": 0,
+              "withinTolerance": 0,
+              "nonBlocking": 0
+            },
+            "measuredScope": [],
+            "unverifiedScope": []
+          }
+        }
+      ],
+      "runCoverage": {
+        "discoveredFiles": [],
+        "inspectedFiles": [],
+        "skippedFiles": [],
+        "unreadableFiles": [],
+        "unsupportedSourceKinds": [],
+        "unsupportedFiles": [],
+        "measuredScope": [],
+        "unverifiedScope": [],
+        "notApplicableRuleIds": []
+      },
+      "measuredScope": [],
+      "outcome": "running",
+      "consecutiveNoProgress": 2,
+      "nextIteration": 2
+    }
+  ]
+}

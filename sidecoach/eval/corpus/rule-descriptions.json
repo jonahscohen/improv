@@ -1,0 +1,18 @@
+{
+  "_purpose": "Self-descriptions of each tool's UNMAPPED rules, sourced VERBATIM/faithfully from that tool's OWN source (cited), for the symmetric Codex semantic pass. Each tool describes its own rule; the architect does not characterize either tool's rules. Lead-auditable against the cited source.",
+  "sidecoach": {
+    "modal-as-first-thought": { "description": "Modals used where inline editing or progressive disclosure would work.", "source": "src/reference-loader.ts:323" },
+    "taste/border-radius-inconsistency": { "description": "Many distinct border-radius literals are used instead of 1-2 named tokens from a radius scale.", "source": "src/taste-validator.ts:306" },
+    "taste/hero-radial-blob": { "description": "A radial-gradient is used as the background inside a hero/banner selector - the canonical AI-slop hero backdrop in place of an editorial image or typography-first hero.", "source": "src/taste-validator.ts:216" },
+    "taste/large-inline-style": { "description": "A large inline <style> block sits in the document head instead of living in the external stylesheet.", "source": "src/taste-validator.ts:197" },
+    "taste/translatey-in-hover": { "description": "A hover state lifts an element with transform: translateY instead of the prescribed scale-on-press interaction.", "source": "src/taste-validator.ts:177" }
+  },
+  "oracle": {
+    "side-tab": { "description": "Thick colored border on one side of a card - the most recognizable tell of AI-generated UIs.", "source": "detector/registry/antipatterns.mjs:4 (verbatim)" },
+    "border-accent-on-rounded": { "description": "Thick accent border on a rounded card - the border clashes with the rounded corners.", "source": "detector/registry/antipatterns.mjs:13 (verbatim)" },
+    "overused-font": { "description": "Overused default faces (Inter, Roboto, Fraunces, Geist, Plus Jakarta Sans, Space Grotesk) used on so many sites they no longer feel distinctive.", "source": "detector/registry/antipatterns.mjs:22" },
+    "flat-type-hierarchy": { "description": "Font sizes are too close together, giving no clear visual type hierarchy.", "source": "detector/registry/antipatterns.mjs:40" },
+    "monotonous-spacing": { "description": "The same spacing value used everywhere, with no rhythm or variation.", "source": "detector/registry/antipatterns.mjs:85" },
+    "em-dash-overuse": { "description": "More than two em-dashes in body copy, an AI cadence tell.", "source": "detector/registry/antipatterns.mjs:159" }
+  }
+}

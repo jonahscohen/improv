@@ -28,6 +28,10 @@ exports.EVIDENCE_SOURCE_COMPATIBILITY = {
     'computed-style': [],
     'dom': [],
     'contrast': [],
+    // rendered-scan: satisfied ONLY by a live rendered scan of a renderUrl (no static source
+    // kind can provide it), so isStaticallySatisfiable is false and the rule runs via the
+    // run-validator non-static branch reading ctx.renderedScan. Parallel to dom/contrast.
+    'rendered-scan': [],
 };
 // The union of source kinds that can satisfy ALL of the given evidence requirements
 // (union across requirements; a rule is satisfied if any listed kind is present for

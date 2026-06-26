@@ -60,7 +60,7 @@ The CD reviews each builder's output sequentially:
    - `/sidecoach audit` (a11y, performance, theming, responsive, anti-patterns)
    - `/sidecoach critique` (AI-slop detection, Nielsen heuristics, cognitive load)
    - `/sidecoach polish` (alignment pass against design system)
-   - `make-interfaces-feel-better` 14-point checklist
+   - `make-interfaces-feel-better` 16-point checklist
    - `DESIGN.md` lint (if present)
 3. Check cross-section consistency (typography, spacing, color palette, component patterns)
 4. Produce a review document with per-section verdicts:

@@ -8,12 +8,12 @@ Collaborator: Jonah Cohen
 
 ## Context
 
-Studied Efecto Design Tool (efecto.app/docs) thoroughly - 64 MCP tools, brand system, agent teams, FX engine, shader backgrounds. Compared against existing design suite (Impeccable, make-interfaces-feel-better, component-gallery-reference, Figma plugin, Pencil MCP, cmux).
+Studied Efecto Design Tool (efecto.app/docs) thoroughly - 64 MCP tools, brand system, agent teams, FX engine, shader backgrounds. Compared against existing design suite (Oracle, make-interfaces-feel-better, component-gallery-reference, Figma plugin, Pencil MCP, cmux).
 
 ## Key decisions
 
 - Efecto's live browser canvas NOT needed - Figma is the industry standard
-- Four new skills, all peers to Impeccable (not children), sharing PRODUCT.md + DESIGN.md contract
+- Four new skills, all peers to Oracle (not children), sharing PRODUCT.md + DESIGN.md contract
 - No references to Efecto or Regent anywhere in source/docs/commits
 - Visual-effects skill ships actual shader source code extracted from Regent experiments (not pseudocode)
 - Icon libraries: Heroicons, Lucide, Tabler, Bootstrap Icons, Phosphor, Material Symbols + Lucide Animated + Heroicons Animated (8 total). Feather dropped (Lucide is its maintained fork), Radix dropped.

@@ -1,0 +1,47 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Changelog</title>
+<style>
+  body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;max-width:760px;margin:0 auto;padding:48px 24px;line-height:1.6}
+  h1{font-size:52px;margin:0 0 8px}
+  .sub{font-size:22px;color:#555;margin:0 0 40px}
+  h2{font-size:28px;margin:36px 0 6px}
+  .date{font-size:14px;color:#888;margin:0 0 10px}
+  p,li{font-size:16px;margin:0 0 10px}
+  ul{padding-left:20px}
+</style></head>
+<body>
+  <main>
+    <h1>Changelog</h1>
+    <p class="sub">Notable changes to the platform, newest first.</p>
+
+    <h2>Version 2.4.0</h2>
+    <p class="date">Released May 6, 2025</p>
+    <ul>
+      <li>Added CSV export to the reports page. Exports include all columns visible in the current view and respect active filters.</li>
+      <li>The dashboard now remembers the last selected date range across sessions.</li>
+      <li>Reduced cold-start latency for the serverless functions by about 200 milliseconds.</li>
+    </ul>
+
+    <h2>Version 2.3.2</h2>
+    <p class="date">Released April 22, 2025</p>
+    <ul>
+      <li>Fixed a bug where pagination skipped the final row when the total count was an exact multiple of the page size.</li>
+      <li>Fixed an issue where the webhook retry schedule used the wrong backoff interval.</li>
+      <li>Updated the Postgres driver to 8.11 to address a connection-leak warning.</li>
+    </ul>
+
+    <h2>Version 2.3.1</h2>
+    <p class="date">Released April 9, 2025</p>
+    <ul>
+      <li>Corrected a typo in the invoice email template.</li>
+      <li>The CLI now prints a clearer message when the configuration file is missing.</li>
+    </ul>
+
+    <h2>Version 2.3.0</h2>
+    <p class="date">Released March 30, 2025</p>
+    <ul>
+      <li>Introduced team roles with read-only and admin permissions.</li>
+      <li>Added support for SAML single sign-on on the business plan.</li>
+      <li>Migrated the search index to reduce query latency on large workspaces.</li>
+    </ul>
+  </main>
+</body></html>

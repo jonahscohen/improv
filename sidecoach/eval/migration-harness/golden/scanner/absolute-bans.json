@@ -1,0 +1,45 @@
+[
+  {
+    "source": "absolute-ban",
+    "rule": "gradient-text",
+    "severity": "P1",
+    "file": "absolute-bans.html",
+    "line": 5,
+    "matchedText": ".grad { ... background-clip: text + gradient }",
+    "reason": "background-clip: text combined with a gradient background. Decorative, never meaningful.",
+    "rewriteOptions": [
+      "Solid color",
+      "Emphasis via weight or size",
+      "Use the brand accent on one word with text-decoration-color instead"
+    ]
+  },
+  {
+    "source": "absolute-ban",
+    "rule": "identical-card-grids",
+    "severity": "P1",
+    "file": "absolute-bans.html",
+    "line": 10,
+    "matchedText": "Repeated <div> with same card-style class containing heading + paragraph triplet",
+    "reason": "Same-sized cards with icon + heading + text, repeated endlessly.",
+    "rewriteOptions": [
+      "Asymmetric grid with one anchor card and supporting cards",
+      "List-style layout",
+      "Editorial mosaic with varied card sizes"
+    ]
+  },
+  {
+    "source": "absolute-ban",
+    "rule": "side-stripe-borders",
+    "severity": "P1",
+    "file": "absolute-bans.html",
+    "line": 1,
+    "matchedText": "<!doctype html>\n<!-- migration-harness INPUT (hand-authored; CURRENT absolute-ban behavior; not the eval corpus).\n     Triggers: side-stripe-borders, gradient-text, identical-card-grids. -->\n<html><head><style>\n.alert { border-left: 4px solid #ee3333; }",
+    "reason": "border-left or border-right greater than 1px as a colored accent on cards, list items, callouts, or alerts.",
+    "rewriteOptions": [
+      "Full borders",
+      "Background tints",
+      "Leading numbers or icons",
+      "Nothing - remove the accent"
+    ]
+  }
+]

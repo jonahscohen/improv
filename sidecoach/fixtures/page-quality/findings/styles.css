@@ -1,0 +1,9 @@
+.title {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dark {
+  background: #111;
+  color: #eee;
+}

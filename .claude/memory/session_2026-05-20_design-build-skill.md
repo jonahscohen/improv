@@ -17,7 +17,7 @@ The 2026-05-20 marketing-site build was the first time the design pipeline ran o
 
 1. Of 8 documented pipeline steps, only 2 fired as skills (fontshare-reference's reject list, motion-reference's canonical snippets)
 2. component-gallery-reference, design-references, icon-source never auto-triggered
-3. The QA triad (/impeccable audit + critique + polish) never ran
+3. The QA triad (/oracle audit + critique + polish) never ran
 4. make-interfaces-feel-better only fired because I'd read it recently, not via auto-trigger
 
 The keyword-auto-trigger mechanism is unreliable for orchestration. The QA triad needs explicit invocation. This skill solves both.
@@ -34,7 +34,7 @@ The keyword-auto-trigger mechanism is unreliable for orchestration. The QA triad
 | 5. Motion | motion-reference patterns IF animation/scroll in scope |
 | 6. Icons | icon-source protocol IF icons needed |
 | 7. Build | apply make-interfaces-feel-better's 14 rules DURING construction |
-| 8. **QA triad (MANDATORY)** | /impeccable audit + critique + polish |
+| 8. **QA triad (MANDATORY)** | /oracle audit + critique + polish |
 | 8b. **GATE CHECKPOINT 2** | AskUserQuestion on QA findings |
 | 9. Verification | cmux browser, screenshots, real-input testing |
 | 10. Memory | session memory with phases fired/skipped + friction |
@@ -47,7 +47,7 @@ The keyword-auto-trigger mechanism is unreliable for orchestration. The QA triad
 
 3. **Two gate checkpoints, not 10.** Strategy gate (after Phase 1) and QA findings gate (after Phase 8). Other phases flow automatically so the build doesn't death-by-AskUserQuestion.
 
-4. **QA triad is non-skippable.** If impeccable can't run, the skill must record "QA triad SKIPPED because <reason>" in memory explicitly. No silent skipping.
+4. **QA triad is non-skippable.** If oracle can't run, the skill must record "QA triad SKIPPED because <reason>" in memory explicitly. No silent skipping.
 
 5. **Failure modes named upfront.** Skill includes a "Failure modes to expect" section pulled from the marketing-site retrospective: data-reveal brittleness, CDN ESM imports (use esm.sh not skypack), Lenis + cmux scroll conflict, hero entrance race with Lenis init.
 

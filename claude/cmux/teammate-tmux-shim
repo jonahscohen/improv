@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# cmux tmux shim (agent-teams) WITH a launch-command fix.
+#
+# Stock behavior is just: exec cmux __tmux-compat "$@"  (see tmux.orig).
+#
+# Why this fix exists (verified 2026-06-23, Jonah):
+#   cmux's `cmux __tmux-compat` implements a subset of tmux. Its
+#   respawn-pane / split-window / new-window run the pane command via execvp on
+#   the whitespace-split command string - they do NOT run it through a shell.
+#   Claude Code agent-teams (v2.1.186) spawns a teammate by respawn-pane'ing the
+#   pane with a COMPOUND shell command:
+#       cd <dir> && env VAR=1 ... <path>/claude.exe --flags ...
+#   cmux execvp's the first token `cd` (a shell builtin, not an executable), the
+#   launch fails instantly, the pane closes, and the teammate never appears or
+#   runs (it registers in ~/.claude/teams/<session>/config.json with
+#   backendType:"tmux" + a tmuxPaneId, but no pane, unread inbox, no process).
+#   Empirically: 1-2 token commands exec fine; 3+ tokens or any shell operator
+#   (&& || ; |) break.
+#
+# Fix: for those three subcommands, if the command after `--` has a shell
+#   operator or more than 2 whitespace tokens, write it to a one-token launch
+#   script and pass the script path instead. cmux execvp's the script (a single
+#   token), bash runs the real compound command, and claude.exe launches in a
+#   persistent pane. Everything else passes through untouched.
+#
+# Restore stock behavior: cp ~/.cmuxterm/claude-teams-bin/tmux.orig over this file.
+
+set -eo pipefail
+CMUX="${CMUX_CLAUDE_TEAMS_CMUX_BIN:-cmux}"
+
+# Optional trace for debugging: export CMUX_SHIM_TRACE=/path/to/log
+if [ -n "${CMUX_SHIM_TRACE:-}" ]; then
+  { printf '%s IN:' "$(date +%H:%M:%S)"; printf ' %q' "$@"; printf '\n'; } >> "$CMUX_SHIM_TRACE" 2>/dev/null || true
+fi
+
+args=("$@")
+
+# Is this one of the pane-spawning subcommands? Scan ALL args for the keyword.
+# (Do NOT stop at the first non-flag token: the harness prefixes `-S <socket>`,
+# whose socket-path VALUE is a non-flag token that would otherwise bail early.)
+is_spawn=0
+for a in "${args[@]}"; do
+  case "$a" in
+    respawn-pane|split-window|new-window) is_spawn=1; break ;;
+  esac
+done
+
+if [ "$is_spawn" -eq 1 ]; then
+  # Find the `--` separator that precedes the pane command.
+  sep=-1
+  idx=0
+  for a in "${args[@]}"; do
+    if [ "$a" = "--" ]; then sep=$idx; break; fi
+    idx=$((idx + 1))
+  done
+
+  if [ "$sep" -ge 0 ]; then
+    post=( "${args[@]:$((sep + 1))}" )
+    if [ "${#post[@]}" -ge 1 ]; then
+      if [ "${#post[@]}" -eq 1 ]; then
+        body="${post[0]}"                 # single shell-command string (harness case)
+      else
+        body="exec"                        # already-tokenized argv: re-exec verbatim
+        for t in "${post[@]}"; do body="$body $(printf '%q' "$t")"; done
+      fi
+
+      ntok=$(printf '%s\n' "$body" | wc -w | tr -d '[:space:]')
+      has_op=0
+      case "$body" in
+        *"&&"*|*"||"*|*";"*|*"|"*|*">"*|*"<"*) has_op=1 ;;
+      esac
+
+      if [ "$has_op" -eq 1 ] || [ "${ntok:-0}" -gt 2 ]; then
+        dir="${TMPDIR:-/tmp}/cmux-teammate-launch"
+        mkdir -p "$dir" 2>/dev/null || true
+        find "$dir" -type f -mmin +120 -delete 2>/dev/null || true
+        script="$dir/launch-$$-${RANDOM}.sh"
+        # Teammate panes are spawned by cmux with a MINIMAL PATH (cmux shims +
+        # system dirs only) - no node/npm/brew, which breaks teammates that need
+        # to build/test. This shim runs in the LEAD's environment, so bake the
+        # lead's full PATH into the launcher; the teammate then inherits the same
+        # toolchain (node, npm, etc.) as the lead.
+        { printf '#!/bin/bash\n'; printf 'export PATH=%q\n' "$PATH"; printf '%s\n' "$body"; } > "$script"
+        chmod +x "$script"
+        newargs=( "${args[@]:0:$((sep + 1))}" "$script" )
+        exec "$CMUX" __tmux-compat "${newargs[@]}"
+      fi
+    fi
+  fi
+fi
+
+exec "$CMUX" __tmux-compat "$@"

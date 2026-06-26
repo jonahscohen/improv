@@ -2,7 +2,26 @@
 // Validates code against 27 deterministic anti-patterns with severity scoring
 // Used by audit flows (K, L, V) to detect design violations
 
-import { ANTI_PATTERNS } from './design-laws';
+import type { ProductCheckContext } from './validators/check-context';
+import type { CanonicalSeverity } from './product-rule-types';
+
+// Registry-backed (Stage 4 convergence). The private design-laws ANTI_PATTERNS engine
+// (27 patterns; 21 were presence-of-CSS theater) is RETIRED. validateCode now runs the
+// registry's anti-pattern owner rules (the real named bans, backed by absolute-ban-detector).
+// RULES is required LAZILY so this module can be imported anywhere without a registry cycle.
+const AP_SEVERITY: Record<CanonicalSeverity, 'critical' | 'high' | 'medium' | 'low'> = {
+  blocker: 'critical', major: 'high', minor: 'medium', advisory: 'low',
+};
+let _antiPatternRules: any[] | null = null;
+function antiPatternRegistryRules(): any[] {
+  if (_antiPatternRules === null) {
+    const { RULES } = require('./product-rule-registry');
+    _antiPatternRules = (RULES as any[]).filter(
+      (r) => r.ownerValidatorId === 'anti-pattern' && typeof r.checkProduct === 'function',
+    );
+  }
+  return _antiPatternRules;
+}
 
 export interface AntiPatternViolation {
   patternId: string;
@@ -35,22 +54,28 @@ export class AntiPatternValidator {
     let highCount = 0;
     let mediumCount = 0;
 
-    // Test against each anti-pattern
-    for (const [key, pattern] of Object.entries(ANTI_PATTERNS)) {
-      if (pattern.checker(code)) {
-        const violation: AntiPatternViolation = {
-          patternId: pattern.id,
-          patternName: pattern.name,
-          severity: pattern.severity as 'critical' | 'high' | 'medium' | 'low',
-          match: this.extractMatch(code, pattern.name),
-          fix: this.getSuggestedFix(pattern.name),
-        };
-
-        violations.push(violation);
-
-        if (pattern.severity === 'critical') criticalCount++;
-        else if (pattern.severity === 'high') highCount++;
-        else if (pattern.severity === 'medium') mediumCount++;
+    // Run the registry's anti-pattern owner rules over the code (as both CSS + markup).
+    // Provide a synthetic CollectedFile too: the markup checks (hero-metric, modal) scan
+    // ctx.files[].markup per-file, so files:[] would make them silently pass (Codex P1).
+    const ctx: ProductCheckContext = {
+      cssText: code,
+      markup: code,
+      files: [{ path: '<input>', sourceKind: 'html', cssText: code, markup: code, evidenceKindsPresent: ['css-rule', 'markup'] }],
+    };
+    for (const rule of antiPatternRegistryRules()) {
+      const v = rule.checkProduct(ctx);
+      if (v.status === 'fail') {
+        const severity = AP_SEVERITY[rule.severity as CanonicalSeverity] || 'medium';
+        violations.push({
+          patternId: rule.canonicalRuleKey,
+          patternName: rule.canonicalRuleKey,
+          severity,
+          match: v.message,
+          fix: v.remediation,
+        });
+        if (severity === 'critical') criticalCount++;
+        else if (severity === 'high') highCount++;
+        else if (severity === 'medium') mediumCount++;
       }
     }
 
@@ -154,82 +179,6 @@ export class AntiPatternValidator {
   }
 
   // Private helper methods
-
-  private extractMatch(code: string, patternName: string): string {
-    // Extract a small snippet showing the violation
-    const patterns: Record<string, RegExp> = {
-      'Side-stripe borders': /border-(left|right):\s*\d+px/,
-      'Gradient text': /background-clip:\s*text/,
-      'Glassmorphism as default': /backdrop-filter:|backdropFilter:/,
-      'Hero-metric template': /hero|metric/i,
-      'Identical card grids': /grid|repeat.*card/i,
-      'Modal as first thought': /modal|dialog/i,
-      'Flat typography scales': /font-size|--fs-/,
-      'Body text exceeds 75ch': /max-width|width.*\d{3,}/i,
-      'Pure black or white': /#000000|#fff|#ffffff/,
-      'Alpha as design substitute': /rgba\(.*,\s*0\.[1-4]\)/,
-      'WCAG contrast failure': /contrast|wcag/i,
-      'Inconsistent spacing rhythm': /padding:|margin:|gap:/,
-      'Nested cards': /card.*card|nested/i,
-      'Cluttered information hierarchy': /cluttered|busy/i,
-      'No breathing room': /margin|padding/,
-      'Sans + serif mix': /font-family.*sans.*serif|font-family.*serif.*sans/i,
-      'Overlapping text': /overlap|z-index.*\d+/,
-      'Orphaned single words': /orphan|widows/i,
-      'Ease.out on entrance': /ease-out|easeOut|cubic-bezier.*0\..*0\./,
-      'No reduced-motion support': /prefers-reduced-motion/i,
-      'Click targets <40x40px': /width:\s*(?:1\d|[1-3]\d)px|height:\s*(?:1\d|[1-3]\d)px/,
-      'Missing focus states': /focus|:focus/,
-      'No feedback on state change': /active|:active|disabled/,
-      'Fixed pixel dimensions on mobile': /@media.*fixed|width:\s*\d+px/,
-      'Empty states not designed': /empty|no.*data/i,
-      'Loading states missing': /loading|loader|spinner/i,
-      'Direct copy from reference': /generic|copy|reference/i,
-    };
-
-    const regex = patterns[patternName];
-    if (regex) {
-      const match = code.match(regex);
-      return match ? match[0].substring(0, 50) : patternName;
-    }
-
-    return patternName;
-  }
-
-  private getSuggestedFix(patternName: string): string {
-    const fixes: Record<string, string> = {
-      'Side-stripe borders': 'Use border-bottom or box-shadow instead of side borders',
-      'Gradient text': 'Use gradient on background element instead of text itself',
-      'Glassmorphism as default':
-        'Reserve glassmorphism for overlay/modal contexts only',
-      'Hero-metric template': 'Vary card layouts, use asymmetric proportions',
-      'Identical card grids': 'Create visual hierarchy with varied card sizes',
-      'Modal as first thought': 'Try inline expansion, progressive disclosure, or sidebar',
-      'Flat typography scales': 'Increase size ratio between steps (target 1.25+)',
-      'Body text exceeds 75ch': 'Constrain paragraph width to max 66-75 characters',
-      'Pure black or white': 'Use tinted neutrals (#f5f5f5, #1a1a1a) instead',
-      'Alpha as design substitute': 'Build proper color palette with semantic colors',
-      'WCAG contrast failure': 'Increase text/UI contrast to 4.5:1 (AA) or 3:1 minimum',
-      'Inconsistent spacing rhythm': 'Use 4pt/8pt/16pt modular system consistently',
-      'Nested cards': 'Flatten hierarchy or use borders instead of nested cards',
-      'Cluttered information hierarchy': 'Remove 30% of visual elements, increase whitespace',
-      'No breathing room': 'Add minimum 16px padding/margin around content',
-      'Sans + serif mix': 'Pair serif heading with sans body (or same family)',
-      'Overlapping text': 'Increase line-height or letter-spacing for clarity',
-      'Orphaned single words': 'Use text-wrap: balance on headings',
-      'Ease.out on entrance': 'Use cubic-bezier(0.25, 0.46, 0.45, 0.94) on entrance',
-      'No reduced-motion support': 'Add @media (prefers-reduced-motion) with instant alternatives',
-      'Click targets <40x40px': 'Ensure all interactive elements are 40x40px minimum',
-      'Missing focus states': 'Add visible focus ring or outline on all focusable elements',
-      'No feedback on state change': 'Add visual feedback for hover, active, disabled states',
-      'Fixed pixel dimensions on mobile': 'Use relative units (rem, %) and media queries',
-      'Empty states not designed': 'Design for 0 data state with helpful messaging',
-      'Loading states missing': 'Add spinner/skeleton loader during data fetching',
-      'Direct copy from reference': 'Adapt reference to match project register and brand',
-    };
-
-    return fixes[patternName] || 'Review design against anti-pattern guidelines';
-  }
 
   private generateRecommendations(
     violations: AntiPatternViolation[],

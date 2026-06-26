@@ -6,7 +6,6 @@ exports.FlowSTypographyExcellenceHandler = void 0;
 exports.createFlowSHandler = createFlowSHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
-const extended_domain_validator_1 = require("./extended-domain-validator");
 const design_md_parser_1 = require("./design-md-parser");
 const model_routing_1 = require("./model-routing");
 class FlowSTypographyExcellenceHandler extends flow_handler_1.BaseFlowHandler {
@@ -21,20 +20,9 @@ class FlowSTypographyExcellenceHandler extends flow_handler_1.BaseFlowHandler {
         (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
         try {
-            const domainCheckContext = {
-                designTokens: context.metadata?.designTokens || {},
-                typography: context.metadata?.typography || {},
-                cssRules: context.metadata?.cssRules || [],
-            };
-            const extendedValidationReport = extended_domain_validator_1.ExtendedDomainValidator.validateAll(domainCheckContext);
-            const typographyDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('typography');
-            const typographyPassRate = extendedValidationReport.passRateByDomain['typography'] || '0%';
-            const typographyPassed = Math.round((parseFloat(typographyPassRate) / 100) * typographyDomainRules.length);
             if (enhancedContext?.flowMetadata) {
                 enhancedContext.flowMetadata.tags = ['flowS', 'typography-excellence', 'type-mastery'];
                 enhancedContext.flowMetadata.customData = {
-                    'typography-rules': typographyDomainRules.length,
-                    'typography-rules-passed': typographyPassed,
                     'type-scale-levels': 12,
                     'font-pairing-guidance': true,
                 };
@@ -43,7 +31,6 @@ class FlowSTypographyExcellenceHandler extends flow_handler_1.BaseFlowHandler {
                 { label: 'Audit current typography system', required: true },
                 { label: 'Define type scale (headings + body)', required: true },
                 { label: 'Select primary and fallback fonts', required: true },
-                { label: 'Typography domain validation', required: false, description: `${typographyPassed}/${typographyDomainRules.length} rules passing (${typographyPassRate})` },
                 { label: 'Implement line height and letter spacing', required: true },
                 { label: 'Apply optical adjustments (baseline shift)', required: true },
                 { label: 'Test variable font axes (if using)', required: true },
@@ -63,8 +50,6 @@ class FlowSTypographyExcellenceHandler extends flow_handler_1.BaseFlowHandler {
             const guidance = [
                 'Typography Excellence: Master type scales, kerning, variable fonts, and reading comfort.',
                 '',
-                'Domain Validation Results:',
-                '',
                 'TYPE SCALE:',
                 `- Display family: ${displayFamily}${cite('typography.display.family')}`,
                 `- Body family: ${bodyFamily}${cite('typography.body.family')}`,
@@ -83,20 +68,9 @@ class FlowSTypographyExcellenceHandler extends flow_handler_1.BaseFlowHandler {
                 '- Axes: weight (wght), optical size (opsz), slant',
                 '- Usage: wght 400-700, opsz auto on font-size',
             ];
-            const getSeverity = (percentage) => {
-                const num = parseFloat(percentage);
-                if (num >= 80)
-                    return 'pass';
-                if (num >= 50)
-                    return 'warning';
-                return 'fail';
-            };
             const memoryBuilder = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())
                 .setSummary('Typography excellence: kerning, variable fonts, and type system mastery')
-                .addRule('typography', typographyDomainRules.map((r) => r.name))
                 .addDecision('Type scale', 'Display → Heading → Body → Small with comfortable line height and kerning')
-                .addMetric('typography-rules-passing', typographyPassed, getSeverity(typographyPassRate), typographyDomainRules.length)
-                .addValidation('Typography domain', getSeverity(typographyPassRate), `${typographyPassed}/${typographyDomainRules.length} rules passing`)
                 .addArtifact('type-scale', 1);
             return {
                 flowId: this.flowId,

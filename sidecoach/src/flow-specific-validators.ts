@@ -128,7 +128,7 @@ const designTokensRules: FlowValidationRule[] = [
 const tacticalPolishRules: FlowValidationRule[] = [
   {
     name: 'polish-principles-applied',
-    description: '22-point Polish Standard must be enforced',
+    description: '24-point Polish Standard must be enforced',
     check: (context, result) => {
       // Check for polish-related guidance
       return !!(result.guidance && result.guidance.some(g =>

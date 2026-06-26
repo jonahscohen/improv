@@ -9,7 +9,6 @@ const flow_handler_1 = require("./flow-handler");
 const component_gallery_reference_1 = require("./component-gallery-reference");
 const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
-const extended_domain_validator_1 = require("./extended-domain-validator");
 const model_routing_1 = require("./model-routing");
 class FlowBComponentResearchHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
@@ -82,29 +81,12 @@ class FlowBComponentResearchHandler extends flow_handler_1.BaseFlowHandler {
                 a11yPatterns,
                 validationResults,
             };
-            // Domain validation integration
-            const domainCheckContext = {
-                designTokens: context.metadata?.designTokens || {},
-                componentTree: context.metadata?.componentTree || { components: componentPatterns.length },
-                cssRules: context.metadata?.cssRules || [],
-                accessibility: context.metadata?.accessibility,
-                contrast: context.metadata?.contrast,
-            };
-            const extendedValidationReport = extended_domain_validator_1.ExtendedDomainValidator.validateAll(domainCheckContext);
-            const interactionDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('interaction');
-            const uxWritingDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('ux-writing');
-            const interactionPassRate = extendedValidationReport.passRateByDomain['interaction'] || '0%';
-            const uxWritingPassRate = extendedValidationReport.passRateByDomain['ux-writing'] || '0%';
-            const interactionPassed = Math.round((parseFloat(interactionPassRate) / 100) * interactionDomainRules.length);
-            const uxWritingPassed = Math.round((parseFloat(uxWritingPassRate) / 100) * uxWritingDomainRules.length);
             // Build checklist
             const checklist = this.createChecklist([
                 { label: 'Brand personality defined', required: true, description: brandPersonality || 'Not specified' },
                 { label: 'Design approach specified', required: true, description: designApproach || 'Not specified' },
-                { label: 'Interaction domain rules reviewed (8 states)', required: true, description: `${interactionDomainRules.length} rules loaded` },
+                { label: 'Interaction domain rules reviewed (8 states)', required: true, description: `${interactionRules.length} rules loaded` },
                 { label: 'Writing domain rules reviewed', required: true, description: `${writingRules.length} rules loaded` },
-                { label: 'Interaction domain validation', required: false, description: `${interactionPassed}/${interactionDomainRules.length} rules passing (${interactionPassRate})` },
-                { label: 'UX Writing domain validation', required: false, description: `${uxWritingPassed}/${uxWritingDomainRules.length} rules passing (${uxWritingPassRate})` },
                 { label: 'Component patterns identified', required: false, description: `${componentPatterns.length} patterns available` },
                 { label: 'Semantic markup documented', required: false, description: `${Object.keys(semanticMarkup).length} components` },
                 { label: 'WCAG validation complete', required: false, description: `${validationResults.length} components validated` },
@@ -121,8 +103,6 @@ class FlowBComponentResearchHandler extends flow_handler_1.BaseFlowHandler {
                 '',
                 'Writing Domain Rules (Labels & Microcopy):',
                 ...writingRules,
-                '',
-                'Domain Validation Results:',
                 '',
                 'Semantic Markup Requirements:',
                 ...Object.entries(semanticMarkup).map(([name, markup]) => `- ${name}: use semantic ${markup}`),
@@ -141,17 +121,13 @@ class FlowBComponentResearchHandler extends flow_handler_1.BaseFlowHandler {
             const wcagPassCount = validationResults.filter((r) => r.wcagStatus === 'pass').length;
             const wcagWarningCount = validationResults.filter((r) => r.wcagStatus === 'warning').length;
             const memoryBuilder = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())
-                .setSummary(`Component research: ${componentPatterns.length} patterns with domain validation (interaction: ${interactionPassRate}, writing: ${uxWritingPassRate})`)
+                .setSummary(`Component research: ${componentPatterns.length} patterns analyzed`)
                 .addRule('interaction', interactionRules)
                 .addRule('writing', writingRules)
                 .addDecision(`Selected design approach: ${designApproach}`, `Component patterns aligned to ${designApproach} architecture`)
                 .addMetric('component-patterns-analyzed', componentPatterns.length, 'pass')
                 .addMetric('interaction-states-covered', 8, 'pass')
-                .addMetric('interaction-domain-validation', interactionPassed, 'pass', interactionDomainRules.length)
-                .addMetric('writing-domain-validation', uxWritingPassed, 'pass', uxWritingDomainRules.length)
                 .addMetric('wcag-validation-pass', wcagPassCount, 'pass', validationResults.length)
-                .addValidation('Interaction domain compliance', interactionPassed === interactionDomainRules.length ? 'pass' : 'warning', `${interactionPassed}/${interactionDomainRules.length} pass`)
-                .addValidation('UX Writing domain compliance', uxWritingPassed === uxWritingDomainRules.length ? 'pass' : 'warning', `${uxWritingPassed}/${uxWritingDomainRules.length} pass`)
                 .addValidation('WCAG compliance', wcagWarningCount === 0 ? 'pass' : 'warning', `${wcagPassCount}/${validationResults.length} pass`)
                 .addReference('component-gallery', componentPatterns.length)
                 .addArtifact('component-patterns', componentPatterns.length, ['flowG_component_implementation', 'flowL_design_critique']);
@@ -160,7 +136,7 @@ class FlowBComponentResearchHandler extends flow_handler_1.BaseFlowHandler {
                 flowId: this.flowId,
                 flowName: this.getFlowName(),
                 status: 'success',
-                message: `Component research: ${componentPatterns.length} patterns analyzed with ${interactionDomainRules.length} interaction rules + ${writingRules.length} writing rules`,
+                message: `Component research: ${componentPatterns.length} patterns analyzed with ${interactionRules.length} interaction rules + ${writingRules.length} writing rules`,
                 guidance,
                 checklist,
                 artifacts: componentPatterns.length > 0

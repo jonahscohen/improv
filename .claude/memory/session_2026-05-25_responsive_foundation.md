@@ -1,6 +1,6 @@
 ---
 name: Responsive foundation reference written (2026-05-25)
-description: Canonical sidecoach responsive reference synthesizing Bencium, impeccable, component-gallery, make-interfaces-feel-better, and public web research
+description: Canonical sidecoach responsive reference synthesizing Bencium, oracle, component-gallery, make-interfaces-feel-better, and public web research
 type: project
 relates_to: [all_tasks_complete.md, session_2026-05-23_sidecoach_100_complete.md, sidecoach_consolidation_gameplan.md]
 ---
@@ -14,11 +14,11 @@ Built by Jonah on 2026-05-25. Single dense reference file at `sidecoach/referenc
 Sourced verbatim and synthesized from:
 
 1. **Bencium's `RESPONSIVE-DESIGN.md`** (https://github.com/bencium/bencium-marketplace/blob/main/bencium-impact-designer/skills/bencium-impact-designer/RESPONSIVE-DESIGN.md): the 5-band breakpoint table (XS 0-479, SM 480-767, MD 768-1023, LG 1024-1439, XL 1440+) reproduced as-is plus extensions (test widths 375/390/414/768/1024/1280/1440, Tailwind name mapping, content-driven breakpoint allowance, clamp() guidance).
-2. **impeccable `adapt.md` and `responsive-design.md`** (cached): mobile/tablet/desktop adaptation strategies, layout-vs-interaction-vs-content split, pointer/hover media queries, safe-area env() pattern, responsive images with srcset.
+2. **oracle `adapt.md` and `responsive-design.md`** (cached): mobile/tablet/desktop adaptation strategies, layout-vs-interaction-vs-content split, pointer/hover media queries, safe-area env() pattern, responsive images with srcset.
 3. **component-gallery-reference SKILL.md** (`~/.claude/skills/component-gallery-reference/SKILL.md`): the 60 component types map; pulled Navigation, Drawer, Tabs, Segmented control, Modal, Combobox into the mobile-nav decision tree.
 4. **make-interfaces-feel-better SKILL.md** (`~/.agents/skills/make-interfaces-feel-better/SKILL.md`, principle 16): the 40x40 hit-area minimum - sidecoach overrides to 44x44 for WCAG 2.5.5 / iOS HIG / Bencium consistency; documented the override and the pseudo-element extension pattern.
 
-Web research filled gaps Bencium and impeccable did not cover:
+Web research filled gaps Bencium and oracle did not cover:
 
 - **2026 mobile-nav patterns** (uxpin, phone-simulator, designstudiouiux): bottom-tab-bar vs hamburger 40% task-completion gap, hybrid bottom-nav + hamburger NN/g recommendation.
 - **WCAG 2.5.5 vs 2.5.8** (w3.org, css-tricks, adrian roselli): 44x44 AAA enhanced vs 24x24 AA minimum, target-size-is-not-visual-size principle.
