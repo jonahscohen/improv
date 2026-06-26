@@ -54,7 +54,7 @@ After Phase 1 verification:
 - Phase 4: RegressionDetector (compare against prior runs)
 - Phase 5: ProjectPersonaEngine (async LLM extraction from PRODUCT.md)
 - Phase 6: DesignDebtTracker (formal tracking of deferred decisions)
-- Phase 7: Impeccable Detect Integration (wire `npx impeccable detect` into FlowK)
+- Phase 7: Oracle Detect Integration (wire `npx oracle detect` into FlowK)
 
 Plus: Port full skill content (component gallery, fontshare, motion patterns, curate wizard, all-seven QA flow)
 

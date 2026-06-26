@@ -365,7 +365,7 @@ GPT-Tasteskill's AIDA structure (Attention/Interest/Desire/Action) is a 1960s ad
 
 ---
 
-## SECTION 3: What this covers that impeccable + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
 
 The 4 variants are PRE-COMPOSED VIBE SHEETS - each is a complete style system the user can opt into rather than building from scratch.
 

@@ -9,7 +9,6 @@ const flow_handler_1 = require("./flow-handler");
 const fontshare_reference_1 = require("./fontshare-reference");
 const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
-const extended_domain_validator_1 = require("./extended-domain-validator");
 const model_routing_1 = require("./model-routing");
 class FlowCFontResearchHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
@@ -52,23 +51,10 @@ class FlowCFontResearchHandler extends flow_handler_1.BaseFlowHandler {
                 pairingRules,
                 typographyRules: typographyDomain.rules,
             };
-            // Domain validation integration
-            const domainCheckContext = {
-                designTokens: context.metadata?.designTokens || {},
-                componentTree: context.metadata?.componentTree || { fonts: fontCandidates.length },
-                cssRules: context.metadata?.cssRules || [],
-                typography: context.metadata?.typography,
-                accessibility: context.metadata?.accessibility,
-            };
-            const extendedValidationReport = extended_domain_validator_1.ExtendedDomainValidator.validateAll(domainCheckContext);
-            const typographyDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('typography');
-            const typographyPassRate = extendedValidationReport.passRateByDomain['typography'] || '0%';
-            const typographyPassed = Math.round((parseFloat(typographyPassRate) / 100) * typographyDomainRules.length);
             // Build checklist
             const checklist = this.createChecklist([
                 { label: 'Brand personality defined', required: true, description: brandPersonality || 'Not specified' },
                 { label: 'Typography domain rules reviewed', required: true, description: `${typographyRules.length} rules loaded` },
-                { label: 'Typography domain validation', required: false, description: `${typographyPassed}/${typographyDomainRules.length} rules passing (${typographyPassRate})` },
                 { label: 'Font pairing strategy selected', required: true, description: pairingRules.length > 0 ? `${pairingRules.length} rules` : 'None found' },
                 { label: 'Font candidates identified', required: false, description: `${fontCandidates.length} candidates available` },
             ]);
@@ -78,8 +64,6 @@ class FlowCFontResearchHandler extends flow_handler_1.BaseFlowHandler {
                 '',
                 'Typography Domain Rules (16 principles):',
                 ...typographyRules,
-                '',
-                'Domain Validation Results:',
                 '',
                 'Font Pairing Strategy:',
                 ...pairingRules,
@@ -94,13 +78,11 @@ class FlowCFontResearchHandler extends flow_handler_1.BaseFlowHandler {
                 `${fontCandidates.length} font candidates available. Run Flow F to extract design tokens with selected typefaces.`,
             ];
             const memoryBuilder = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())
-                .setSummary(`Font research: ${fontCandidates.length} candidates with typography domain validation (${typographyPassRate})`)
+                .setSummary(`Font research: ${fontCandidates.length} candidates analyzed`)
                 .addRule('typography', typographyRules)
                 .addDecision(`Font pairing strategy: ${pairingRules.length > 0 ? 'defined' : 'generic'}`, 'Selected pairing approach based on brand personality')
                 .addMetric('font-candidates-analyzed', fontCandidates.length, 'pass')
                 .addMetric('typography-rules-applied', typographyRules.length, 'pass', 16)
-                .addMetric('typography-domain-validation', typographyPassed, 'pass', typographyDomainRules.length)
-                .addValidation('Typography domain compliance', typographyPassed === typographyDomainRules.length ? 'pass' : 'warning', `${typographyPassed}/${typographyDomainRules.length} pass`)
                 .addValidation('Font pairing rules', pairingRules.length > 0 ? 'pass' : 'warning')
                 .addReference('fontshare', fontCandidates.length, 'typography candidates')
                 .addArtifact('font-candidates', fontCandidates.length, ['flowF_design_tokens', 'flowG_component_implementation']);

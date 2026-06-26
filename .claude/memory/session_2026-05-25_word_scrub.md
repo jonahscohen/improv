@@ -36,16 +36,16 @@ Marketing-site sidecoach.html meta description updated. Fix-gate suppressed - 71
 ## Progress
 
 - Marketing-site (3 HTML files) - DONE. 0 remaining references.
-- TS source identifier rename - DONE. IMPECCABLE_VERB_REGISTRY → VERB_REGISTRY, ImpeccableCommandEntry → VerbCommandEntry, getImpeccableEntry → getVerbEntry, getImpeccableCommandInfo → getVerbCommandInfo, IMPECCABLE_REF → SKILL_REF.
-- File renames - DONE via git mv. impeccable-command-registry.ts → verb-command-registry.ts. impeccable-detect-bridge.ts → category-reflex-bridge.ts → then deleted entirely because it was a wrapper around the external CLI we're abandoning. flow-handlers-tier3-tier4.ts had its bridge consumer block removed.
+- TS source identifier rename - DONE. ORACLE_VERB_REGISTRY → VERB_REGISTRY, OracleCommandEntry → VerbCommandEntry, getOracleEntry → getVerbEntry, getOracleCommandInfo → getVerbCommandInfo, ORACLE_REF → SKILL_REF.
+- File renames - DONE via git mv. oracle-command-registry.ts → verb-command-registry.ts. oracle-detect-bridge.ts → category-reflex-bridge.ts → then deleted entirely because it was a wrapper around the external CLI we're abandoning. flow-handlers-tier3-tier4.ts had its bridge consumer block removed.
 
 ## DONE
 
 - All 6 tasks (115-120) closed.
-- src identifier renames complete. impeccable-command-registry.ts -> verb-command-registry.ts. impeccable-detect-bridge.ts deleted (external CLI wrapper, no longer needed).
-- context-loader.ts: legacy .impeccable.md filename support + IMPECCABLE_CONTEXT_DIR env var removed.
-- sprint8 test renamed sprint8-impeccable-parity -> sprint8-verb-parity.
-- sidecoach/reference/_extracted/impeccable/ renamed to legacy-design-skill/ (source attribution layer).
+- src identifier renames complete. oracle-command-registry.ts -> verb-command-registry.ts. oracle-detect-bridge.ts deleted (external CLI wrapper, no longer needed).
+- context-loader.ts: legacy .oracle.md filename support + ORACLE_CONTEXT_DIR env var removed.
+- sprint8 test renamed sprint8-oracle-parity -> sprint8-verb-parity.
+- sidecoach/reference/_extracted/oracle/ renamed to legacy-design-skill/ (source attribution layer).
 - Marketing-site HTML scrubbed: 3 pages clean. Reference page tab + entire panel removed.
 - claude/CLAUDE.md: full Design Work section rewritten. 25 references gone.
 - claude/settings.json: plugin entry + marketplace removed.

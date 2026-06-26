@@ -2,7 +2,7 @@
 // Source: product-rule-registry.ts + flow-validation-capabilities.ts
 import type { CleanPolicy, SourceKindSupport } from './product-rule-types';
 
-export interface GeneratedValidator { validatorId: string; ownedRuleIds: string[]; registryScope: string[]; supportedSourceKinds: SourceKindSupport[]; browserRuleIds: string[]; browserCoverageByScope: import('./product-rule-types').RequiredCoverageRecord[]; cleanPolicy: CleanPolicy; }
+export interface GeneratedValidator { validatorId: string; ownedRuleIds: string[]; registryScope: string[]; supportedSourceKinds: SourceKindSupport[]; browserRuleIds: string[]; browserCoverageByScope: import('./product-rule-types').RequiredCoverageRecord[]; renderedRuleIds: string[]; renderedCoverageByScope: import('./product-rule-types').RequiredCoverageRecord[]; cleanPolicy: CleanPolicy; }
 export interface GeneratedFlowCapability { flowId: string; capability: 'product_validator' | 'advisory' | 'none'; }
 
 export const GENERATED_VALIDATORS: GeneratedValidator[] = [
@@ -20,6 +20,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       "polish.subtle-exit",
       "polish.font-smoothing",
       "polish.animatepresence-initial",
+      "polish.interruptible-animations",
+      "polish.skip-load-animation",
       "polish.sparse-will-change",
       "polish.shadows-over-borders",
       "polish.optical-alignment",
@@ -27,7 +29,9 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       "polish.shadow-hierarchy",
       "polish.reduced-motion-respect",
       "polish.state-completeness",
-      "polish.anti-pattern-genericity"
+      "polish.anti-pattern-genericity",
+      "polish.tiny-text",
+      "polish.marketing-buzzword"
     ],
     "registryScope": [
       "polished-press-feedback",
@@ -41,6 +45,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       "polished-exit-choreography",
       "polished-font-smoothing",
       "polished-first-load-suppression",
+      "polished-interruptible-state",
+      "polished-load-animation-gating",
       "polished-sparse-will-change",
       "polished-elevation-shadow",
       "polished-optical-alignment",
@@ -48,7 +54,9 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       "polished-shadow-hierarchy",
       "polished-motion-respect",
       "polished-state-completeness",
-      "polished-genericity-floor"
+      "polished-genericity-floor",
+      "rendered-tiny-text",
+      "rendered-marketing-buzzword"
     ],
     "supportedSourceKinds": [
       {
@@ -73,6 +81,10 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       },
       {
         "kind": "less",
+        "level": "full"
+      },
+      {
+        "kind": "rendered-scan",
         "level": "full"
       },
       {
@@ -118,6 +130,32 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
         "requireAllDiscoveredApplicableFiles": true
       }
     ],
+    "renderedRuleIds": [
+      "polish.tiny-text",
+      "polish.marketing-buzzword"
+    ],
+    "renderedCoverageByScope": [
+      {
+        "ruleId": "polish.tiny-text",
+        "scope": "component",
+        "evidenceAlternativesByRequirement": [
+          [
+            "rendered-scan"
+          ]
+        ],
+        "requireAllDiscoveredApplicableFiles": true
+      },
+      {
+        "ruleId": "polish.marketing-buzzword",
+        "scope": "component",
+        "evidenceAlternativesByRequirement": [
+          [
+            "rendered-scan"
+          ]
+        ],
+        "requireAllDiscoveredApplicableFiles": true
+      }
+    ],
     "cleanPolicy": {
       "requiredRuleIds": [
         "polish.scale-on-press",
@@ -130,6 +168,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
         "polish.subtle-exit",
         "polish.font-smoothing",
         "polish.animatepresence-initial",
+        "polish.interruptible-animations",
+        "polish.skip-load-animation",
         "polish.sparse-will-change",
         "polish.shadows-over-borders",
         "polish.optical-alignment",
@@ -287,6 +327,34 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
           "requireAllDiscoveredApplicableFiles": true
         },
         {
+          "ruleId": "polish.interruptible-animations",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.skip-load-animation",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
           "ruleId": "polish.sparse-will-change",
           "scope": "file",
           "evidenceAlternativesByRequirement": [
@@ -408,6 +476,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
     ],
     "browserRuleIds": [],
     "browserCoverageByScope": [],
+    "renderedRuleIds": [],
+    "renderedCoverageByScope": [],
     "cleanPolicy": {
       "requiredRuleIds": [
         "theming.hex-in-interactive-state",
@@ -460,7 +530,6 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       "anti-pattern.gradient-text",
       "anti-pattern.glassmorphism-default",
       "anti-pattern.side-stripe-borders",
-      "anti-pattern.identical-card-grids",
       "anti-pattern.hero-metric-template",
       "anti-pattern.modal-as-first-thought"
     ],
@@ -503,12 +572,13 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
     ],
     "browserRuleIds": [],
     "browserCoverageByScope": [],
+    "renderedRuleIds": [],
+    "renderedCoverageByScope": [],
     "cleanPolicy": {
       "requiredRuleIds": [
         "anti-pattern.gradient-text",
         "anti-pattern.glassmorphism-default",
         "anti-pattern.side-stripe-borders",
-        "anti-pattern.identical-card-grids",
         "anti-pattern.hero-metric-template",
         "anti-pattern.modal-as-first-thought"
       ],
@@ -563,20 +633,6 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
           "requireAllDiscoveredApplicableFiles": true
         },
         {
-          "ruleId": "anti-pattern.identical-card-grids",
-          "scope": "project",
-          "evidenceAlternativesByRequirement": [
-            [
-              "html",
-              "tsx",
-              "jsx",
-              "vue",
-              "svelte"
-            ]
-          ],
-          "requireAllDiscoveredApplicableFiles": true
-        },
-        {
           "ruleId": "anti-pattern.hero-metric-template",
           "scope": "project",
           "evidenceAlternativesByRequirement": [
@@ -614,18 +670,22 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
     "ownedRuleIds": [
       "a11y.focus-visible",
       "a11y.min-hit-area",
-      "a11y.color-contrast"
+      "a11y.color-contrast",
+      "a11y.broken-image",
+      "a11y.skipped-heading",
+      "a11y.gray-on-color",
+      "a11y.justified-text"
     ],
     "registryScope": [
       "keyboard-accessibility-floor",
       "touch-target-floor",
-      "contrast-floor"
+      "contrast-floor",
+      "rendered-broken-image",
+      "rendered-heading-order",
+      "rendered-gray-on-color",
+      "rendered-justified-text"
     ],
     "supportedSourceKinds": [
-      {
-        "kind": "contrast",
-        "level": "full"
-      },
       {
         "kind": "css",
         "level": "full"
@@ -643,6 +703,10 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
         "level": "full"
       },
       {
+        "kind": "rendered-scan",
+        "level": "full"
+      },
+      {
         "kind": "scss",
         "level": "full"
       },
@@ -652,8 +716,7 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       }
     ],
     "browserRuleIds": [
-      "a11y.min-hit-area",
-      "a11y.color-contrast"
+      "a11y.min-hit-area"
     ],
     "browserCoverageByScope": [
       {
@@ -665,13 +728,62 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
           ]
         ],
         "requireAllDiscoveredApplicableFiles": true
-      },
+      }
+    ],
+    "renderedRuleIds": [
+      "a11y.color-contrast",
+      "a11y.broken-image",
+      "a11y.skipped-heading",
+      "a11y.gray-on-color",
+      "a11y.justified-text"
+    ],
+    "renderedCoverageByScope": [
       {
         "ruleId": "a11y.color-contrast",
         "scope": "component",
         "evidenceAlternativesByRequirement": [
           [
-            "contrast"
+            "rendered-scan"
+          ]
+        ],
+        "requireAllDiscoveredApplicableFiles": true
+      },
+      {
+        "ruleId": "a11y.broken-image",
+        "scope": "component",
+        "evidenceAlternativesByRequirement": [
+          [
+            "rendered-scan"
+          ]
+        ],
+        "requireAllDiscoveredApplicableFiles": true
+      },
+      {
+        "ruleId": "a11y.skipped-heading",
+        "scope": "component",
+        "evidenceAlternativesByRequirement": [
+          [
+            "rendered-scan"
+          ]
+        ],
+        "requireAllDiscoveredApplicableFiles": true
+      },
+      {
+        "ruleId": "a11y.gray-on-color",
+        "scope": "component",
+        "evidenceAlternativesByRequirement": [
+          [
+            "rendered-scan"
+          ]
+        ],
+        "requireAllDiscoveredApplicableFiles": true
+      },
+      {
+        "ruleId": "a11y.justified-text",
+        "scope": "component",
+        "evidenceAlternativesByRequirement": [
+          [
+            "rendered-scan"
           ]
         ],
         "requireAllDiscoveredApplicableFiles": true
@@ -686,7 +798,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
         "major"
       ],
       "toleratedFindingCounts": {
-        "blocker|a11y": 0
+        "blocker|a11y": 0,
+        "major|a11y": 0
       },
       "requiredCoverageByScope": [
         {
@@ -699,6 +812,489 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
               "less",
               "tsx",
               "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        }
+      ],
+      "inconclusiveBehavior": "block",
+      "notApplicableBehavior": "exclude_and_report"
+    }
+  },
+  {
+    "validatorId": "forms",
+    "ownedRuleIds": [
+      "a11y.form-control-labelled",
+      "a11y.form-error-association",
+      "a11y.form-placeholder-not-label",
+      "a11y.form-input-type",
+      "a11y.form-choice-label-target",
+      "a11y.form-autocomplete",
+      "a11y.form-inputmode",
+      "a11y.form-never-block-paste",
+      "a11y.form-spellcheck-off",
+      "a11y.form-idempotent-submit",
+      "a11y.form-inline-errors",
+      "a11y.form-focus-first-error",
+      "a11y.form-no-pm-non-auth",
+      "a11y.form-textarea-submit",
+      "a11y.form-no-pre-disable-submit",
+      "a11y.form-autofocus-sparingly"
+    ],
+    "registryScope": [
+      "forms-labelling",
+      "forms-error-association",
+      "forms-placeholder",
+      "forms-input-type",
+      "forms-choice-target",
+      "forms-autocomplete",
+      "forms-inputmode",
+      "forms-paste",
+      "forms-spellcheck",
+      "forms-idempotent-submit",
+      "forms-inline-errors",
+      "forms-focus-first-error",
+      "forms-no-pm",
+      "forms-textarea-submit",
+      "forms-no-pre-disable",
+      "forms-autofocus"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "html",
+        "level": "full"
+      },
+      {
+        "kind": "jsx",
+        "level": "partial"
+      },
+      {
+        "kind": "svelte",
+        "level": "partial"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "vue",
+        "level": "partial"
+      }
+    ],
+    "browserRuleIds": [],
+    "browserCoverageByScope": [],
+    "renderedRuleIds": [],
+    "renderedCoverageByScope": [],
+    "cleanPolicy": {
+      "requiredRuleIds": [
+        "a11y.form-control-labelled",
+        "a11y.form-error-association",
+        "a11y.form-placeholder-not-label",
+        "a11y.form-input-type",
+        "a11y.form-choice-label-target",
+        "a11y.form-autocomplete",
+        "a11y.form-inputmode",
+        "a11y.form-never-block-paste",
+        "a11y.form-spellcheck-off",
+        "a11y.form-idempotent-submit",
+        "a11y.form-inline-errors",
+        "a11y.form-focus-first-error",
+        "a11y.form-no-pm-non-auth",
+        "a11y.form-textarea-submit",
+        "a11y.form-no-pre-disable-submit",
+        "a11y.form-autofocus-sparingly"
+      ],
+      "blockingSeverities": [
+        "blocker",
+        "major"
+      ],
+      "toleratedFindingCounts": {
+        "blocker|a11y": 0,
+        "major|a11y": 0
+      },
+      "requiredCoverageByScope": [
+        {
+          "ruleId": "a11y.form-control-labelled",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-error-association",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-placeholder-not-label",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-input-type",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-choice-label-target",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-autocomplete",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-inputmode",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-never-block-paste",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-spellcheck-off",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-idempotent-submit",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-inline-errors",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-focus-first-error",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-no-pm-non-auth",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-textarea-submit",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-no-pre-disable-submit",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.form-autofocus-sparingly",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        }
+      ],
+      "inconclusiveBehavior": "block",
+      "notApplicableBehavior": "exclude_and_report"
+    }
+  },
+  {
+    "validatorId": "page-quality",
+    "ownedRuleIds": [
+      "perf.image-dimensions",
+      "perf.image-lazy-load",
+      "polish.text-overflow-strategy",
+      "theming.color-scheme-dark",
+      "a11y.chart-text-fallback",
+      "a11y.button-label-specific"
+    ],
+    "registryScope": [
+      "pq-image-dimensions",
+      "pq-image-lazy",
+      "pq-text-overflow",
+      "pq-color-scheme",
+      "pq-chart-fallback",
+      "pq-button-label"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "css",
+        "level": "full"
+      },
+      {
+        "kind": "html",
+        "level": "full"
+      },
+      {
+        "kind": "jsx",
+        "level": "partial"
+      },
+      {
+        "kind": "less",
+        "level": "full"
+      },
+      {
+        "kind": "scss",
+        "level": "full"
+      },
+      {
+        "kind": "svelte",
+        "level": "partial"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "vue",
+        "level": "partial"
+      }
+    ],
+    "browserRuleIds": [],
+    "browserCoverageByScope": [],
+    "renderedRuleIds": [],
+    "renderedCoverageByScope": [],
+    "cleanPolicy": {
+      "requiredRuleIds": [
+        "perf.image-dimensions",
+        "perf.image-lazy-load",
+        "polish.text-overflow-strategy",
+        "theming.color-scheme-dark",
+        "a11y.chart-text-fallback",
+        "a11y.button-label-specific"
+      ],
+      "blockingSeverities": [
+        "blocker",
+        "major"
+      ],
+      "toleratedFindingCounts": {
+        "major|polish": 0
+      },
+      "requiredCoverageByScope": [
+        {
+          "ruleId": "perf.image-dimensions",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "perf.image-lazy-load",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "polish.text-overflow-strategy",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "theming.color-scheme-dark",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.chart-text-fallback",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "a11y.button-label-specific",
+          "scope": "project",
+          "evidenceAlternativesByRequirement": [
+            [
+              "html",
+              "tsx",
+              "jsx",
+              "vue",
+              "svelte"
             ]
           ],
           "requireAllDiscoveredApplicableFiles": true

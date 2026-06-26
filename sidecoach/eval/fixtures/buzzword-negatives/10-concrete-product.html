@@ -1,0 +1,33 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Postgres in 30 seconds</title>
+<style>
+  body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#0d1117;max-width:1000px;margin:0 auto;padding:48px 24px;line-height:1.6}
+  h1{font-size:72px;margin:0 0 16px;line-height:1.05;text-align:center}
+  .sub{font-size:26px;color:#57606a;margin:0 auto 56px;max-width:640px;text-align:center}
+  h2{font-size:34px;margin:48px 0 12px}
+  h3{font-size:22px;margin:24px 0 6px}
+  p{font-size:17px;margin:0 0 16px}
+</style></head>
+<body>
+  <main>
+    <h1>Deploy Postgres in 30 seconds</h1>
+    <p class="sub">A managed Postgres database with automatic backups, connection pooling, and point-in-time recovery. No servers to manage.</p>
+
+    <h2>Provision a database</h2>
+    <p>Create a database from the dashboard or the CLI. Each database runs on isolated compute and storage, and you get a connection string the moment it is ready. Branching lets you copy a database for a pull request and discard it when the branch is merged.</p>
+
+    <h2>Automatic backups</h2>
+    <p>We take a full backup every day and keep write-ahead logs continuously, so you can restore to any second within your retention window. Restores create a new database rather than overwriting the original, so you can inspect the result before switching traffic.</p>
+
+    <h2>Connection pooling</h2>
+    <p>A built-in pooler sits in front of every database and multiplexes thousands of client connections onto a small number of Postgres backends. This keeps serverless functions from exhausting the connection limit during a traffic spike.</p>
+
+    <h2>Point-in-time recovery</h2>
+    <p>If a bad migration drops a table, you can branch from a timestamp thirty seconds before the mistake and copy the table back. Recovery is measured in seconds because we restore from the nearest snapshot and replay only the logs since.</p>
+
+    <h2>Read replicas</h2>
+    <p>Add a read replica in another region with one command. Replicas stay within a second of the primary under normal load and are useful for analytics queries that would otherwise compete with production traffic.</p>
+
+    <h2>Pricing that scales down</h2>
+    <p>Compute pauses when a database is idle and resumes on the next connection, so a staging database that sees traffic during work hours costs almost nothing overnight. You pay for the storage you use and the compute time you consume, billed by the second.</p>
+  </main>
+</body></html>

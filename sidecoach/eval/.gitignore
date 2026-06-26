@@ -1,0 +1,9 @@
+# Derived scorecard collection cache (regenerable via scorecard-collect.mjs; per-page detector findings + timing)
+/.scorecard-cache/
+# Derived browser-mode ceiling cache (regenerable via scorecard-browser-ceiling.mjs)
+/.ceiling-cache/
+# Dev-corpus screenshots (derived; regenerated deterministically from the committed dev HTML)
+/corpus/.shots/
+# NOTE: /corpus/dev/ is intentionally COMMITTED (not ignored). Live-web captures can't be reproduced byte-for-byte
+# later, so the gated, Codex-labeled, detector-developed dev corpus must be a frozen content-addressable artifact -
+# same precedent as the committed frozen-90 corpus HTML. The dev-manifest.json shas pin exactly what was captured.

@@ -6,6 +6,9 @@
 import type {
   ProductRuleDefinition, ProductRuleResult, RuleStatus, EvidenceKind, NormalizedErrorCategory,
 } from '../product-rule-types';
+// import type only (erased at runtime) - threading the rendered-scan result type does NOT pull playwright into
+// the check-context graph.
+import type { RenderedScanCollection } from './rendered-live-scan';
 
 // Per-file collected evidence. evidenceKindsPresent lists the SOURCE kinds available
 // for this file (e.g. ['css'] or ['tsx']) - it is what isCoverageSatisfied matches
@@ -55,6 +58,10 @@ export interface ProductCheckContext {
   renderUrl?: string;
   browserEvidence?: BrowserEvidenceMeta;
   dom?: BrowserDomEvidence;
+  // The ONE live rendered scan for this target (objective + subjective findings from a single goto render),
+  // resolved once in run-validator and read synchronously by rendered-scan rules. Absent when there is no
+  // renderUrl or the run did not render. import type only - no runtime coupling to playwright.
+  renderedScan?: RenderedScanCollection;
 }
 
 // A check returns ONLY the verdict; metadata is stamped from the definition so a

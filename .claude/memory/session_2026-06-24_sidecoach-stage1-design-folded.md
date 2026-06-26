@@ -1,0 +1,34 @@
+---
+name: sidecoach-stage1-design-folded
+description: The Stage-1 convergence design AFTER folding the Codex adversarial architecture review (4 P0 + 4 P1 + 1 P2, all grounded/cited). Decision record incl. the one refinement of Codex's fail-closed rec (promote on renderUrl-presence, not no-renderUrl). This is the build spec for wiring the rendered scanner into run-validator.
+type: decision
+relates_to: [session_2026-06-24_sidecoach-stage1-integration-surface.md, session_2026-06-24_sidecoach-option-B-convergence-PLAN.md]
+---
+
+Collaborator: Jonah Cohen. Codex (GPT-5.4) adversarial review delivered via FILE handoff (text relay between teammate and lead only carried idle pings - the broken part; file write worked). Review artifact: scratchpad/stage1-codex-review-findings.md (23 files read, line-cited). Baseline: 60 suites green @ 774ab884.
+
+## DECISION: additive live bridge, eval untouched, new rendered-scan evidence channel
+Wire the rendered scanner into the LIVE path (run-validator) as a NEW evidence channel parallel to the browser-evidence channel. Do NOT touch the eval call path. "One engine" = one detector LOGIC with two callers (eval subprocess on HTML strings via setContent; live path on renderUrl via goto), sharing in-page detector functions but NOT the page-load boundary.
+
+**Alternatives considered:**
+- Force renderUrl through the HTML-string setContent scanner: REJECTED (P0-1) - setContent drops linked CSS/same-origin assets/SPA DOM; under-detects live apps.
+- Change scanObjectiveRendered(html) to use goto: REJECTED (P0-1/P1-2) - eval imports the compiled scanner and passes raw HTML; would break the 0.894 benchmark.
+- Route eval through run-validator's policy engine: REJECTED (P1-2) - changes the measured surface from raw scanner quality to policy decisions; benchmark becomes meaningless.
+
+**Why this one:** preserves the eval head-to-head proof byte-for-byte (eval untouched), ships the oracle-beating detection to the LIVE NL workflow (the actual mission), and keeps detection-preserving by construction.
+
+## THE FOLDED BUILD SPEC (each Codex finding -> concrete action)
+1. **New live scanner (P0-1, P0-4, P1-3):** `scanRenderedLive(renderUrl, signal?, opts?)` in a new module `src/validators/rendered-live-scan.ts`. Launches ONE browser, `page.goto(renderUrl)` with same-origin hermetic routing (reuse browser-evidence-collector's `isSubresourceAllowed`), 1280x800, reducedMotion. Evaluates BOTH `inPageObjective` (from objective scanner) AND the subjective in-page detector (from subjective scanner) in ONE page. Returns `RenderedScanCollection { objective: ObjectiveScan; subjective: SubjectiveScan }`. FAIL-CLOSED (available:false on any error). Accepts AbortSignal, races launch/nav/eval like the collector (browser-evidence-collector.ts:60). MUST NOT import eval/ (referee-independence stays green; it's a new module the scanner doesn't import).
+2. **New evidence kind (P0-2):** add `'rendered-scan'` to `EvidenceKind` (product-rule-types.ts:7) and `'rendered-scan': []` to `EVIDENCE_SOURCE_COMPATIBILITY` (line 136) -> empty source set -> `isStaticallySatisfiable` false -> rendered rules run via executeRule's non-static branch (run-validator.ts:106) reading `ctx.renderedScan`.
+3. **Parallel promotion path (P0-2, P0-3 REFINED):** add `RENDERED_BACKED_RULE_IDS` allowlist + `gen.renderedRuleIds`/`gen.renderedCoverageByScope` in validator-generation.ts (parallel to BROWSER_BACKED_RULE_IDS at line 24). New `activateRenderedPolicy(base, gen, hasRenderUrl)` in run-validator.ts promotes rendered rules to REQUIRED **iff renderUrl is present** (NOT scan-success-gated). 
+   - **THE REFINEMENT of Codex P0-3:** Codex said no-renderUrl should also block clean. REJECTED for detection-preservation: making rendered rules required-on-no-renderUrl flips every existing non-rendered validation (most of the 60 suites) to blocked. Correct policy: renderUrl PRESENT -> required (scan unavailable -> required inconclusive -> blocks = fail-closed, Codex's intent honored for the attempted-render case); NO renderUrl -> dormant/non-required (same as browser rules when their evidence is absent; preserves baseline). VERIFY against the suite, do not assume.
+4. **Memoized scan (P0-4):** ONE awaited promise in `runDetailed`, local to the call (no module global). After collectBrowserEvidence, `const renderedScan = await scanRenderedLive(renderUrl, signal)` (via injectable `deps.scanRenderedLive` seam, mirroring deps.collectBrowserEvidence so tests inject deterministic scans). Thread into `toCheckContext` -> new optional `ProductCheckContext.renderedScan`. checkProduct stays SYNCHRONOUS, launches no browser.
+5. **Color-contrast dedupe (P1-1):** keep canonical `a11y.color-contrast`; reimplement `checkColorContrast` to read the scanner `low-contrast` finding from `ctx.renderedScan` (fallback to existing contrast evidence if no rendered scan? - decide at build; primary = rendered). Move `a11y.color-contrast` from BROWSER_BACKED_RULE_IDS to RENDERED_BACKED_RULE_IDS. NO second low-contrast rule. Golden count net change from contrast = 0.
+6. **New rules (5):** broken-image, skipped-heading, gray-on-color, justified-text (objective; low-contrast reuses a11y.color-contrast) + tiny-text (subjective). Each: evidenceRequirements ['rendered-scan'], scope distinct `page:rendered`-family registryScope (P2-1, avoid shared-scope coverage masking), new SourceVocabulary `'rendered-scanner'` (add to union at product-rule-types.ts:9), sourceSeverity mapped to EXISTING SEVERITY_TABLE keys (P1-4; avoid extending the table - errors->'error'(blocker)/'critical', warnings->'medium'(minor)). nested-cards stays DEFERRED (precision miss; negative top-up pending).
+7. **Codegen + golden:** regenerate validators.generated.ts; update product-rule-registry.test.ts count (31 -> 31+5 = 36, since low-contrast reuses a11y.color-contrast; CONFIRM the exact delta at build). Add CHECKS entries for the 5 new keys + the re-pointed contrast check.
+
+## GATE (Stage 1 done)
+eval scorecard objective findings IDENTICAL (no 0.894 regression - guaranteed by leaving eval untouched, but RE-RUN to confirm), referee-independence green, golden updated, 60+ suites green, a REAL NL utterance surfaces scanner findings end-to-end. THEN send the diff to Codex (codex-arch-review teammate) for the implementation-gate review (mandate item 8), fold, re-verify.
+
+## Files to touch
+src/product-rule-types.ts, src/validator-generation.ts, src/validators/run-validator.ts, src/validators/check-context.ts, src/validators/rendered-live-scan.ts (NEW), src/product-rule-registry.ts, src/validators/checks/a11y-checks.ts (+ new checks file or additions), src/validators.generated.ts (regen), src/__tests__/product-rule-registry.test.ts (golden), + new calibration/integration test for the live bridge.

@@ -1,0 +1,3890 @@
+<!doctype html>
+<html class="js" lang="en-US"><head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+	<title>jQuery</title>
+
+	<meta name="author" content="OpenJS Foundation - openjsf.org">
+	<meta name="description" content="jQuery: The Write Less, Do More, JavaScript Library">
+	<meta name="viewport" content="width=device-width">
+
+	<link rel="shortcut icon" href="https://jquery.com/wp-content/themes/jquery.com/i/favicon.ico">
+	<style data-inlined-from="https://jquery.com/wp-content/themes/jquery/lib/typesense-minibar/typesense-minibar.css?v=c5fa9b9a">/*! https://github.com/jquery/typesense-minibar 1.3.4 */
+.tsmb-form,
+typesense-minibar {
+  --tsmb-size-edge: 1px;
+  --tsmb-size-radius: 3px;
+  --tsmb-size-highlight: 2px;
+  --tsmb-size-base: 1rem;
+  --tsmb-size-sm: 0.8rem;
+  --tsmb-size-half: calc(var(--tsmb-size-sm)/2);
+  --tsmb-size-input: calc(var(--tsmb-size-base) * 1.2);
+  --tsmb-size-listbox-right: auto;
+  --tsmb-size-listbox-width: calc(min(30rem, 60vw));
+  --tsmb-size-listbox-max-height: 70vh;
+
+  --tsmb-color-base-background: #fff;
+  --tsmb-color-base30: #333;
+  --tsmb-color-base50: #63676d;
+  --tsmb-color-base90: #cdcdcd;
+  --tsmb-color-focus-background: #fff;
+  --tsmb-color-focus30: #333;
+  --tsmb-color-focus50: #63676d;
+  --tsmb-color-focus90: #cdcdcd;
+
+  --tsmb-color-primary30: #390f39;
+  --tsmb-color-primary50: #9c3493;
+  --tsmb-color-primary90: #fbdbfb;
+
+  max-width: 100%;
+}
+
+.tsmb-form,
+typesense-minibar form {
+  position: relative;
+  width: 20rem;
+  max-width: 100%;
+  padding: 0;
+  color: var(--tsmb-color-base30);
+}
+
+.tsmb-form input[type=search],
+typesense-minibar input[type=search] {
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  color: inherit;
+  background: var(--tsmb-color-base-background);
+  padding: var(--tsmb-size-sm) var(--tsmb-size-sm) var(--tsmb-size-sm) calc(var(--tsmb-size-base) + var(--tsmb-size-sm) + var(--tsmb-size-sm));
+  border: var(--tsmb-size-edge) solid var(--tsmb-color-base90);
+  border-radius: var(--tsmb-size-radius);
+  font-size: var(--tsmb-size-base);
+  width: 100%;
+  line-height: var(--tsmb-size-input);
+}
+
+.tsmb-form input[type=search]::placeholder,
+typesense-minibar input[type=search]::placeholder {
+  color: var(--tsmb-color-base50);
+  opacity: 1;
+}
+
+.tsmb-form:focus-within,
+typesense-minibar form:focus-within {
+  color: var(--tsmb-color-focus30);
+}
+
+.tsmb-form:focus-within input[type=search],
+typesense-minibar:focus-within input[type=search] {
+  background: var(--tsmb-color-focus-background);
+}
+
+.tsmb-form:focus-within input[type=search]::placeholder,
+typesense-minibar:focus-within input[type=search]::placeholder {
+  color: var(--tsmb-color-focus50);
+}
+
+.tsmb-form input[type=search]::-webkit-search-decoration,
+.tsmb-form input[type=search]::-webkit-search-cancel-button,
+.tsmb-form input[type=search]::-webkit-search-results-button,
+.tsmb-form input[type=search]::-webkit-search-results-decoration,
+typesense-minibar input[type=search]::-webkit-search-decoration,
+typesense-minibar input[type=search]::-webkit-search-cancel-button,
+typesense-minibar input[type=search]::-webkit-search-results-button,
+typesense-minibar input[type=search]::-webkit-search-results-decoration {
+  display: none;
+}
+
+.tsmb-form::before,
+typesense-minibar form::before {
+  content: '';
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='654 -372 1664 1664' width='20' height='20'><path d='M1806,332c0-123.3-43.8-228.8-131.5-316.5C1586.8-72.2,1481.3-116,1358-116s-228.8,43.8-316.5,131.5 C953.8,103.2,910,208.7,910,332s43.8,228.8,131.5,316.5C1129.2,736.2,1234.7,780,1358,780s228.8-43.8,316.5-131.5 C1762.2,560.8,1806,455.3,1806,332z M2318,1164c0,34.7-12.7,64.7-38,90s-55.3,38-90,38c-36,0-66-12.7-90-38l-343-342 c-119.3,82.7-252.3,124-399,124c-95.3,0-186.5-18.5-273.5-55.5s-162-87-225-150s-113-138-150-225S654,427.3,654,332 s18.5-186.5,55.5-273.5s87-162,150-225s138-113,225-150S1262.7-372,1358-372s186.5,18.5,273.5,55.5s162,87,225,150s113,138,150,225 S2062,236.7,2062,332c0,146.7-41.3,279.7-124,399l343,343C2305.7,1098.7,2318,1128.7,2318,1164z'/></svg>") 0 50% / contain no-repeat;
+  position: absolute;
+  top: calc(var(--tsmb-size-edge) + var(--tsmb-size-sm));
+  left: var(--tsmb-size-sm);
+  width: var(--tsmb-size-base);
+  height: var(--tsmb-size-input);
+  opacity: 0.5;
+}
+
+/* js only */
+.tsmb-form--open input[type=search],
+.tsmb-form--slash input[type=search] {
+  padding-right: calc(var(--tsmb-size-sm) + var(--tsmb-size-base) + var(--tsmb-size-base));
+}
+
+.tsmb-icon-close {
+  box-sizing: border-box;
+  position: absolute;
+  top: calc(var(--tsmb-size-edge) + var(--tsmb-size-sm) + (var(--tsmb-size-input)/2) - (var(--tsmb-size-base)/2));
+  right: var(--tsmb-size-base);
+  width: var(--tsmb-size-base);
+  height: var(--tsmb-size-base);
+
+  stroke: currentColor;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+form:not(.tsmb-form--open) .tsmb-icon-close {
+  display: none;
+}
+
+.tsmb-form--slash:not(.tsmb-form--open):not(:focus-within)::after {
+  content: '/';
+  display: inline-block;
+  position: absolute;
+  top: calc(50% - (var(--tsmb-size-input) + var(--tsmb-size-sm)/2)/2);
+  right: var(--tsmb-size-sm);
+  width: calc(var(--tsmb-size-input) + var(--tsmb-size-sm)/2);
+  height: calc(var(--tsmb-size-input) + var(--tsmb-size-sm)/2);
+
+  font-size: var(--tsmb-size-base);
+  line-height: calc(var(--tsmb-size-input) + var(--tsmb-size-sm)/2);
+  text-align: center;
+
+  background: var(--tsmb-color-base-background);
+  border: var(--tsmb-size-edge) solid var(--tsmb-color-base90);
+  border-radius: var(--tsmb-size-radius);
+  color: var(--tsmb-color-base90);
+}
+
+.tsmb-form [role=listbox],
+typesense-minibar [role=listbox] {
+  position: absolute;
+  z-index: 10;
+  right: var(--tsmb-size-listbox-right);
+  background: var(--tsmb-color-focus-background);
+  color: var(--tsmb-color-focus30);
+  margin-top: var(--tsmb-size-half);
+  min-width: 100%;
+  width: var(--tsmb-size-listbox-width);
+  max-height: var(--tsmb-size-listbox-max-height);
+  overflow: auto;
+  border: var(--tsmb-size-edge) solid var(--tsmb-color-focus90);
+  border-radius: var(--tsmb-size-radius);
+  box-shadow: 0 var(--tsmb-size-sm) 20px rgba(0,0,0,0.12);
+}
+
+.tsmb-suggestion_group {
+  margin: var(--tsmb-size-sm) var(--tsmb-size-base) 0 var(--tsmb-size-base);
+  border-bottom: var(--tsmb-size-edge) solid var(--tsmb-color-focus90);
+}
+
+.tsmb-form [role=option] a,
+typesense-minibar [role=option] a {
+  display: block;
+  padding: var(--tsmb-size-base);
+  text-decoration: none;
+  border-left: var(--tsmb-size-highlight) solid transparent;
+}
+
+.tsmb-form:not([data-group=true]) [role=option]:not(:first-child) a,
+typesense-minibar:not([data-group=true]) [role=option]:not(:first-child) a {
+  border-top: var(--tsmb-size-edge) solid var(--tsmb-color-focus90);
+}
+
+.tsmb-form[data-group=true] [role=option] a,
+typesense-minibar[data-group=true] [role=option] a {
+  margin: 0 var(--tsmb-size-base);
+  padding: var(--tsmb-size-sm);
+}
+
+.tsmb-form [role=option] a:hover,
+.tsmb-form [role=option][aria-selected=true] a,
+typesense-minibar [role=option] a:hover,
+typesense-minibar [role=option][aria-selected=true] a {
+  background: var(--tsmb-color-primary90);
+  border-left-color: var(--tsmb-color-primary50);
+}
+
+.tsmb-form [role=option] mark,
+typesense-minibar [role=option] mark {
+  background: none;
+  color: inherit;
+  font-style: normal;
+  font-weight: bold;
+}
+
+.tsmb-suggestion_group,
+.tsmb-suggestion_title,
+.tsmb-suggestion_content {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tsmb-suggestion_title {
+  color: var(--tsmb-color-primary30);
+}
+.tsmb-form[data-group=true] .tsmb-suggestion_title,
+typesense-minibar[data-group=true] .tsmb-suggestion_title {
+  font-weight: bold;
+  font-size: var(--tsmb-size-sm);
+}
+
+.tsmb-suggestion_content {
+  font-size: var(--tsmb-size-sm);
+  color: var(--tsmb-color-focus50);
+}
+
+.tsmb-empty {
+  padding: var(--tsmb-size-base);
+}
+
+.tsmb-foot,
+.tsmb-foot:hover {
+  display: block;
+  text-align: right;
+  font-size: var(--tsmb-size-sm);
+  line-height: 18px;
+  padding: var(--tsmb-size-half) var(--tsmb-size-sm);
+  box-shadow: 0 0 10px rgba(0,0,0,0.12);
+  text-decoration: none;
+}
+
+.tsmb-foot::before {
+  content: 'Search by';
+  color: var(--tsmb-color-focus50);
+}
+
+.tsmb-foot::after {
+  content: ' Typesense';
+  color: #0300b0;
+}
+/*! https://github.com/jquery/typesense-minibar 1.3.4 */
+.tsmb-foot::after {
+  content: "";
+  display: inline-block;
+  vertical-align: top;
+  width: 88px;
+  height: 18px;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 18' width='80' height='18'><g fill='%230300b0'><path d='m4.82 5.16c.03534.18.05.354.05.522 0 .156-.01766.32-.053.50l-2.24-.018v6.04c0 .504.22.756.68.756h1.34c.08246.20.12368.40.12368.61s-.01177.33-.03533.37c-.54184.07-1.10.108-1.67.108-1.14 0-1.71-.498-1.71-1.49v-6.40l-1.25.018c-.0353374-.18-.0530061-.348-.0530061-.504 0-.168.01-.342.05-.522l1.25.018v-1.89c0-.324.04-.552.14-.684.09-.144.27-.216.54-.216h.47706l.10601.10v2.7z'></path><path d='m13.37 5.25-2.42 8.44c-.4476 1.54-.9247 2.64-1.43 3.27s-1.26.954-2.27.954c-.51828 0-.99534-.078-1.43-.234-.03533-.336.05-.66.28-.972.36.132.75.198 1.16.198.62 0 1.10-.216 1.43-.648.32-.432.63-1.10.90111-2.01l.053-.18c-.30625-.024-.54184-.096-.70674-.216-.15313-.12-.2827-.342-.38872-.666l-2.47-7.92c.36516-.156.62-.234.77-.234.34 0 .57129.21.68.63l1.39 4.51c.04711.14.31803 1.08.81 2.80.02356.08.08245.12.17668.12l2.15-7.95c.1531-.048.35-.072.60-.072.25 0 .4771.03.6537.10z'></path><path d='m16.76 13.41v3.56c0 .324-.0471.55-.1414.68-.0942.14-.2827.21-.5653.21h-.4771l-.106-.108v-12.54l.106-.108h.4594c.2827 0 .4711.07.5654.23.106.14.159.38.159.72v.09c.7067-.804 1.54-1.20 2.52-1.20 1.00 0 1.75.414 2.26 1.24.5065.81.7598 1.95.75 3.40 0 .708-.0943 1.34-.2827 1.90-.1767.56-.4182 1.04-.7244 1.44-.2945.38-.6361.68-1.02.9-.3887.20-.7892.30-1.20.306-.8128 0-1.58-.246-2.31-.738zm0-5.85v4.62c.7185.54 1.39.81 2.03.81s1.16-.288 1.57-.864.61-1.44.6184-2.61c0-.576-.053-1.07-.159-1.49-.0942-.432-.2238-.786-.3887-1.06-.1649-.288-.3593-.498-.5831-.63-.212-.144-.4417-.216-.6891-.216-.4711 0-.9187.12-1.34.378-.424.25-.7774.60-1.06 1.06z'></path><path d='m31.26 9.99h-5.47c.0589 2.04.81 3.06 2.27 3.06.80 0 1.65-.252 2.56-.756.25.24.41.546.47.918-.9659.67-2.04 1.00-3.25 1.00-.6125 0-1.13-.114-1.57-.342-.4359-.24-.7951-.564-1.07-.972-.271-.42-.4712-.912-.6008-1.47-.1295-.564-.1943-1.18-.1943-1.85 0-.684.07-1.30.2297-1.87.1649-.564.40-1.05.70-1.45.3063-.408.67-.726 1.09-.954.43-.228.93-.342 1.48-.342.54 0 1.02.102 1.44.306.43.192.79.462 1.07.81.29.336.51.744.67 1.22.1531.46.2297.97.2297 1.51 0 .216-.0118.42-.0354.63-.0117.19-.0294.37-.053.55zm-5.47-1.02h4.24v-.234c0-.828-.1708-1.49-.5124-1.99s-.854-.756-1.53-.756c-.6714 0-1.19.27-1.57.81-.3651.54-.5713 1.26-.6184 2.17z'></path><path d='m33.08 13.37c.0117-.264.08-.552.21-.864.14-.324.30-.576.47-.756.93.516 1.74.774 2.45.774.38 0 .7009-.078.93-.234.24-.156.37-.366.37-.63 0-.42-.3181-.756-.9541-1.00l-.9895-.378c-1.48-.552-2.22-1.43-2.22-2.64 0-.432.07-.816.22-1.15.1649-.348.38-.642.67-.882.29-.252.64-.444 1.04-.576s.8481-.198 1.34-.198c.2238 0 .4712.01.7421.05.2827.03.5654.09.84.162.28.06.55.132.81.216s.4829.17.6714.27c0 .3-.0589.61-.1767.93s-.2768.56-.477.72c-.9306-.42-1.73-.63-2.42-.63-.3062 0-.5477.07-.7244.23-.1767.14-.265.33-.265.57 0 .372.29.666.88.882l1.07.396c.7775.27 1.35.654 1.73 1.13.3769.48.56 1.03.5654 1.67 0 .852-.3122 1.53-.9365 2.05-.6243.50-1.51.756-2.68.756-1.14 0-2.21-.294-3.21-.882z'></path><path d='m48.56 10.29h-4.87c.0353.66.18 1.18.4417 1.56.2709.37.7362.55 1.39.558.68 0 1.46-.204 2.35-.612.34.36.55.834.65 1.42-.9423.68-2.07 1.02-3.39 1.02-1.24 0-2.19-.39-2.84-1.17-.6361-.792-.9542-1.96-.9542-3.51 0-.72.08-1.36.2474-1.94.1649-.588.40-1.08.7244-1.49.3181-.42.70-.744 1.16-.972.45-.228.98-.342 1.57-.342.60 0 1.13.096 1.59.288.45.18.84.444 1.16.792.31.336.55.738.70 1.20.1649.46.2474.97.2474 1.53 0 .3-.0177.58-.053.86-.0353.26-.0825.52-.1414.79zm-3.41-3.78c-.9188 0-1.41.708-1.48 2.12h2.93v-.216c0-.576-.1178-1.03-.3534-1.38-.2355-.348-.6007-.522-1.09-.522z'></path><path d='m58.25 7.99v3.92c0 .768.12 1.33.3711 1.71-.377.33-.8305.50-1.36.504-.5065 0-.854-.114-1.04-.342-.1884-.24-.2827-.612-.2827-1.11v-4.19c0-.54-.0648-.918-.1943-1.13-.1296-.216-.3711-.324-.7244-.324-.6243 0-1.20.288-1.74.864v6.12c-.1767.03-.3652.06-.5654.07-.1885.01-.3829.01-.5831.01-.2003 0-.4005-.006-.6007-.018-.1885-.012-.3711-.036-.5478-.072v-8.91l.106-.126h.8835c.6596 0 1.07.36 1.23 1.08.85-.756 1.71-1.13 2.56-1.13s1.47.282 1.87.846c.4123.55.6184 1.29.6184 2.23z'></path><path d='m60.10 13.37c.0117-.264.08-.552.21-.864.14-.324.30-.576.47-.756.93.516 1.74.774 2.45.774.38 0 .7008-.078.93-.234.24-.156.37-.366.37-.63 0-.42-.3181-.756-.9541-1.00l-.9895-.378c-1.48-.552-2.22-1.43-2.22-2.64 0-.432.07-.816.22-1.15.165-.348.38-.642.67-.882.29-.252.64-.444 1.04-.576s.8481-.198 1.34-.198c.2238 0 .4712.01.7421.05.2827.03.5654.09.84.162.28.06.55.132.81.216.25.084.48.174.67.27 0 .3-.0589.61-.1767.93s-.2768.56-.4771.72c-.9305-.42-1.73-.63-2.42-.63-.3062 0-.5477.07-.7244.23-.1767.14-.265.33-.265.57 0 .372.29.666.88.882l1.07.396c.7774.27 1.35.654 1.73 1.13.377.48.56 1.03.5655 1.67 0 .852-.3122 1.53-.9365 2.05-.6243.50-1.51.756-2.68.756-1.14 0-2.21-.294-3.21-.882z'></path><path d='m75.58 10.29h-4.87c.0353.66.18 1.18.4417 1.56.2709.37.7362.55 1.39.558.68 0 1.46-.204 2.35-.612.34.36.55.834.65 1.42-.9423.68-2.07 1.02-3.39 1.02-1.24 0-2.19-.39-2.84-1.17-.636-.792-.9541-1.96-.9541-3.51 0-.72.08-1.36.2474-1.94.1649-.588.40-1.08.7244-1.49.318-.42.70-.744 1.16-.972.45-.228.98-.342 1.57-.342.60 0 1.13.096 1.59.288.45.18.84.444 1.16.792.31.336.55.738.70 1.20.1649.46.2474.97.2474 1.53 0 .3-.0177.58-.053.86-.0353.26-.0825.52-.1414.79zm-3.41-3.78c-.9188 0-1.41.708-1.48 2.12h2.93v-.216c0-.576-.1178-1.03-.3534-1.38-.2355-.348-.6007-.522-1.09-.522z'></path><path d='m78.32 16.52v-16.46c.1767-.0360003.37-.0540004.60-.0540004.23 0 .4535.01.6538.05v16.46c-.2003.03-.4182.05-.6538.05-.2238 0-.424-.018-.6007-.054z'></path></g></svg>") 100% 0 / contain no-repeat;
+}
+</style>
+	<style data-inlined-from="https://jquery.com/wp-content/themes/jquery/css/base.css?v=4a1b65ae">/*! Copyright jQuery Foundation and other contributors
+ * Includes:
+ * - normalize.css v1.0.1 (MIT License, Copyright Nicolas Gallagher and Jonathan Neal)
+ * - Font Awesome v3.0.2 (MIT License, Font Awesome by Dave Gandy)
+ */
+
+/* ==========================================================================
+   HTML5 display definitions
+   ========================================================================== */
+
+* {
+	box-sizing: border-box;
+}
+
+/*
+ * Corrects `block` display not defined in IE 6/7/8/9 and Firefox 3.
+ */
+article,
+aside,
+details,
+figcaption,
+figure,
+footer,
+header,
+hgroup,
+nav,
+section,
+summary {
+	display: block;
+}
+
+/*
+ * Corrects `inline-block` display.
+ */
+audio,
+canvas,
+video {
+	display: inline-block;
+}
+
+/*
+ * Prevents modern browsers from displaying `audio` without controls.
+ * Remove excess height in iOS 5 devices.
+ */
+audio:not([controls]) {
+	display: none;
+	height: 0;
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+/*
+ * 1. Corrects text resizing oddly in IE 6/7 when body `font-size` is set using
+ *    `em` units.
+ * 2. Prevents iOS text size adjust after orientation change, without disabling
+ *    user zoom.
+ */
+html {
+	font-size: 100%; /* 1 */
+	-webkit-text-size-adjust: 100%; /* 2 */
+}
+
+/*
+ * Addresses `font-family` inconsistency between `textarea` and other form
+ * elements.
+ */
+html,
+button,
+input,
+select,
+textarea {
+	font-family: sans-serif;
+	color: #333;
+}
+
+body {
+	margin: 0;
+}
+
+::selection {
+	background: #b4efff;
+	text-shadow: none;
+}
+.jquery-ui ::selection {
+	background: #ffddb2;
+}
+.jquery-mobile ::selection {
+	background: #c9f2c8;
+}
+
+/* ==========================================================================
+   FontAwesome (https://fontawesome.com/v3/)
+	 .ttf and .woff files were included in the FontAwesome download.
+	 .woff2 file created with https://github.com/nfroidure/ttf2woff2
+   ========================================================================== */
+
+@font-face {
+  font-family: "FontAwesome";
+  src: url("../lib/FontAwesome/fontawesome-webfont.woff2") format("woff2"),
+		url("../lib/FontAwesome/fontawesome-webfont.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+[class^="icon-"]:before,
+[class*=" icon-"]:before {
+	font-size: 1.2em;
+  text-decoration: inherit;
+  display: inline-block;
+  speak: none;
+}
+.icon-info-sign:before { content: "\f05a"; }
+
+/* ==========================================================================
+   Links
+   ========================================================================== */
+
+/*
+ * Addresses `outline` inconsistency between Chrome and other browsers.
+ */
+a:focus {
+	outline: thin dotted;
+}
+
+/*
+ * Improves readability when focused and also mouse hovered in all browsers.
+ */
+a:active,
+a:hover {
+	outline: 0;
+}
+
+/* ==========================================================================
+   Typography
+   ========================================================================== */
+
+/*
+ * Addresses font sizes and margins set differently in IE 6/7.
+ * Addresses font sizes within `section` and `article` in Firefox 4+, Safari 5,
+ * and Chrome.
+ */
+
+h1 {
+	font-size: 2em;
+	margin: 0 0 0.33em;
+}
+
+h2 {
+	font-size: 1.5em;
+	margin: 0 0 0.5em;
+}
+
+h3 {
+	font-size: 1.25em;
+	margin: 0 0 0.67em;
+}
+
+h4 {
+	font-size: 1em;
+	margin: 0 0 1em;
+}
+
+h5 {
+	font-size: 0.83em;
+	margin: 0 0 1.33em;
+}
+
+h6 {
+	font-size: 0.75em;
+	margin: 0 0 2em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	font-weight: 700;
+	font-family: Cairo, "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif !important;
+}
+/*
+ * Addresses styling not present in IE 7/8/9, Safari 5, and Chrome.
+ */
+abbr[title] {
+	border-bottom: 1px dotted;
+}
+
+/*
+ * Addresses style set to `bolder` in Firefox 3+, Safari 4/5, and Chrome.
+ */
+b,
+strong {
+	font-weight: bold;
+}
+
+blockquote {
+	margin: 1em 40px;
+}
+
+/*
+ * Addresses styling not present in Safari 5 and Chrome.
+ */
+dfn {
+	font-style: italic;
+}
+
+/*
+ * Addresses margins set differently in IE 6/7.
+ */
+p,
+pre {
+	margin: 1em 0;
+}
+
+/*
+ * Improves readability of pre-formatted text in all browsers.
+ */
+pre, code {
+	white-space: pre;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	word-spacing: 0;
+	font-size: 13px;
+	line-height: 16px;
+}
+code {
+	padding: 0 3px;
+	/* Prefer translucent shade over hardcoded light grey, so that <code> can be
+	   also be used in elements with white text and dark backgrounds,
+	   such as div.note on https://api.jqueryui.com/buttonset/
+	   https://github.com/jquery/jquery-wp-content/pull/314
+	 */
+	background-color: rgba( 0, 0, 0, 0.08 );
+	border-radius: 3px;
+}
+pre code {
+	background-color: transparent;
+	font-size: 16px;
+	white-space: pre;
+	word-wrap: normal;
+}
+
+/* Addresses CSS quotes not supported in IE 6/7. */
+q {
+	quotes: none;
+}
+
+/* Addresses `quotes` property not supported in Safari 4. */
+q:before,
+q:after {
+	content: '';
+	content: none;
+}
+
+/* Prevents `sub` and `sup` affecting `line-height` in all browsers. */
+sub,
+sup {
+	font-size: 75%;
+	line-height: 0;
+	position: relative;
+	vertical-align: baseline;
+}
+sup {
+	top: -0.5em;
+}
+sub {
+	bottom: -0.25em;
+}
+
+/* ==========================================================================
+   Lists
+   ========================================================================== */
+
+/* Addresses margins set differently in IE 6/7. */
+dl,
+menu,
+ol,
+ul {
+	margin: 0 0 1em;
+}
+
+dd {
+	margin: 0 0 0 40px;
+}
+
+/* Addresses paddings set differently in IE 6/7. */
+menu,
+ol,
+ul {
+	padding: 0;
+}
+
+/* Corrects list images handled incorrectly in IE 7. */
+nav ul,
+nav ol {
+	list-style: none;
+	list-style-image: none;
+}
+
+/* ==========================================================================
+   Embedded content
+   ========================================================================== */
+
+/*
+ * 1. Removes border when inside `a` element in IE 6/7/8/9 and Firefox 3.
+ */
+img {
+	border: 0; /* 1 */
+	vertical-align: middle;
+	max-width: 100%;
+}
+
+/* ==========================================================================
+   Figures
+   ========================================================================== */
+
+/*
+ * Addresses margin not present in IE 6/7/8/9, Safari 5, and Opera 11.
+ */
+figure {
+	margin: 0;
+}
+
+/* ==========================================================================
+   Forms
+   ========================================================================== */
+
+/*
+ * Corrects margin displayed oddly in IE 6/7.
+ */
+form {
+	margin: 0;
+	padding: 10px 0;
+}
+
+/*
+ * Define consistent border, margin, and padding.
+ */
+fieldset {
+	border: 0;
+	margin: 0;
+	padding: 0;
+}
+
+/*
+ * 1. Corrects color not being inherited in IE 6/7/8/9.
+ * 2. Corrects text not wrapping in Firefox 3.
+ */
+legend {
+	border: 0; /* 1 */
+	padding: 0;
+	white-space: normal; /* 2 */
+}
+
+/*
+ * 1. Corrects font size not being inherited in all browsers.
+ * 2. Addresses margins set differently in IE 6/7, Firefox 3+, Safari 5,
+ *    and Chrome.
+ * 3. Improves appearance and consistency in all browsers.
+ */
+button,
+input,
+select,
+textarea {
+	font-size: 100%; /* 1 */
+	margin: 0; /* 2 */
+	vertical-align: baseline; /* 3 */
+}
+
+/*
+ * Addresses Firefox 3+ setting `line-height` on `input` using `!important` in
+ * the UA stylesheet.
+ */
+button,
+input {
+	line-height: normal;
+}
+
+/*
+ * 1. Avoid the WebKit bug in Android 4.0.* where (2) destroys native `audio`
+ *    and `video` controls.
+ * 2. Corrects inability to style clickable `input` types in iOS.
+ * 3. Improves usability and consistency of cursor style between image-type
+ *    `input` and others.
+ */
+button,
+html input[type="button"], /* 1 */
+input[type="reset"],
+input[type="submit"] {
+	-webkit-appearance: button; /* 2 */
+	cursor: pointer; /* 3 */
+}
+
+/*
+ * Re-set default cursor for disabled elements.
+ */
+button[disabled],
+input[disabled] {
+	cursor: default;
+}
+
+/*
+ * 1. Addresses box sizing set to content-box in IE 8/9.
+ * 2. Removes excess padding in IE 8/9.
+ */
+input[type="checkbox"],
+input[type="radio"] {
+	box-sizing: border-box; /* 1 */
+	padding: 0; /* 2 */
+}
+
+/*
+ * 1. Addresses `appearance` set to `searchfield` in Safari 5 and Chrome.
+ * 2. Addresses `box-sizing` set to `border-box` in Safari 5 and Chrome.
+ */
+input[type="search"] {
+	-webkit-appearance: textfield;
+	box-sizing: content-box;
+}
+
+/*
+ * Removes inner padding and search cancel button in Safari 5 and Chrome
+ * on OS X.
+ */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+	-webkit-appearance: none;
+}
+
+/*
+ * Removes inner padding and border in Firefox 3+.
+ */
+button::-moz-focus-inner,
+input::-moz-focus-inner {
+	border: 0;
+	padding: 0;
+}
+
+/*
+ * 1. Removes default vertical scrollbar in IE 6/7/8/9.
+ * 2. Improves readability and alignment in all browsers.
+ */
+textarea {
+	overflow: auto; /* 1 */
+	vertical-align: top; /* 2 */
+	min-height: 150px;
+	resize: vertical;
+}
+
+#content input[type="text"],
+#content input[type="email"],
+#content textarea {
+	color: #666;
+
+	width: 70%;
+	min-width: 300px;
+
+	margin: 5px 0 10px 0;
+	padding: 8px 12px;
+
+	background: rgba(245,245,245,0.37);
+
+	border: 1px solid rgba(192,192,192,0.49);
+	border-radius: 2px;
+}
+
+#content input:not([type]):focus,
+#content input[type="text"]:focus,
+#content input[type="email"]:focus,
+#content textarea:focus {
+	outline: none;
+
+	color: #333;
+	background: #fff;
+
+	border: 1px solid #b24926;
+}
+
+/**
+ * Radio Buttons
+ */
+
+.radio {
+	margin: 15px 0;
+}
+
+#content .radio ul {
+	margin: 0;
+	padding: 0;
+	float: left;
+}
+
+#content .radio ul li::marker {
+	content: "";
+}
+#content .radio ul li {
+	list-style: none;
+	background: none;
+	margin: 0;
+	padding: 0;
+}
+
+.radio label {
+	margin: 5px 0;
+}
+
+input[type=radio] {
+	margin: 0 5px 0 0;
+}
+
+/**
+ * Checkboxes
+ */
+
+input[type="checkbox"] {
+	margin: 0 5px 0 0;
+}
+
+/**
+ * Submit Buttons
+ */
+
+.top-labels input[type="submit"] {
+	margin: 40px 0;
+	float: none;
+}
+
+/**
+ * Top aligned labels
+ */
+
+.top-labels label,
+.top-labels .radio label,
+.top-labels input[type="text"],
+.top-labels input[type="email"],
+.top-labels textarea {
+	display: block;
+}
+
+/**
+ * Label descriptions
+ */
+
+label .field-description {
+	font-size: 0.8em;
+}
+
+/**
+ * Button
+ */
+
+.db {
+	display: inline-block;
+	float: none !important;
+	clear: both;
+}
+
+/* ==========================================================================
+   Tables
+   ========================================================================== */
+
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+#content table {
+	margin: 1em 2em;
+}
+
+#content thead tr {
+	border-bottom: 2px solid #666;
+}
+
+#content tbody tr {
+	border-bottom: 1px solid #666;
+}
+
+#content tbody tr:hover {
+	background-color: #eee;
+}
+
+#content th {
+	font-family: Cairo, "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif;
+}
+
+#content th,
+#content td {
+	padding: .5em;
+}
+
+/* ==========================================================================
+   Cairo Font (https://github.com/Gue3bara/Cairo)
+	 .ttf files downloaded from Google Fonts, but only used for conversion.
+	 .woff files created with https://github.com/odemiral/woff2sfnt-sfnt2woff
+	 .woff2 files created with https://github.com/nfroidure/ttf2woff2
+   ========================================================================== */
+
+@font-face {
+	font-family: Cairo;
+	src: url("../lib/Cairo/Cairo-Regular.woff2") format("woff2"),
+		url("../lib/Cairo/Cairo-Regular.woff") format("woff");
+	font-weight: normal;
+}
+
+@font-face {
+	font-family: Cairo;
+	src: url("../lib/Cairo/Cairo-Bold.woff2") format("woff2"),
+		url("../lib/Cairo/Cairo-Bold.woff") format("woff");
+	font-weight: 700;
+}
+
+/* ==========================================================================
+   Font Awesome
+   ========================================================================== */
+
+[class^="icon-"],
+[class*=" icon-"] {
+  font-weight: normal;
+  font-style: normal;
+  text-decoration: inherit;
+  -webkit-font-smoothing: antialiased;
+
+  /* sprites.less reset */
+  display: inline;
+  width: auto;
+  height: auto;
+  line-height: normal;
+  vertical-align: baseline;
+  background-image: none;
+  background-position: 0 0;
+  background-repeat: repeat;
+  margin-top: 0;
+}
+
+/* more sprites.less reset*/
+.nav-pills > .active > a > [class^="icon-"],
+.nav-pills > .active > a > [class*=" icon-"],
+.nav-list > .active > a > [class^="icon-"],
+.nav-list > .active > a > [class*=" icon-"],
+.navbar-inverse .nav > .active > a > [class^="icon-"],
+.navbar-inverse .nav > .active > a > [class*=" icon-"],
+.dropdown-menu > li > a:hover > [class^="icon-"],
+.dropdown-menu > li > a:hover > [class*=" icon-"],
+.dropdown-menu > .active > a > [class^="icon-"],
+.dropdown-menu > .active > a > [class*=" icon-"],
+.dropdown-submenu:hover > a > [class^="icon-"],
+.dropdown-submenu:hover > a > [class*=" icon-"] {
+  background-image: none;
+}
+[class^="icon-"]:before,
+[class*=" icon-"]:before {
+  text-decoration: inherit;
+  display: inline-block;
+  speak: none;
+}
+/* makes sure icons active on rollover in links */
+a [class^="icon-"],
+a [class*=" icon-"] {
+  display: inline-block;
+}
+/* makes the font 33% larger relative to the icon container */
+.icon-large:before {
+  vertical-align: -10%;
+  font-size: 1.3333333333333333em;
+}
+.btn [class^="icon-"],
+.nav [class^="icon-"],
+.btn [class*=" icon-"],
+.nav [class*=" icon-"] {
+  display: inline;
+  /* keeps button heights with and without icons the same */
+}
+.btn [class^="icon-"].icon-large,
+.nav [class^="icon-"].icon-large,
+.btn [class*=" icon-"].icon-large,
+.nav [class*=" icon-"].icon-large {
+  line-height: .9em;
+}
+.nav-tabs [class^="icon-"],
+.nav-pills [class^="icon-"],
+.nav-tabs [class*=" icon-"],
+.nav-pills [class*=" icon-"],
+.nav-tabs [class^="icon-"].icon-large,
+.nav-pills [class^="icon-"].icon-large,
+.nav-tabs [class*=" icon-"].icon-large,
+.nav-pills [class*=" icon-"].icon-large {
+  line-height: .9em;
+}
+li [class^="icon-"],
+.nav li [class^="icon-"],
+li [class*=" icon-"],
+.nav li [class*=" icon-"] {
+  display: inline-block;
+  width: 1.25em;
+  text-align: center;
+}
+li [class^="icon-"].icon-large,
+.nav li [class^="icon-"].icon-large,
+li [class*=" icon-"].icon-large,
+.nav li [class*=" icon-"].icon-large {
+  /* increased font size for icon-large */
+  width: 1.5625em;
+}
+ul.icons {
+  list-style: none;
+  text-indent: -0.75em;
+}
+ul.icons li [class^="icon-"],
+ul.icons li [class*=" icon-"] {
+  width: .75em;
+}
+.pull-right {
+  float: right;
+}
+.pull-left {
+  float: left;
+}
+[class^="icon-"].pull-left,
+[class*=" icon-"].pull-left {
+  margin-right: .3em;
+}
+[class^="icon-"].pull-right,
+[class*=" icon-"].pull-right {
+  margin-left: .3em;
+}
+.btn.btn-large [class^="icon-"],
+.btn.btn-large [class*=" icon-"] {
+  margin-top: 0;
+}
+/*  Font Awesome uses the Unicode Private Use Area (PUA) to ensure screen
+    readers do not read off random characters that represent icons */
+.icon-bolt:before                 { content: "\f0e7"; } /* Used: learn */
+.icon-calendar:before             { content: "\f073"; } /* Used: learn */
+.icon-certificate:before          { content: "\f0a3"; } /* Used: learn */
+.icon-chevron-left:before         { content: "\f053"; } /* Used: learn */
+.icon-chevron-right:before        { content: "\f054"; } /* Used: learn */
+.icon-comments:before             { content: "\f086"; } /* Used: footer */
+.icon-copy:before                 { content: "\f0c5"; } /* Used: releases */
+.icon-dashboard:before            { content: "\f0e4"; } /* Used: learn */
+.icon-eye-open:before             { content: "\f06e"; } /* Used: jqueryui.com */
+.icon-github:before               { content: "\f09b"; } /* Used: footer */
+.icon-link:before                 { content: "\f0c1"; } /* Used: toc-link, grunt-jquery-content */
+.icon-magnet:before               { content: "\f076"; } /* Used: learn */
+.icon-pencil:before               { content: "\f040"; } /* Used: footer */
+.icon-picture:before              { content: "\f03e"; } /* Used: learn */
+.icon-question-sign:before        { content: "\f059"; } /* Used: learn */
+.icon-refresh:before              { content: "\f021"; } /* Used: learn */
+.icon-sitemap:before              { content: "\f0e8"; } /* Used: learn */
+.icon-star-empty:before           { content: "\f006"; } /* Used: learn */
+.icon-tasks:before                { content: "\f0ae"; } /* Used: learn */
+.icon-th-large:before             { content: "\f009"; } /* Used: learn */
+.icon-twitter:before              { content: "\f099"; } /* Used: footer */
+
+/* Manual Font Awesome Styles */
+[class^="icon-"]::before, [class^="icon-"]::after,
+[class*=" icon-"]::before, [class*=" icon-"]::after {
+  font-family: FontAwesome, "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+#content ul li[class^="icon-"],
+#content ul li[class*=" icon-"] {
+	background: none;
+	padding-left: 0;
+}
+
+h2 [class^="icon-"],
+h2 [class*=" icon-"],
+h3 [class^="icon-"],
+h3 [class*=" icon-"] {
+	margin-right: 7px;
+}
+
+/* Global Structure
+   ========================================================================== */
+
+body {
+	-webkit-font-smoothing: antialiased;
+	color: #333;
+	font: 15px/22.5px "Helvetica Neue", HelveticaNeue, Helvetica, Arial, sans-serif;
+}
+
+iframe {
+	border: 1px solid #bfbfbf;
+	padding: 1px;
+}
+
+#container {
+	background: #0769ad;
+	margin: 0 auto;
+	padding: 0 20px;
+
+}
+
+.jquery-ui #container {
+	background: #b24926;
+}
+
+.jquery-mobile #container {
+	background: #108040;
+}
+
+.jquery-foundation #container {
+	background: #333;
+}
+
+.jquery-learn #container {
+	background: url(../images/bg-body-learn.jpg) no-repeat center top #000;
+}
+
+#content-wrapper {
+	background-color: #fff;
+	box-shadow: -3px 0 5px -3px rgba(1, 1, 1, 0.87), 3px 0 5px -3px rgba(1, 1, 1, 0.87);
+	padding: 20px 0;
+	border-top: 1px solid #333;
+	border-radius: 0 0 10px 10px;
+	position: relative;
+}
+
+.jquery-ui #content-wrapper,
+.jquery-ui #banner-secondary,
+.jquery-foundation #content-wrapper,
+.jquery-foundation #banner-secondary,
+.jquery-learn #content-wrapper,
+.jquery-learn #banner-secondary {
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+}
+
+.constrain {
+	max-width: 1240px;
+	margin: 0 auto;
+	padding: 0 20px;
+}
+
+.lte8 .constrain {
+  max-width: 1198px; /* Accomodate for padding + 1px border */
+}
+
+#content {
+	float: left;
+	width: 71%;
+}
+
+.content-right #content {
+	float: right;
+}
+
+.content-full #content {
+	width: 100%;
+	padding-left: 10%;
+	padding-right: 10%;
+}
+
+.content-full.full-width #content {
+	padding-left: 0;
+	padding-right: 0;
+}
+
+#sidebar,
+.sidebar-left,
+.sidebar-right {
+	padding: 20px;
+	width: 29%;
+}
+
+#sidebar,
+.sidebar-right {
+	float: right;
+	margin-right: -25px;
+	position: relative;
+	border-image: linear-gradient(#ffffff, #e7e7e7 15%, #e7e7e7 85%, #ffffff);
+	box-shadow: inset 15px 0 5px -16px #e7e7e7;
+	background-image: radial-gradient(ellipse at left, #f2f2f2, #ffffff 80%);
+	border: 0;
+	border-left: 1px solid #efefef;
+}
+
+
+.content-right #sidebar,
+.sidebar-left {
+	float: left;
+	border-left: 0;
+	border-right: 1px solid #e7e7e7;
+	margin: -20px 0 0 -25px;
+	border-image: linear-gradient(#ffffff, #e7e7e7 15%, #e7e7e7 85%, #ffffff);
+	box-shadow: inset 15px 0 5px -16px #e7e7e7;
+	background-image: radial-gradient(ellipse at right, #f2f2f2, #ffffff 80%);
+}
+
+.entry-summary p {
+	margin: 0;
+}
+
+/* Support message at top of page.
+   ========================================================================== */
+
+#banner {
+	text-align: center;
+	background-color: #dddddd;
+	padding: 0.25em 1.25em;
+	color: #333; /* jQuery Black */
+}
+
+#banner a:hover {
+	text-decoration: none;
+}
+
+/* Global Nav
+   ========================================================================== */
+
+#global-nav {
+	background: #232323;
+	background: linear-gradient(to bottom, transparent 92%, rgb(20, 20, 20)),
+		linear-gradient(to bottom, rgb(75, 75, 75), #232323);
+}
+
+#global-nav nav {
+	height: 34px;
+}
+
+#global-nav nav ul {
+	text-align: left;
+	display: inline;
+	float: left;
+	margin: 0;
+	list-style: none;
+	border-right: 1px solid rgba(255, 255, 255, 0.0976562);
+	border-left: 1px solid rgba(0, 0, 0, 0.347656);
+}
+
+#global-nav nav ul.links {
+	float: right;
+}
+
+#global-nav nav ul li {
+	font: bold 13px/17px "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif;
+	display: inline-block;
+	float: left;
+	position: relative;
+	top: 1px;
+	cursor: pointer;
+	transition: all 0.2s;
+	text-shadow: 0 0 2px #000;
+	border-left: 1px solid rgba(255, 255, 255, 0.0976562);
+	border-right: 1px solid rgba(0, 0, 0, 0.347656);
+}
+.ie #global-nav nav ul li {
+	top: 2px;
+}
+
+#global-nav nav ul li:hover {
+	background: #232323;
+	color: #fff;
+}
+
+#global-nav nav ul li i {
+	height: 1em;
+}
+
+#global-nav nav ul li a {
+	color: #e6e6e6;
+	font-weight: normal;
+	font-style: normal;
+	text-decoration: none;
+	display: block;
+	padding: 8px 12px;
+	white-space: nowrap;
+}
+
+#global-nav nav ul li ul {
+	padding: 0;
+	position: absolute;
+	top: 32px;
+	left: -2px;
+	min-width: 120px;
+	display: none;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.2s;
+	box-shadow: 0 4px 5px rgba(0, 0, 0, 0.4);
+	z-index: 400;
+}
+
+#global-nav nav ul li ul.wide {
+	width: 260px;
+}
+
+#global-nav nav ul li ul li {
+	background: #232323;
+	display: block;
+	color: #fff;
+	float: none;
+}
+
+#global-nav nav ul li ul li:hover { background: #000; }
+#global-nav nav ul li:hover ul {
+	display: block;
+	opacity: 1;
+	visibility: visible;
+}
+
+#global-nav nav ul.projects li.project {
+	width: 42px;
+	padding: 0;
+	height: 33px;
+	text-indent: -9999px;
+	background: url(../images/jq-nav-icons.png) -6px 0;
+	z-index: 10;
+}
+
+#global-nav nav ul.projects li.project a {
+	display: block;
+	height: 33px;
+}
+
+#global-nav nav ul.projects li.jquery-ui {
+	background-position: -57px 0;
+}
+
+#global-nav nav ul.projects li.jquery-mobile {
+	background-position: -107px 0;
+}
+
+#global-nav nav ul.projects li.sizzlejs {
+	background-position: -155px 0;
+}
+
+#global-nav nav ul.projects li.qunitjs {
+	background-position: -204px 0;
+}
+
+.jquery #global-nav nav ul.projects li.jquery {
+	background-position: 0 bottom;
+	width: 52px;
+	position: relative;
+	margin-top:1px;
+	border: none;
+}
+
+.jquery #global-nav nav ul.projects {
+	border-left: none;
+}
+
+.jquery #global-nav nav ul.projects li.jquery-ui {
+	border-left: none;
+	background-position: -59px 0;
+}
+
+.jquery-ui #global-nav nav ul.projects li.jquery-ui {
+	background-position: -50px bottom;
+	width: 52px;
+	position: relative;
+	margin-top:1px;
+	border: none;
+}
+
+.jquery-ui #global-nav nav ul.projects li.jquery {
+	border-right: none;
+	background-position: -2px 0;
+}
+
+.jquery-ui #global-nav nav ul.projects li.jquery-mobile {
+	border-left: none;
+}
+
+.jquery-mobile #global-nav nav ul.projects li.jquery-mobile {
+	background-position: -100px bottom;
+	width: 52px;
+	position: relative;
+	margin-top:1px;
+	border: none;
+}
+
+.jquery-mobile #global-nav nav ul.projects li.jquery-ui {
+	border-right: none;
+	background-position: -53px 0;
+}
+
+.jquery-mobile #global-nav nav ul.projects li.jquery-mobile {
+	border-right: none;
+}
+
+.jquery-mobile #global-nav nav ul.projects li.sizzlejs{
+	border-left: none;
+	background-position: -157px 0;
+}
+
+
+#container,
+footer {
+	border-top: 1px solid #7acef4;
+}
+
+.jquery-ui #container,
+.jquery-ui footer {
+	border-top-color: #faa523;
+}
+
+.jquery-mobile #container,
+.jquery-mobile footer {
+	border-top-color: #3eb249;
+}
+
+.jquery-learn #container,
+.jquery-learn footer {
+	border-top-color: #333;
+}
+
+/* Brand Colors for General Use
+   ========================================================================== */
+.color.black { background-color: #333; }
+.color.primary-blue { background-color: #0769ad; }
+.color.secondary-blue { background-color: #7acef4; }
+.color.navy-blue { background-color: #131b28; }
+.color.primary-orange { background-color: #faa523; }
+.color.secondary-orange { background-color: #b24926; }
+.color.primary-green { background-color: #3eb249; }
+.color.secondary-green { background-color: #108040; }
+.color.sizzle-orange { background-color: #faa523; }
+.color.sizzle-red { background-color: #9a1B1E; }
+.color.qunit-primary-purple { background-color: #9c3493; }
+.color.qunit-secondary-purple { background-color: #390f39; }
+.color.globalize-primary-aqua { background-color: #009b93; }
+.color.globalize-secondary-aqua { background-color: #41586b; }
+
+/* Logo & Navigation
+   ========================================================================== */
+
+#logo-events {
+	clear: both;
+	padding: 25px 20px;
+}
+
+h2.logo {
+	float: left;
+	margin: 0;
+	width: 243px;
+}
+
+h2.logo a {
+	float: left;
+	display: block;
+	height: 66px;
+	overflow: hidden;
+	text-indent: -1000px;
+}
+
+.jquery h2.logo a,
+.jquery-learn h2.logo a {
+	width: 243px;
+	background: url(../images/logo-jquery.png) no-repeat;
+}
+
+.jquery-ui h2.logo a {
+	width: 253px;
+	background: url(../images/logo-jquery-ui.png) no-repeat;
+}
+
+.jquery-mobile h2.logo a {
+	width: 268px;
+	background: url(../images/logo-jquery-mobile.png) no-repeat;
+}
+
+.jquery-foundation h2.logo a {
+	width: 243px;
+	background: url(../images/logo-jquery-foundation.png) no-repeat;
+}
+
+.logo.small {
+  height: 30px;
+  background: url('../images/projectlogosfull-small.png') no-repeat;
+}
+
+.jquery.logo.small {
+  width:109px;
+  background-position: -0 0;
+}
+.jquery-foundation.logo.small {
+  width: 109px;
+  background-position: -109px 0;
+}
+.jqueryui.logo.small {
+  width: 114px;
+  background-position: -327px 0;
+}
+.jquery-mobile.logo.small {
+  width: 122px;
+  background-position: -442px 0;
+}
+.qunitjs.logo.small {
+  width: 105px;
+  background-position: -564px 0;
+}
+.sizzlejs.logo.small {
+  width: 105px;
+  background-position: -669px 0;
+}
+
+#logo-events aside {
+	float: right;
+}
+
+nav#main {
+	background-color: rgba(0, 0, 0, 0.18);
+	border-radius: 10px 10px 0 0;
+	border-right: 1px solid rgba(2, 2, 2, 0.28);
+	border-left: 1px solid rgba(2, 2, 2, 0.28);
+	border-top: 1px solid rgba(250, 250, 250, 0.14);
+	box-shadow: 0 0 5px rgba(1, 1, 1, 0.7);
+}
+
+.jquery-ui nav#main {
+	background-color: rgba(12, 12, 12, 0.06);
+}
+.jquery-learn nav#main {
+	background-color: rgba(0, 0, 0, 0.4);
+}
+
+nav#main ul {
+	margin: 0;
+	float: left;
+	width: 70%;
+	padding-top: 10px;
+	padding-bottom: 10px;
+}
+
+nav#main li {
+	float: left;
+	font: normal 700 16px Cairo, "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif;
+	margin-right: 2px;
+}
+
+nav#main li a {
+	color: #fff;
+	text-decoration: none;
+	padding: 0 10px;
+	line-height: 32px;
+	display: block;
+	border: 1px solid transparent;
+	text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.76);
+}
+
+nav#main li a:hover,
+nav#main li.current a {
+	background: none;
+	box-shadow: inset 0 0 5px rgba(0,0,0, 0.4), rgba(255,255,255,0.1) 0 1px 0;
+	border-radius: 4px;
+	border: 1px solid rgba(0,0,0,0.25);
+	color: #fff;
+	text-shadow: rgba(0, 0, 0, 0.796875) 0 -1px 0, rgba(255, 255, 255, 0.296875) 0 0 10px;
+}
+
+.searchform {
+	float: right;
+	margin: 6px 0;
+	width: 30%;
+}
+.searchform input {
+	font-family: "Lucida Grande", Lucida, Verdana, sans-serif;
+}
+
+typesense-minibar {
+	--tsmb-size-radius: 5px;
+	--tsmb-size-base: 12px;
+	--tsmb-size-sm: 0.8rem;
+	--tsmb-size-listbox-right: 0;
+	--tsmb-color-base-background: var(--tsmb-color-primary50);
+	--tsmb-color-base30: #fff;
+	--tsmb-color-base50: var(--tsmb-color-primary90);
+	--tsmb-color-base90: var(--tsmb-color-primary90);
+	--tsmb-color-focus30: #666;
+	--tsmb-color-focus50: #444;
+	--tsmb-color-focus90: #ccc;
+	--tsmb-color-primary30: #333; /* jQuery Black */
+	--tsmb-color-primary50: #0769ad;  /* jQuery Primary Blue */
+	--tsmb-color-primary90: #b4efff; /* oklch(0.92 0.07 228) hue=228 of #7ACEF4 (jQuery Secondary Blue) */
+}
+.jquery-ui typesense-minibar {
+	--tsmb-color-primary50: #b24926; /* jQuery UI Secondary Orange */
+	--tsmb-color-primary90: #ffddb2; /* = #b4efff + oklch(hue=70) of #FAA523 (jQuery UI Primary Orange) */
+}
+.jquery-mobile typesense-minibar {
+	--tsmb-color-primary50: #108040; /* jQuery Mobile Secondary Green */
+	--tsmb-color-primary90: #c9f2c8; /* = #b4efff + oklch(hue=144) of #3EB249 (jQuery UI Primary Orange) */
+}
+.jquery-foundation typesense-minibar {
+	--tsmb-color-primary50: #333; /* jQuery Black */
+	--tsmb-color-primary90: #ccc;
+}
+.jquery-learn typesense-minibar {
+	--tsmb-color-primary50: #222;
+	--tsmb-color-primary90: #ccc;
+}
+typesense-minibar form:not(:focus-within)::before {
+  filter: invert();
+}
+typesense-minibar input[type=search] {
+	border-width: 0;
+}
+typesense-minibar[role="option"] mark {
+  border-bottom: 2px solid var(--tsmb-color-primary90);
+}
+
+#broadcast {
+	height: 100px;
+}
+
+#broadcast:empty {
+	display: none;
+}
+
+/* Typography & Global Styles
+   ========================================================================== */
+
+#content a {
+	text-decoration: underline;
+	word-break: break-word;
+}
+
+#content a:hover {
+	text-decoration: none;
+}
+
+#sidebar a {
+	text-decoration: none;
+}
+
+#sidebar a:hover {
+	text-decoration: underline;
+}
+
+p {
+	margin-bottom: 15px;
+	margin-top: 0;
+}
+
+b, strong {
+	font-weight: bold;
+	color: #1a1a1a;
+}
+
+em, i {
+	color: #6d6d6d;
+	font-style: italic;
+}
+
+hr {
+	background: #ececec;
+	height: .75em;
+	border: none;
+	margin: .75em 0;
+}
+
+#content code a {
+	text-decoration: none;
+}
+
+pre strong,
+pre b {
+	color: #fff;
+	font-weight: bold;
+}
+
+#content blockquote {
+	margin: 20px 0;
+	padding: 20px 30px;
+	background-color: #f2f2f2;
+	color: #828282;
+	position: relative;
+	font-size: 18px;
+	line-height: 26px;
+	font-style: italic;
+	text-shadow: 0 1px 0 #ffffff;
+}
+
+#content blockquote p {
+	margin-left: 0;
+	margin-bottom: 0;
+}
+#content blockquote b,
+#content blockquote strong {
+	color: inherit;
+}
+
+#content ol,
+#content ul {
+	margin: 0 0 20px 20px;
+}
+
+#content ul ul {
+	margin-bottom: 0;
+}
+
+#content ul li {
+	padding: 5px 0 5px 12px;
+	margin-left: 8px;
+	line-height: 20px;
+}
+
+#content ul li::marker {
+	content: "●";
+	color: #ccc;
+}
+
+#content ol > li {
+	padding-left: 10px;
+	margin-top: 5px;
+}
+
+#content img.full,
+#content figure.full {
+	display: block;
+	width: 100%;
+	max-width: 100%;
+}
+
+#content img.full,
+#content img.left,
+#content img.right {
+	box-shadow: 0 0 5px 1px rgba(0, 0, 0, 0.20);
+}
+
+#content img.noborder,
+#content figure.noborder {
+	box-shadow: none;
+	border: none;
+	background: none;
+}
+
+#content img.full,
+#content img.left,
+#content img.right,
+#content figure.full,
+#content figure.left,
+#content figure.right {
+	margin-bottom: 20px;
+	float: left;
+}
+
+#content img.right,
+#content figure.right {
+	float: right;
+	margin-left: 15px;
+}
+
+#content img.left,
+#content figure.left {
+	margin-right: 15px;
+}
+
+
+#content figure img {
+	margin: 0 !important;
+}
+
+#content figcaption {
+	box-shadow: 0 0 5px 1px rgba(0, 0, 0, 0.20);
+	font: italic 700 12px/20px Cairo, "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif;
+	padding: 10px 5px;
+	color: #737272;
+	clear: both;
+	margin-top: -10px;
+	background-color: #f2f2f2;
+}
+
+#content figure.noborder figcaption {
+	box-shadow: none;
+	background: none;
+	text-align: center;
+}
+
+#content .embed,
+#content .embed_media {
+	position: relative;
+	padding-bottom: 56.25%; /* 16/9 ratio */
+	height: 0;
+	overflow: hidden;
+	box-shadow: 0 0 5px 1px rgba(0, 0, 0, 0.20);
+	margin-bottom: 20px;
+}
+
+.embed iframe,
+.embed_media iframe,
+.embed object,
+.embed_media object,
+.embed embed,
+.embed_media embed {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+}
+
+#content h1 {
+	font-size: 36px;
+	line-height: 36px;
+}
+
+.content-full #content h1 {
+	text-align: center;
+}
+
+#content h2 {
+	font-size: 24px;
+	line-height: 24px;
+	color: #333;
+	margin-bottom: 10px;
+}
+
+#content h3 {
+	font-size: 20px;
+	line-height: 20px;
+	color: #666;
+}
+
+#content h1.block,
+#content h2.block {
+	padding: 10px 2%;
+	background: #ececec;
+	text-shadow: 0 1px 0 #ffffff;
+}
+
+p.author {
+	color: #ababab;
+	font-family: Cairo, "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif;
+	font-weight: 700;
+	margin-top: -20px;
+}
+
+p.author a {
+	color: #ababab;
+}
+
+.meta {
+	padding: 2%;
+	padding-bottom: .5%;
+	margin-bottom: 20px;
+	font-weight: 700;
+	font-family: Cairo, "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif;
+	color: #666;
+	background: #f0f0f0;
+	text-shadow: 0 1px 0 #ffffff;
+}
+
+#banner-large-image {
+	text-align: center;
+	margin-bottom: 30px;
+
+}
+
+#banner-large-image .vertically-centered-black-bg {
+	height: 50%;
+	width: 100%;
+	margin-top: 24%;
+	display: block;
+	background-color: rgba(0, 0, 0, 0.68);
+	position: absolute;
+	padding-top: 3.5%;
+}
+
+#banner-large-image h1, #banner-large-image h2 {
+	font: bold 60px/60px Cairo, "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif;
+	margin-bottom: 0;
+	color: #fff;
+	text-shadow: 0 0 4px rgba(0, 0, 0, 0.85);
+}
+
+#banner-large-image p {
+	color: #cccccc;
+	font: 700 normal 24px/36px Cairo, "Helvetica Neue", sans-serif;
+}
+
+#banner-secondary {
+	background-image: url(../images/dark-grey-tile.png);
+	margin: -20px -25px 15px;
+	padding: 20px;
+}
+
+#banner-secondary h1,
+#banner-secondary h2 {
+	margin-bottom: 0;
+	color: #fff;
+	text-shadow: 0 0 4px rgba(0, 0, 0, 0.85);
+}
+
+#banner-secondary h1 {
+	font-size: 48px;
+	line-height: 54px;
+}
+
+#banner-secondary h2 {
+	font-size: 36px;
+	line-height: 42px;
+}
+
+#banner-secondary p {
+	color: #ccc;
+	font: 22px/26px "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif;
+	padding-left: 15%;
+	padding-right: 15%;
+}
+
+#banner-secondary a,
+#banner-secondary a:hover {
+	color: #7acef4;
+}
+
+#banner-secondary em,
+#banner-secondary i {
+	color: #fff;
+}
+
+#banner-secondary.large-banner {
+	text-align: center;
+	padding-top: 30px;
+	padding-bottom: 30px;
+}
+
+#banner-secondary.large-banner h1,
+#banner-secondary.large-banner h2 {
+	margin-bottom: 10px;
+}
+
+#banner-secondary.large-banner h1 {
+	font-size: 60px;
+	line-height: 60px;
+}
+
+#banner-secondary.large-banner h2 {
+	font-size: 48px;
+	line-height: 48px;
+}
+
+#banner-secondary.large-banner h3 {
+	font-size: 36px;
+	line-height: 36px;
+}
+
+.center-txt {
+	text-align: center !important;
+}
+
+/* Buttons
+   ========================================================================== */
+
+a.button,
+#content a.button,
+.button,
+input[type="submit"] {
+	border-radius: 5px;
+	border: 1px solid #999;
+	box-shadow:
+		0 0 5px rgba(0, 0, 0, 0.28),
+		inset 0 1px 0 rgba(255, 255, 255, 0.45),
+		inset 0 -1px 0 rgba(255, 255, 255, 0.45),
+		inset 1px 0 0 rgba(255, 255, 255, 0.45),
+		inset -1px 1px 0 rgba(255, 255, 255, 0.45);
+	text-decoration: none;
+	color: #fff !important;
+	text-shadow: 0 -1px 1px rgba(0, 0, 0, 0.35);
+	padding: 8px 15px;
+	font: bold 16px/16px Cairo, "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif;
+	transition: all 0.2s;
+	background-color: #d18f4f;
+	float: left;
+}
+
+a.button:hover,
+#content a.button:hover,
+.button:hover,
+input[type="submit"]:hover {
+	border-color: #b24926;
+	background-color: #cc8540;
+}
+
+a.button:active,
+#content a.button:active,
+.button:active,
+input[type="submit"]:active {
+	border-color: #b24926;
+	background-color: #b24926;
+}
+
+a.button.large,
+#content a.button.large,
+button.large,
+input[type="submit"].large {
+	font-size: 20px;
+	padding: 12px 20px;
+}
+
+a.button.dark,
+#content a.button.dark,
+.button.dark,
+input[type="submit"].dark {
+	background-color: #666;
+}
+
+a.button.dark:hover,
+#content a.button.dark:hover,
+.button.dark:hover,
+input[type="submit"].dark:hover {
+	background-color: #424141;
+}
+
+/* Sidebar
+   ========================================================================== */
+
+#sidebar h3 {
+	font-size: 20px;
+	line-height: 18px;
+	background-image: linear-gradient(to right, #efefef, #f3f3f3);
+	margin-left: -20px;
+	margin-right: -20px;
+	padding: 12px 20px;
+	text-shadow: 0 1px 0 #ffffff;
+}
+
+#sidebar li {
+	padding: 5px 0 5px 12px;
+	margin-left: 8px;
+	/* set explicitly to avoid default of "circle" on sub list */
+	list-style-type: disc;
+	text-shadow: 0 1px 0 #ffffff;
+}
+
+#sidebar li::marker {
+	color: #ccc;
+	content: "●";
+}
+
+#sidebar li a {
+	color: #4d4d4d;
+	text-decoration: none;
+	display: block;
+}
+
+#sidebar nav#secondary li {
+	background-image: none;
+	padding-left: 0;
+}
+
+#sidebar nav#secondary li.current {
+	background-color: #eee;
+	margin-left: -35px;
+	margin-right: -20px;
+	padding-left: 35px;
+	font-weight: bold;
+}
+
+/* == Footer
+   ========================================================================== */
+
+footer {
+	background: #232323;
+	background: #232323 linear-gradient(to bottom, rgba(0,0,0,.3), rgba(0,0,0,0)) top left / 100px 15px repeat-x;
+	margin-top: -20px;
+	padding-top: 40px;
+	color: #aaa;
+}
+
+footer.simple {
+	padding-top: 45px;
+	padding-bottom: 10px;
+}
+
+footer a,
+footer strong {
+	color: #fff;
+	text-decoration: none;
+}
+
+footer .download {
+	text-align: center;
+	color: #fff;
+	padding: 10px 2% 15px 2%;
+	line-height: 140%;
+}
+
+footer .download strong { margin-right: 10px; }
+
+footer .download > span { white-space: nowrap; }
+
+footer .download a { margin: 0 10px; }
+
+footer .download a em {
+	font-style: normal;
+}
+
+footer .download a:hover { border-bottom: solid 1px #888; }
+
+footer h3 {
+	color: #777;
+	letter-spacing: normal;
+	text-transform: uppercase;
+	text-shadow: #000 0 1px 0;
+	border: solid 1px #000;
+	text-rendering: optimizeLegibility;
+	border-bottom: none;
+	border-radius: 4px 4px 0 0;
+	position: relative;
+	text-align: center;
+	height: 10px;
+	margin-top: 20px;
+	font-size: 16px;
+}
+
+footer h3 span {
+	display: inline-block;
+	padding: 3px 10px;
+	position: relative;
+	top: -0.8em;
+	background: #232323;
+	z-index: 1;
+}
+
+footer h3:after {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	border: solid 1px #333;
+	border-bottom: none;
+	border-radius: 4px 4px 0 0;
+}
+
+footer .legal {
+	margin-top: 1em;
+	border-top: solid 1px #333;
+	box-shadow: #000 0 -1px 0;
+	padding-top: 10px;
+	color: #777;
+}
+
+.footer-site-links {
+	float: right;
+	width: 58%;
+	min-height: 5em; /* displace p.copyright*/
+	text-align: right;
+}
+
+footer p {
+	margin: 0 0 0.5em;
+	font-size: 11px;
+	line-height: 130%;
+}
+
+footer p.copyright {
+	margin-top: 0;
+	width: 40%;
+}
+
+footer .legal a {
+	color: #aaa;
+}
+
+footer .legal a:hover {
+	color: #fff;
+}
+
+footer a.wp-link:before,
+footer a.do-link:before {
+	content: url(../images/logo-wordpress.svg);
+	display: inline-block;
+	width: 1.5em;
+	height: 1.5em;
+	padding-right: 0.5em;
+	vertical-align: bottom;
+	filter: invert(1);
+}
+footer a.do-link:before {
+	content: url(../images/logo-digitalocean.svg);
+}
+
+.footer-site-links li {
+	position: relative;
+	background: none;
+	width: auto;
+	height: auto;
+	line-height: 20px;
+	margin: 0 0 10px 20px;
+	font-size: 13px;
+}
+
+.footer-site-links li:first-child {
+	margin-left: 0;
+}
+
+.footer-site-links li a {
+	position: relative;
+	color: #aaa;
+	display: block;
+	padding-left: 30px;
+	width: auto;
+	line-height: inherit;
+}
+
+.footer-site-links li a:before {
+	position: absolute;
+	font-size: 1.5em;
+	color: #4d4d4d;
+	text-shadow: 0 -1px 0 #000000;
+	left: 2px;
+}
+
+.footer-site-links li:hover a,
+.footer-site-links li:hover a:before {
+	color: #e6e6e6;
+}
+
+.footer-site-links li {
+	display: inline-block;
+}
+
+footer ul li {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	line-height: 30px;
+}
+
+footer .books {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	justify-content: center;
+}
+
+footer .books li {
+	flex: 1 0 92px;
+	line-height: 130%;
+	font-size: 11px;
+	text-align: center;
+}
+
+footer .books li a img {
+	display: block;
+	border-radius: 5px;
+	border: solid 1px rgba(255,255,255,0.2);
+	width: 92px;
+	height: 114px;
+	margin: 0 auto 5px;
+}
+
+footer .books li a:hover img {
+	border-color: #fff;
+}
+
+footer .books li a cite {
+	display: block;
+	font-style: normal;
+	font-size: 9px;
+	line-height: 1.5em;
+	color: #aaa;
+}
+
+/* General Styles
+   ========================================================================== */
+
+#content .entry-title a {
+	text-decoration: none;
+}
+
+.entry-meta,
+.entry-posted {
+	color: #666;
+	font-size: 12px;
+}
+
+.toc-linked {
+	position: relative;
+}
+
+.toc-linked .toc-link {
+	position: absolute;
+	left: -1em;
+	text-decoration: none;
+	opacity: 0;
+}
+/* TODO: Remove (https://github.com/jquery/jquery-wp-content/issues/143) */
+#content .toc-linked .toc-link {
+	text-decoration: none;
+}
+
+.toc-linked:hover .toc-link {
+	opacity: 1;
+}
+
+.post-heirarchy {
+	margin-bottom: 0.75em;
+}
+
+/* WordPress requirements for theme and content */
+
+.assistive-text,
+.screen-reader-text {
+	position: absolute !important;
+	clip: rect(1px, 1px, 1px, 1px);
+	overflow: hidden;
+	height: 1px;
+	width: 1px;
+}
+.alignright {
+	float: right;
+}
+.alignleft {
+	float: left;
+}
+
+/* Listing Pages (categories, searches, etc.)
+   ========================================================================== */
+
+.listing .hentry {
+	padding: 10px 20px;
+	margin: 15px 0;
+	border: 1px solid rgba( 0, 0, 0, 0.2 );
+	border-radius: 5px;
+	background-color: #eee;
+	position: relative;
+}
+.listing .hentry:first-child {
+	/* align top of first sidebar heading, with top of first homepage article */
+	margin-top: 0;
+}
+
+.listing #content .entry-title {
+	font-size: 1.3em;
+	margin-bottom: 0;
+	text-shadow: 0 1px 1px #fff;
+}
+
+.listing .entry-meta {
+	float: right;
+}
+
+.listing .entry-meta .category {
+	padding: 4px;
+	background-color: #ddd;
+	border-radius: 5px;
+}
+
+.pagination {
+	text-align: center;
+	margin-top: 2em;
+}
+
+.pagination a,
+.page-numbers {
+	padding: 0 10px;
+}
+
+
+
+/* API Sites
+========================================================================== */
+
+.entry {
+	margin: 15px 0;
+}
+
+.entry-wrapper {
+	border: 1px solid #ccc;
+	border-top: 0;
+	padding: 10px;
+	border-radius: 0 0 5px 5px;
+}
+
+#content .section-title {
+	background: #333;
+	border: 1px solid #111;
+	padding: 8px 15px;
+	font-size: 16px;
+	color: white;
+	text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5);
+	letter-spacing: 0;
+	border-radius: 5px 5px 0 0;
+	margin-bottom: 0;
+	overflow: hidden;
+}
+
+.returns {
+	float: right;
+	font-style: italic;
+}
+
+.api-item .returns {
+	font-size: 16px;
+	color: #333;
+	font-weight: normal;
+}
+
+.api-item .version-details {
+	display: block;
+	padding: 0.5em;
+	margin: 1em 0;
+	background: #fff3a5;
+	border-radius: 5px;
+}
+
+#content .signatures {
+	background: #eee;
+	border: 1px solid #ccc;
+	margin: 0 auto 15px;
+	max-width: 750px;
+	border-radius: 3px;
+	color: #333;
+	text-shadow: 0 1px 0 #fff;
+}
+
+#content .signatures li::marker {
+	content: "";
+}
+#content .signatures li {
+	list-style: none;
+	background: none;
+	margin: 0;
+	padding: 10px;
+}
+
+#content .signatures > li {
+	padding-bottom: 0;
+}
+
+#content .signature > ul {
+	margin: 0;
+}
+
+.signatures h4 {
+	font-size: 16px;
+	letter-spacing: 0;
+	padding: 8px 10px;
+	margin: -10px -10px 0;
+	color: #fff;
+	text-shadow: 0 1px 0 #444;
+}
+
+.signature:first-child h4 {
+	border-radius: 3px 3px 0 0;
+}
+
+#content .signature h4 a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.signature h4 .icon-link {
+	margin-right: 0.5em;
+}
+
+.signature .event-properties {
+	margin: 15px 0 0 0;
+}
+
+.argument {
+	margin-top: 1em;
+}
+
+#options, #methods, #extension-points, #events, #quick-nav {
+	border: 1px solid #ccc;
+	margin: 0 15px 15px;
+	padding: 10px;
+	overflow: auto;
+}
+
+#options header h2, #methods header h2, #extension-points header h2, #events header h2, #quick-nav h2 {
+	background: #cccccc; /* Old browsers */
+	background: linear-gradient(to bottom, #ffffff 0%,#eeeeee 17%,#cccccc 100%); /* W3C */
+	margin: -10px -10px 10px -10px;
+	padding: 10px;
+}
+
+#quick-nav h2 a {
+	float: right;
+	font-size: 80%;
+	padding-left: 10px;
+}
+
+.quick-nav-section {
+	width: 33%;
+	float: left;
+}
+
+#methods .api-item li,
+#extension-points .api-item li,
+#events .api-item li {
+	margin-bottom: 1em;
+}
+
+#methods .api-item li ul,
+#extension-points .api-item li ul,
+#events .api-item li ul {
+	list-style: none;
+}
+
+.version-details {
+	font-weight: bold;
+}
+
+.section-title .version-details,
+.name .version-details {
+	float: right;
+	clear: right;
+	font-size: 14px;
+	color: #fff;
+}
+
+.api-item {
+	padding: 20px 10px;
+}
+.signature li,
+.api-item {
+	border-top: 1px solid #ccc;
+}
+
+.signature li:first-child,
+.api-item.first-item {
+	border-top: none;
+	padding-top: 10px;
+}
+
+.option-type {
+	font-size: 16px;
+	font-weight: normal;
+	color: #333;
+}
+
+#options .default {
+	margin-bottom: 1em;
+}
+#options .default .syntaxhighlighter {
+	/* stick code to label; this is more important! */
+	margin-top: 0 !important;
+}
+
+.desc {
+	font-size: 16px;
+	padding: 5px 15px 0;
+	color: #666;
+	font-style: italic;
+}
+
+.desc strong {
+	color: #444;
+	font-style: normal;
+}
+
+.entry-summary p {
+	margin: 0;
+}
+
+.warning, .note {
+	padding: 0.5em 1em;
+	margin: 1em;
+	border-radius: 5px;
+}
+
+.warning {
+	background: #fff3a5;
+}
+
+.note {
+	background: #428bca;
+	color: #fff;
+}
+
+.note a {
+	color: #fff;
+}
+
+.entry-example h3 {
+	margin-top: 1em;
+}
+
+/* Media Queries
+   ========================================================================== */
+
+@media only screen and (max-width: 807px) {
+	#content-wrapper.row {
+		min-width: 0;
+	}
+}
+
+@media only screen and (max-width: 767px) {
+	#global-nav ul.projects li.toggle-projects {
+		display: none;
+	}
+
+	#sidebar,
+	.content-right #sidebar {
+		width: auto;
+		float: none;
+		clear: both;
+		margin: 0;
+		border-top: 1px solid #e7e7e7;
+		border-right: none;
+		border-image: none;
+		box-shadow: none;
+		background-image: none;
+	}
+
+	.content-full.full-width #content,
+	.content-right #content,
+	.content-left #content {
+		padding-left: 15px;
+		padding-right: 15px;
+	}
+
+	#content {
+		width: 100%;
+		float: none;
+		clear: both;
+	}
+
+	#banner-secondary {
+		margin-left: -15px !important;
+		margin-right: -15px !important;
+	}
+
+	footer p.copyright,
+	footer ul.footer-site-links {
+		width: 100%;
+		min-height: auto;
+	}
+
+	footer p.copyright,
+	footer ul.footer-site-links,
+	footer p {
+		text-align: center;
+		margin: 0 0 10px 0;
+	}
+}
+
+@media only screen and (max-width: 700px) {
+	#global-nav ul.projects {
+		display: none;
+	}
+
+	#global-nav nav ul.links {
+		float: left;
+	}
+
+	#global-nav nav ul.links li {
+		font-size: 12px;
+	}
+
+	#logo-events aside {
+		display: inline-block;
+		position: relative;
+		left: 50%;
+		margin-left: -200px;
+		float: none;
+		padding: 10px 0;
+	}
+
+	#logo-events h2.logo {
+		float: none;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	nav#main .searchform {
+		display: block;
+		float: none;
+		width: 100%;
+		margin: 15px auto;
+		clear:both;
+	}
+	.searchform input[type=search] {
+		border-width: 1px;
+	}
+
+	nav#main ul{
+		width: auto !important;
+		text-align: left !important;
+		float: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	nav#main ul li, nav#main ul li a {
+		display: block;
+		text-align: left !important;
+		float: left;
+		margin-right: 0;
+		padding: 0 4px 4px 0;
+	}
+
+
+	nav#main li a:hover,
+	nav#main li.current a {
+		background: none;
+		box-shadow: none;
+		border-radius: 4px;
+		border: 1px solid rgba(0,0,0,0.0);
+	}
+
+	nav#main li a {
+		font-size: 14px;
+	}
+
+	.content-full.full-width #content,
+	.content-right #content,
+	.content-left #content {
+		padding-left: 10px;
+		padding-right: 10px;
+	}
+
+	#banner-secondary {
+		border-top-left-radius: 9px;
+		border-top-right-radius: 9px;
+		margin-left: -10px !important;
+		margin-right: -10px !important;
+	}
+
+	#banner-secondary h2 {
+		font-size: 35px;
+		line-height: 35px;
+	}
+
+	#content h1 {
+		font-size: 26px;
+		line-height: 26px;
+	}
+
+	#banner-secondary.large-banner h1,
+	#banner-secondary.large-banner h2 {
+		font-size: 36px;
+		line-height: 36px;
+	}
+
+	#banner-secondary.large-banner p {
+		font-size: 22px;
+		padding: 0;
+	}
+}
+
+@media only screen and (max-width: 480px) {
+
+	#global-nav {
+		display: none;
+	}
+
+	#logo-events aside {
+		width: 300px;
+		margin-left: -150px;
+	}
+
+	#container {
+		border-top: none !important;
+	}
+
+	.menu-top-container {
+		display: flex;
+		flex-flow: column;
+	}
+
+	.menu-top-container .menu-trigger {
+		display: inline-block !important;
+		align-self: flex-end;
+	}
+
+	#menu-top {
+		display: none;
+	}
+
+	#menu-top.menu-open {
+		display: block;
+		background-color: rgba(0, 0, 0, 0.18);
+		margin-top: 6px;
+	}
+
+	nav#main {
+		padding: 0;
+		background: none;
+		border: none;
+		box-shadow: none;
+	}
+
+	nav#main .searchform {
+		display: block;
+		float: none;
+		width: 100%;
+		margin: 15px auto;
+	}
+
+	nav#main ul li,
+	nav#main ul li a {
+		float: none;
+		padding: 6px 0 6px 8px;
+	}
+
+	.constrain,
+	#container {
+		padding-left: 10px;
+		padding-right: 10px;
+	}
+
+	.content-full #content,
+	.content-full.full-width #content,
+	.content-right #content,
+	.content-left #content {
+		padding-left: 0;
+		padding-right: 0;
+	}
+
+	#content-wrapper {
+		border-top-left-radius: 10px;
+		border-top-right-radius: 10px;
+		padding-left: 25px;
+		padding-right: 25px;
+	}
+
+	#content pre {
+		margin-left: -25px;
+		margin-right: -25px;
+	}
+
+	#content img.left,
+	#content figure.left,
+	#content img.right,
+	#content figure.right {
+		display: block;
+		width: 100%;
+		max-width: 100%;
+		margin-left: 0;
+		margin-right: 0;
+	}
+
+	#banner-secondary {
+		margin-left: -25px !important;
+		margin-right: -25px !important;
+	}
+
+	footer .footer-icon-links li a:before {
+		display: none;
+	}
+
+	footer .footer-icon-links li:first-child {
+		margin-left: 0;
+	}
+
+	footer .download > span {
+		white-space: normal;
+	}
+}
+
+@media only screen and (-webkit-device-pixel-ratio: 2){
+	.jquery h2.logo a {
+		background: url(../images/logo-jquery@2x.png) no-repeat;
+		background-size: 243px 66px;
+	}
+
+	.jquery-ui h2.logo a {
+		background: url(../images/logo-jquery-ui@2x.png) no-repeat;
+		background-size: 253px 66px;
+	}
+
+	.jquery-mobile h2.logo a {
+		background: url(../images/logo-jquery-mobile@2x.png) no-repeat;
+		background-size: 268px 66px;
+	}
+
+	.jquery-foundation h2.logo a {
+		background: url(../images/logo-jquery-foundation@2x.png) no-repeat;
+		background-size: 243px 66px;
+	}
+}
+
+ /* Helper classes
+	========================================================================== */
+
+.ir {
+	background-color: transparent;
+	border: 0;
+	overflow: hidden;
+}
+
+.ir:before {
+	content: "";
+	display: block;
+	width: 0;
+	height: 100%;
+}
+
+.hidden {
+	display: none !important;
+	visibility: hidden;
+}
+
+.visuallyhidden {
+	border: 0;
+	clip: rect(0 0 0 0);
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	padding: 0;
+	position: absolute;
+	width: 1px;
+}
+
+.visuallyhidden.focusable:active,
+.visuallyhidden.focusable:focus {
+	clip: auto;
+	height: auto;
+	margin: 0;
+	overflow: visible;
+	position: static;
+	width: auto;
+}
+
+.invisible {
+	visibility: hidden;
+}
+
+.clearfix:before,
+.clearfix:after {
+	content: " ";
+	display: table;
+}
+
+.clearfix:after {
+	clear: both;
+}
+
+/* Print styles
+   ========================================================================== */
+
+@media print {
+	* {
+		background: transparent !important;
+		color: #000 !important; /* Black prints faster: h5bp.com/s */
+		box-shadow:none !important;
+		text-shadow: none !important;
+	}
+
+	a,
+	a:visited {
+		text-decoration: underline;
+	}
+
+	a[href]:after {
+		content: " (" attr(href) ")";
+	}
+
+	abbr[title]:after {
+		content: " (" attr(title) ")";
+	}
+
+	/*
+	 * Don't show links for images, or javascript/internal links
+	 */
+
+	.ir a:after,
+	a[href^="javascript:"]:after,
+	a[href^="#"]:after {
+		content: "";
+	}
+
+	pre,
+	blockquote {
+		border: 1px solid #999;
+		page-break-inside: avoid;
+	}
+
+	thead {
+		display: table-header-group; /* h5bp.com/t */
+	}
+
+	tr,
+	img {
+		page-break-inside: avoid;
+	}
+
+	img {
+		max-width: 100% !important;
+	}
+
+	@page {
+		margin: 0.5cm;
+	}
+
+	p,
+	h2,
+	h3 {
+		orphans: 3;
+		widows: 3;
+	}
+
+	h2,
+	h3 {
+		page-break-after: avoid;
+	}
+}
+
+/* The Grid ----------------------
+Based on Zurb Foundation's Grid
+*/
+.row { width: 1240px; max-width: 100%; min-width: 768px; margin: 0 auto; }
+.row .row { width: auto; max-width: none; min-width: 0; margin: 0 -25px; }
+.row.collapse .column, .row.collapse .columns { padding: 0; }
+.row .row { width: auto; max-width: none; min-width: 0; margin: 0 -25px; }
+.row .row.collapse { margin: 0; }
+
+.column, .columns { float: left; min-height: 1px; padding: 0 25px; position: relative; }
+.column.centered, .columns.centered { float: none; margin: 0 auto; }
+
+[class*="column"] + [class*="column"]:last-child { float: right; }
+
+[class*="column"] + [class*="column"].end { float: left; }
+
+.one, .row .one { width: 8.33333%; }
+.two, .row .two { width: 16.66667%; }
+.three, .row .three { width: 25%; }
+.four, .row .four { width: 33.33333%; }
+.five, .row .five { width: 41.66667%; }
+.six, .row .six { width: 50%; }
+.seven, .row .seven { width: 58.33333%; }
+.eight, .row .eight { width: 66.66667%; }
+.nine, .row .nine { width: 75%; }
+.ten, .row .ten { width: 83.33333%; }
+.eleven, .row .eleven { width: 91.66667%; }
+.twelve, .row .twelve { width: 100%; }
+
+.push-two { left: 16.66667%; }
+.pull-two { right: 16.66667%; }
+
+.push-three { left: 25%; }
+.pull-three { right: 25%; }
+
+.push-four { left: 33.33333%; }
+.pull-four { right: 33.33333%; }
+
+.push-five { left: 41.66667%; }
+.pull-five { right: 41.66667%; }
+
+.push-six { left: 50%; }
+.pull-six { right: 50%; }
+
+.push-seven { left: 58.33333%; }
+.pull-seven { right: 58.33333%; }
+
+.push-eight { left: 66.66667%; }
+.pull-eight { right: 66.66667%; }
+
+.push-nine { left: 75%; }
+.pull-nine { right: 75%; }
+
+.push-ten { left: 83.33333%; }
+.pull-ten { right: 83.33333%; }
+
+img, object, embed { max-width: 100%; height: auto; }
+
+object, embed { height: 100%; }
+
+#map_canvas img, .map_canvas img { max-width: none!important; }
+
+/* Nicolas Gallagher's micro clearfix */
+.row:before, .row:after { content: ""; display: table; }
+.row:after { clear: both; }
+
+/* Mobile Grid and Overrides ---------------------- */
+@media only screen and (max-width: 767px) {
+	.row { width: auto; min-width: 0; margin-left: 0 !important; margin-right: 0 !important; }
+	.column, .columns { width: auto !important; float: none; padding-left: 0 !important; padding-right: 0 !important;
+	}
+	.column:last-child, .columns:last-child { float: none; }
+	[class*="column"] + [class*="column"]:last-child { float: none; }
+	.column:before, .columns:before, .column:after, .columns:after { content: ""; display: table; }
+	.column:after, .columns:after { clear: both; }
+	.push-two, .push-three, .push-four, .push-five, .push-six, .push-seven, .push-eight, .push-nine, .push-ten { left: auto; }
+	.pull-two, .pull-three, .pull-four, .pull-five, .pull-six, .pull-seven, .pull-eight, .pull-nine, .pull-ten { right: auto; }
+	/* Mobile 4-column Grid */
+	.row .mobile-one { width: 25% !important; float: left; padding: 0 25px; }
+	.row .mobile-one:last-child { float: right; }
+	.row .mobile-one.end { float: left; }
+	.row.collapse .mobile-one { padding: 0; }
+	.row .mobile-two { width: 50% !important; float: left; padding: 0 25px; }
+	.row .mobile-two:last-child { float: right; }
+	.row .mobile-two.end { float: left; }
+	.row.collapse .mobile-two { padding: 0; }
+	.row .mobile-three { width: 75% !important; float: left; padding: 0 25px; }
+	.row .mobile-three:last-child { float: right; }
+	.row .mobile-three.end { float: left; }
+	.row.collapse .mobile-three { padding: 0; }
+	.row .mobile-four { width: 100% !important; float: left; padding: 0 25px; }
+	.row .mobile-four:last-child { float: right; }
+	.row .mobile-four.end { float: left; }
+	.row.collapse .mobile-four { padding: 0; }
+	.push-one-mobile { left: 25%; }
+	.pull-one-mobile { right: 25%; }
+	.push-two-mobile { left: 50%; }
+	.pull-two-mobile { right: 50%; }
+	.push-three-mobile { left: 75%; }
+	.pull-three-mobile { right: 75%; }
+}
+
+/* Syntax Highlighting ---------------------- */
+
+pre, code {
+	font-family: Consolas, Menlo, monospace !important;
+	word-spacing: 0;
+}
+pre code {
+  display: block; padding: 0.5em;
+  color: #333;
+  background: #f8f8ff
+}
+
+/*
+ * Styles for highlight.js. Classes without the hljs prefix are legacy
+ * and can be removed once all pages update grunt-jquery-content to
+ * the latest version.
+ */
+
+pre .comment, /* legacy */
+pre .hljs-comment,
+pre .template_comment, /* legacy */
+pre .diff .header, /* legacy */
+pre .diff .hljs-meta,
+pre .javadoc, /* legacy */
+pre .hljs-doctag {
+	color: #998;
+	font-style: italic
+}
+
+pre .keyword, /* legacy */
+pre .hljs-keyword,
+pre .css .rule .keyword, /* legacy */
+pre .css .hljs-keyword,
+pre .winutils, /* ??? */
+pre .javascript .title, /* legacy */
+pre .javascript .hljs-name,
+pre .nginx .title, /* legacy */
+pre .nginx .hljs-name,
+pre .subst, /* legacy */
+pre .hljs-subst,
+pre .request, /* ??? */
+pre .status /* ??? */ {
+	color: #333;
+	font-weight: bold
+}
+
+pre .number, /* legacy */
+pre .hexcolor, /* legacy */
+pre .hljs-number,
+pre .ruby .constant /* legacy */ {
+	color: #099;
+}
+
+pre .string, /* legacy */
+pre .tag .value, /* legacy */
+pre .hljs-string,
+pre .phpdoc, /* legacy */
+pre .tex .formula /* legacy */ {
+	color: #d14
+}
+
+pre .hljs-name,
+pre .id, /* legacy */
+pre .hljs-selector-id {
+	color: #900;
+	font-weight: bold
+}
+
+pre .javascript .title, /* legacy */
+pre .javascript .hljs-name,
+pre .lisp .title, /* legacy */
+pre .lisp .hljs-name,
+pre .clojure .title, /* legacy */
+pre .clojure .hljs-name,
+pre .subst, /* legacy */
+pre .hljs-subst {
+	font-weight: normal
+}
+
+pre .class .title, /* legacy */
+pre .hljs-selector-class .hljs-name,
+pre .haskell .type,
+pre .haskell .hljs-type,
+pre .vhdl .literal, /* legacy */
+pre .vhdl .hljs-string,
+pre .tex .command, /* legacy */
+pre .tex .hljs-keyword {
+	color: #458;
+	font-weight: bold
+}
+
+pre .tag, /* legacy */
+pre .hljs-tag,
+pre .tag .title, /* legacy */
+pre .hljs-tag .hljs-name,
+pre .rules .property, /* ??? */
+pre .django .tag .keyword, /* legacy */
+pre .django .hljs-tag .hljs-keyword {
+	color: #000080;
+	font-weight: normal
+}
+
+pre .attribute, /* legacy */
+pre .hljs-attribute,
+pre .hljs-attr,
+pre .variable, /* legacy */
+pre .hljs-variable,
+pre .lisp .body, /* legacy */
+pre .lisp .hljs-symbol {
+	color: #008080
+}
+
+pre .regexp, /* legacy */
+pre .hljs-regexp {
+	color: #009926
+}
+
+pre .class, /* legacy */
+pre .hljs-selector-class {
+	color: #458;
+	font-weight: bold
+}
+
+pre .symbol, /* legacy */
+pre .hljs-symbol,
+pre .ruby .symbol .string, /* legacy */
+pre .ruby .hljs-symbol .hljs-string,
+pre .lisp .keyword, /* legacy */
+pre .lisp .hljs-keyword,
+pre .tex .special, /* legacy */
+pre .prompt /* legacy */ {
+	color: #990073
+}
+
+pre .built_in, /* legacy */
+pre .hljs-built_in,
+pre .lisp .title, /* legacy */
+pre .lisp .hljs-name,
+pre .clojure .built_in, /* legacy */
+pre .clojure .hljs-built_in {
+	color: #0086b3
+}
+
+pre .preprocessor, /* legacy */
+pre .pi, /* legacy */
+pre .doctype, /* legacy */
+pre .shebang, /* legacy */
+pre .cdata, /* legacy */
+pre .hljs-meta {
+	color: #999;
+	font-weight: bold
+}
+
+pre .deletion, /* legacy */
+pre .hljs-deletion {
+	background: #fdd
+}
+
+pre .addition, /* legacy */
+pre .hljs-addition {
+	background: #dfd
+}
+
+pre .diff .change, /* legacy */
+pre .diff .hljs-meta {
+	background: #0086b3
+}
+
+pre .chunk, /* legacy */
+pre .diff .hljs-comment {
+	color: #aaa
+}
+
+.syntaxhighlighter a,
+.syntaxhighlighter div,
+.syntaxhighlighter pre,
+.syntaxhighlighter code,
+.syntaxhighlighter table,
+.syntaxhighlighter table td,
+.syntaxhighlighter table tr,
+.syntaxhighlighter table tbody,
+.syntaxhighlighter table thead,
+.syntaxhighlighter table caption,
+.syntaxhighlighter textarea {
+	border-radius: 0 0 0 0 !important;
+	background: none !important;
+	bottom: auto !important;
+	float: none !important;
+	height: auto !important;
+	left: auto !important;
+	line-height: 1.1em !important;
+	margin: 0 !important;
+	outline: 0 !important;
+	overflow: visible !important;
+	padding: 0 !important;
+	position: static !important;
+	right: auto !important;
+	text-align: left !important;
+	top: auto !important;
+	vertical-align: baseline !important;
+	width: auto !important;
+	box-sizing: content-box !important;
+	font-family: Consolas, Menlo, monospace !important;
+	font-weight: normal !important;
+	font-style: normal !important;
+	font-size: 1em !important;
+	min-height: auto !important;
+}
+.syntaxhighlighter {
+	width: 100% !important;
+	margin: 1em 0 1em 0 !important;
+	padding: 1em 0;
+	position: relative !important;
+	overflow: auto !important;
+	font-size: 1em !important;
+	background: #eee;
+}
+.syntaxhighlighter.source {
+	overflow: hidden !important;
+}
+.syntaxhighlighter .line {
+	white-space: pre !important;
+}
+.syntaxhighlighter table {
+	width: 100% !important;
+}
+.syntaxhighlighter table caption {
+	text-align: left !important;
+	padding: .5em 0 0.5em 1em !important;
+}
+.syntaxhighlighter table td.code {
+	width: 100% !important;
+}
+.syntaxhighlighter table td.code .container {
+	position: relative !important;
+}
+.syntaxhighlighter table td.code .container textarea {
+	box-sizing: border-box !important;
+	position: absolute !important;
+	left: 0 !important;
+	top: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+	border: none !important;
+	background: white !important;
+	padding-left: 1em !important;
+	overflow: hidden !important;
+	white-space: pre !important;
+}
+.syntaxhighlighter table td.gutter .line {
+	text-align: right !important;
+	padding: 0 0.5em 0 1em !important;
+	user-select: none;
+}
+.syntaxhighlighter table td.code .line {
+	padding: 0 0.5em !important;
+}
+.syntaxhighlighter.nogutter td.code .container textarea,
+.syntaxhighlighter.nogutter td.code .line {
+	padding-left: 1em !important;
+}
+
+.syntaxhighlighter table td.gutter {
+	border-right: 2px solid #999;
+}
+
+.syntaxhighlighter {
+	border-radius: 5px;
+}
+
+#content .syntaxhighlighter tr {
+	border-bottom: none;
+}
+</style>
+	<style data-inlined-from="https://jquery.com/wp-content/themes/jquery.com/style.css?v=8acf125c">/*
+Theme Name: jquery-com
+Template: jquery
+Description: Theme for jquery.com and blog.jquery.com
+*/
+
+a,
+.title {
+	color: #b24926;
+}
+#content a:hover {
+	color: #333;
+}
+
+/* Home Page */
+
+#home-content {
+	margin-bottom: 15px;
+}
+
+#banner-secondary a,
+#banner-secondary a:hover {
+	color: #b3b3b3;
+}
+#banner-secondary h3 {
+	color: #7acef4;
+	margin-bottom: 0.5em;
+}
+
+#banner-secondary .features-box p {
+	font-size: .8em;
+	line-height: 1em;
+	padding: 0;
+}
+
+.feature-box-image {
+	margin: 0 auto 1em auto;
+	width: 120px;
+	height: 107px;
+	overflow: hidden;
+}
+.lightweight-footprint .feature-box-image {
+	background: url('i/feature-sprites.png') 0 0 no-repeat;
+}
+.css3-compliant .feature-box-image{
+	background: url('i/feature-sprites.png') -139px 0 no-repeat;
+}
+.cross-browser .feature-box-image{
+	background: url('i/feature-sprites.png') -278px 0 no-repeat;
+	transition: all 0.4s;
+}
+.cross-browser .feature-box-image:hover {
+	transition: all 0.7s;
+	transform: rotate(6.28rad);
+}
+
+#banner-secondary .download-main .download-options {
+	margin-top: 1em;
+}
+#banner-secondary .download-options a {
+	display: block;
+}
+#banner-secondary .download-main .button {
+	float: none;
+	box-shadow: 0 0 20px rgba(209, 143, 79, 0.6);
+	border-radius: 0;
+	border: none;
+	transition: all 1s;
+}
+#banner-secondary .download-main .button:hover {
+	box-shadow: 0 0 25px rgba(209, 143, 79, 0.9);
+}
+#content #banner-secondary .download-main > a {
+	display: block;
+	padding: 0 0 .5em 0;
+	font-size: 2em;
+	width: 100%;
+	text-align: center;
+	text-decoration: none;
+	line-height: 0.8em;
+}
+#content #banner-secondary .download-main > a span {
+	display: block;
+	font-size: 0.6em;
+}
+#content #banner-secondary .download-main > a span.download {
+	background: url('i/download.png') 0 0;
+	width: 44px;
+	height: 37px;
+	position: relative;
+	top: 1em;
+	display: inline-block;
+	margin-right: 0.5em;
+}
+#content #banner-secondary .download-main .support-notice {
+	font-size: 12px;
+}
+
+/* New download button */
+#banner-secondary > .download {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	margin-bottom: 1em;
+}
+.download-button-content {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 0.5em;
+}
+.download-button-content .download-icon {
+	background: url('i/download.png') no-repeat 0 5px / 100% 100%;
+	width: 35px;
+	height: 35px;
+	display: inline-block;
+	flex-shrink: 0;
+}
+.download-button-content .download-message {
+	flex-grow: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	gap: 0.25em;
+}
+.download-button-content .download-message .download-version {
+	font-size: 0.7em;
+}
+.download-options .support-notice {
+	margin: 0.5em 0;
+	color: #ccc;
+}
+@media only screen and (max-width: 767px) {
+	#banner-secondary .download {
+		align-items: center;
+	}
+}
+
+/* Team */
+
+.block-grid,
+#content .block-grid {
+	display: flex;
+	flex-flow: row wrap;
+	margin: 0 -12px;
+}
+.block-grid li,
+#content .block-grid li {
+	display: block;
+	margin: 0;
+	padding: 0 12px 12px;
+}
+.block-grid.two-up li,
+#content .block-grid.two-up li {
+	width: 50%;
+}
+.block-grid.three-up li,
+#content .block-grid.three-up li {
+	width: 33.33%;
+}
+.block-grid.four-up li,
+#content .block-grid.four-up li {
+	width: 25%;
+}
+.block-grid.five-up li,
+#content .block-grid.five-up li {
+	width: 20%;
+}
+@media only screen and (max-width: 767px) {
+	.block-grid.mobile-one-up li { width: 100% !important; }
+	.block-grid.mobile-two-up li { width: 50% !important; }
+	.block-grid.mobile-three-up li { width: 33.33% !important; }
+	.block-grid.mobile-four-up li { width: 25% !important; }
+}
+
+.page-slug-team .block-grid li {
+	text-align: center;
+}
+.page-slug-team .block-grid img {
+	max-width: 100%;
+	margin-bottom: 10px;
+}
+.page-slug-team .block-grid p {
+	text-align: left;
+}
+.page-slug-team #content h2 {
+	color: #333;
+	font-size: 20px;
+	line-height: 20px;
+	font-weight: bold;
+	text-align: center;
+	margin-bottom: 5px;
+}
+.page-slug-team #content h3 {
+	color: #0769ad;
+	font-style: italic;
+	font-size: 14px;
+	line-height: 18px;
+	text-align: center;
+}
+
+.page-slug-team #content .team-list h3 {
+	min-height: 5px;
+}
+
+.page-slug-team #content .past-team-list h2,
+.page-slug-team #content .past-team-list h3 {
+	text-align: left;
+}
+.page-slug-team #content .past-team-list h3 {
+	min-height: 45px;
+	border-bottom: 1px solid #dbdbdb;
+}
+
+.page-slug-team .center-txt {
+	padding-left: 10%;
+	padding-right: 10%;
+}
+</style>
+
+	
+	
+	
+<meta name="robots" content="max-image-preview:large">
+<link rel="alternate" title="oEmbed (JSON)" type="application/json+oembed" href="https://jquery.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fjquery.com%2F">
+<link rel="alternate" title="oEmbed (XML)" type="text/xml+oembed" href="https://jquery.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fjquery.com%2F&amp;format=xml">
+
+<style id="global-styles-inline-css">
+:root{--wp--preset--aspect-ratio--square: 1;--wp--preset--aspect-ratio--4-3: 4/3;--wp--preset--aspect-ratio--3-4: 3/4;--wp--preset--aspect-ratio--3-2: 3/2;--wp--preset--aspect-ratio--2-3: 2/3;--wp--preset--aspect-ratio--16-9: 16/9;--wp--preset--aspect-ratio--9-16: 9/16;--wp--preset--color--black: #000000;--wp--preset--color--cyan-bluish-gray: #abb8c3;--wp--preset--color--white: #ffffff;--wp--preset--color--pale-pink: #f78da7;--wp--preset--color--vivid-red: #cf2e2e;--wp--preset--color--luminous-vivid-orange: #ff6900;--wp--preset--color--luminous-vivid-amber: #fcb900;--wp--preset--color--light-green-cyan: #7bdcb5;--wp--preset--color--vivid-green-cyan: #00d084;--wp--preset--color--pale-cyan-blue: #8ed1fc;--wp--preset--color--vivid-cyan-blue: #0693e3;--wp--preset--color--vivid-purple: #9b51e0;--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple: linear-gradient(135deg,rgb(6,147,227) 0%,rgb(155,81,224) 100%);--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan: linear-gradient(135deg,rgb(122,220,180) 0%,rgb(0,208,130) 100%);--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange: linear-gradient(135deg,rgb(252,185,0) 0%,rgb(255,105,0) 100%);--wp--preset--gradient--luminous-vivid-orange-to-vivid-red: linear-gradient(135deg,rgb(255,105,0) 0%,rgb(207,46,46) 100%);--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray: linear-gradient(135deg,rgb(238,238,238) 0%,rgb(169,184,195) 100%);--wp--preset--gradient--cool-to-warm-spectrum: linear-gradient(135deg,rgb(74,234,220) 0%,rgb(151,120,209) 20%,rgb(207,42,186) 40%,rgb(238,44,130) 60%,rgb(251,105,98) 80%,rgb(254,248,76) 100%);--wp--preset--gradient--blush-light-purple: linear-gradient(135deg,rgb(255,206,236) 0%,rgb(152,150,240) 100%);--wp--preset--gradient--blush-bordeaux: linear-gradient(135deg,rgb(254,205,165) 0%,rgb(254,45,45) 50%,rgb(107,0,62) 100%);--wp--preset--gradient--luminous-dusk: linear-gradient(135deg,rgb(255,203,112) 0%,rgb(199,81,192) 50%,rgb(65,88,208) 100%);--wp--preset--gradient--pale-ocean: linear-gradient(135deg,rgb(255,245,203) 0%,rgb(182,227,212) 50%,rgb(51,167,181) 100%);--wp--preset--gradient--electric-grass: linear-gradient(135deg,rgb(202,248,128) 0%,rgb(113,206,126) 100%);--wp--preset--gradient--midnight: linear-gradient(135deg,rgb(2,3,129) 0%,rgb(40,116,252) 100%);--wp--preset--font-size--small: 13px;--wp--preset--font-size--medium: 20px;--wp--preset--font-size--large: 36px;--wp--preset--font-size--x-large: 42px;--wp--preset--spacing--20: 0.44rem;--wp--preset--spacing--30: 0.67rem;--wp--preset--spacing--40: 1rem;--wp--preset--spacing--50: 1.5rem;--wp--preset--spacing--60: 2.25rem;--wp--preset--spacing--70: 3.38rem;--wp--preset--spacing--80: 5.06rem;--wp--preset--shadow--natural: 6px 6px 9px rgba(0, 0, 0, 0.2);--wp--preset--shadow--deep: 12px 12px 50px rgba(0, 0, 0, 0.4);--wp--preset--shadow--sharp: 6px 6px 0px rgba(0, 0, 0, 0.2);--wp--preset--shadow--outlined: 6px 6px 0px -3px rgb(255, 255, 255), 6px 6px rgb(0, 0, 0);--wp--preset--shadow--crisp: 6px 6px 0px rgb(0, 0, 0);}:where(body) { margin: 0; }:where(.is-layout-flex){gap: 0.5em;}:where(.is-layout-grid){gap: 0.5em;}body .is-layout-flex{display: flex;}.is-layout-flex{flex-wrap: wrap;align-items: center;}.is-layout-flex > :is(*, div){margin: 0;}body .is-layout-grid{display: grid;}.is-layout-grid > :is(*, div){margin: 0;}body{padding-top: 0px;padding-right: 0px;padding-bottom: 0px;padding-left: 0px;}:root :where(.wp-element-button, .wp-block-button__link){background-color: #32373c;border-width: 0;color: #fff;font-family: inherit;font-size: inherit;font-style: inherit;font-weight: inherit;letter-spacing: inherit;line-height: inherit;padding-top: calc(0.667em + 2px);padding-right: calc(1.333em + 2px);padding-bottom: calc(0.667em + 2px);padding-left: calc(1.333em + 2px);text-decoration: none;text-transform: inherit;}.has-black-color{color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-color{color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-color{color: var(--wp--preset--color--white) !important;}.has-pale-pink-color{color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-color{color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-color{color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-color{color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-color{color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-color{color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-color{color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-color{color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-color{color: var(--wp--preset--color--vivid-purple) !important;}.has-black-background-color{background-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-background-color{background-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-background-color{background-color: var(--wp--preset--color--white) !important;}.has-pale-pink-background-color{background-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-background-color{background-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-background-color{background-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-background-color{background-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-background-color{background-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-background-color{background-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-background-color{background-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-background-color{background-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-background-color{background-color: var(--wp--preset--color--vivid-purple) !important;}.has-black-border-color{border-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-border-color{border-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-border-color{border-color: var(--wp--preset--color--white) !important;}.has-pale-pink-border-color{border-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-border-color{border-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-border-color{border-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-border-color{border-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-border-color{border-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-border-color{border-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-border-color{border-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-border-color{border-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-border-color{border-color: var(--wp--preset--color--vivid-purple) !important;}.has-vivid-cyan-blue-to-vivid-purple-gradient-background{background: var(--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple) !important;}.has-light-green-cyan-to-vivid-green-cyan-gradient-background{background: var(--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan) !important;}.has-luminous-vivid-amber-to-luminous-vivid-orange-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange) !important;}.has-luminous-vivid-orange-to-vivid-red-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-orange-to-vivid-red) !important;}.has-very-light-gray-to-cyan-bluish-gray-gradient-background{background: var(--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray) !important;}.has-cool-to-warm-spectrum-gradient-background{background: var(--wp--preset--gradient--cool-to-warm-spectrum) !important;}.has-blush-light-purple-gradient-background{background: var(--wp--preset--gradient--blush-light-purple) !important;}.has-blush-bordeaux-gradient-background{background: var(--wp--preset--gradient--blush-bordeaux) !important;}.has-luminous-dusk-gradient-background{background: var(--wp--preset--gradient--luminous-dusk) !important;}.has-pale-ocean-gradient-background{background: var(--wp--preset--gradient--pale-ocean) !important;}.has-electric-grass-gradient-background{background: var(--wp--preset--gradient--electric-grass) !important;}.has-midnight-gradient-background{background: var(--wp--preset--gradient--midnight) !important;}.has-small-font-size{font-size: var(--wp--preset--font-size--small) !important;}.has-medium-font-size{font-size: var(--wp--preset--font-size--medium) !important;}.has-large-font-size{font-size: var(--wp--preset--font-size--large) !important;}.has-x-large-font-size{font-size: var(--wp--preset--font-size--x-large) !important;}
+/*# sourceURL=global-styles-inline-css */
+</style>
+
+<link rel="https://api.w.org/" href="https://jquery.com/wp-json/"><link rel="alternate" title="JSON" type="application/json" href="https://jquery.com/wp-json/wp/v2/pages/8"><meta name="generator" content="WordPress 7.0">
+<link rel="canonical" href="https://jquery.com/">
+<link rel="me" href="https://social.lfx.dev/@jquery">
+</head>
+<body class="jquery home wp-singular page-template page-template-page-fullwidth page-template-page-fullwidth-php page page-id-8 wp-theme-jquery wp-child-theme-jquerycom page-slug-index single-author singular">
+
+	<div id="banner">
+		jQuery 4.0 has been released! jQuery 3.x will now only receive critical updates. Find support for earlier versions at <a href="https://www.herodevs.com/support/jquery-nes?utm_source=jQuery&amp;utm_medium=link&amp;utm_campaign=eol_support_jQuery">herodevs.com</a>.	</div>
+
+<header>
+	<section id="global-nav">
+		<nav>
+			<div class="constrain">
+				<ul class="projects">
+					<li class="project jquery"><a href="https://jquery.com/" title="jQuery">jQuery</a></li>
+					<li class="project jquery-ui"><a href="https://jqueryui.com/" title="jQuery UI">jQuery UI</a></li>
+					<li class="project jquery-mobile"><a href="https://jquerymobile.com/" title="jQuery Mobile">jQuery Mobile</a></li>
+					<li class="project sizzlejs"><a href="https://sizzlejs.com/" title="Sizzle">Sizzle</a></li>
+					<li class="project qunitjs"><a href="https://qunitjs.com/" title="QUnit">QUnit</a></li>
+				</ul>
+				<ul class="links">
+					<li><a href="https://plugins.jquery.com/">Plugins</a></li>
+					<li class="dropdown"><a href="https://contribute.jquery.org/">Contribute</a>
+						<ul>
+							<li><a href="https://cla.openjsf.org/">CLA</a></li>
+							<li><a href="https://contribute.jquery.org/style-guide/">Style Guides</a></li>
+							<li><a href="https://contribute.jquery.org/triage/">Bug Triage</a></li>
+							<li><a href="https://contribute.jquery.org/code/">Code</a></li>
+							<li><a href="https://contribute.jquery.org/documentation/">Documentation</a></li>
+							<li><a href="https://contribute.jquery.org/web-sites/">Web Sites</a></li>
+						</ul>
+					</li>
+					<li class="dropdown"><a href="https://events.jquery.org/">Events</a>
+						<ul class="wide">
+						</ul>
+					</li>
+					<li class="dropdown"><a href="https://jquery.com/support/">Support</a>
+						<ul>
+							<li><a href="https://learn.jquery.com/">Learning Center</a></li>
+							<li><a href="https://jquery.com/support/">Chat</a></li>
+							<li><a href="https://stackoverflow.com/tags/jquery/info">Stack Overflow</a></li>
+							<li><a href="https://contribute.jquery.org/bug-reports/">Report a bug</a></li>
+						</ul>
+					</li>
+					<li class="dropdown"><a href="https://openjsf.org/">OpenJS Foundation</a>
+						<ul>
+							<li><a href="https://openjsf.org/join">Join</a></li>
+							<li><a href="https://openjsf.org/members">Members</a></li>
+							<li><a href="https://jquery.com/team">jQuery Team</a></li>
+							<li><a href="https://openjsf.org/governance">Governance</a></li>
+							<li><a href="https://code-of-conduct.openjsf.org/">Conduct</a></li>
+							<li><a href="https://openjsf.org/projects">Projects</a></li>
+						</ul>
+					</li>
+				</ul>
+			</div>
+		</nav>
+	</section>
+</header>
+
+<div id="container">
+	<div id="logo-events" class="constrain clearfix">
+		<h2 class="logo"><a href="/" title="jQuery">jQuery</a></h2>
+
+		<aside id="broadcast"></aside>
+	</div>
+
+	<nav id="main" class="constrain clearfix">
+		<div class="menu-top-container">
+	<button hidden="" id="menu-trigger" class="button menu-trigger" aria-expanded="false" aria-haspopup="menu">Navigation</button>
+	<ul id="menu-top" class="menu" role="menu" aria-labelledby="menu-trigger">
+<li class="menu-item"><a href="https://jquery.com/download/">Download</a></li>
+<li class="menu-item"><a href="https://api.jquery.com/">API Documentation</a></li>
+<li class="menu-item"><a href="https://blog.jquery.com/">Blog</a></li>
+<li class="menu-item"><a href="https://plugins.jquery.com/">Plugins</a></li>
+<li class="menu-item"><a href="https://jquery.com/browser-support/">Browser Support</a></li>
+<li class="menu-item"><a href="https://jquery.com/support/">Version Support</a></li>
+	</ul>
+</div>
+
+		<typesense-minibar data-origin="https://typesense.jquery.com" data-collection="jquery_com" data-key="Zh8mMgohXECel9wjPwqT7lekLSG3OCgz" data-foot="true" data-group="true">
+	<form role="search" class="searchform tsmb-form--slash" action="https://jquery.com/" method="get">
+	<input type="search" name="s" aria-label="Search jQuery" value="" placeholder="Search" autocomplete="off"><div role="listbox" hidden=""></div>
+	<button type="submit" class="visuallyhidden"></button>
+<svg viewBox="0 0 12 12" width="20" height="20" aria-hidden="true" tabindex="-1" class="tsmb-icon-close"><path d="M9 3L3 9M3 3L9 9"></path></svg></form>
+</typesense-minibar>
+	</nav>
+
+	<div id="content-wrapper" class="clearfix row">
+
+
+<div class="content-full full-width twelve columns">
+	<div id="content">
+		
+		
+<div id="banner-secondary" class="row">
+	<div class="download four columns push-eight">
+		<a href="/download/" class="button large">
+			<span class="download-button-content">
+				<span class="download-icon"></span>
+				<span class="download-message">
+					<span>Download jQuery</span>
+					<span class="download-version">v4.0.0</span>
+				</span>
+			</span>
+		</a>
+		<div class="download-options">
+			<div class="support-notice">Only the latest version of jQuery is supported.</div>
+			<a href="/support">Discover Support Options</a>
+			<a href="https://github.com/jquery/jquery">View Source on GitHub →</a>
+			<a href="https://learn.jquery.com/about-jquery/how-jquery-works/">How jQuery Works →</a>
+		</div>
+	</div>
+	<div class="features-box row eight columns pull-four">
+		<div class="feature-box lightweight-footprint four columns center-txt">
+			<div class="feature-box-image"></div>
+			<h3>Lightweight Footprint</h3>
+			<p>Only 30kB minified and gzipped. Can also be included as an AMD module</p>
+		</div>
+
+		<div class="feature-box css3-compliant four columns center-txt">
+			<div class="feature-box-image"></div>
+			<h3>CSS3 Compliant</h3>
+			<p>Supports CSS3 selectors to find elements as well as in style property manipulation</p>
+		</div>
+
+		<div class="feature-box cross-browser four columns center-txt">
+			<div class="feature-box-image"></div>
+			<h3>Cross-Browser</h3>
+			<p><a href="/browser-support/">Chrome, Edge, Firefox, IE, Safari, Android, iOS, and more</a></p>
+		</div>
+	</div>
+</div>
+
+<div id="home-content" class="clearfix row">
+	<section class="eight columns">
+		<h2 class="block">What is jQuery?</h2>
+
+		<p>jQuery is a fast, small, and feature-rich JavaScript library. It makes
+		things like HTML document traversal and manipulation, event handling,
+		animation, and Ajax much simpler with an easy-to-use API that works across
+		a multitude of browsers. With a combination of versatility and
+		extensibility, jQuery has changed the way that millions of people write
+		JavaScript.</p>
+	</section>
+	<aside class="four columns">
+		<h2 class="block">Resources</h2>
+		<ul>
+			<li><a href="https://api.jquery.com">jQuery Core API Documentation</a></li>
+			<li><a href="https://learn.jquery.com">jQuery Learning Center</a></li>
+			<li><a href="https://blog.jquery.com">jQuery Blog</a></li>
+			<li><a href="https://contribute.jquery.com">Contribute to jQuery</a></li>
+			<li><a href="https://github.com/jquery/jquery/issues">Browse or Submit jQuery Bugs</a></li>
+		</ul>
+	</aside>
+</div>
+
+<section>
+	<h2 class="block">A Brief Look</h2>
+
+	<h3>DOM Traversal and Manipulation</h3>
+	<p>Get the <code>&lt;button&gt;</code> element with the class 'continue' and change its HTML to 'Next Step...'</p>
+	<div class="syntaxhighlighter javascript">
+	<table>
+		<tbody>
+			<tr>
+				
+				<td class="gutter">
+					
+						<div class="line n1">1</div>
+					
+				</td>
+				
+				<td class="code">
+					<pre><div class="container"><div class="line"><code>$( <span class="hljs-string">"button.continue"</span> ).html( <span class="hljs-string">"Next Step..."</span> )</code></div></div></pre>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+
+
+	<h3>Event Handling</h3>
+	<p>Show the <code>#banner-message</code> element that is hidden with
+		<code>display:none</code> in its CSS when any button in <code>#button-container</code> is
+		clicked.</p>
+	<div class="syntaxhighlighter javascript">
+	<table>
+		<tbody>
+			<tr>
+				
+				<td class="gutter">
+					
+						<div class="line n1">1</div>
+					
+						<div class="line n2">2</div>
+					
+						<div class="line n3">3</div>
+					
+						<div class="line n4">4</div>
+					
+				</td>
+				
+				<td class="code">
+					<pre><div class="container"><div class="line"><code><span class="hljs-keyword">var</span> hiddenBox = $( <span class="hljs-string">"#banner-message"</span> );</code></div></div><div class="container"><div class="line"><code>$( <span class="hljs-string">"#button-container button"</span> ).on( <span class="hljs-string">"click"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"> event </span>) </span>{</code></div></div><div class="container"><div class="line"><code>  hiddenBox.show();</code></div></div><div class="container"><div class="line"><code>});</code></div></div></pre>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+
+
+	<h3>Ajax</h3>
+	<p>Call a local script on the server <code>/api/getWeather</code>
+		with the query parameter <code>zipcode=97201</code>
+		and replace the element <code>#weather-temp</code>'s html with the returned text.</p>
+	<div class="syntaxhighlighter javascript">
+	<table>
+		<tbody>
+			<tr>
+				
+				<td class="gutter">
+					
+						<div class="line n1">1</div>
+					
+						<div class="line n2">2</div>
+					
+						<div class="line n3">3</div>
+					
+						<div class="line n4">4</div>
+					
+						<div class="line n5">5</div>
+					
+						<div class="line n6">6</div>
+					
+						<div class="line n7">7</div>
+					
+						<div class="line n8">8</div>
+					
+						<div class="line n9">9</div>
+					
+				</td>
+				
+				<td class="code">
+					<pre><div class="container"><div class="line"><code>$.ajax({</code></div></div><div class="container"><div class="line"><code>  <span class="hljs-attr">url</span>: <span class="hljs-string">"/api/getWeather"</span>,</code></div></div><div class="container"><div class="line"><code>  <span class="hljs-attr">data</span>: {</code></div></div><div class="container"><div class="line"><code>    <span class="hljs-attr">zipcode</span>: <span class="hljs-number">97201</span></code></div></div><div class="container"><div class="line"><code>  },</code></div></div><div class="container"><div class="line"><code>  <span class="hljs-attr">success</span>: <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"> result </span>) </span>{</code></div></div><div class="container"><div class="line"><code>    $( <span class="hljs-string">"#weather-temp"</span> ).html( <span class="hljs-string">"&lt;strong&gt;"</span> + result + <span class="hljs-string">"&lt;/strong&gt; degrees"</span> );</code></div></div><div class="container"><div class="line"><code>  }</code></div></div><div class="container"><div class="line"><code>});</code></div></div></pre>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+
+</section>
+
+<section>
+	<h2 class="block">Related Projects</h2>
+
+	<h3><a href="https://jqueryui.com/">jQuery UI</a></h3>
+	<p>This project is in maintenance-only mode. <a href="https://blog.jquery.com/2021/10/07/jquery-maintainers-update-and-transition-jquery-ui-as-part-of-overall-modernization-efforts/">Learn more</a>.</p>
+
+	<h3><a href="https://jquerymobile.com/">jQuery Mobile</a></h3>
+	<p>This project is deprecated. <a href="https://blog.jqueryui.com/2021/10/jquery-maintainers-continue-modernization-initiative-with-deprecation-of-jquery-mobile/">Learn more</a>.</p>
+</section>	</div>
+</div>
+
+	</div>
+</div>
+
+<footer class="clearfix simple">
+	<div class="constrain">
+		<div class="row">
+			<div class="six columns centered">
+				<h3><span>Books</span></h3>
+				<ul class="books">
+					<li>
+						<a href="https://www.packtpub.com/en-us/product/learning-jquery-fourth-edition-9781782163152">
+							<img src="https://jquery.com/wp-content/themes/jquery/content/books/learning-jquery-4th-ed.jpg" alt="Learning jQuery 4th Edition by Karl Swedberg and Jonathan Chaffer" width="92" height="114" loading="lazy">
+							Learning jQuery Fourth Edition
+							<cite>Karl Swedberg and Jonathan Chaffer</cite>
+						</a>
+					</li>
+					<li>
+						<a href="https://www.manning.com/books/jquery-in-action-third-edition">
+							<img src="https://jquery.com/wp-content/themes/jquery/content/books/jquery-in-action.jpg" alt="jQuery in Action by Bear Bibeault, Yehuda Katz, and Aurelio De Rosa" width="92" height="114" loading="lazy">
+							jQuery in Action
+							<cite>Bear Bibeault, Yehuda Katz, and Aurelio De Rosa</cite>
+						</a>
+					</li>
+					<li>
+						<a href="https://www.syncfusion.com/ebooks/jquery">
+							<img src="https://jquery.com/wp-content/themes/jquery/content/books/jquery-succinctly.jpg" alt="jQuery Succinctly by Cody Lindley" width="92" height="114" loading="lazy">
+							jQuery Succinctly
+							<cite>Cody Lindley</cite>
+						</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+
+		
+<div id="legal" class="legal">
+	<ul class="footer-site-links">
+			<li><a class="icon-pencil" href="https://learn.jquery.com/">Learning Center</a></li>
+			<li><a class="icon-comments" href="https://jquery.com/support/">Chat</a></li>
+			<li><a class="icon-twitter" href="https://twitter.com/jquery">Twitter</a></li>
+			<li><a class="icon-github" href="https://github.com/jquery">GitHub</a></li>
+	</ul>
+	<p class="copyright">
+		Copyright 2026 <a href="https://openjsf.org/">OpenJS Foundation</a> and jQuery contributors. All rights reserved. See <a href="https://jquery.com/license/">jQuery License</a> for more information. The <a href="https://openjsf.org/">OpenJS Foundation</a> has registered trademarks and uses trademarks. For a list of trademarks of the <a href="https://openjsf.org/">OpenJS Foundation</a>, please see our <a href="https://trademark-policy.openjsf.org/">Trademark Policy</a> and <a href="https://trademark-list.openjsf.org/">Trademark List</a>. Trademarks and logos not indicated on the <a href="https://trademark-list.openjsf.org/">list of OpenJS Foundation trademarks</a> are trademarks™ or registered® trademarks of their respective holders. Use of them does not imply any affiliation with or endorsement by them. OpenJS Foundation <a href="https://terms-of-use.openjsf.org/">Terms of Use</a>, <a href="https://privacy-policy.openjsf.org/">Privacy</a>, <a href="https://code-of-conduct.openjsf.org/">Code of Conduct</a>, and <a href="https://www.linuxfoundation.org/cookies">Cookie</a> Policies also apply.
+	</p>
+	<p><a href="https://www.digitalocean.com/?refcode=aa1a2e950a73&amp;utm_campaign=Referral_Invite&amp;utm_medium=Referral_Program&amp;utm_source=badge" class="do-link">Web hosting by Digital Ocean</a> | <a href="https://www.fastly.com/">CDN by Fastly</a> | <a href="https://wordpress.org/" class="wp-link">Powered by WordPress</a></p>
+</div>
+
+	</div>
+</footer>
+
+
+
+
+</body></html>

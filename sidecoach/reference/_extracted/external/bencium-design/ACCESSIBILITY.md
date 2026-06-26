@@ -199,7 +199,7 @@ For dropdowns, accordions, disclosures:
 
 ---
 
-## SECTION 3: What this covers that impeccable + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
 
 1. **The POUR framework as a structured audit tool.** Sidecoach a11y handler validates against WCAG checklist; Bencium provides the conceptual triage layer.
 

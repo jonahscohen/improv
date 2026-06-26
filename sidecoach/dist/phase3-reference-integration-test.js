@@ -2,11 +2,48 @@
 // Phase 3 Reference Integration Test: Verify Flows B-E with Real Reference Systems
 // Tests: Component Research → Font Research → Design References → Motion Patterns
 // Each flow uses real reference implementations (not stubs)
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const flow_handler_component_research_1 = require("./flow-handler-component-research");
 const flow_handler_font_research_1 = require("./flow-handler-font-research");
 const flow_handler_design_references_1 = require("./flow-handler-design-references");
 const flow_handler_motion_patterns_1 = require("./flow-handler-motion-patterns");
+const reference_preflight_artifacts_1 = require("./reference-preflight-artifacts");
+const fs = __importStar(require("fs"));
+const os = __importStar(require("os"));
+const path = __importStar(require("path"));
 const testProjectContext = {
     register: 'product',
     product: {
@@ -136,5 +173,53 @@ async function testPhase3References() {
         process.exit(1);
     }
 }
-testPhase3References();
+// Phase B: lane-start reference preflight bundle (deliverable B).
+// Asserts the gatherer returns multiple reference artifact kinds and soft-fails
+// (warnings array, never throws) when a system has no match.
+async function testReferencePreflightBundle() {
+    console.log('\nTesting Reference Preflight Bundle (deliverable B)');
+    // 1. A project with a real PRODUCT.md voice -> several artifact kinds, no throw.
+    const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'phase3-preflight-'));
+    fs.writeFileSync(path.join(proj, 'PRODUCT.md'), '# Test\n\n## Voice\nclean, editorial, precise\n\n## Brand personality\nclean, editorial, precise\n');
+    const bundle = await (0, reference_preflight_artifacts_1.gatherReferencePreflightArtifacts)({ projectPath: proj, register: 'product', target: 'a settings modal' });
+    if (!bundle || !Array.isArray(bundle.artifacts) || !Array.isArray(bundle.warnings)) {
+        console.error('ERROR: preflight bundle shape invalid');
+        process.exit(1);
+    }
+    const kinds = new Set(bundle.artifacts.map((a) => a.kind));
+    console.log(`OK preflight: ${bundle.artifacts.length} artifacts across kinds [${[...kinds].join(', ')}]`);
+    console.log(`   warnings: ${bundle.warnings.length}`);
+    // Embedded/static systems (component, fonts, motion, icon-source) are always available,
+    // so at least 4 distinct kinds must surface regardless of the live design-references catalog.
+    if (kinds.size < 4) {
+        console.error(`ERROR: expected >=4 reference artifact kinds, got ${kinds.size} (${[...kinds].join(', ')})`);
+        process.exit(1);
+    }
+    for (const k of ['component', 'fonts', 'motion', 'icon-source']) {
+        if (!kinds.has(k)) {
+            console.error(`ERROR: missing always-available kind "${k}"`);
+            process.exit(1);
+        }
+    }
+    console.log('   OK >=4 kinds incl. component/fonts/motion/icon-source\n');
+    // 2. Soft-fail: a bogus path must NOT throw - it returns a bundle (warnings allowed).
+    try {
+        const degraded = await (0, reference_preflight_artifacts_1.gatherReferencePreflightArtifacts)({ projectPath: '/no/such/path/at/all', register: 'product' });
+        if (!degraded || !Array.isArray(degraded.artifacts)) {
+            console.error('ERROR: degraded bundle invalid');
+            process.exit(1);
+        }
+        console.log(`OK soft-fail on bogus path: ${degraded.artifacts.length} artifacts, ${degraded.warnings.length} warnings (no throw)\n`);
+    }
+    catch (e) {
+        console.error('ERROR: gatherReferencePreflightArtifacts threw on bogus path (must soft-fail):', e);
+        process.exit(1);
+    }
+    try {
+        fs.rmSync(proj, { recursive: true, force: true });
+    }
+    catch { /* ignore */ }
+    console.log('OK Reference Preflight Bundle works\n');
+}
+testPhase3References().then(() => testReferencePreflightBundle());
 //# sourceMappingURL=phase3-reference-integration-test.js.map

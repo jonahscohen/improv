@@ -29,7 +29,7 @@ Two decisions locked via multiple choice:
   - Snap-to-section scrolling
 - Gotchas: SSR, ScrollTrigger.refresh after dynamic content, Lenis breaking native scrollIntoView, iOS Safari + Lenis + fixed position, React cleanup without useGSAP, plugin registration
 - Anti-patterns
-- Integration with `impeccable` (strategy) and `make-interfaces-feel-better` (tactical polish)
+- Integration with `oracle` (strategy) and `make-interfaces-feel-better` (tactical polish)
 - When NOT to use this stack (CSS transitions are fine for simple cases)
 
 ## Wiring

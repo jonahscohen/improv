@@ -1,0 +1,45 @@
+[
+  {
+    "source": "absolute-ban",
+    "rule": "glassmorphism-default",
+    "severity": "P1",
+    "file": "bans-extra.html",
+    "line": 1,
+    "matchedText": "<!doctype html>\n<!-- migration-harness INPUT (hand-authored compatibility fixture, NOT eval corpus): glassmorphism-default + hero-metric-template + modal-as-first-thought -->\n<html><head><style>\n.card { backdrop-filter: blur(...) + low-alpha background }",
+    "reason": "Blurs and glass cards used decoratively rather than purposefully.",
+    "rewriteOptions": [
+      "Solid surface with shadow",
+      "Border",
+      "Reserve glass for one purposeful moment per page"
+    ]
+  },
+  {
+    "source": "absolute-ban",
+    "rule": "hero-metric-template",
+    "severity": "P1",
+    "file": "bans-extra.html",
+    "line": 7,
+    "matchedText": "Three+ stat/metric/kpi blocks in sequence - SaaS hero-metric template shape",
+    "reason": "Big number + small label + supporting stats + gradient accent. SaaS cliché.",
+    "rewriteOptions": [
+      "Replace with a chart, illustration, or single anchor metric",
+      "Customer logos with specific named outcomes",
+      "Editorial paragraph with embedded metrics"
+    ]
+  },
+  {
+    "source": "absolute-ban",
+    "rule": "modal-as-first-thought",
+    "severity": "P2",
+    "file": "bans-extra.html",
+    "line": 11,
+    "matchedText": "<dialog>/modal containing <form> - consider inline editing or progressive disclosure first",
+    "reason": "Modals used where inline or progressive disclosure would work.",
+    "rewriteOptions": [
+      "Inline editing",
+      "Progressive disclosure with details/summary",
+      "Popover anchored to trigger",
+      "Toast for confirmation"
+    ]
+  }
+]

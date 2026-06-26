@@ -9,7 +9,7 @@ Human collaborator: Jonah.
 
 ## T1 status
 
-Edited `sidecoach/src/impeccable-command-registry.ts` craft entry:
+Edited `sidecoach/src/oracle-command-registry.ts` craft entry:
 
 - flowIds expanded 6 -> 8: `[A, B, E, F, G, H, I, J]`. B (component research) lands before G (component implementation). E (motion patterns) lands before H (motion integration).
 - guidanceAppend gained 2 new lines: component-patterns researched, motion-patterns researched.

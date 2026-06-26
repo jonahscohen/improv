@@ -91,6 +91,15 @@ export interface LaneStepResult {
         }[];
         findings: ProductFinding[];
     };
+    referencePreflight?: {
+        artifacts: {
+            kind: string;
+            title: string;
+            content: string;
+            source: string;
+        }[];
+        warnings: string[];
+    };
     convergence?: {
         outcome: ConvergenceOutcome;
         iteration: number;

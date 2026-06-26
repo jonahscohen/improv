@@ -31,7 +31,7 @@ Files touched so far:
 
 ## T2: craft chain includes H/I (in progress)
 
-Edited `sidecoach/src/impeccable-command-registry.ts` craft entry directly (controller is Opus 4.7 1M context; satisfies the "Opus only" constraint without subagent dispatch overhead).
+Edited `sidecoach/src/oracle-command-registry.ts` craft entry directly (controller is Opus 4.7 1M context; satisfies the "Opus only" constraint without subagent dispatch overhead).
 
 Changes:
 - flowIds: added `flowH_motion_integration` and `flowI_accessibility` between flowG and flowJ. Length now 6 (was 4).

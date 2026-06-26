@@ -52,11 +52,27 @@ if tool in ("Edit", "Write", "MultiEdit"):
             pass
     print("{}"); sys.exit(0)
 
-# 2. Detect - tool-API results only (Bash stdout is too noisy).
-if tool == "Bash" or not tool:
+# 2. Detect - ONLY on actual tool-API / harness calls. File / search / web /
+# content tools (Read, Grep, Glob, Bash, WebFetch, Skill, ...) return arbitrary
+# data that legitimately contains words like "deprecated" or "should have been
+# initialized" - e.g. reading a beat that DOCUMENTS a past drift. Scanning those
+# is a false-positive factory, so restrict detection to tools whose results are
+# tool/harness contracts: Agent, Workflow, SendMessage, ToolSearch, Task*, Cron*,
+# and any MCP tool (mcp__*).
+if not re.match(r"^(Agent|Workflow|SendMessage|ToolSearch|Task|Cron|mcp__)", tool):
     print("{}"); sys.exit(0)
 
 resp = d.get("tool_response", d.get("tool_result", ""))
+
+# SendMessage carries the DELIVERED message body (arbitrary user/teammate text in
+# routing.content / routing.summary), which legitimately contains phrases like
+# "has been removed" or "deprecated". A send that returned success=true means the
+# tool contract held - there is no API drift in its result - so skip it. Real
+# SendMessage drift surfaces as a FAILED send (success != true / an error), which
+# still falls through to the scan below.
+if tool == "SendMessage" and isinstance(resp, dict) and resp.get("success") is True:
+    print("{}"); sys.exit(0)
+
 try:
     blob = resp if isinstance(resp, str) else json.dumps(resp)
 except Exception:

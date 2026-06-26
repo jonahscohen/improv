@@ -20,8 +20,10 @@ import { stampResult, inconclusive } from './check-context';
 import type { ProductCheckContext, CollectedFile } from './check-context';
 import { collectBrowserEvidence, renderUrlFromContext } from './browser-evidence-collector';
 import type { BrowserEvidenceCollection } from './browser-evidence-collector';
+import { scanRenderedLive } from './rendered-live-scan';
+import type { RenderedScanCollection } from './rendered-live-scan';
 
-function toCheckContext(c: Collected, raw: unknown, browser?: BrowserEvidenceCollection): ProductCheckContext {
+function toCheckContext(c: Collected, raw: unknown, browser?: BrowserEvidenceCollection, rendered?: RenderedScanCollection): ProductCheckContext {
   const r = raw as Partial<ProductCheckContext>;
   const e = browser?.available ? browser.evidence : undefined;
   return {
@@ -32,6 +34,7 @@ function toCheckContext(c: Collected, raw: unknown, browser?: BrowserEvidenceCol
     dom: e?.dom ?? r?.dom,
     contrast: e?.contrast ?? r?.contrast,
     designTokens: r?.designTokens, tasteOptions: r?.tasteOptions,
+    renderedScan: rendered ?? r?.renderedScan,
   };
 }
 
@@ -40,6 +43,10 @@ function toCheckContext(c: Collected, raw: unknown, browser?: BrowserEvidenceCol
 // degrades to available:false when there is no render URL or no launchable Chromium).
 export interface ValidatorRuntimeDeps {
   collectBrowserEvidence?: (renderUrl: string | undefined, signal?: AbortSignal) => Promise<BrowserEvidenceCollection>;
+  // Per-run seam mirroring collectBrowserEvidence: production uses the real live scanner; tests inject a
+  // deterministic one. Absent -> the real scanRenderedLive (which degrades to {available:false} without a
+  // renderUrl or launchable Chromium).
+  scanRenderedLive?: (renderUrl: string | undefined, signal?: AbortSignal) => Promise<RenderedScanCollection>;
 }
 
 // Promote ONLY the generated browserRuleIds whose evidence requirements are ALL
@@ -64,6 +71,25 @@ function activateBrowserPolicy(
       ...base.requiredCoverageByScope,
       ...gen.browserCoverageByScope.filter((c) => promoted.includes(c.ruleId)),
     ],
+  };
+}
+
+// Rendered-scan promotion (parallel to activateBrowserPolicy, but the gate is renderUrl-PRESENCE, not
+// scan-success). When a renderUrl is present a live scan is EXPECTED, so every rendered rule is promoted to
+// required: a successful scan yields pass/fail; an UNAVAILABLE scan makes the rule's check return inconclusive,
+// and required+inconclusive blocks clean (the fail-closed contract - a render we tried and could not read must
+// never report clean). When there is NO renderUrl, rendered rules stay owned-but-non-required (dormant), exactly
+// like browser rules with no evidence, so the established no-render behavior is preserved (detection-preserving).
+function activateRenderedPolicy(
+  base: CleanPolicy,
+  gen: typeof GENERATED_VALIDATORS[number],
+  hasRenderUrl: boolean,
+): CleanPolicy {
+  if (!hasRenderUrl || gen.renderedRuleIds.length === 0) return base;
+  return {
+    ...base,
+    requiredRuleIds: [...base.requiredRuleIds, ...gen.renderedRuleIds],
+    requiredCoverageByScope: [...base.requiredCoverageByScope, ...gen.renderedCoverageByScope],
   };
 }
 
@@ -99,19 +125,31 @@ async function executeRule(
   raw: unknown,
   signal?: AbortSignal,
   browser?: BrowserEvidenceCollection,
+  rendered?: RenderedScanCollection,
 ): Promise<RuleExecution> {
   if (signal?.aborted) throw new AbortSentinel();
   const reqKind = def.evidenceRequirements[0];
 
   if (!isStaticallySatisfiable(def.evidenceRequirements)) {
-    // computed-style/dom/contrast: no static source can satisfy this. With trusted
-    // browser evidence the check produces a real verdict over the synthetic render-URL
-    // target; without it the check returns its honest inconclusive.
-    const result = def.checkProduct!(toCheckContext(collected, raw, browser)) as ProductRuleResult;
+    // computed-style/dom/contrast/rendered-scan: no static source can satisfy this. With trusted evidence the
+    // check produces a real verdict over the render-URL target; without it the check returns its honest
+    // inconclusive. The evidence channel that satisfies THIS rule is rendered-scan (the live scan ran) or the
+    // browser collector (dom/contrast/computed-style) - inspected coverage tracks the matching channel so a
+    // rendered rule whose browser collection failed is still counted covered when its scan ran (and vice versa).
+    const result = def.checkProduct!(toCheckContext(collected, raw, browser, rendered)) as ProductRuleResult;
     const renderUrl = renderUrlFromContext(raw);
-    const kinds = browser?.available ? browser.evidence.browserEvidence.kinds : [];
+    // Evidence "present for THIS rule": a rendered-scan rule's family produced a verdict iff the check did NOT
+    // return inconclusive (the rendered checks return inconclusive ONLY when their own family scan is
+    // unavailable). Keying coverage on the per-rule result - not on a coarse objective||subjective availability -
+    // is precise when one family failed and the other succeeded (Codex P2). Browser rules key on the collector.
+    const evidenceAvailable = reqKind === 'rendered-scan'
+      ? result.status !== 'inconclusive'
+      : (browser?.available ?? false);
+    const kinds = reqKind === 'rendered-scan'
+      ? (evidenceAvailable ? ['rendered-scan'] : [])
+      : (browser?.available ? browser.evidence.browserEvidence.kinds : []);
     const discoveredApplicableFiles = renderUrl ? [{ file: renderUrl, evidenceKindsPresent: kinds }] : [];
-    const inspectedApplicableFiles = browser?.available && renderUrl ? [renderUrl] : [];
+    const inspectedApplicableFiles = evidenceAvailable && renderUrl ? [renderUrl] : [];
     const exec: RuleExecution = { result, discoveredApplicableFiles, inspectedApplicableFiles, sufficientlyCovered: false };
     exec.sufficientlyCovered = result.status !== 'inconclusive' && isCoverageSatisfied(record, observationFor(exec));
     return exec;
@@ -265,7 +303,13 @@ async function runDetailed(
   const renderUrl = renderUrlFromContext(context);
   const browser = await (deps.collectBrowserEvidence ?? collectBrowserEvidence)(renderUrl, signal);
   if (signal?.aborted) return abortedDetail(validatorId, policy);
-  const activePolicy = activateBrowserPolicy(policy, gen, browser.available ? browser.evidence.browserEvidence.kinds : []);
+  // ONE live rendered scan per target (objective + subjective), resolved BEFORE any rendered-scan rule runs so
+  // checkProduct reads it synchronously and never launches its own browser (Codex P0-4). Fail-closed inside.
+  const rendered = await (deps.scanRenderedLive ?? scanRenderedLive)(renderUrl, signal);
+  if (signal?.aborted) return abortedDetail(validatorId, policy);
+  const activePolicy = activateRenderedPolicy(
+    activateBrowserPolicy(policy, gen, browser.available ? browser.evidence.browserEvidence.kinds : []),
+    gen, !!renderUrl);
 
   const recordById = new Map(activePolicy.requiredCoverageByScope.map((c) => [c.ruleId, c]));
   const defs = gen.ownedRuleIds
@@ -278,7 +322,7 @@ async function runDetailed(
       // observed promptly across a long synchronous validator run.
       if (signal?.aborted) return abortedDetail(validatorId, policy);
       await yieldToEventLoop();
-      executions.push(await executeRule(d, recordById.get(d.ruleId), collected, context, signal, browser));
+      executions.push(await executeRule(d, recordById.get(d.ruleId), collected, context, signal, browser, rendered));
     }
   } catch (e) {
     if (e instanceof AbortSentinel) return abortedDetail(validatorId, policy);

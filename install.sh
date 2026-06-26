@@ -1603,7 +1603,7 @@ if picked config; then
     block-clickup-writes.sh consolidate-nudge.sh content-guard-stop.sh
     grounding-gate.sh grounding-guard.sh justify-source-guard.sh
     justify-watch-guard.sh memory-compact.sh model-router-guard.sh
-    node-shim-heal.sh sidecoach-taste-gate.sh
+    node-shim-heal.sh cmux-teammate-shim-heal.sh sidecoach-taste-gate.sh
     api-drift-detector.sh api-drift-stop.sh api-drift-ack.sh
   )
   for f in "${CONFIG_HOOKS[@]}"; do
@@ -1613,6 +1613,16 @@ if picked config; then
       ok "hooks/$f"
     fi
   done
+
+  # Canonical fixed cmux agent-teams tmux shim. cmux-teammate-shim-heal.sh
+  # (a SessionStart hook above) re-plants this over cmux's stock shim every
+  # cmux-teams launch so spawned teammates render as real cmux panes. Symlinked
+  # (not copied) so it tracks git pulls. See claude/cmux/teammate-tmux-shim and
+  # .claude/memory/session_2026-06-23_cmux-teammate-pane-FIX.md.
+  if [ -d "$REPO_DIR/claude/cmux" ]; then
+    make_symlink "$REPO_DIR/claude/cmux" "$CLAUDE_DIR/cmux"
+    ok "cmux/ (teammate tmux-shim canonical)"
+  fi
 
   # Copy startup-check.sh
   safe_cp "$REPO_DIR/claude/startup-check.sh" "$CLAUDE_DIR/startup-check.sh"

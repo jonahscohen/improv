@@ -160,8 +160,8 @@ async function run() {
   // === Section 3: validators run and produce sane numbers ===
   const polish = scorePolishStandard(studio);
   expect(
-    'scorePolishStandard: returns counts that sum to 22',
-    polish.passed + polish.failed === 22,
+    'scorePolishStandard: returns counts that sum to 24',
+    polish.passed + polish.failed === 24,
     `passed=${polish.passed} failed=${polish.failed}`,
   );
   expect(

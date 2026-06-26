@@ -1,0 +1,1385 @@
+<!doctype html>
+<html><head><meta charset="UTF-8">
+<title>martinfowler.com</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+<meta content="summary" name="twitter:card">
+
+<meta content="16665197" name="twitter:site:id">
+
+<meta content="@martinfowler" name="twitter:site">
+
+<meta content="martinfowler.com" property="og:title">
+
+<meta content="https://martinfowler.com/" property="og:url">
+
+<meta content="A website on building software effectively" property="og:description">
+
+<meta content="https://martinfowler.com/logo-sq.png" property="og:image">
+
+<meta content="martinfowler.com" property="og:site_name">
+
+<meta content="article" property="og:type">
+
+<meta content="width=device-width, initial-scale=1" name="viewport">
+
+
+<link rel="me" href="https://toot.thoughtworks.com/@mfowler">
+<style>@charset "UTF-8";
+/* ================ reset.scss ================================================================ */
+/* derived from */
+/* http://meyerweb.com/eric/tools/css/reset/ */
+/* v1.0 | 20080212 */
+@import url(https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,300,400,600,700,800);
+@import url(https://fonts.googleapis.com/css?family=Inconsolata:400,700);
+@import url(https://fonts.googleapis.com/css?family=Lora:400,400i,700,700i);
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, font, img, ins, kbd, q, s, samp,
+small, strike, strong, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  font-size: 100%;
+  vertical-align: baseline;
+  background: transparent; }
+
+body {
+  line-height: 1; }
+
+ol, ul {
+  list-style: none; }
+
+blockquote, q {
+  quotes: none; }
+
+blockquote:before, blockquote:after,
+q:before, q:after {
+  content: '';
+  content: none; }
+
+/* remember to define focus styles! */
+:focus {
+  outline: 0; }
+
+/* remember to highlight inserts somehow! */
+ins {
+  text-decoration: none; }
+
+del {
+  text-decoration: line-through; }
+
+/* tables still need 'cellspacing="0"' in the markup */
+table {
+  border-collapse: collapse;
+  border-spacing: 0; }
+
+div.clear {
+  clear: both; }
+
+/* ................ */
+/*
+tw-grey is hsl(145, 5%, 52%)
+*/
+@font-face {
+  font-family: 'Marydale';
+  src: url("/fonts/marydale/marydale-webfont.eot");
+  src: url("/fonts/marydale/marydale-webfont.eot?#iefix") format("embedded-opentype"), url("/fonts/marydale/marydale-webfont.woff") format("woff"), url("/fonts/marydale/marydale-webfont.ttf") format("truetype"), url("/fonts/marydale/marydale-webfont.svg#marydaleregular") format("svg");
+  font-weight: normal;
+  font-style: normal; }
+
+@font-face {
+  font-family: "remixicon";
+  src: url("https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.eot?t=1590207869815");
+  /* IE9*/
+  src: url("https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.eot?t=1590207869815#iefix") format("embedded-opentype"), url("https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.woff2?t=1590207869815") format("woff2"), url("https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.woff?t=1590207869815") format("woff"), url("https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.ttf?t=1590207869815") format("truetype"), url("https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.svg?t=1590207869815#remixicon") format("svg");
+  /* iOS 4.1- */
+  font-display: swap; }
+
+.icon-twitter:before {
+  content: "";
+  font-family: 'remixicon';
+  font-weight: normal;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale; }
+
+.icon-rss:before {
+  content: "";
+  font-family: 'remixicon';
+  font-weight: normal;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale; }
+
+.icon-bars:before {
+  content: "";
+  font-family: 'remixicon';
+  font-weight: normal;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale; }
+
+.icon-close:before, .navmenu .close:before {
+  content: "⨉"; }
+
+.icon-tag:before {
+  content: "";
+  font-family: 'remixicon';
+  font-weight: normal;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale; }
+
+.icon svg {
+  height: 1em;
+  width: 1em;
+  fill: white; }
+
+table.dark-head {
+  font-family: Open Sans, sans-serif;
+  border: solid thin #070D4A; }
+  table.dark-head tbody {
+    font-size: 80%; }
+  table.dark-head td {
+    vertical-align: middle;
+    padding: 5px 2em; }
+  table.dark-head th, table.dark-head caption {
+    background-color: #070D4A;
+    color: white;
+    font-weight: bold;
+    padding: 0.5em 0; }
+  table.dark-head th {
+    padding: 0.5em 1.6em;
+    text-align: left; }
+  table.dark-head tr:nth-child(even) {
+    background-color: #F7F8FE; }
+  table.dark-head caption {
+    text-align: center;
+    border: none; }
+
+table.borders {
+  background-color: #F7F8FE;
+  font-family: Open Sans, sans-serif;
+  font-size: 90%;
+  padding: 0.5em 1em;
+  border: 2px solid #0f1872; }
+  table.borders th, table.borders td {
+    padding: 0.5em;
+    border: thin solid #cad0f8; }
+  table.borders th {
+    border-bottom: 2px solid #0f1872; }
+  table.borders caption {
+    border: none; }
+
+main .photo, main .photo-right, main div.fullPhoto, main .figure {
+  max-width: 100%;
+  margin: 1em auto; }
+  main .photo .credit, main .photo-right .credit, main div.fullPhoto .credit, main .figure .credit {
+    color: #808080;
+    font-size: 80%;
+    text-align: right; }
+  main .photo .photoCaption, main .photo-right .photoCaption, main div.fullPhoto .photoCaption, main .figure .photoCaption {
+    font-size: 80%;
+    font-style: italic;
+    min-height: 1em; }
+
+main div.fullPhoto, main .figure {
+  float: none;
+  margin: 1em 0; }
+
+main .photo-right {
+  float: right;
+  margin: 1em -250px 1em 1em; }
+
+main img {
+  max-width: 100%; }
+
+main .article-card {
+  font-size: 80%; }
+  @media (max-width: 599px) {
+    main .article-card {
+      font-size: 19px; } }
+  main .article-card h3 {
+    font-size: 130%;
+    font-weight: bold; }
+    main .article-card h3 a {
+      border: none;
+      padding-bottom: 0; }
+      main .article-card h3 a:hover {
+        text-decoration: underline; }
+  main .article-card summary h3 {
+    display: inline; }
+  main .article-card:before {
+    display: block;
+    background-color: #070D4A;
+    height: 3px;
+    border-right: 3px solid #ef5ba1;
+    content: ""; }
+  main .article-card .meta {
+    font-family: Open Sans, sans-serif;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    grid-template-areas: "cr tp" "cr ln" "cr dt" "mo mo" "tg tg"; }
+    main .article-card .meta p {
+      margin: 0; }
+  main .article-card .credits {
+    grid-area: cr;
+    font-weight: bold; }
+  main .article-card .date {
+    grid-area: dt;
+    font-weight: 600;
+    color: #A9A7A7;
+    font-family: Open Sans, sans-serif; }
+  main .article-card .type {
+    grid-area: tp;
+    font-weight: 600;
+    color: #A9A7A7;
+    font-family: Open Sans, sans-serif;
+    text-transform: uppercase; }
+  main .article-card .length {
+    grid-area: ln;
+    font-weight: 600;
+    color: #A9A7A7;
+    font-family: Open Sans, sans-serif; }
+  main .article-card a.more {
+    font-family: Open Sans, sans-serif;
+    font-weight: bold;
+    color: #ef5ba1;
+    border: none;
+    padding-bottom: 0; }
+    main .article-card a.more:hover {
+      text-decoration: underline; }
+  main .article-card p.more {
+    margin: 1em 0;
+    grid-area: mo;
+    font-family: Open Sans, sans-serif;
+    font-weight: bold;
+    color: #ef5ba1; }
+    main .article-card p.more a {
+      border: none;
+      padding-bottom: 0; }
+      main .article-card p.more a:hover {
+        text-decoration: underline; }
+    main .article-card p.more a:hover {
+      color: #ef5ba1; }
+  main .article-card .tags {
+    grid-area: tg; }
+    main .article-card .tags a {
+      border: none;
+      padding-bottom: 0; }
+      main .article-card .tags a:hover {
+        text-decoration: underline; }
+  main .article-card .picture
+p {
+    font-style: italic; }
+  main .article-card .book-cover {
+    max-height: 250px; }
+
+/* ==== global ================================ */
+html {
+  box-sizing: border-box; }
+
+*, *:before, *:after {
+  box-sizing: inherit; }
+
+body {
+  font-size: 16px; }
+
+main {
+  line-height: 1.5;
+  font-family: Open Sans, sans-serif; }
+
+.error {
+  background-color: rgba(253, 147, 151, 0.34); }
+
+.todo {
+  background-color: rgba(255, 255, 0, 0.3); }
+
+.draft-notice {
+  border: thin solid red;
+  font-family: sans-serif;
+  margin: 1em 10%;
+  padding: 0.5em;
+  text-align: center; }
+  .draft-notice h1 {
+    font-size: 120%;
+    color: black; }
+  .draft-notice p {
+    color: red; }
+
+.clickable, a.permalink, a:hover {
+  text-decoration: underline;
+  cursor: pointer; }
+
+a {
+  color: inherit;
+  text-decoration: none; }
+
+a:hover {
+  color: #3546E5; }
+
+a.button {
+  color: white;
+  background: #9ca9f3;
+  font-family: Open Sans, sans-serif;
+  font-style: normal;
+  font-weight: bold;
+  font-size: 14px;
+  padding: 5px;
+  border-radius: 5px;
+  margin: 2px;
+  white-space: nowrap;
+  cursor: pointer;
+  border: none;
+  vertical-align: middle; }
+  a.button:hover {
+    background: #6f81ed; }
+
+a.permalink {
+  color: #3546E5;
+  border: none !important;
+  text-decoration: none !important; }
+  a.permalink:before {
+    content: "#"; }
+
+.tag-link {
+  color: #3546E5;
+  text-transform: uppercase; }
+  .tag-link:before {
+    content: "";
+    font-family: 'remixicon';
+    font-weight: normal;
+    font-style: normal;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale; }
+
+/* ................................................................ */
+@font-face {
+  font-family: "remixicon";
+  src: url("https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.eot?t=1590207869815");
+  /* IE9*/
+  src: url("https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.eot?t=1590207869815#iefix") format("embedded-opentype"), url("https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.woff2?t=1590207869815") format("woff2"), url("https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.woff?t=1590207869815") format("woff"), url("https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.ttf?t=1590207869815") format("truetype"), url("https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.svg?t=1590207869815#remixicon") format("svg");
+  /* iOS 4.1- */
+  font-display: swap; }
+
+.icon-twitter:before {
+  content: "";
+  font-family: 'remixicon';
+  font-weight: normal;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale; }
+
+.icon-rss:before {
+  content: "";
+  font-family: 'remixicon';
+  font-weight: normal;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale; }
+
+.icon-bars:before {
+  content: "";
+  font-family: 'remixicon';
+  font-weight: normal;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale; }
+
+.icon-close:before, .navmenu .close:before {
+  content: "⨉"; }
+
+.icon-tag:before {
+  content: "";
+  font-family: 'remixicon';
+  font-weight: normal;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale; }
+
+.icon svg {
+  height: 1em;
+  width: 1em;
+  fill: white; }
+
+/* ==== banner ================ */
+#banner {
+  border-right: 30px solid #ef5ba1;
+  display: grid;
+  background-color: #070D4A;
+  background-position: left 60px top;
+  height: 100px;
+  font-family: Open Sans, sans-serif;
+  color: white;
+  grid-template-columns: 2fr 2fr 60px;
+  grid-template-areas: "lg sh nb" "tm tm .";
+  grid-template-rows: 1fr 1.5em; }
+  #banner .search {
+    grid-area: sh;
+    text-align: right;
+    padding-top: 10px;
+    padding-right: 30px; }
+    #banner .search .button {
+      cursor: pointer;
+      background-color: transparent;
+      color: white;
+      width: 24px;
+      font-size: 100%;
+      border: none; }
+      #banner .search .button:before {
+        content: "";
+        font-family: 'remixicon';
+        font-weight: normal;
+        font-style: normal;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale; }
+    #banner .search input.field {
+      width: 15em; }
+  #banner .name-logo {
+    grid-area: lg;
+    padding-left: 10px; }
+  #banner .navmenu-button {
+    grid-area: nb;
+    font-size: 36px;
+    padding-right: 5px; }
+  #banner .icon:hover {
+    text-decoration: none; }
+  #banner a:hover {
+    color: #ef5ba1; }
+  #banner .top-menu {
+    font-family: Lora, serif;
+    grid-area: tm;
+    text-align: right;
+    font-size: 16px; }
+    #banner .top-menu ul {
+      float: right;
+      list-style-image: none;
+      list-style-position: outside;
+      list-style-type: none;
+      margin: 0;
+      padding: 0; }
+    #banner .top-menu ul li {
+      float: left;
+      padding-right: 18px; }
+  @media screen and (max-width: 600px) {
+    #banner {
+      grid-template-columns: 1fr 60px;
+      grid-template-areas: "lg nb"; }
+      #banner .search, #banner .top-menu {
+        display: none; } }
+/* ................................................................ */
+/* ==== footer ================ */
+#page-footer {
+  font-family: Open Sans, sans-serif;
+  border-right: 30px solid #ef5ba1;
+  position: relative;
+  background-color: #070D4A;
+  color: white;
+  min-height: 80px; }
+  #page-footer a {
+    color: white;
+    text-decoration: none; }
+  #page-footer div.copyright {
+    display: block;
+    font-size: 80%;
+    position: absolute;
+    bottom: 5px;
+    left: 5px; }
+    #page-footer div.copyright a:hover {
+      padding-top: 5px;
+      color: #ef5ba1;
+      text-decoration: underline; }
+  @media screen and (min-width: 600px) {
+    #page-footer {
+      min-height: 60px; }
+      #page-footer div.copyright {
+        left: auto;
+        right: 60px; } }
+  #page-footer .tw-logo {
+    position: absolute;
+    left: 5px;
+    top: 15px; }
+    #page-footer .tw-logo img {
+      width: 200px; }
+  #page-footer .menu-button {
+    position: absolute;
+    right: 30px;
+    top: 5px;
+    font-size: 200%; }
+
+/* ................................................................ */
+.navmenu {
+  border-right: 30px solid #ef5ba1;
+  padding: 5px;
+  color: white;
+  background-color: #070D4A;
+  font-size: 16px;
+  font-family: Open Sans, sans-serif;
+  line-height: 36px; }
+  .navmenu .nav-head {
+    display: grid;
+    grid-template-columns: 1fr 3fr 1fr;
+    grid-template-areas: ".  sh  cl"; }
+  .navmenu .nav-body {
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr 1fr 1fr;
+    grid-template-areas: "tp ab ct fd  tw"; }
+  .navmenu h2 {
+    column-span: all;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 14px; }
+  .navmenu .search {
+    grid-area: sh; }
+  .navmenu .closediv {
+    grid-area: cl;
+    text-align: right; }
+  .navmenu .topics {
+    grid-area: tp;
+    column-count: 2; }
+  .navmenu .about {
+    grid-area: ab; }
+  .navmenu .content {
+    grid-area: ct; }
+  .navmenu .tw {
+    grid-area: tw; }
+  .navmenu .feeds {
+    grid-area: fd; }
+  .navmenu a:hover {
+    color: #ef5ba1; }
+  .navmenu .search {
+    display: block; }
+    .navmenu .search .button {
+      cursor: pointer;
+      background-color: transparent;
+      color: white;
+      width: 24px;
+      font-size: 100%;
+      border: none; }
+      .navmenu .search .button:before {
+        content: "";
+        font-family: 'remixicon';
+        font-weight: normal;
+        font-style: normal;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale; }
+    .navmenu .search input.field {
+      width: 10em; }
+  .navmenu .close {
+    color: white;
+    cursor: pointer;
+    padding-right: 0.5em; }
+    .navmenu .close:hover {
+      color: #ef5ba1; }
+  .navmenu .icon-close, .navmenu .close {
+    font-size: 200%; }
+  @media screen and (min-width: 600px) {
+    .navmenu .search {
+      display: none; } }
+  @media screen and (max-width: 800px) {
+    .navmenu .nav-head {
+      grid-template-areas: "sh  sh  cl"; }
+    .navmenu .nav-body {
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas: "sh cl" "tp tp" "ab ct" "fd  tw"; } }
+/* ==== framing ================ */
+main, #banner, #page-footer, .navmenu {
+  margin-left: 5px;
+  margin-right: 5px;
+  max-width: 960px; }
+  @media screen and (min-width: 750px) {
+    main, #banner, #page-footer, .navmenu {
+      margin-left: 20px; } }
+main {
+  background-color: white;
+  min-height: 500px;
+  margin-bottom: 1em; }
+  main::after {
+    clear: both;
+    content: "";
+    display: block; }
+
+@media (min-width: 1400px) {
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center; }
+  main, #banner, #page-footer, .navmenu {
+    width: 960px; } }
+
+#top-navmenu {
+  display: none; }
+
+#bottom-navmenu {
+  display: block; }
+
+.navmenu-button {
+  cursor: pointer; }
+
+/* ................................................................ */
+main {
+  /* prose mixin */
+  line-height: 1.6;
+  color: #303633;
+  font-family: Lora, serif; }
+  @media (max-width: 599px) {
+    main {
+      font-size: 19px; } }
+  main h2, main h3, main h4, main h5 {
+    font-weight: bold; }
+  main h1 {
+    font-size: 200%; }
+  main h2 {
+    font-size: 150%; }
+  main h3 {
+    font-size: 120%; }
+  main p, main h1, main h2, main h3, main h4, main h5, main ul {
+    margin: 1em 0; }
+  main a {
+    border-bottom: thin solid;
+    padding-bottom: 1px; }
+  main a:hover {
+    text-decoration: none; }
+  main .img-link a, main a.img-link, main a.img {
+    border-bottom: none;
+    padding-bottom: 0; }
+  main dd {
+    margin-left: 2em; }
+  main ul {
+    list-style: square;
+    margin-left: 1.5em; }
+  main ol {
+    list-style: decimal;
+    margin-left: 1.5em; }
+  main pre {
+    font-size: 90%;
+    font-family: Inconsolata, monospace; }
+  main code {
+    font-family: Inconsolata, monospace; }
+  main span.credit {
+    color: #808080;
+    font-size: 80%; }
+  main hr {
+    border: none;
+    display: block;
+    background-color: #070D4A;
+    height: 3px;
+    border-right: 3px solid #ef5ba1;
+    content: "";
+    margin: 10px 15px; }
+  main blockquote {
+    /* margin-left: 3em; */
+    border-left: 2px solid #0f1872;
+    padding-left: 1em;
+    font-style: italic;
+    margin-left: 2em; }
+  main .inline-box {
+    background-color: #F7F8FE;
+    padding: 0.5em 1em;
+    margin-left: 1em; }
+  main .show-code summary {
+    color: #A9A7A7;
+    font-weight: bold;
+    font-family: Open Sans, sans-serif;
+    font-size: 80%; }
+  main .show-code pre {
+    background-color: #F7F8FE; }
+  main .row {
+    display: grid;
+    column-gap: 2em; }
+  main h1 {
+    font-size: 300%; }
+  main h2 {
+    font-size: 200%; }
+  main .lede {
+    display: grid;
+    column-gap: 2em;
+    grid-template-columns: 1fr 8em;
+    column-gap: 8em; }
+    @media (max-width: 599px) {
+      main .lede {
+        grid-template-columns: auto; } }
+    main .lede .main {
+      font-size: 120%; }
+    main .lede .author {
+      margin-top: 2em;
+      font-family: Open Sans, sans-serif;
+      font-weight: bold; }
+    main .lede .explain {
+      font-style: italic;
+      font-size: 80%; }
+  main .synopsis p {
+    width: 45em;
+    max-width: 100%; }
+  main hr.sep {
+    display: block;
+    background-color: #070D4A;
+    height: 10px;
+    border-right: 10px solid #ef5ba1;
+    content: "";
+    margin: 10em 15em 5em 15em; }
+    @media (max-width: 599px) {
+      main hr.sep {
+        margin: 5em; } }
+  main .author a {
+    border: none;
+    padding-bottom: 0; }
+    main .author a:hover {
+      text-decoration: underline; }
+  main .author img {
+    display: none; }
+  main .card-box {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(18em, 1fr));
+    column-gap: 2em;
+    row-gap: 3em;
+    margin-top: 3em; }
+
+main .top {
+  grid-template-columns: 1fr 200px;
+  grid-template-areas: "i p"; }
+  @media (max-width: 599px) {
+    main .top {
+      display: block; } }
+  main .top .intro {
+    grid-area: i;
+    font-size: 120%; }
+  main .top .photo, main .top div.fullPhoto, main .top .figure, main .top .photo-right {
+    grid-area: p;
+    max-width: 200px;
+    margin: 1em auto; }
+    main .top .photo .image, main .top div.fullPhoto .image, main .top .figure .image, main .top .photo-right .image {
+      margin-bottom: 0; }
+    main .top .photo .credit, main .top div.fullPhoto .credit, main .top .figure .credit, main .top .photo-right .credit {
+      margin: 0; }
+    main .top .photo .mf-name, main .top div.fullPhoto .mf-name, main .top .figure .mf-name, main .top .photo-right .mf-name {
+      font-family: Open Sans, sans-serif;
+      font-weight: bold;
+      font-style: normal;
+      font-size: 16px; }
+
+main .center {
+  grid-template-columns: 2fr 1fr;
+  grid-template-areas: "cm fd"; }
+  @media (max-width: 599px) {
+    main .center {
+      display: block; } }
+main h1 {
+  font-size: 180%; }
+
+main .center-main {
+  grid-area: cm; }
+
+main .feed {
+  grid-area: fd;
+  background-color: #F7F8FE;
+  padding: 10px;
+  font-size: 90%; }
+  main .feed .intro h1 {
+    font-size: 140%;
+    margin-top: 0; }
+    main .feed .intro h1 a {
+      border: none;
+      padding-bottom: 0; }
+      main .feed .intro h1 a:hover {
+        text-decoration: underline; }
+  main .feed .intro p {
+    font-style: italic; }
+  main .feed .entries hr {
+    display: block;
+    background-color: #070D4A;
+    height: 4px;
+    border-right: 4px solid #ef5ba1;
+    content: "";
+    margin: 2em 4em; }
+  main .feed .entries h2 {
+    font-size: 100%; }
+    main .feed .entries h2 a {
+      border: none;
+      padding-bottom: 0; }
+      main .feed .entries h2 a:hover {
+        text-decoration: underline; }
+  main .feed .entries .datetime {
+    font-weight: 600;
+    color: #A9A7A7;
+    font-family: Open Sans, sans-serif;
+    font-size: 80%; }
+
+main a.highlight {
+  color: #ef5ba1; }
+
+main .photostream p {
+  font-style: italic; }
+
+main .tags {
+  font-size: 80%;
+  font-family: Open Sans, sans-serif; }
+  main .tags:before {
+    display: block;
+    background-color: #070D4A;
+    height: 5px;
+    border-right: 5px solid #ef5ba1;
+    content: ""; }
+  main .tags a {
+    border: none;
+    color: #3546E5; }
+    main .tags a:hover {
+      text-decoration: underline; }
+</style></head>
+
+<body><header id="banner" style="background-image: url(&quot;/banner.png&quot;); background-repeat: no-repeat">
+
+<div class="name-logo"><a href="https://martinfowler.com"><img src="/mf-name-white.png"></a></div>
+  <div class="search">
+    <!-- SiteSearch Google -->
+    <form method="GET" action="https://www.google.com/search">
+      <input type="hidden" name="ie" value="UTF-8">
+      <input type="hidden" name="oe" value="UTF-8">
+      <input class="field" type="text" name="q" size="15" maxlength="255" value="">
+      <button class="button" type="submit" name="btnG" value=" " title="Search">
+      <input type="hidden" name="domains" value="martinfowler.com">
+      <input type="hidden" name="sitesearch" value=""> 
+      <input type="hidden" name="sitesearch" value="martinfowler.com">
+    
+  </button></form></div>
+
+<div class="menu-button navmenu-button"><a class="icon icon-bars" href="#navmenu-bottom"></a></div>
+
+<nav class="top-menu">
+<ul>
+<li><a class="" href="https://refactoring.com">Refactoring</a></li>
+
+<li><a class="" href="/agile.html">Agile</a></li>
+
+<li><a class="" href="/architecture">Architecture</a></li>
+
+<li><a class="" href="/aboutMe.html">About</a></li>
+
+<li><a class="tw" href="https://www.thoughtworks.com/engineering">Thoughtworks</a></li>
+
+<li><a class="icon icon-rss" href="/feed.atom" title="feed"></a></li>
+
+<li><a class="icon icon-twitter" href="https://www.twitter.com/martinfowler" title="Twitter stream"></a></li>
+
+<li class="icon"><a href="https://toot.thoughtworks.com/@mfowler" title="Mastodon stream"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M21.2595 13.9898C20.9852 15.4006 18.8033 16.9446 16.2974 17.2439C14.9907 17.3998 13.7041 17.5431 12.3321 17.4802C10.0885 17.3774 8.31809 16.9446 8.31809 16.9446C8.31809 17.163 8.33156 17.371 8.3585 17.5655C8.65019 19.7797 10.5541 19.9124 12.3576 19.9742C14.1779 20.0365 15.7987 19.5254 15.7987 19.5254L15.8735 21.1711C15.8735 21.1711 14.6003 21.8548 12.3321 21.9805C11.0814 22.0493 9.52849 21.9491 7.71973 21.4703C3.79684 20.432 3.12219 16.2504 3.01896 12.0074C2.98749 10.7477 3.00689 9.55981 3.00689 8.56632C3.00689 4.22771 5.84955 2.95599 5.84955 2.95599C7.2829 2.29772 9.74238 2.0209 12.2993 2H12.3621C14.919 2.0209 17.3801 2.29772 18.8133 2.95599C18.8133 2.95599 21.6559 4.22771 21.6559 8.56632C21.6559 8.56632 21.6916 11.7674 21.2595 13.9898ZM18.3029 8.9029C18.3029 7.82924 18.0295 6.97604 17.4805 6.34482C16.9142 5.71359 16.1726 5.39001 15.2522 5.39001C14.187 5.39001 13.3805 5.79937 12.8473 6.61819L12.3288 7.48723L11.8104 6.61819C11.2771 5.79937 10.4706 5.39001 9.40554 5.39001C8.485 5.39001 7.74344 5.71359 7.17719 6.34482C6.62807 6.97604 6.3547 7.82924 6.3547 8.9029V14.1562H8.43597V9.05731C8.43597 7.98246 8.88822 7.4369 9.79281 7.4369C10.793 7.4369 11.2944 8.08408 11.2944 9.36376V12.1547H13.3634V9.36376C13.3634 8.08408 13.8646 7.4369 14.8648 7.4369C15.7694 7.4369 16.2216 7.98246 16.2216 9.05731V14.1562H18.3029V8.9029Z"></path></svg>
+</a></li>
+
+<li class="icon"><a href="https://www.linkedin.com/in/martin-fowler-com/" title="LinkedIn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4.00098 3H20.001C20.5533 3 21.001 3.44772 21.001 4V20C21.001 20.5523 20.5533 21 20.001 21H4.00098C3.44869 21 3.00098 20.5523 3.00098 20V4C3.00098 3.44772 3.44869 3 4.00098 3ZM5.00098 5V19H19.001V5H5.00098ZM7.50098 9C6.67255 9 6.00098 8.32843 6.00098 7.5C6.00098 6.67157 6.67255 6 7.50098 6C8.3294 6 9.00098 6.67157 9.00098 7.5C9.00098 8.32843 8.3294 9 7.50098 9ZM6.50098 10H8.50098V17.5H6.50098V10ZM12.001 10.4295C12.5854 9.86534 13.2665 9.5 14.001 9.5C16.072 9.5 17.501 11.1789 17.501 13.25V17.5H15.501V13.25C15.501 12.2835 14.7175 11.5 13.751 11.5C12.7845 11.5 12.001 12.2835 12.001 13.25V17.5H10.001V10H12.001V10.4295Z"></path></svg>
+</a></li>
+
+<li class="icon"><a href="https://bsky.app/profile/martinfowler.com" title="BlueSky"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 11.3884C11.0942 9.62673 8.62833 6.34423 6.335 4.7259C4.13833 3.17506 3.30083 3.4434 2.75167 3.69256C2.11583 3.9784 2 4.95506 2 5.52839C2 6.10339 2.315 10.2367 2.52 10.9276C3.19917 13.2076 5.61417 13.9776 7.83917 13.7309C4.57917 14.2142 1.68333 15.4017 5.48083 19.6292C9.65833 23.9542 11.2058 18.7017 12 16.0392C12.7942 18.7017 13.7083 23.7651 18.4442 19.6292C22 16.0392 19.4208 14.2142 16.1608 13.7309C18.3858 13.9784 20.8008 13.2076 21.48 10.9276C21.685 10.2376 22 6.10256 22 5.52923C22 4.95423 21.8842 3.97839 21.2483 3.6909C20.6992 3.44256 19.8617 3.17423 17.665 4.72423C15.3717 6.34506 12.9058 9.62756 12 11.3884Z"></path></svg></a></li>
+</ul>
+</nav>
+</header>
+<nav id="top-navmenu">
+<nav class="navmenu">
+<div class="nav-head">  <div class="search">
+    <!-- SiteSearch Google -->
+    <form method="GET" action="https://www.google.com/search">
+      <input type="hidden" name="ie" value="UTF-8">
+      <input type="hidden" name="oe" value="UTF-8">
+      <input class="field" type="text" name="q" size="15" maxlength="255" value="">
+      <button class="button" type="submit" name="btnG" value=" " title="Search">
+      <input type="hidden" name="domains" value="martinfowler.com">
+      <input type="hidden" name="sitesearch" value=""> 
+      <input type="hidden" name="sitesearch" value="martinfowler.com">
+    
+  </button></form></div>
+
+<div class="closediv">
+<span class="close" title="close"></span>
+</div>
+</div>
+
+<div class="nav-body">
+<div class="topics">
+<h2>Topics</h2>
+
+<p><a href="/architecture">Architecture</a></p>
+
+<p><a href="https://refactoring.com">Refactoring</a></p>
+
+<p><a href="/agile.html">Agile</a></p>
+
+<p><a href="/delivery.html">Delivery</a></p>
+
+<p><a href="/microservices">Microservices</a></p>
+
+<p><a href="/data">Data</a></p>
+
+<p><a href="/testing">Testing</a></p>
+
+<p><a href="/dsl.html">DSL</a></p>
+</div>
+
+<div class="about">
+<h2>about me</h2>
+
+<p><a href="/aboutMe.html">About</a></p>
+
+<p><a href="/books">Books</a></p>
+
+<p><a href="/faq.html">FAQ</a></p>
+</div>
+
+<div class="content">
+<h2>content</h2>
+
+<p><a href="/videos.html">Videos</a></p>
+
+<p><a href="/tags">Content Index</a></p>
+
+<p><a href="/fragments">Fragments</a></p>
+
+<p><a href="/boardgames">Board Games</a></p>
+
+<p><a href="/photos">Photography</a></p>
+</div>
+
+<div class="tw">
+<h2>Thoughtworks</h2>
+
+<p><a href="https://thoughtworks.com">Home</a></p>
+
+<p><a href="https://thoughtworks.com/insights">Insights</a></p>
+
+<p><a href="https://thoughtworks.com/careers">Careers</a></p>
+
+<p><a href="https://thoughtworks.com/radar">Radar</a></p>
+
+<p><a href="https://www.thoughtworks.com/engineering">Engineering</a></p>
+</div>
+
+<div class="feeds">
+<h2>follow</h2>
+
+<p><a href="/feed.atom">RSS</a></p>
+
+<p><a href="https://toot.thoughtworks.com/@mfowler">Mastodon</a></p>
+
+<p><a href="https://www.linkedin.com/in/martin-fowler-com/">LinkedIn</a></p>
+
+<p><a href="https://bsky.app/profile/martinfowler.com">Bluesky</a></p>
+
+<p><a href="https://www.twitter.com/martinfowler">X</a></p>
+
+<p><a href="https://boardgamegeek.com/blog/13064/martins-7th-decade">BGG</a></p>
+</div>
+</div>
+</nav>
+</nav>
+
+<main>
+<section class="row top">
+<section class="intro">
+<p>Software development is a young profession, and we are still learning the
+      techniques and building the tools to do it effectively. I've been involved
+      in this activity for over three decades and in the last two I've been
+      writing on this website about patterns and practices that make it easier to build useful
+      software. The site began as a place to put my own writing, but
+      I also use it to publish articles by my colleagues.</p>
+
+<p>In 2000, I joined <a class="highlight" href="https://thoughtworks.com">Thoughtworks</a>, where my role
+      is to learn about the techniques that we've learned to deliver software
+      for our clients, and pass these techniques on to the wider software
+      industry. As this site has developed into a respected platform on software
+      development, I've edited and published articles by my colleagues, both Thoughtworkers
+      and others, to help useful writing reach a wider audience.</p>
+</section>
+
+<section class="photo">
+<p class="image"><img alt="photo of Martin Fowler" src="/img/mf-dallas.jpg"></p>
+
+<p class="credit">photo: Christopher Ferguson</p>
+
+<p class="mf-name">Martin Fowler</p>
+</section>
+</section>
+
+<section class="row center">
+<section class="center-main">
+<section class="main-narrative" id="AWebsiteOnBuildingSoftwareEffectively">
+<h1>A website on building software effectively</h1>
+
+<p>If there's a theme that runs through my work and writing on this site,
+        it's the interplay between the shift towards agile thinking and the
+        technical patterns and practices that make agile software development
+        practical. While specifics of technology change rapidly in our
+        profession, fundamental practices and patterns are more stable. So
+        writing about these allows me to have articles on this site that are
+        several years old but still as relevant as when they were written.</p>
+
+<p>As software becomes more critical to modern business, software needs to
+        be able to react quickly to changes, allowing new features to be
+        conceived, developed and put into production rapidly. The techniques of
+        <a class="highlight" href="/agile.html">agile software development</a> began in the 1990s
+        and became steadily more popular in the last decade. They focus on a
+        flexible approach to planning, which allows software products to change
+        direction as the users' needs change and as product managers learn more
+        about how to make their users effective. While widely accepted now, agile
+        approaches are not easy, requiring significant skills for a team, but more
+        importantly a culture of open collaboration both within the team and with a
+        team's partners.</p>
+
+<p>This need to respond fluently to changes has an important impact upon
+        the <a class="highlight" href="/architecture">architecture</a> of a software system. The
+        software needs to be built in such a way that it is able to adapt to
+        unexpected changes in features. One of the most important ways to do this
+        is to write clear code, making it easy to understand what the program
+        is supposed to do. This code should be divided into modules which allow
+        developers to understand only the parts of the system they need to make a
+        change. This production code should be supported with automated tests that
+        can detect any errors made when making a change while providing examples
+        of how internal structures are used. Large and complex software efforts
+        may find the <a class="highlight" href="/microservices">microservices</a> architectural style
+        helps teams deploy software with less entangling dependencies.</p>
+
+<p>Creating software that has a good architecture isn't something that can
+        be done first time. Like good prose, it needs regular revisions as
+        programmers learn more about what the product needs to do and how best to
+        design the product to achieve its goals. <a class="highlight" href="https://refactoring.com">Refactoring</a> is an essential technique to allow a
+        program to be changed safely. It consists of making small changes that
+        don't alter the observable behavior of the software. By combining lots of
+        small changes, developers can revise the software's structure supporting
+        significant modifications that weren't planned when the system was first
+        conceived.</p>
+
+<p>Software that runs only on a developer's machine isn't providing
+        value to the customers of the software. Traditionally releasing software
+        has been a long and complicated process, one that hinders the need to
+        evolve software quickly. <a class="highlight" href="/delivery.html">Continuous Delivery</a> uses
+        automation and collaborative workflows to remove this bottleneck,
+        allowing teams to release software as often as the customers demand. 
+        For Continuous Delivery to be possible, we need to build in a solid
+        foundation of <a class="highlight" href="/testing">Testing</a>, with a range of
+        automated tests that can give us confidence that our changes haven't
+        introduced any bugs. This leads us to integrate testing into
+        programming, which can act to improve our architecture.</p>
+</section>
+
+<section class="card-box topics">
+<section class="photostream article-card" id="Photostream">
+<h2>Photostream</h2>
+
+<p class="img-link"><a href="/photos/131.html"><img src="/photos/131.jpg"></a></p>
+
+<p>San Francisco</p>
+
+<p></p>
+</section>
+
+<section class="data article-card" id="DataManagement">
+<h2>Data Management</h2>
+
+<p>There are many kinds of software out there, the kind I'm primarily
+          engaged is Enterprise Applications. One of the enduring problems we
+          need to tackle in this world is <a class="highlight" href="/data">data management</a>. The aspects of data
+          managment I've focused on here are how to migrate data stores as their
+          applications respond to changing needs, coping with different contexts
+          across a large enterprise, the role of NoSQL databases, and the
+          broader issues of coping with data that is both Big and Messy.</p>
+</section>
+
+<section class="dsl article-card" id="Domain-specificLanguages">
+<h2>Domain-Specific Languages</h2>
+
+<p>A common problem in complex software systems is how to capture
+          complicated domain logic in a way that programmers can both easily
+          manipulate and also easily communicate to domain experts. <a class="highlight" href="/dsl.html">Domain-Specific Languages</a> (DSLs) create a custom language
+          for a particular problem, either with custom parsers or by conventions
+          within a host language.</p>
+</section>
+
+<section class="books article-card" id="Books">
+<h2>Books</h2>
+
+<p>I've written seven books on software development, including
+          Refactoring, Patterns of Enterprise Application Architecture, and UML
+          Distilled. I'm also the editor of a signature series for
+          Addison-Wesley that includes five jolt award winners.</p>
+
+<p class="more"><a href="/books">My Books Page...</a></p>
+</section>
+
+<section class="talks article-card" id="ConferenceTalks">
+<h2>Conference Talks</h2>
+
+<section class="picture">
+<p class="img-link"><img src="/architecture/oscon.png">
+</p><p class="caption"></p>
+<p></p>
+</section>
+
+<p>I'm often asked to give talks at conferences, from which I've
+          inferred that I'm a pretty good speaker - which is ironic since I
+          really hate giving talks. You can form your own opinion of my talks by
+          watching videos of some my conference talks.</p>
+
+<p class="more"><a href="/videos.html">My Videos Page...</a></p>
+</section>
+
+<section class="games article-card" id="BoardGames">
+<h2>Board Games</h2>
+
+<section class="picture">
+<p class="img-link"><img src="/board-games.png">
+</p><p class="caption"></p>
+<p></p>
+</section>
+
+<p>I've long been a fan of board games, I enjoy a
+           game that fully occupies my mind, clearing out all the serious
+          thoughts for a bit, while enjoying the company of good friends. Modern
+          board games saw dramatic improvement in the 1990's with the rise of
+          Eurogames, and I expect many people would be surprised if they haven't
+          tried any of this new generation. I also appear regularly on <a href="/bliki/HeavyCardboard.html">Heavy Cardboard</a>.</p>
+
+<p class="more"><a href="/articles/eurogames/">My Board Games page...</a></p>
+</section>
+</section>
+
+<section class="tags" id="Tags">
+<h2>Tags</h2>
+
+<p><a href="/tags/API%20design.html">API design</a>&nbsp;· <a href="/tags/agile.html">agile</a>&nbsp;· <a href="/tags/agile%20adoption.html">agile adoption</a>&nbsp;· <a href="/tags/analysis%20patterns.html">analysis patterns</a>&nbsp;· <a href="/tags/application%20architecture.html">application architecture</a>&nbsp;· <a href="/tags/application%20integration.html">application integration</a>&nbsp;· <a href="/tags/bad%20things.html">bad things</a>&nbsp;· <a href="/tags/board%20games.html">board games</a>&nbsp;· <a href="/tags/build%20scripting.html">build scripting</a>&nbsp;· <a href="/tags/certification.html">certification</a>&nbsp;· <a href="/tags/collaboration.html">collaboration</a>&nbsp;· <a href="/tags/computer%20history.html">computer history</a>&nbsp;· <a href="/tags/conference%20panels.html">conference panels</a>&nbsp;· <a href="/tags/conferences.html">conferences</a>&nbsp;· <a href="/tags/continuous%20delivery.html">continuous delivery</a>&nbsp;· <a href="/tags/covid-19.html">covid-19</a>&nbsp;· <a href="/tags/data%20analytics.html">data analytics</a>&nbsp;· <a href="/tags/data%20mesh.html">data mesh</a>&nbsp;· <a href="/tags/database.html">database</a>&nbsp;· <a href="/tags/design.html">design</a>&nbsp;· <a href="/tags/dictionary.html">dictionary</a>&nbsp;· <a href="/tags/distributed%20computing%20magazine.html">distributed computing magazine</a>&nbsp;· <a href="/tags/diversions.html">diversions</a>&nbsp;· <a href="/tags/diversity.html">diversity</a>&nbsp;· <a href="/tags/documentation.html">documentation</a>&nbsp;· <a href="/tags/domain%20driven%20design.html">domain driven design</a>&nbsp;· <a href="/tags/domain%20specific%20language.html">domain specific language</a>&nbsp;· <a href="/tags/domestic.html">domestic</a>&nbsp;· <a href="/tags/encapsulation.html">encapsulation</a>&nbsp;· <a href="/tags/enterprise%20architecture.html">enterprise architecture</a>&nbsp;· <a href="/tags/estimation.html">estimation</a>&nbsp;· <a href="/tags/event%20architectures.html">event architectures</a>&nbsp;· <a href="/tags/evolutionary%20design.html">evolutionary design</a>&nbsp;· <a href="/tags/experience%20reports.html">experience reports</a>&nbsp;· <a href="/tags/expositional%20architectures.html">expositional architectures</a>&nbsp;· <a href="/tags/extreme%20programming.html">extreme programming</a>&nbsp;· <a href="/tags/front-end.html">front-end</a>&nbsp;· <a href="/tags/gadgets.html">gadgets</a>&nbsp;· <a href="/tags/generative%20AI.html">generative AI</a>&nbsp;· <a href="/tags/ieeeSoftware.html">ieeeSoftware</a>&nbsp;· <a href="/tags/infodecks.html">infodecks</a>&nbsp;· <a href="/tags/internet%20culture.html">internet culture</a>&nbsp;· <a href="/tags/interviews.html">interviews</a>&nbsp;· <a href="/tags/language%20feature.html">language feature</a>&nbsp;· <a href="/tags/language%20workbench.html">language workbench</a>&nbsp;· <a href="/tags/lean.html">lean</a>&nbsp;· <a href="/tags/legacy%20modernization.html">legacy modernization</a>&nbsp;· <a href="/tags/legal.html">legal</a>&nbsp;· <a href="/tags/metrics.html">metrics</a>&nbsp;· <a href="/tags/microservices.html">microservices</a>&nbsp;· <a href="/tags/mobile.html">mobile</a>&nbsp;· <a href="/tags/noSQL.html">noSQL</a>&nbsp;· <a href="/tags/object%20collaboration%20design.html">object collaboration design</a>&nbsp;· <a href="/tags/parser%20generators.html">parser generators</a>&nbsp;· <a href="/tags/photography.html">photography</a>&nbsp;· <a href="/tags/platforms.html">platforms</a>&nbsp;· <a href="/tags/podcast.html">podcast</a>&nbsp;· <a href="/tags/presentation%20technique.html">presentation technique</a>&nbsp;· <a href="/tags/privacy.html">privacy</a>&nbsp;· <a href="/tags/process%20theory.html">process theory</a>&nbsp;· <a href="/tags/productivity.html">productivity</a>&nbsp;· <a href="/tags/programming%20environments.html">programming environments</a>&nbsp;· <a href="/tags/programming%20style.html">programming style</a>&nbsp;· <a href="/tags/project%20planning.html">project planning</a>&nbsp;· <a href="/tags/recruiting.html">recruiting</a>&nbsp;· <a href="/tags/refactoring.html">refactoring</a>&nbsp;· <a href="/tags/refactoring%20boundary.html">refactoring boundary</a>&nbsp;· <a href="/tags/requirements%20analysis.html">requirements analysis</a>&nbsp;· <a href="/tags/ruby.html">ruby</a>&nbsp;· <a href="/tags/security.html">security</a>&nbsp;· <a href="/tags/talk%20videos.html">talk videos</a>&nbsp;· <a href="/tags/team%20environment.html">team environment</a>&nbsp;· <a href="/tags/team%20organization.html">team organization</a>&nbsp;· <a href="/tags/technical%20debt.html">technical debt</a>&nbsp;· <a href="/tags/technical%20leadership.html">technical leadership</a>&nbsp;· <a href="/tags/test%20categories.html">test categories</a>&nbsp;· <a href="/tags/testing.html">testing</a>&nbsp;· <a href="/tags/thoughtworks.html">thoughtworks</a>&nbsp;· <a href="/tags/tools.html">tools</a>&nbsp;· <a href="/tags/travel.html">travel</a>&nbsp;· <a href="/tags/uml.html">uml</a>&nbsp;· <a href="/tags/version%20control.html">version control</a>&nbsp;· <a href="/tags/web%20development.html">web development</a>&nbsp;· <a href="/tags/web%20services.html">web services</a>&nbsp;· <a href="/tags/website.html">website</a>&nbsp;· <a href="/tags/writing.html">writing</a></p>
+
+<p><a href="/tags/2026.html">2026</a>&nbsp;· <a href="/tags/2025.html">2025</a>&nbsp;· <a href="/tags/2024.html">2024</a>&nbsp;· <a href="/tags/2023.html">2023</a>&nbsp;· <a href="/tags/2022.html">2022</a>&nbsp;· <a href="/tags/2021.html">2021</a>&nbsp;· <a href="/tags/2020.html">2020</a>&nbsp;· <a href="/tags/2019.html">2019</a>&nbsp;· <a href="/tags/2018.html">2018</a>&nbsp;· <a href="/tags/2017.html">2017</a>&nbsp;· <a href="/tags/2016.html">2016</a>&nbsp;· <a href="/tags/2015.html">2015</a>&nbsp;· <a href="/tags/2014.html">2014</a>&nbsp;· <a href="/tags/2013.html">2013</a>&nbsp;· <a href="/tags/2012.html">2012</a>&nbsp;· <a href="/tags/2011.html">2011</a>&nbsp;· <a href="/tags/2010.html">2010</a>&nbsp;· <a href="/tags/2009.html">2009</a>&nbsp;· <a href="/tags/2008.html">2008</a>&nbsp;· <a href="/tags/2007.html">2007</a>&nbsp;· <a href="/tags/2006.html">2006</a>&nbsp;· <a href="/tags/2005.html">2005</a>&nbsp;· <a href="/tags/2004.html">2004</a>&nbsp;· <a href="/tags/2003.html">2003</a>&nbsp;· <a href="/tags/2002.html">2002</a>&nbsp;· <a href="/tags/2001.html">2001</a>&nbsp;· <a href="/tags/2000.html">2000</a>&nbsp;· <a href="/tags/1999.html">1999</a>&nbsp;· <a href="/tags/1998.html">1998</a>&nbsp;· <a href="/tags/1997.html">1997</a>&nbsp;· <a href="/tags/1996.html">1996</a></p>
+
+<p><a href="/tags/index.html"><b>All Content</b></a></p>
+</section>
+</section>
+
+<section class="feed">
+<section class="intro" id="RecentChanges">
+<h1><a href="/recent-changes.html">Recent Changes</a></h1>
+
+<p>If you'd
+        like to be notified when I post new material, subscribe to my
+        <a href="/feed.atom">RSS</a> feed. I also post announcements of new
+        material to <a href="https://toot.thoughtworks.com/@mfowler">Fediverse (Mastodon)</a>,
+<a href="https://bsky.app/profile/martinfowler.com">Bluesky</a>,
+<a href="https://www.linkedin.com/in/martin-fowler-com/">LinkedIn</a>, and
+<a href="https://twitter.com/martinfowler">X (Twitter)</a>
+. I also have a page dedicated to <a href="/recent-changes.html">recent changes</a>.</p>
+</section>
+
+<section class="entries">
+<article class="feed-entry">
+<hr>
+
+<h2><a href="/articles/reliable-llm-bayer.html">Building Reliable Agentic AI Systems</a></h2>
+
+<p class="datetime">Tue 16 Jun 2026 13:11 BST</p>
+
+<div class="img-link"><a href="/articles/reliable-llm-bayer.html"><img src="/articles/reliable-llm-bayer/card.png" width="350px"></a></div>
+
+<p>One of the most interesting projects my colleagues have done with LLMs
+      has been building a system with Bayer to allow pharmaceutical researchers to query
+      decades of information about studies buried in PDF reports. <b class="author">Sarang
+      Sanjay Kulkarni</b> describes its evolution from keyword-based search
+      to an intelligent research assistant capable of answering complex
+      questions and drafting regulatory documents.</p>
+
+<p><a class="more" href="/articles/reliable-llm-bayer.html">more…</a></p></article>
+
+<article class="feed-entry">
+<hr>
+
+<h2><a href="/fragments/2026-06-16.html">Fragments: June 16</a></h2>
+
+<p class="datetime">Tue 16 Jun 2026 08:44 </p>
+<p>enjoying programming with LLMs, four types of LLM conversation, the crevasse between AI enthusiasts and skeptics, AI companies get product/market fit, the need for decentralization</p>
+<p><a href="/fragments/2026-06-16.html" class="more">more...</a></p></article>
+
+<article class="feed-entry">
+<hr>
+
+<h2><a href="/fragments/2026-06-02.html">Fragments: June  2</a></h2>
+
+<p class="datetime">Tue 02 Jun 2026 11:21 </p>
+<p>Dodgy metrics for AI usage, history of tech removing jobs, benchmarking closed and open models, LLMs multiply existing cruft, AI slop driving us crazy, I am the Global Interpreter Lock for agents</p>
+<p><a href="/fragments/2026-06-02.html" class="more">more...</a></p></article>
+
+<article class="feed-entry">
+<hr>
+
+<h2><a href="/articles/vibesec-reckoning.html">The VibeSec Reckoning</a></h2>
+
+<p class="datetime">Wed 27 May 2026 10:03 </p>
+
+<p>Vibe coding has significantly accelerated software prototyping but AI
+      agents frequently recommend insecure configurations, creating security
+      problems. <b class="author">Gautam Koul, Lucian Moss, Neil Drew-Lopez, and Daberechi
+      Ruth Edeokoh</b> share their experience while building applications
+      for Thoughtworks's global marketing. They learned that to combat this we
+      need to write a security context file to guide the AI, be cautious with AI
+      permission requests, create a daily security intelligence feed, and
+      provide builders with a secure-by-default harness and templates.</p>
+
+<p><a class="more" href="/articles/vibesec-reckoning.html">more…</a></p></article>
+
+<article class="feed-entry">
+<hr>
+
+<h2><a href="/bliki/VibeCoding.html">Bliki: Vibe Coding</a></h2>
+
+<p class="datetime">Thu 21 May 2026 07:49 </p>
+
+<p>Vibe coding is building a software application by prompting an LLM, telling it
+  what to build, trying it out, prompting for changes - but without looking at
+  any of the code that the LLM generates. This technique can be used by people
+  without any knowledge of programming. However the resulting software often
+  shows problems with maintainability, correctness, and security - so is best
+  used for disposable software written for a limited audience.</p>
+
+<p><a class="more" href="/bliki/VibeCoding.html">more ...</a></p>
+</article>
+
+<article class="feed-entry">
+<hr>
+
+<h2><a href="/articles/sensors-for-coding-agents.html">Maintainability sensors for coding agents</a></h2>
+
+<p class="datetime">Tue 19 May 2026 12:38 </p>
+
+<div class="img-link"><a href="/articles/sensors-for-coding-agents.html"><img src="/articles/sensors-for-coding-agents/card.png" width="350px"></a></div>
+
+<p>In her recent article about harness engineering for coding agent users,
+      <b class="author">Birgitta Böckeler</b> laid out a mental model for expanding a
+      coding agent harness: a system of guides and sensors that increase the
+      probability of good agent outputs and enable self-correction before issues
+      reach human eyes. Birgitta has now started publishing an article where she
+      walks though <a href="/articles/sensors-for-coding-agents.html">her experiences using sensors</a> to keep a codebase
+      maintainable. This part looks at static analysis with basic code linting.</p>
+
+<p><a class="more" href="/articles/sensors-for-coding-agents.html">more…</a></p></article>
+</section>
+</section>
+</section>
+</main>
+
+<nav id="bottom-navmenu" style="display: none;">
+<nav class="navmenu">
+<div class="nav-head">  <div class="search">
+    <!-- SiteSearch Google -->
+    <form method="GET" action="https://www.google.com/search">
+      <input type="hidden" name="ie" value="UTF-8">
+      <input type="hidden" name="oe" value="UTF-8">
+      <input class="field" type="text" name="q" size="15" maxlength="255" value="">
+      <button class="button" type="submit" name="btnG" value=" " title="Search">
+      <input type="hidden" name="domains" value="martinfowler.com">
+      <input type="hidden" name="sitesearch" value=""> 
+      <input type="hidden" name="sitesearch" value="martinfowler.com">
+    
+  </button></form></div>
+
+<div class="closediv">
+<span class="close" title="close"></span>
+</div>
+</div>
+
+<div class="nav-body">
+<div class="topics">
+<h2>Topics</h2>
+
+<p><a href="/architecture">Architecture</a></p>
+
+<p><a href="https://refactoring.com">Refactoring</a></p>
+
+<p><a href="/agile.html">Agile</a></p>
+
+<p><a href="/delivery.html">Delivery</a></p>
+
+<p><a href="/microservices">Microservices</a></p>
+
+<p><a href="/data">Data</a></p>
+
+<p><a href="/testing">Testing</a></p>
+
+<p><a href="/dsl.html">DSL</a></p>
+</div>
+
+<div class="about">
+<h2>about me</h2>
+
+<p><a href="/aboutMe.html">About</a></p>
+
+<p><a href="/books">Books</a></p>
+
+<p><a href="/faq.html">FAQ</a></p>
+</div>
+
+<div class="content">
+<h2>content</h2>
+
+<p><a href="/videos.html">Videos</a></p>
+
+<p><a href="/tags">Content Index</a></p>
+
+<p><a href="/fragments">Fragments</a></p>
+
+<p><a href="/boardgames">Board Games</a></p>
+
+<p><a href="/photos">Photography</a></p>
+</div>
+
+<div class="tw">
+<h2>Thoughtworks</h2>
+
+<p><a href="https://thoughtworks.com">Home</a></p>
+
+<p><a href="https://thoughtworks.com/insights">Insights</a></p>
+
+<p><a href="https://thoughtworks.com/careers">Careers</a></p>
+
+<p><a href="https://thoughtworks.com/radar">Radar</a></p>
+
+<p><a href="https://www.thoughtworks.com/engineering">Engineering</a></p>
+</div>
+
+<div class="feeds">
+<h2>follow</h2>
+
+<p><a href="/feed.atom">RSS</a></p>
+
+<p><a href="https://toot.thoughtworks.com/@mfowler">Mastodon</a></p>
+
+<p><a href="https://www.linkedin.com/in/martin-fowler-com/">LinkedIn</a></p>
+
+<p><a href="https://bsky.app/profile/martinfowler.com">Bluesky</a></p>
+
+<p><a href="https://www.twitter.com/martinfowler">X</a></p>
+
+<p><a href="https://boardgamegeek.com/blog/13064/martins-7th-decade">BGG</a></p>
+</div>
+</div>
+</nav>
+</nav>
+<footer id="page-footer">
+<div class="tw-logo">
+<a href="https://www.thoughtworks.com/engineering">
+<img src="/thoughtworks_white.png">
+</a>
+</div>
+<div class="menu-button">
+<div class="icon-bars navmenu-button"></div>
+</div>
+<div class="copyright">
+<p>© Martin Fowler | <a href="/aboutMe.html#disclosures">Disclosures</a></p>
+</div>
+</footer>
+
+
+
+
+
+
+
+
+</body></html>

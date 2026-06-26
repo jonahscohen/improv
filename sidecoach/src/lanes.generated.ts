@@ -27,6 +27,8 @@ export const LANES: GeneratedLane[] = [
     "flowSequence": [
       "flowA_brand_verify",
       "flowB_component_research",
+      "flowC_font_research",
+      "flowD_reference_inspiration",
       "flowE_motion_patterns",
       "flowF_design_tokens",
       "flowG_component_implementation",
@@ -82,6 +84,8 @@ export const LANES: GeneratedLane[] = [
         "verb": "craft",
         "flowIds": [
           "flowB_component_research",
+          "flowC_font_research",
+          "flowD_reference_inspiration",
           "flowE_motion_patterns",
           "flowF_design_tokens",
           "flowG_component_implementation",
@@ -261,6 +265,7 @@ export const LANES: GeneratedLane[] = [
       }
     ],
     "flowSequence": [
+      "flowD_reference_inspiration",
       "flowF_design_tokens",
       "flowH_motion_integration",
       "flowT_ambitious_motion",
@@ -305,6 +310,7 @@ export const LANES: GeneratedLane[] = [
       {
         "verb": "colorize",
         "flowIds": [
+          "flowD_reference_inspiration",
           "flowF_design_tokens"
         ],
         "guidance": [
@@ -370,6 +376,7 @@ export const LANES: GeneratedLane[] = [
     ],
     "flowSequence": [
       "flowN_rapid_iteration_refined",
+      "flowD_reference_inspiration",
       "flowF_design_tokens",
       "flowJ_tactical_polish",
       "flowM_responsive_validation",
@@ -425,6 +432,7 @@ export const LANES: GeneratedLane[] = [
       {
         "verb": "colorize",
         "flowIds": [
+          "flowD_reference_inspiration",
           "flowF_design_tokens"
         ],
         "guidance": [

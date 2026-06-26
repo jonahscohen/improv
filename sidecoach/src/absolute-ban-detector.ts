@@ -145,23 +145,11 @@ export function scanGlassmorphism(content: string, file: string): AbsoluteBanFin
   return findings;
 }
 
-export function scanIdenticalCardGrids(content: string, file: string): AbsoluteBanFinding[] {
-  const findings: AbsoluteBanFinding[] = [];
-  // Heuristic: find a parent with grid-template-columns: repeat(N, 1fr) where N>=3,
-  // then verify the source has multiple sibling elements with the same class
-  // containing icon/heading/text triplet structure.
-  const repeatGridRegex = /grid-template-columns\s*:\s*repeat\s*\(\s*(\d+)\s*,\s*(?:minmax\([^)]+\)|1fr)\s*\)/gi;
-  const repeats = Array.from(content.matchAll(repeatGridRegex));
-  if (repeats.length === 0) return findings;
-  // Look for HTML patterns: three+ same-class siblings each containing a heading
-  // and a paragraph - the "icon + heading + text" structure. This is a heuristic.
-  const cardTripletRegex = /(<(?:a|div|article|li)\s+[^>]*class\s*=\s*["']([^"']*\b(?:tool-card|card|tile|feature|item|service|capability)\b[^"']*)["'][^>]*>[\s\S]*?<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>[\s\S]*?<p[^>]*>[\s\S]*?<\/p>[\s\S]*?<\/(?:a|div|article|li)>\s*){3,}/gi;
-  for (const m of Array.from(content.matchAll(cardTripletRegex))) {
-    if (m.index === undefined) continue;
-    findings.push(findingFromBan('identical-card-grids', file, lineNumberAt(content, m.index), `Repeated <${m[1].slice(1, 12).split(/[^a-zA-Z]/)[0]}> with same card-style class containing heading + paragraph triplet`, 'P1'));
-  }
-  return findings;
-}
+// DELETED (Stage-2, lead+Jonah-blessed 2026-06-24): scanIdenticalCardGrids - it had a ReDoS-class regex (nested
+// [\s\S]*? in the card-triplet pattern) that hung on large HTML, and its semantic mapping to icon-tile-stack was a
+// low-precision over-firing detector (P 0.33) we are not supporting. Removing it is the net-simpler half of Stage-1+2
+// AND precision-positive (subjective P 0.436->0.457). No replacement (a new icon-tile-stack detector ground-tested
+// marginal - a holistic gestalt - and was not built).
 
 export function scanHeroMetricTemplate(content: string, file: string): AbsoluteBanFinding[] {
   const findings: AbsoluteBanFinding[] = [];
@@ -243,8 +231,7 @@ export function scanForAbsoluteBans(projectPath: string): AbsoluteBanReport {
       findings.push(...scanSideStripeBorders(content, rel));
       findings.push(...scanGradientText(content, rel));
       findings.push(...scanGlassmorphism(content, rel));
-      // HTML-structural scans
-      findings.push(...scanIdenticalCardGrids(content, rel));
+      // HTML-structural scans (scanIdenticalCardGrids deleted Stage-2 - ReDoS + low-precision)
       findings.push(...scanHeroMetricTemplate(content, rel));
       findings.push(...scanModalAsFirstThought(content, rel));
     } catch { /* skip unreadable */ }

@@ -17,8 +17,8 @@ Applied to: index, sidecoach, justify, beats, foundation, reference, demo, sidec
 ## cheatsheet.html deleted
 `git rm -f marketing-site/cheatsheet.html` (plain `git rm` refused because the file had this-session edits). Safe: the only "cheatsheet.html" reference anywhere was a code snippet inside the page itself - no inbound links from other pages. Verified the URL now 404s. Zero capital `>GitHub<` remain across the site.
 
-## Flag (not done)
-styles.css still has ~22 orphaned `.cheatsheet__*` rules (the deleted page's styles) - harmless dead CSS, left in place. Offered to remove on request.
+## Orphaned CSS (now removed - 2026-06-23)
+styles.css had ~22 orphaned `.cheatsheet__*` rules (the deleted page's styles). Stripped the whole block (the `/* Cheatsheet ... */` comment through its `@media` block, ~2958 chars) after confirming NO html file uses any `.cheatsheet` class. Verified index.html still renders cleanly after the strip (screenshot, no page errors).
 
 ## Files touched
 - deleted marketing-site/cheatsheet.html

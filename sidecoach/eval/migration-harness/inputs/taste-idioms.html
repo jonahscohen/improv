@@ -1,0 +1,15 @@
+<!doctype html>
+<!-- migration-harness INPUT (hand-authored to capture CURRENT taste-validator behavior
+     for the Stage-2 compatibility contract; NOT the externally-sourced eval corpus).
+     Triggers: hero-radial-blob, translatey-in-hover, hex-in-interactive-state, border-radius-inconsistency. -->
+<html><head><style>
+:root { --c-brand: #3355ff; }
+.hero { background: radial-gradient(circle, #ffffff, #eeeeee); }
+.btn:hover { transform: translateY(-2px); background: #2244ee; }
+.card { border-radius: 4px; }
+.panel { border-radius: 9px; }
+.box { border-radius: 13px; }
+</style></head><body>
+<div class="hero"><h1>Hi</h1></div>
+<button class="btn">Go</button>
+</body></html>

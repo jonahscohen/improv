@@ -1,0 +1,331 @@
+{
+  "generatedUtc": "2026-06-24T12:30:22.932Z",
+  "note": "ST0 gate: per-class dev-signal coverage over the Codex-labeled dev corpus. DEVELOPABLE>=3, THIN 1-2, ZERO 0. A class below DEVELOPABLE needs a DISJOINT top-up before an ST1 detector can be developed/validated against it.",
+  "devPages": 21,
+  "highConfidenceThreshold": 0.7,
+  "tiers": {
+    "developable": [
+      "tiny-text",
+      "nested-cards",
+      "layout-transition",
+      "marketing-buzzword",
+      "icon-tile-stack",
+      "aphoristic-cadence",
+      "hero-eyebrow-chip",
+      "repeated-section-kickers",
+      "dark-glow",
+      "tight-leading",
+      "bounce-easing"
+    ],
+    "thin": [
+      "ai-color-palette(2)",
+      "numbered-section-markers(2)",
+      "side-stripe-borders(2)",
+      "cream-palette(1)",
+      "italic-serif-display(1)",
+      "gradient-text(1)"
+    ],
+    "zero": [
+      "glassmorphism-default",
+      "hero-metric-template",
+      "wide-tracking",
+      "all-caps-body",
+      "extreme-negative-tracking"
+    ]
+  },
+  "existingDetectorCoverage": [
+    {
+      "class": "icon-tile-stack",
+      "present": 10,
+      "tier": "developable"
+    },
+    {
+      "class": "side-stripe-borders",
+      "present": 2,
+      "tier": "thin"
+    },
+    {
+      "class": "gradient-text",
+      "present": 1,
+      "tier": "thin"
+    },
+    {
+      "class": "glassmorphism-default",
+      "present": 0,
+      "tier": "zero"
+    },
+    {
+      "class": "hero-metric-template",
+      "present": 0,
+      "tier": "zero"
+    }
+  ],
+  "perClass": [
+    {
+      "class": "tiny-text",
+      "present": 21,
+      "highConfidence": 21,
+      "existingDetector": false,
+      "tier": "developable",
+      "examples": [
+        "linear",
+        "framer",
+        "loom",
+        "retool",
+        "clerk",
+        "resend"
+      ]
+    },
+    {
+      "class": "nested-cards",
+      "present": 19,
+      "highConfidence": 14,
+      "existingDetector": false,
+      "tier": "developable",
+      "examples": [
+        "linear",
+        "framer",
+        "loom",
+        "retool",
+        "clerk",
+        "resend"
+      ]
+    },
+    {
+      "class": "layout-transition",
+      "present": 17,
+      "highConfidence": 15,
+      "existingDetector": false,
+      "tier": "developable",
+      "examples": [
+        "linear",
+        "loom",
+        "retool",
+        "resend",
+        "railway",
+        "supabase"
+      ]
+    },
+    {
+      "class": "marketing-buzzword",
+      "present": 16,
+      "highConfidence": 14,
+      "existingDetector": false,
+      "tier": "developable",
+      "examples": [
+        "linear",
+        "loom",
+        "retool",
+        "clerk",
+        "railway",
+        "supabase"
+      ]
+    },
+    {
+      "class": "icon-tile-stack",
+      "present": 10,
+      "highConfidence": 10,
+      "existingDetector": true,
+      "tier": "developable",
+      "examples": [
+        "loom",
+        "clerk",
+        "railway",
+        "supabase",
+        "calcom",
+        "dub"
+      ]
+    },
+    {
+      "class": "aphoristic-cadence",
+      "present": 10,
+      "highConfidence": 9,
+      "existingDetector": false,
+      "tier": "developable",
+      "examples": [
+        "linear",
+        "framer",
+        "dub",
+        "raycast",
+        "neon",
+        "liveblocks"
+      ]
+    },
+    {
+      "class": "hero-eyebrow-chip",
+      "present": 8,
+      "highConfidence": 8,
+      "existingDetector": false,
+      "tier": "developable",
+      "examples": [
+        "retool",
+        "resend",
+        "calcom",
+        "dub",
+        "liveblocks",
+        "trigger"
+      ]
+    },
+    {
+      "class": "repeated-section-kickers",
+      "present": 7,
+      "highConfidence": 7,
+      "existingDetector": false,
+      "tier": "developable",
+      "examples": [
+        "clerk",
+        "railway",
+        "calcom",
+        "dub",
+        "raycast",
+        "liveblocks"
+      ]
+    },
+    {
+      "class": "dark-glow",
+      "present": 7,
+      "highConfidence": 7,
+      "existingDetector": false,
+      "tier": "developable",
+      "examples": [
+        "retool",
+        "resend",
+        "railway",
+        "dub",
+        "raycast",
+        "liveblocks"
+      ]
+    },
+    {
+      "class": "tight-leading",
+      "present": 7,
+      "highConfidence": 6,
+      "existingDetector": false,
+      "tier": "developable",
+      "examples": [
+        "linear",
+        "framer",
+        "retool",
+        "neon",
+        "liveblocks",
+        "trigger"
+      ]
+    },
+    {
+      "class": "bounce-easing",
+      "present": 4,
+      "highConfidence": 3,
+      "existingDetector": false,
+      "tier": "developable",
+      "examples": [
+        "supabase",
+        "posthog",
+        "inngest",
+        "knock"
+      ]
+    },
+    {
+      "class": "ai-color-palette",
+      "present": 2,
+      "highConfidence": 1,
+      "existingDetector": false,
+      "tier": "thin",
+      "examples": [
+        "railway",
+        "fly"
+      ]
+    },
+    {
+      "class": "numbered-section-markers",
+      "present": 2,
+      "highConfidence": 2,
+      "existingDetector": false,
+      "tier": "thin",
+      "examples": [
+        "calcom",
+        "raycast"
+      ]
+    },
+    {
+      "class": "side-stripe-borders",
+      "present": 2,
+      "highConfidence": 2,
+      "existingDetector": true,
+      "tier": "thin",
+      "examples": [
+        "linear",
+        "mintlify"
+      ]
+    },
+    {
+      "class": "cream-palette",
+      "present": 1,
+      "highConfidence": 1,
+      "existingDetector": false,
+      "tier": "thin",
+      "examples": [
+        "posthog"
+      ]
+    },
+    {
+      "class": "italic-serif-display",
+      "present": 1,
+      "highConfidence": 1,
+      "existingDetector": false,
+      "tier": "thin",
+      "examples": [
+        "fly"
+      ]
+    },
+    {
+      "class": "gradient-text",
+      "present": 1,
+      "highConfidence": 1,
+      "existingDetector": true,
+      "tier": "thin",
+      "examples": [
+        "upstash"
+      ]
+    },
+    {
+      "class": "glassmorphism-default",
+      "present": 0,
+      "highConfidence": 0,
+      "existingDetector": true,
+      "tier": "zero",
+      "examples": []
+    },
+    {
+      "class": "hero-metric-template",
+      "present": 0,
+      "highConfidence": 0,
+      "existingDetector": true,
+      "tier": "zero",
+      "examples": []
+    },
+    {
+      "class": "wide-tracking",
+      "present": 0,
+      "highConfidence": 0,
+      "existingDetector": false,
+      "tier": "zero",
+      "examples": []
+    },
+    {
+      "class": "all-caps-body",
+      "present": 0,
+      "highConfidence": 0,
+      "existingDetector": false,
+      "tier": "zero",
+      "examples": []
+    },
+    {
+      "class": "extreme-negative-tracking",
+      "present": 0,
+      "highConfidence": 0,
+      "existingDetector": false,
+      "tier": "zero",
+      "examples": []
+    }
+  ]
+}

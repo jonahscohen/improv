@@ -10,7 +10,6 @@ exports.createFlowFHandler = createFlowFHandler;
 const flow_handler_1 = require("./flow-handler");
 const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
-const extended_domain_validator_1 = require("./extended-domain-validator");
 const design_md_parser_1 = require("./design-md-parser");
 const typography_validator_1 = require("./typography-validator");
 const fs_1 = __importDefault(require("fs"));
@@ -159,7 +158,6 @@ class FlowFDesignTokensHandler extends flow_handler_1.BaseFlowHandler {
                 motion: context.metadata?.motion,
                 accessibility: context.metadata?.accessibility,
             };
-            const extendedValidationReport = extended_domain_validator_1.ExtendedDomainValidator.validateAll(domainCheckContext);
             // Round 2 wiring: run the new typography-validator that consumes
             // TypeUI's modular ratio + line-height tier + heading-size-by-role
             // tables from the absorbed library. Pre-wiring these rules lived in
@@ -171,40 +169,12 @@ class FlowFDesignTokensHandler extends flow_handler_1.BaseFlowHandler {
             });
             const typoP0 = typoReport.findings.filter((f) => f.severity === 'P0').length;
             const typoP1 = typoReport.findings.filter((f) => f.severity === 'P1').length;
-            const colorDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('color');
-            const typographyDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('typography');
-            const spatialDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('spatial');
-            const motionDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('motion');
-            const interactionDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('interaction');
-            const responsiveDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('responsive');
-            const writingDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('writing');
-            const colorPassRate = extendedValidationReport.passRateByDomain['color'] || '0%';
-            const typographyPassRate = extendedValidationReport.passRateByDomain['typography'] || '0%';
-            const spatialPassRate = extendedValidationReport.passRateByDomain['spatial'] || '0%';
-            const motionPassRate = extendedValidationReport.passRateByDomain['motion'] || '0%';
-            const interactionPassRate = extendedValidationReport.passRateByDomain['interaction'] || '0%';
-            const responsivePassRate = extendedValidationReport.passRateByDomain['responsive'] || '0%';
-            const writingPassRate = extendedValidationReport.passRateByDomain['writing'] || '0%';
-            const colorPassed = Math.round((parseFloat(colorPassRate) / 100) * colorDomainRules.length);
-            const typographyPassed = Math.round((parseFloat(typographyPassRate) / 100) * typographyDomainRules.length);
-            const spatialPassed = Math.round((parseFloat(spatialPassRate) / 100) * spatialDomainRules.length);
-            const motionPassed = Math.round((parseFloat(motionPassRate) / 100) * motionDomainRules.length);
-            const interactionPassed = Math.round((parseFloat(interactionPassRate) / 100) * interactionDomainRules.length);
-            const responsivePassed = Math.round((parseFloat(responsivePassRate) / 100) * responsiveDomainRules.length);
-            const writingPassed = Math.round((parseFloat(writingPassRate) / 100) * writingDomainRules.length);
             // Build checklist
             const checklist = this.createChecklist([
                 { label: 'DESIGN.md exists at project root', required: true, description: hasDesignMd ? 'Found' : 'Missing' },
                 { label: 'YAML frontmatter contains token sections', required: true, description: `${tokenSections.length} sections` },
                 { label: 'Typography validator: P0 line-height-tier findings (display headings 1.05-1.20)', required: true, description: typoP0 === 0 ? 'PASS' : `${typoP0} P0 findings - heading line-height outside size tier` },
                 { label: 'Typography validator: P1 modular-ratio + heading-size-by-role + tier-warnings', required: false, description: typoP1 === 0 ? 'PASS' : `${typoP1} P1 findings` },
-                { label: 'Color domain validation', required: false, description: `${colorPassed}/${colorDomainRules.length} rules passing (${colorPassRate})` },
-                { label: 'Typography domain validation', required: false, description: `${typographyPassed}/${typographyDomainRules.length} rules passing (${typographyPassRate})` },
-                { label: 'Spatial domain validation', required: false, description: `${spatialPassed}/${spatialDomainRules.length} rules passing (${spatialPassRate})` },
-                { label: 'Motion domain validation', required: false, description: `${motionPassed}/${motionDomainRules.length} rules passing (${motionPassRate})` },
-                { label: 'Interaction domain validation', required: false, description: `${interactionPassed}/${interactionDomainRules.length} rules passing (${interactionPassRate})` },
-                { label: 'Responsive domain validation', required: false, description: `${responsivePassed}/${responsiveDomainRules.length} rules passing (${responsivePassRate})` },
-                { label: 'Writing domain validation', required: false, description: `${writingPassed}/${writingDomainRules.length} rules passing (${writingPassRate})` },
                 { label: 'All tokens have semantic names (no hard values in code)', required: true, description: 'Verify via {token.path} references' },
                 { label: 'npx @google/design.md lint run successfully', required: true, description: 'Resolve all errors/warnings' },
             ]);
@@ -232,8 +202,6 @@ class FlowFDesignTokensHandler extends flow_handler_1.BaseFlowHandler {
                 `- Border radius md: ${roundedMd}${cite('rounded.md')}`,
                 `- Motion ease out: ${motionEaseOut}${cite('motion.ease.out')}`,
                 `- Display font family: ${typographyDisplay}${cite('typography.display')}`,
-                '',
-                'Domain Validation Results:',
                 '',
                 'Color Domain Rules:',
                 ...design_laws_1.SHARED_DESIGN_LAWS.color.rules.map((r) => `- ${r}`),
@@ -263,7 +231,7 @@ class FlowFDesignTokensHandler extends flow_handler_1.BaseFlowHandler {
             ];
             const domainPassCount = domainValidationResults.filter((r) => r.validationStatus === 'pass').length;
             const memoryBuilder = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())
-                .setSummary(`Design tokens validated: ${tokenSections.length} sections with all 7 domain validation (color: ${colorPassRate}, typography: ${typographyPassRate}, spatial: ${spatialPassRate}, motion: ${motionPassRate}, interaction: ${interactionPassRate}, responsive: ${responsivePassRate}, writing: ${writingPassRate})`)
+                .setSummary(`Design tokens validated: ${tokenSections.length} sections`)
                 .addRule('color', design_laws_1.SHARED_DESIGN_LAWS.color.rules)
                 .addRule('typography', design_laws_1.SHARED_DESIGN_LAWS.typography.rules)
                 .addRule('spatial', design_laws_1.SHARED_DESIGN_LAWS.spatial.rules)
@@ -273,21 +241,7 @@ class FlowFDesignTokensHandler extends flow_handler_1.BaseFlowHandler {
                 .addRule('writing', design_laws_1.SHARED_DESIGN_LAWS.writing.rules)
                 .addDecision('Design token structure strategy', 'Semantic naming with {token.path} references per google-labs DESIGN.md spec')
                 .addMetric('token-sections-indexed', tokenSections.length, 'pass')
-                .addMetric('color-domain-validation', colorPassed, 'pass', colorDomainRules.length)
-                .addMetric('typography-domain-validation', typographyPassed, 'pass', typographyDomainRules.length)
-                .addMetric('spatial-domain-validation', spatialPassed, 'pass', spatialDomainRules.length)
-                .addMetric('motion-domain-validation', motionPassed, 'pass', motionDomainRules.length)
-                .addMetric('interaction-domain-validation', interactionPassed, 'pass', interactionDomainRules.length)
-                .addMetric('responsive-domain-validation', responsivePassed, 'pass', responsiveDomainRules.length)
-                .addMetric('writing-domain-validation', writingPassed, 'pass', writingDomainRules.length)
                 .addValidation('DESIGN.md exists', hasDesignMd ? 'pass' : 'warning')
-                .addValidation('Color domain compliance', colorPassed === colorDomainRules.length ? 'pass' : 'warning', `${colorPassed}/${colorDomainRules.length} pass`)
-                .addValidation('Typography domain compliance', typographyPassed === typographyDomainRules.length ? 'pass' : 'warning', `${typographyPassed}/${typographyDomainRules.length} pass`)
-                .addValidation('Spatial domain compliance', spatialPassed === spatialDomainRules.length ? 'pass' : 'warning', `${spatialPassed}/${spatialDomainRules.length} pass`)
-                .addValidation('Motion domain compliance', motionPassed === motionDomainRules.length ? 'pass' : 'warning', `${motionPassed}/${motionDomainRules.length} pass`)
-                .addValidation('Interaction domain compliance', interactionPassed === interactionDomainRules.length ? 'pass' : 'warning', `${interactionPassed}/${interactionDomainRules.length} pass`)
-                .addValidation('Responsive domain compliance', responsivePassed === responsiveDomainRules.length ? 'pass' : 'warning', `${responsivePassed}/${responsiveDomainRules.length} pass`)
-                .addValidation('Writing domain compliance', writingPassed === writingDomainRules.length ? 'pass' : 'warning', `${writingPassed}/${writingDomainRules.length} pass`)
                 .addArtifact('design-tokens', tokenSections.length, ['flowG_component_implementation', 'flowI_motion_polish']);
             const memory = memoryBuilder.build();
             return {

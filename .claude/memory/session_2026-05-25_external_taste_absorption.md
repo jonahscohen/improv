@@ -50,7 +50,7 @@ User goal achieved: every external taste skill repo can be discarded because sid
 | **Bencium SKILL** | 6 design principles, "ALWAYS ASK" protocol, "does this look AI-generated?" filter, 7-item decision checklist | 4-5 neutral + 1-3 accent palette structure |
 | **Refactoring-UI** | 6 hierarchy strategies, 8 typography rules, 10-step spacing scale, HSL saturation falloff rule, 5-tier elevation system, two-part shadow recipe | Spacing 4/8/12/16/24/32/48/64/96/128; type scale 12/14/16/18/20/24/30/36/48/60/72 |
 
-## Synthesis - what each source uniquely adds beyond impeccable + make-interfaces-feel-better
+## Synthesis - what each source uniquely adds beyond oracle + make-interfaces-feel-better
 
 ### Emil (animation philosophy + frequency-first decisions)
 The "should this animate AT ALL?" frequency matrix; 3 canonical custom bezier curves; asymmetric enter/exit timing; Framer Motion x/y hardware-accel gotcha; popover transform-origin with modal exemption; blur-during-crossfade; clip-path as animation primitive; Sonner principles for loved components.

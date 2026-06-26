@@ -1,0 +1,31 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>How we cut build times by 40 percent</title>
+<style>
+  body{font-family:Charter,Georgia,serif;color:#1d1d1f;max-width:720px;margin:0 auto;padding:56px 24px;line-height:1.7}
+  h1{font-size:58px;margin:0 0 12px;line-height:1.1}
+  .byline{font-size:16px;color:#6e6e73;margin:0 0 40px}
+  h2{font-size:30px;margin:40px 0 12px}
+  p{font-size:18px;margin:0 0 20px}
+  blockquote{font-size:20px;font-style:italic;color:#444;border-left:3px solid #ddd;margin:24px 0;padding-left:20px}
+</style></head>
+<body>
+  <article>
+    <h1>How we cut our build times by 40 percent</h1>
+    <p class="byline">By the platform team, posted April 2, 2025</p>
+
+    <p>Last quarter our continuous integration pipeline had crept up to eleven minutes for a single commit. Engineers were context-switching while they waited, and the cost of running the fleet of build machines had roughly doubled year over year. We set a goal to bring the median build back under seven minutes without buying more hardware.</p>
+
+    <h2>Measuring where the time went</h2>
+    <p>Before changing anything, we added timing spans to each stage of the pipeline and collected a week of data. The install step accounted for nearly half the wall-clock time, mostly because the dependency cache was being invalidated on every run by an unrelated lockfile change.</p>
+
+    <blockquote>The slowest stage was not the one anyone suspected. We had been optimizing the compiler flags while the cache quietly missed on every build.</blockquote>
+
+    <h2>Fixing the cache key</h2>
+    <p>We rewrote the cache key to hash only the lockfile and the toolchain version rather than the entire working tree. Hit rates went from roughly twenty percent to over ninety percent within a day, and the install step dropped from five minutes to under forty seconds on a warm cache.</p>
+
+    <h2>Parallelizing the test suite</h2>
+    <p>The test stage was running serially on one machine. We split the suite across four workers by historical runtime so each worker finishes at about the same moment. That change alone removed another two minutes from the median.</p>
+
+    <h2>What we would do differently</h2>
+    <p>The biggest lesson was to measure first. We had spent two earlier sprints tuning things that turned out to be noise. Once we had real timing data, the two changes that mattered took an afternoon to write and have held up for three months.</p>
+  </article>
+</body></html>

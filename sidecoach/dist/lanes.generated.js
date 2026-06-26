@@ -19,6 +19,8 @@ exports.LANES = [
         "flowSequence": [
             "flowA_brand_verify",
             "flowB_component_research",
+            "flowC_font_research",
+            "flowD_reference_inspiration",
             "flowE_motion_patterns",
             "flowF_design_tokens",
             "flowG_component_implementation",
@@ -74,6 +76,8 @@ exports.LANES = [
                 "verb": "craft",
                 "flowIds": [
                     "flowB_component_research",
+                    "flowC_font_research",
+                    "flowD_reference_inspiration",
                     "flowE_motion_patterns",
                     "flowF_design_tokens",
                     "flowG_component_implementation",
@@ -253,6 +257,7 @@ exports.LANES = [
             }
         ],
         "flowSequence": [
+            "flowD_reference_inspiration",
             "flowF_design_tokens",
             "flowH_motion_integration",
             "flowT_ambitious_motion",
@@ -297,6 +302,7 @@ exports.LANES = [
             {
                 "verb": "colorize",
                 "flowIds": [
+                    "flowD_reference_inspiration",
                     "flowF_design_tokens"
                 ],
                 "guidance": [
@@ -362,6 +368,7 @@ exports.LANES = [
         ],
         "flowSequence": [
             "flowN_rapid_iteration_refined",
+            "flowD_reference_inspiration",
             "flowF_design_tokens",
             "flowJ_tactical_polish",
             "flowM_responsive_validation",
@@ -417,6 +424,7 @@ exports.LANES = [
             {
                 "verb": "colorize",
                 "flowIds": [
+                    "flowD_reference_inspiration",
                     "flowF_design_tokens"
                 ],
                 "guidance": [

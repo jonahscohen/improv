@@ -90,7 +90,7 @@ interface ValidationResult {
 - Graceful degradation: tool-unavailable and timeout violations degrade to warnings
 - Blocking violations stop flow chain and record to history with full violation details
 
-**Impact:** Impeccable never blocks. Sidecoach now blocks flows when real prerequisites are unmet.
+**Impact:** Oracle never blocks. Sidecoach now blocks flows when real prerequisites are unmet.
 
 ---
 
@@ -100,6 +100,6 @@ Remaining systems:
 - **Phase 4**: RegressionDetector (compare runs, block on degradation)
 - **Phase 5**: ProjectPersonaEngine (async LLM extraction from PRODUCT.md)
 - **Phase 6**: DesignDebtTracker (formal deferred decision tracking)
-- **Phase 7**: Impeccable Detect integration (wire `npx impeccable detect` into FlowK)
+- **Phase 7**: Oracle Detect integration (wire `npx oracle detect` into FlowK)
 
 Plus: Skill content porting and new flows (curate + all-seven QA)

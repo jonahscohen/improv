@@ -4,9 +4,9 @@ export type NormalizedErrorCategory =
   | 'unreadable_input' | 'registry_fault' | 'validator_exception' | 'rule_exception'
   | 'timeout' | 'aborted' | 'unsupported_runtime' | 'other';
 export type RuleStatus = 'pass' | 'fail' | 'not_applicable' | 'inconclusive';
-export type EvidenceKind = 'css-rule' | 'computed-style' | 'dom' | 'markup' | 'contrast';
+export type EvidenceKind = 'css-rule' | 'computed-style' | 'dom' | 'markup' | 'contrast' | 'rendered-scan';
 export type RuleScope = 'file' | 'component' | 'page' | 'project';
-export type SourceVocabulary = 'polish-extended-antipattern' | 'p012' | 'taste';
+export type SourceVocabulary = 'polish-extended-antipattern' | 'p012' | 'taste' | 'rendered-scanner' | 'extended-domain';
 
 export interface SourceKindSupport { kind: string; level: 'full' | 'partial' | 'none'; }
 
@@ -139,6 +139,10 @@ export const EVIDENCE_SOURCE_COMPATIBILITY: Record<EvidenceKind, string[]> = {
   'computed-style': [],
   'dom': [],
   'contrast': [],
+  // rendered-scan: satisfied ONLY by a live rendered scan of a renderUrl (no static source
+  // kind can provide it), so isStaticallySatisfiable is false and the rule runs via the
+  // run-validator non-static branch reading ctx.renderedScan. Parallel to dom/contrast.
+  'rendered-scan': [],
 };
 
 // The union of source kinds that can satisfy ALL of the given evidence requirements

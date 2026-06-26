@@ -6,7 +6,6 @@ exports.FlowOCloneMatchHandler = void 0;
 exports.createFlowOHandler = createFlowOHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
-const extended_domain_validator_1 = require("./extended-domain-validator");
 const icon_source_reference_1 = require("./icon-source-reference");
 class FlowOCloneMatchHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
@@ -17,43 +16,20 @@ class FlowOCloneMatchHandler extends flow_handler_1.BaseFlowHandler {
     }
     async execute(context) {
         try {
-            // Domain validation integration for spatial, responsive, color precision
-            const domainCheckContext = {
-                designTokens: context.metadata?.designTokens || {},
-                componentTree: context.metadata?.componentTree || { nodeCount: 0 },
-                cssRules: context.metadata?.cssRules || [],
-                colors: context.metadata?.colors || {},
-                typography: context.metadata?.typography || {},
-                spacing: context.metadata?.spacing || {},
-            };
-            const extendedValidationReport = extended_domain_validator_1.ExtendedDomainValidator.validateAll(domainCheckContext);
-            const spatialDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('spatial');
-            const responsiveDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('responsive');
-            const colorDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('color');
-            const spatialPassRate = extendedValidationReport.passRateByDomain['spatial'] || '0%';
-            const responsivePassRate = extendedValidationReport.passRateByDomain['responsive'] || '0%';
-            const colorPassRate = extendedValidationReport.passRateByDomain['color'] || '0%';
-            const spatialPassed = Math.round((parseFloat(spatialPassRate) / 100) * spatialDomainRules.length);
-            const responsivePassed = Math.round((parseFloat(responsivePassRate) / 100) * responsiveDomainRules.length);
-            const colorPassed = Math.round((parseFloat(colorPassRate) / 100) * colorDomainRules.length);
             const checklist = this.createChecklist([
                 { label: 'Design screenshot at same viewport size', required: true },
                 { label: 'Implementation screenshot at same viewport size', required: true },
                 { label: 'Side-by-side comparison setup', required: true },
-                { label: 'Spatial domain validation', required: false, description: `${spatialPassed}/${spatialDomainRules.length} rules passing (${spatialPassRate})` },
                 { label: 'Typography match (font, size, weight, line-height, letter-spacing)', required: true },
-                { label: 'Color match (hex match or token reference)', required: true, description: `${colorPassed}/${colorDomainRules.length} rules passing (${colorPassRate})` },
+                { label: 'Color match (hex match or token reference)', required: true },
                 { label: 'Spacing match (padding, margins, gap - measure with tools)', required: true },
                 { label: 'Border radius match (concentric radius pattern)', required: true },
                 { label: 'Shadow match (blur, offset, color, opacity)', required: true },
                 { label: 'Element positioning (alignment, overlap, float)', required: true },
-                { label: 'Responsive domain validation', required: false, description: `${responsivePassed}/${responsiveDomainRules.length} rules passing (${responsivePassRate})` },
                 { label: 'Interactive states match (hover, active, focus, disabled)', required: false },
             ]);
             const guidance = [
                 'Clone Match verifies pixel-perfect alignment between design and implementation.',
-                '',
-                'Domain Validation Results:',
                 '',
                 'SETUP:',
                 '- Design screenshot at exact viewport (e.g., 1024px)',
@@ -88,30 +64,13 @@ class FlowOCloneMatchHandler extends flow_handler_1.BaseFlowHandler {
                 '- Text baseline alignment',
                 '- Icon centering (optical vs geometric)',
             ];
-            const getSeverity = (percentage) => {
-                const num = parseFloat(percentage);
-                if (num >= 80)
-                    return 'pass';
-                if (num >= 50)
-                    return 'warning';
-                return 'fail';
-            };
             const memoryBuilder = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())
                 .setSummary('Clone match: pixel-perfect comparison - typography, colors, spacing, shapes, layout verified')
-                .addRule('spatial', spatialDomainRules.map((r) => r.name))
-                .addRule('color', colorDomainRules.map((r) => r.name))
-                .addRule('responsive', responsiveDomainRules.map((r) => r.name))
                 .addRule('typography', ['font family', 'size', 'weight', 'line-height', 'letter-spacing'])
                 .addRule('spacing', ['padding measured', 'margins measured', 'gap verified'])
                 .addRule('shapes', ['border radius', 'border style', 'shadow blur', 'shadow offset', 'shadow color', 'shadow opacity'])
                 .addRule('layout', ['element positioning', 'alignment', 'baseline', 'optical centering'])
                 .addDecision('Clone strategy', 'Side-by-side viewport-matched comparison with pixel-level verification')
-                .addMetric('spatial-rules-passing', spatialPassed, 'pass', spatialDomainRules.length)
-                .addMetric('color-rules-passing', colorPassed, 'pass', colorDomainRules.length)
-                .addMetric('responsive-rules-passing', responsivePassed, 'pass', responsiveDomainRules.length)
-                .addValidation('Spatial domain', getSeverity(spatialPassRate), `${spatialPassed}/${spatialDomainRules.length} rules passing`)
-                .addValidation('Color domain', getSeverity(colorPassRate), `${colorPassed}/${colorDomainRules.length} rules passing`)
-                .addValidation('Responsive domain', getSeverity(responsivePassRate), `${responsivePassed}/${responsiveDomainRules.length} rules passing`)
                 .addArtifact('clone', 5);
             return {
                 flowId: this.flowId,

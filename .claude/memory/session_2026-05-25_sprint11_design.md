@@ -13,7 +13,7 @@ Sprint 10 closed. Dogfood surfaced 2 remaining bugs in actual end-to-end use:
 
 1. flowA `Personality: ` displays empty because `brand_personality = []` (empty array from existing section parser) is truthy and preempts `brandPersonality = 'real string'` in JS `||` chains. Two read sites in flow-handler-brand-verify.ts (line 120 display, line 222 pre-flight check).
 
-2. Registry's craft chain has 4 flowIds (A/F/G/J). Per impeccable's craft.md skill, craft should cover shape -> tokens -> components -> motion -> accessibility -> polish. Missing flowH (motion) and flowI (accessibility) from the registry's flowIds array.
+2. Registry's craft chain has 4 flowIds (A/F/G/J). Per oracle's craft.md skill, craft should cover shape -> tokens -> components -> motion -> accessibility -> polish. Missing flowH (motion) and flowI (accessibility) from the registry's flowIds array.
 
 ## Fixes
 

@@ -1,0 +1,102 @@
+{
+  "composite": "composite_craft_qa",
+  "flowsExecuted": [
+    "flowZ_design_component",
+    "flowK_multi_lens_audit"
+  ],
+  "verdict": "blocked",
+  "severityCounts": {
+    "blocking": 6,
+    "warning": 1,
+    "info": 0
+  },
+  "overallGrade": "F",
+  "overallPassRate": 50.8,
+  "domainGrades": [
+    {
+      "domain": "accessibility",
+      "passRate": 100,
+      "letter": "A",
+      "rulesPassed": 1,
+      "rulesTotal": 1
+    },
+    {
+      "domain": "color",
+      "passRate": 3.2,
+      "letter": "F",
+      "rulesPassed": 0,
+      "rulesTotal": 1
+    },
+    {
+      "domain": "performance",
+      "passRate": 33.33333333333333,
+      "letter": "F",
+      "rulesPassed": 0,
+      "rulesTotal": 1
+    },
+    {
+      "domain": "taste",
+      "passRate": 66.66666666666666,
+      "letter": "D",
+      "rulesPassed": 0,
+      "rulesTotal": 1
+    }
+  ],
+  "findings": [
+    {
+      "severity": "blocking",
+      "source": "flowZ_design_component",
+      "flowId": "flowZ_design_component",
+      "rule": "taste:r3",
+      "message": "one taste issue"
+    },
+    {
+      "severity": "blocking",
+      "source": "flowK_multi_lens_audit",
+      "flowId": "flowK_multi_lens_audit",
+      "rule": "contrast",
+      "message": "2.1:1 below AA on body text"
+    },
+    {
+      "severity": "blocking",
+      "source": "flowK_multi_lens_audit",
+      "flowId": "flowK_multi_lens_audit",
+      "rule": "color.contrast-ratio",
+      "message": "color.contrast-ratio = 3.2 (target 4.5)"
+    },
+    {
+      "severity": "blocking",
+      "source": "flowK_multi_lens_audit",
+      "flowId": "flowK_multi_lens_audit",
+      "rule": "gate:design-tokens-exist",
+      "message": "no DESIGN.md"
+    },
+    {
+      "severity": "blocking",
+      "source": "flowK_multi_lens_audit",
+      "flowId": "flowK_multi_lens_audit",
+      "rule": "performance:p2",
+      "message": "perf issues"
+    },
+    {
+      "severity": "blocking",
+      "source": "flowK_multi_lens_audit",
+      "flowId": "flowK_multi_lens_audit",
+      "rule": "performance:p3",
+      "message": "perf issues"
+    },
+    {
+      "severity": "warning",
+      "source": "flowZ_design_component",
+      "flowId": "flowZ_design_component",
+      "rule": "AI slop detection",
+      "message": "mild eyebrow chip"
+    }
+  ],
+  "nextSteps": [
+    "Resolve blocker: taste:r3 - one taste issue",
+    "Resolve blocker: contrast - 2.1:1 below AA on body text",
+    "Resolve blocker: color.contrast-ratio - color.contrast-ratio = 3.2 (target 4.5)",
+    "Address warning: AI slop detection - mild eyebrow chip"
+  ]
+}

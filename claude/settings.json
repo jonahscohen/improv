@@ -126,6 +126,16 @@
         ]
       },
       {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/codex-rescue-guard.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
@@ -171,6 +181,12 @@
             "type": "command",
             "command": "~/.claude/hooks/node-shim-heal.sh",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/cmux-teammate-shim-heal.sh",
+            "timeout": 5,
+            "statusMessage": "Healing cmux teammate shim..."
           }
         ]
       },
@@ -344,6 +360,16 @@
         ]
       },
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/codex-failure-watcher.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
@@ -509,17 +535,9 @@
     "feature-dev@claude-plugins-official": true,
     "ralph-loop@claude-plugins-official": true,
     "code-review@claude-plugins-official": true,
-    "impeccable@impeccable": false,
     "codex@openai-codex": true
   },
   "extraKnownMarketplaces": {
-    "impeccable": {
-      "source": {
-        "source": "github",
-        "repo": "pbakaus/impeccable"
-      },
-      "autoUpdate": true
-    },
     "buildwithclaude": {
       "source": {
         "source": "github",

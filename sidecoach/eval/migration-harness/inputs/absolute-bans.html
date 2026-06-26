@@ -1,0 +1,14 @@
+<!doctype html>
+<!-- migration-harness INPUT (hand-authored; CURRENT absolute-ban behavior; not the eval corpus).
+     Triggers: side-stripe-borders, gradient-text, identical-card-grids. -->
+<html><head><style>
+.alert { border-left: 4px solid #ee3333; }
+.grad { -webkit-background-clip: text; background: linear-gradient(#ff0000, #0000ff); }
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); }
+</style></head><body>
+<div class="cards">
+<div class="card"><h3>A</h3><p>aa</p></div>
+<div class="card"><h3>B</h3><p>bb</p></div>
+<div class="card"><h3>C</h3><p>cc</p></div>
+</div>
+</body></html>

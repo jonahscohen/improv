@@ -41,8 +41,8 @@ async function run() {
         throw new Error('genericity must remain inconclusive with collector evidence');
     if (a11y_checks_1.A11Y_CHECKS['a11y/min-hit-area'](ctx).status !== 'fail')
         throw new Error('hit-area rule must reach real fail');
-    if (a11y_checks_1.A11Y_CHECKS['a11y/color-contrast'](ctx).status !== 'fail')
-        throw new Error('contrast rule must reach real fail');
+    // a11y.color-contrast no longer consumes the collector contrast probe (Stage 6 migrated it to the rendered
+    // scan). The collector still MEASURES contrast (asserted above: e.contrast.wcagAA), it is just orphaned.
     console.log('browser-evidence-collector: OK');
 }
 run().catch((e) => { console.error(e); process.exit(1); });

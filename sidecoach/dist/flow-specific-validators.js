@@ -114,7 +114,7 @@ const designTokensRules = [
 const tacticalPolishRules = [
     {
         name: 'polish-principles-applied',
-        description: '22-point Polish Standard must be enforced',
+        description: '24-point Polish Standard must be enforced',
         check: (context, result) => {
             // Check for polish-related guidance
             return !!(result.guidance && result.guidance.some(g => g.includes('scale') || g.includes('radius') || g.includes('transition') || g.includes('shadow')));

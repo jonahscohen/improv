@@ -319,7 +319,7 @@ mm.add("(prefers-reduced-motion: no-preference)", () => {
 
 The skill's own integration notes:
 
-- **impeccable / sidecoach** provides the brand strategy (what should this feel like? what register?). motion-reference provides the implementation tools (how to make it feel that way?).
+- **oracle / sidecoach** provides the brand strategy (what should this feel like? what register?). motion-reference provides the implementation tools (how to make it feel that way?).
 - **make-interfaces-feel-better** overlaps on tactical motion polish (timing, easing, scale-on-press, stagger windows). When both apply, defer to make-interfaces-feel-better for specific timing values; use motion-reference for the API calls.
 - **design-references** may surface captured patterns that use these libraries; consult both when matching feel from a reference.
 

@@ -10,7 +10,6 @@ const flow_handler_1 = require("./flow-handler");
 const design_references_reference_1 = require("./design-references-reference");
 const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
-const extended_domain_validator_1 = require("./extended-domain-validator");
 const model_routing_1 = require("./model-routing");
 class FlowDReferenceSearchHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
@@ -67,30 +66,12 @@ class FlowDReferenceSearchHandler extends flow_handler_1.BaseFlowHandler {
                 spatialDomainRules: spatialDomain.rules,
                 references: referenceAnalysis,
             };
-            // Domain validation integration
-            const domainCheckContext = {
-                designTokens: context.metadata?.designTokens || {},
-                componentTree: context.metadata?.componentTree || { references: references.length },
-                cssRules: context.metadata?.cssRules || [],
-                colors: context.metadata?.colors,
-                spacing: context.metadata?.spacing,
-                accessibility: context.metadata?.accessibility,
-            };
-            const extendedValidationReport = extended_domain_validator_1.ExtendedDomainValidator.validateAll(domainCheckContext);
-            const colorDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('color');
-            const spatialDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('spatial');
-            const colorPassRate = extendedValidationReport.passRateByDomain['color'] || '0%';
-            const spatialPassRate = extendedValidationReport.passRateByDomain['spatial'] || '0%';
-            const colorPassed = Math.round((parseFloat(colorPassRate) / 100) * colorDomainRules.length);
-            const spatialPassed = Math.round((parseFloat(spatialPassRate) / 100) * spatialDomainRules.length);
             // Build checklist
             const checklist = this.createChecklist([
                 { label: 'Register defined', required: true, description: register },
                 { label: 'Design approach specified', required: true, description: designApproach },
                 { label: 'Color domain rules reviewed (OKLCH, contrast)', required: true, description: `${colorRules.length} rules loaded` },
-                { label: 'Color domain validation', required: false, description: `${colorPassed}/${colorDomainRules.length} rules passing (${colorPassRate})` },
                 { label: 'Spatial domain rules reviewed (grid, spacing)', required: true, description: `${spatialRules.length} rules loaded` },
-                { label: 'Spatial domain validation', required: false, description: `${spatialPassed}/${spatialDomainRules.length} rules passing (${spatialPassRate})` },
                 { label: 'Design references found', required: false, description: `${references.length} references available` },
                 { label: 'Category-reflex AI slop detection applied', required: false, description: `${referenceAnalysis.length - lowSlopReferences.length} high-slop filtered` },
             ]);
@@ -105,8 +86,6 @@ class FlowDReferenceSearchHandler extends flow_handler_1.BaseFlowHandler {
                 'Semantic Colors: ensure meaning is consistent across light/dark modes',
                 'Contrast Validation: WCAG AA minimum 4.5:1 for text, 3:1 for UI',
                 'Saturation & Vibrancy: appropriate for register (product vs brand)',
-                '',
-                'Domain Validation Results:',
                 '',
                 'Spatial Domain Rules (4pt Grid System):',
                 ...spatialRules,
@@ -126,17 +105,13 @@ class FlowDReferenceSearchHandler extends flow_handler_1.BaseFlowHandler {
                 `Proceed to Flow E (Motion Patterns) for animation design validation.`,
             ];
             const memoryBuilder = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())
-                .setSummary(`Design references: ${references.length} patterns with color + spatial domain validation (color: ${colorPassRate}, spatial: ${spatialPassRate}) + AI slop detection`)
+                .setSummary(`Design references: ${references.length} patterns + AI slop detection`)
                 .addRule('color', colorRules)
                 .addRule('spatial', spatialRules)
                 .addDecision(`Selected ${lowSlopReferences.length} high-quality references`, `Filtered oversaturated/AI-slop references (genericityScore < 0.6)`)
                 .addMetric('references-analyzed', references.length, 'pass')
-                .addMetric('color-domain-validation', colorPassed, 'pass', colorDomainRules.length)
-                .addMetric('spatial-domain-validation', spatialPassed, 'pass', spatialDomainRules.length)
                 .addMetric('high-quality-references', lowSlopReferences.length, 'pass', references.length)
                 .addMetric('ai-slop-filtered', oversaturatedCount, 'pass')
-                .addValidation('Color domain compliance', colorPassed === colorDomainRules.length ? 'pass' : 'warning', `${colorPassed}/${colorDomainRules.length} pass`)
-                .addValidation('Spatial domain compliance', spatialPassed === spatialDomainRules.length ? 'pass' : 'warning', `${spatialPassed}/${spatialDomainRules.length} pass`)
                 .addValidation('Category-reflex AI slop detection', oversaturatedCount === 0 ? 'pass' : 'warning', `${oversaturatedCount} oversaturated categories`)
                 .addReference('design-references', lowSlopReferences.length, 'design inspiration patterns')
                 .addArtifact('reference-patterns', lowSlopReferences.length, ['flowE_motion_patterns', 'flowG_component_implementation', 'flowN_design_refine']);

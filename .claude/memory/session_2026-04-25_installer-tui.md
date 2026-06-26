@@ -52,14 +52,14 @@ User wanted a fresh-machine setup that's a single-line invocation AND a real TUI
 
 # Follow-up: plain-English descriptions + connector clarity (2026-04-25)
 
-User asked "does this factor in plugins I like? (impeccable, clickup, claude in chrome)" and asked for plain-English component descriptions because terms like "nvm" meant nothing.
+User asked "does this factor in plugins I like? (oracle, clickup, claude in chrome)" and asked for plain-English component descriptions because terms like "nvm" meant nothing.
 
 ## What changed
 
 - TITLES + DESCS rewritten in plain English. No more "symlinks settings.json into ~/.claude/" - now "Your global Claude Code brain: instructions, settings, safety hooks..." Same six components. Each description ends with when to skip.
-- The `claude` component description now lists representative plugins (Impeccable, Figma, Sentry, Supabase, Discord, hookify, superpowers) so users see the plugin layer is bundled in.
+- The `claude` component description now lists representative plugins (Oracle, Figma, Sentry, Supabase, Discord, hookify, superpowers) so users see the plugin layer is bundled in.
 - New post-install section: "Connectors and MCP servers (NOT installed by this script)". Distinguishes:
-  - **Plugins** (impeccable + 13 others): enabled via settings.json's `enabledPlugins`, auto-installed by Claude Code on first launch. Portable through dotfiles.
+  - **Plugins** (oracle + 13 others): enabled via settings.json's `enabledPlugins`, auto-installed by Claude Code on first launch. Portable through dotfiles.
   - **Connectors** (ClickUp): OAuth in claude.ai -> Settings -> Connectors. Per-account, not portable.
   - **Chrome extensions** (Claude in Chrome): installed in browser. Per-browser, not portable.
 - README install section gets the same component table (now with two columns: plain-English + "what changes on disk") and a new "Plugins vs. connectors vs. extensions" subsection.

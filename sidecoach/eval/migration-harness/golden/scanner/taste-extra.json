@@ -1,0 +1,33 @@
+[
+  {
+    "source": "taste-validator",
+    "rule": "taste/fabricated-svg",
+    "severity": "error",
+    "category": "icon-sourcing",
+    "message": "Inline <svg> has 2 path(s) (max d=\"\" length 44) with no library marker. Copy verbatim from Heroicons, Lucide, Tabler, Bootstrap Icons, Phosphor, or Material Symbols. Annotate with class=\"lucide-...\", data-icon-source=\"...\", or a <!-- source: ... --> comment so provenance is verifiable.",
+    "excerpt": "<svg viewBox=\"0 0 24 24\"><path d=\"M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0zoooooong\"/><path d=\"M8 12l3 3 5-6 more-fabricated-path-data-here\"/></svg>",
+    "lineNumbers": [
+      61
+    ]
+  },
+  {
+    "source": "taste-validator",
+    "rule": "taste/large-inline-style",
+    "severity": "error",
+    "category": "separation-of-concerns",
+    "message": "Inline <style> block in <head> is 58 lines. Move the rules to the external stylesheet; large inline blocks duplicate the design system and drift from the shared file.",
+    "excerpt": null,
+    "lineNumbers": [
+      3
+    ]
+  },
+  {
+    "source": "taste-validator",
+    "rule": "taste/observer-race",
+    "severity": "error",
+    "category": "render-correctness",
+    "message": "IntersectionObserver-driven reveal targets element(s) (.reveal) that start at opacity: 0. On slow paint or font-load, the observer callback can fire after the screenshot or user-visible paint, leaving elements stuck invisible. Use a CSS-only animation (e.g. @keyframes with animation-delay stagger) or set initial opacity:1 and have JS opt INTO the hidden state right before the observer fires.",
+    "excerpt": null,
+    "lineNumbers": null
+  }
+]

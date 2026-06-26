@@ -1,6 +1,7 @@
 import { CleanPolicy, ProductRuleDefinition, RequiredCoverageRecord, SourceKindSupport } from './product-rule-types';
 import { ProductValidatorRegistration, LaneValidationPolicy, ValidatorFixtureManifest } from './flow-validation-capabilities';
 export declare const BROWSER_BACKED_RULE_IDS: Set<string>;
+export declare const RENDERED_BACKED_RULE_IDS: Set<string>;
 export interface GeneratedValidator {
     validatorId: string;
     ownedRuleIds: string[];
@@ -8,10 +9,12 @@ export interface GeneratedValidator {
     supportedSourceKinds: SourceKindSupport[];
     browserRuleIds: string[];
     browserCoverageByScope: RequiredCoverageRecord[];
+    renderedRuleIds: string[];
+    renderedCoverageByScope: RequiredCoverageRecord[];
     cleanPolicy: CleanPolicy;
 }
 export declare function deriveValidator(reg: ProductValidatorRegistration, rules: ProductRuleDefinition[]): GeneratedValidator;
-export declare function validateRegistry(rules: ProductRuleDefinition[], regs: ProductValidatorRegistration[], gatingValidatorIdList?: string[], browserBackedRuleIds?: string[]): {
+export declare function validateRegistry(rules: ProductRuleDefinition[], regs: ProductValidatorRegistration[], gatingValidatorIdList?: string[], browserBackedRuleIds?: string[], renderedBackedRuleIds?: string[]): {
     ok: boolean;
     errors: string[];
 };

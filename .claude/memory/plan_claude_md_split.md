@@ -65,8 +65,8 @@ For every top-level `##` section in the installed CLAUDE.md (in file order):
 | 5 | `## Self-Analysis Protocol` (~9 lines) | **CORE** | Not enforced by any hook. Discipline rule for post-failure learning. Keep verbatim. |
 | 6 | `## Gut Check` (4 lines) | **CORE** | Cheap, universally applicable, no hook covers it. Keep. |
 | 7 | `## Hook Override Protocol` (4 lines) | **CORE** | Meta-rule that interacts with the hook layer itself. Tiny. Keep. |
-| 8 | `## Style Guide and Component Library Rules` (3 bullets) | **TOPIC** -> `/impeccable` or `/component-gallery-reference` | Triggers only when building a style guide / component library. The /impeccable skill already enforces design-source extraction. Move to skill description or to a new `skills/component-library-rules.md`. |
-| 9 | `## Design Work and Impeccable` (63 lines) | **TOPIC** -> already a skill | Entirely about the /impeccable plugin. Currently lives in CLAUDE.md as a permanent "load every turn" instruction even though impeccable is a plugin/skill with its own description. **Biggest single bloat.** Move 100% to `skills/impeccable-protocol.md` (or have /impeccable's own description carry the routing table). Keep ONE line in core: "For UI work, invoke /impeccable. See skill for routing." |
+| 8 | `## Style Guide and Component Library Rules` (3 bullets) | **TOPIC** -> `/oracle` or `/component-gallery-reference` | Triggers only when building a style guide / component library. The /oracle skill already enforces design-source extraction. Move to skill description or to a new `skills/component-library-rules.md`. |
+| 9 | `## Design Work and Oracle` (63 lines) | **TOPIC** -> already a skill | Entirely about the /oracle plugin. Currently lives in CLAUDE.md as a permanent "load every turn" instruction even though oracle is a plugin/skill with its own description. **Biggest single bloat.** Move 100% to `skills/oracle-protocol.md` (or have /oracle's own description carry the routing table). Keep ONE line in core: "For UI work, invoke /oracle. See skill for routing." |
 | 10 | `## Permission Posture` (~10 lines) | **CORE** | Explains why bypassPermissions is set. Important context for any session. But could compress to 3 lines: "Machine runs bypassPermissions deliberately. Hooks do the gating. See `claude/settings.json`." Keep compressed. |
 | 11 | `## Voice transcription` (~14 lines) | **TOPIC** -> skill | Specific to Discord audio attachments. Only relevant on audio-attached messages. Move to a skill triggered by audio-attachment detection, or to `skills/voice-transcription.md`. |
 | 12 | `## Discord Chat Agent` (~20 lines) | **TOPIC** -> already a skill (`/discord:access`) plus `discord-onboard.sh` | Mostly setup/install/repair info. Refer colleagues to `bash ~/.claude/discord-onboard.sh`. The recovery paragraph is operational knowledge that belongs in `discord-onboard.sh --help` or `skills/discord-setup.md`. Keep ONE line in core: "Discord setup: `bash ~/.claude/discord-onboard.sh`. Repair: `--repair`." |
@@ -111,7 +111,7 @@ Plus a footer pointing to skills/topic files:
 ## Topic Modules (load on demand)
 - Voice output: see /voice-output skill or hooks/voice-mandate.sh
 - Voice transcription: see skills/voice-transcription.md
-- Impeccable design protocol: see /impeccable skill
+- Oracle design protocol: see /oracle skill
 - Discord setup: bash ~/.claude/discord-onboard.sh
 - cmux browser: see skills/cmux-browser.md (per-project surface id in project memory)
 - Reflect: /reflect or see skills/reflect/
@@ -123,7 +123,7 @@ Plus a footer pointing to skills/topic files:
 
 | New file | Source content (current location) | Lines moved |
 |---|---|---|
-| `claude/skills/impeccable-protocol/SKILL.md` | Installed CLAUDE.md lines 122-183 AND source `claude/CLAUDE.md` lines 1-62 | ~63 |
+| `claude/skills/oracle-protocol/SKILL.md` | Installed CLAUDE.md lines 122-183 AND source `claude/CLAUDE.md` lines 1-62 | ~63 |
 | `claude/skills/voice-transcription/SKILL.md` | Installed lines 195-207 AND source CLAUDE.md lines 165-177 | ~13 |
 | `claude/skills/cmux-browser/SKILL.md` | Installed lines 228-255 AND source CLAUDE.md lines 198-225 | ~28 |
 | `claude/skills/discord-setup/SKILL.md` | Installed lines 209-226 AND source CLAUDE.md lines 179-196 | ~18 |
@@ -180,7 +180,7 @@ After this lands, document a rule: never hand-edit `~/.claude/CLAUDE.md` directl
 | Voice Output (current installed version) | **LOW** | Hook already injects per-turn mandate. Moving to skill description just documents the hook. |
 | Verification HARD RULE sub-blocks (screenshot, real-input) | **MEDIUM** | The hooks enforce the rules at write time, but the documentation is the FIRST defense (Claude reads it and avoids the pattern). Moving to skills/ means it's only loaded when the skill auto-triggers. Risk: Claude tries a synthetic click thinking the rule doesn't apply because it's not in core CLAUDE.md. Mitigation: leave a one-line "synthetic clicks blocked by validation-guard.sh - see skill" pointer in the core Verification Protocol. |
 | Memory Discipline "Per-Task Memory Updates" prose | **MEDIUM** | memory-nudge.sh fires the nag. But reflection finding #1 notes the nag was over-triggering and getting tuned out. Cutting the prose AND keeping the nag could leave Claude with no canonical statement of the rule. Mitigation: keep a 3-line core summary + the bullet list of what counts as a task. Cut only the lecture paragraphs ("This has been corrected multiple times..."). |
-| Impeccable section | **LOW** | Already exists as a plugin/skill. Moving the routing table into the skill description is the right architecture. |
+| Oracle section | **LOW** | Already exists as a plugin/skill. Moving the routing table into the skill description is the right architecture. |
 | Style Guide / Component Library Rules | **LOW** | 3 bullets, narrow trigger condition. Skill description handles it. |
 | Permission Posture (compress) | **LOW** | Just documentation. Settings.json is the real source. |
 | Discord / cmux / voice-transcription | **LOW** | All narrow-trigger conditions (Discord message arrives, building UI, audio attachment present). Skill auto-triggers fit naturally. |

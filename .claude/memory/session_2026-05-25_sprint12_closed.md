@@ -46,7 +46,7 @@ The marketing-site build (original chief-architect task on 2026-05-23 brief). Si
 
 ## Files touched
 
-- `sidecoach/src/impeccable-command-registry.ts` (T1)
+- `sidecoach/src/oracle-command-registry.ts` (T1)
 - `sidecoach/src/dogfood-craft-step2.ts` (T2)
 - `sidecoach/src/sidecoach-orchestrator.ts` (T4, T5)
 - `sidecoach/src/context-loader.ts` (T6)

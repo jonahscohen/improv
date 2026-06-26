@@ -16,14 +16,14 @@ The README claims an 8-step "how the layers stack on a real build" sequence. Her
 | Layer | README claim | What actually happened |
 |---|---|---|
 | **PRODUCT.md / DESIGN.md** | Pre-step; check exists | I WROTE them at the start, derived from README brand voice + logo observation. Worked smoothly. |
-| **1. /impeccable shape** | Reads PRODUCT.md, proposes brand direction | NEVER invoked as a skill. I did the strategy mentally + captured in PRODUCT.md. |
+| **1. /oracle shape** | Reads PRODUCT.md, proposes brand direction | NEVER invoked as a skill. I did the strategy mentally + captured in PRODUCT.md. |
 | **2. component-gallery-reference** | Triggers for standard components | NEVER auto-fired. I built hero/nav/cards/footer from convention. |
 | **3. design-references** | Triggers in parallel, greps catalog | NEVER fired. The 1 reference (unlumen-kbd) wouldn't have matched anyway. |
 | **4. fontshare-reference** | Triggers for type decisions | Did the WORKFLOW mentally - picked Source Serif 4 + Hanken Grotesk + JetBrains Mono, validated against reflex-reject list. The skill's reject list was load-bearing - I caught myself almost picking Inter before remembering. |
 | **5. motion-reference** | Triggers for animation | Applied the canonical GSAP + Lenis 3-line glue snippet from the skill verbatim. Also applied the SSR / cleanup / ScrollTrigger.refresh gotchas. The skill earned its place. |
 | **6. icon-source** | Peer skill for icons | Not invoked. I didn't end up needing icons - the design is pure type + color. |
 | **7. make-interfaces-feel-better** | Tactical polish during impl | Applied DURING construction, not as a separate pass: scale(0.96) on press, text-wrap balance on headings, pretty on body, concentric radius (xl outer + md inner), tabular nums setup, no transition: all, image outlines never tinted. About 10 of the 14 rules ended up in the CSS. |
-| **8. /impeccable audit + critique + polish** | QA gate | NEVER invoked. The site shipped without the documented QA triad. |
+| **8. /oracle audit + critique + polish** | QA gate | NEVER invoked. The site shipped without the documented QA triad. |
 
 ## The honest read
 
@@ -31,7 +31,7 @@ Of the 8 documented pipeline steps, **2 fired as skills the way the README claim
 
 `make-interfaces-feel-better` is the interesting case - it didn't AUTO-TRIGGER but I applied its 14-point rules DURING the build because I'd read the skill recently. The auto-trigger description matches UI keywords; my work counted, but the keyword routing didn't show me the rules - I remembered them.
 
-The QA gate (`/impeccable audit + critique + polish`) genuinely never ran. The site went from "done" to "live" with no design-review step.
+The QA gate (`/oracle audit + critique + polish`) genuinely never ran. The site went from "done" to "live" with no design-review step.
 
 ## Friction points the build surfaced
 
@@ -54,7 +54,7 @@ The QA gate (`/impeccable audit + critique + polish`) genuinely never ran. The s
 
 - The `data-reveal` pattern as currently designed has too much surface area to fail. Either commit to "always visible, animate on scroll" (no opacity:0 default) OR commit to a guaranteed-fire JS init that doesn't race.
 - The pipeline's auto-trigger mechanism (description keyword matching) isn't actually catching skills consistently. Several skills that should have auto-fired (component-gallery-reference, design-references, icon-source) didn't.
-- The QA gate (impeccable audit/critique/polish) needs to be a literal pre-commit hook, not a README claim. If we're serious that it runs at QA time, it should mechanically block a "done" claim.
+- The QA gate (oracle audit/critique/polish) needs to be a literal pre-commit hook, not a README claim. If we're serious that it runs at QA time, it should mechanically block a "done" claim.
 
 ## Files touched (the build)
 

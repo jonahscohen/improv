@@ -7,7 +7,7 @@ type: project
 ## What changed
 
 - Created `claude/RULES.md` with team-wide standards: Code Quality, Verification Protocol, Debugging Protocol, Style Guide and Component Library Rules
-- Stripped those four sections from `claude/CLAUDE.md`, leaving only personal workflow: Memory Discipline, Impeccable, Permission Posture, Voice, Discord, cmux
+- Stripped those four sections from `claude/CLAUDE.md`, leaving only personal workflow: Memory Discipline, Oracle, Permission Posture, Voice, Discord, cmux
 - Updated `install.sh`: the `claude` component now concatenates RULES.md + CLAUDE.md into `~/.claude/CLAUDE.md` (no longer a symlink)
 - Updated component detection to look for `<!-- claude-dotfiles:rules:begin -->` marker instead of symlink check
 - Updated deactivation to handle generated file instead of symlink

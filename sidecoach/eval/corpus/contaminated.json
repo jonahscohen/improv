@@ -1,0 +1,10 @@
+{
+  "_purpose": "Held-out pages that have been DEVELOPED AGAINST (peeked) and therefore LEAVE the held-out bar (lead ruling, 2026-06-24). A peeked page is contaminated - including it in the measurement would be training-on-test. Scoring + mapping EXCLUDE these ids. The frozen corpus (candidates.json / lock) is untouched; this is a separate post-freeze annotation so the freeze integrity stays intact. Precedent: a peek has a real, concrete cost - the page is gone from the bar.",
+  "contaminated": {
+    "ed_csstricks_live": {
+      "reason": "Stage 1 batch-1 bg-image diagnosis peeked at this page's rendered DOM to find the resolvedBg occlusion bug (disclosed). Per lead ruling it leaves the held-out objective measurement.",
+      "since": "stage1-batch1 (2026-06-24)",
+      "scope": "all measurement axes (conservative: a developed-against page leaves the bar entirely)"
+    }
+  }
+}

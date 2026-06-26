@@ -93,8 +93,15 @@ CODE_EXTS = {
     ".sh", ".zsh", ".bash"
 }
 
-# Paths exempt from verification requirement
-EXEMPT_PATHS = [".claude/memory/", "MEMORY.md", ".claude/hooks/", ".claude/skills/"]
+# Paths exempt from verification requirement. Everything under a `/eval/` dir is
+# detector TEST INPUTS / harness data (Sidecoach Phase 2 scanner corpus + migration
+# harness: planted-defect / known-good / candidate / golden-fixture HTML+CSS that the
+# scanner READS) - NOT shipped UI, so screenshotting them is meaningless and they must
+# not trip the visual-verify gate. Also `__fixtures__` / `test-fixtures` anywhere.
+# (added 2026-06-23; Jonah, Sidecoach reimplement-and-own eval; broadened from the
+# per-subdir list after migration-harness/inputs/ slipped through.)
+EXEMPT_PATHS = [".claude/memory/", "MEMORY.md", ".claude/hooks/", ".claude/skills/",
+                "/eval/", "/__fixtures__/", "/test-fixtures/"]
 
 def is_code_file(path):
     if not path:

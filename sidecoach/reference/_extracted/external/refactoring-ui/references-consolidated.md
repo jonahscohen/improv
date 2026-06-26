@@ -295,7 +295,7 @@ The rule that catches people: destructive doesn't mean "always red and prominent
 
 ---
 
-## SECTION 3: What this covers that impeccable + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
 
 1. **The HSL color curve with saturation falloff and hue rotation.** Sidecoach color domain has no codified "as you lighten or darken, you must boost saturation" rule.
 

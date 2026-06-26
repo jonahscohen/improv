@@ -8,7 +8,7 @@ relates_to: [session_2026_05_23_handoff_for_next_session.md, feedback_sidecoach_
 Plan saved at: `/Users/spare3/.claude/plans/iterative-greeting-noodle.md`
 
 5 tasks:
-1. Create SKILL.md (23 Impeccable-equivalent commands, routes to FlowExecutionEngine via sidecoach-monitor.js)
+1. Create SKILL.md (23 Oracle-equivalent commands, routes to FlowExecutionEngine via sidecoach-monitor.js)
 2. Fix daemon hooks (replace env-var state with ~/.claude/.sidecoach-state flag file)
 3. Wire hooks in settings.json (SessionStart, UserPromptSubmit, Stop)
 4. Write install.sh sidecoach block (npm build, skill symlink, hook symlinks, settings wiring)

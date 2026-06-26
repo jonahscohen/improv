@@ -43,9 +43,9 @@ Creative director runs in MAIN session (NOT subagent) - needs full context + QA 
 
 1. Read built files
 2. Run QA pipeline:
-   - `/impeccable audit` (a11y, performance, theming, responsive, anti-patterns)
-   - `/impeccable critique` (AI-slop, Nielsen heuristics, cognitive load)
-   - `/impeccable polish` (alignment pass against design system)
+   - `/oracle audit` (a11y, performance, theming, responsive, anti-patterns)
+   - `/oracle critique` (AI-slop, Nielsen heuristics, cognitive load)
+   - `/oracle polish` (alignment pass against design system)
    - `make-interfaces-feel-better` 14-point checklist
    - DESIGN.md lint (if present)
 3. Check cross-section consistency (typography, spacing, color palette, components)
@@ -126,7 +126,7 @@ Persists to `~/.claude/design-teams/` (per-machine, NOT checked into repos).
 - Tasks where parallel specialized work + review improves quality
 
 **Do NOT use for:**
-- Single component builds (use impeccable/sidecoach + component-gallery-reference)
+- Single component builds (use oracle/sidecoach + component-gallery-reference)
 - Bug fixes or minor tweaks
 - Non-UI work
 - Tasks where team orchestration overhead exceeds benefit
@@ -255,7 +255,7 @@ Sidecoach Flow N can extend the existing 159-rule validator framework with **cro
 - No example team.json with realistic agent roster
 - No mechanism to enforce "non-overlapping file paths" - relies on prompt-engineering the builders
 - No revision-loop counter or escalation policy beyond "ONE round only"
-- No integration callbacks to other skills (CD runs impeccable via prompt, not as a programmatic call)
+- No integration callbacks to other skills (CD runs oracle via prompt, not as a programmatic call)
 - No telemetry on which roles produced the most CD-revisions historically (could inform personality/conviction defaults)
 
 ## What sidecoach is currently missing

@@ -207,9 +207,9 @@ Sidecoach has no codified upgrade-order priority. This 7-step priority is portab
 
 ---
 
-## SECTION 3: What this covers that impeccable + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
 
-The redesign-skill is the AUDIT/UPGRADE flow that Impeccable's `/audit` doesn't have at this level of specificity:
+The redesign-skill is the AUDIT/UPGRADE flow that Oracle's `/audit` doesn't have at this level of specificity:
 
 1. **The 6-category audit checklist** (Typography, Color/Surfaces, Layout, Interactivity, Content, Components, Iconography, Code Quality). Sidecoach's `/audit` runs 5-dimension technical scan (a11y, performance, theming, responsive, anti-patterns). This redesign-skill audit is DESIGN-aesthetic-focused, not technical-quality-focused. Complementary, not duplicative.
 

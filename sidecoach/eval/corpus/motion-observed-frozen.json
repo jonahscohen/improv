@@ -1,0 +1,658 @@
+{
+  "generatedUtc": "2026-06-24T15:37:06.705Z",
+  "mode": "frozen",
+  "note": "CSS-observable motion GT (scripts-stripped). layout-transition = observed sibling/own-size reflow; bounce-easing = observed overshoot OR overshoot timing-function.",
+  "labels": {
+    "ed_govuk_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_python_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "au_hn_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_mit_2012": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_w3c_2020": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "fm_ghlogin_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "fm_bsforms_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "db_bsdash_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_bspricing_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_stripe_2018": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_mdn_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_django_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_rust_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_nngroup_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_bs_album_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_apple_2012": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_wikipedia_2020": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_csstricks_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_vuejs_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "db_tabler_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_amazon_2012": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_nytimes_2012": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "au_stackoverflow_live": {
+      "layoutTransition": true,
+      "layoutEvidence": {
+        "sel": "div",
+        "siblingTopRange": 6
+      },
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_wikipedia_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_go_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_kubernetes_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_a11yproject_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_basecamp_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_wikipedia_2012": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "fm_bs_signin_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_bs_product_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "au_bs_cheatsheet_live": {
+      "layoutTransition": true,
+      "layoutEvidence": {
+        "sel": "div.spinner-border",
+        "siblingTopRange": 7
+      },
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_jquery_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_smashing_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_apache_2012": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "fm_bs_checkout_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_webdev_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_tailwind_live": {
+      "layoutTransition": true,
+      "layoutEvidence": {
+        "sel": "div",
+        "ownWidthRange": 30,
+        "ownHeightRange": 30
+      },
+      "bounceEasing": true,
+      "bounceObserved": true,
+      "bounceCurve": false
+    },
+    "mk_astro_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_netlify_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_mdncss_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_digitalocean_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "fm_w3wai_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_theverge_2016": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_gatsby_2020": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "db_sbadmin_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "db_sbadmin_charts": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_mailchimp_2016": {
+      "layoutTransition": true,
+      "layoutEvidence": {
+        "sel": "div",
+        "ownWidthRange": 30,
+        "ownHeightRange": 12
+      },
+      "bounceEasing": true,
+      "bounceObserved": true,
+      "bounceCurve": false
+    },
+    "pr_woocommerce_2016": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_squarespace_2012": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_medium_2016": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "au_discourse_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_gumroad_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_atlassian_2018": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_techcrunch_2018": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_guardian_2020": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_wix_2020": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "db_adminlte_live": {
+      "layoutTransition": true,
+      "layoutEvidence": {
+        "sel": "img",
+        "ownWidthRange": 3,
+        "ownHeightRange": 3
+      },
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "db_tabler_settings": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_godaddy_2020": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_buzzfeed_2018": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "fm_w3schools_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_reactdocs_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_tailwinddocs_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_mdn_grid": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_vercel_docs": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_web_dev_learn": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_stripe_docs": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_smashing_article2": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_svelte_docs": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_a11y_wcag": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_github_features": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_govuk_guidance": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_mozilla_about": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "pr_basecamp_features": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "ed_nngroup_article": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "mk_eleventy_live": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "fm_w3wai_tutorial": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "fm_govuk_vehicle": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "fm_mdn_form": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "au_govuk_service": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "au_govuk_voting": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "au_a11y_patterns": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "db_govuk_search": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "db_datausa": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "db_ourworldindata": {
+      "layoutTransition": true,
+      "layoutEvidence": {
+        "sel": "a.homepage-intro__featured-tile",
+        "siblingTopRange": 116
+      },
+      "bounceEasing": true,
+      "bounceObserved": true,
+      "bounceCurve": false
+    },
+    "db_govuk_transparency": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "db_cdc_data": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "db_worldbank_data": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    },
+    "db_usafacts": {
+      "layoutTransition": false,
+      "layoutEvidence": null,
+      "bounceEasing": false,
+      "bounceObserved": false,
+      "bounceCurve": false
+    }
+  }
+}

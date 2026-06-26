@@ -1,0 +1,311 @@
+{
+  "generatedUtc": "2026-06-26T01:25:14.795Z",
+  "note": "FRESH held-out for marketing-buzzword v3 precision. Disjoint from dev(48)+frozen-90 (host+sha, fail-closed). FP-mode-loaded (marketing vocab used concretely). Author does NOT label/develop against it.",
+  "captured": 38,
+  "pages": [
+    {
+      "id": "mit",
+      "url": "https://www.mit.edu/",
+      "host": "mit.edu",
+      "register": "science",
+      "contentSha": "bcfec7c618212a2b93729d384dc06ea3b6adcbd6bd173fb17e05d1748f414620",
+      "bytes": 529486
+    },
+    {
+      "id": "caltech",
+      "url": "https://www.caltech.edu/",
+      "host": "caltech.edu",
+      "register": "science",
+      "contentSha": "e862c6c3cd4c36bd93bca8e0bfb4f0a77271b6289cea9a77b00fbba38306aa4a",
+      "bytes": 1219270
+    },
+    {
+      "id": "cern",
+      "url": "https://home.cern/",
+      "host": "home.cern",
+      "register": "science",
+      "contentSha": "ddaaa4db28f90c5594749b5c9b151d7ac3cc0d33ec7cd5408f488e1dad74ed41",
+      "bytes": 414550
+    },
+    {
+      "id": "nih",
+      "url": "https://www.nih.gov/",
+      "host": "nih.gov",
+      "register": "science",
+      "contentSha": "cd579fcae49307228c2fb671737a746f8ad8eb7615af17432989c710a656feea",
+      "bytes": 114448
+    },
+    {
+      "id": "esa",
+      "url": "https://www.esa.int/",
+      "host": "esa.int",
+      "register": "science",
+      "contentSha": "4ff128fb82662803a51c1285b830cf0be1dafb70c1c5daa28522129acee550c8",
+      "bytes": 460525
+    },
+    {
+      "id": "cloudflare",
+      "url": "https://www.cloudflare.com/",
+      "host": "cloudflare.com",
+      "register": "infra",
+      "contentSha": "b167a4edaa86a5d8c7ed5cf07e91542f81de9e7c6f01385a9ef28e80fb25dd36",
+      "bytes": 2064585
+    },
+    {
+      "id": "hashicorp",
+      "url": "https://www.hashicorp.com/",
+      "host": "hashicorp.com",
+      "register": "infra",
+      "contentSha": "728fad05e1d0b20d02c76ff1d585d8b7d3d61050b1fbca5dfc9ed1cf6c4c5c0f",
+      "bytes": 152398
+    },
+    {
+      "id": "mongodb",
+      "url": "https://www.mongodb.com/",
+      "host": "mongodb.com",
+      "register": "infra",
+      "contentSha": "1e25028dd84908ecf5fc202982628985f2b1a8cf7be65c7bfb5de526d149ae78",
+      "bytes": 1864495
+    },
+    {
+      "id": "cockroachlabs",
+      "url": "https://www.cockroachlabs.com/",
+      "host": "cockroachlabs.com",
+      "register": "infra",
+      "contentSha": "0b4cff616b54261f088744545b32e553cea97fb9a8300e50056384d1941ad578",
+      "bytes": 711858
+    },
+    {
+      "id": "grafana",
+      "url": "https://grafana.com/",
+      "host": "grafana.com",
+      "register": "infra",
+      "contentSha": "089ebcee0dc71eab463bdc3950abbfbe0b81762bc02feaed5f15df60c0b10d97",
+      "bytes": 643588
+    },
+    {
+      "id": "sentry",
+      "url": "https://sentry.io/",
+      "host": "sentry.io",
+      "register": "infra",
+      "contentSha": "5a7c8f216318211ce66bdfc0efb944de1109ffc7d7da953eeaff1d3c6e753218",
+      "bytes": 733468
+    },
+    {
+      "id": "temporal",
+      "url": "https://temporal.io/",
+      "host": "temporal.io",
+      "register": "infra",
+      "contentSha": "2f04843d060a3844ea997af92abb028a1bd7ae81073d581ffebff5a2b9a7c58b",
+      "bytes": 487600
+    },
+    {
+      "id": "fastly",
+      "url": "https://www.fastly.com/",
+      "host": "fastly.com",
+      "register": "infra",
+      "contentSha": "bcaa5be8921a1e1680b5469a3c1c6c64295bb4f17fdb44e8ee3bea4054af04f4",
+      "bytes": 763130
+    },
+    {
+      "id": "gitlab",
+      "url": "https://about.gitlab.com/",
+      "host": "about.gitlab.com",
+      "register": "enterprise",
+      "contentSha": "3a6a3145ab9eb77311a0220dba7679fa982264a942c3818fbff68d348d9db4ae",
+      "bytes": 588718
+    },
+    {
+      "id": "atlassian",
+      "url": "https://www.atlassian.com/",
+      "host": "atlassian.com",
+      "register": "enterprise",
+      "contentSha": "ef249efa54b4895934d3a919a8ff695888c2ec24ba6b8d814804ad706911424a",
+      "bytes": 2437741
+    },
+    {
+      "id": "redhat",
+      "url": "https://www.redhat.com/en",
+      "host": "redhat.com",
+      "register": "enterprise",
+      "contentSha": "5dd293a2364844dfd3dc9895d6c5c465b7bfd4c0063998363e11f0b17f23dd72",
+      "bytes": 522509
+    },
+    {
+      "id": "usgs",
+      "url": "https://www.usgs.gov/",
+      "host": "usgs.gov",
+      "register": "gov-data",
+      "contentSha": "92a8977404f0df166a9ba8a77d669eb90891671fdd061de9bd4e3900899d1b85",
+      "bytes": 1544608
+    },
+    {
+      "id": "weather",
+      "url": "https://www.weather.gov/",
+      "host": "weather.gov",
+      "register": "gov-data",
+      "contentSha": "31ac7e4150c501d67c007fa694e6cfbdb0835e83f658ef520e229f60219c879c",
+      "bytes": 200234
+    },
+    {
+      "id": "federalreserve",
+      "url": "https://www.federalreserve.gov/",
+      "host": "federalreserve.gov",
+      "register": "gov-data",
+      "contentSha": "3ff9181eea92402c970d26c47863c0f6559ade54f35b3ceb092185486fe8eb02",
+      "bytes": 1683138
+    },
+    {
+      "id": "clickup",
+      "url": "https://clickup.com/",
+      "host": "clickup.com",
+      "register": "marketing",
+      "contentSha": "c0c4b80bde35721c1d07db5cf849f4b853bb7a54b5ab29d25e726f22c066339f",
+      "bytes": 1902242
+    },
+    {
+      "id": "miro",
+      "url": "https://miro.com/",
+      "host": "miro.com",
+      "register": "marketing",
+      "contentSha": "f9ad000ffc669a89f4f4057ec8c98849c6a14c4c169f44ede0111bd55ad91474",
+      "bytes": 1045697
+    },
+    {
+      "id": "mailchimp",
+      "url": "https://mailchimp.com/",
+      "host": "mailchimp.com",
+      "register": "marketing",
+      "contentSha": "988bc00e5308cff82d746dd587af61fa131388183c44a72c6a1765e593e3abba",
+      "bytes": 1375461
+    },
+    {
+      "id": "intercom",
+      "url": "https://www.intercom.com/",
+      "host": "intercom.com",
+      "register": "marketing",
+      "contentSha": "b3d112c8b236b00a7ce75ddf43b79fb6e308e4a198feb97c2b62156720133df2",
+      "bytes": 763357
+    },
+    {
+      "id": "zendesk",
+      "url": "https://www.zendesk.com/",
+      "host": "zendesk.com",
+      "register": "marketing",
+      "contentSha": "b029b3c09bd717895bbea25681565208f0020a117f3d15107105f449ffefc0d2",
+      "bytes": 542617
+    },
+    {
+      "id": "wix",
+      "url": "https://www.wix.com/",
+      "host": "wix.com",
+      "register": "marketing",
+      "contentSha": "163387f39759e2112239eb02295b471c7f6f69a7f2291f7009d08b9d98ce8a4c",
+      "bytes": 2026844
+    },
+    {
+      "id": "openai",
+      "url": "https://openai.com/",
+      "host": "openai.com",
+      "register": "marketing-ai",
+      "contentSha": "a52f3ee67451e805ed7e77b67a40cc20060f35b6e2e91ae795c46ddfe5f511f4",
+      "bytes": 163870
+    },
+    {
+      "id": "cohere",
+      "url": "https://cohere.com/",
+      "host": "cohere.com",
+      "register": "marketing-ai",
+      "contentSha": "e074ff90a8c76f79ae87057b251c3a88b2b30fab81a075b38aa2efa7e78843d5",
+      "bytes": 1661326
+    },
+    {
+      "id": "huggingface",
+      "url": "https://huggingface.co/",
+      "host": "huggingface.co",
+      "register": "marketing-ai",
+      "contentSha": "0255473e77b6d0bcdfc9615571b94114a4d79292c293b95966f87515954e4d5f",
+      "bytes": 1091640
+    },
+    {
+      "id": "perplexity",
+      "url": "https://www.perplexity.ai/",
+      "host": "perplexity.ai",
+      "register": "marketing-ai",
+      "contentSha": "8c41a4a52cb811534fd9cb80df7a6c7e23078ea226d30e0dd7ba3bd521c945b3",
+      "bytes": 947637
+    },
+    {
+      "id": "mistral",
+      "url": "https://mistral.ai/",
+      "host": "mistral.ai",
+      "register": "marketing-ai",
+      "contentSha": "b18a8237ed0896c7cc860e1130d8b7c0ec627f7ad85f006dff19106e424aab4f",
+      "bytes": 560989
+    },
+    {
+      "id": "coinbase",
+      "url": "https://www.coinbase.com/",
+      "host": "coinbase.com",
+      "register": "marketing-crypto",
+      "contentSha": "41cfc844e781d52059e08e3d73e0ca8ae762a473caa4c993eebde6ca0f0d43c5",
+      "bytes": 986427
+    },
+    {
+      "id": "arbitrum",
+      "url": "https://arbitrum.io/",
+      "host": "arbitrum.io",
+      "register": "marketing-crypto",
+      "contentSha": "5546fb3bb613a8841c69854993b22bc62f9d66a5942a3b571248e82ddc9b7555",
+      "bytes": 417422
+    },
+    {
+      "id": "danluu",
+      "url": "https://danluu.com/",
+      "host": "danluu.com",
+      "register": "editorial",
+      "contentSha": "d1582dcc6a7352913bc4aeef45a2cf4cb7147b61b4809aeabc8eebf7efddf7ff",
+      "bytes": 20555
+    },
+    {
+      "id": "jvns",
+      "url": "https://jvns.ca/",
+      "host": "jvns.ca",
+      "register": "editorial",
+      "contentSha": "245c50bc7d3ebb7ed5b22457ffc61ea3deb44550d380088194787470985ed66f",
+      "bytes": 185296
+    },
+    {
+      "id": "simonwillison",
+      "url": "https://simonwillison.net/",
+      "host": "simonwillison.net",
+      "register": "editorial",
+      "contentSha": "66246f716e1ade3f9679c77a88aeb3117b84b134fea3143a85d3011dfac49459",
+      "bytes": 149105
+    },
+    {
+      "id": "deno-docs",
+      "url": "https://docs.deno.com/runtime/",
+      "host": "docs.deno.com",
+      "register": "docs",
+      "contentSha": "7e72d90ecd128d326e5ffc0798b056fbc897da92b4b0fa982e8c84742dea3ed9",
+      "bytes": 234929
+    },
+    {
+      "id": "bun-docs",
+      "url": "https://bun.sh/docs",
+      "host": "bun.sh",
+      "register": "docs",
+      "contentSha": "03fc8991d80e4039453065bf4743d198240591fd266b80e5671f76b99cfc7729",
+      "bytes": 541110
+    },
+    {
+      "id": "vite-docs",
+      "url": "https://vitejs.dev/guide/",
+      "host": "vitejs.dev",
+      "register": "docs",
+      "contentSha": "0bff33f1cb3b93402083a43a184637dabe5dae480c05bc57db4acb2016fc42bb",
+      "bytes": 353834
+    }
+  ]
+}

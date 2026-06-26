@@ -66,7 +66,7 @@ The 2-axis personality lookup expanded:
 
 ---
 
-## SECTION 3: What this covers that impeccable + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
 
 1. **The "Feature First" workflow ordering principle.** Sidecoach flows start with strategy then build; Refactoring UI starts with one specific feature then works outward.
 

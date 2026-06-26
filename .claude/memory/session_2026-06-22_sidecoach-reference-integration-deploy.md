@@ -23,6 +23,9 @@ Plan-first (verify-clause lines); `cd sidecoach && npm run build` exits 0; `npm 
 ## Why this approach
 Jonah's prior-turn ask produced the routing map (the gaps). The fix is routing + an auto-inject preflight, not new capability - the accessors and flow handlers already exist and work. Single teammate (Jonah said "deploy an agent", singular; self-analysis from the break beat said spawn ONE named foreground teammate, keep main-thread recon minimal).
 
+## SELF-ANALYSIS - deployed without observability (Jonah called it out)
+Why it went wrong: a foreground Agent-tool teammate's ONLY feedback channel is the mailbox message it sends on completion (delivered to the spawner, not the user). I gave the teammate no obligation to report progress, did not have it break work into TaskCreate tasks, did not stay in a polling loop, and did not confirm it surfaced as a watchable cmux pane. Result after a long run: process alive (PIDs 18060/90665) but ZERO tasks (TaskList empty), ZERO messages, ZERO file changes in sidecoach/. A black box - which defeats the entire reason the orchestration-routing decision prefers cmux panes (live visibility). What I missed: "deploy a teammate" is not done at spawn; it requires a reporting contract (per-phase SendMessage + task breakdown) AND a watch loop or pane confirmation. Fix applied: SendMessage'd a status request + mandated TaskCreate/TaskUpdate reporting and plan-pause. Standing lesson: never fire-and-forget a teammate on a large task - bake in a reporting cadence and verify the pane/visibility at spawn time, or keep the work inline where every step is visible.
+
 ## Files (mine, this session - recon + deploy only)
 - .claude/memory/reference_sidecoach_reference_routing_map.md (prior turn)
 - .claude/memory/session_2026-06-22_sidecoach-reference-integration-deploy.md (this)

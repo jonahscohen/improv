@@ -53,7 +53,7 @@ const phases = [
     { flow: 'flowG_component_implementation', utterance: 'plan component implementation for the marketing site' },
     { flow: 'flowE_motion_patterns', utterance: 'design motion patterns for restrained technical aesthetic' },
     { flow: 'flowI_accessibility', utterance: 'plan accessibility validation WCAG 2.1 AA' },
-    { flow: 'flowJ_tactical_polish', utterance: 'apply tactical polish 22-point standard plus extended domains' },
+    { flow: 'flowJ_tactical_polish', utterance: 'apply tactical polish 24-point standard plus extended domains' },
 ];
 async function run() {
     const engine = new sidecoach_orchestrator_1.FlowExecutionEngine();

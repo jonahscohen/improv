@@ -3,10 +3,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // P1-1: the collector must NEVER emit a trusted contrast verdict it could not
 // faithfully measure. If zero visible text was measured, OR any unsupported
 // background (image/gradient) or unparseable computed color was encountered, the
-// collector must DROP 'contrast' from the trusted evidence kinds so a11y.color-contrast
-// stays INCONCLUSIVE (never a false blocker PASS).
+// collector must DROP 'contrast' from the trusted evidence kinds.
+// Stage 6 note: a11y.color-contrast was MIGRATED off this collector probe onto the rendered
+// scanner's low-contrast finding, so no live rule consumes ctx.contrast anymore (orphaned). This
+// test still guards the collector's measurement gate itself - it must not over-emit a 'contrast'
+// kind it could not faithfully measure - which stays correct whether or not a rule reads it.
 const browser_evidence_collector_1 = require("../validators/browser-evidence-collector");
-const a11y_checks_1 = require("../validators/checks/a11y-checks");
 const dataUrl = (html) => `data:text/html,${encodeURIComponent(html)}`;
 // (a) no visible text at all -> nothing to measure.
 const noText = `<!doctype html><main><div style="width:40px;height:40px;background:#ffffff"></div></main>`;
@@ -23,10 +25,6 @@ async function unmeasurable(label, html) {
     const e = r.evidence;
     if (e.browserEvidence.kinds.includes('contrast'))
         throw new Error(`${label}: 'contrast' must NOT be a trusted kind when unmeasurable`);
-    const ctx = { cssText: '', markup: '', files: [], renderUrl: dataUrl(html), ...e };
-    const status = a11y_checks_1.A11Y_CHECKS['a11y/color-contrast'](ctx).status;
-    if (status !== 'inconclusive')
-        throw new Error(`${label}: color-contrast must be inconclusive, got ${status}`);
     // The collector still completes; only contrast is withheld.
     if (!e.browserEvidence.kinds.includes('computed-style') || !e.browserEvidence.kinds.includes('dom')) {
         throw new Error(`${label}: computed-style and dom evidence must still be collected`);
@@ -38,17 +36,14 @@ async function run() {
         if ((await unmeasurable(label, html)) === 'skip')
             return;
     }
-    // Faithfully-measurable page: contrast IS trusted and reaches a real verdict (a low
-    // ratio fails, not inconclusive) - proving the gate did not over-withhold.
+    // Faithfully-measurable page: contrast IS trusted (the gate did not over-withhold). The collector still
+    // produces the kind correctly even though it is now orphaned (no rule consumes it).
     const lowContrast = `<!doctype html><body style="background:#ffffff"><main><p style="color:#aaaaaa;line-height:20px">Low contrast</p></main></body>`;
     const r = await (0, browser_evidence_collector_1.collectBrowserEvidence)(dataUrl(lowContrast));
     if (r.available) {
         const e = r.evidence;
         if (!e.browserEvidence.kinds.includes('contrast'))
             throw new Error('a fully-measurable page must include trusted contrast');
-        const ctx = { cssText: '', markup: '', files: [], renderUrl: dataUrl(lowContrast), ...e };
-        if (a11y_checks_1.A11Y_CHECKS['a11y/color-contrast'](ctx).status !== 'fail')
-            throw new Error('low-contrast measurable text must FAIL, not inconclusive/pass');
     }
     console.log('browser-evidence-contrast: OK');
 }

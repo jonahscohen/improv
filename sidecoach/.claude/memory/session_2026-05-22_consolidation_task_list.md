@@ -1,8 +1,8 @@
 ---
-name: Sidecoach-Impeccable Consolidation Task Execution (2026-05-22) - PHASE 1 COMPLETE
+name: Sidecoach-Oracle Consolidation Task Execution (2026-05-22) - PHASE 1 COMPLETE
 description: Execute 26-task consolidated list with Phase 1 foundation + QA verification per task
 type: project
-relates_to: [gap-analysis-sidecoach-vs-impeccable.md, sidecoach_consolidation_gameplan.md]
+relates_to: [gap-analysis-sidecoach-vs-oracle.md, sidecoach_consolidation_gameplan.md]
 ---
 
 ## PHASE 1 FOUNDATION: COMPLETE ✓
@@ -157,7 +157,7 @@ All created files compile with zero TypeScript errors.
 - **Task #8: Enhance /sidecoach list** - Blocked until Phase 1 embedding complete
 - **Task #9: Implement /sidecoach teach** - Blocked until Phase 1 embedding complete
 - **Task #10: Flow N live browser iteration** - Blocked until Phase 1 embedding complete
-- **Task #11: Interactive menu equivalent to /impeccable** - Blocked until Phase 1 embedding complete
+- **Task #11: Interactive menu equivalent to /oracle** - Blocked until Phase 1 embedding complete
 
 ### Phase 3 Documentation Tasks (Tasks #12-14)
 - **Task #12: Document command → flow mappings** - Blocked until Phase 2 complete

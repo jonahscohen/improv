@@ -17,6 +17,7 @@ import { persistSessionMemory } from './session-memory-writer';
 import { parseSlashCommand, getAvailableCommands, getCommandsByPhase, getVerbCommandInfo, resolveSidecoachInput } from './slash-command-router';
 import { LANES, getLane } from './lanes.generated';
 import { convergencePreflight } from './lane-convergence-preflight';
+import { gatherReferencePreflightArtifacts } from './reference-preflight-artifacts';
 import * as path from 'path';
 import { createHash } from 'crypto';
 import { SidecoachEntryPoint, globalEntryPoint, EntryPointRequest } from './sidecoach-entry-point';
@@ -542,7 +543,19 @@ export class FlowExecutionEngine {
     const enrichedProjectContext = {
       ...(context.projectContext || {}),
       register: context.projectContext?.register || loaded.register,
-      product: (context.projectContext as any)?.product || { content: loaded.productContent },
+      // MERGE the STRUCTURED product (brandPersonality, antiReferences, ...) parsed from
+      // PRODUCT.md UNDER any caller-supplied product. Six handlers (flowC font-research,
+      // flowB component-research, flowE motion-patterns, copywriting, motion-integration,
+      // brand-verify) gate on product.brandPersonality and silently saw undefined when
+      // only { content } was set - so e.g. flowC degraded to needs_input in production even
+      // after being routed into a lane. Merging (not replacing) also fills brandPersonality
+      // for a PARTIAL caller product like {} or { content }; caller fields win; raw content
+      // is always retained. (Codex review 2026-06-23, findings 2 + 6.)
+      product: {
+        ...(loaded.product || {}),
+        content: loaded.productContent,
+        ...((context.projectContext as any)?.product || {}),
+      },
     };
     return {
       ...context,
@@ -1652,6 +1665,21 @@ export class FlowExecutionEngine {
       if (!pf.ok) throw new Error(pf.message);
     }
     const started = await laneRunner.startLane(laneId, target, { ...context, projectPath }, startRequestId, this.laneDeps(projectPath), renderUrl);
+    // Deliverable B: auto-inject the reference-system preflight for build/refinement
+    // lanes, REGARDLESS of which verbs the chain routes. Additive + soft-fail: the
+    // gatherer runs every system under Promise.allSettled and this try/catch is a final
+    // belt-and-braces guard so a reference failure can never block lane start.
+    if (REFERENCE_PREFLIGHT_LANES.has(laneId)) {
+      try {
+        started.referencePreflight = await gatherReferencePreflightArtifacts({
+          projectPath,
+          register: (context as any)?.projectContext?.register,
+          target,
+        });
+      } catch (e) {
+        started.referencePreflight = { artifacts: [], warnings: [`reference-preflight error: ${(e as Error).message}`] };
+      }
+    }
     try { started.panel = renderSidecoachPanel(laneStepToPanelModel(started)); } catch { /* panel is best-effort */ }
     return started;
   }
@@ -1757,6 +1785,13 @@ export interface SidecoachResult {
   // the model can confirm (confirming dispatches engine.startLane, same path as ROUTE).
   classify?: { laneId: string; label: string; interviewLabel: string };
 }
+
+// Build + refinement lanes that receive the lane-start reference preflight
+// (deliverable B). Every sidecoach lane is design build/refinement work, so all six
+// qualify; listed explicitly so a future non-design lane is opted in deliberately.
+const REFERENCE_PREFLIGHT_LANES = new Set<string>([
+  'lane_build', 'lane_delight', 'lane_live', 'lane_calm', 'lane_ship', 'lane_converge',
+]);
 
 // module-level helper: deterministic start-request id from phrase + project so a
 // literal retry of the same phrase does not create a second lane. Canonicalize the

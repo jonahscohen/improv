@@ -9,7 +9,7 @@ supersedes: session_2026-05-28_skill-recon-team.md
 Collaborator: Jonah. Synthesized 2026-05-28 from 4 recon teammates (skill-recon team).
 
 ## Headline finding
-None of the 4 skills adds curated TASTE sidecoach is missing. Each is ~55-60% redundant with what we already absorbed (impeccable, make-interfaces, emil, leonxlnx, bencium, refactoring-ui, typeui + the codified validators). The genuine gaps are CAPABILITY / COVERAGE, not taste: Forms, gesture physics, chart-type selection, mobile-platform. This VALIDATES the "sidecoach is the taste authority" claim - the holes are domains we never built, not better taste. All 4 are MIT-licensed (clean to extract with attribution into reference/_extracted/external/).
+None of the 4 skills adds curated TASTE sidecoach is missing. Each is ~55-60% redundant with what we already absorbed (oracle, make-interfaces, emil, leonxlnx, bencium, refactoring-ui, typeui + the codified validators). The genuine gaps are CAPABILITY / COVERAGE, not taste: Forms, gesture physics, chart-type selection, mobile-platform. This VALIDATES the "sidecoach is the taste authority" claim - the holes are domains we never built, not better taste. All 4 are MIT-licensed (clean to extract with attribution into reference/_extracted/external/).
 
 ## Per-skill verdicts
 - **vercel-labs/agent-skills@web-design-guidelines** (real ruleset: vercel-labs/web-interface-guidelines/command.md, ~150 lint rules, React/Next/Tailwind-flavored) -> ROLL-IN-PARTIAL. Headline: Forms.

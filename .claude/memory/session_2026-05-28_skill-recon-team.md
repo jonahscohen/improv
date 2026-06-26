@@ -9,7 +9,7 @@ superseded_by: session_2026-05-28_skill-recon-synthesis.md
 Collaborator: Jonah. Deployed 2026-05-28.
 
 ## Context
-Jonah is evaluating new skills to roll into sidecoach's reference layer. First confirmed what's ALREADY baked in: Impeccable (extracted to core validators, soft-deprecated), make-interfaces-feel-better (= 14 baseline of the 22-Point Polish Standard, Flow J), Emil Kowalski (reference/_extracted/external/emil-design-eng), Leonxlnx taste-skill (reference/_extracted/external/taste-skill), plus bencium-design, refactoring-ui, typeui-fundamentals. So sidecoach is already a consolidated + partially-codified taste authority. Then Jonah named 4 NEW candidate skills to vet for gaps.
+Jonah is evaluating new skills to roll into sidecoach's reference layer. First confirmed what's ALREADY baked in: Oracle (extracted to core validators, soft-deprecated), make-interfaces-feel-better (= 14 baseline of the 22-Point Polish Standard, Flow J), Emil Kowalski (reference/_extracted/external/emil-design-eng), Leonxlnx taste-skill (reference/_extracted/external/taste-skill), plus bencium-design, refactoring-ui, typeui-fundamentals. So sidecoach is already a consolidated + partially-codified taste authority. Then Jonah named 4 NEW candidate skills to vet for gaps.
 
 ## Routing
 In cmux-teams mode (per decision_orchestration_routing_cmux_vs_workflows.md), so this runs as a cmux TEAM in panes, not a workflow. Team `skill-recon`, 4 general-purpose teammates (named cmux splits), read-only research, run_in_background, no worktree.
@@ -24,7 +24,7 @@ In cmux-teams mode (per decision_orchestration_routing_cmux_vs_workflows.md), so
 Fetch the skill (GitHub agent-skill convention skills/<name>/SKILL.md, fallback tree-browse), summarize, diff against sidecoach coverage, classify each element REDUNDANT / PARTIAL / GAP, place each GAP/PARTIAL (which reference system + flow A-M + validator, prose-vs-codifiable, value), and give a verdict (roll-in-full / partial / skip-redundant) + confidence + license flag.
 
 ## Baseline given to teammates (sidecoach current coverage)
-4 reference systems (component-gallery, fontshare, design-references, motion); extracted external (emil-design-eng, taste-skill, bencium-design, refactoring-ui, typeui-fundamentals); Impeccable-in-core; codified taste-validator.ts anti-slop checks + 22-Point Polish Standard + 159-rule 10-domain validator; flows Tier1 A-E research / Tier2 F-M execution.
+4 reference systems (component-gallery, fontshare, design-references, motion); extracted external (emil-design-eng, taste-skill, bencium-design, refactoring-ui, typeui-fundamentals); Oracle-in-core; codified taste-validator.ts anti-slop checks + 22-Point Polish Standard + 159-rule 10-domain validator; flows Tier1 A-E research / Tier2 F-M execution.
 
 ## Status
 Spawned, running as cmux splits. Awaiting reports. Lead will synthesize into a consolidated gap+placement plan, then TeamDelete.

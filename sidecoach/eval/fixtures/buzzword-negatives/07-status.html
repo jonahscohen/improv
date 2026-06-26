@@ -1,0 +1,32 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>System Status</title>
+<style>
+  body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;max-width:780px;margin:0 auto;padding:48px 24px;line-height:1.6}
+  h1{font-size:50px;margin:0 0 6px}
+  .ok{font-size:24px;color:#1a7f37;margin:0 0 40px}
+  h2{font-size:26px;margin:30px 0 10px}
+  .row{font-size:18px;display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:10px 0}
+  p{font-size:16px}
+  .small{font-size:13px;color:#888}
+</style></head>
+<body>
+  <main>
+    <h1>System Status</h1>
+    <p class="ok">All systems operational</p>
+
+    <h2>Current status</h2>
+    <div class="row"><span>API</span><span>Operational</span></div>
+    <div class="row"><span>Dashboard</span><span>Operational</span></div>
+    <div class="row"><span>Webhooks</span><span>Operational</span></div>
+    <div class="row"><span>Database</span><span>Operational</span></div>
+    <div class="row"><span>Background jobs</span><span>Operational</span></div>
+
+    <h2>Uptime, last 90 days</h2>
+    <p>API availability was 99.98 percent. The dashboard was 99.99 percent. We measure uptime from three independent regions and report the lowest of the three.</p>
+
+    <h2>Past incidents</h2>
+    <p>On April 18 a configuration change caused elevated error rates on the webhook delivery service for 22 minutes. We rolled back the change and added a check to the deploy pipeline to prevent the same misconfiguration. A full postmortem is linked below.</p>
+    <p>On March 27 a database failover took longer than expected, causing read latency to rise for about nine minutes. No data was lost. We have since tuned the failover timeout.</p>
+
+    <p class="small">Subscribe to receive email notifications when an incident is opened or resolved.</p>
+  </main>
+</body></html>

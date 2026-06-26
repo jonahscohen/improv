@@ -1,8 +1,10 @@
 // Sidecoach Polish Standard Validator
-// Utility for validating UI implementations against 22-point proprietary polish framework
+// Utility for validating UI implementations against 24-point proprietary polish framework
 // Separate from flow handlers - used by Flow J (Tactical Polish) and audit flows
 
 import type { ValidationResult } from './flow-composition';
+import type { ProductCheckContext } from './validators/check-context';
+import type { CanonicalSeverity } from './product-rule-types';
 
 export interface PolishValidationRule {
   id: number;
@@ -90,400 +92,128 @@ export const POLISH_STATES = ['default', 'hover', 'focus', 'active', 'disabled',
 export const countDefinedStates = (css: string): number => POLISH_STATES.filter((s) => css.includes(`:${s}`)).length;
 export const hasFocusVisible = (css: string): boolean => css.includes(':focus-visible');
 export const hasReducedMotion = (css: string): boolean => css.includes('@media (prefers-reduced-motion');
-
-// 22-Point Polish Rules (14 baseline + 8 proprietary)
-const POLISH_RULES: PolishValidationRule[] = [
-  {
-    id: 1,
-    name: 'Scale on Press',
-    category: 'baseline',
-    description: 'Interactive elements scale to 0.96 on press state',
-    checkFunction: (ctx) => ({
-      ruleId: 1,
-      passed: hasScaleOnPress(joinCssRules(ctx)),
-      message: 'Scale on press effect should be present',
-      remediation: 'Add :active { transform: scale(0.96); }'
-    }),
-    severity: 'high'
-  },
-  {
-    id: 2,
-    name: 'Concentric Border Radius',
-    category: 'baseline',
-    description: 'Outer radius = inner radius + padding',
-    checkFunction: (ctx) => ({
-      ruleId: 2,
-      passed: ctx.computedStyle?.borderRadius !== '0px',
-      message: 'Border radius relationship should follow concentric rule',
-      remediation: 'Set outer_radius = inner_radius + padding'
-    }),
-    severity: 'medium'
-  },
-  {
-    id: 3,
-    name: 'Icon Swap via Opacity + Scale + Blur',
-    category: 'baseline',
-    description: 'Icon transitions use compound animation',
-    checkFunction: (ctx) => ({
-      ruleId: 3,
-      passed: hasCompoundIconTransition(joinCssRules(ctx)),
-      message: 'Icon transitions need opacity, scale, and blur',
-      remediation: 'Use: opacity, transform scale, and filter blur in transitions'
-    }),
-    severity: 'medium'
-  },
-  {
-    id: 4,
-    name: 'Image Outlines via Neutral Transparency',
-    category: 'baseline',
-    description: 'Image outlines use rgba(0,0,0,0.1), never tinted',
-    checkFunction: (ctx) => {
-      // Pre-fix: failed by default when no DOM. Now: passes when (a) the
-      // computed style has rgba border OR (b) the project has no images
-      // OR (c) the CSS shows image-aware rules using rgba(0,0,0,0.x).
-      const hasComputedRgba = ctx.computedStyle?.borderColor?.includes('rgba') ?? false;
-      const cssText = joinCssRules(ctx);
-      const imageOutlineRule = hasImageOutlineRule(cssText);
-      const noImagesInProject = hasNoImages(cssText);
-      return {
-        ruleId: 4,
-        passed: hasComputedRgba || imageOutlineRule || noImagesInProject,
-        message: noImagesInProject ? 'Image outlines: not applicable (no img rules in project)' : 'Image outlines should use neutral transparency',
-        remediation: 'When images are added: border: 1px solid rgba(0,0,0,0.1) - never tinted neutrals.'
-      };
-    },
-    severity: 'low'
-  },
-  {
-    id: 5,
-    name: 'Minimum Hit Area (40x40px)',
-    category: 'baseline',
-    description: 'Interactive elements have minimum 40x40px touch target',
-    checkFunction: (ctx) => {
-      // Without a DOM element, fall back to static CSS: look for min-height
-      // or min-width declarations of >=40px on interactive selectors.
-      if (!ctx.htmlElement) {
-        const cssText = (ctx.cssRules || []).join('\n');
-        const hasMinHeight = /\.(?:btn|button|input|nav\s+a|tab|toggle|chip|tag|wordmark|tool-card|install-block|reference__tab)[^{]*\{[^}]*min-height\s*:\s*(?:4\d|[5-9]\d|\d{3})px/i.test(cssText);
-        return {
-          ruleId: 5,
-          passed: hasMinHeight,
-          message: hasMinHeight ? 'Hit area: min-height >=40px set on interactive selectors' : 'Hit area: no min-height >=40px found on interactive selectors',
-          remediation: 'Set min-height: 44px on buttons, links, and interactive controls.'
-        };
-      }
-      const rect = ctx.htmlElement.getBoundingClientRect();
-      const minSize = ctx.htmlElement.tagName === 'BUTTON' ? 44 : 40;
-      return {
-        ruleId: 5,
-        passed: rect.width >= minSize && rect.height >= minSize,
-        message: `Hit area is ${Math.round(rect.width)}x${Math.round(rect.height)}px (need ${minSize}x${minSize}px)`,
-        remediation: `Increase padding to reach ${minSize}x${minSize}px minimum`
-      };
-    },
-    severity: 'critical'
-  },
-  {
-    id: 6,
-    name: 'No transition: all',
-    category: 'baseline',
-    description: 'Explicit property transitions only',
-    checkFunction: (ctx) => ({
-      ruleId: 6,
-      passed: !hasTransitionAll(joinCssRules(ctx)),
-      message: 'Should use explicit property transitions',
-      remediation: 'Replace transition: all with specific properties'
-    }),
-    severity: 'high'
-  },
-  {
-    id: 7,
-    name: 'Tabular Numbers on Dynamic Data',
-    category: 'baseline',
-    description: 'Dynamic numeric fields use font-variant-numeric: tabular-nums',
-    checkFunction: (ctx) => {
-      const cssText = joinCssRules(ctx);
-      const hasTabular = hasTabularNums(cssText)
-        || !!(ctx.computedStyle && (ctx.computedStyle as any).fontVariantNumeric?.includes('tabular'));
-      // Not applicable: no dynamic numeric content selectors (no counter,
-      // timer, stat, price, count, metric class anywhere)
-      const notApplicable = !hasDynamicNumberSelectors(cssText);
-      return {
-        ruleId: 7,
-        passed: hasTabular || notApplicable,
-        message: notApplicable ? 'Tabular nums: not applicable (no dynamic-number selectors in project)' : hasTabular ? 'Tabular nums applied' : 'Numeric fields should use tabular-nums',
-        remediation: 'When dynamic numbers appear: font-variant-numeric: tabular-nums on the selector.'
-      };
-    },
-    severity: 'medium'
-  },
-  {
-    id: 8,
-    name: 'Text Wrap Balance on Headings',
-    category: 'baseline',
-    description: 'Headings use text-wrap: balance',
-    checkFunction: (ctx) => {
-      const isHeading = ctx.htmlElement && ['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(ctx.htmlElement.tagName);
-      const hasBalance = hasTextWrapBalance(joinCssRules(ctx));
-      return {
-        ruleId: 8,
-        passed: !isHeading || hasBalance,
-        message: isHeading && !hasBalance ? 'Heading should use text-wrap: balance' : 'Not a heading',
-        remediation: 'Add: text-wrap: balance to heading styles'
-      };
-    },
-    severity: 'low'
-  },
-  {
-    id: 9,
-    name: 'Staggered Enter Animations',
-    category: 'baseline',
-    description: 'Multiple elements use stagger delay (30ms-80ms)',
-    checkFunction: (ctx) => ({
-      ruleId: 9,
-      passed: hasStaggerDelay(joinCssRules(ctx)),
-      message: 'Animations should use stagger delays',
-      remediation: 'Apply animation-delay: calc(30ms * var(--index))'
-    }),
-    severity: 'medium'
-  },
-  {
-    id: 10,
-    name: 'Subtle Exit Animations',
-    category: 'baseline',
-    description: 'Exiting elements fade and scale down',
-    checkFunction: (ctx) => {
-      const cssText = joinCssRules(ctx);
-      const exitOpacity = hasExitOpacity(cssText);
-      const exitScale = hasExitScale(cssText);
-      // Not applicable: no transition or animation declarations at all
-      // (a static page without animated exits doesn't need exit choreography)
-      const notApplicable = !hasAnyMotion(cssText);
-      return {
-        ruleId: 10,
-        passed: (exitOpacity && exitScale) || notApplicable,
-        message: notApplicable ? 'Exit animations: not applicable (no animations or transitions on the project)' : 'Exit animations need opacity + scale',
-        remediation: 'When elements animate out, fade opacity to 0 and scale toward 0.96 (not below 0.8). Symmetric exits look like reverse-entrance; asymmetric (faster + softer) is the absorbed prescription.'
-      };
-    },
-    severity: 'medium'
-  },
-  {
-    id: 11,
-    name: 'Font Smoothing',
-    category: 'baseline',
-    description: 'Text rendering optimized with font-smoothing',
-    checkFunction: (ctx) => ({
-      ruleId: 11,
-      passed: hasFontSmoothing(joinCssRules(ctx)),
-      message: 'Should apply font smoothing',
-      remediation: 'Add: -webkit-font-smoothing: antialiased (desktop)'
-    }),
-    severity: 'low'
-  },
-  {
-    id: 12,
-    name: 'AnimatePresence initial={false}',
-    category: 'baseline',
-    description: 'Prevent exit animations on first load',
-    checkFunction: (ctx) => {
-      const componentTreeOk = (ctx.componentTree?.initial ?? undefined) === false;
-      // Not applicable: no React + Framer Motion in the project (static HTML
-      // sites have no AnimatePresence to configure)
-      const cssText = joinCssRules(ctx);
-      const isReactProject = hasFramerSignal(cssText) || /use[A-Z]/.test(cssText) || ctx.componentTree?.usesFramerMotion === true;
-      const notApplicable = !isReactProject;
-      return {
-        ruleId: 12,
-        passed: componentTreeOk || notApplicable,
-        message: notApplicable ? 'AnimatePresence initial={false}: not applicable (no Framer Motion in project)' : 'AnimatePresence children need initial={false}',
-        remediation: 'Framer Motion projects: set initial={false} on all AnimatePresence children to suppress exit animations on first render.'
-      };
-    },
-    severity: 'medium'
-  },
-  {
-    id: 13,
-    name: 'Sparse will-change',
-    category: 'baseline',
-    description: 'will-change used selectively',
-    checkFunction: (ctx) => ({
-      ruleId: 13,
-      passed: !hasWillChangeAll(joinCssRules(ctx)),
-      message: 'Avoid will-change: all',
-      remediation: 'Use will-change for specific properties only'
-    }),
-    severity: 'low'
-  },
-  {
-    id: 14,
-    name: 'Shadows Over Borders',
-    category: 'baseline',
-    description: 'Use box-shadow for elevation',
-    checkFunction: (ctx) => {
-      // Pre-fix this rule only checked computedStyle.boxShadow which
-      // requires a live DOM. Now it also accepts static CSS containing
-      // box-shadow declarations, so projects with comprehensive shadow
-      // systems in their stylesheet pass without needing a headless
-      // browser to evaluate computed styles.
-      const hasComputed = !!(ctx.computedStyle?.boxShadow && ctx.computedStyle.boxShadow !== 'none');
-      const hasCssDeclaration = hasBoxShadowElevation(joinCssRules(ctx));
-      return {
-        ruleId: 14,
-        passed: hasComputed || hasCssDeclaration,
-        message: 'Should use box-shadow for elevation',
-        remediation: 'Add: box-shadow: 0 1px 3px rgba(0,0,0,0.1) (or define elevation tokens)'
-      };
-    },
-    severity: 'medium'
-  },
-  {
-    id: 15,
-    name: 'Optical Alignment',
-    category: 'proprietary',
-    description: 'Correct visual imbalance from letter shapes',
-    checkFunction: (ctx) => ({
-      ruleId: 15,
-      passed: hasOpticalPadding(joinCssRules(ctx)),
-      message: 'Apply optical alignment adjustments',
-      remediation: 'Subtract 2-4px from top padding for descender allowance'
-    }),
-    severity: 'medium'
-  },
-  {
-    id: 16,
-    name: 'Typography Rhythm',
-    category: 'proprietary',
-    description: 'Coherent vertical rhythm and modular scale',
-    checkFunction: (ctx) => ({
-      ruleId: 16,
-      passed: ctx.computedStyle?.lineHeight !== 'normal',
-      message: 'Establish typography rhythm',
-      remediation: 'Set margin-bottom = line-height * font-size'
-    }),
-    severity: 'medium'
-  },
-  {
-    id: 17,
-    name: 'Shadow Hierarchy',
-    category: 'proprietary',
-    description: 'Shadow scales match elevation levels (0-5)',
-    checkFunction: (ctx) => {
-      // Also accept static CSS containing multiple shadow tiers (--shadow-sm,
-      // --shadow-md, --shadow-lg or equivalent). A project with a defined
-      // shadow elevation system in tokens passes without needing a live DOM.
-      const shadow = ctx.computedStyle?.boxShadow || '';
-      const hasElevationInComputed = ['1px 2px', '4px 6px', '10px 25px', '20px 40px', '40px 80px'].some((level) => shadow.includes(level));
-      const cssText = joinCssRules(ctx);
-      const hasTokenizedTiers = hasShadowTokenTiers(cssText);
-      const hasMultipleShadowRules = countBoxShadowRules(cssText) >= 3;
-      return {
-        ruleId: 17,
-        passed: hasElevationInComputed || hasTokenizedTiers || hasMultipleShadowRules,
-        message: 'Use elevation-based shadow hierarchy',
-        remediation: 'Define a tokenized shadow system (--shadow-sm, --shadow-md, --shadow-lg) or apply standard elevation levels 1-5.'
-      };
-    },
-    severity: 'medium'
-  },
-  {
-    id: 18,
-    name: 'Focus Visible',
-    category: 'proprietary',
-    description: 'Keyboard focus visible with outline-offset: 2px',
-    checkFunction: (ctx) => ({
-      ruleId: 18,
-      passed: hasFocusVisible(joinCssRules(ctx)),
-      message: 'Implement :focus-visible for keyboard navigation',
-      remediation: 'Add: :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }'
-    }),
-    severity: 'critical'
-  },
-  {
-    id: 19,
-    name: 'Reduced Motion Respect',
-    category: 'proprietary',
-    description: 'Animations disabled for motion-sensitive users',
-    checkFunction: (ctx) => ({
-      ruleId: 19,
-      passed: hasReducedMotion(joinCssRules(ctx)),
-      message: 'Respect prefers-reduced-motion',
-      remediation: 'Add: @media (prefers-reduced-motion: reduce) { animation: none; }'
-    }),
-    severity: 'critical'
-  },
-  {
-    id: 20,
-    name: 'Color Contrast',
-    category: 'proprietary',
-    description: 'WCAG AA (4.5:1) or AAA (7:1) contrast',
-    checkFunction: (ctx) => ({
-      ruleId: 20,
-      passed: ctx.contrast?.wcagAA ?? false,
-      message: ctx.contrast ? `Contrast: ${ctx.contrast.ratio.toFixed(2)}:1` : 'Check contrast ratio',
-      remediation: 'Achieve WCAG AA minimum (4.5:1 for text)'
-    }),
-    severity: 'critical'
-  },
-  {
-    id: 21,
-    name: 'Component State Completeness',
-    category: 'proprietary',
-    description: 'All 8 states defined (default, hover, focus, active, disabled, loading, error, success)',
-    checkFunction: (ctx) => {
-      const defined = countDefinedStates(joinCssRules(ctx));
-      return {
-        ruleId: 21,
-        passed: defined >= 8,
-        message: `${defined}/8 states defined`,
-        remediation: 'Define all 8 component states with explicit styling'
-      };
-    },
-    severity: 'high'
-  },
-  {
-    id: 22,
-    name: 'Anti-Pattern Detection',
-    category: 'proprietary',
-    description: 'Reject generic patterns (genericityScore > 70)',
-    checkFunction: (ctx) => {
-      const score = ctx.designTokens?.genericityScore || 0;
-      return {
-        ruleId: 22,
-        passed: score < 55,
-        message: `Design genericityScore: ${score}`,
-        remediation: 'Add unique design personality (custom colors, typography, spacing)'
-      };
-    },
-    severity: 'medium'
+// #4 Interruptible Animations: interactive state changes should use CSS transitions (interruptible),
+// not keyframe `animation` (runs to completion). Flags :hover/:focus/:active blocks that declare an
+// `animation:`/`animation-name:` property (shorthand/name set a keyframe; animation-delay/duration/play-state
+// alone are not matched - those tune an existing animation and aren't the violation). The property must sit
+// at a declaration boundary ({, ; or whitespace) so a `--animation` custom property or a `transition-property:
+// animation` value does not false-match, while a `-webkit-`/`-moz-`/`-o-`/`-ms-` vendor prefix still counts.
+// Bounded quantifiers (selectors <500, declaration blocks <4000) keep it linear/ReDoS-safe.
+export const hasKeyframeAnimationOnInteractiveState = (css: string): boolean =>
+  /(?::hover|:focus|:active)[^{}]{0,500}\{(?:[^}]{0,4000}[\s;{])?(?:-(?:webkit|moz|o|ms)-)?animation(?:-name)?\s*:/i.test(css);
+// #13 Skip Animation on Page Load (CSS-only complement to AnimatePresence initial={false}): an entrance
+// @keyframes (a from/0% frame setting opacity:0) replays on every page load unless gated. Returns true when
+// such a frame exists; the check then fails only when nothing gates it (no reduced-motion guard, no
+// AnimatePresence initial={false}).
+export const hasEntranceKeyframe = (css: string): boolean => {
+  // Scan each @keyframes block body with a brace-balanced walk and test ONLY that body for a from/0% frame
+  // setting opacity:0. Scoping to the block (vs an unbounded lazy span) avoids attributing an opacity:0 from
+  // an unrelated rule to a keyframe, and the bounded inner quantifier keeps it ReDoS-safe.
+  const blockStart = /@keyframes[^{]{0,200}\{/gi;
+  let m: RegExpExecArray | null;
+  while ((m = blockStart.exec(css)) !== null) {
+    let depth = 1;
+    let i = m.index + m[0].length;
+    const bodyStart = i;
+    for (; i < css.length && depth > 0; i++) {
+      if (css[i] === '{') depth++;
+      else if (css[i] === '}') depth--;
+    }
+    const body = css.slice(bodyStart, i - 1);
+    if (/(?:\bfrom\b|\b0%)\s*\{[^}]{0,1000}\bopacity\s*:\s*0\b/i.test(body)) return true;
+    blockStart.lastIndex = i;
   }
-];
+  return false;
+};
+
+// ============================================================================
+// Registry-backed PolishStandardValidator (Stage 4 convergence).
+// The private POLISH_RULES engine was DELETED - the 24 polish rules already live
+// in the rule registry (21 under owner 'polish-standard' + 3 under 'static-a11y',
+// each carrying a `polish-standard:N` sourceRuleAlias). validateAll now runs THOSE
+// rules' checkProduct over a registry ProductCheckContext, so there is ONE engine.
+// The exported helper predicates above are KEPT - the registry's checks/polish-checks.ts
+// and checks/a11y-checks.ts import them. RULES is required LAZILY (not a top-level
+// import) because those checks import from THIS module, so a static import would be
+// circular. Behavior note: the registry checks are sync cssText/markup-only, so legacy
+// ad-hoc computedStyle/contrast paths no longer force a pass (correct convergence).
+// ============================================================================
+
+const LEGACY_SEVERITY_POLISH: Record<CanonicalSeverity, 'critical' | 'high' | 'medium' | 'low'> = {
+  blocker: 'critical', major: 'high', minor: 'medium', advisory: 'low',
+};
+
+let _polishRegistryRules: Array<{ n: number; rule: any }> | null = null;
+function polishRegistryRules(): Array<{ n: number; rule: any }> {
+  if (_polishRegistryRules === null) {
+    // Lazy require breaks the cycle (the registry's checks import helpers from this file).
+    const { RULES } = require('./product-rule-registry');
+    _polishRegistryRules = (RULES as any[])
+      .map((r) => {
+        const alias = (r.sourceRuleAliases || []).find((a: string) => /^polish-standard:\d+$/.test(a));
+        return alias && typeof r.checkProduct === 'function'
+          ? { n: parseInt(alias.split(':')[1], 10), rule: r }
+          : null;
+      })
+      .filter((x): x is { n: number; rule: any } => x !== null)
+      .sort((a, b) => a.n - b.n);
+  }
+  return _polishRegistryRules;
+}
+
+function polishContextToProduct(ctx: PolishCheckContext): ProductCheckContext {
+  let markup = '';
+  if (ctx.htmlElement) { try { markup = (ctx.htmlElement as { outerHTML?: string }).outerHTML || ''; } catch { /* no DOM */ } }
+  return { cssText: (ctx.cssRules || []).join('\n'), markup, files: [] };
+}
 
 export class PolishStandardValidator {
   static validateAll(context: PolishCheckContext): PolishValidationReport {
-    const results = POLISH_RULES.map(rule => rule.checkFunction(context));
+    const entries = polishRegistryRules();
+    const pctx = polishContextToProduct(context);
+    const results: PolishCheckResult[] = entries.map(({ n, rule }) => {
+      const v = rule.checkProduct(pctx);
+      return { ruleId: n, passed: v.status !== 'fail', message: v.message, remediation: v.remediation };
+    });
     const passed = results.filter(r => r.passed).length;
     const violations = results.filter(r => !r.passed);
-    const passRate = ((passed / POLISH_RULES.length) * 100).toFixed(1);
-    const critical = violations.filter(v => POLISH_RULES.find(r => r.id === v.ruleId)?.severity === 'critical').length;
+    const total = entries.length;
+    const passRate = total > 0 ? ((passed / total) * 100).toFixed(1) : '0.0';
+    // Registry 'blocker' severity maps to the legacy 'critical' tier.
+    const critical = violations.filter(v => {
+      const e = entries.find(x => x.n === v.ruleId);
+      return !!e && e.rule.severity === 'blocker';
+    }).length;
 
     return {
-      totalRules: POLISH_RULES.length,
+      totalRules: total,
       passed,
       violations: violations.length,
       passRate: `${passRate}%`,
       criticalViolations: critical,
       results,
-      summary: `Polish Standard: ${passed}/${POLISH_RULES.length} rules passed (${passRate}%)`
+      summary: `Polish Standard: ${passed}/${total} rules passed (${passRate}%)`
     };
   }
 
   static getRules(): PolishValidationRule[] {
-    return POLISH_RULES;
+    return polishRegistryRules().map(({ n, rule }) => ({
+      id: n,
+      name: rule.canonicalRuleKey,
+      category: n <= 16 ? 'baseline' as const : 'proprietary' as const,
+      description: rule.canonicalRuleKey,
+      checkFunction: (ctx: PolishCheckContext): PolishCheckResult => {
+        const v = rule.checkProduct(polishContextToProduct(ctx));
+        // Only a real pass or a genuine not_applicable counts as passed; 'inconclusive'
+        // (e.g. evidence absent) must NOT clean-pass - it blocks a clean result (Codex P0).
+        return { ruleId: n, passed: v.status === 'pass' || v.status === 'not_applicable', message: v.message, remediation: v.remediation };
+      },
+      severity: LEGACY_SEVERITY_POLISH[rule.severity as CanonicalSeverity] || 'medium',
+    }));
   }
 
   static getSummary(): string {
-    return 'Sidecoach 22-Point Polish Standard: 14 baseline + 8 proprietary rules for production UI quality';
+    return 'Sidecoach Polish Standard (registry-backed): 24 polish rules for production UI quality';
   }
 
   static toValidationResult(report: PolishValidationReport): ValidationResult {

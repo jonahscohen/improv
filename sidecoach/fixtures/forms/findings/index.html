@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <body>
+    <!-- Adversarial findings fixture: every absorbed forms-a11y rule fails at least once.
+         - no <label>/aria-label anywhere            -> a11y.form-control-labelled (blocker)
+         - error state expressed, no aria association -> a11y.form-error-association (major)
+         - placeholder used as the only naming        -> a11y.form-placeholder-not-label (major)
+         - bare type="text" for an email field         -> a11y.form-input-type (minor)
+         - checkbox with no label association          -> a11y.form-choice-label-target (major) -->
+    <form>
+      <input type="text" name="email" placeholder="Email" />
+      <div class="error">Please enter a valid email</div>
+
+      <input type="checkbox" name="agree" /> I agree to the terms
+
+      <button type="submit">Submit</button>
+    </form>
+  </body>
+</html>

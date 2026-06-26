@@ -1,0 +1,19 @@
+import type { ProductCheckContext, RuleVerdict } from '../check-context';
+export declare const checkFormControlLabelled: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormErrorAssociation: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormPlaceholderNotLabel: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormInputType: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormChoiceLabelTarget: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormAutocomplete: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormInputmode: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormNeverBlockPaste: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormSpellcheckOff: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormIdempotentSubmit: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormInlineErrors: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormFocusFirstError: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormNoPasswordManagerNonAuth: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormTextareaSubmit: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormNoPreDisableSubmit: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkFormAutofocusSparingly: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const FORMS_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict>;
+//# sourceMappingURL=forms-checks.d.ts.map

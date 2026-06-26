@@ -1,10 +1,10 @@
 ---
-name: Mapping 23 Impeccable Commands to Sidecoach Flows
-description: Verification that all 23 impeccable design commands map to appropriate flows A-Q
+name: Mapping 23 Oracle Commands to Sidecoach Flows
+description: Verification that all 23 oracle design commands map to appropriate flows A-Q
 type: project
 ---
 
-# 23 Impeccable Commands → Sidecoach Flows Mapping
+# 23 Oracle Commands → Sidecoach Flows Mapping
 
 ## Strategy/Research Phase (Flows A-E)
 

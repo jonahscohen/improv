@@ -16,14 +16,14 @@ The real UI task: build a local marketing microsite that sells claude-dotfiles a
 Per the README's "how the layers stack on a real build" sequence:
 
 1. PRODUCT.md + DESIGN.md (derived from existing material - README, yes& logos, brand voice in the corpus - so I don't have to ask Jonah brand questions)
-2. /impeccable shape <feature> mentally - propose brand direction + site structure
+2. /oracle shape <feature> mentally - propose brand direction + site structure
 3. component-gallery-reference - research hero / nav / card-grid / footer patterns
 4. fontshare-reference - typography (NOT from reflex-reject list)
 5. design-references - check the personal catalog (1 reference: unlumen-kbd)
 6. motion-reference - GSAP + Lenis canonical patterns
 7. icon-source - pick one icon library
 8. make-interfaces-feel-better - tactical polish during impl
-9. /impeccable audit + critique + polish at QA time
+9. /oracle audit + critique + polish at QA time
 
 ## Decisions locked autonomously
 

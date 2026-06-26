@@ -70,6 +70,8 @@ export declare const POLISH_STATES: string[];
 export declare const countDefinedStates: (css: string) => number;
 export declare const hasFocusVisible: (css: string) => boolean;
 export declare const hasReducedMotion: (css: string) => boolean;
+export declare const hasKeyframeAnimationOnInteractiveState: (css: string) => boolean;
+export declare const hasEntranceKeyframe: (css: string) => boolean;
 export declare class PolishStandardValidator {
     static validateAll(context: PolishCheckContext): PolishValidationReport;
     static getRules(): PolishValidationRule[];

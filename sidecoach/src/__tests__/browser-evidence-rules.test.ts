@@ -16,11 +16,12 @@ const status = (key: string, ctx: ProductCheckContext) => {
 };
 
 function run() {
+  // a11y/color-contrast is NO LONGER here: Stage 6 migrated it to the rendered scan (checkLowContrast), so it is
+  // not a collector/browser-evidence rule. Its coverage lives in the rendered-scan tests.
   const keys = [
     'polish/concentric-radius',
     'polish/typography-rhythm',
     'a11y/min-hit-area',
-    'a11y/color-contrast',
   ];
   for (const key of keys) {
     if (status(key, empty) !== 'inconclusive') throw new Error(`${key}: absent browser evidence must be inconclusive`);
@@ -47,16 +48,6 @@ function run() {
     dom: { minHitArea: { checked: 2, failing: 1, smallestWidth: 20, smallestHeight: 20 } },
   })) !== 'fail') throw new Error('hit-area trusted fail missing');
 
-  if (status('a11y/color-contrast', trusted(['contrast'], {
-    contrast: { wcagAA: true, ratio: 7 },
-  })) !== 'pass') throw new Error('contrast trusted pass missing');
-  if (status('a11y/color-contrast', trusted(['contrast'], {
-    contrast: { wcagAA: false, ratio: 1.2 },
-  })) !== 'fail') throw new Error('contrast trusted fail missing');
-
-  if (status('a11y/color-contrast', { ...empty, contrast: { wcagAA: true, ratio: 7 } }) !== 'inconclusive') {
-    throw new Error('ad hoc browser-shaped fields must remain untrusted');
-  }
   if (status('polish/anti-pattern-genericity', trusted(['dom'], {
     dom: { minHitArea: { checked: 1, failing: 0, smallestWidth: 44, smallestHeight: 44 } },
   })) !== 'inconclusive') {

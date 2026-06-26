@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BROWSER_BACKED_RULE_IDS = void 0;
+exports.RENDERED_BACKED_RULE_IDS = exports.BROWSER_BACKED_RULE_IDS = void 0;
 exports.deriveValidator = deriveValidator;
 exports.validateRegistry = validateRegistry;
 exports.gatingValidatorIds = gatingValidatorIds;
@@ -15,7 +15,7 @@ const product_rule_types_1 = require("./product-rule-types");
 const source_support_matrix_1 = require("./validators/source-support-matrix");
 const flow_validation_capabilities_1 = require("./flow-validation-capabilities");
 const BLOCKING = ['blocker', 'major'];
-// P4b-2 EXPLICIT browser-backed allowlist. ONLY these four rules are promoted into
+// P4b-2 EXPLICIT browser-backed allowlist. ONLY these rules are promoted into
 // active browser policy when the collector succeeds. polish.anti-pattern-genericity
 // is deliberately EXCLUDED (team-lead decision) even though it also declares 'dom':
 // its render-URL meaning was never defined, so it stays owned, non-required, and
@@ -23,14 +23,30 @@ const BLOCKING = ['blocker', 'major'];
 // requirement" - it is this hand-maintained allowlist.
 exports.BROWSER_BACKED_RULE_IDS = new Set([
     'a11y.min-hit-area',
-    'a11y.color-contrast',
     'polish.concentric-radius',
     'polish.typography-rhythm',
+]);
+// RENDERED-backed rules: satisfied by the live rendered scan (scanRenderedLive), promoted to required when a
+// renderUrl is PRESENT (run-validator activateRenderedPolicy). Each must declare ONLY 'rendered-scan' evidence.
+// Stage 6 convergence: a11y.color-contrast MIGRATED off the collector contrast probe onto the rendered scanner's
+// low-contrast finding (the SAME detector the eval scores) - closing the eval-only hole the one-engine audit
+// found. Its old collector contrast probe is now orphaned (no live rule consumes ctx.contrast).
+exports.RENDERED_BACKED_RULE_IDS = new Set([
+    'a11y.broken-image',
+    'a11y.skipped-heading',
+    'a11y.gray-on-color',
+    'a11y.justified-text',
+    'a11y.color-contrast',
+    'polish.tiny-text',
+    'polish.marketing-buzzword',
 ]);
 // Evidence kinds the browser-evidence collector actually produces. An allowlisted
 // browser rule whose declared evidence is outside this set could never be satisfied
 // by collection, so --check rejects it.
 const COLLECTOR_EVIDENCE_KINDS = new Set(['computed-style', 'dom', 'contrast']);
+// The ONLY evidence kind a rendered-backed rule may declare - the live rendered scan. --check rejects a
+// rendered-backed rule that declares anything else (e.g. a stray static or collector kind).
+const RENDERED_EVIDENCE_KINDS = new Set(['rendered-scan']);
 function dedupeSourceKinds(kinds) {
     // strongest level wins per kind (full > partial > none)
     const rank = { full: 3, partial: 2, none: 1 };
@@ -63,11 +79,11 @@ function coverageRecord(r) {
         requireAllDiscoveredApplicableFiles: deriveRequireAll(r),
     };
 }
-// Browser coverage is satisfied by the collector's evidence KINDS directly (each
-// evidence requirement is its own collector kind, e.g. 'dom' / 'computed-style' /
-// 'contrast'), NOT by static source kinds. The runtime matches these against the
-// browserEvidence.kinds present for the synthetic render-URL target.
-function browserCoverageRecord(r) {
+// Non-static coverage is satisfied by an evidence KIND directly (each evidence requirement is its own kind, e.g.
+// 'dom' / 'computed-style' / 'contrast' for the collector, or 'rendered-scan' for the live scan), NOT by static
+// source kinds. The runtime matches these against the evidence kinds present for the render-URL target. Shared by
+// the browser and rendered promotion paths (their coverage semantics are identical).
+function evidenceKindCoverageRecord(r) {
     return {
         ruleId: r.ruleId,
         scope: r.scope,
@@ -80,6 +96,7 @@ function deriveValidator(reg, rules) {
     const owned = rules.filter((r) => r.ownerValidatorId === reg.validatorId);
     const required = owned.filter((r) => (0, product_rule_types_1.isStaticallySatisfiable)(r.evidenceRequirements));
     const browserRequired = owned.filter((r) => exports.BROWSER_BACKED_RULE_IDS.has(r.ruleId));
+    const renderedRequired = owned.filter((r) => exports.RENDERED_BACKED_RULE_IDS.has(r.ruleId));
     const requiredCoverageByScope = required.map(coverageRecord);
     // EXPLICIT 0 tolerance for every owned blocking (severity,findingClass) pair.
     const toleratedFindingCounts = {};
@@ -101,13 +118,15 @@ function deriveValidator(reg, rules) {
         registryScope: [...new Set(owned.map((r) => r.registryScope))],
         supportedSourceKinds: dedupeSourceKinds(owned.flatMap((r) => r.supportedSourceKinds)),
         browserRuleIds: browserRequired.map((r) => r.ruleId),
-        browserCoverageByScope: browserRequired.map(browserCoverageRecord),
+        browserCoverageByScope: browserRequired.map(evidenceKindCoverageRecord),
+        renderedRuleIds: renderedRequired.map((r) => r.ruleId),
+        renderedCoverageByScope: renderedRequired.map(evidenceKindCoverageRecord),
         cleanPolicy,
     };
 }
 // PURE: validate the whole registry; returns { ok, errors }. --check exits nonzero
 // if !ok. Covers the spec 628-634 rejection set.
-function validateRegistry(rules, regs, gatingValidatorIdList = [], browserBackedRuleIds = []) {
+function validateRegistry(rules, regs, gatingValidatorIdList = [], browserBackedRuleIds = [], renderedBackedRuleIds = []) {
     const errors = [];
     // FULL field completeness: EVERY required field must be non-empty.
     for (const r of rules) {
@@ -241,6 +260,36 @@ function validateRegistry(rules, regs, gatingValidatorIdList = [], browserBacked
         const nonCollector = r.evidenceRequirements.filter((e) => !COLLECTOR_EVIDENCE_KINDS.has(e));
         if (nonCollector.length) {
             errors.push(`browser-backed rule ${id} declares non-collector evidence (${nonCollector.join(', ')})`);
+        }
+    }
+    // RENDERED-backed allowlist consistency (parallel to the browser allowlist). Each allowlisted id must be owned
+    // by a present rule, must NOT be statically satisfiable, and must declare ONLY 'rendered-scan' evidence (the
+    // live scan is the only channel that satisfies it). A rule may be in at most one of the two allowlists.
+    for (const id of new Set(renderedBackedRuleIds)) {
+        const r = byRuleId.get(id);
+        if (!r) {
+            errors.push(`rendered-backed rule ${id} is not present in the registry`);
+            continue;
+        }
+        if ((0, product_rule_types_1.isStaticallySatisfiable)(r.evidenceRequirements)) {
+            errors.push(`rendered-backed rule ${id} is statically satisfiable and must not be in the rendered allowlist`);
+        }
+        const nonRendered = r.evidenceRequirements.filter((e) => !RENDERED_EVIDENCE_KINDS.has(e));
+        if (nonRendered.length) {
+            errors.push(`rendered-backed rule ${id} declares non-rendered evidence (${nonRendered.join(', ')})`);
+        }
+        if (browserBackedRuleIds.includes(id)) {
+            errors.push(`rule ${id} is in BOTH the browser and rendered allowlists (a rule has one evidence channel)`);
+        }
+    }
+    // INVERSE invariant (the gap that let marketing-buzzword ship un-promoted): EVERY rule that declares a
+    // rendered-scan evidence requirement MUST be in the rendered allowlist. Without this, a rule can declare
+    // ['rendered-scan'] yet be omitted from RENDERED_BACKED_RULE_IDS, so it is never promoted-required on a renderUrl
+    // and never fails-closed on an unavailable scan (a silent false-clean). Forward + inverse together pin the set.
+    const renderedSet = new Set(renderedBackedRuleIds);
+    for (const r of rules) {
+        if (r.evidenceRequirements.some((e) => RENDERED_EVIDENCE_KINDS.has(e)) && !renderedSet.has(r.ruleId)) {
+            errors.push(`rule ${r.ruleId} declares rendered-scan evidence but is missing from RENDERED_BACKED_RULE_IDS (it would never be promoted-required or fail-closed)`);
         }
     }
     // per-validator generated checks: non-empty requiredRuleIds + satisfiable coverage

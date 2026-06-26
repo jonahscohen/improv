@@ -30,7 +30,7 @@ Sprint 10 dogfood: 4 flows ran successfully, pre-flight warnings GONE (Sprint 10
 
 1. **flowA "Personality: " still empty.** Root cause: `productMetadata.brand_personality` is `[]` (empty array from the existing markdown section parser - `## Brand Personality` header creates a section key with empty body). The flowA display does `brand_personality || brandPersonality || 'Not specified'`. Empty arrays are truthy, so `[]` wins. Two spots in `flow-handler-brand-verify.ts`: line 120 (display string), line 222 (pre-flight check). Fix: reverse the order to prefer `brandPersonality` first, OR strip the snake_case empty-array section keys before consumers see them.
 
-2. **Registry's craft entry omits flowH (motion) and flowI (accessibility).** Sprint 8 spec said craft chain = [F, G, H, I, J]. Implementer entered only [A, F, G, J]. Per impeccable's `craft.md` skill the chain should cover shape → tokens → components → motion → accessibility → polish (6 phases). Fix: extend `IMPECCABLE_VERB_REGISTRY.craft` to include `flowH_motion_integration` and `flowI_accessibility`, plus extend parityChecklist + guidanceAppend strings to reference them.
+2. **Registry's craft entry omits flowH (motion) and flowI (accessibility).** Sprint 8 spec said craft chain = [F, G, H, I, J]. Implementer entered only [A, F, G, J]. Per oracle's `craft.md` skill the chain should cover shape → tokens → components → motion → accessibility → polish (6 phases). Fix: extend `ORACLE_VERB_REGISTRY.craft` to include `flowH_motion_integration` and `flowI_accessibility`, plus extend parityChecklist + guidanceAppend strings to reference them.
 
 ## Loop status
 

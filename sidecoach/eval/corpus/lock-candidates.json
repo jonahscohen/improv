@@ -1,0 +1,597 @@
+{
+  "frozenAt": "2026-06-24T01:50:02.844Z",
+  "pageCount": 90,
+  "briefCount": 23,
+  "records": {
+    "ed_govuk_live": {
+      "split": "known-good",
+      "contentSha256": "0698e6cc1c745618541b8c13b6042951226ddae0d0cc867cefd8f9515cdd7e20",
+      "recordHash": "9f7ed79ab23e3ef7d7f82b7ce2e1476cc53397b549b6b45086ed144a07338374"
+    },
+    "mk_python_live": {
+      "split": "known-good",
+      "contentSha256": "61482e0d7c771071408bf6774e1b87f4ee1573e1edd2f4fa37f2d3ae8f546930",
+      "recordHash": "efec276518dcc61da3137c4c68fc25d3d5b35c17bc81aa4b19b00a8bd6a493da"
+    },
+    "au_hn_live": {
+      "split": "heldout",
+      "contentSha256": "3924cdcb00a13bc41c9bf754bc4f94a65cb1fe4c874fc6e4ea9f012654051219",
+      "recordHash": "144bed7bdb1c8998b4c412f8f687914124b7204c06533f241539124f2c2449b3"
+    },
+    "mk_mit_2012": {
+      "split": "heldout",
+      "contentSha256": "a75e54f28b627f282f3086e1833e4a9eb6e0fe491fe57081fd01c52775749e07",
+      "recordHash": "dbf76932488e9863355c4d981acf541f0308679d3a610cfaf1a99b63d5de68d1"
+    },
+    "ed_w3c_2020": {
+      "split": "known-good",
+      "contentSha256": "26e797d194a7336690eef4b0e074f9b3ed0327fbb71b2bd0b0b3b3d80969fb03",
+      "recordHash": "b44c1e2fca30d44e6d0b557fefc948c0589e087ad42f1f065435363c96028dfb"
+    },
+    "fm_ghlogin_live": {
+      "split": "known-good",
+      "contentSha256": "3562952adc09ef09db05d3a9331df431a390871005f180e12c992d46755784ca",
+      "recordHash": "bb3862c87148faa2623cd2404b098193af818e48e5258becd7ca54781143f472"
+    },
+    "fm_bsforms_live": {
+      "split": "heldout",
+      "contentSha256": "be9bdd837ba014093e9b638333ae6abbd4a8b0b6802dec59925afa6ffd436285",
+      "recordHash": "6a9d2f7d1716c94f9cb199e86a2438d76eb5c293d9b9e22f989f3421d3e2571f"
+    },
+    "db_bsdash_live": {
+      "split": "heldout",
+      "contentSha256": "c9ff2a34908e3eff6ef6573d218ea6d1f321c33497ad5d50ea2836d870fb4bad",
+      "recordHash": "8b16e97e95a5259f374e5b1ac3f8fb34708232a5f32adb213df3286749109bfb"
+    },
+    "pr_bspricing_live": {
+      "split": "heldout",
+      "contentSha256": "b1d1bd9c656dfbafe7d2d60262ac3ce0c0d432386a5ac18a4793676eccf79cac",
+      "recordHash": "fac768a66fc9041c0eb2eebf3d1babd904b388e956cde2d7316eb795703624c8"
+    },
+    "pr_stripe_2018": {
+      "split": "heldout",
+      "contentSha256": "3840d8f219d6d7439178266aca1a0d1e979c6a1e12a0b4fc166cfe78fc63010b",
+      "recordHash": "0aed9240529b2443225fb386b78bbffac759dbe93ad98565cf1055d325e4809c"
+    },
+    "ed_mdn_live": {
+      "split": "known-good",
+      "contentSha256": "137eb936d0b63f27cb8be3cd089f27f2d44d589df69b91f958043e0046ce2e4e",
+      "recordHash": "902e61fe9773d350ba5096c5f3d2a8ee97243e48abc698238395215bceff9956"
+    },
+    "mk_django_live": {
+      "split": "heldout",
+      "contentSha256": "989769096670cb4fa903788cb8c79657c59e0128c6590bc08ded027ab23211db",
+      "recordHash": "649db1e826893d11f45c9ce9b008f3cbd939888939408c3031ec3d3460115aae"
+    },
+    "mk_rust_live": {
+      "split": "known-good",
+      "contentSha256": "b08a4d7c0e748710d3417b3668bb4cafdc4384d8ff113f11873de4395a029d85",
+      "recordHash": "e594b55b2553559533971b4a75eb3af4339aa3d3362a3a7fa6ddc98d7e6cae9b"
+    },
+    "ed_nngroup_live": {
+      "split": "known-good",
+      "contentSha256": "2647073d68f97a404a70fcf26601125385bf10ac3d4d418877b2ceb37640a755",
+      "recordHash": "fafbfe3f82239e3a830a4cfb18be951dba14bf5260925d036e09252b24b07004"
+    },
+    "mk_bs_album_live": {
+      "split": "known-good",
+      "contentSha256": "9ea8973ab1bf6c19f90c4a7275442f1eb95fb5a2bc5256f3654f8b09dcf4830e",
+      "recordHash": "723b73300e35179ed1745d9784d5de094a482e30f73a76ac1d6212e3d95121bb"
+    },
+    "mk_apple_2012": {
+      "split": "known-good",
+      "contentSha256": "d3f2d5a9e3cfa7931d0c02b458eaa37936ebf69e5e7790066d9a55ff2661e7c9",
+      "recordHash": "8e6464dc794d0483ef186b4db32a42fa40a6be6620d7679f2a65b0421c646f09"
+    },
+    "ed_wikipedia_2020": {
+      "split": "known-good",
+      "contentSha256": "8fb5f590f9b7beeeed55416da22701f884e3dc79e669daf433cff15cb35bf955",
+      "recordHash": "cc2ac9e37c5018f9d1a75b49fe4aba33f6445f9abdc7a13e62490c1472e25028"
+    },
+    "ed_csstricks_live": {
+      "split": "heldout",
+      "contentSha256": "74d59b3c6c3d21a7e83b50f84e4bcc8e87f3d0aa19fd0b5fd4af2138fba7f28c",
+      "recordHash": "57cdf0ee97b0e697ef61b5aabafd49db7d9e95583bfd00f4a9596dc4b2b701fe"
+    },
+    "mk_vuejs_live": {
+      "split": "heldout",
+      "contentSha256": "4ca35a5464e4ebffbbd1989768f06b0a042c8917dc7467e6326135992a6d5a78",
+      "recordHash": "3f3f5a2bdcfddc6a61486e15a74460060668024b22cb681e1bf5a5dd40168ee0"
+    },
+    "db_tabler_live": {
+      "split": "known-good",
+      "contentSha256": "84205d5ce7c998758495db82b80ed5424d699715bb6560bcc6d0412a32565de4",
+      "recordHash": "ba53a75230440719c2880a2dd91e8a2c1a2c74e77765b8d6097e7839cef77319"
+    },
+    "pr_amazon_2012": {
+      "split": "heldout",
+      "contentSha256": "6c8de666930d85c02e78c2703154dd253081a42c14b39e9a9fdff8a751d40068",
+      "recordHash": "cad7424cb0cc06b509fe51ddb734cbce8c3afe7bd66ca05ccf9e67f4e74d6ec6"
+    },
+    "ed_nytimes_2012": {
+      "split": "heldout",
+      "contentSha256": "c593b6d2f5bad6d80906d3cb44f055ed3b30f3f9db8a4be0cdf147c7dbbf1564",
+      "recordHash": "3ed44ba07462b6d5edc3afcea60d6b3615911d90018a8204721c48ef848f6edf"
+    },
+    "au_stackoverflow_live": {
+      "split": "known-good",
+      "contentSha256": "6b9767fa41a10ebd81a7d91a825ca69f334a66070b14c7408ad59bfb14bdb438",
+      "recordHash": "3d3a587ab8145e1c43c315556f844febc73aa233ccc6df425556959571d4a11b"
+    },
+    "ed_wikipedia_live": {
+      "split": "known-good",
+      "contentSha256": "8da42cbb7b577103be9d232c0919880f4139af5cb3a66f71d30a61792e97e49f",
+      "recordHash": "e5a66a06d7a89333af116c544d6c58527f19163945b6eec3222a739c25060770"
+    },
+    "mk_go_live": {
+      "split": "heldout",
+      "contentSha256": "6aa6570cc80d938e39a07ff318491f75bba4d9ce8cfbaadecd8e911dab20176f",
+      "recordHash": "4b3901806d9fd7a353940d735b45bcd48ba2d9f2d4af0ed66acf0fbf398a60ba"
+    },
+    "mk_kubernetes_live": {
+      "split": "heldout",
+      "contentSha256": "b0dc50e4e4d04672b4dff8d14abf2b74abd8c2a29edbdb4787146ddb1fe60d2d",
+      "recordHash": "83e9d5d83a9e4cfcc3dd944bb51076ec2d8bdf7afbff88ca6a27e9ef305731cf"
+    },
+    "ed_a11yproject_live": {
+      "split": "known-good",
+      "contentSha256": "edcc17683e1d5007557b7c41b8e4e3ea372a5ca0cbc02eff0fde6d938516df68",
+      "recordHash": "f4a37b7f2f3c18e45e06c4ca38d4b3ce70df0927927cc60e94f00a7485fb95ff"
+    },
+    "pr_basecamp_live": {
+      "split": "known-good",
+      "contentSha256": "ae80272472896233d9d28b3145024ae7f9237f85ef56aaf3d847baff9eb6c0dd",
+      "recordHash": "e75498b9d270b6f9c74e7fe5e700f6fe6dbc0f1be4bbbff71cc62d9adc98fdeb"
+    },
+    "ed_wikipedia_2012": {
+      "split": "heldout",
+      "contentSha256": "5484a8c376944e1e49f3200644f7960c8acce0d1528ae3f3a54d927fd4bbbc7c",
+      "recordHash": "902a44daab93eb74159b475c9ace251c8d41c73faac79f78fde35334a4aa2fda"
+    },
+    "fm_bs_signin_live": {
+      "split": "known-good",
+      "contentSha256": "57ab56cca9948cd403808bd692a5c59e0008666c8e4dc355eec597fe8668aafc",
+      "recordHash": "ccea33a52228c49a993591dc2413d9bc22e5f1c56026dace2d19ce29c7c5d991"
+    },
+    "pr_bs_product_live": {
+      "split": "heldout",
+      "contentSha256": "defd03bd0abd61a0fc511faee6695db042c940059a4dce99f30bf3f308732dc5",
+      "recordHash": "429646873b58017bc3746808aedfc54936d4bf114e4da47fd9d5ce1fb46ebb88"
+    },
+    "au_bs_cheatsheet_live": {
+      "split": "heldout",
+      "contentSha256": "57654f6e80496ec1c3417f036d6c28402e3d27c81ff0e148b025bd2b29e847ee",
+      "recordHash": "eb4dc67da3ce8953b64999e81de6091e8a203794c6b0601a139385c9c585164e"
+    },
+    "mk_jquery_live": {
+      "split": "heldout",
+      "contentSha256": "6b5b9c4a22168112ba5b2d5e066e1043db33a8132daec0f55ac92ecb1e3447c5",
+      "recordHash": "9a39bfb80f1294de50ff4c1358b3492325cbaeb99a88cc36d0161c07bc7692ed"
+    },
+    "ed_smashing_live": {
+      "split": "heldout",
+      "contentSha256": "91e66f4117f6fc1eb435957ec71d8a1ae68e2299e43329c91dfbcd6fecfe3c8b",
+      "recordHash": "d10484005516fee390c273d4a77e113fa92a941a042dd23647e8622a783c7dca"
+    },
+    "mk_apache_2012": {
+      "split": "heldout",
+      "contentSha256": "85d1576a64e3cea7106b18b30a4d105dc9cb2340fbd39e674057cf477fb4b95b",
+      "recordHash": "61357689c3e00b518144829d2bdff7e5b26d427547f415d2928b3a220004c759"
+    },
+    "fm_bs_checkout_live": {
+      "split": "heldout",
+      "contentSha256": "be6f3c8383fb326e674cbfa9d2c14553e36e4e49df32c6974bbf42b58698ce68",
+      "recordHash": "185437533231da0e2e24dd421cf15b14250f315c5bf2e48c658b7aa4be02facc"
+    },
+    "ed_webdev_live": {
+      "split": "known-good",
+      "contentSha256": "3c85ce329af827ae35f80f5643cbacb89dddd8fb468473ade4b0ff4908e11b16",
+      "recordHash": "12ab53054a4ae16f82c8d845c340afb746c3def12bccd07e93c371a2a92548e6"
+    },
+    "mk_tailwind_live": {
+      "split": "heldout",
+      "contentSha256": "e1b3fc278f75f769cc89054b735a34977e13ee832f6beb7a3639167bf9b89097",
+      "recordHash": "ade5fbf4c6a621c48608be6c8ab40522c4bdd35a2784281c3bd59448d86b2497"
+    },
+    "mk_astro_live": {
+      "split": "known-good",
+      "contentSha256": "630d1ecbf4d66146d1545d9c93ce8f434928ac1621297c07dd0191bd0d4f88b4",
+      "recordHash": "8775c221a7a329d3721fc3b3eed620e073e885fb50489673b73ad84a2d61381d"
+    },
+    "pr_netlify_live": {
+      "split": "heldout",
+      "contentSha256": "a369c4a31d834b19877aa4ef2aaab3ff742fcd3c7bc1a56386c93af7d4adc5e7",
+      "recordHash": "15299be11a8b55713bbcb9ea903603720a76800d605b67721338edbec5c363d0"
+    },
+    "ed_mdncss_live": {
+      "split": "known-good",
+      "contentSha256": "489eedf1e985fa95cbc32ddeb4dced1f07546bec9f4c8b2ada6e26d074c3e7e0",
+      "recordHash": "12e0cef1d26ceeb48d01f4ff66a45533e7f55ed95120ea93e980cdbf00b64610"
+    },
+    "pr_digitalocean_live": {
+      "split": "known-good",
+      "contentSha256": "1626394db34272a041bf4f2e63ba6655fadb83c6eb62a883c4835ed72eed5de5",
+      "recordHash": "65213c513aba18a661bfb3949efcaf3a17f243ec5d51f1ab190f71d5792f1884"
+    },
+    "fm_w3wai_live": {
+      "split": "known-good",
+      "contentSha256": "a5d28d3f4192f08f327574f21cf05f6300f4573461448d4b1b0b13c805126e73",
+      "recordHash": "d6799a148b8340a05760fa420c71c7f332e0cc2d117c044f133396a6c3d407c0"
+    },
+    "ed_theverge_2016": {
+      "split": "heldout",
+      "contentSha256": "5e427f206bbc92092754549ba8d6f3e63c90dc4dfb4f2acf1e28a9aa40b4596a",
+      "recordHash": "7f1a1453ca13d3fc8a2bf4ccc50d9ecfda34e718e179e781aa3d5d6d9cd602b6"
+    },
+    "mk_gatsby_2020": {
+      "split": "known-good",
+      "contentSha256": "b9cc5ab8faff159f1a8ab6884c002b90c3532d9210327d38ef3ca779d69a2d59",
+      "recordHash": "8b613468cefb8cd277b5f8e1e887bd63021833ca41e1b4580dc2c3f7a37dd383"
+    },
+    "db_sbadmin_live": {
+      "split": "heldout",
+      "contentSha256": "cee55c3b2033f0ff9a840dfa4d0ea965d36787ef297e50a09c179ea27f326f87",
+      "recordHash": "0b77f5668bf85adcdf4b7e90bb5cf6df9d070cf60c02af7b383b23803f7effc7"
+    },
+    "db_sbadmin_charts": {
+      "split": "heldout",
+      "contentSha256": "2cb6a4fd0c0ea11f3d68204f92345b27c027fa94cc113ef79a8af463f51a2025",
+      "recordHash": "4634834cc14f20daca98005ceea87f422588bb3f7d3bf9e8200c190446916cdc"
+    },
+    "mk_mailchimp_2016": {
+      "split": "heldout",
+      "contentSha256": "eda6750231f602db20a860d0bcf499f13b28d6280a1bfc04c09cfc64d12da6a8",
+      "recordHash": "377599c38baae8d740ec4534c6b631ddb48c3b7f0b1e063c667a97c241c4f2d6"
+    },
+    "pr_woocommerce_2016": {
+      "split": "heldout",
+      "contentSha256": "a1d7d7bdb67abd5c14443dc12e0927df859e9f382a35df4071448d6c51e7a872",
+      "recordHash": "5acf6901fe26b96981bb50520aad3c324aa5247b1c9fd8a1c4f25fc1db70e744"
+    },
+    "mk_squarespace_2012": {
+      "split": "heldout",
+      "contentSha256": "8e504597f6a39abe06a76b1fa87fedeaa2ace3e8d97db673e79f8d1ad8ec2a39",
+      "recordHash": "c1510f167fe435abebd87ad5695e40f29435c2047f689c2f8bc77aaba722911a"
+    },
+    "ed_medium_2016": {
+      "split": "heldout",
+      "contentSha256": "253bb27a030f4206a145c95e0a69b849710683a059caf1e25658f54de4a893e1",
+      "recordHash": "fdb9210c2244a5d6cb8e736b29d63f83dd10363ee6e37a6c5d49d1fdccd36243"
+    },
+    "au_discourse_live": {
+      "split": "heldout",
+      "contentSha256": "6d913d22b138be6ca0ea456d07f88fd35e07837c7e7557d7857898b82148e730",
+      "recordHash": "8279a473ed3a85cd1087f90acabbbe1be64f1762f861bd32f6d15384e8b43dbf"
+    },
+    "pr_gumroad_live": {
+      "split": "heldout",
+      "contentSha256": "206859a3390b2a49ec0576623b91d505bae07957e88be27a5ae5171c326d46b2",
+      "recordHash": "8fecff852453c2c09cb5ced929418276c7cfdbc8186bffe4b7c21d04bfea44a9"
+    },
+    "pr_atlassian_2018": {
+      "split": "heldout",
+      "contentSha256": "b209bd0bfedcd4012c63d7d329b8ad0e18778e5b58d5945809d4ef2068987aa9",
+      "recordHash": "63ef5f552bb591dd9673d4ded5868342290b32498170e2b071a284fff8d4ddaf"
+    },
+    "ed_techcrunch_2018": {
+      "split": "known-good",
+      "contentSha256": "fa45ea9aa2d34ade6afbf94fdd6705e52bcffe10e29f3892f9807db362279036",
+      "recordHash": "215e25d6c35b978959a9e064caaf5c1ff25db1c6d2e30f0a002229df2be61101"
+    },
+    "ed_guardian_2020": {
+      "split": "heldout",
+      "contentSha256": "7eac7e67cabba083e4365b09b7d523da5025547409cd8be25e4574ebd762509f",
+      "recordHash": "62797987e248c7405b7f8829a3e18fbac522650618eaf6fc7cc2816a5f1b9e91"
+    },
+    "pr_wix_2020": {
+      "split": "heldout",
+      "contentSha256": "662414fb9bffac39977b8e8fb1cffb576fede2c56a9f61fc2ed5f030b8635ff3",
+      "recordHash": "e4d21e658f8ef079a2ca5e17d89a980e91b1dde8d0048a5d16fded2cc3521b85"
+    },
+    "db_adminlte_live": {
+      "split": "heldout",
+      "contentSha256": "47e901a7223a9bc72ded03d5ef31c4d595adce505371f62d29682e6067086001",
+      "recordHash": "7ebfdea9e8dc0f7ea5081a1b96bce3c2a2c95f8fa485ac8cf1bcecc3bfe22408"
+    },
+    "db_tabler_settings": {
+      "split": "heldout",
+      "contentSha256": "78f83354dc46ecaba847ecdba758f6c766af31e3c70ba3b9592290e43f17a28d",
+      "recordHash": "2c9da5191d92241892a137d9f2bbb0f28f22d7204ea19c6ad0afc068444a5139"
+    },
+    "mk_godaddy_2020": {
+      "split": "known-good",
+      "contentSha256": "6eb91858dfaee9435eabb3211ea13bd02bef3a8c29fc0c79fba73957ac8d4fa8",
+      "recordHash": "7d75bed0d236218714d938ccb50ed2cb941fcd11ee598de1daa1212902aadd31"
+    },
+    "ed_buzzfeed_2018": {
+      "split": "heldout",
+      "contentSha256": "1ceba20ca0f7c8b11ec2e460c33bdefe1b93efdf5713e52a4dff5e3e775b1f15",
+      "recordHash": "24da3348b866d4d1bca773bd297b611f02f6933a538117647fb97bd7464e5d4b"
+    },
+    "fm_w3schools_live": {
+      "split": "heldout",
+      "contentSha256": "f4f803d6269838a425c2351f7d2f2eb38e699e2df9dd56efcfa4c981dcff20f7",
+      "recordHash": "d9c7a23cf83f4518ffe3b1cc973f82d9759469d2d505970b59344b25ad6519d6"
+    },
+    "ed_reactdocs_live": {
+      "split": "heldout",
+      "contentSha256": "d4fb9098573a124b7a2ee5f968c1a97aa424b473ecef1e90e1b864fd17593c10",
+      "recordHash": "f441406da28bab9fef633a087f01f8d009aabcf7bb52e60fb864865d44a7614a"
+    },
+    "ed_tailwinddocs_live": {
+      "split": "known-good",
+      "contentSha256": "15ab2134d68214f2a44437ea08fc6757bda7e412b15f96bbc181dde37d5a402a",
+      "recordHash": "c7f98eced3a5a0bae9aed591e4d0f5866ebfc66e44e1ebc53a74690224fae846"
+    },
+    "ed_mdn_grid": {
+      "split": "known-good",
+      "contentSha256": "b891d741fe7c48fdb5053a1d631ec70107222569533d964b3e3e98af900228bb",
+      "recordHash": "83fa9ce49f24d39f0cc41950f44227697a087462adaf544011599f1fa16d3bde"
+    },
+    "pr_vercel_docs": {
+      "split": "known-good",
+      "contentSha256": "6e4c0e81053ba6277c68cbf1b1a9bb9e7280ebb3ab27f124f8e2b6b2a119a666",
+      "recordHash": "912051564a86d5bf2bc5d4c1722f98d22984b69fe1055645b1c6702ee6c31a02"
+    },
+    "ed_web_dev_learn": {
+      "split": "known-good",
+      "contentSha256": "b0ea409ba13f4a1057562fc28ba5ce39a713ee2e6715d2c72f6884e447984fb5",
+      "recordHash": "148c5c02f109f8f707734aea2541b0dad49e60c13bc5c2d6ad7d49334fd4915c"
+    },
+    "pr_stripe_docs": {
+      "split": "known-good",
+      "contentSha256": "68cd6e7b49e5ac3735afbd90c02966bf731869ba2cbdcc12bc1c3f4145303a7b",
+      "recordHash": "43e88c7c22e0b1ea41ec037ff7d619aab7d43296273c2e081778ba9c93651f2c"
+    },
+    "ed_smashing_article2": {
+      "split": "heldout",
+      "contentSha256": "2f2143823b182f61bb511ea31393fc80b9cf6c1d28565e6cbfb2f015594a7033",
+      "recordHash": "ef0c9d5eddeb4fafab44a5c1c8c1c2745f70e6583153c21a0e12d23b1d171376"
+    },
+    "mk_svelte_docs": {
+      "split": "known-good",
+      "contentSha256": "434adb72c56b0cd16c6a2e1ffb8a9caa3f2b65172a72e780d52ba37226658cc5",
+      "recordHash": "de2394d2eeb4f788a68a6d37282efd483716521bff575df40c8bf0cdd5856049"
+    },
+    "ed_a11y_wcag": {
+      "split": "known-good",
+      "contentSha256": "07064e617b51bdb55f0138b11b29a4f9a3047a0127fba53cdcdf398d8ede5c90",
+      "recordHash": "9d0e52084b926d3c17631f103d44f9645e5e12e867a147d7e4120ea45cba7288"
+    },
+    "pr_github_features": {
+      "split": "known-good",
+      "contentSha256": "8adaa0ed4f23ce406028f7d35748824c126505e3d39f82407d07c3fbb89663b5",
+      "recordHash": "5b32e70db34bebf74981427deaba751ab65b0c2f90d2aa4dcdf6d016129c6559"
+    },
+    "ed_govuk_guidance": {
+      "split": "known-good",
+      "contentSha256": "5364503426d55dad4f1a33ef8d05db2fc2d7a965e53fd0ce71927db2afe9fcd4",
+      "recordHash": "c270a4150bc70d2f1ff2250f0db6e1c749d4c4541a7c222d1cd2f8deb37867c8"
+    },
+    "ed_mozilla_about": {
+      "split": "known-good",
+      "contentSha256": "b49afcd479fa1bbd0e2fcf120429c0e3f591542c5234b5663efb2660a2d92160",
+      "recordHash": "0ac294b5afa91a0ae15381380cf8f299e49a3f9148026ae4eae3f999f3d9f776"
+    },
+    "pr_basecamp_features": {
+      "split": "known-good",
+      "contentSha256": "27c166de53aec6076f91b090923e1d2a4073368ecae8fb55e6a700bdf37e38c5",
+      "recordHash": "d86692c585a87858f2671bdeea8d184e70eb030323da3a9d6607fb33c9c0189a"
+    },
+    "ed_nngroup_article": {
+      "split": "known-good",
+      "contentSha256": "05edfdceae7fcb6eabb9ad2f66ff591c18de3c9aaefaceb12d6e23b3aae397ca",
+      "recordHash": "cdaa56c724ff02bd23d4b083c8d9f117f63a2cc5133e8f2acfe12ee1b5f254c4"
+    },
+    "mk_eleventy_live": {
+      "split": "known-good",
+      "contentSha256": "ed5b834227f1c0f6b07c1d115f8a86e4590524a7dc8f920095ccf8047e748988",
+      "recordHash": "7c6a6f359a366de3bbbf426a72220d2d2971dc0ddb498531e55b4fb8b1f19743"
+    },
+    "fm_w3wai_tutorial": {
+      "split": "known-good",
+      "contentSha256": "39b3bffef240efbbbfa21ddd601643027b364c6ffb74bec83a34524abaf0f3d6",
+      "recordHash": "b836b8f669fa9080419336aa40f365b8ca98f7d77c899c99fb372aa816a18cf4"
+    },
+    "fm_govuk_vehicle": {
+      "split": "known-good",
+      "contentSha256": "c83fa25f9be2a48f2c876011bb9c4cdc59fa3fc9d2ffb9a5d64b3d88d35748fb",
+      "recordHash": "80d51c8928f515d403c3e0c3a50c8f25824e7f9209f53ce92d79287821758761"
+    },
+    "fm_mdn_form": {
+      "split": "known-good",
+      "contentSha256": "729994f4cddc6f82b3622f8926c0eb30b9bbe56f7f89972c981e4b80f5b7c33c",
+      "recordHash": "b1a24cf597738b655412a6bada0363e826c52352d4acab4a0fce5f649a492c12"
+    },
+    "au_govuk_service": {
+      "split": "known-good",
+      "contentSha256": "9203b47afd29ff5cfa4c43de6ef755be046c2de50c218a2eade8912c0edd6f61",
+      "recordHash": "30ace17ebe645f9bdb015cc9b95b85c62bea5fd2478859eb8c092a51f84a7b21"
+    },
+    "au_govuk_voting": {
+      "split": "known-good",
+      "contentSha256": "f7145dedda0868c610514c379e999beaa507cf83082fe185a49d78375056a005",
+      "recordHash": "af5a0d6616f571a20afc3c8f543a4206225756ef7904cefcba85b0edf033c8c2"
+    },
+    "au_a11y_patterns": {
+      "split": "known-good",
+      "contentSha256": "a50bc579671383a6791a00994c3c4601637aa420606c795e77f7c83dc92b1b46",
+      "recordHash": "9851fe4edce2d517972fbc497e4b3cbeb566873ebdb1753c1ad83a8d3341ddc2"
+    },
+    "db_govuk_search": {
+      "split": "known-good",
+      "contentSha256": "6fcde6f80c35e83dc6c80c40a770edb3028289e12007207654c0be5a0e4ab885",
+      "recordHash": "fa99e54e7f6dba096c99a7c996ba04015820fca0d45bb5388abb8fdbc4e66f78"
+    },
+    "db_datausa": {
+      "split": "known-good",
+      "contentSha256": "b02a9b3eeaba4118c28da248874ca5ef190534a02971e473d7e2373a326713a3",
+      "recordHash": "776c2b2b20e4cb83e746c1ec944e32076dc82d1a559e450adcd47c2cc8eb4acf"
+    },
+    "db_ourworldindata": {
+      "split": "heldout",
+      "contentSha256": "25c87c4aba58db5a0596f4bce8cac407040a311c1415360567db202dacb04c86",
+      "recordHash": "ee2f543b7855099f0f05188b03238ee0b200b90c1882069f838803ad7654a8c3"
+    },
+    "db_govuk_transparency": {
+      "split": "known-good",
+      "contentSha256": "75b5fd6b35da8b7fc4d34081cbd53138399d24578d9e7794af499180eddf03af",
+      "recordHash": "fa45f5fab8d756ea083d05ab6caea3359d367a7c063c9a27c9d70c3fc6d5d78c"
+    },
+    "db_cdc_data": {
+      "split": "known-good",
+      "contentSha256": "f5d1be4bcfe63a4d2341fd72cafea0376df2d4d2b7dc3da50131f529fdb9e306",
+      "recordHash": "fe02f865e4b69c4dd3082a2bda6ae91561fdb3bb8c78595f22372c8e27b04cb4"
+    },
+    "db_worldbank_data": {
+      "split": "heldout",
+      "contentSha256": "d50e827fa4c809887bb6d6d478f981b4ba2f56cddf191babdc6647148f3911c9",
+      "recordHash": "49c5cb47a86ba7b3ea000499529928fb6b3cd350a5b9f380780f016cc6f1d278"
+    },
+    "db_usafacts": {
+      "split": "heldout",
+      "contentSha256": "a912ff11dc370498c515fcd0bf033a7e948bb3e2f01d7400c2b519b00d51a98c",
+      "recordHash": "23b777027ab0a61e7bfa3139ff7f48771255e9cd56c157d8753e97e6b7d5003e"
+    }
+  },
+  "briefRecords": {
+    "calib-a11y-dominant": {
+      "kind": "calibration",
+      "authoredBy": "architect",
+      "contentSha256": "fbb4ef802106d1c9aa6077f17b7f4286a7b81a1cdd74c2610d981263dc88179a",
+      "recordHash": "e7b073ecb0cf0072e2585d41e3345aba6b96bf1cfba6e63ea9e24b7dab566334"
+    },
+    "calib-taste-dominant": {
+      "kind": "calibration",
+      "authoredBy": "architect",
+      "contentSha256": "2017d3c21256b6192ba95b520de6de06680b815db3494c96a93bedfa781e06eb",
+      "recordHash": "a74b3cf227922677a60cb00b8867f3cc5d72476fbe7a0fc062932cc9ecf53850"
+    },
+    "calib-balanced": {
+      "kind": "calibration",
+      "authoredBy": "architect",
+      "contentSha256": "30e505105cf900caf399f37fb617a493eb775d410111e5ddc0c932c3cf27b614",
+      "recordHash": "354d7e5be82189b73a73f12871cced83141062bc662f832ecb5380145d8cd0e7"
+    },
+    "real-govuk-addresses": {
+      "kind": "real",
+      "authoredBy": "real",
+      "contentSha256": "5e78e48fba69cd799fff0f3f852dd89d762be6f506dda6bbf2c417bd8415bf96",
+      "recordHash": "99026fee3c20e4e694a36fcefd536b9cc6a19c194c49524811912a7886e67b57"
+    },
+    "real-govuk-passwords": {
+      "kind": "real",
+      "authoredBy": "real",
+      "contentSha256": "9ea183343e43dc814bba4ff30e7e3650638d1e45c202e906b1e4dc9298a4f370",
+      "recordHash": "20eeaabb982b3869f760a3399a910b70cdad0f24592712d27787e0c9255e7cfa"
+    },
+    "real-govuk-complete-multiple-tasks": {
+      "kind": "real",
+      "authoredBy": "real",
+      "contentSha256": "96c4869ed0052558f2f458192abee940e329be7f6dc1dc9188f64b97006bc7bc",
+      "recordHash": "5dc36535ad14386b50a0d20b51dc50e64004b20ed9570d09ed1bd82776856594"
+    },
+    "coverage-marketing-landing-expressive-branded-bike-share": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "fd5132c9edd0f0aabc932a5ba4b02f0f194ea13c38af50c5aa6ff21a900f0f59",
+      "recordHash": "8f5dfd3687e7a98a62e782e5da208c3689a5a2aec8c2e7366c0df0af5a868187"
+    },
+    "coverage-marketing-landing-minimal-language-app": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "125d4589b4e48f7c7089f1499cc7c610ff81a509eeb1d8ddd67f4d8bedfacdc2",
+      "recordHash": "dfb2c6b61a6f5f36d9272d1237f5054b7265e30e6ece0ef16d9b76de7cf84a41"
+    },
+    "coverage-marketing-landing-corporate-trust-freight-security": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "8960989b1864d72b47d53b9f093b7d3b582e28cc2917913b7c2b9a68b5c4ca29",
+      "recordHash": "7a81fe431594303b906e51bf2b8c238123881cc0175792dcbe359d8f7bfd8794"
+    },
+    "coverage-product-minimal-utility-password-manager": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "1c604778d7b60132be1797ec8a5748eb3d6528cf3255fd61b27771c7da840a1d",
+      "recordHash": "19b6f25084dd1c48909eef6b9660a6ba8ada39fcff69e9b3aa6e06fcd1d3c4e4"
+    },
+    "coverage-product-playful-kids-cooking-kit": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "00d49e70bcb40a8bdf5d46e0a3192a34e48c11cb9c7b8c6fbf88b806962a8789",
+      "recordHash": "6aaf9ee067a4b7d11692fb0dafc8ad7f76614a480b2f3b4478ea182d3d69928e"
+    },
+    "coverage-product-data-dense-climate-risk-dashboard": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "c3168f51a3d8a10bf37673a0af292fe9302100b9732d96a9c118cfc10eb08b07",
+      "recordHash": "48131a607dbe2a6b2cc32ec9c12c4aec9971e3586d04da48f567f3701d07128e"
+    },
+    "coverage-editorial-classic-editorial-heritage-bakery": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "bffde5e8a00ef2b1f90edad5d9be3d9387e6bb3be039d8c92b8f54a37e083b53",
+      "recordHash": "e6ca292449beb364a7de7cceab4d2152625576e1bb969abfd4eafac2684786c7"
+    },
+    "coverage-editorial-expressive-music-scene-report": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "600bfa9adfc9066f278f4db59ed3043d19e71b3875406d1eede8f058ad9fe809",
+      "recordHash": "62e9b848635d33088790cb30541001c33d054c4db28e016badd6bbe48d4a5959"
+    },
+    "coverage-editorial-restrained-public-health-brief": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "106a7a4b7d66bb3e4ecbcc153740507738d1c5a1b7c664eb8d8fe3f602d82072",
+      "recordHash": "c2752aa75a012ded315d268a2d7c15a9bcbdcf834ff59443588a1217666e02f8"
+    },
+    "coverage-app-ui-minimal-utility-personal-budget": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "71213112d78131bcf9ad9b40bb6f79881ded5a763af853e251019cdfc54080b8",
+      "recordHash": "f49c9c496ca03b096933866b4e8131ecb48a10a91902e2f692b6949bbd3254a4"
+    },
+    "coverage-app-ui-corporate-dense-it-operations": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "2b4b538ed7e27d2e8278cf04f22a9d0df489ff01e6939fb669b755679bde82e0",
+      "recordHash": "f70d4ae730f18c41f1b70fb7a702b944de9ae54c47a1ce44c085046f7a6d7c4c"
+    },
+    "coverage-app-ui-playful-pet-care-planner": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "c74fbe0862f7968bb1cadd910e0e23cba6be6784fa24ef871c12a67e466a4fd6",
+      "recordHash": "20490332afb7d39aa5291942bfecdfffd4508fd932bcfd956f1b7baa43d01949"
+    },
+    "coverage-forms-minimal-medical-intake": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "98f59edd608a2b2f7640d02134589c3190f8a5f2c7b033debe2da87a7bb1d911",
+      "recordHash": "78e314c398f747983c4982455484fdc5617ebb9c7dbd9cb5c1208430775fb803"
+    },
+    "coverage-forms-multi-step-corporate-vendor-onboarding": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "50dd56da96d8df208d8985445085b5dab7505963dacdf5242f6471dfa3f13f45",
+      "recordHash": "de28c22257eca3adc8398e9c7f80cf6ab4a9f4f4969b58f44bf3169446f46bb1"
+    },
+    "coverage-flex-warm-human-community-clinic": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "5855eb38b575df31bdc16ac0443904be57dca1ff42efa782c90ea752b99d0d2d",
+      "recordHash": "be20c1ba6c35d304c3fa38319767499d2ba912922ffec25537fd95d381011339"
+    },
+    "coverage-flex-high-energy-youth-campus-event": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "11ecb512b1f445ba100a42a6b68cf34f4944773c1abd228e9ef1bf8048ca0f28",
+      "recordHash": "b9f6a1450a117606f6d8a2cf7e29a1522ee4f1e71b96c264dbceb33e02de3fc9"
+    },
+    "coverage-flex-premium-luxury-private-travel": {
+      "kind": "coverage",
+      "authoredBy": "codex",
+      "contentSha256": "b1107e84845e3c4352923b552980e5d0727431fd1b333c22eb38353fb9331a53",
+      "recordHash": "5d6d787acac6019782332e57eeabbfa5e6eabe71a46aa52140c94edd94cdf87a"
+    }
+  }
+}

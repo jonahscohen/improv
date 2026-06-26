@@ -72,4 +72,4 @@ Run sidecoach's craft chain (or specific flows) against the marketing-site proje
 
 ## Step 2 wired (about to run)
 
-Created `sidecoach/src/dogfood-craft-step2.ts`. Will invoke `/sidecoach craft marketing-site` against the project. Output captured to `/tmp/sidecoach-craft-output.md` with per-flow guidance/checklist/artifacts + top-level appended guidance (impeccable parity) + BuildReport.
+Created `sidecoach/src/dogfood-craft-step2.ts`. Will invoke `/sidecoach craft marketing-site` against the project. Output captured to `/tmp/sidecoach-craft-output.md` with per-flow guidance/checklist/artifacts + top-level appended guidance (oracle parity) + BuildReport.

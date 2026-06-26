@@ -207,15 +207,21 @@ export class FlowJTacticalPolishHandler extends BaseFlowHandler {
         contrast: metadata.contrast,
       };
 
-      // Run both validators: 22-point Polish Standard + 90-rule Extended Domains
+      // Run both validators: Polish Standard + the registry-backed Extended Domain facade.
       const polishReport = PolishStandardValidator.validateAll(domainCheckContext);
       const extendedReport = ExtendedDomainValidator.validateAll(domainCheckContext);
 
-      // Combine results: 22 + 90 = 112 rules
+      // Combine results. All displayed counts derive from the LIVE reports (Stage 2 convergence:
+      // ExtendedDomainValidator is now a registry-backed facade, so the old hardcoded 24/90/114
+      // figures were stale and dishonest once the theater rules were retired).
       const totalRules = polishReport.totalRules + extendedReport.totalRules;
       const totalPassed = polishReport.passed + extendedReport.passed;
       const totalViolations = polishReport.violations + extendedReport.violations;
       const combinedPassRate = ((totalPassed / totalRules) * 100).toFixed(1);
+      // Honest, registry-derived domain breakdown (finding-class -> rule count) for the guidance body.
+      const extendedDomainBreakdown = ExtendedDomainValidator.getDomains()
+        .map((d) => `${d} (${ExtendedDomainValidator.getRulesByDomain(d).length})`)
+        .join(', ');
 
       // Linguistic-ban scan: walk the project's HTML/markdown copy and look
       // for slop words + rhetorical templates. Closes the largest forensic
@@ -291,9 +297,9 @@ export class FlowJTacticalPolishHandler extends BaseFlowHandler {
       }
 
       const guidance = [
-        `Validation Matrix: 112-Rule Framework (${totalPassed}/${totalRules} rules pass - ${combinedPassRate}%)`,
-        '= 22-point Polish Standard (14 baseline + 8 proprietary)',
-        '+ 90-rule Extended Domain Validator (10 domains: 7 base + 3 new)',
+        `Validation Matrix: ${totalRules}-Rule Framework (${totalPassed}/${totalRules} rules pass - ${combinedPassRate}%)`,
+        `= ${polishReport.totalRules}-point Polish Standard`,
+        `+ ${extendedReport.totalRules}-rule registry-backed Domain Validator (forms a11y + page quality)`,
         '+ Linguistic Ban Scan (slop words + rhetorical templates)',
         '+ Absolute Ban Detector (6 named anti-patterns)',
         '',
@@ -301,14 +307,12 @@ export class FlowJTacticalPolishHandler extends BaseFlowHandler {
         '',
         ...linguisticGuidance,
         '',
-        'POLISH STANDARD (22 rules):',
+        `POLISH STANDARD (${polishReport.totalRules} rules):`,
         `- Polish: ${polishReport.passed}/${polishReport.totalRules} pass`,
         '',
-        'EXTENDED DOMAINS (90 rules):',
+        `EXTENDED DOMAINS (${extendedReport.totalRules} rules):`,
         `- Extended: ${extendedReport.passed}/${extendedReport.totalRules} pass`,
-        '- Domains: Typography (16), Color (18), Spatial (14), Motion (20), Interaction (15),',
-        '           Responsive (12), UX Writing (11), Performance (9), Data Visualization (10),',
-        '           Internationalization (7)',
+        `- Domains: ${extendedDomainBreakdown}`,
         '',
         'SCALE & PRESS (Required):',
         '- Add scale(0.96) on active/press state to all buttons, links, interactive components',
@@ -352,9 +356,9 @@ export class FlowJTacticalPolishHandler extends BaseFlowHandler {
       ];
 
       const memoryBuilder = new FlowMemoryBuilder(this.flowId, this.getFlowName())
-        .setSummary(`112-rule validation matrix applied: ${totalPassed}/${totalRules} rules pass (${combinedPassRate}%)`)
+        .setSummary(`${totalRules}-rule validation matrix applied: ${totalPassed}/${totalRules} rules pass (${combinedPassRate}%)`)
         .addRule('polish', [TACTICAL_RULES.scalePress, TACTICAL_RULES.radius, TACTICAL_RULES.shadows, TACTICAL_RULES.transitions, TACTICAL_RULES.hitAreas, TACTICAL_RULES.optical, TACTICAL_RULES.textWrap, TACTICAL_RULES.smoothing, TACTICAL_RULES.iconSwaps, TACTICAL_RULES.imageOutlines])
-        .addDecision('Validation strategy', '112-rule framework: 22-point Polish + 90-rule Extended Domains')
+        .addDecision('Validation strategy', `${totalRules}-rule framework: ${polishReport.totalRules}-point Polish + ${extendedReport.totalRules}-rule registry-backed Domain Validator`)
         .addMetric('total-rules', totalRules, 'pass')
         .addMetric('passed-rules', totalPassed, 'pass', totalRules)
         .addMetric('violation-count', totalViolations, 'warning')
@@ -364,7 +368,7 @@ export class FlowJTacticalPolishHandler extends BaseFlowHandler {
         .addMetric('absolute-ban-p0', banP0, banP0 === 0 ? 'pass' : 'fail')
         .addMetric('absolute-ban-p1', banP1, banP1 === 0 ? 'pass' : 'warning')
         .addValidation('Tactical polish checklist', 'pass', '16 principles documented')
-        .addValidation('Extended domain validation', 'pass', `${extendedReport.totalRules} rules across 10 domains`)
+        .addValidation('Extended domain validation', 'pass', `${extendedReport.totalRules} rules across ${ExtendedDomainValidator.getDomains().length} finding-classes`)
         .addValidation('Linguistic ban scan', linguisticP0 === 0 ? 'pass' : 'fail', `${linguisticScan.totalFindings.length} findings across ${linguisticScan.perFile.size} files`)
         .addArtifact('reference', totalRules);
 
@@ -372,7 +376,7 @@ export class FlowJTacticalPolishHandler extends BaseFlowHandler {
         flowId: this.flowId,
         flowName: this.getFlowName(),
         status: 'success',
-        message: `Tactical Polish: 112-rule matrix ${totalPassed}/${totalRules} pass. Linguistic ban: ${linguisticP0} P0 + ${linguisticP1} P1. Absolute ban: ${banP0} P0 + ${banP1} P1 across ${absoluteBanScan.scannedFiles} files.`,
+        message: `Tactical Polish: ${totalRules}-rule matrix ${totalPassed}/${totalRules} pass. Linguistic ban: ${linguisticP0} P0 + ${linguisticP1} P1. Absolute ban: ${banP0} P0 + ${banP1} P1 across ${absoluteBanScan.scannedFiles} files.`,
         guidance,
         checklist,
         artifacts: [
@@ -388,7 +392,7 @@ export class FlowJTacticalPolishHandler extends BaseFlowHandler {
             'template',
             'Validation Report Summary',
             `Polish Standard: ${polishReport.passed}/${polishReport.totalRules} pass (${polishReport.passRate})\nExtended Domains: ${extendedReport.passed}/${extendedReport.totalRules} pass (${extendedReport.passRate})\nCombined: ${totalPassed}/${totalRules} pass (${combinedPassRate}%)`,
-            'Complete 112-rule validation matrix results'
+            `Complete ${totalRules}-rule validation matrix results`
           ),
         ],
         memory: memoryBuilder.build(),

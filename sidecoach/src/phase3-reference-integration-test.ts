@@ -7,6 +7,10 @@ import { FlowCFontResearchHandler } from './flow-handler-font-research';
 import { FlowDReferenceSearchHandler } from './flow-handler-design-references';
 import { FlowEMotionPatternsHandler } from './flow-handler-motion-patterns';
 import { FlowExecutionContext } from './flow-handler';
+import { gatherReferencePreflightArtifacts } from './reference-preflight-artifacts';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 const testProjectContext = {
   register: 'product' as const,
@@ -159,4 +163,48 @@ async function testPhase3References() {
   }
 }
 
-testPhase3References();
+// Phase B: lane-start reference preflight bundle (deliverable B).
+// Asserts the gatherer returns multiple reference artifact kinds and soft-fails
+// (warnings array, never throws) when a system has no match.
+async function testReferencePreflightBundle() {
+  console.log('\nTesting Reference Preflight Bundle (deliverable B)');
+
+  // 1. A project with a real PRODUCT.md voice -> several artifact kinds, no throw.
+  const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'phase3-preflight-'));
+  fs.writeFileSync(path.join(proj, 'PRODUCT.md'),
+    '# Test\n\n## Voice\nclean, editorial, precise\n\n## Brand personality\nclean, editorial, precise\n');
+
+  const bundle = await gatherReferencePreflightArtifacts({ projectPath: proj, register: 'product', target: 'a settings modal' });
+  if (!bundle || !Array.isArray(bundle.artifacts) || !Array.isArray(bundle.warnings)) {
+    console.error('ERROR: preflight bundle shape invalid');
+    process.exit(1);
+  }
+  const kinds = new Set(bundle.artifacts.map((a) => a.kind));
+  console.log(`OK preflight: ${bundle.artifacts.length} artifacts across kinds [${[...kinds].join(', ')}]`);
+  console.log(`   warnings: ${bundle.warnings.length}`);
+  // Embedded/static systems (component, fonts, motion, icon-source) are always available,
+  // so at least 4 distinct kinds must surface regardless of the live design-references catalog.
+  if (kinds.size < 4) {
+    console.error(`ERROR: expected >=4 reference artifact kinds, got ${kinds.size} (${[...kinds].join(', ')})`);
+    process.exit(1);
+  }
+  for (const k of ['component', 'fonts', 'motion', 'icon-source']) {
+    if (!kinds.has(k as any)) { console.error(`ERROR: missing always-available kind "${k}"`); process.exit(1); }
+  }
+  console.log('   OK >=4 kinds incl. component/fonts/motion/icon-source\n');
+
+  // 2. Soft-fail: a bogus path must NOT throw - it returns a bundle (warnings allowed).
+  try {
+    const degraded = await gatherReferencePreflightArtifacts({ projectPath: '/no/such/path/at/all', register: 'product' });
+    if (!degraded || !Array.isArray(degraded.artifacts)) { console.error('ERROR: degraded bundle invalid'); process.exit(1); }
+    console.log(`OK soft-fail on bogus path: ${degraded.artifacts.length} artifacts, ${degraded.warnings.length} warnings (no throw)\n`);
+  } catch (e) {
+    console.error('ERROR: gatherReferencePreflightArtifacts threw on bogus path (must soft-fail):', e);
+    process.exit(1);
+  }
+
+  try { fs.rmSync(proj, { recursive: true, force: true }); } catch { /* ignore */ }
+  console.log('OK Reference Preflight Bundle works\n');
+}
+
+testPhase3References().then(() => testReferencePreflightBundle());

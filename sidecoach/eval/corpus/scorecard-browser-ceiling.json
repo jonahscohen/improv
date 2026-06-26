@@ -1,0 +1,73 @@
+{
+  "generatedUtc": "2026-06-24T05:14:54.550Z",
+  "label": "ORACLE FULL BROWSER-MODE OBJECTIVE CEILING - the real floor bar (NOT part of the static-vs-static head-to-head in scorecard.json). oracle run via its Puppeteer browser engine over the script+external-link-stripped corpus; objective recall vs the rendered-referee objective labels. This is the objective floor the reimplemented browser-based Sidecoach must clear; the static head-to-head objective recall (0.063) was a static-mode artifact.",
+  "mode": "oracle detect.mjs --json over http://127.0.0.1 (browser/Puppeteer engine, Playwright Chromium), page transform matches the referee (scripts + external links stripped), per-page isolated + group-killed, fail-closed on problem-stderr",
+  "envSig": "b7c054a86c126f66",
+  "oracleSha": "f5dfd05ca1e314acd8ed79c6301a20a1b844f2eb6691bd63e04116a8e7efb187",
+  "chromiumPath": "/Users/spare3/Library/Caches/ms-playwright/chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "pages": 90,
+  "unavailable": 1,
+  "objectiveGroundTruth": "rendered referee objectiveLabels (same GT as scorecard.json objective axis)",
+  "strictPerClassMicroRecall": 0.632,
+  "strictMicro": {
+    "tp": 60,
+    "present": 95
+  },
+  "perClass": {
+    "broken-image": {
+      "present": 5,
+      "tp": 0,
+      "recall": 0
+    },
+    "justified-text": {
+      "present": 0,
+      "tp": 0,
+      "recall": null
+    },
+    "skipped-heading": {
+      "present": 32,
+      "tp": 32,
+      "recall": 1
+    },
+    "low-contrast": {
+      "present": 41,
+      "tp": 28,
+      "recall": 0.683
+    },
+    "gray-on-color": {
+      "present": 17,
+      "tp": 0,
+      "recall": 0
+    }
+  },
+  "honest": {
+    "note": "broken-image is a STATIC-engine rule (oracle browser engine does not emit it; ceiling = static head-to-head R). browser mode folds gray-on-color INTO low-contrast, so contrast is scored as a family (low-contrast OR gray-on-color). The full-objective ceiling combines browser skipped-heading + contrast-family + static broken-image.",
+    "skippedHeading": {
+      "present": 32,
+      "tp": 32,
+      "recall": 1
+    },
+    "contrastFamily": {
+      "present": 41,
+      "tp": 28,
+      "recall": 0.683
+    },
+    "brokenImageStatic": {
+      "present": 5,
+      "tp": 5,
+      "recall": 1,
+      "engine": "static (not browser)"
+    },
+    "fullObjectiveCeilingRecall": 0.833,
+    "fullObjective": {
+      "tp": 65,
+      "present": 78
+    }
+  },
+  "timingMs": {
+    "median": 1811,
+    "p90": 2790,
+    "max": 30705
+  },
+  "comparisonNote": "static-mode oracle objective recall (head-to-head) was 0.063; this browser-mode ceiling is the honest objective bar (~13x higher). broken-image reads 0 in browser-mode but that is NOT a capability gap: (1) oracle detects broken-image in its STATIC engine, not the browser engine (browser emits 0 across all pages, even src-less imgs) - static head-to-head R=1.0; (2) the frozen pages reference images via external/data/src-less URLs (no relative resources resolve over the local server), so the rendered DOM has no broken-image box either. So the STRICT per-class micro (0.632) conservatively UNDERSTATES oracle; the HONEST full-objective ceiling (browser skipped-heading + contrast-family + static broken-image = 0.833) is the real floor bar. The 1 unavailable page (mk_mailchimp_2016, browser nav timeout) is fail-closed (counted as detecting nothing = FN), not silently dropped."
+}

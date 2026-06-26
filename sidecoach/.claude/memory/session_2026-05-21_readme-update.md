@@ -21,7 +21,7 @@ Updated from outdated "14 flows" documentation to comprehensive v3 guide coverin
      - RegressionDetector (output degradation detection)
      - ProjectPersonaEngine (async LLM persona extraction)
      - DesignDebtTracker (persistent debt logging)
-     - ImpeccableDetectBridge (npx impeccable detect integration)
+     - OracleDetectBridge (npx oracle detect integration)
    - Explained gate rules for each tier
 
 3. **The 36 Flows**

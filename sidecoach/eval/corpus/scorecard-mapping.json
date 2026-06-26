@@ -1,0 +1,416 @@
+{
+  "generatedUtc": "2026-06-26T00:44:55.704Z",
+  "algorithm": "neutral canonicalization applied IDENTICALLY to rule names and class names (strip prefix before '/'; split camelCase; lowercase; tokenize on every non-alphanumeric separator; rejoin '-'); rule maps iff canon(rule) == canon(class); SAME algorithm for both tools; no synonyms/fuzzy; vocab read from frozen manifest ids only; unmapped reported; borderline surfaced for lead decision (not auto-mapped)",
+  "groundTruthClasses": {
+    "objective": [
+      "broken-image",
+      "justified-text",
+      "skipped-heading",
+      "low-contrast",
+      "gray-on-color"
+    ],
+    "subjective": [
+      "cream-palette",
+      "ai-color-palette",
+      "hero-eyebrow-chip",
+      "repeated-section-kickers",
+      "numbered-section-markers",
+      "icon-tile-stack",
+      "italic-serif-display",
+      "nested-cards",
+      "side-stripe-borders",
+      "glassmorphism-default",
+      "hero-metric-template",
+      "gradient-text",
+      "marketing-buzzword",
+      "aphoristic-cadence",
+      "dark-glow",
+      "tiny-text",
+      "wide-tracking",
+      "all-caps-body",
+      "layout-transition",
+      "bounce-easing",
+      "tight-leading",
+      "extreme-negative-tracking"
+    ]
+  },
+  "sidecoach": {
+    "vocab": [
+      "broken-image",
+      "glassmorphism-default",
+      "gradient-text",
+      "gray-on-color",
+      "hero-metric-template",
+      "low-contrast",
+      "marketing-buzzword",
+      "modal-as-first-thought",
+      "nested-cards",
+      "side-stripe-borders",
+      "skipped-heading",
+      "taste/border-radius-inconsistency",
+      "taste/hero-radial-blob",
+      "taste/large-inline-style",
+      "taste/translatey-in-hover",
+      "tiny-text"
+    ],
+    "mapped": {
+      "broken-image": "broken-image",
+      "glassmorphism-default": "glassmorphism-default",
+      "gradient-text": "gradient-text",
+      "gray-on-color": "gray-on-color",
+      "hero-metric-template": "hero-metric-template",
+      "low-contrast": "low-contrast",
+      "marketing-buzzword": "marketing-buzzword",
+      "nested-cards": "nested-cards",
+      "side-stripe-borders": "side-stripe-borders",
+      "skipped-heading": "skipped-heading",
+      "tiny-text": "tiny-text"
+    },
+    "unmapped": [
+      "modal-as-first-thought",
+      "taste/border-radius-inconsistency",
+      "taste/hero-radial-blob",
+      "taste/large-inline-style",
+      "taste/translatey-in-hover"
+    ],
+    "mappedClasses": [
+      "broken-image",
+      "glassmorphism-default",
+      "gradient-text",
+      "gray-on-color",
+      "hero-metric-template",
+      "low-contrast",
+      "marketing-buzzword",
+      "nested-cards",
+      "side-stripe-borders",
+      "skipped-heading",
+      "tiny-text"
+    ]
+  },
+  "oracle": {
+    "vocab": [
+      "ai-color-palette",
+      "border-accent-on-rounded",
+      "bounce-easing",
+      "broken-image",
+      "dark-glow",
+      "em-dash-overuse",
+      "flat-type-hierarchy",
+      "gradient-text",
+      "gray-on-color",
+      "layout-transition",
+      "marketing-buzzword",
+      "monotonous-spacing",
+      "numbered-section-markers",
+      "overused-font",
+      "side-tab"
+    ],
+    "mapped": {
+      "ai-color-palette": "ai-color-palette",
+      "bounce-easing": "bounce-easing",
+      "broken-image": "broken-image",
+      "dark-glow": "dark-glow",
+      "gradient-text": "gradient-text",
+      "gray-on-color": "gray-on-color",
+      "layout-transition": "layout-transition",
+      "marketing-buzzword": "marketing-buzzword",
+      "numbered-section-markers": "numbered-section-markers"
+    },
+    "unmapped": [
+      "border-accent-on-rounded",
+      "em-dash-overuse",
+      "flat-type-hierarchy",
+      "monotonous-spacing",
+      "overused-font",
+      "side-tab"
+    ],
+    "mappedClasses": [
+      "ai-color-palette",
+      "bounce-easing",
+      "broken-image",
+      "dark-glow",
+      "gradient-text",
+      "gray-on-color",
+      "layout-transition",
+      "marketing-buzzword",
+      "numbered-section-markers"
+    ]
+  },
+  "borderlineForLeadDecision": [
+    {
+      "tool": "sidecoach",
+      "rule": "taste/hero-radial-blob",
+      "nearClass": "hero-eyebrow-chip",
+      "sharedToken": "hero",
+      "codexVerdict": {
+        "matchedClass": null,
+        "confidence": "high",
+        "reasoning": "The rule targets a radial-gradient blob backdrop in a hero/banner, while none of the classes specifically describe hero gradient blobs or decorative radial backgrounds."
+      }
+    },
+    {
+      "tool": "sidecoach",
+      "rule": "taste/hero-radial-blob",
+      "nearClass": "hero-metric-template",
+      "sharedToken": "hero",
+      "codexVerdict": {
+        "matchedClass": null,
+        "confidence": "high",
+        "reasoning": "The rule targets a radial-gradient blob backdrop in a hero/banner, while none of the classes specifically describe hero gradient blobs or decorative radial backgrounds."
+      }
+    },
+    {
+      "tool": "oracle",
+      "rule": "side-tab",
+      "nearClass": "side-stripe-borders",
+      "sharedToken": "side",
+      "codexVerdict": {
+        "matchedClass": "side-stripe-borders",
+        "confidence": "high",
+        "reasoning": "Both target the same one-sided colored accent stripe or border used on cards/callouts as a recurring visual motif."
+      }
+    }
+  ],
+  "nameLineageMitigation": "Subjective GT class names share lineage with Sidecoach's taste vocabulary; exact-name-match (above) is the neutral floor; the Codex symmetric semantic pass (semanticPass below) corrects BOTH directions over unmapped rules. effectiveMapping = exact + Codex-confirmed semantic.",
+  "semanticPass": {
+    "labeledBy": "codex",
+    "method": "symmetric per-rule Codex semantic pass over UNMAPPED rules of BOTH tools; identical tool-agnostic prompt template; namespace prefix stripped so the model is blind to tool lineage; each rule described in its OWN tool source words (rule-descriptions.json, cited); Codex decides matchedClass/null + confidence + reasoning; NOTHING auto-mapped by the architect",
+    "rubricSha": "41d3a966a90a5076",
+    "descriptionsSha": "1772932f0f184e98",
+    "verdicts": [
+      {
+        "tool": "sidecoach",
+        "rule": "modal-as-first-thought",
+        "source": "src/reference-loader.ts:323",
+        "matchedClass": null,
+        "confidence": "high",
+        "reasoning": "The rule targets interaction-pattern overuse of modals instead of inline/progressive UI, which is not the same idiom as any listed visual, typography, copy, motion, or layout class."
+      },
+      {
+        "tool": "sidecoach",
+        "rule": "taste/border-radius-inconsistency",
+        "source": "src/taste-validator.ts:306",
+        "matchedClass": null,
+        "confidence": "high",
+        "reasoning": "The rule targets inconsistent use of border-radius values/design tokens, which is not the same visual or textual idiom as any listed class."
+      },
+      {
+        "tool": "sidecoach",
+        "rule": "taste/hero-radial-blob",
+        "source": "src/taste-validator.ts:216",
+        "matchedClass": null,
+        "confidence": "high",
+        "reasoning": "The rule targets a radial-gradient blob backdrop in a hero/banner, while none of the classes specifically describe hero gradient blobs or decorative radial backgrounds."
+      },
+      {
+        "tool": "sidecoach",
+        "rule": "taste/large-inline-style",
+        "source": "src/taste-validator.ts:197",
+        "matchedClass": null,
+        "confidence": "high",
+        "reasoning": "The rule targets a code organization issue for CSS placement, not any visible visual or textual design idiom in the taxonomy."
+      },
+      {
+        "tool": "sidecoach",
+        "rule": "taste/translatey-in-hover",
+        "source": "src/taste-validator.ts:177",
+        "matchedClass": null,
+        "confidence": "high",
+        "reasoning": "The rule targets a hover lift microinteraction using translateY, while none of the taxonomy classes describe that idiom."
+      },
+      {
+        "tool": "oracle",
+        "rule": "border-accent-on-rounded",
+        "source": "detector/registry/antipatterns.mjs:13 (verbatim)",
+        "matchedClass": null,
+        "confidence": "high",
+        "reasoning": "The rule targets a thick all-around accent border on a rounded card, while the closest taxonomy item is specifically a recurring vertical side stripe/side accent motif, which is a different idiom."
+      },
+      {
+        "tool": "oracle",
+        "rule": "em-dash-overuse",
+        "source": "detector/registry/antipatterns.mjs:159",
+        "matchedClass": null,
+        "confidence": "high",
+        "reasoning": "The rule targets overuse of em-dash punctuation in body copy, which is not the same idiom as any listed visual or copy-pattern class."
+      },
+      {
+        "tool": "oracle",
+        "rule": "flat-type-hierarchy",
+        "source": "detector/registry/antipatterns.mjs:40",
+        "matchedClass": null,
+        "confidence": "high",
+        "reasoning": "The rule targets insufficient contrast between typographic sizes in a visual hierarchy, which is distinct from semantic heading skips, tiny text, or other typography issues listed."
+      },
+      {
+        "tool": "oracle",
+        "rule": "monotonous-spacing",
+        "source": "detector/registry/antipatterns.mjs:85",
+        "matchedClass": null,
+        "confidence": "high",
+        "reasoning": "The rule targets repetitive uniform layout spacing/rhythm, while none of the taxonomy classes describe that same spacing-system idiom."
+      },
+      {
+        "tool": "oracle",
+        "rule": "overused-font",
+        "source": "detector/registry/antipatterns.mjs:22",
+        "matchedClass": null,
+        "confidence": "high",
+        "reasoning": "The rule targets generic overused font-family choices, while none of the taxonomy classes flag font-family distinctiveness as the idiom."
+      },
+      {
+        "tool": "oracle",
+        "rule": "side-tab",
+        "source": "detector/registry/antipatterns.mjs:4 (verbatim)",
+        "matchedClass": "side-stripe-borders",
+        "confidence": "high",
+        "reasoning": "Both target the same one-sided colored accent stripe or border used on cards/callouts as a recurring visual motif."
+      }
+    ]
+  },
+  "effectiveMapping": {
+    "sidecoach": {
+      "exact": [
+        {
+          "rule": "broken-image",
+          "class": "broken-image",
+          "layer": "exact"
+        },
+        {
+          "rule": "glassmorphism-default",
+          "class": "glassmorphism-default",
+          "layer": "exact"
+        },
+        {
+          "rule": "gradient-text",
+          "class": "gradient-text",
+          "layer": "exact"
+        },
+        {
+          "rule": "gray-on-color",
+          "class": "gray-on-color",
+          "layer": "exact"
+        },
+        {
+          "rule": "hero-metric-template",
+          "class": "hero-metric-template",
+          "layer": "exact"
+        },
+        {
+          "rule": "low-contrast",
+          "class": "low-contrast",
+          "layer": "exact"
+        },
+        {
+          "rule": "marketing-buzzword",
+          "class": "marketing-buzzword",
+          "layer": "exact"
+        },
+        {
+          "rule": "nested-cards",
+          "class": "nested-cards",
+          "layer": "exact"
+        },
+        {
+          "rule": "side-stripe-borders",
+          "class": "side-stripe-borders",
+          "layer": "exact"
+        },
+        {
+          "rule": "skipped-heading",
+          "class": "skipped-heading",
+          "layer": "exact"
+        },
+        {
+          "rule": "tiny-text",
+          "class": "tiny-text",
+          "layer": "exact"
+        }
+      ],
+      "semantic": [],
+      "allClasses": [
+        "broken-image",
+        "glassmorphism-default",
+        "gradient-text",
+        "gray-on-color",
+        "hero-metric-template",
+        "low-contrast",
+        "marketing-buzzword",
+        "nested-cards",
+        "side-stripe-borders",
+        "skipped-heading",
+        "tiny-text"
+      ]
+    },
+    "oracle": {
+      "exact": [
+        {
+          "rule": "ai-color-palette",
+          "class": "ai-color-palette",
+          "layer": "exact"
+        },
+        {
+          "rule": "bounce-easing",
+          "class": "bounce-easing",
+          "layer": "exact"
+        },
+        {
+          "rule": "broken-image",
+          "class": "broken-image",
+          "layer": "exact"
+        },
+        {
+          "rule": "dark-glow",
+          "class": "dark-glow",
+          "layer": "exact"
+        },
+        {
+          "rule": "gradient-text",
+          "class": "gradient-text",
+          "layer": "exact"
+        },
+        {
+          "rule": "gray-on-color",
+          "class": "gray-on-color",
+          "layer": "exact"
+        },
+        {
+          "rule": "layout-transition",
+          "class": "layout-transition",
+          "layer": "exact"
+        },
+        {
+          "rule": "marketing-buzzword",
+          "class": "marketing-buzzword",
+          "layer": "exact"
+        },
+        {
+          "rule": "numbered-section-markers",
+          "class": "numbered-section-markers",
+          "layer": "exact"
+        }
+      ],
+      "semantic": [
+        {
+          "rule": "side-tab",
+          "class": "side-stripe-borders",
+          "layer": "semantic",
+          "confidence": "high",
+          "reasoning": "Both target the same one-sided colored accent stripe or border used on cards/callouts as a recurring visual motif."
+        }
+      ],
+      "allClasses": [
+        "ai-color-palette",
+        "bounce-easing",
+        "broken-image",
+        "dark-glow",
+        "gradient-text",
+        "gray-on-color",
+        "layout-transition",
+        "marketing-buzzword",
+        "numbered-section-markers",
+        "side-stripe-borders"
+      ]
+    }
+  }
+}

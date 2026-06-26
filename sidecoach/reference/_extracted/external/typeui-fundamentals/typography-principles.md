@@ -490,7 +490,7 @@ For better mobile/desktop balance, use a two-term preferred value: `clamp(2.25re
 
 ---
 
-## SECTION 3: What this covers that impeccable + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
 
 **make-interfaces-feel-better has tabular-nums and balanced text wrap as 2 of its 14 rules.** TypeUI's typography-principles.md is 638 lines of complete typography theory.
 
@@ -500,7 +500,7 @@ For better mobile/desktop balance, use a two-term preferred value: `clamp(2.25re
 
 2. **The line-height-by-size-tier table.** Sidecoach has no codified line-height ramp. TypeUI provides body 1.4-1.6, headings 1.05-1.25, UI labels 1.0-1.2, multi-line captions 1.4.
 
-3. **The heading-size-by-role table (10 roles).** This is the SOURCE of the "card title sizing" anti-inflation rule. Make-interfaces-feel-better doesn't have this; Impeccable's `/typeset` command doesn't have it; this is the missing structural layer.
+3. **The heading-size-by-role table (10 roles).** This is the SOURCE of the "card title sizing" anti-inflation rule. Make-interfaces-feel-better doesn't have this; Oracle's `/typeset` command doesn't have it; this is the missing structural layer.
 
 4. **The 5-letter-case vocabulary with use-for/avoid-for.** "Avoid Title Case" is a common piece of taste advice; TypeUI makes it concrete by enumerating Sentence/Title/ALL CAPS/small caps/all lowercase and the role of each.
 

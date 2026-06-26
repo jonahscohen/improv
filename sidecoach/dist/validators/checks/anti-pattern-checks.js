@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ANTI_PATTERN_CHECKS = exports.checkModalAsFirstThought = exports.checkHeroMetricTemplate = exports.checkIdenticalCardGrids = exports.checkSideStripeBorders = exports.checkGlassmorphism = exports.checkGradientText = void 0;
+exports.ANTI_PATTERN_CHECKS = exports.checkModalAsFirstThought = exports.checkHeroMetricTemplate = exports.checkSideStripeBorders = exports.checkGlassmorphism = exports.checkGradientText = void 0;
 const check_context_1 = require("../check-context");
 const absolute_ban_detector_1 = require("../../absolute-ban-detector");
 function verdictFromBanFindings(findings, cleanMessage) {
@@ -47,12 +47,8 @@ const checkSideStripeBorders = (ctx) => {
 };
 exports.checkSideStripeBorders = checkSideStripeBorders;
 // --- HTML-structural heuristics (declared minor; still emit fail when matched) ---
-const checkIdenticalCardGrids = (ctx) => {
-    if (!(0, check_context_1.hasMarkup)(ctx))
-        return (0, check_context_1.inconclusive)('no markup source collected', 'unreadable_input');
-    return verdictFromBanFindings(scanMarkupPerFile(ctx, absolute_ban_detector_1.scanIdenticalCardGrids), 'no identical-card-grids shape');
-};
-exports.checkIdenticalCardGrids = checkIdenticalCardGrids;
+// (checkIdenticalCardGrids deleted Stage-2 2026-06-24 - the underlying scanIdenticalCardGrids had a ReDoS + was a
+// low-precision over-firing detector; removed, no replacement.)
 const checkHeroMetricTemplate = (ctx) => {
     if (!(0, check_context_1.hasMarkup)(ctx))
         return (0, check_context_1.inconclusive)('no markup source collected', 'unreadable_input');
@@ -69,7 +65,6 @@ exports.ANTI_PATTERN_CHECKS = {
     'anti-pattern/gradient-text': exports.checkGradientText,
     'anti-pattern/glassmorphism-default': exports.checkGlassmorphism,
     'anti-pattern/side-stripe-borders': exports.checkSideStripeBorders,
-    'anti-pattern/identical-card-grids': exports.checkIdenticalCardGrids,
     'anti-pattern/hero-metric-template': exports.checkHeroMetricTemplate,
     'anti-pattern/modal-as-first-thought': exports.checkModalAsFirstThought,
 };

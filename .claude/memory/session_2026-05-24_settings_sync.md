@@ -28,7 +28,7 @@ Hooks + permissions only. Filter rules:
 
 ## Decisions during execution
 
-- **enabledPlugins source:** kept REPO's version (not live) because repo has more entries (plugin-developer-toolkit, chrome-devtools) and matches the CLAUDE.md statement that impeccable is enabled. Live had `impeccable: false` which contradicts CLAUDE.md.
+- **enabledPlugins source:** kept REPO's version (not live) because repo has more entries (plugin-developer-toolkit, chrome-devtools) and matches the CLAUDE.md statement that oracle is enabled. Live had `oracle: false` which contradicts CLAUDE.md.
 - **model update:** repo had `claude-opus-4-6[1m]` which is outdated per CLAUDE.md "no legacy model versions" mandate. Updated to `claude-opus-4-7[1m]`.
 
 ## Filter results (from python sanity check)
