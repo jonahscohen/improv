@@ -53,7 +53,7 @@ class CommandRoutingAdapter {
     }
     preprocessCommand(command, target) {
         // Validate command exists
-        const commands = (0, slash_command_router_1.getAvailableCommands)();
+        const commands = { ...(0, slash_command_router_1.getAvailableCommands)(), ...(0, slash_command_router_1.getVerbCommandInfo)() };
         if (!commands[command]) {
             return {
                 utterance: '',
@@ -66,7 +66,7 @@ class CommandRoutingAdapter {
     }
     enrichResult(result, command) {
         // Add command metadata to result
-        const commands = (0, slash_command_router_1.getAvailableCommands)();
+        const commands = { ...(0, slash_command_router_1.getAvailableCommands)(), ...(0, slash_command_router_1.getVerbCommandInfo)() };
         const commandInfo = commands[command];
         if (commandInfo) {
             // Prepend command info to guidance
@@ -87,7 +87,7 @@ class CommandRoutingAdapter {
     }
     // Helper method: check if command is known
     isKnownCommand(command) {
-        const commands = (0, slash_command_router_1.getAvailableCommands)();
+        const commands = { ...(0, slash_command_router_1.getAvailableCommands)(), ...(0, slash_command_router_1.getVerbCommandInfo)() };
         return !!commands[command];
     }
     // Helper method: get all commands for a phase

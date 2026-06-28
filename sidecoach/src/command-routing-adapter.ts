@@ -2,7 +2,7 @@
 // Bridges slash commands to orchestrator flows with preprocessing and post-processing
 
 import { FlowExecutionContext, FlowExecutionResult } from './flow-handler';
-import { parseSlashCommand, getAvailableCommands, getCommandsByPhase } from './slash-command-router';
+import { parseSlashCommand, getAvailableCommands, getCommandsByPhase, getVerbCommandInfo } from './slash-command-router';
 import { FlowExecutionEngine, SidecoachResult } from './sidecoach-orchestrator';
 
 export interface CommandRouteRequest {
@@ -80,7 +80,7 @@ export class CommandRoutingAdapter {
 
   private preprocessCommand(command: string, target: string): { utterance: string; error?: string } {
     // Validate command exists
-    const commands = getAvailableCommands();
+    const commands = { ...getAvailableCommands(), ...getVerbCommandInfo() };
     if (!commands[command]) {
       return {
         utterance: '',
@@ -96,7 +96,7 @@ export class CommandRoutingAdapter {
 
   private enrichResult(result: SidecoachResult, command: string): SidecoachResult {
     // Add command metadata to result
-    const commands = getAvailableCommands();
+    const commands = { ...getAvailableCommands(), ...getVerbCommandInfo() };
     const commandInfo = commands[command];
 
     if (commandInfo) {
@@ -121,7 +121,7 @@ export class CommandRoutingAdapter {
 
   // Helper method: check if command is known
   isKnownCommand(command: string): boolean {
-    const commands = getAvailableCommands();
+    const commands = { ...getAvailableCommands(), ...getVerbCommandInfo() };
     return !!commands[command];
   }
 

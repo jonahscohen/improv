@@ -87,6 +87,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/forms-checks.test.ts', required: true },                      // Stage 2 convergence: absorbed forms-a11y checks (FORMS_016/018/019/002/015)
   { rel: 'src/__tests__/page-quality-checks.test.ts', required: true },               // Stage 2 convergence: cherry-picked DOM-evidence Tier-2 keepers (img/text/dark/chart/button)
   { rel: 'src/__tests__/validator-integration.test.ts', required: true },             // Stage 2 convergence: registry-facade migration contract tripwire (Extended===22, Polish+Extended===46, honest Flow J display)
+  { rel: 'src/__tests__/audit-rendered.test.ts', required: true },                    // /sidecoach audit <url> rendered read path: url detect, severity mapping, FAIL-CLOSED inconclusive-not-clean
 ];
 
 // Pin Playwright to the SHARED real-home browser cache BEFORE we isolate HOME below.

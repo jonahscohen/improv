@@ -105,13 +105,17 @@ async function executeFlow(utterance) {
       projectPath: process.cwd(),
     });
 
-    // --render: designed, low-noise presentation (the product surface).
-    // Default stays JSON so the skill's programmatic parsing is untouched.
-    if (process.argv.includes('--render')) {
-      const { render } = require('./sidecoach-present');
-      console.log(render(result, utterance));
+    // Output: the clean, low-noise PANEL is the DEFAULT human surface (so a raw run no
+    // longer dumps a JSON wall - the exact "miles of mumbo jumbo" complaint). `--json`
+    // opts into the full machine-readable result for the skill's own parsing, and embeds
+    // the SAME rendered panel under `renderedPanel` so the skill prints it for the user
+    // without a second (re-rendering) run. `--render` stays as an explicit alias.
+    const { render } = require('./sidecoach-present');
+    const panel = render(result, utterance);
+    if (process.argv.includes('--json')) {
+      console.log(JSON.stringify({ ...result, renderedPanel: panel }, null, 2));
     } else {
-      console.log(JSON.stringify(result, null, 2));
+      console.log(panel);
     }
 
     // Exit with appropriate code

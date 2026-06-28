@@ -58,7 +58,9 @@ while true; do
       # Results written to temp file keyed by timestamp
       RESULT_FILE="${RESULTS_DIR}/result-$(date +%s%N).json"
 
-      if node "${SIDECOACH_BIN}/sidecoach-monitor.js" "$utterance" > "$RESULT_FILE" 2>&1; then
+      # --json: the daemon writes a machine-readable .json result file for downstream
+      # consumers; the monitor's default output is now the human panel, so be explicit.
+      if node "${SIDECOACH_BIN}/sidecoach-monitor.js" "$utterance" --json > "$RESULT_FILE" 2>&1; then
         log "Flow executed: $(head -1 "$RESULT_FILE")"
       else
         log "Flow execution failed: $(cat "$RESULT_FILE")"

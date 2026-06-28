@@ -88,9 +88,11 @@ const flow_specific_validators_1 = require("./flow-specific-validators");
 const flow_metrics_tracker_1 = require("./flow-metrics-tracker");
 const flow_conditional_router_1 = require("./flow-conditional-router");
 const clausemd_mandate_validator_1 = require("./clausemd-mandate-validator");
+const build_report_types_1 = require("./build-report-types");
 const build_report_aggregator_1 = require("./build-report-aggregator");
 const panel_model_1 = require("./panel-model");
 const panel_renderer_1 = require("./panel-renderer");
+const audit_rendered_1 = require("./audit-rendered");
 const checkpoint_store_1 = require("./checkpoint-store");
 const verb_command_registry_1 = require("./verb-command-registry");
 // Flows that produce HTML output and must clear the taste gate before declaring success.
@@ -815,6 +817,17 @@ class FlowExecutionEngine {
                 };
                 return this.runCompositeLoop(compositeFlow, executionContext, [], 0, utterance);
             }
+            // `/sidecoach audit <url>`: the rendered diagnosis READ PATH. A standalone audit
+            // of a live URL renders the page and runs the proven detection engine directly
+            // (objective a11y + subjective taste, the same scanRenderedLive the eval measures),
+            // BYPASSING the build-pipeline flow chain. A diagnosis of an existing URL has no
+            // build prerequisite (the "diagnosis IS an audit" rule), and the old chain routed
+            // to a guidance-only flowK that never rendered and reported a FALSE 'clean'. This
+            // path is FAIL-CLOSED: a render failure is reported inconclusive, never clean.
+            if (commandMatch.command === 'audit' && (0, audit_rendered_1.looksLikeUrl)(commandMatch.target)) {
+                const audit = await (0, audit_rendered_1.runRenderedAudit)(commandMatch.target);
+                return this.toRenderedAuditResult(audit, commandMatch.command);
+            }
             // Route to command's flow chain
             // Sprint 10 Bug 1 + Sprint 12 T5: always auto-build projectContext from
             // PRODUCT.md / DESIGN.md on the project root, then overlay any caller-passed
@@ -1502,6 +1515,162 @@ class FlowExecutionEngine {
                     throw new Error(`laneDeps.runValidator: no validator "${validatorId}"`);
                 return reg.validateProduct(validatorContext, signal);
             },
+        };
+    }
+    // Shape a rendered audit into a SidecoachResult with an HONEST verdict. FAIL-CLOSED:
+    // when the page did not render (audit did not run) the result is success:false with
+    // NO clean buildReport - a non-execution is never reported as 'clean'.
+    toRenderedAuditResult(audit, command) {
+        const findingLines = audit.findings.map((f) => `[${f.severity}] ${f.lens}/${f.rule}${f.selector ? ` @ ${f.selector}` : ''}${f.detail ? ` - ${f.detail}` : ''}`);
+        // A partial scan that DID find something (verdict blocked/warnings-only but a lens
+        // failed) must still flag incomplete coverage - the missing lens is unknown, not clean.
+        const partialNote = audit.unavailableReasons.length > 0
+            ? [`NOTE: partial scan - a detection lens did not run, so coverage is incomplete (${audit.unavailableReasons.join('; ')}). Findings below are only from the lens(es) that ran.`]
+            : [];
+        // Grouped + prioritized findings for the report panel. byRule counts over ALL findings;
+        // topFixes are the worst (blocking first, stable order) with a compact metric extracted
+        // from the detail string (e.g. "4.23:1 (need 4.5:1)" -> "4.23:1").
+        const byRuleMap = new Map();
+        for (const f of audit.findings) {
+            const key = `${f.lens}/${f.rule}`;
+            const e = byRuleMap.get(key) || { rule: f.rule, lens: f.lens, count: 0 };
+            e.count++;
+            byRuleMap.set(key, e);
+        }
+        const byRule = Array.from(byRuleMap.values()).sort((a, b) => b.count - a.count);
+        const metricOf = (d) => {
+            if (!d)
+                return undefined;
+            const m = d.match(/\d+(?:\.\d+)?\s*:\s*1|\d+(?:\.\d+)?\s*px|\d+(?:\.\d+)?\/100/);
+            return m ? m[0].replace(/\s+/g, '') : undefined;
+        };
+        // "badness" of a metric for ranking (LOWER sorts first / worse): contrast ratio and px
+        // are lower-is-worse as-is; buzzword density (N/100) is HIGHER-is-worse, so negate it
+        // (Codex P2); metricless stays Infinity (ranked last within its severity).
+        const numMetric = (m) => {
+            if (!m)
+                return Infinity;
+            const r = m.match(/(\d+(?:\.\d+)?)\s*:\s*1/);
+            if (r)
+                return parseFloat(r[1]); // contrast: lower worse
+            const px = m.match(/(\d+(?:\.\d+)?)px/);
+            if (px)
+                return parseFloat(px[1]); // px: smaller worse
+            const d = m.match(/(\d+(?:\.\d+)?)\/100/);
+            if (d)
+                return -parseFloat(d[1]); // density: higher worse
+            return Infinity;
+        };
+        const sevRank = (s) => (s === 'blocking' ? 0 : 1);
+        // DEDUPE by selector so each element appears once (a single element often trips multiple
+        // rules, e.g. low-contrast + gray-on-color). Keep the most SEVERE finding for that element;
+        // a blocker must never be demoted by a later warning with a smaller metric (Codex P1) - so
+        // severity wins, and the worse metric only breaks ties WITHIN a severity.
+        const fixMap = new Map();
+        for (const f of audit.findings) {
+            const key = f.selector || `(${f.rule})`;
+            const m = metricOf(f.detail);
+            const n = numMetric(m);
+            const cur = fixMap.get(key);
+            const better = !cur
+                || sevRank(f.severity) < sevRank(cur.severity)
+                || (sevRank(f.severity) === sevRank(cur.severity) && n < cur.n);
+            if (better)
+                fixMap.set(key, { selector: f.selector, metric: m, rule: f.rule, severity: f.severity, n });
+        }
+        const topFixes = Array.from(fixMap.values())
+            .sort((a, b) => sevRank(a.severity) - sevRank(b.severity) || a.n - b.n)
+            .slice(0, 6)
+            .map(({ n, ...rest }) => rest);
+        const auditSummary = {
+            renderUrl: audit.renderUrl, lenses: audit.lenses, verdict: audit.verdict,
+            totalFindings: audit.findings.length, byRule, topFixes,
+            // carried so the report can flag PARTIAL coverage (a lens that did not run) and
+            // distinguish "page did not render at all" from "one lens failed" (Codex P1).
+            rendered: audit.rendered, unavailableReasons: audit.unavailableReasons,
+        };
+        // INCONCLUSIVE covers BOTH no-render (no lens ran) AND a partial scan (one lens
+        // failed) with zero findings. Either way the page cannot be certified - this is
+        // NEVER reported as clean: success:false, NO BuildReport (Codex P1).
+        if (audit.verdict === 'inconclusive') {
+            const partial = audit.rendered; // a lens DID run, just not all of them
+            const headline = partial
+                ? `Rendered audit of ${audit.renderUrl} is INCONCLUSIVE: a detection lens did not run, so the page cannot be certified clean.`
+                : `Rendered audit could not run: ${audit.renderUrl} did not render. This is INCONCLUSIVE, not clean.`;
+            const flowResult = {
+                flowId: 'flowK_multi_lens_audit',
+                flowName: 'rendered audit',
+                status: 'error',
+                message: headline,
+                guidance: audit.unavailableReasons,
+                checklist: [],
+                error: audit.unavailableReasons.join('; '),
+            };
+            return {
+                success: false,
+                message: `${headline} (${audit.unavailableReasons.join('; ')})`,
+                detectedFlow: { flowId: 'flowK_multi_lens_audit', flowName: 'rendered audit', confidence: 1.0 },
+                flowResults: [flowResult],
+                guidance: [
+                    partial
+                        ? 'A detection lens failed, so this is NOT a clean result - re-run for full coverage. Treat the unscanned dimension as unknown, not clean.'
+                        : 'The audit did not run - the page failed to render. Verify the dev server is up and the URL is reachable, then re-run. Do NOT treat this as a clean result.',
+                    ...audit.unavailableReasons,
+                ],
+                audit: auditSummary,
+            };
+        }
+        const counts = audit.severityCounts;
+        const verdict = (0, build_report_types_1.computeVerdict)(counts); // clean ONLY when blocking+warning are 0 (and we DID render)
+        const findings = audit.findings.map((f) => ({
+            severity: f.severity,
+            source: `rendered/${f.lens}`,
+            flowId: 'flowK_multi_lens_audit',
+            rule: f.rule,
+            message: `${f.rule}${f.selector ? ` @ ${f.selector}` : ''}${f.detail ? ` - ${f.detail}` : ''}`,
+        }));
+        const total = audit.findings.length;
+        const passRate = total === 0 ? 100 : Math.max(0, 100 - (counts.blocking * 20 + counts.warning * 8));
+        const letter = (0, build_report_types_1.passRateToLetter)(passRate);
+        const report = {
+            reportId: `${new Date().toISOString().replace(/[:.]/g, '-')}-rendered-audit`,
+            generatedAt: new Date().toISOString(),
+            composite: command,
+            flowsExecuted: ['flowK_multi_lens_audit (rendered)'],
+            verdict,
+            severityCounts: counts,
+            overallGrade: letter,
+            overallPassRate: passRate,
+            domainGrades: [],
+            findings,
+            nextSteps: [...partialNote, ...(total === 0
+                    ? [`Rendered scan of ${audit.renderUrl} found no objective a11y or taste defects.`]
+                    : findingLines.slice(0, 8))],
+        };
+        const flowResult = {
+            flowId: 'flowK_multi_lens_audit',
+            flowName: 'rendered audit',
+            status: 'success',
+            message: `Rendered ${audit.renderUrl}; ${total} finding(s) (${counts.blocking} blocking, ${counts.warning} warning). Verdict: ${verdict}.`,
+            guidance: findingLines,
+            checklist: [],
+        };
+        // The early-return rendered path skips the normal chain bookkeeping, so record the
+        // synthesized result to memory here (the advertised audit "memory entry" + so later
+        // history-based checks see that an audit ran). Best-effort: never fail the audit on it.
+        try {
+            this.recordFlowWithMemory(flowResult);
+        }
+        catch { /* memory is best-effort */ }
+        return {
+            success: true,
+            message: `Rendered audit of ${audit.renderUrl}: ${verdict} (${total} finding(s): ${counts.blocking} blocking, ${counts.warning} warning).`,
+            detectedFlow: { flowId: 'flowK_multi_lens_audit', flowName: 'rendered audit', confidence: 1.0 },
+            flowResults: [flowResult],
+            guidance: [...partialNote, ...(findingLines.length ? findingLines : [`No findings - ${audit.renderUrl} scanned clean across objective a11y + taste lenses.`])],
+            buildReport: report,
+            audit: { ...auditSummary, grade: letter },
+            panel: (0, panel_renderer_1.renderSidecoachPanel)((0, panel_model_1.assemblePanelModel)({ flowResults: [flowResult], report, confidence: 1.0 })),
         };
     }
     async startLane(laneId, target, context, startRequestId, renderUrl) {
