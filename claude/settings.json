@@ -167,6 +167,12 @@
           },
           {
             "type": "command",
+            "command": "~/.claude/hooks/claude-surface.sh",
+            "timeout": 5,
+            "statusMessage": "Detecting surface..."
+          },
+          {
+            "type": "command",
             "command": "~/.claude/hooks/voice-mandate.sh",
             "timeout": 5,
             "statusMessage": "Checking voice output..."
@@ -280,6 +286,11 @@
     "UserPromptSubmit": [
       {
         "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/claude-surface.sh turn",
+            "timeout": 5
+          },
           {
             "type": "command",
             "command": "~/.claude/hooks/resume-toggle.sh",
@@ -432,6 +443,11 @@
     "Stop": [
       {
         "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/surface-visual-gate.sh",
+            "timeout": 8
+          },
           {
             "type": "command",
             "command": "~/.claude/hooks/node-shim-heal.sh",

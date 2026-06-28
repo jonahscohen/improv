@@ -93,14 +93,39 @@ if hook_dir and hook_dir not in sys.path:
 lane_file = os.environ.get("LANE_FILE_PATH", "")
 lane_registry = None
 sidecoach_lanes = None
+_lane_py = os.path.join(hook_dir, "sidecoach_lanes.py") if hook_dir else ""
+
+# Deploy-completeness check, run BEFORE and INDEPENDENT of the import. A required
+# sibling absent next to the hook is the exact breakage that left the
+# natural-language/lane tier DEAD for ~13 days. We must warn LOUD (stderr,
+# non-blocking) whenever a sibling is missing on disk - NOT only when the import
+# throws. Python keeps searching the rest of sys.path, so a stray copy on
+# cwd/PYTHONPATH could import "successfully" and silently MASK an incomplete
+# deploy; the canonical deploy requires these files next to the hook regardless.
+# A healthy deploy (siblings present) stays silent.
+if hook_dir and not os.path.isfile(_lane_py):
+    sys.stderr.write(
+        "sidecoach-keyword: sidecoach_lanes.py is NOT deployed next to the hook (%s) - "
+        "the natural-language/lane tier is unreliable here (it depends on this sibling). "
+        "Run install.sh (sidecoach component) to link it.\n" % hook_dir
+    )
+elif lane_file and not os.path.isfile(lane_file):
+    sys.stderr.write(
+        "sidecoach-keyword: sidecoach-lanes.json is NOT deployed next to the hook (%s) - "
+        "the natural-language/lane tier is unreliable here. Run install.sh to link it.\n"
+        % lane_file
+    )
+
 try:
     import sidecoach_lanes as sidecoach_lanes  # noqa: PLC0414
     if lane_file:
         lane_registry = sidecoach_lanes.load_registry(lane_file)
-except Exception:
-    # Structure-invalid registry disables the lane tier loudly but does not
-    # break the verb/intent tiers (spec sections 12-13).
+except Exception as _lane_exc:
+    # Import/parse failed for a reason NOT already explained by an absent sibling
+    # above (e.g. a structurally-invalid lane registry). Surface it; non-blocking.
     lane_registry = None
+    if (not _lane_py or os.path.isfile(_lane_py)) and (not lane_file or os.path.isfile(lane_file)):
+        sys.stderr.write("sidecoach-keyword: lane tier disabled: %s\n" % _lane_exc)
 
 # Load the intent registry (third tier). Fires a light, advisory self-question
 # on NATURAL front-end/design requests that carry no explicit sidecoach verb.

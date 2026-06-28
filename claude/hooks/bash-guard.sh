@@ -49,12 +49,15 @@ if [ -z "$REASON" ] && echo "$CMD" | grep -qE 'git\s+commit'; then
       # Config files: skip verification requirement
       elif echo "$file" | grep -qE '\.json$|\.yml$|\.yaml$|\.lock$|\.eslintrc|tsconfig'; then
         continue
-      # Source code files: require verification
-      elif echo "$file" | grep -qE '\.(ts|tsx|js|jsx|css|scss)$|src/.*\.(ts|tsx|js|jsx)$'; then
+      # UI / FRONT-END files: require visual (browser) verification - these actually render.
+      # Plain .ts/.js/.mjs (CLI, engine, hooks, scripts, tests), .sh, .py, and compiled dist
+      # output are NOT browser-renderable and are EXEMPT. The old rule required verification
+      # for ALL .ts/.js and false-blocked every backend/CLI/hook commit (fixed 2026-06-27).
+      elif echo "$file" | grep -qE '\.(tsx|jsx|css|scss|sass|less|vue|svelte|astro|html?)$'; then
         HAS_SOURCE_CODE=true
         break
-      # Compiled output: require verification
-      elif echo "$file" | grep -qE '^dist/.*\.(js|d\.ts)$'; then
+      # Plain .ts/.js/.mjs ONLY under a clearly front-end path (a real UI surface).
+      elif echo "$file" | grep -qE '(^|/)(marketing-site|reference-site|components?|pages|views|ui|widgets)/.*\.(ts|js|mjs)$'; then
         HAS_SOURCE_CODE=true
         break
       fi

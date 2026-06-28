@@ -15,12 +15,20 @@ if [[ -z "$LATEST" ]]; then exit 0; fi
 
 LATEST_FILE="$LATEST" node -e "
   const fs = require('fs');
-  const result = JSON.parse(fs.readFileSync(process.env.LATEST_FILE, 'utf8'));
-  if (result.success && result.message) {
-    const guidance = (result.guidance || []).map(g => '  - ' + g).join('\n');
-    console.log('\n[Sidecoach: ' + (result.detectedFlow?.flowName || 'flow') + ']\n' + result.message + (guidance ? '\n' + guidance : ''));
+  let result = null;
+  try { result = JSON.parse(fs.readFileSync(process.env.LATEST_FILE, 'utf8')); } catch (e) { result = null; }
+  if (result) {
+    // Surface the clean panel (the user surface) REGARDLESS of success - an inconclusive
+    // or failed audit must be SHOWN, not hidden. renderedPanel is the staged panel from
+    // the monitor's --json output; .panel is the legacy card; message is the last resort.
+    const panel = result.renderedPanel || result.panel;
+    if (panel) {
+      console.log('\n' + panel);
+    } else if (result.message) {
+      console.log('\n[Sidecoach: ' + (result.detectedFlow && result.detectedFlow.flowName || 'flow') + ']\n' + result.message);
+    }
   }
-  fs.unlinkSync(process.env.LATEST_FILE);
+  try { fs.unlinkSync(process.env.LATEST_FILE); } catch (e) {}
 " 2>/dev/null
 
 exit 0

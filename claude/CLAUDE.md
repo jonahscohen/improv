@@ -279,7 +279,9 @@ The `/sidecoach` skill is the front door for every design or QA task. It auto-tr
 
 **DESIGN.md must conform to the Google spec** (YAML token frontmatter + six-section markdown body in canonical order). After writing or modifying it, run `npx @google/design.md lint DESIGN.md` and resolve every finding. Generated UI code must reference tokens via `{path.to.token}` rather than hard-coded hex.
 
-**QA gate before reporting done** on any substantive UI change:
+**Diagnosing or critiquing existing UI IS a sidecoach audit - run it, do not eyeball it.** When asked to look at, review, diagnose, or critique an existing page or component ("what's wrong with this page", "how does this look", "this feels off, take a look", "is the copy real or fluff"), that request IS `/sidecoach audit <target>` (plus `/sidecoach critique <target>` for the design-judgment layer). Run it as the FIRST step, before forming or stating an opinion - not after a build, not only when there is a change to verify. The audit renders the page and runs the detection engine: objective defects (contrast, heading order, broken images, justified text) and taste defects (marketing-buzzword, tiny-text, nested-cards, anti-pattern bans) that a freeform human read provably misses. Running audit when nothing is being built is NOT "dressing up an opinion as a formal pass" - the freeform eyeball read is the opinion; the audit is the measurement. A diagnosis is not "upstream of" sidecoach; it IS sidecoach's primary read path. Reaching for Chrome or a screenshot to hand-critique a page instead of running the audit is the exact failure this rule exists to prevent. (Recorded 2026-06-26 after a session reasoned its way out of an audit on a pure-diagnosis request because the only framing it had was the post-build gate below.)
+
+**QA gate before reporting done** (the other use of the same tools) on any substantive UI change:
 1. `/sidecoach audit <target>` - address all Critical and High findings
 2. `/sidecoach critique <target>` - address anything above "minor"
 3. `/sidecoach polish <target>` - final alignment, must run last
@@ -319,6 +321,15 @@ A synthesis agent weaves all findings into a unified narrative with ranked findi
 A SessionStart hook (`reflect-nudge.sh`) counts new beats since the last reflection. When the count exceeds the threshold (default 15, configurable via `REFLECT_THRESHOLD` env var), the session opener includes a one-line nudge. The user says yes and it runs, or no and it drops.
 
 Default scope is the current project's `.claude/memory/`. Say "reflect across everything" or pass `--all` to include global project beats from `~/.claude/projects/*/memory/`.
+
+## Presentation by Surface (rich visualizer vs text panel)
+
+The `claude-surface.sh` SessionStart hook detects which Claude Code SURFACE the session runs in - via `CLAUDE_CODE_ENTRYPOINT` plus the `CMUX_*` vars (full value map in `reference_claude_code_surface_detection.md`) - and injects it into context every session. Adapt how you PRESENT reporting and data to that surface:
+
+- **RICH surfaces** (desktop = `claude-desktop`, web / Cowork = `remote*`, VS Code = `claude-vscode`) render HTML-based custom visuals and artifacts (Anthropic: "Custom visuals in chat and Cowork"). When you present REPORTING, DATA, CHARTS, TABLES, or GRAPHS here, prefer Claude's visualizer - a self-contained interactive/visual artifact (HTML / SVG / React: a chart, a table, a dashboard) - and be creative where it earns its keep. Plain text is the fallback, not the default. Mechanism: produce HTML-based visual content; "custom visuals" are ephemeral inline, "artifacts" are persistent/shareable.
+- **TEXT-ONLY surfaces** (terminal, cmux, mobile = `remote_mobile`, sdk) cannot render custom visuals (Anthropic: not available on iOS/Android; terminals are text). Present as clean text / markdown / ASCII - for example the sidecoach panel. Do NOT build visual artifacts to display data; they will not render.
+
+The surface is in your context each session - honor it. When unsure whether a specific visual renders in the current surface, fall back to clean markdown/text. This sits alongside the sidecoach panel work: the ASCII report is the text-surface form; the rich-surface form of the same data is a visualizer artifact.
 
 ## Voice Output
 

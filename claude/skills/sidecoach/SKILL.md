@@ -35,28 +35,38 @@ Source of truth: `sidecoach/src/lanes.generated.ts` (generated task registry), `
 
 ## Invoking the Engine
 
+**QUIET INVOCATION (this is the user experience - treat it as a hard rule).** When you run Sidecoach for the user, the run must be QUIET: one command, then the panel, nothing else.
+- Run exactly ONE command (the monitor, below). Do NOT wrap it in greps, file reads, `cat`/`ls`, or exploratory/extra calls - a normal Sidecoach run is a SINGLE call. The detection happens inside the engine; you do not investigate around it.
+- Print ONLY the panel (`renderedPanel`) VERBATIM. Do NOT also print the JSON, the guidance list, the build report, or a recap of the findings.
+- Do NOT narrate. No "let me run sidecoach", no play-by-play of what you're doing, no postamble explaining or summarizing the panel afterward. The panel IS the explanation - let it stand alone.
+- The `guidance`/`checklist`/`buildReport` drive YOUR OWN execution silently; never surface them to the user as prose.
+- The single monitor call itself still renders in the transcript (that is harness behavior, not yours to hide). But everything around it - narration, greps, extra commands, JSON dumps, summaries - is yours to suppress, and you must.
+
 **Before doing any design work**, run the Sidecoach engine and use its output as your implementation plan:
 
 ```bash
 node /Users/spare3/Documents/Github/improv/sidecoach/bin/sidecoach-monitor.js "/sidecoach <command> <target>"
 ```
 
-Parse the JSON result and act on it:
-- `panel: string` - the compact progress card (route -> flow -> checklist -> gates -> verdict/grade/findings). PRINT THIS VERBATIM to the user; it is the status surface. Do not rebuild it, wrap it in prose, or summarize it.
-- `guidance: string[]` - YOUR ordered steps to execute; they are instructions, not suggestions. Act on them; do NOT paste them to the user as a wall of text (the panel is what the user sees).
-- `checklist: object[]` - every item must pass before you report done; failures are blockers
-- `artifacts: object[]` - reference data (components, tokens, motion patterns); use verbatim, do not invent alternatives
-- `detectedFlow` - confirms which flow matched
+The monitor's **default output is the clean, low-noise panel** - what the user should see. Running it bare (no flag) prints that panel and nothing else; for `/sidecoach audit <url>` the panel is a final REPORT - the verdict, the findings grouped by category and rule, and the concrete priority fixes (full selector + metric). Surface that panel VERBATIM: do not rebuild it, wrap it in prose, or summarize it.
+
+For your OWN execution add `--json` to get the full machine-readable result. It carries the same rendered panel under `renderedPanel` (so you print it for the user from the SAME run - no re-render) plus the structured fields you act on:
+- `renderedPanel: string` - the clean panel; PRINT THIS VERBATIM to the user.
+- `guidance: string[]` - YOUR ordered steps to execute; act on them, do NOT paste them to the user as prose.
+- `checklist: object[]` - every item must pass before you report done; failures are blockers.
+- `buildReport` / `audit` - structured findings, per-lens outcomes, verdict, grade.
+- `artifacts: object[]` - reference data (components, tokens, motion patterns); use verbatim.
+- `detectedFlow` - confirms which flow matched.
 - For the lane path (`sidecoach_lane`), each `start` / `advance` result carries `.panel` too - print that snapshot after each op so progress shows live.
 
-**Template for every invocation** (surface the panel; keep guidance/checklist for your own execution):
+**Template for every invocation** (one run: print the panel for the user, act on the structured fields yourself):
 
 ```bash
-RESULT=$(node /Users/spare3/Documents/Github/improv/sidecoach/bin/sidecoach-monitor.js "$UTTERANCE")
+RESULT=$(node /Users/spare3/Documents/Github/improv/sidecoach/bin/sidecoach-monitor.js "$UTTERANCE" --json)
 echo "$RESULT" | node -e "
   const r = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
-  if (r.panel) console.log(r.panel);   // the card the user sees - print verbatim
-  // r.guidance / r.checklist drive YOUR work; do not paste them as prose.
+  if (r.renderedPanel) console.log(r.renderedPanel);   // the panel the user sees - print verbatim
+  // r.guidance / r.checklist / r.buildReport drive YOUR work; do not paste them as prose.
 "
 ```
 
@@ -141,6 +151,7 @@ Type `/sidecoach list` to see all commands organized by phase (phase commands pl
 
 These are not optional:
 
+0. **Diagnosing existing UI IS an audit (not a freeform read).** When asked to look at, review, diagnose, or critique an existing page or component ("what's wrong with this", "how does it look", "it feels off", "is the copy real or fluff"), run `/sidecoach audit <target>` (plus `/sidecoach critique <target>`) as the FIRST step, before forming an opinion. It does NOT require a pending build or change - the audit renders the page and runs the detection engine, catching objective and taste defects a human read misses. A freeform eyeball read is the opinion; the audit is the measurement. This is sidecoach's primary read path, not "upstream of" it.
 1. **Before any new feature:** run `/sidecoach teach <brief>` if no PRODUCT.md exists with real content. Pass whatever you know about the project in the brief; the handler parses what's there and asks targeted questions for the rest.
 2. **If DESIGN.md is missing and the project has CSS:** run `/sidecoach document` to scan the codebase and write a Google-spec DESIGN.md.
 3. **Before implementing:** run `/sidecoach shape <feature>` to get the design plan.
@@ -149,7 +160,7 @@ These are not optional:
 
 ## Using Output Correctly
 
-**panel (the progress surface - keep the run quiet):** `result.panel` (and the `.panel` on each `sidecoach_lane` start/advance result) is a pre-rendered compact card - route, flow chain, checklist, gates, verdict/grade/findings. PRINT IT VERBATIM. It is the only progress output the user needs. Do NOT also dump the verbose markdown Build Report, paste the guidance steps as prose, or narrate each flow as it runs - that mid-run verbosity is exactly what the panel replaces. Surface the panel, do the work quietly, surface the final panel. The detailed Build Report (in `artifacts`) stays available only if the user asks for findings detail.
+**panel (the progress surface - keep the run quiet):** the monitor's DEFAULT output is the clean rendered panel, and `--json` carries the same string as `renderedPanel` (plus `.panel` on each `sidecoach_lane` start/advance result). For audits it is a final report (verdict, findings grouped by category + rule, priority fixes); for other flows it is the route/flow/verdict card. PRINT IT VERBATIM. It is the only progress output the user needs. Do NOT also dump the verbose JSON or the markdown Build Report, paste the guidance steps as prose, or narrate each flow as it runs - that mid-run verbosity is exactly what the panel replaces. Surface the panel, do the work quietly, surface the final panel. The detailed findings (in `buildReport` / `audit`) stay available via `--json` only if the user asks for detail.
 
 **guidance:** Each item is a concrete, ordered step. Do not paraphrase, skip, or reorder. Execute them exactly - act on them, do not paste them at the user.
 

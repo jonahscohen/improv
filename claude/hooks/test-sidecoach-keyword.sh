@@ -320,7 +320,7 @@ assert_intent_fires() {
   local label="$1" prompt="$2"
   local cd; cd=$(mktemp -u /tmp/sc-cd-XXXXXX)
   local out; out=$(intent_out "$prompt" "$cd"); rm -f "$cd"
-  if echo "$out" | grep -q "sidecoach flow or mode"; then
+  if echo "$out" | grep -q "reads as front-end"; then
     echo "PASS: $label"; ((PASS++))
   else
     echo "FAIL: $label (expected intent nudge, got: $out)"; FAIL_LABELS+=("$label"); ((FAIL++))
@@ -391,7 +391,7 @@ echo "===== sidecoach-keyword: NUDGE cooldown mapping (v10) ====="
 # Cooldown INACTIVE (absent file) -> NUDGE_ELIGIBLE becomes a nudge.
 CDN=$(mktemp -u /tmp/sc-cd-XXXXXX)
 nudge_out=$(intent_out 'restyle the navbar' "$CDN")
-if echo "$nudge_out" | grep -qF 'sidecoach flow or mode'; then
+if echo "$nudge_out" | grep -qF 'reads as front-end'; then
   echo "PASS: navbar nudge fires when cooldown inactive"; ((PASS++))
 else
   echo "FAIL: navbar nudge fires when cooldown inactive (got: $nudge_out)"
@@ -408,6 +408,75 @@ else
   echo "FAIL: navbar nudge suppressed when cooldown active (got: $cool_out)"
   FAIL_LABELS+=("navbar nudge active"); ((FAIL++))
 fi
+
+# ---------------------------------------------------------------------------
+# DEPLOY-COMPLETENESS GUARD (regression for the 2026-06-26 dead-NL-tier bug).
+# The lane/intent tier silently died for ~13 days because sidecoach_lanes.py was
+# never deployed next to the live hook -> `import sidecoach_lanes` failed -> the
+# whole tier was skipped with NO signal, and unit tests stayed green because they
+# run against the repo copy (module present). These cases pin both halves of the fix:
+#   (1) a genuine broken deploy (module absent) must warn LOUD on stderr and degrade
+#       to verb-only (no nudge), not fail silently.
+#   (2) a healthy deploy must fire the diagnosis-aware nudge with NO stderr noise.
+# ---------------------------------------------------------------------------
+deploy_input=$(python3 -c 'import json; print(json.dumps({"prompt": "Something about the marketing homepage feels off. Take a look at the page and tell me what is wrong with it."}))')
+
+# (1) BROKEN deploy: a hook dir WITHOUT sidecoach_lanes.py
+broke_dir=$(mktemp -d)
+cp "$HOOK" "$broke_dir/"
+for j in sidecoach-verbs.json sidecoach-lanes.json sidecoach-intent.json; do
+  cp -L "$HOOK_DIR/$j" "$broke_dir/" 2>/dev/null
+done
+# (intentionally omit sidecoach_lanes.py to simulate the stale deploy)
+broke_cd=$(mktemp -u)
+broke_err=$(echo "$deploy_input" | SIDECOACH_INTENT_COOLDOWN_FILE="$broke_cd" bash "$broke_dir/sidecoach-keyword.sh" 2>&1 >/dev/null)
+broke_out=$(echo "$deploy_input" | SIDECOACH_INTENT_COOLDOWN_FILE="${broke_cd}.2" bash "$broke_dir/sidecoach-keyword.sh" 2>/dev/null)
+if echo "$broke_err" | grep -qF "sidecoach_lanes.py is NOT deployed"; then
+  echo "PASS: broken deploy warns LOUD (missing sidecoach_lanes.py)"; ((PASS++))
+else
+  echo "FAIL: broken deploy warns LOUD (got stderr: $broke_err)"; FAIL_LABELS+=("broken deploy loud"); ((FAIL++))
+fi
+if [ -z "$broke_out" ]; then
+  echo "PASS: broken deploy degrades to verb-only (no nudge)"; ((PASS++))
+else
+  echo "FAIL: broken deploy degrades to verb-only (got: $broke_out)"; FAIL_LABELS+=("broken deploy degrade"); ((FAIL++))
+fi
+rm -rf "$broke_dir" "$broke_cd" "${broke_cd}.2" 2>/dev/null
+
+# (1b) STRAY-COPY MASK (Codex P2): the sibling is absent next to the hook but IS
+# importable via PYTHONPATH. Python's sys.path search would import the stray copy
+# and the tier would "work", silently masking the incomplete deploy. The proactive
+# (import-independent) on-disk check must STILL warn here.
+stray_dir=$(mktemp -d)
+cp "$HOOK" "$stray_dir/"
+for j in sidecoach-verbs.json sidecoach-lanes.json sidecoach-intent.json; do
+  cp -L "$HOOK_DIR/$j" "$stray_dir/" 2>/dev/null
+done
+# (no sidecoach_lanes.py in stray_dir; PYTHONPATH exposes the repo copy)
+stray_cd=$(mktemp -u)
+stray_err=$(echo "$deploy_input" | PYTHONPATH="$HOOK_DIR" SIDECOACH_INTENT_COOLDOWN_FILE="$stray_cd" bash "$stray_dir/sidecoach-keyword.sh" 2>&1 >/dev/null)
+if echo "$stray_err" | grep -qF "sidecoach_lanes.py is NOT deployed"; then
+  echo "PASS: stray-copy deploy still warns (no silent mask via PYTHONPATH)"; ((PASS++))
+else
+  echo "FAIL: stray-copy deploy still warns (got stderr: $stray_err)"; FAIL_LABELS+=("stray copy mask"); ((FAIL++))
+fi
+rm -rf "$stray_dir" "$stray_cd" 2>/dev/null
+
+# (2) HEALTHY deploy: the real repo hook dir (module present)
+healthy_cd=$(mktemp -u)
+healthy_err=$(echo "$deploy_input" | SIDECOACH_INTENT_COOLDOWN_FILE="$healthy_cd" bash "$HOOK" 2>&1 >/dev/null)
+healthy_out=$(echo "$deploy_input" | SIDECOACH_INTENT_COOLDOWN_FILE="${healthy_cd}.2" bash "$HOOK" 2>/dev/null)
+if echo "$healthy_out" | grep -qF "/sidecoach audit" && echo "$healthy_out" | grep -qF "DIAGNOSE"; then
+  echo "PASS: healthy deploy fires diagnosis-aware nudge"; ((PASS++))
+else
+  echo "FAIL: healthy deploy fires diagnosis-aware nudge (got: $healthy_out)"; FAIL_LABELS+=("healthy nudge framing"); ((FAIL++))
+fi
+if [ -n "$healthy_err" ]; then
+  echo "FAIL: healthy deploy must emit NO stderr noise (got stderr: $healthy_err)"; FAIL_LABELS+=("healthy no-noise"); ((FAIL++))
+else
+  echo "PASS: healthy deploy emits no stderr noise"; ((PASS++))
+fi
+rm -f "$healthy_cd" "${healthy_cd}.2" 2>/dev/null
 
 echo ""
 echo "============================================================"
