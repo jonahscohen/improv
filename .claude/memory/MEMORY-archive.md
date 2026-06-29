@@ -922,3 +922,9 @@
 
 <!-- archived 2026-06-27 (moved from MEMORY.md to stay under load budget) -->
 - [Marketing homepage THIRD "feels off" ask - page byte-unchanged since Jun 22, surfaced standing diagnosis instead of re-deriving, asked Jonah to fix or explain re-asks - PROJECT (2026-06-27)](session_2026-06-27_marketing-homepage-third-ask.md)
+
+<!-- archived 2026-06-29 (moved from MEMORY.md to stay under load budget) -->
+- [Quiet invocation: skill rule (2026-06-27)](session_2026-06-27_quiet-invocation-skill-rule.md): added QUIET INVOCATION rule atop "Invoking the Engine" (one command, panel-only verbatim, no narratio…
+- [Presentation by surface: visualizer in desktop/web, panel in terminal (2026-06-27)](session_2026-06-27_presentation-by-surface.md): built claude-surface.sh SessionStart hook (detects surface via C…
+- [Visual presentation 3-layer enforcement (2026-06-27)](session_2026-06-27_visual-presentation-three-layer-enforcement.md): moved past once-per-session nudge - SessionStart full directive + UserProm…
+- [Sidecoach NESTED-CARDS PRECISION MISS - milestone failed precision (1.00 dev -> 0.267 eval); root cause = dev had only 2 negatives so precision was statistically unestimable (held-out's 83 negatives exposed the true ~13% FP); LEAD GATE-MISS owned (accepted precision-on-2-negatives as a win without flagging sample size); NEW gate criterion = precision needs >=~10 negatives (dev/synthetic); defer nested-cards for a negative top-up + tighten, build precision-developable classes next (icon-tile-stack 11neg, repeated-kickers 14, hero-eyebrow 13) - DECISION (2026-06-24)](session_2026-06-24_sidecoach-nested-cards-precision-miss.md)
