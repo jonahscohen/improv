@@ -42,10 +42,14 @@ code. Search's only codes are 0, 1, 2, and 4.
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 import sqlite3
+import struct
 import sys
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -55,7 +59,7 @@ REPO_ROOT = BEATS_DIR.parent
 DEFAULT_CORPUS = REPO_ROOT / ".claude" / "memory"
 DEFAULT_BUILD = BEATS_DIR / ".build"
 
-TOOL_VERSION = 1
+TOOL_VERSION = 2
 
 # Fields lifted into their own columns; everything else in frontmatter is
 # preserved verbatim in `extra`.
@@ -246,8 +250,15 @@ def spot_term(records):
     return None
 
 
-def build_db(tmp_db, records, chash, compiled_at, inject_fault):
-    """Create the SQLite artifact at tmp_db. Raises sqlite3.Error on failure."""
+def build_db(tmp_db, records, chash, compiled_at, inject_fault,
+             vectors=None, embed_model="", embed_dim=0):
+    """Create the SQLite artifact at tmp_db. Raises sqlite3.Error on failure.
+
+    `vectors` (filename -> unit list[float]) is optional: when present every
+    record must have an entry (compile guarantees this before calling), and the
+    rows land in beats_vec as float32 BLOBs. meta records embed_model/embed_dim
+    and vectors_present so search and verify know whether the hybrid path is
+    available."""
     if tmp_db.exists():
         tmp_db.unlink()
     con = sqlite3.connect(str(tmp_db))
@@ -275,11 +286,21 @@ def build_db(tmp_db, records, chash, compiled_at, inject_fault):
             "tokenize='porter unicode61')"
         )
         con.execute("""
+            CREATE TABLE beats_vec (
+                filename TEXT PRIMARY KEY,
+                dim INTEGER,
+                vec BLOB
+            )
+        """)
+        con.execute("""
             CREATE TABLE meta (
                 corpus_hash TEXT,
                 compiled_at TEXT,
                 file_count INTEGER,
-                tool_version INTEGER
+                tool_version INTEGER,
+                embed_model TEXT,
+                embed_dim INTEGER,
+                vectors_present INTEGER
             )
         """)
         beat_rows = [(
@@ -298,9 +319,22 @@ def build_db(tmp_db, records, chash, compiled_at, inject_fault):
             "INSERT INTO beats_fts (filename, name, description, body) VALUES (?,?,?,?)",
             fts_rows,
         )
+        vectors_present = 1 if vectors else 0
+        if vectors:
+            vec_rows = [
+                (r["filename"], embed_dim,
+                 struct.pack(f"<{embed_dim}f", *vectors[r["filename"]]))
+                for r in records
+            ]
+            con.executemany(
+                "INSERT INTO beats_vec (filename, dim, vec) VALUES (?,?,?)", vec_rows
+            )
         con.execute(
-            "INSERT INTO meta VALUES (?,?,?,?)",
-            (chash, compiled_at, len(records), TOOL_VERSION),
+            "INSERT INTO meta VALUES (?,?,?,?,?,?,?)",
+            (chash, compiled_at, len(records), TOOL_VERSION,
+             embed_model if vectors_present else "",
+             embed_dim if vectors_present else 0,
+             vectors_present),
         )
         con.commit()
         integrity = con.execute("PRAGMA integrity_check").fetchone()[0]
@@ -388,6 +422,35 @@ def self_verify(corpus, tmp_jsonl, tmp_db, records, chash):
             ).fetchone()[0]
             if hits < 1:
                 errors.append(f"fts sanity: term {term!r} matched 0 rows")
+
+        # (e) vector parity: when vectors are enabled, EVERY beat must have EXACTLY
+        # one vector of the declared dimension. Checks filenames (not just count),
+        # dim == meta.embed_dim, and blob byte-length == dim*4 (float32). Any
+        # mismatch is a parity failure (exit 5), never a silently-degraded index.
+        meta_vec = con.execute(
+            "SELECT vectors_present, embed_dim FROM meta"
+        ).fetchone()
+        if meta_vec and meta_vec[0]:
+            embed_dim = meta_vec[1]
+            beat_names = {r["filename"] for r in records}
+            vec_names = set()
+            for filename, dim, blob in con.execute(
+                "SELECT filename, dim, vec FROM beats_vec"
+            ).fetchall():
+                vec_names.add(filename)
+                if dim != embed_dim:
+                    errors.append(
+                        f"vector parity: {filename} dim {dim} != meta.embed_dim {embed_dim}")
+                elif len(blob) != embed_dim * 4:
+                    errors.append(
+                        f"vector parity: {filename} blob {len(blob)} bytes != {embed_dim * 4} "
+                        f"(dim {embed_dim} float32)")
+            if vec_names != beat_names:
+                missing = sorted(beat_names - vec_names)[:5]
+                extra = sorted(vec_names - beat_names)[:5]
+                errors.append(
+                    f"vector parity: beats_vec filenames != beats "
+                    f"(missing {missing}, extra {extra})")
     finally:
         con.close()
     return errors
@@ -449,10 +512,42 @@ def cmd_compile(corpus, build, inject_fault):
         eprint(f"ARTIFACT/DB FAILURE: cannot write jsonl artifact: {exc}")
         return 4
 
+    # Embed the corpus (stage 3b). FAIL-SOFT: if the embedder is unreachable the
+    # compile still succeeds lexical-only, emitting a single loud VECTORS ABSENT
+    # line and vectors_present=0 - never a silent degradation. Vectors are
+    # all-or-nothing: self_verify enforces "vectors present => every beat has
+    # one", so a single failed embed drops the whole vector set (still exit 0).
+    vectors = None
+    embed_dim = 0
+    if records:
+        probe = embed_text("beats embedder availability probe")
+        if probe is None:
+            eprint(f"VECTORS ABSENT: embedder unreachable "
+                   f"({embed_text.last_error or 'no response'}); compiling lexical-only "
+                   f"(model {EMBED_MODEL} at {OLLAMA_URL})")
+        else:
+            embed_dim = len(probe)
+            vecs = {}
+            failed = None
+            for rec in records:
+                v = embed_text(build_embed_text(rec["name"], rec["description"], rec["body"]))
+                if v is None or len(v) != embed_dim:
+                    failed = rec["filename"]
+                    break
+                vecs[rec["filename"]] = v
+            if failed is not None:
+                eprint(f"VECTORS ABSENT: embedding failed at {failed} "
+                       f"({embed_text.last_error or 'dimension mismatch'}); "
+                       "compiling lexical-only")
+                embed_dim = 0
+            else:
+                vectors = vecs
+
     # Write the SQLite artifact (temp, atomic-rename later).
     try:
-        build_db(tmp_db, records, chash, compiled_at, inject_fault)
-    except sqlite3.Error as exc:
+        build_db(tmp_db, records, chash, compiled_at, inject_fault,
+                 vectors=vectors, embed_model=EMBED_MODEL, embed_dim=embed_dim)
+    except (sqlite3.Error, struct.error) as exc:
         cleanup_temps()
         eprint(f"ARTIFACT/DB FAILURE: cannot build SQLite artifact: {exc}")
         return 4
@@ -480,10 +575,12 @@ def cmd_compile(corpus, build, inject_fault):
         eprint(f"ARTIFACT/DB FAILURE: cannot install artifacts: {exc}")
         return 4
 
+    vec_note = (f"{len(records)} vectors ({EMBED_MODEL} dim {embed_dim})"
+                if vectors else "no vectors (lexical-only)")
     print(
         f"OK: compiled {len(records)} beats "
         f"({no_frontmatter} no-frontmatter, {stale_count} stale) "
-        f"-> {final_jsonl}, {final_db} | corpus_hash {chash[:12]}"
+        f"-> {final_jsonl}, {final_db} | {vec_note} | corpus_hash {chash[:12]}"
     )
     return 0
 
@@ -511,6 +608,7 @@ def cmd_verify(corpus, build):
                 raise sqlite3.DatabaseError(
                     f"integrity_check returned {integrity[0] if integrity else 'no result'!r}"
                 )
+            # Base meta read works on any schema (stage 3a or 3b).
             meta = con.execute(
                 "SELECT corpus_hash, file_count FROM meta"
             ).fetchone()
@@ -524,6 +622,27 @@ def cmd_verify(corpus, build):
                 raise sqlite3.DatabaseError(
                     f"beats_fts row count {fts_count} != beats row count {len(db_rows)}"
                 )
+            # Same logic for the vector table, read DEFENSIVELY (an old stage-3a
+            # db has no vectors_present column -> treated as no-vectors, verifies
+            # normally). When vectors are present, beats_vec must match beats
+            # exactly by FILENAME (not just count); a desync silently disables
+            # hybrid search, so it is a broken artifact (exit 4).
+            try:
+                vp_row = con.execute("SELECT vectors_present FROM meta").fetchone()
+                vectors_present = bool(vp_row and vp_row[0])
+            except sqlite3.OperationalError:
+                vectors_present = False
+            if vectors_present:
+                vec_names = {
+                    r[0] for r in con.execute("SELECT filename FROM beats_vec").fetchall()
+                }
+                beat_names = {r[0] for r in db_rows}
+                if vec_names != beat_names:
+                    raise sqlite3.DatabaseError(
+                        f"beats_vec desynced with beats by filename "
+                        f"(vec {len(vec_names)} rows, beats {len(beat_names)} rows) "
+                        "(vectors_present=1)"
+                    )
             # db-internal consistency: the beats table must match the meta row's
             # own file_count. Otherwise an emptied beats+beats_fts (0/0) with an
             # intact meta would slip past the count check and, because the disk
@@ -543,7 +662,7 @@ def cmd_verify(corpus, build):
         eprint("ARTIFACT/DB FAILURE: meta row missing from db")
         return 4
 
-    stored_hash, stored_count = meta
+    stored_hash, stored_count = meta[0], meta[1]
 
     md_files = sorted(corpus.glob("*.md"), key=lambda p: p.name)
     disk = {}
@@ -638,6 +757,97 @@ RESOLVE_DEPTH_CAP = 10
 # heads; index files are excluded. Both knobs are global - no per-case tuning.
 EXPAND_FROM = 10
 EXPAND_DAMPING = 0.5
+
+# --- embeddings (stage 3b): local ollama-served model, stdlib urllib only -----
+# The embedder is a LOCAL ollama HTTP endpoint - one-time model download, offline
+# thereafter, zero per-query cost, and beats.py stays pip-free (no torch/numpy).
+# Everything below is a GLOBAL knob; the embedded-text construction is uniform
+# across every beat. qwen3-embedding:0.6b is the pick (newest strong small
+# embedding model ollama serves, 1024-dim, clean semantic separation on a probe).
+OLLAMA_URL = os.environ.get("BEATS_OLLAMA_URL", "http://localhost:11434")
+EMBED_MODEL = os.environ.get("BEATS_EMBED_MODEL", "qwen3-embedding:0.6b")
+EMBED_TIMEOUT = 60          # seconds per embedding HTTP call
+EMBED_TEXT_CHARS = 4000     # uniform truncation of name+description+body (~1k tokens)
+STUB_EMBED_DIM = 64         # deterministic test-only stub dimensionality
+
+# Hybrid retrieval knobs (global). Reciprocal Rank Fusion with the standard
+# k=60 over the lexical and vector candidate lists, each capped at CAND_K. A
+# candidate depth of 100 (out of ~860 beats) is the honest operating point: it
+# is deep enough to admit a complementary beat that only one modality ranks
+# highly, without diluting RRF's rank signal (swept globally; 100 was the best
+# principled depth, deeper plateaus).
+RRF_K = 60
+CAND_K = 100
+
+# Test-only deterministic embedder, gated by BEATS_EMBED_STUB (documented, like
+# --inject-parity-fault). Lets the suites run without ollama. A hashed
+# bag-of-tokens unit vector: same text -> same vector, token overlap -> higher
+# cosine, so fixtures can exercise the vector/RRF path deterministically.
+def _stub_embed(text):
+    vec = [0.0] * STUB_EMBED_DIM
+    for tok in QUERY_TOKEN_RE.findall((text or "").lower()):
+        vec[int(hashlib.sha1(tok.encode("utf-8")).hexdigest(), 16) % STUB_EMBED_DIM] += 1.0
+    return _l2_normalize(vec)
+
+
+def _l2_normalize(vec):
+    norm = math.sqrt(sum(x * x for x in vec))
+    if norm == 0.0:
+        return vec
+    return [x / norm for x in vec]
+
+
+def embed_text(text):
+    """Return a unit-normalized embedding (list[float]) for `text`, or None.
+
+    FAIL-SOFT: any transport/HTTP/parse problem returns None so callers degrade
+    to lexical-only with a loud warning - an embedder outage never crashes a
+    compile or a search. BEATS_EMBED_STUB swaps in the deterministic test stub.
+    """
+    if os.environ.get("BEATS_EMBED_STUB"):
+        return _stub_embed(text)
+    try:
+        req = urllib.request.Request(
+            f"{OLLAMA_URL}/api/embeddings",
+            data=json.dumps({"model": EMBED_MODEL, "prompt": text}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=EMBED_TIMEOUT) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        embed_text.last_error = str(exc)
+        return None
+    if not isinstance(payload, dict):
+        embed_text.last_error = "embedder returned non-object JSON"
+        return None
+    vec = payload.get("embedding")
+    if not isinstance(vec, list) or not vec:
+        embed_text.last_error = "embedder returned no embedding field"
+        return None
+    try:
+        return _l2_normalize([float(x) for x in vec])
+    except (TypeError, ValueError):
+        embed_text.last_error = "embedding contained non-numeric values"
+        return None
+
+
+embed_text.last_error = ""
+
+
+def build_embed_text(name, description, body):
+    """Uniform embedded-text construction for every beat: name + description +
+    body, truncated to a global character cap. Identical for corpus beats (at
+    compile) and would be identical for any future re-embed - never per-beat."""
+    return f"{name}\n{description}\n{body}"[:EMBED_TEXT_CHARS]
+
+
+def cosine_unit(query_vec, other_vec):
+    """Dot product of two vectors. Inputs are L2-normalized unit vectors (stored
+    and query embeddings are normalized on creation), so the dot product IS the
+    cosine similarity. Length mismatch (e.g. a model change) yields 0.0."""
+    if len(query_vec) != len(other_vec):
+        return 0.0
+    return sum(a * b for a, b in zip(query_vec, other_vec))
 
 
 def sanitize_query(raw):
@@ -796,6 +1006,7 @@ def cmd_search(corpus, build, query, top, as_json):
                 raise sqlite3.DatabaseError(
                     f"integrity_check returned "
                     f"{integrity[0] if integrity else 'no result'!r}")
+            # Base meta read works on any schema (stage 3a or 3b).
             meta = con.execute(
                 "SELECT corpus_hash, file_count FROM meta"
             ).fetchone()
@@ -810,6 +1021,43 @@ def cmd_search(corpus, build, query, top, as_json):
             if meta is not None and len(rows) != meta[1]:
                 raise sqlite3.DatabaseError(
                     f"beats row count {len(rows)} != meta.file_count {meta[1]}")
+            # Vector availability is read DEFENSIVELY so an old stage-3a db (no
+            # vectors_present/embed_dim columns) degrades to lexical-only rather
+            # than exiting 4 - matches the "missing-vectors db -> lexical-only"
+            # contract. When vectors are present the set must be complete AND
+            # its filenames must match beats exactly (a wrong-filename or short
+            # beats_vec is a broken artifact, exit 4).
+            vec_rows = []
+            vectors_present = False
+            index_dim = 0
+            try:
+                vp_row = con.execute(
+                    "SELECT vectors_present, embed_dim FROM meta"
+                ).fetchone()
+                if vp_row and vp_row[0]:
+                    dim_val = vp_row[1]
+                    # A usable hybrid index needs a STRICT positive integer
+                    # dimension. No int() coercion: a REAL/TEXT/None/0/negative
+                    # embed_dim means unusable vectors, so degrade to lexical-only
+                    # rather than fuse meaningless rows (and never risk an
+                    # OverflowError from int(inf)).
+                    if isinstance(dim_val, int) and not isinstance(dim_val, bool) and dim_val > 0:
+                        index_dim = dim_val
+                        vectors_present = True
+            except sqlite3.OperationalError:
+                # stage-3a schema: no vectors_present/embed_dim columns.
+                vectors_present = False
+                index_dim = 0
+            if vectors_present:
+                vec_rows = con.execute(
+                    "SELECT filename, dim, vec FROM beats_vec"
+                ).fetchall()
+                vec_names = {vr[0] for vr in vec_rows}
+                beat_names = {r[0] for r in rows}
+                if len(vec_rows) != len(rows) or vec_names != beat_names:
+                    raise sqlite3.DatabaseError(
+                        f"beats_vec desynced with beats (vec {len(vec_rows)} rows, "
+                        f"beats {len(rows)} rows; filenames match={vec_names == beat_names})")
         except sqlite3.Error as exc:
             eprint(f"ARTIFACT/DB FAILURE: db unreadable or malformed: {exc}")
             return 4
@@ -859,39 +1107,122 @@ def cmd_search(corpus, build, query, top, as_json):
     finally:
         con.close()
 
+    # --- Reciprocal Rank Fusion (stage 3b) -----------------------------------
+    # Vector candidates FIRST (FAIL-SOFT), because whether the vector side is
+    # active decides the lexical candidate DEPTH below. If the db carries vectors
+    # AND the query embeds, cosine over the stored unit vectors gives a second
+    # ranked list; otherwise a loud one-line warning and lexical-only (still exit
+    # 0, distinct from a broken db which already returned 4 above).
+    vector_rank = {}
+    mode = "lexical"
+    if vectors_present:
+        qvec = embed_text(query)
+        if qvec is None:
+            eprint("VECTORS ABSENT: embedder unreachable "
+                   f"({embed_text.last_error or 'no response'}); this query is lexical-only.")
+        elif index_dim and len(qvec) != index_dim:
+            # A query embedding of a different width than the stored vectors means
+            # the query model does not match the compile model. Cosine would be
+            # meaningless (0.0 for every row); fall back loudly rather than fusing
+            # arbitrary vector candidates.
+            eprint(f"VECTORS ABSENT: query embedding dim {len(qvec)} != index dim "
+                   f"{index_dim} (embedder model mismatch); this query is lexical-only.")
+        else:
+            sims = []
+            corrupt = False
+            for filename, dim, blob in vec_rows:
+                # Skip phantom rows (a vector whose filename is not a real beat)
+                # and derived indexes; a real beat's vector only.
+                if filename in INDEX_FILES or filename not in existing:
+                    continue
+                # Every stored row must match the index dimension exactly: a row
+                # with a wrong dim or a short/NULL/TEXT blob is corrupt. Trusting
+                # the per-row dim would let a dim=1/4-byte row unpack "fine" and
+                # silently pollute the ranking with a length-mismatched cosine.
+                if (dim != index_dim
+                        or not isinstance(blob, (bytes, bytearray))
+                        or len(blob) != index_dim * 4):
+                    corrupt = True
+                    break
+                try:
+                    bvec = struct.unpack(f"<{index_dim}f", blob)
+                except (struct.error, TypeError):
+                    corrupt = True
+                    break
+                sims.append((filename, cosine_unit(qvec, bvec)))
+            if corrupt:
+                # A malformed stored vector is a corrupt artifact; abandon the
+                # whole vector side loudly rather than silently ranking a partial
+                # set as "hybrid" (vector_rank stays empty, mode stays lexical).
+                eprint("VECTORS ABSENT: corrupt stored vector (blob unpack failed); "
+                       "this query is lexical-only.")
+            else:
+                sims.sort(key=lambda t: (-t[1], t[0]))
+                for i, (filename, _sim) in enumerate(sims[:CAND_K], start=1):
+                    vector_rank[filename] = i
+                mode = "hybrid"
+    else:
+        eprint("VECTORS ABSENT: compiled index has no vectors "
+               "(compile with the embedder available); this search is lexical-only.")
+
+    # Build the candidate score map (higher = better for the pipeline below).
+    if mode == "hybrid":
+        # Reciprocal Rank Fusion of the CAND_K-capped lexical and vector lists:
+        # RRF score 1/(RRF_K + rank), summed across the two lists. Index files are
+        # already excluded by the FTS query.
+        lexical_rank = {}
+        for i, (filename, _score) in enumerate(hits[:CAND_K], start=1):
+            lexical_rank[filename] = i
+        fused = {}
+        for filename, r in lexical_rank.items():
+            fused[filename] = fused.get(filename, 0.0) + 1.0 / (RRF_K + r)
+        for filename, r in vector_rank.items():
+            fused[filename] = fused.get(filename, 0.0) + 1.0 / (RRF_K + r)
+    else:
+        # Lexical-only / degraded: score = -bm25 over the FULL hits stream. This
+        # is EXACTLY the stage-3a pipeline: the pipeline below (max-per-head,
+        # blended = score*EXPAND_DAMPING, descending sort) over -bm25 reproduces
+        # 3a's bm25-ascending ordering for BOTH direct hits AND damped expansion
+        # neighbors, because it is a consistent negation of 3a's whole bm25 path.
+        # (Single-list RRF would preserve direct-hit order but NOT the direct-vs-
+        # neighbor gap.) No CAND_K cap, so broad queries, --top > CAND_K, and heavy
+        # supersession collapse all match pre-3b.
+        fused = {filename: -score for filename, score in hits}
+
     head_of, head_neighbors = build_graph(rows_relates, sup_map, existing)
 
-    # Phase 1 - direct hits: resolve every FTS hit to its chain head, keeping the
-    # best (most negative) bm25 score per head. Hits arrive best-first, so the
-    # first sighting of a head is its best rank. Never surface a derived index.
+    # Phase 1 - direct hits: resolve every fused candidate to its chain head,
+    # keeping the best (highest) fused score per head. Iterate best-first so the
+    # first sighting of a head is its best position. Never surface a derived index.
+    fused_sorted = sorted(fused.items(), key=lambda kv: (-kv[1], kv[0]))
     direct = {}
     order = []
-    for filename, score in hits:
+    for filename, score in fused_sorted:
         head = head_of.get(filename, filename)
         if head in INDEX_FILES:
             continue
         if head not in direct:
             direct[head] = score
             order.append(head)
-        elif score < direct[head]:
+        elif score > direct[head]:
             direct[head] = score
 
     # Phase 2 - bidirectional relates_to graph expansion: the top EXPAND_FROM
     # direct hits pull in their neighbor heads at EXPAND_DAMPING of their own
-    # relevance (bm25 is negative, so the neighbor ranks below its citing hit).
-    # A neighbor keeps its best contribution across all citing hits; a beat that
-    # is both a direct hit and a neighbor keeps whichever score is better.
+    # relevance (fused scores are positive, so a damped neighbor ranks below its
+    # citing hit). A neighbor keeps its best contribution across citing hits; a
+    # beat that is both a direct hit and a neighbor keeps whichever is better.
     combined = dict(direct)
     for head in order[:EXPAND_FROM]:
         blended = direct[head] * EXPAND_DAMPING
         for neighbor in head_neighbors.get(head, ()):
             if neighbor in INDEX_FILES:
                 continue
-            if neighbor not in combined or blended < combined[neighbor]:
+            if neighbor not in combined or blended > combined[neighbor]:
                 combined[neighbor] = blended
 
-    # Strict ranking: (score asc, filename asc), truncated to `top`.
-    ranked = sorted(combined.items(), key=lambda kv: (kv[1], kv[0]))[:top]
+    # Strict ranking: (score desc, filename asc), truncated to `top`.
+    ranked = sorted(combined.items(), key=lambda kv: (-kv[1], kv[0]))[:top]
     results = []
     for rank, (head, score) in enumerate(ranked, start=1):
         name, description = info.get(head, ("", ""))

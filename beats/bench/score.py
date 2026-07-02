@@ -98,18 +98,21 @@ def ensure_fresh(beats_path, common):
 
 
 def score_query(beats_path, phrasing, top_n, common):
-    """Run one query through the public CLI. Returns (results, error). On any
-    failure `results` is None and `error` is a printable string. `common` (the
-    benchmark-derived --corpus) precedes `--`; `--` then guards a phrasing that
-    starts with '-' from being parsed as an option."""
+    """Run one query through the public CLI. Returns (results, error, lexical).
+    On any failure `results` is None and `error` is a printable string. `lexical`
+    is True when the engine fell back to lexical-only for this query (it printed
+    a VECTORS ABSENT warning), so the scorer can report the run's mode. `common`
+    (the benchmark-derived --corpus) precedes `--`; `--` then guards a phrasing
+    that starts with '-' from being parsed as an option."""
     r = run([sys.executable, str(beats_path), "search", "--json",
              "--top", str(top_n), *common, "--", phrasing])
+    lexical = "VECTORS ABSENT" in (r.stderr or "")
     if r.returncode != 0:
-        return None, f"search exited {r.returncode}: {tail(r.stderr)}"
+        return None, f"search exited {r.returncode}: {tail(r.stderr)}", lexical
     try:
-        return json.loads(r.stdout), None
+        return json.loads(r.stdout), None, lexical
     except json.JSONDecodeError as exc:
-        return None, f"search JSON parse failed: {exc}: {tail(r.stdout, 400)}"
+        return None, f"search JSON parse failed: {exc}: {tail(r.stdout, 400)}", lexical
 
 
 def main():
@@ -198,6 +201,7 @@ def main():
 
     total = 0
     hits = 0
+    lexical_queries = 0
     topic_total = defaultdict(int)
     topic_hits = defaultdict(int)
     lines = []
@@ -215,7 +219,9 @@ def main():
             total += 1
             topic_total[topic] += 1
 
-            results, error = score_query(beats_path, phrasing, top_n, common)
+            results, error, lexical = score_query(beats_path, phrasing, top_n, common)
+            if lexical:
+                lexical_queries += 1
             if results is None:
                 eprint(f"ENGINE BROKEN: {cid}[{idx}] {phrasing!r}: {error}")
                 return 4
@@ -304,7 +310,17 @@ def main():
         print(line)
 
     rate = hits / total if total else 0.0
+    if lexical_queries == 0:
+        mode = "hybrid (lexical + vector RRF)"
+    elif lexical_queries == total:
+        mode = "lexical-only (no vectors / embedder unreachable)"
+    else:
+        mode = f"DEGRADED - {lexical_queries}/{total} queries fell back to lexical-only"
     print()
+    print(f"MODE: {mode}")
+    if lexical_queries:
+        print("NOTE: the 90% gate is only meaningful in full hybrid mode; "
+              "vectors were missing for at least one query above.")
     print(f"SCORE: {hits}/{total} queries hit = {rate:.4f} (bar {pass_rate})")
     print("per-topic:")
     for topic in sorted(topic_total):

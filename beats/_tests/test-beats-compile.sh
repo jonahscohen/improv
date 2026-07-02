@@ -5,6 +5,11 @@
 # if any case fails.
 set -u
 
+# Stage 3b: use the deterministic stub embedder so every compile here embeds
+# vectors WITHOUT a running ollama (hermetic + fast; a real 863-beat embed would
+# otherwise take minutes). Existing exit-code checks are vector-agnostic.
+export BEATS_EMBED_STUB=1
+
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BEATS_PY="$HERE/../beats.py"
 REPO_ROOT="$(cd "$HERE/../.." && pwd)"
@@ -134,6 +139,14 @@ if [ -n "$SQLITE" ]; then
     pass "case1 exactly one is_stale row"
   else
     failcase "case1 is_stale count expected 1 got $stale"
+  fi
+  # Stage 3b: the stub embedder means vectors are present and complete.
+  vp="$("$SQLITE" "$c1_build/beats.db" "SELECT vectors_present FROM meta;")"
+  vcnt="$("$SQLITE" "$c1_build/beats.db" "SELECT COUNT(*) FROM beats_vec;")"
+  if [ "$vp" = "1" ] && [ "$vcnt" = "6" ]; then
+    pass "case1 vectors_present=1 with a complete beats_vec (6 rows)"
+  else
+    failcase "case1 vector parity wrong: vectors_present=$vp beats_vec=$vcnt"
   fi
 else
   failcase "case1 sqlite3 not on PATH - cannot verify db"
