@@ -36,6 +36,15 @@ Lead-verified: suites 27/27 + 25/25 green, scorer reproduces 79.2% (exit 1 under
 
 Stage 3 ships as the honest under-bar operating point (commit 48c27f90); the >=90% verify clause is NOT met, cutover stays blocked. The close-the-gap decision (local embeddings / API embeddings / defer-and-proceed) goes to Jonah per the dispatch contract.
 
+## Stage 3b: Jonah chose LOCAL EMBEDDINGS (decision + dispatch, 2026-07-02)
+Options presented (AskUserQuestion): local embeddings (recommended) / API embeddings / defer-to-stages-4-5. **Jonah picked local embeddings.** Environment probe found the machine bare (no ollama, no torch/numpy, python 3.14 - torch wheel availability is a trap), which drove the design: ollama-served embedding model (brew install; evaluate qwen3-embedding + embeddinggemma first per the bleeding-edge rule, nomic-embed-text as fallback), all calls via local HTTP with stdlib urllib (beats.py stays pip-free), vectors float32-packed in a new beats_vec table inside the same atomic SQLite artifact (parity extends: vec count == beats count, exit 5), pure-python cosine (no numpy - ~0.7M multiply-adds total at this corpus size), RRF fusion (global k) over lexical+vector candidates BEFORE the unchanged resolution/expansion pipeline. Fail-soft both ends with LOUD warnings (compile lexical-only "VECTORS ABSENT", search lexical-only fallback), never silent. Stub embedder for suites, real-model smoke gated on availability. Dispatched to the searcher (unit extended); same anti-gaming rules, honest re-measure, STOP if still under 90%.
+
+## 3a closure + lead-side hygiene hardening (2026-07-02)
+Searcher's Codex gate CLOSED after 4 rounds (R3: 3 mediums folded - bigrams from the pre-dedupe token stream, scorer rejects N>top_n result pages, scorer derives --corpus from the benchmark's own corpus field exactly as validate.py does; R4 confirmation CLEAN). Verified the tree was already at the fully-folded state when 4b804747 was committed and lead-certified (git diff clean under beats/ afterward). The searcher's honest no-gaming discipline held through both iterations.
+Escalated item closed LEAD-side (validate.py is spec territory): corpus supersession hygiene is now enforced by validate.py - a dangling superseded_by target or a supersession cycle is an ERROR, because search resolves chains at query time and the scorer's stale-leak assertion assumes every chain reaches an existing unmarked head. Verified: real corpus clean (73 marked-stale, 0 hygiene errors), synthetic dangling and cycle corpora both exit 1 loudly, clean-chain control exits 0.
+
 ## Files touched
 - .claude/memory/session_2026-07-02_beats-stage3-search.md (this beat)
 - .claude/memory/MEMORY.md (index pointer)
+- beats/bench/validate.py (supersession hygiene: dangling/cycle = error)
+- beats/bench/README.md (hygiene rule documented)

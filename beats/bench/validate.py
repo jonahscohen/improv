@@ -155,10 +155,40 @@ def main() -> int:
     # Corpus-wide frontmatter scan: the global_stale_rule is enforced from
     # this derived set, so every corpus beat must be readable and parseable.
     marked_stale = {}
+    corpus_names = set()
     for beat in sorted(corpus.glob("*.md")):
+        corpus_names.add(beat.name)
         superseder = read_superseded_by(beat, report, "corpus-scan")
         if superseder:
             marked_stale[beat.name] = superseder
+
+    # Corpus supersession hygiene: search resolves superseded_by chains at
+    # query time and the scorer's stale-leak assertion assumes every chain
+    # reaches an existing, unmarked head. A dangling target or a cycle would
+    # make a stale beat its own resolution target, so both are corpus ERRORS
+    # (escalated from the 2026-07-02 stage-3 Codex reviews).
+    for name, target in sorted(marked_stale.items()):
+        if target not in corpus_names:
+            report.error(
+                f"corpus-hygiene: {name} has superseded_by pointing at "
+                f"nonexistent beat {target}"
+            )
+    reported_cycles = set()
+    for name in sorted(marked_stale):
+        chain = [name]
+        cur = name
+        while cur in marked_stale and marked_stale[cur] in corpus_names:
+            cur = marked_stale[cur]
+            if cur in chain:
+                cycle = frozenset(chain[chain.index(cur):] + [cur])
+                if cycle not in reported_cycles:
+                    reported_cycles.add(cycle)
+                    report.error(
+                        "corpus-hygiene: superseded_by cycle: "
+                        + " -> ".join(chain[chain.index(cur):] + [cur])
+                    )
+                break
+            chain.append(cur)
 
     cases = bench.get("cases")
     if not isinstance(cases, list):

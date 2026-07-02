@@ -23,7 +23,7 @@ Passing the bar here is NECESSARY but NOT SUFFICIENT to retire the read-everythi
 
 1. **Add, never bend.** If a retrieval run misses a case, fix the retrieval, not the case. A case may only be edited if its mapping is factually wrong (a beat was superseded after authoring), and the edit must be recorded in a session beat.
 2. **Every parallel-run miss becomes a new case.** No exceptions - that is where held-out coverage comes from.
-3. **Validate before commit.** `python3 validate.py` must exit 0. It checks schema and types, path safety, that every referenced beat exists, that no `answers` entry is itself superseded, that answers/stale sets do not overlap, that `mode: all` cases fit within top_n, that unmarked-stale traps are explicitly declared (`unmarked_stale_ok`), and it scans the ENTIRE corpus frontmatter (every beat must be readable; the marked-stale set is derived here, not in scorers).
+3. **Validate before commit.** `python3 validate.py` must exit 0. It checks schema and types, path safety, that every referenced beat exists, that no `answers` entry is itself superseded, that answers/stale sets do not overlap, that `mode: all` cases fit within top_n, that unmarked-stale traps are explicitly declared (`unmarked_stale_ok`), and it scans the ENTIRE corpus frontmatter (every beat must be readable; the marked-stale set is derived here, not in scorers). Supersession hygiene is enforced corpus-wide: a `superseded_by` pointing at a nonexistent beat, or a supersession cycle, is an ERROR - search resolves chains at query time and every chain must reach an existing, unmarked head.
 
 ## Files
 
