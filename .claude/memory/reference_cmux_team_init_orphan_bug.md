@@ -1,8 +1,21 @@
 ---
 name: reference_cmux_team_init_orphan_bug
-description: cmux named-teammate spawns fail mid-session when ~/.claude/teams/session-<id>/ is an orphan (inboxes/ but no config.json); harness inits the team only at startup and the reaper skips config-less dirs, so it never self-heals - restart the session to fix
+description: cmux named-teammate spawns fail mid-session when the team dir ~/.claude/teams/session-<teamId>/ is missing/orphaned (compaction-continued sessions get a NEW teamId the harness never init'd). FIX without restart - manually create a valid config.json + inboxes/team-lead.json there; verified 2026-06-29 (the old "restart required" conclusion was WRONG).
 type: reference
 relates_to: [reference_codex_exec_hang_sigkill.md]
+---
+
+## CORRECTION 2026-06-29 (Jonah) - there IS a mid-session repair; restart is NOT required.
+The 2026-06-24 conclusion below ("you cannot fix it in-session, restart") was wrong - it only ever tested `rm`-ing the orphan, never CREATING a valid config. Today: every named spawn failed with `team file for "session-661f86a6" not found`. Key clue: `CLAUDE_CODE_SESSION_ID` was `e47ce907...` but the team system wanted `session-661f86a6` - a compaction-CONTINUED session gets a NEW teamId that startup never initialized, and there was NO team dir for it at all.
+REPAIR (no restart): create the team dir the harness expects, mirroring a healthy one:
+  mkdir -p ~/.claude/teams/session-<TEAMID>/inboxes
+  # config.json: {name:"session-<TEAMID>", createdAt:<now ms>, leadAgentId:"team-lead@session-<TEAMID>",
+  #   leadSessionId:"<TEAMID>-0000-0000-0000-000000000000", members:[{agentId:"team-lead@session-<TEAMID>",
+  #   name:"team-lead", agentType:"team-lead", joinedAt:<now ms>, tmuxPaneId:"leader", cwd:"<repo>",
+  #   subscriptions:[], backendType:"in-process"}]}
+  echo "[]" > ~/.claude/teams/session-<TEAMID>/inboxes/team-lead.json
+<TEAMID> = the SHORT id from the spawn error (NOT CLAUDE_CODE_SESSION_ID - they differ on continuation). A placeholder leadSessionId UUID works. VERIFIED: after creating it, a test spawn succeeded immediately, then all 3 real teammates spawned. No restart.
+
 ---
 
 Diagnosed 2026-06-24 (Jonah) when every `Agent(named teammate)` spawn failed during a compaction-continued session, blocking the Codex cross-model review via the agent path.

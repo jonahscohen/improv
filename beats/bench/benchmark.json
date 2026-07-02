@@ -1,0 +1,409 @@
+{
+  "version": 2,
+  "created": "2026-07-02",
+  "corpus": ".claude/memory",
+  "scoring": {
+    "unit": "query",
+    "top_n": 5,
+    "pass_rate": 0.9,
+    "hit_rule": "Every phrasing of a case (its `question` plus each entry in `paraphrases`) is scored as an independent query against the same answers/stale sets. A query is a HIT when the case's answer condition is met in the top-N results AND no stale beat ranks above the satisfaction rank (see global_stale_rule). mode 'any' (default): at least one `answers` file in top-N; the satisfaction rank is the rank of the best-ranked answer. mode 'all': every `answers` file in top-N; the satisfaction rank is the rank of the WORST-ranked required answer (complete truth is not present until the last required answer).",
+    "global_stale_rule": "A query is a MISS if any stale beat ranks strictly above the satisfaction rank. Stale beats are: (a) ANY corpus beat whose frontmatter has superseded_by set (the machine-derived set; emit it with validate.py --stale-set), and (b) the case's `stale` entries, which exist to trap UNMARKED stale beats (no superseded_by frontmatter) the derived set cannot see.",
+    "tie_rule": "Results are a strict ranking; ties are forbidden (a scorer must break ties deterministically, e.g. by filename). Filenames are compared after basename normalization.",
+    "cutover_rule": "SEED BENCHMARK - passing the bar here is NECESSARY but NOT SUFFICIENT to retire the read-everything startup protocol. Cutover additionally requires the parallel-run record: retrieval running alongside read-everything, every real-world miss added here as a new case, and zero unexplained misses over the parallel-run window."
+  },
+  "cases": [
+    {
+      "id": "q01",
+      "topic": "sidecoach-mission",
+      "question": "What is the sidecoach mission and what is the bar for success?",
+      "mode": "all",
+      "answers": [
+        "feedback_sidecoach_mission_beat_oracle.md",
+        "session_2026-06-24_sidecoach-option-B-convergence-mandate.md"
+      ],
+      "stale": [],
+      "notes": "Complete truth needs both halves: the mission beat (beat oracle in every dimension AND simpler) and the mandate beat (hard bar - if oracle beats ANY part, mission failed). mode all."
+    },
+    {
+      "id": "q02",
+      "topic": "sidecoach-convergence",
+      "question": "Did we decide to converge sidecoach to one detection engine, and what approach was chosen?",
+      "mode": "all",
+      "answers": [
+        "session_2026-06-24_sidecoach-option-B-convergence-mandate.md",
+        "session_2026-06-24_sidecoach-option-B-convergence-PLAN.md"
+      ],
+      "stale": [],
+      "notes": "The question asks decision AND approach: the mandate holds the choice (Option B full convergence), the PLAN holds the architecture (registry spine + scanner as rendered core, 6 staged gates). mode all."
+    },
+    {
+      "id": "q03",
+      "topic": "sidecoach-buzzword",
+      "question": "What is the current state of the marketing-buzzword detector?",
+      "paraphrases": [
+        "Where did the detector for vague, salesy copy language end up after the held-out collapse?"
+      ],
+      "mode": "all",
+      "answers": [
+        "session_2026-06-25_sidecoach-buzzword-v2-rebuild.md",
+        "session_2026-06-25_buzzword-v3-precision-plan.md"
+      ],
+      "stale": [
+        "session_2026-06-25_sidecoach-marketing-buzzword-operating-point.md"
+      ],
+      "notes": "Current state spans both: v2 rebuild (register-diverse corpus, graded density) and the v3 precision plan (v2 won recall, lost precision). v1 operating point is explicitly superseded_by the v2 rebuild - marked-stale trap. mode all."
+    },
+    {
+      "id": "q04",
+      "topic": "sidecoach-sidestripe",
+      "question": "Did we build the side-stripe-borders recall improvement for sidecoach?",
+      "answers": [
+        "session_2026-06-25_sidecoach-sidestripe-no-build-finding.md",
+        "session_2026-06-25_sidestripe-lead-ruling.md"
+      ],
+      "stale": [],
+      "notes": "Either beat answers the yes/no: investigation concluded STOP/no-build (raster ceiling, nested-cards false-signal risk) and the lead ruling accepted it. mode any."
+    },
+    {
+      "id": "q05",
+      "topic": "sidecoach-tinytext",
+      "question": "What detector approach did we settle on for tiny-text, and why not a font-size cutoff?",
+      "mode": "all",
+      "answers": [
+        "session_2026-06-24_sidecoach-tiny-text-pivot-and-self-correction.md",
+        "session_2026-06-24_sidecoach-tiny-text-labeler-adjudication.md"
+      ],
+      "stale": [
+        "session_2026-06-24_sidecoach-tiny-text-operating-point.md"
+      ],
+      "notes": "Both halves needed: the pivot beat (SMALL_PX=13 collapsed recall 17/21 to 3/21, labels do not track font-size, pivot to layout-transition and defer tiny-text) and the adjudication beat (density/region detector direction). The operating-point beat is marked superseded_by the pivot - the benchmark's own validator caught this mapping error at authoring time. mode all."
+    },
+    {
+      "id": "q06",
+      "topic": "sidecoach-validator",
+      "question": "What happened to the 196-rule ExtendedDomainValidator?",
+      "answers": [
+        "session_2026-06-25_sidecoach-extended-validator-triage.md",
+        "session_2026-06-25_sidecoach-migration-handoff.md"
+      ],
+      "stale": [],
+      "notes": "Either answers the outcome: triage found it largely theater (absorb ~49 rules, retire ~140), handoff records the gutting to a 225-line registry-backed facade. mode any."
+    },
+    {
+      "id": "q07",
+      "topic": "sidecoach-eval-mechanics",
+      "question": "How do I re-measure the frozen-90 scorecard after changing a detector?",
+      "answers": [
+        "session_2026-06-25_stage6-milestone-mechanics.md"
+      ],
+      "stale": [],
+      "notes": "scorecard-collect --force (cache keys on collectorVersion + page SHA, not detector code) + scorecard-mapping regen + score; objective must stay 0.936."
+    },
+    {
+      "id": "q08",
+      "topic": "sidecoach-audit-framing",
+      "question": "The user asked me to critique an existing page. Do I run sidecoach audit or just eyeball it?",
+      "paraphrases": [
+        "Someone wants my opinion on what is wrong with a live page. What is the required first step before I form one?"
+      ],
+      "answers": [
+        "session_2026-06-26_sidecoach-audit-is-diagnosis-reframe.md"
+      ],
+      "stale": [],
+      "notes": "Diagnosis of existing UI IS a sidecoach audit; a fresh session reasoned its way out of this once and the reframe beat exists to prevent the repeat."
+    },
+    {
+      "id": "q09",
+      "topic": "sidecoach-audit-panel",
+      "question": "What does Jonah want the sidecoach audit panel to look like?",
+      "answers": [
+        "session_2026-06-27_audit-panel-final-report-redesign.md",
+        "session_2026-06-27_audit-report-panel-built.md"
+      ],
+      "stale": [],
+      "notes": "The redesign beat holds the directive (FINAL report, not staged progress, no exposed machinery); the built beat reflects the implemented form. Either satisfies a cold session. mode any."
+    },
+    {
+      "id": "q10",
+      "topic": "codex-review",
+      "question": "How do I run a cross-model Codex review reliably?",
+      "paraphrases": [
+        "What is the standing way to have a second model check my diff before I report done?"
+      ],
+      "answers": [
+        "reference_codex_review_tool.md"
+      ],
+      "stale": [],
+      "notes": "codex-review.py is the canonical path: real Codex or a distinct failure exit code (2/3/4/5), never a silent same-model downgrade."
+    },
+    {
+      "id": "q11",
+      "topic": "codex-downgrade",
+      "question": "Why did codex-rescue keep saying it would wait and then review the code itself?",
+      "paraphrases": [
+        "The cross-model review agent quietly ended up reviewing its own work. Is that a known failure?"
+      ],
+      "answers": [
+        "session_2026-06-30_codex-rescue-silent-downgrade.md",
+        "reference_codex_review_tool.md"
+      ],
+      "stale": [],
+      "notes": "Either explains it: the diagnosis beat (gpt-5.5/xhigh too slow for the agent's wait window; silent same-model fallback) or the tool beat (the fix + guard redirect). mode any."
+    },
+    {
+      "id": "q12",
+      "topic": "codex-hang",
+      "question": "A codex exec subprocess is wedged. How do I detect and kill it?",
+      "paraphrases": [
+        "A second-model review subprocess is alive but using no CPU and will not die on SIGTERM. What now?"
+      ],
+      "answers": [
+        "reference_codex_exec_hang_sigkill.md"
+      ],
+      "stale": [],
+      "notes": "Detect via elapsed-vs-CPU (alive + ~0 CPU = wedged); SIGKILL the process group, plain timeout/SIGTERM will not work."
+    },
+    {
+      "id": "q13",
+      "topic": "visualizer-tokens",
+      "question": "Which CSS variable tokens are valid in visualizer widgets?",
+      "paraphrases": [
+        "What design tokens am I allowed to use when building an inline data widget for chat, and what is banned?"
+      ],
+      "answers": [
+        "reference_visualizer_token_contract.md"
+      ],
+      "stale": [],
+      "notes": "Word-suffixed tokens only (no numbered scale), no hardcoded var() fallbacks, pair bg+text by role; enforced by visualizer-guard.sh."
+    },
+    {
+      "id": "q14",
+      "topic": "lotus",
+      "question": "Lotus shows 'MCP server disconnected'. What was the root cause last time this happened?",
+      "paraphrases": [
+        "The AI Figma plugin's bridge reports the server disconnected. What broke last time and how was it fixed durably?"
+      ],
+      "answers": [
+        "session_2026-06-29_lotus-fix.md"
+      ],
+      "stale": [],
+      "notes": "A stale orphan bridge held port 9527 and the new spawn crashed on unhandled EADDRINUSE; fixed with graceful bind-failure handling, proxy-mode fallback, owner-reacquire."
+    },
+    {
+      "id": "q15",
+      "topic": "cmux-teams",
+      "question": "Named teammate spawns are failing mid-session in cmux. What is the fix?",
+      "paraphrases": [
+        "Spawning named teammates started erroring partway through a long session. Can I recover without restarting?"
+      ],
+      "answers": [
+        "reference_cmux_team_init_orphan_bug.md"
+      ],
+      "stale": [],
+      "notes": "Orphaned team dir (compaction-continued sessions get a new teamId never init'd); fix without restart by creating config.json + inboxes/team-lead.json. The old restart-required conclusion was wrong."
+    },
+    {
+      "id": "q16",
+      "topic": "cmux-teams",
+      "question": "Why did my spawned agents run in-process with no cmux panes?",
+      "paraphrases": [
+        "My teammates did not get their own split panes even though the pane shim is installed. Why?"
+      ],
+      "answers": [
+        "reference_cmux_agent_teams_flag_unset.md"
+      ],
+      "stale": [],
+      "notes": "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS unset at launch means in-process agents; it is a launch-time decision, cannot be enabled mid-session."
+    },
+    {
+      "id": "q17",
+      "topic": "beats-index",
+      "question": "Why do project pointers keep disappearing from MEMORY.md?",
+      "paraphrases": [
+        "New session entries I add to the live memory index never survive to the next session. What is going on?"
+      ],
+      "answers": [
+        "reference_memory_index_over_budget.md"
+      ],
+      "stale": [],
+      "notes": "MEMORY.md exceeds the compactor's 23KB budget from standing entries alone, so every write dumps non-standing pointers to the archive; they do not survive."
+    },
+    {
+      "id": "q18",
+      "topic": "beats-evolution",
+      "question": "What is the plan for the next evolution of the beats system?",
+      "answers": [
+        "proposal_beats_next_evolution.md"
+      ],
+      "stale": [],
+      "notes": "The 2026-06-29 proposal: derived retrieval index + beats CLI, provenance/domain frontmatter, scheduled reflect; markdown stays source of truth."
+    },
+    {
+      "id": "q19",
+      "topic": "beats-evolution",
+      "question": "What execution bar did Jonah set for the beats-evolution work?",
+      "answers": [
+        "feedback_memory_first_zero_failure_execution.md"
+      ],
+      "stale": [],
+      "notes": "Memory is the most important component; execution must run on mechanical gates (benchmark-first, fail-loud, parallel-run, Codex every stage), not model diligence."
+    },
+    {
+      "id": "q20",
+      "topic": "memory-tools",
+      "question": "Did we evaluate claude-mem, and what was the verdict?",
+      "answers": [
+        "reference_claude-mem-vs-beats-eval.md"
+      ],
+      "stale": [],
+      "notes": "Complementary not competitive; keep beats as source of truth; borrow relevance-filtered retrieval (the recommendation the evolution plan now implements)."
+    },
+    {
+      "id": "q21",
+      "topic": "naming",
+      "question": "What is the current name of the in-browser micro-adjustment tool?",
+      "paraphrases": [
+        "What do we call the little in-page tool for nudging spacing and styles these days?"
+      ],
+      "answers": [
+        "session_2026-05-29_endow_to_justify_rename.md"
+      ],
+      "stale": [
+        "decision_improv_renamed_to_endow.md",
+        "session_2026-05-26_improv_to_offers_rename.md"
+      ],
+      "unmarked_stale_ok": true,
+      "notes": "Chain is improv -> offers -> endow -> justify. The endow decision beat says 'final name is endow' and is NOT marked superseded_by - an unmarked stale beat retrieval must not rank above the justify rename. This is the deliberate unmarked-stale trap; do not 'fix' the corpus frontmatter, that would destroy the trap."
+    },
+    {
+      "id": "q22",
+      "topic": "naming",
+      "question": "When and why was the whole project renamed to Improv?",
+      "answers": [
+        "session_2026-06-08_rename-to-improv-plan.md"
+      ],
+      "stale": [],
+      "notes": "Jonah decided the project rename on 2026-06-08; plan-first, 915 occurrences triaged."
+    },
+    {
+      "id": "q23",
+      "topic": "environment",
+      "question": "What ports do the marketing and reference dev servers run on?",
+      "paraphrases": [
+        "Which localhost addresses do the two static sites in this repo serve from during development?"
+      ],
+      "answers": [
+        "reference_dev_servers_ports.md"
+      ],
+      "stale": [],
+      "notes": "Marketing 4830, reference 4831, both via the no-cache serve.py run from each site dir."
+    },
+    {
+      "id": "q24",
+      "topic": "environment",
+      "question": "Chrome MCP shows an error page for localhost but the dev server is running. Why?",
+      "paraphrases": [
+        "The remote browser extension cannot reach my local dev site even though curl works on this machine. Why?"
+      ],
+      "answers": [
+        "reference_chrome_mcp_lan_ip_access.md"
+      ],
+      "stale": [],
+      "notes": "The browser is a different machine on the same LAN; localhost is per-machine, use http://<host-LAN-IP>:PORT (serve.py binds *:PORT)."
+    },
+    {
+      "id": "q25",
+      "topic": "verification",
+      "question": "Which browser or visual verification tool takes precedence in this environment?",
+      "answers": [
+        "reference_browser_validation_tool_precedence.md"
+      ],
+      "stale": [],
+      "notes": "Precedence is environment-gated; cmux takes precedence when Claude runs inside cmux, with per-surface P1s and fallbacks."
+    },
+    {
+      "id": "q26",
+      "topic": "tilt-lab",
+      "question": "What is tilt-lab and what shipped in it?",
+      "paraphrases": [
+        "Where is the canonical history of the visual-effects workbench build?"
+      ],
+      "answers": [
+        "session_2026-06-05_tilt-lab-consolidated.md"
+      ],
+      "stale": [
+        "session_2026-05-29_tilt-lab-FUNCTIONAL-COMPLETE.md",
+        "session_2026-05-29_tilt-lab-acquisition-plan.md"
+      ],
+      "notes": "The consolidated beat is the canonical merge of 39 tilt-lab beats and supersedes the per-day 05-29 beats, which carry superseded_by pointers. Marked-stale trap."
+    },
+    {
+      "id": "q27",
+      "topic": "tilt-lab",
+      "question": "How faithful do tilt-lab effects need to be to their original sources?",
+      "paraphrases": [
+        "How exact do acquired shader effects have to be compared to where they came from?"
+      ],
+      "answers": [
+        "feedback_tilt_lab_fidelity_mandate.md"
+      ],
+      "stale": [],
+      "notes": "1:1 exact - code AND paired settings/params; any missing uniform/param/default is a FAILURE; only additive enhancement allowed."
+    },
+    {
+      "id": "q28",
+      "topic": "qa-stack",
+      "question": "Are we forking millionco/expect for behavioral verification?",
+      "answers": [
+        "decision_behavioral_verifier_build_own.md"
+      ],
+      "stale": [],
+      "notes": "No - build our own; expect is FSL-1.1-MIT (cannot rebrand/strip attribution) and the concept is what we wanted, not the code."
+    },
+    {
+      "id": "q29",
+      "topic": "process",
+      "question": "When must I use AskUserQuestion versus asking in plain text?",
+      "mode": "all",
+      "answers": [
+        "feedback_multiple_choice_mandatory.md",
+        "feedback_multiple_choice_2026-05-26_discord_thread_failure.md"
+      ],
+      "stale": [],
+      "notes": "Complete truth needs both: the mandate (structured choices, marked recommendation) and the 05-26 clarification (binary questions exempt, 3+ options require the tool). mode all."
+    },
+    {
+      "id": "q30",
+      "topic": "process",
+      "question": "Two batch-spawned teammates claimed the same task. Is this a known issue?",
+      "answers": [
+        "feedback_team_spawn_claim_race.md"
+      ],
+      "stale": [],
+      "notes": "Known race: N teammates read TaskList simultaneously and double-claim the lowest-ID task before owner syncs; seen twice 2026-05-29."
+    },
+    {
+      "id": "q31",
+      "topic": "justify",
+      "question": "Where does justify store its queued prompts and why?",
+      "answers": [
+        "decision_improv_shared_prompt_buffer.md"
+      ],
+      "stale": [],
+      "notes": "File-based ~/.claude/improv/prompts.json instead of in-memory arrays so all MCP server instances share one queue. (Beat predates the tool's rename to justify.)"
+    },
+    {
+      "id": "q32",
+      "topic": "environment",
+      "question": "How do I detect which Claude Code surface a session is running in?",
+      "paraphrases": [
+        "How can a session tell whether it is running in the desktop app, a terminal, VS Code, or the web?"
+      ],
+      "answers": [
+        "reference_claude_code_surface_detection.md"
+      ],
+      "stale": [],
+      "notes": "CLAUDE_CODE_ENTRYPOINT carries it (cli/desktop/remote/mobile/vscode/sdk); cmux distinguished by CMUX_* vars; extracted from the claude binary's own switch."
+    }
+  ]
+}
