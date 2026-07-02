@@ -12,7 +12,7 @@ prints its class name on stderr. There is no silent success - the single
 success summary line prints only when every check has passed.
 
 USAGE
-  beats.py compile [--corpus PATH] [--build PATH]
+  beats.py compile [--corpus PATH] [--build PATH] [--reembed-all]
   beats.py verify  [--corpus PATH] [--build PATH]
   beats.py search  "natural language query" [--top N] [--json]
                    [--corpus PATH] [--build PATH]
@@ -434,9 +434,11 @@ def self_verify(corpus, tmp_jsonl, tmp_db, records, chash):
             embed_dim = meta_vec[1]
             beat_names = {r["filename"] for r in records}
             vec_names = set()
+            vec_count = 0
             for filename, dim, blob in con.execute(
                 "SELECT filename, dim, vec FROM beats_vec"
             ).fetchall():
+                vec_count += 1
                 vec_names.add(filename)
                 if dim != embed_dim:
                     errors.append(
@@ -451,12 +453,96 @@ def self_verify(corpus, tmp_jsonl, tmp_db, records, chash):
                 errors.append(
                     f"vector parity: beats_vec filenames != beats "
                     f"(missing {missing}, extra {extra})")
+            # Row-COUNT parity too, consistent with verify/search: a duplicate row
+            # (only possible if build_db ever regressed off the PK) has the right
+            # filename SET but an extra row. Unreachable from today's compile, but
+            # keeps the three parity checks aligned.
+            if vec_count != len(records):
+                errors.append(
+                    f"vector parity: beats_vec row count {vec_count} != {len(records)} beats")
     finally:
         con.close()
     return errors
 
 
-def cmd_compile(corpus, build, inject_fault):
+def load_reusable_vectors(db_path, records, embed_model):
+    """Return (reusable, stored_dim): vectors reusable verbatim from the EXISTING
+    compiled db, keyed by CONTENT IDENTITY, for incremental re-embedding (stage 4).
+
+    A beat's stored vector is reused when ALL hold:
+      (a) the db exists and its meta records vectors_present=1;
+      (b) meta.embed_model == embed_model AND meta.embed_dim is a usable positive
+          int. The model name determines the dimension, so a matching model is a
+          matching embedder - the live embedder is NOT probed here, which is what
+          lets an unchanged corpus recompile fully OFFLINE;
+      (c) the stored sha256 for that filename equals the file's CURRENT sha256
+          (unchanged content) AND the stored blob is well-formed (row dim ==
+          stored dim, byte length == dim*4, unpackable as float32).
+    Any db-open / schema / parse problem yields ({}, 0): reuse is a pure
+    optimization, never a correctness risk, so a shaky prior db just forces a full
+    re-embed. `reusable` maps filename -> list[float] (the stored unit vector,
+    already L2-normalized at its original embed). New and deleted files never
+    appear here (the rebuild is full-table from `records`), so a deleted file's
+    vector vanishes naturally and a new file falls through to a fresh embed.
+    """
+    if not db_path.exists():
+        return {}, 0
+    try:
+        con = sqlite3.connect(str(db_path))
+    except sqlite3.Error:
+        return {}, 0
+    try:
+        try:
+            vp_row = con.execute(
+                "SELECT vectors_present, embed_model, embed_dim FROM meta"
+            ).fetchone()
+        except sqlite3.Error:
+            return {}, 0
+        if not vp_row or not vp_row[0]:
+            return {}, 0
+        stored_model, stored_dim = vp_row[1], vp_row[2]
+        if stored_model != embed_model:
+            return {}, 0
+        if not (isinstance(stored_dim, int) and not isinstance(stored_dim, bool)
+                and stored_dim > 0):
+            return {}, 0
+        try:
+            stored_sha = dict(
+                con.execute("SELECT filename, sha256 FROM beats").fetchall())
+            vec_rows = con.execute(
+                "SELECT filename, dim, vec FROM beats_vec").fetchall()
+        except sqlite3.Error:
+            return {}, 0
+        current_sha = {r["filename"]: r["sha256"] for r in records}
+        reusable = {}
+        seen = set()
+        for filename, dim, blob in vec_rows:
+            # A duplicate filename means the old vector table is structurally
+            # corrupt (a normally-compiled beats_vec has filename as PRIMARY KEY, so
+            # this can only arise from external tampering). The dict-keyed reuse
+            # below would silently pick one of the duplicates, possibly a
+            # mislabeled blob - so trust NONE of this db's vectors and force a full
+            # re-embed rather than risk reusing a wrong vector.
+            if filename in seen:
+                return {}, 0
+            seen.add(filename)
+            cur = current_sha.get(filename)
+            if cur is None or stored_sha.get(filename) != cur:
+                continue  # new or content-changed file -> must re-embed
+            if (dim != stored_dim
+                    or not isinstance(blob, (bytes, bytearray))
+                    or len(blob) != stored_dim * 4):
+                continue  # corrupt stored vector -> re-embed
+            try:
+                reusable[filename] = list(struct.unpack(f"<{stored_dim}f", blob))
+            except (struct.error, TypeError):
+                continue
+        return reusable, stored_dim
+    finally:
+        con.close()
+
+
+def cmd_compile(corpus, build, inject_fault, reembed_all):
     if not corpus.is_dir():
         eprint(f"CORPUS MISSING: corpus dir does not exist: {corpus}")
         return 2
@@ -512,36 +598,70 @@ def cmd_compile(corpus, build, inject_fault):
         eprint(f"ARTIFACT/DB FAILURE: cannot write jsonl artifact: {exc}")
         return 4
 
-    # Embed the corpus (stage 3b). FAIL-SOFT: if the embedder is unreachable the
-    # compile still succeeds lexical-only, emitting a single loud VECTORS ABSENT
-    # line and vectors_present=0 - never a silent degradation. Vectors are
-    # all-or-nothing: self_verify enforces "vectors present => every beat has
-    # one", so a single failed embed drops the whole vector set (still exit 0).
+    # Embed the corpus (stage 3b) with INCREMENTAL VECTOR REUSE (stage 4 prereq).
+    # A beat's vector is reused verbatim from the existing db when the embed
+    # model+dim match and its content sha256 is unchanged; only new/changed beats
+    # are re-embedded. This turns a per-write recompile from a full re-embed of the
+    # whole corpus (~155s for ~865 beats) into ~one embedding call, which is what
+    # makes the stage-4 rebuild-on-write hook usable. `--reembed-all` forces a full
+    # re-embed (model upgrades / corruption paranoia).
+    #
+    # FAIL-SOFT is unchanged and vectors stay ALL-OR-NOTHING (self_verify enforces
+    # "vectors present => every beat has exactly one"):
+    #   - embedder down + at least one beat still needs embedding -> drop the whole
+    #     vector set, compile lexical-only, single loud VECTORS ABSENT line;
+    #   - embedder down + EVERY beat's vector reusable (no changed files) -> vectors
+    #     preserved with NO embedder round-trip (an unchanged corpus recompiles
+    #     fully OFFLINE);
+    #   - embedder up -> reuse the unchanged, embed only the new/changed.
     vectors = None
     embed_dim = 0
+    reused_count = 0
     if records:
-        probe = embed_text("beats embedder availability probe")
-        if probe is None:
-            eprint(f"VECTORS ABSENT: embedder unreachable "
-                   f"({embed_text.last_error or 'no response'}); compiling lexical-only "
-                   f"(model {EMBED_MODEL} at {OLLAMA_URL})")
+        reusable = {}
+        stored_dim = 0
+        if not reembed_all:
+            reusable, stored_dim = load_reusable_vectors(final_db, records, EMBED_MODEL)
+        to_embed = [r for r in records if r["filename"] not in reusable]
+
+        if not to_embed:
+            # Every beat's vector was reused verbatim - no embedder call at all.
+            # This is the offline-recompile path for an unchanged corpus.
+            embed_dim = stored_dim
+            vectors = dict(reusable)
+            reused_count = len(reusable)
         else:
-            embed_dim = len(probe)
-            vecs = {}
-            failed = None
-            for rec in records:
-                v = embed_text(build_embed_text(rec["name"], rec["description"], rec["body"]))
-                if v is None or len(v) != embed_dim:
-                    failed = rec["filename"]
-                    break
-                vecs[rec["filename"]] = v
-            if failed is not None:
-                eprint(f"VECTORS ABSENT: embedding failed at {failed} "
-                       f"({embed_text.last_error or 'dimension mismatch'}); "
-                       "compiling lexical-only")
-                embed_dim = 0
+            probe = embed_text("beats embedder availability probe")
+            if probe is None:
+                eprint(f"VECTORS ABSENT: embedder unreachable "
+                       f"({embed_text.last_error or 'no response'}); compiling lexical-only "
+                       f"(model {EMBED_MODEL} at {OLLAMA_URL})")
             else:
-                vectors = vecs
+                embed_dim = len(probe)
+                # A reusable set at a DIFFERENT dimension than the live embedder
+                # (same model name, changed dim underneath) cannot be trusted -
+                # discard it and re-embed every beat.
+                if reusable and stored_dim != embed_dim:
+                    eprint(f"VECTOR REUSE INVALIDATED: stored dim {stored_dim} != live "
+                           f"embedder dim {embed_dim}; re-embedding all {len(records)} beats")
+                    reusable = {}
+                    to_embed = list(records)
+                vecs = dict(reusable)
+                failed = None
+                for rec in to_embed:
+                    v = embed_text(build_embed_text(rec["name"], rec["description"], rec["body"]))
+                    if v is None or len(v) != embed_dim:
+                        failed = rec["filename"]
+                        break
+                    vecs[rec["filename"]] = v
+                if failed is not None:
+                    eprint(f"VECTORS ABSENT: embedding failed at {failed} "
+                           f"({embed_text.last_error or 'dimension mismatch'}); "
+                           "compiling lexical-only")
+                    embed_dim = 0
+                else:
+                    vectors = vecs
+                    reused_count = len(reusable)
 
     # Write the SQLite artifact (temp, atomic-rename later).
     try:
@@ -575,7 +695,8 @@ def cmd_compile(corpus, build, inject_fault):
         eprint(f"ARTIFACT/DB FAILURE: cannot install artifacts: {exc}")
         return 4
 
-    vec_note = (f"{len(records)} vectors ({EMBED_MODEL} dim {embed_dim})"
+    vec_note = (f"{len(records)} vectors ({EMBED_MODEL} dim {embed_dim}; "
+                f"{reused_count} reused, {len(records) - reused_count} embedded)"
                 if vectors else "no vectors (lexical-only)")
     print(
         f"OK: compiled {len(records)} beats "
@@ -623,24 +744,53 @@ def cmd_verify(corpus, build):
                     f"beats_fts row count {fts_count} != beats row count {len(db_rows)}"
                 )
             # Same logic for the vector table, read DEFENSIVELY (an old stage-3a
-            # db has no vectors_present column -> treated as no-vectors, verifies
-            # normally). When vectors are present, beats_vec must match beats
-            # exactly by FILENAME (not just count); a desync silently disables
-            # hybrid search, so it is a broken artifact (exit 4).
+            # db has no vectors_present/embed_dim columns -> treated as no-vectors,
+            # verifies normally). When vectors are present, beats_vec must match
+            # beats exactly by FILENAME and every row must be a VALID vector; a
+            # desync or a corrupt row silently disables hybrid search, so it is a
+            # broken artifact (exit 4). This mirrors compile's self_verify and
+            # search's per-row guard so the SessionStart staleness guard reports a
+            # corrupt-blob db as broken (exit 4) instead of staying silent.
             try:
-                vp_row = con.execute("SELECT vectors_present FROM meta").fetchone()
+                vp_row = con.execute(
+                    "SELECT vectors_present, embed_dim FROM meta").fetchone()
                 vectors_present = bool(vp_row and vp_row[0])
+                vdim = vp_row[1] if vp_row else 0
             except sqlite3.OperationalError:
                 vectors_present = False
+                vdim = 0
             if vectors_present:
-                vec_names = {
-                    r[0] for r in con.execute("SELECT filename FROM beats_vec").fetchall()
-                }
-                beat_names = {r[0] for r in db_rows}
-                if vec_names != beat_names:
+                # A usable hybrid index needs a strict positive-int dimension.
+                if not (isinstance(vdim, int) and not isinstance(vdim, bool) and vdim > 0):
                     raise sqlite3.DatabaseError(
-                        f"beats_vec desynced with beats by filename "
-                        f"(vec {len(vec_names)} rows, beats {len(beat_names)} rows) "
+                        f"vectors_present=1 but meta.embed_dim is unusable ({vdim!r})"
+                    )
+                vec_names = set()
+                vec_count = 0
+                for filename, dim, blob in con.execute(
+                        "SELECT filename, dim, vec FROM beats_vec").fetchall():
+                    vec_count += 1
+                    vec_names.add(filename)
+                    # A right-filename row with a wrong dim / short / NULL / non-blob
+                    # vec passes a filename-only check yet is unusable at query time.
+                    if (dim != vdim
+                            or not isinstance(blob, (bytes, bytearray))
+                            or len(blob) != vdim * 4):
+                        got = len(blob) if isinstance(blob, (bytes, bytearray)) else "non-blob"
+                        raise sqlite3.DatabaseError(
+                            f"beats_vec row {filename!r} corrupt (dim {dim}, {got} bytes; "
+                            f"expected dim {vdim} / {vdim * 4} bytes)"
+                        )
+                beat_names = {r[0] for r in db_rows}
+                # Require ROW-count parity too, not just the filename SET: a
+                # duplicate row (a beats_vec recreated without its PK) has the
+                # right filename set but an extra row, which search rejects on
+                # count. Match search exactly so verify never calls such a db fresh.
+                if vec_count != len(db_rows) or vec_names != beat_names:
+                    raise sqlite3.DatabaseError(
+                        f"beats_vec desynced with beats "
+                        f"(vec {vec_count} rows / {len(vec_names)} distinct filenames, "
+                        f"beats {len(db_rows)} rows; filenames match={vec_names == beat_names}) "
                         "(vectors_present=1)"
                     )
             # db-internal consistency: the beats table must match the meta row's
@@ -1262,6 +1412,9 @@ def main():
                     help="search: max results after resolution (default 5)")
     ap.add_argument("--json", action="store_true",
                     help="search: emit a JSON array")
+    ap.add_argument("--reembed-all", action="store_true",
+                    help="compile: force a full re-embed, ignoring reusable vectors "
+                         "in the existing db (model upgrades / corruption paranoia)")
     ap.add_argument("--inject-parity-fault", action="store_true",
                     help=argparse.SUPPRESS)
     args = ap.parse_args()
@@ -1270,7 +1423,7 @@ def main():
     build = Path(args.build).resolve() if args.build else DEFAULT_BUILD
 
     if args.command == "compile":
-        return cmd_compile(corpus, build, args.inject_parity_fault)
+        return cmd_compile(corpus, build, args.inject_parity_fault, args.reembed_all)
     if args.command == "verify":
         return cmd_verify(corpus, build)
     # search

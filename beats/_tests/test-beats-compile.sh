@@ -391,6 +391,226 @@ else
   failcase "case14 sqlite3 not on PATH - cannot forge meta"
 fi
 
+# =============================================================================
+# Unit A (stage 4 prereq): incremental vector reuse in compile.
+# The reuse rule: a beat's stored vector is reused when vectors_present + embed
+# model/dim match + stored sha256 == current sha256; else it is re-embedded.
+# `--reembed-all` forces a full re-embed. All checks use the stub embedder
+# (dim 64), so a body change deterministically changes the vector blob.
+# =============================================================================
+
+# --- Case 15: reuse HIT - an unchanged file keeps IDENTICAL blob bytes --------
+c15="$(newtmp)"; c15_corpus="$c15/corpus"; c15_build="$c15/build"
+make_fixture "$c15_corpus"
+python3 "$BEATS_PY" compile --corpus "$c15_corpus" --build "$c15_build" >/dev/null 2>&1
+if [ -n "$SQLITE" ]; then
+  blob_before="$("$SQLITE" "$c15_build/beats.db" "SELECT hex(vec) FROM beats_vec WHERE filename='file03_block.md';")"
+fi
+out="$(python3 "$BEATS_PY" compile --corpus "$c15_corpus" --build "$c15_build" 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q "6 reused, 0 embedded"; then
+  pass "case15 unchanged recompile reuses all vectors (6 reused, 0 embedded)"
+else
+  failcase "case15 expected '6 reused, 0 embedded' rc=$rc :: $out"
+fi
+if [ -n "$SQLITE" ]; then
+  blob_after="$("$SQLITE" "$c15_build/beats.db" "SELECT hex(vec) FROM beats_vec WHERE filename='file03_block.md';")"
+  if [ -n "$blob_before" ] && [ "$blob_before" = "$blob_after" ]; then
+    pass "case15 reused vector blob bytes are byte-identical across recompiles"
+  else
+    failcase "case15 reused blob changed (before=${blob_before:0:16}... after=${blob_after:0:16}...)"
+  fi
+fi
+
+# --- Case 16: reuse INVALIDATION on content change (changed re-embeds, rest reused) -
+c16="$(newtmp)"; c16_corpus="$c16/corpus"; c16_build="$c16/build"
+make_fixture "$c16_corpus"
+python3 "$BEATS_PY" compile --corpus "$c16_corpus" --build "$c16_build" >/dev/null 2>&1
+if [ -n "$SQLITE" ]; then
+  chg_before="$("$SQLITE" "$c16_build/beats.db" "SELECT hex(vec) FROM beats_vec WHERE filename='file04_empty.md';")"
+  keep_before="$("$SQLITE" "$c16_build/beats.db" "SELECT hex(vec) FROM beats_vec WHERE filename='file03_block.md';")"
+fi
+printf '\nnew body words entirely different vocabulary sprocket zeppelin\n' >> "$c16_corpus/file04_empty.md"
+out="$(python3 "$BEATS_PY" compile --corpus "$c16_corpus" --build "$c16_build" 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q "5 reused, 1 embedded"; then
+  pass "case16 one changed file -> 5 reused, 1 embedded"
+else
+  failcase "case16 expected '5 reused, 1 embedded' rc=$rc :: $out"
+fi
+if [ -n "$SQLITE" ]; then
+  chg_after="$("$SQLITE" "$c16_build/beats.db" "SELECT hex(vec) FROM beats_vec WHERE filename='file04_empty.md';")"
+  keep_after="$("$SQLITE" "$c16_build/beats.db" "SELECT hex(vec) FROM beats_vec WHERE filename='file03_block.md';")"
+  if [ "$chg_before" != "$chg_after" ]; then
+    pass "case16 changed file's vector was re-embedded (blob differs)"
+  else
+    failcase "case16 changed file's blob did not change (reuse invalidation failed)"
+  fi
+  if [ "$keep_before" = "$keep_after" ]; then
+    pass "case16 unchanged sibling's vector still reused (blob identical)"
+  else
+    failcase "case16 unchanged sibling's blob changed unexpectedly"
+  fi
+fi
+
+# --- Case 17: reuse INVALIDATION on embed-model mismatch (0 reused) -----------
+c17="$(newtmp)"; c17_corpus="$c17/corpus"; c17_build="$c17/build"
+make_fixture "$c17_corpus"
+python3 "$BEATS_PY" compile --corpus "$c17_corpus" --build "$c17_build" >/dev/null 2>&1
+out="$(BEATS_EMBED_MODEL="different-model:0.1b" python3 "$BEATS_PY" compile --corpus "$c17_corpus" --build "$c17_build" 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q "0 reused, 6 embedded"; then
+  pass "case17 embed-model mismatch invalidates reuse (0 reused, 6 embedded)"
+else
+  failcase "case17 expected '0 reused, 6 embedded' rc=$rc :: $out"
+fi
+if [ -n "$SQLITE" ]; then
+  em="$("$SQLITE" "$c17_build/beats.db" "SELECT embed_model FROM meta;")"
+  if [ "$em" = "different-model:0.1b" ]; then
+    pass "case17 meta.embed_model updated to the new model"
+  else
+    failcase "case17 expected meta.embed_model=different-model:0.1b got '$em'"
+  fi
+fi
+
+# --- Case 18: --reembed-all forces a full re-embed (0 reused) -----------------
+c18="$(newtmp)"; c18_corpus="$c18/corpus"; c18_build="$c18/build"
+make_fixture "$c18_corpus"
+python3 "$BEATS_PY" compile --corpus "$c18_corpus" --build "$c18_build" >/dev/null 2>&1
+out="$(python3 "$BEATS_PY" compile --corpus "$c18_corpus" --build "$c18_build" --reembed-all 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q "0 reused, 6 embedded"; then
+  pass "case18 --reembed-all forces a full re-embed (0 reused, 6 embedded)"
+else
+  failcase "case18 expected '0 reused, 6 embedded' rc=$rc :: $out"
+fi
+
+# --- Case 19: OFFLINE reuse - embedder DOWN + no changes -> vectors preserved --
+c19="$(newtmp)"; c19_corpus="$c19/corpus"; c19_build="$c19/build"
+make_fixture "$c19_corpus"
+python3 "$BEATS_PY" compile --corpus "$c19_corpus" --build "$c19_build" >/dev/null 2>&1
+# Drop the stub AND point at a dead ollama so the embedder is genuinely unreachable.
+out="$(env -u BEATS_EMBED_STUB BEATS_OLLAMA_URL=http://127.0.0.1:1 \
+  python3 "$BEATS_PY" compile --corpus "$c19_corpus" --build "$c19_build" 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q "6 reused, 0 embedded" \
+   && ! printf '%s' "$out" | grep -q "VECTORS ABSENT"; then
+  pass "case19 offline recompile (embedder down, no changes) preserves vectors, no VECTORS ABSENT"
+else
+  failcase "case19 expected offline reuse '6 reused, 0 embedded' no VECTORS ABSENT, rc=$rc :: $out"
+fi
+if [ -n "$SQLITE" ]; then
+  vp="$("$SQLITE" "$c19_build/beats.db" "SELECT vectors_present FROM meta;")"
+  vc="$("$SQLITE" "$c19_build/beats.db" "SELECT COUNT(*) FROM beats_vec;")"
+  if [ "$vp" = "1" ] && [ "$vc" = "6" ]; then
+    pass "case19 offline recompile keeps vectors_present=1 with a complete beats_vec"
+  else
+    failcase "case19 offline reuse dropped vectors: vectors_present=$vp beats_vec=$vc"
+  fi
+fi
+
+# --- Case 20: offline compile with a CHANGED file -> lexical-only loud --------
+# Embedder down AND at least one beat needs embedding: vectors are all-or-nothing,
+# so the whole set drops to lexical-only with a loud VECTORS ABSENT line (exit 0).
+c20="$(newtmp)"; c20_corpus="$c20/corpus"; c20_build="$c20/build"
+make_fixture "$c20_corpus"
+python3 "$BEATS_PY" compile --corpus "$c20_corpus" --build "$c20_build" >/dev/null 2>&1
+printf '\nchanged body so this beat needs a fresh embed\n' >> "$c20_corpus/file04_empty.md"
+out="$(env -u BEATS_EMBED_STUB BEATS_OLLAMA_URL=http://127.0.0.1:1 \
+  python3 "$BEATS_PY" compile --corpus "$c20_corpus" --build "$c20_build" 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q "VECTORS ABSENT" \
+   && printf '%s' "$out" | grep -q "no vectors (lexical-only)"; then
+  pass "case20 embedder down + a changed beat -> lexical-only loud VECTORS ABSENT (exit 0)"
+else
+  failcase "case20 expected lexical-only VECTORS ABSENT, rc=$rc :: $out"
+fi
+if [ -n "$SQLITE" ]; then
+  vp="$("$SQLITE" "$c20_build/beats.db" "SELECT vectors_present FROM meta;")"
+  if [ "$vp" = "0" ]; then
+    pass "case20 lexical-only drop sets vectors_present=0"
+  else
+    failcase "case20 expected vectors_present=0 got '$vp'"
+  fi
+fi
+
+# --- Case 21: verify exit 4 on a corrupt beats_vec (mirrors self_verify / search) -
+# A right-filename row with a truncated blob passes a filename-only check but is
+# unusable; verify must call it broken (exit 4) so the SessionStart guard goes
+# loud instead of silent.
+c21="$(newtmp)"; c21_corpus="$c21/corpus"; c21_build="$c21/build"
+make_fixture "$c21_corpus"
+python3 "$BEATS_PY" compile --corpus "$c21_corpus" --build "$c21_build" >/dev/null 2>&1
+if [ -n "$SQLITE" ]; then
+  "$SQLITE" "$c21_build/beats.db" "UPDATE beats_vec SET vec=X'0000' WHERE filename='file03_block.md';" >/dev/null 2>&1
+  out="$(python3 "$BEATS_PY" verify --corpus "$c21_corpus" --build "$c21_build" 2>&1)"; rc=$?
+  if [ "$rc" -eq 4 ]; then
+    pass "case21 verify with a truncated beats_vec blob exits 4"
+  else
+    failcase "case21 expected 4 got $rc :: $out"
+  fi
+  # vectors_present=1 with a NULL embed_dim is likewise a broken artifact.
+  c21b_build="$c21/build2"
+  python3 "$BEATS_PY" compile --corpus "$c21_corpus" --build "$c21b_build" >/dev/null 2>&1
+  "$SQLITE" "$c21b_build/beats.db" "UPDATE meta SET embed_dim=NULL;" >/dev/null 2>&1
+  out="$(python3 "$BEATS_PY" verify --corpus "$c21_corpus" --build "$c21b_build" 2>&1)"; rc=$?
+  if [ "$rc" -eq 4 ]; then
+    pass "case21 verify with vectors_present=1 but NULL embed_dim exits 4"
+  else
+    failcase "case21 expected 4 for NULL embed_dim got $rc :: $out"
+  fi
+else
+  failcase "case21 sqlite3 not on PATH - cannot corrupt beats_vec"
+fi
+
+# --- Case 22: verify exit 4 on a DUPLICATE beats_vec row (row-count parity) ---
+# A beats_vec recreated without its PK can hold a duplicate valid row: the
+# filename SET still equals beats, but the row COUNT does not. search rejects this
+# on count; verify must too (else the guard stays silent on a search-broken db).
+c22="$(newtmp)"; c22_corpus="$c22/corpus"; c22_build="$c22/build"
+make_fixture "$c22_corpus"
+python3 "$BEATS_PY" compile --corpus "$c22_corpus" --build "$c22_build" >/dev/null 2>&1
+if [ -n "$SQLITE" ]; then
+  "$SQLITE" "$c22_build/beats.db" \
+    "CREATE TABLE beats_vec_tmp (filename TEXT, dim INTEGER, vec BLOB);
+     INSERT INTO beats_vec_tmp SELECT * FROM beats_vec;
+     INSERT INTO beats_vec_tmp SELECT * FROM beats_vec WHERE filename='file03_block.md';
+     DROP TABLE beats_vec;
+     ALTER TABLE beats_vec_tmp RENAME TO beats_vec;" >/dev/null 2>&1
+  out="$(python3 "$BEATS_PY" verify --corpus "$c22_corpus" --build "$c22_build" 2>&1)"; rc=$?
+  if [ "$rc" -eq 4 ]; then
+    pass "case22 verify with a duplicate beats_vec row (filename set intact) exits 4"
+  else
+    failcase "case22 expected 4 got $rc :: $out"
+  fi
+else
+  failcase "case22 sqlite3 not on PATH - cannot duplicate a beats_vec row"
+fi
+
+# --- Case 23: reuse ABANDONS a structurally corrupt old db (duplicate beats_vec) --
+# If the existing db has a duplicate (mislabeled-blob) beats_vec row, dict-keyed
+# reuse could silently pick the wrong vector. load_reusable_vectors must instead
+# abandon reuse wholesale and re-embed all, producing a clean db.
+c23="$(newtmp)"; c23_corpus="$c23/corpus"; c23_build="$c23/build"
+make_fixture "$c23_corpus"
+python3 "$BEATS_PY" compile --corpus "$c23_corpus" --build "$c23_build" >/dev/null 2>&1
+if [ -n "$SQLITE" ]; then
+  "$SQLITE" "$c23_build/beats.db" \
+    "CREATE TABLE beats_vec_tmp (filename TEXT, dim INTEGER, vec BLOB);
+     INSERT INTO beats_vec_tmp SELECT * FROM beats_vec;
+     INSERT INTO beats_vec_tmp (filename, dim, vec)
+       SELECT 'file03_block.md', dim, vec FROM beats_vec WHERE filename='file04_empty.md';
+     DROP TABLE beats_vec; ALTER TABLE beats_vec_tmp RENAME TO beats_vec;" >/dev/null 2>&1
+  out="$(python3 "$BEATS_PY" compile --corpus "$c23_corpus" --build "$c23_build" 2>&1)"; rc=$?
+  if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q "0 reused, 6 embedded"; then
+    pass "case23 reuse abandons a duplicate-row old db and re-embeds all (0 reused)"
+  else
+    failcase "case23 expected '0 reused, 6 embedded' rc=$rc :: $out"
+  fi
+  out="$(python3 "$BEATS_PY" verify --corpus "$c23_corpus" --build "$c23_build" 2>&1)"; rc=$?
+  if [ "$rc" -eq 0 ]; then
+    pass "case23 the recompiled db is clean (verify exit 0)"
+  else
+    failcase "case23 expected verify 0 after clean re-embed got $rc :: $out"
+  fi
+else
+  failcase "case23 sqlite3 not on PATH - cannot inject a duplicate row"
+fi
+
 # --- Summary -----------------------------------------------------------------
 printf '\n%d passed, %d failed\n' "$passes" "$fails"
 [ "$fails" -eq 0 ] || exit 1

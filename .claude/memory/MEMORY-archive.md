@@ -962,3 +962,12 @@
 
 <!-- archived 2026-07-02 (moved from MEMORY.md to stay under load budget) -->
 - [Sidecoach BATCH-2 REGRESSION RULING - architect honestly surfaced eval regress 0.894->0.787; #2 currentSrc revert APPROVED (currentSrc empty under abort-external = render-config bug, +regression fixture); #3/#4 HELD - I read the referee myself and the architect's premise is FACTUALLY WRONG (referee DOES skip partial opacity line 167; real divergence is FILTER which referee ignores); frame reset = justify by independent STANDARD axe/Lighthouse never "align to GT" (manufactures coupling); keep the genuine batch-2 wins - DECISION (2026-06-24)](session_2026-06-24_sidecoach-batch2-regression-ruling.md)
+
+<!-- archived 2026-07-02 (moved from MEMORY.md to stay under load budget) -->
+- [Sidecoach DECOUPLING GATE - lead independently re-ran the render-decoupling probe (errors 0, both arms 0.815, 20/20 identical, 0 flips, reproduced exactly): ACCEPT as a check that COULD have failed and didn't, but CORRECT the "STRONG" framing (perturbation is weak on viewport/script-invariant inline-CSS corpus = corroborating not dispositive); dispositive test = deferred S5b external-resource; engine-coupling non-issue by design (import-guard already proves separate spec-math); scanner SHIP on objective axis but CLAIM still gated on S5b; subjective-frontier plan gated with 5 conditions - DECISION (2026-06-24)](session_2026-06-24_sidecoach-decoupling-gate.md)
+
+<!-- archived 2026-07-02 (moved from MEMORY.md to stay under load budget) -->
+- [Sidecoach Stage 1 PLAN (reimplement-and-own) - first target: owned RENDERED objective scanner (0 -> ~0.83 ceiling), reuses product browser-evidence-collector (no new engine), referee-INDEPENDENCE guarded by a committed test, proof = frozen scorecard re-run, net-simpler via Stage-2 deletion (HARD CHECKPOINT) - DECISION (2026-06-24)](session_2026-06-24_sidecoach-stage1-plan.md)
+
+<!-- archived 2026-07-02 (moved from MEMORY.md to stay under load budget) -->
+- [Sidecoach Stage-1 DESIGN FOLDED (build spec) - Codex adversarial review folded (4 P0 + 4 P1 + 1 P2); additive live bridge (scanRenderedLive via goto, eval untouched), new rendered-scan evidence channel, promote-on-renderUrl-presence fail-closed refinement - DECISION (2026-06-24)](session_2026-06-24_sidecoach-stage1-design-folded.md)
