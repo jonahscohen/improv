@@ -272,8 +272,7 @@
         "decision_improv_renamed_to_endow.md",
         "session_2026-05-26_improv_to_offers_rename.md"
       ],
-      "unmarked_stale_ok": true,
-      "notes": "Chain is improv -> offers -> endow -> justify. The endow decision beat says 'final name is endow' and is NOT marked superseded_by - an unmarked stale beat retrieval must not rank above the justify rename. This is the deliberate unmarked-stale trap; do not 'fix' the corpus frontmatter, that would destroy the trap."
+      "notes": "Chain is improv -> offers -> endow -> justify. Originally the deliberate UNMARKED-stale trap (the endow decision beat claimed 'final name is endow' with no supersession marker). RETIRED 2026-07-02 by Jonah's corpus-truth ruling: a decision beat asserting false current-truth with no marker is a protocol violation that would mislead any reader, so the naming chain was marked superseded_by per the write-time link protocol. The case now tests marked-supersession collapse; unmarked-stale coverage lives in the search test fixtures and future parallel-run cases."
     },
     {
       "id": "q22",

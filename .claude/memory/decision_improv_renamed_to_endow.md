@@ -1,7 +1,9 @@
 ---
 name: improv renamed to endow (2026-05-26)
-description: The tool previously known as "improv" was renamed to "endow" on 2026-05-26. There was a brief "offers" intermediate naming earlier the same day that was superseded within minutes; final name is endow. All future references use "endow".
+description: The tool previously known as "improv" was renamed to "endow" on 2026-05-26. There was a brief "offers" intermediate naming earlier the same day that was superseded within minutes; final name is endow. All future references use "endow". [SUPERSEDED 2026-05-29: renamed again to "justify" - see superseded_by.]
 type: decision
+supersedes: session_2026-05-26_improv_to_offers_rename.md
+superseded_by: session_2026-05-29_endow_to_justify_rename.md
 ---
 
 **Choice made:** On 2026-05-26, the visual micro-adjustment tool previously called "improv" was renamed to "endow" throughout the codebase. Source identifiers, marketing-site URL, MCP server name, Skill name, global namespace - all switched in one coordinated rename. No backwards-compatibility shims.

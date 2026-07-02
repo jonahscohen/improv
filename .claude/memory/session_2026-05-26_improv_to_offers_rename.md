@@ -3,6 +3,7 @@ name: improv -> offers full rename executed
 description: Coordinated rename across 118 files - source identifiers, font filenames, marketing-site URL, MCP namespace, global window namespace, file paths, directory paths. Historical docs preserved.
 type: project
 relates_to: [decision_improv_renamed_to_offers.md]
+superseded_by: decision_improv_renamed_to_endow.md
 ---
 
 Executed the improv -> offers rename per the decision memory. Text replacement pass 1 (118 files) caught the bulk; pass 2 (54 files) cleaned up embedded PascalCase (`detectImprovUrl`, `isImprovElement`), the misspelled `improvePort` var, and font filenames (`improvsans`/`improvserif`/`improvmono`).

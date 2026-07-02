@@ -3,6 +3,7 @@ name: endow + improv -> justify rename (full unification)
 description: Renamed the microadjustment tool to "justify" once and for all - unified the leftover improv AND endow names across live code/config/marketing/assets/build; historical beats/docs left untouched
 type: project
 relates_to: [decision_improv_renamed_to_endow.md, session_2026-05-26_improv_to_offers_rename.md]
+supersedes: decision_improv_renamed_to_endow.md
 ---
 
 Collaborator: Jonah. 2026-05-29. "Changing endow's name to justify once and for all." Scope (AskUserQuestion): FULL unification - rename BOTH lingering improv AND endow refs in live code to justify. Solo (not a team): completeness-critical mechanical sweep where the wedge-prone teams add risk without helping; grep-verified.

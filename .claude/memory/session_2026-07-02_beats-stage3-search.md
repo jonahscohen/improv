@@ -43,8 +43,21 @@ Options presented (AskUserQuestion): local embeddings (recommended) / API embedd
 Searcher's Codex gate CLOSED after 4 rounds (R3: 3 mediums folded - bigrams from the pre-dedupe token stream, scorer rejects N>top_n result pages, scorer derives --corpus from the benchmark's own corpus field exactly as validate.py does; R4 confirmation CLEAN). Verified the tree was already at the fully-folded state when 4b804747 was committed and lead-certified (git diff clean under beats/ afterward). The searcher's honest no-gaming discipline held through both iterations.
 Escalated item closed LEAD-side (validate.py is spec territory): corpus supersession hygiene is now enforced by validate.py - a dangling superseded_by target or a supersession cycle is an ERROR, because search resolves chains at query time and the scorer's stale-leak assertion assumes every chain reaches an existing unmarked head. Verified: real corpus clean (73 marked-stale, 0 hygiene errors), synthetic dangling and cycle corpora both exit 1 loudly, clean-chain control exits 0.
 
+## 3b interim: hybrid 43/48 = 89.58% - ONE query under the bar (2026-07-02)
+qwen3-embedding:0.6b via local ollama (embeddinggemma evaluated, scored 41/48, rejected; nomic not needed). +10.4 points over lexical. All knob sweeps (RRF_K, CAND_K 20-300, damping, FTS weights) plateau at 43/48; CAND_K=100 honest best. Fail-soft verified both ends; suites 35/35 + 26/26 green; searcher STOPPED per mandate without gaming. Remaining 5 misses: q21 x2 (the deliberate unmarked-stale trap - semantic retrieval makes it WORSE, pulling old endow-naming beats above the justify answer), q03 x2 (mode-all 2-hop pair), q10p (token-avoiding paraphrase). Searcher flagged recency as the next lever but correctly deferred it (regression risk on legitimately-old answers; lead adds: mtime is git-unreliable across machines - clone resets it). Decision to Jonah: recency factor / mark the stale naming chain per corpus protocol (truth fix that retires the trap) / accept 89.58% and proceed.
+
+## JONAH RULING: corpus truth wins -> GATE PASSED 45/48 = 93.75% (2026-07-02)
+Options presented (AskUserQuestion): fix corpus truth (recommended) / recency factor / accept 89.58%. **Jonah chose corpus truth.** Rationale: a decision beat asserting false current-truth ("final name is endow") with no supersession marker is a protocol violation that misleads ANY reader - the benchmark merely exposed real corpus debt; recency would have papered over it (and mtime is git-unreliable anyway).
+Executed per the write-time link protocol, both ends synced: improv_to_offers rename -> superseded_by endow decision; endow decision -> superseded_by justify rename (+ supersedes offers, + description annotated); justify rename -> supersedes endow decision. q21's trap annotation RETIRED honestly in benchmark.json + README (the case now tests marked-supersession collapse; unmarked-stale coverage lives in search test fixtures + future parallel-run misses). This was ruled a truth repair, not an eval bend: the corpus change would be mandatory under the link protocol even if no benchmark existed.
+**Measured result: validate green (75 marked-stale, hygiene clean), compile 865 beats + 865 vectors (qwen3-embedding:0.6b dim 1024), scorer 45/48 = 93.75% >= 0.90, exit 0. Both q21 queries flipped via supersession collapse. Residual misses (3, documented): q03[0/1] mode-all 2-hop pair, q10[1] token-avoiding paraphrase - real semantic frontier for parallel-run.**
+Pending to close stage 3b: searcher's in-flight Codex round on the 3b diff -> lead certification round -> 3b code commit -> teardown.
+
 ## Files touched
 - .claude/memory/session_2026-07-02_beats-stage3-search.md (this beat)
 - .claude/memory/MEMORY.md (index pointer)
 - beats/bench/validate.py (supersession hygiene: dangling/cycle = error)
-- beats/bench/README.md (hygiene rule documented)
+- beats/bench/README.md (hygiene rule documented + q21 trap retirement)
+- beats/bench/benchmark.json (q21 trap retirement annotation)
+- .claude/memory/session_2026-05-26_improv_to_offers_rename.md (marked superseded)
+- .claude/memory/decision_improv_renamed_to_endow.md (marked superseded, both-ends sync)
+- .claude/memory/session_2026-05-29_endow_to_justify_rename.md (supersedes backlink)
