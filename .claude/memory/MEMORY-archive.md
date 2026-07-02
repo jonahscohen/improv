@@ -971,3 +971,7 @@
 
 <!-- archived 2026-07-02 (moved from MEMORY.md to stay under load budget) -->
 - [Sidecoach Stage-1 DESIGN FOLDED (build spec) - Codex adversarial review folded (4 P0 + 4 P1 + 1 P2); additive live bridge (scanRenderedLive via goto, eval untouched), new rendered-scan evidence channel, promote-on-renderUrl-presence fail-closed refinement - DECISION (2026-06-24)](session_2026-06-24_sidecoach-stage1-design-folded.md)
+
+<!-- archived 2026-07-02 (superseded IN FLIGHT records - the IMPLEMENTED beats are the current truth) -->
+- [Beats evolution STAGES 4+5 IN FLIGHT (completed; superseded by the IMPLEMENTED beat) - PROJECT (2026-07-02)](session_2026-07-02_beats-stage4-5-hooks.md)
+- [Beats evolution STAGE 3 IN FLIGHT (completed; superseded by the IMPLEMENTED beat) - PROJECT (2026-07-02)](session_2026-07-02_beats-stage3-search.md)

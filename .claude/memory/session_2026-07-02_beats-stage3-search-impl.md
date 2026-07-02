@@ -3,6 +3,7 @@ name: Beats evolution STAGE 3 IMPLEMENTED - search subcommand + benchmark scorer
 description: beats.py search (FTS5 bm25 + NL sanitize + query-time supersession resolution + index exclusion + bidirectional relates_to graph expansion + compound bigrams) and beats/bench/score.py; honest operating point 38/48 (79.2%) under the 0.90 bar - lexical ceiling, expansion+bigrams net-neutral, embeddings is Jonah's call; 3 Codex rounds folded
 type: project
 relates_to: [session_2026-07-02_beats-stage3-search.md, session_2026-07-02_beats-stage2-compiler-impl.md, session_2026-07-02_beats-stage1-recall-benchmark.md]
+supersedes: session_2026-07-02_beats-stage3-search.md
 ---
 
 Stage 3 of the beats next-evolution plan, implemented by a fresh executor teammate (collaborator: Jonah Cohen). Two units delivered on top of the committed stage-1 benchmark and stage-2 compiler, fitting their contracts exactly. The corpus, benchmark.json, and validate.py were NOT modified.

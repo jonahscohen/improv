@@ -5,7 +5,12 @@
 # WHAT IT DOES
 #   At session start it runs `beats.py verify` (fast, no network) under a short
 #   timeout and reacts to the exit code:
-#     0 (fresh)   -> silent (no context noise).
+#     0 (fresh)   -> silent (no context noise) - except while the beats parallel
+#                    run is open (today <= BEATS_PARALLEL_RUN_END), when it emits
+#                    a one-line reminder to exercise `beats.py search` beside the
+#                    canonical beat reads so misses become benchmark cases
+#                    (feedback_memory_first_zero_failure_execution.md steps 6-7).
+#                    Auto-expires after the end date; cutover removes it.
 #     6 (stale)   -> one context line + kick the SAME debounced background compile
 #                    as the stage-4 rebuild hook (beats-rebuild.sh --enqueue).
 #     4 (broken)  -> a LOUD context line: the retrieval index is broken; run
@@ -21,6 +26,8 @@
 #   BEATS_BUILD           build dir      (default <repo>/beats/.build)
 #   BEATS_PY              beats.py path  (default <repo>/beats/beats.py)
 #   BEATS_VERIFY_TIMEOUT  seconds        (default 15)
+#   BEATS_PARALLEL_RUN_END YYYY-MM-DD    (default 2026-07-16; a past date
+#                                         disables the parallel-run reminder)
 set -u
 
 _realpath() { python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null || printf '%s' "$1"; }
@@ -46,6 +53,18 @@ esac
 [ "$TIMEOUT_SECS" -gt 0 ] 2>/dev/null || TIMEOUT_SECS=15
 # Clamp to a sane max so a huge value + a hung verify cannot block session start.
 [ "$TIMEOUT_SECS" -gt "$TIMEOUT_MAX" ] && TIMEOUT_SECS="$TIMEOUT_MAX"
+
+# Parallel-run window (beats evolution cutover plan): while open, fresh sessions
+# get a one-line search mandate instead of silence. Lexicographic compare is
+# date-correct for YYYY-MM-DD; a malformed end value errs toward reminding,
+# which is harmless. The whole check can never abort the guard (set -u safe).
+PARALLEL_RUN_END="${BEATS_PARALLEL_RUN_END:-2026-07-16}"
+parallel_run_active() {
+  local today
+  today="$(date +%Y-%m-%d 2>/dev/null)" || return 1
+  [ -n "$today" ] || return 1
+  [ ! "$today" \> "$PARALLEL_RUN_END" ]
+}
 
 log_note() { printf '%s beats-staleness-guard: %s\n' "$(date '+%Y-%m-%dT%H:%M:%S')" "$*" >> "$LOG" 2>/dev/null || true; }
 emit_silent() { printf '{}\n'; }
@@ -81,7 +100,11 @@ main() {
   run_verify "$errf"; rc=$?
   case "$rc" in
     0)
-      emit_silent ;;
+      if parallel_run_active; then
+        emit_context "beats index fresh. PARALLEL RUN through $PARALLEL_RUN_END: for any recall/prior-work question, ALSO run python3 beats/beats.py search \"<question>\" beside the canonical beat reads, and record any miss as a benchmark case (zero-failure mandate steps 6-7)."
+      else
+        emit_silent
+      fi ;;
     6)
       detail="$(grep -oE '[0-9]+ added, [0-9]+ removed, [0-9]+ changed' "$errf" 2>/dev/null | head -1)"
       [ -n "$detail" ] || detail="corpus changed"

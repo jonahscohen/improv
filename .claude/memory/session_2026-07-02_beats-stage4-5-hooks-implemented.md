@@ -3,6 +3,7 @@ name: Beats evolution STAGES 4+5 IMPLEMENTED - incremental vector reuse + rebuil
 description: Unit A incremental vector reuse in compile (155s->1s single-file), Unit B beats-rebuild.sh PostToolUse debounced background compile, Unit C beats-staleness-guard.sh SessionStart verify guard, project-scoped settings wiring; both ratified verify clauses proven E2E; scorer stays 45/48
 type: project
 relates_to: [session_2026-07-02_beats-stage4-5-hooks.md, session_2026-07-02_beats-stage3b-hybrid-embeddings.md]
+supersedes: session_2026-07-02_beats-stage4-5-hooks.md
 ---
 
 Collaborator: Jonah Cohen. 2026-07-02. Executor (Opus) implementing the lead-ratified stages 4+5 plan. Do NOT commit (lead holds the commit gate).

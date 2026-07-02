@@ -3,6 +3,7 @@ name: Beats evolution STAGE 3 - search + benchmark scorer (dispatched)
 description: Stage 3 kickoff - search subcommand (FTS5 bm25, NL query sanitization, query-time supersession resolution, index-file exclusion) + bench scorer (public-CLI scoring, machine stale-set, 90% bar) dispatched to fresh Opus teammate "searcher"; anti-gaming rules explicit; lead holds the gate
 type: project
 relates_to: [session_2026-07-02_beats-stage2-compiler-impl.md, session_2026-07-02_beats-stage1-recall-benchmark.md]
+superseded_by: session_2026-07-02_beats-stage3-search-impl.md
 ---
 
 Collaborator: Jonah Cohen. 2026-07-02. Jonah greenlit stage 3 ("proceed with stage 3").

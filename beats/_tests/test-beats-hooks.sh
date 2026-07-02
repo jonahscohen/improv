@@ -9,6 +9,9 @@
 set -u
 
 export BEATS_EMBED_STUB=1
+# Disable the guard's parallel-run reminder by default so the fresh-index cases
+# assert the guard's steady-state (post-cutover) silence; case 5b re-enables it.
+export BEATS_PARALLEL_RUN_END=1970-01-01
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$HERE/../.." && pwd)"
@@ -172,6 +175,18 @@ if [ "$rc" -eq 0 ] && [ "$trimmed" = "{}" ]; then
   pass "case5 guard on a fresh index is silent ({}) exit 0"
 else
   failcase "case5 expected silent {} exit 0 got rc=$rc out='$out'"
+fi
+
+# === Case 5b: fresh index INSIDE the parallel-run window -> search mandate ===
+# Same fresh corpus as case 5; with the window open the guard must emit the
+# one-line parallel-run search reminder (valid additionalContext JSON, exit 0)
+# instead of silence.
+out="$(env BEATS_CORPUS="$c5_corpus" BEATS_BUILD="$c5_build" BEATS_PARALLEL_RUN_END=9999-12-31 bash "$GUARD" 2>/dev/null)"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q "PARALLEL RUN" \
+  && printf '%s' "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert "beats.py search" in d["additionalContext"]' 2>/dev/null; then
+  pass "case5b fresh index inside the parallel-run window emits the search mandate (exit 0)"
+else
+  failcase "case5b expected parallel-run mandate JSON exit 0 got rc=$rc out='$out'"
 fi
 
 # === Case 6: guard on a STALE index -> STALE line + background rebuild -> fresh

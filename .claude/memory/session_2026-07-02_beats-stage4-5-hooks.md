@@ -3,6 +3,7 @@ name: Beats evolution STAGES 4+5 - rebuild-on-write + session-start staleness gu
 description: Stages 4-5 kickoff - incremental vector reuse in compile (prereq - full compile re-embeds 865 beats ~155s, unusable per-write), debounced PostToolUse rebuild hook, SessionStart verify guard (silent/STALE-rebuild/broken-loud), project-scoped settings wiring; dispatched to fresh Opus teammate "hooksmith"
 type: project
 relates_to: [session_2026-07-02_beats-stage3-search.md, feedback_memory_first_zero_failure_execution.md]
+superseded_by: session_2026-07-02_beats-stage4-5-hooks-implemented.md
 ---
 
 Collaborator: Jonah Cohen. 2026-07-02. Jonah said "Continue" after stage-3 closure - stages 4+5 proceed.
