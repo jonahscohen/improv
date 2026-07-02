@@ -14,18 +14,29 @@ success summary line prints only when every check has passed.
 USAGE
   beats.py compile [--corpus PATH] [--build PATH]
   beats.py verify  [--corpus PATH] [--build PATH]
+  beats.py search  "natural language query" [--top N] [--json]
+                   [--corpus PATH] [--build PATH]
 
   --corpus  override the corpus dir (default: <repo-root>/.claude/memory)
   --build   override the build dir  (default: <beats-dir>/.build)
+  --top     search: max results after supersession resolution (default 5)
+  --json    search: emit a JSON array for the benchmark scorer
 
 EXIT CODES
-  0  success
+  0  success (search: including zero hits)
+  1  search-only: unusable query (nothing survived sanitization)
   2  corpus dir missing
   3  unreadable / non-strictly-decodable corpus file(s)
   4  artifact / db / FTS5 failure (broken, not stale)
   5  parity self-verification failure
   6  verify-only: artifacts stale vs the corpus
 Argparse errors keep argparse's own default (exit 2).
+
+Search never exits stale (6) and never exits 3: a stale (or even transiently
+unreadable) corpus mid-session still beats retrieving nothing, so search reads
+results from the compiled db, prints a one-line STALE warning to stderr, and
+returns results anyway. Exit 3 (unreadable corpus) is a compile/verify-only
+code. Search's only codes are 0, 1, 2, and 4.
 """
 
 import argparse
@@ -582,15 +593,344 @@ def cmd_verify(corpus, build):
     return 6
 
 
+# ---------------------------------------------------------------------------
+# search (stage 3): natural-language query -> ranked, supersession-resolved
+# beats. All tuning knobs below are GLOBAL and principled - there is no
+# benchmark-specific logic, no per-filename boosts, and the only filename
+# special-casing permitted is the derived-index exclusion.
+# ---------------------------------------------------------------------------
+
+# Short global English stopword list. Dropped before building the FTS query so
+# question scaffolding ("what", "how", "why", ...) does not dilute ranking.
+STOPWORDS = frozenset({
+    "what", "how", "why", "the", "a", "an", "is", "are", "do", "does", "did",
+    "we", "i", "my", "our", "it", "its", "to", "of", "in", "on", "for", "and",
+    "or", "not", "with", "vs", "versus",
+})
+
+# Alphanumeric token runs; a token is kept when it is at least 2 chars long.
+QUERY_TOKEN_RE = re.compile(r"[a-z0-9]+")
+
+# bm25 column weights, positional over the beats_fts columns in declaration
+# order (filename UNINDEXED, name, description, body). The filename slot is
+# never matched (UNINDEXED) so its weight is inert; name and description are
+# weighted above body because a beat's title/summary is a stronger topic signal
+# than an incidental body mention.
+FTS_WEIGHTS = (1.0, 4.0, 3.0, 1.0)
+
+# Derived indexes, never beats themselves: keyword-dense aggregations that would
+# pollute every ranking. This is the ONLY filename-specific logic in the engine.
+INDEX_FILES = ("MEMORY.md", "MEMORY-archive.md")
+
+# Cap on how far a superseded_by chain is walked before giving up (defends
+# against pathological or malformed chains).
+RESOLVE_DEPTH_CAP = 10
+
+# relates_to graph expansion (global, corpus-native). The beats link discipline
+# binds complementary context (plan<->mandate, rule<->clarification), so
+# retrieval that honors the graph honors the data model. After bm25 + supersession
+# resolution, the top EXPAND_FROM direct hits pull in their neighbors - treated
+# BIDIRECTIONALLY because relates_to is written asymmetrically (newer beats link
+# back to older ones), so a forward-only walk would systematically miss the newer
+# half of every pair. A neighbor inherits EXPAND_DAMPING of its citing hit's
+# relevance (bm25 is negative; scaling toward 0 makes the neighbor rank below its
+# citing hit). Edges span the hit's whole supersession chain and resolve through
+# heads; index files are excluded. Both knobs are global - no per-case tuning.
+EXPAND_FROM = 10
+EXPAND_DAMPING = 0.5
+
+
+def sanitize_query(raw):
+    """Turn a natural-language question into an FTS5 OR-query.
+
+    Extracts lowercased alphanumeric tokens (length >= 2), drops the global
+    stopwords, dedupes preserving order, and double-quotes every remaining token
+    so it is treated as a literal term - user text can never inject FTS5
+    operators. Also adds a COMPOUND BIGRAM for each adjacent surviving-token pair
+    (e.g. "micro adjustment" -> "microadjustment", "tilt lab" -> "tiltlab"): pure
+    tokenization robustness for compound/hyphenated vocabulary the corpus may
+    write as one word. Returns (match_expr, tokens); ("", []) when nothing
+    survives. `tokens` is the single-token list (bigrams are query-only).
+    """
+    # Filtered but NOT yet deduped, so adjacency reflects the real query order
+    # (bigrams must be built from this stream: "new york new jersey" must yield
+    # "newyork" and "newjersey", not a bogus cross-pair from a deduped list).
+    filtered = [
+        tok for tok in QUERY_TOKEN_RE.findall((raw or "").lower())
+        if len(tok) >= 2 and tok not in STOPWORDS
+    ]
+    if not filtered:
+        return "", []
+    # single-token terms: dedupe preserving order
+    tokens = []
+    seen = set()
+    for tok in filtered:
+        if tok not in seen:
+            seen.add(tok)
+            tokens.append(tok)
+    # compound bigrams from adjacent surviving tokens (pre-dedupe adjacency)
+    terms = list(tokens)
+    for a, b in zip(filtered, filtered[1:]):
+        terms.append(a + b)
+    # dedupe the final term list preserving order (a bigram may collide with an
+    # existing single token or with another bigram)
+    term_seen = set()
+    ordered = []
+    for t in terms:
+        if t not in term_seen:
+            term_seen.add(t)
+            ordered.append(t)
+    return " OR ".join(f'"{t}"' for t in ordered), tokens
+
+
+def resolve_head(start, sup_map, existing):
+    """Walk the superseded_by chain from `start` to its current-truth head.
+
+    Transitive, cycle-guarded, and depth capped. Terminates on:
+      - a true head (no superseded_by) -> return it;
+      - a dangling pointer (target not in `existing`) -> return the deepest
+        existing beat reached so far;
+      - a cycle (a pointer back to a beat already on the path) -> collapse the
+        whole cycle to ONE canonical representative (its lexicographically
+        smallest filename), so every member of a cycle resolves to the same
+        beat and mutually-superseding beats never surface as separate results;
+      - the depth cap -> return the deepest beat reached.
+    `start` is always an existing beat (it came from a db row).
+    """
+    current = start
+    path = [current]
+    seen = {current}
+    for _ in range(RESOLVE_DEPTH_CAP):
+        nxt = sup_map.get(current, "")
+        if not nxt:
+            return current                     # true head: no superseded_by
+        if nxt not in existing:
+            return current                     # dangling: deepest existing beat
+        if nxt in seen:
+            return min(path[path.index(nxt):])  # cycle: one canonical member
+        seen.add(nxt)
+        path.append(nxt)
+        current = nxt
+    return current                             # depth cap: deepest reached
+
+
+def compute_corpus_hash(corpus):
+    """Recompute the corpus hash the way compile/verify do (all *.md files).
+
+    Returns the hex digest, or None if any corpus file cannot be read - search
+    treats an unreadable corpus as "cannot confirm fresh" and warns STALE."""
+    pairs = []
+    for path in sorted(corpus.glob("*.md"), key=lambda p: p.name):
+        try:
+            pairs.append((path.name, hashlib.sha256(path.read_bytes()).hexdigest()))
+        except OSError:
+            return None
+    return corpus_hash(pairs)
+
+
+def build_graph(rows_relates, sup_map, existing):
+    """Precompute per-head BIDIRECTIONAL relates_to neighbor heads.
+
+    `rows_relates` maps each raw filename to its list of raw relates_to targets.
+    Returns (head_of, head_neighbors):
+      head_of[raw]         = resolve_head(raw)
+      head_neighbors[head] = the set of neighbor heads reachable from ANY raw
+        beat in that head's supersession chain, via forward relates_to targets
+        OR reverse citations (a beat that lists this one in its own relates_to).
+    Edges are treated bidirectionally because relates_to is written
+    asymmetrically by protocol; every endpoint is resolved through supersession
+    to its current head; self-links and derived index files are excluded.
+    """
+    head_of = {raw: resolve_head(raw, sup_map, existing) for raw in existing}
+    reverse = {}
+    for raw, targets in rows_relates.items():
+        for tgt in targets:
+            if tgt in existing:
+                reverse.setdefault(tgt, set()).add(raw)
+    head_neighbors = {}
+    for raw in existing:
+        bucket = head_neighbors.setdefault(head_of[raw], set())
+        for tgt in rows_relates.get(raw, ()):          # forward edge
+            if tgt in existing:
+                bucket.add(head_of[tgt])
+        for citer in reverse.get(raw, ()):             # reverse edge (bidirectional)
+            bucket.add(head_of[citer])
+    for head, bucket in head_neighbors.items():
+        bucket.discard(head)
+        for idx in INDEX_FILES:
+            bucket.discard(idx)
+    return head_of, head_neighbors
+
+
+def cmd_search(corpus, build, query, top, as_json):
+    if not corpus.is_dir():
+        eprint(f"CORPUS MISSING: corpus dir does not exist: {corpus}")
+        return 2
+
+    match, _tokens = sanitize_query(query)
+    if not match:
+        eprint("UNUSABLE QUERY: no searchable terms after sanitization "
+               "(every token was too short or a stopword)")
+        return 1
+
+    db_path = build / "beats.db"
+    if not db_path.exists():
+        eprint(f"ARTIFACT/DB FAILURE: compiled db not found: {db_path} "
+               "(run `beats.py compile` first)")
+        return 4
+
+    weights = ",".join(repr(w) for w in FTS_WEIGHTS)
+    placeholders = ",".join("?" for _ in INDEX_FILES)
+    try:
+        con = sqlite3.connect(str(db_path))
+    except sqlite3.Error as exc:
+        eprint(f"ARTIFACT/DB FAILURE: cannot open db: {exc}")
+        return 4
+    try:
+        # Same layered broken-vs-stale checks as verify: a corrupt page, a
+        # missing meta row, or a desynced/emptied beats_fts is a broken artifact
+        # (exit 4), never a silent empty result.
+        try:
+            integrity = con.execute("PRAGMA integrity_check").fetchone()
+            if not integrity or integrity[0] != "ok":
+                raise sqlite3.DatabaseError(
+                    f"integrity_check returned "
+                    f"{integrity[0] if integrity else 'no result'!r}")
+            meta = con.execute(
+                "SELECT corpus_hash, file_count FROM meta"
+            ).fetchone()
+            rows = con.execute(
+                "SELECT filename, name, description, superseded_by, relates_to FROM beats"
+            ).fetchall()
+            fts_row = con.execute("SELECT COUNT(*) FROM beats_fts").fetchone()
+            fts_count = fts_row[0] if fts_row else -1
+            if fts_count != len(rows):
+                raise sqlite3.DatabaseError(
+                    f"beats_fts row count {fts_count} != beats row count {len(rows)}")
+            if meta is not None and len(rows) != meta[1]:
+                raise sqlite3.DatabaseError(
+                    f"beats row count {len(rows)} != meta.file_count {meta[1]}")
+        except sqlite3.Error as exc:
+            eprint(f"ARTIFACT/DB FAILURE: db unreadable or malformed: {exc}")
+            return 4
+        if meta is None:
+            eprint("ARTIFACT/DB FAILURE: meta row missing from db")
+            return 4
+
+        existing = set()
+        sup_map = {}
+        info = {}
+        rows_relates = {}
+        for filename, name, description, superseded_by, relates_to in rows:
+            existing.add(filename)
+            sup_map[filename] = superseded_by or ""
+            info[filename] = (name or "", description or "")
+            try:
+                targets = json.loads(relates_to) if relates_to else []
+            except (json.JSONDecodeError, TypeError):
+                targets = []
+            rows_relates[filename] = targets if isinstance(targets, list) else []
+
+        # Cheap staleness check (verify-equivalent hash). Search reads results
+        # from the db, not the corpus, so a stale-or-unreadable corpus never
+        # blocks retrieval - it beats returning nothing. Warn loudly on stderr
+        # (never silently) and keep going. Unlike compile/verify, search does
+        # NOT exit 3 on an unreadable corpus file: it cannot confirm freshness,
+        # says so, and still serves the compiled index.
+        current_hash = compute_corpus_hash(corpus)
+        if current_hash is None:
+            eprint("STALE: could not read one or more corpus files to confirm "
+                   "freshness; returning results from the compiled index anyway.")
+        elif current_hash != meta[0]:
+            eprint("STALE: compiled index does not match the corpus on disk; "
+                   "run `beats.py compile`. Returning results from the stale index.")
+
+        try:
+            hits = con.execute(
+                f"SELECT filename, bm25(beats_fts,{weights}) AS score "
+                f"FROM beats_fts WHERE beats_fts MATCH ? "
+                f"AND filename NOT IN ({placeholders}) "
+                f"ORDER BY score ASC, filename ASC",
+                (match, *INDEX_FILES),
+            ).fetchall()
+        except sqlite3.Error as exc:
+            eprint(f"ARTIFACT/DB FAILURE: FTS query failed: {exc}")
+            return 4
+    finally:
+        con.close()
+
+    head_of, head_neighbors = build_graph(rows_relates, sup_map, existing)
+
+    # Phase 1 - direct hits: resolve every FTS hit to its chain head, keeping the
+    # best (most negative) bm25 score per head. Hits arrive best-first, so the
+    # first sighting of a head is its best rank. Never surface a derived index.
+    direct = {}
+    order = []
+    for filename, score in hits:
+        head = head_of.get(filename, filename)
+        if head in INDEX_FILES:
+            continue
+        if head not in direct:
+            direct[head] = score
+            order.append(head)
+        elif score < direct[head]:
+            direct[head] = score
+
+    # Phase 2 - bidirectional relates_to graph expansion: the top EXPAND_FROM
+    # direct hits pull in their neighbor heads at EXPAND_DAMPING of their own
+    # relevance (bm25 is negative, so the neighbor ranks below its citing hit).
+    # A neighbor keeps its best contribution across all citing hits; a beat that
+    # is both a direct hit and a neighbor keeps whichever score is better.
+    combined = dict(direct)
+    for head in order[:EXPAND_FROM]:
+        blended = direct[head] * EXPAND_DAMPING
+        for neighbor in head_neighbors.get(head, ()):
+            if neighbor in INDEX_FILES:
+                continue
+            if neighbor not in combined or blended < combined[neighbor]:
+                combined[neighbor] = blended
+
+    # Strict ranking: (score asc, filename asc), truncated to `top`.
+    ranked = sorted(combined.items(), key=lambda kv: (kv[1], kv[0]))[:top]
+    results = []
+    for rank, (head, score) in enumerate(ranked, start=1):
+        name, description = info.get(head, ("", ""))
+        results.append({
+            "rank": rank,
+            "filename": head,
+            "score": score,
+            "name": name,
+            "description": description,
+        })
+
+    if as_json:
+        print(json.dumps(results, ensure_ascii=False))
+        return 0
+
+    if not results:
+        print("0 results")
+        return 0
+    for r in results:
+        label = r["name"] or r["description"] or "(no name/description)"
+        print(f"{r['rank']:>2}  {r['filename']}  {r['score']:.6f}  {label}")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(
-        description="Compile / verify the markdown beats corpus into build artifacts."
+        description="Compile / verify / search the markdown beats corpus."
     )
-    ap.add_argument("command", choices=["compile", "verify"])
+    ap.add_argument("command", choices=["compile", "verify", "search"])
+    ap.add_argument("query", nargs="?", default=None,
+                    help="search: natural-language query text")
     ap.add_argument("--corpus", default=None,
                     help="corpus dir (default: <repo-root>/.claude/memory)")
     ap.add_argument("--build", default=None,
                     help="build dir (default: <beats-dir>/.build)")
+    ap.add_argument("--top", type=int, default=5,
+                    help="search: max results after resolution (default 5)")
+    ap.add_argument("--json", action="store_true",
+                    help="search: emit a JSON array")
     ap.add_argument("--inject-parity-fault", action="store_true",
                     help=argparse.SUPPRESS)
     args = ap.parse_args()
@@ -600,7 +940,16 @@ def main():
 
     if args.command == "compile":
         return cmd_compile(corpus, build, args.inject_parity_fault)
-    return cmd_verify(corpus, build)
+    if args.command == "verify":
+        return cmd_verify(corpus, build)
+    # search
+    if args.top < 1:
+        eprint("UNUSABLE QUERY: --top must be a positive integer")
+        return 1
+    if args.query is None:
+        eprint("UNUSABLE QUERY: no query text provided")
+        return 1
+    return cmd_search(corpus, build, args.query, args.top, args.json)
 
 
 if __name__ == "__main__":
