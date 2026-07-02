@@ -396,5 +396,13 @@ If a project's beats do not yet declare a surface id, ask the user for it before
 - Interactive verification - use `snapshot --interactive` to get element refs, then drive clicks/hovers.
 - When the user says "refresh the tab in cmux" or similar, this is the tool they mean.
 
+## Teammate Teardown (cmux subagent lifecycle - MANDATORY)
+
+When a spawned subagent/teammate is absolutely done - its unit accepted, results relayed, stood down, no further tasking - kill it and close its pane. Do not leave idle teammates parked: they emit recurring idle-notification noise into the lead session, hold a cmux pane, and keep a claude.exe process alive. "Available for a fresh dispatch" is not a reason to keep one warm; fresh dispatches get fresh contexts anyway.
+
+Teardown sequence (verified live 2026-07-02 on the stage-2 compiler teammate):
+1. Confirm the unit is FULLY closed first: work accepted, beats written, commits landed if due, teammate acknowledged stand-down. Never kill a teammate that may still need to relay results.
+2. Send the sanctioned kill via SendMessage: `{"type": "shutdown_request", "reason": ...}`. The teammate approves and its process terminates. (Originating shutdown_request is allowed here - this standing rule is the ask.)
+3. cmux closes the agent surface automatically when the session ends. Verify: the process is gone (`ps -p <pid>`) and the pane is gone (`cmux list-panels`). If a pane ever lingers, `cmux close-surface --surface surface:<N>`.
 
 <!-- improv:brain:end -->
