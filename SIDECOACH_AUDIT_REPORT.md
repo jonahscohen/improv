@@ -249,7 +249,7 @@ export class SidecoachEntryPoint {
 - fontshare-reference
 - icon-source
 - justify
-- make-interfaces-feel-better (symlink)
+- tactical-polish (symlink)
 - motion-reference
 - reflect
 - social-media

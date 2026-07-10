@@ -1,6 +1,14 @@
 import { Transport } from './transport';
 import { Overlay } from './overlay';
-import { Toolbar } from './toolbar';
+import { Toolbar, currentPalette, registerThemedSurface } from './toolbar';
+
+// Marker hex -> rgba tint for bar-pill hover warmth (theme-independent accent).
+function markerTint(hex: string, alpha: number): string {
+  var m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return 'rgba(217,119,87,' + alpha + ')';
+  var n = parseInt(m[1], 16);
+  return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alpha + ')';
+}
 import { AdapterRegistry } from './adapter-registry';
 import { PreviewEngine } from './preview-engine';
 import { ChangeBuffer } from './change-buffer';
@@ -51,6 +59,8 @@ export class JustifyCore {
   private _changesPanel: ChangesPanel | null = null;
   private _taskHighlights: Array<{el: HTMLElement; box: HTMLElement}> = [];
 
+  private _barThemeUnreg: (() => void) | null = null;
+
   // Claudebar
   private _claudePill: HTMLDivElement | null = null;
   private _claudeSpark: HTMLDivElement | null = null;
@@ -58,8 +68,11 @@ export class JustifyCore {
   private _claudeAnim: Animation | null = null;
   _claudeState: 'none' | 'connected' | 'sending' | 'working' | 'validating' | 'review' | 'review-active' | 'retry' | 'retrying' = 'none';
   _pendingResponses: number = 0;
-  private _claudeTimeout: number | null = null;
   _lastPromptData: any = null;
+  // clientId of the last prompt handed to the outbox. The manual Retry pill
+  // re-sends with THIS id, not a fresh one - the daemon dedupes on it, so
+  // clicking Retry over work that already landed acks instead of double-queueing.
+  _lastPromptClientId: string | null = null;
   private _spriteSvgs: Record<string, string> = {};
   private _spritesLoaded = false;
   _watchActive = false;
@@ -220,7 +233,9 @@ export class JustifyCore {
             this._updateScreenGlowColor(c);
             this.toolbar?.updateModeButtonStyles();
             this._syncPromptModeColor(c);
+            this._setMarkerVar(c);
           });
+          this._setMarkerVar(this.toolbar.getMarkerColor());
           this.toolbar.setBadge(this.changeBuffer?.count() ?? 0);
         }
         return;
@@ -313,7 +328,7 @@ export class JustifyCore {
       this._queuePill.dataset.justify = '';
       this._queuePill.style.cssText =
         'height:44px;display:none;align-items:center;' +
-        'background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:22px;' +
+        'background:' + currentPalette().surface + ';border:1px solid ' + currentPalette().borderSubtle + ';border-radius:22px;' +
         'padding:6px;gap:2px;box-shadow:0 2px 12px rgba(0,0,0,0.4);pointer-events:all;' +
         'transition:padding 0.35s cubic-bezier(0.4,0,0.2,1),gap 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.25s ease,transform 0.35s cubic-bezier(0.4,0,0.2,1)';
 
@@ -335,7 +350,11 @@ export class JustifyCore {
       this._updateScreenGlowColor(c);
       this.toolbar?.updateModeButtonStyles();
       this._syncPromptModeColor(c);
+      this._applyBarTheme();
+      this._setMarkerVar(c);
     });
+    this._setMarkerVar(this.toolbar.getMarkerColor());
+    this._barThemeUnreg = registerThemedSurface(() => this._applyBarTheme());
 
     this._changesPanel = new ChangesPanel(
       this.overlay.getShadowRoot(),
@@ -361,10 +380,7 @@ export class JustifyCore {
       };
       this._lastPromptData = promptData;
       this._showClaudeBar('Sending to Claude', 'writing', true);
-      this.transport.request('push_prompt', promptData).catch((e: unknown) => {
-        console.warn('[Justify] Reply failed:', e);
-        this._claudeToRetry();
-      });
+      this._lastPromptClientId = this.transport.sendPrompt(promptData);
     });
 
     this._changesPanel.setOnClearAll(() => {
@@ -409,8 +425,8 @@ export class JustifyCore {
       // Deactivate Claudebar icon when panel hides
       if (this._claudePill && this._claudeState === 'review-active') {
         const icon = this._claudePill.querySelector('div') as HTMLElement;
-        if (icon) { icon.style.background = 'rgba(255,255,255,0.08)'; icon.style.color = '#D97757'; icon.dataset.barActive = ''; }
-        if (this._claudeSpark) this._setSpark(this._claudeSpark, JustifyCore._staticSvg, '#D97757');
+        if (icon) { icon.style.background = currentPalette().hover; icon.style.color = this._mk(); icon.dataset.barActive = ''; }
+        if (this._claudeSpark) this._setSpark(this._claudeSpark, JustifyCore._staticSvg, 'var(--justify-marker, #D97757)');
       }
     });
 
@@ -435,10 +451,7 @@ export class JustifyCore {
       };
       this._lastPromptData = promptData;
       this._showClaudeBar('Sending to Claude', 'writing', true);
-      this.transport.request('push_prompt', promptData).catch((e: unknown) => {
-        console.warn('[Justify] Revert prompt failed:', e);
-        this._claudeToRetry();
-      });
+      this._lastPromptClientId = this.transport.sendPrompt(promptData);
     });
 
     if (this._changeHistory.some(e => !e.reviewed)) {
@@ -455,7 +468,13 @@ export class JustifyCore {
     if (!this.active) return;
     this.active = false;
 
+    if (this._barThemeUnreg) { this._barThemeUnreg(); this._barThemeUnreg = null; }
     this.switchMode(null);
+    // ChangesPanel registers a themed surface at construction; destroying it
+    // here keeps repeated activate/deactivate cycles from stacking detached
+    // panels and stale appliers in the themed-surface registry.
+    this._changesPanel?.destroy();
+    this._changesPanel = null;
     this.toolbar?.destroy();
     this.toolbar = null;
     this.applyConfirmation?.destroy();
@@ -474,6 +493,10 @@ export class JustifyCore {
     this.manipulateMode = null;
     this.promptMode?.deactivate();
     this.promptMode = null;
+
+    // Child outlines are a prompt-mode hover feature; the prompt branch below
+    // re-enables them on entry.
+    this.overlay.setChildOutlines(false);
 
     this.currentMode = mode;
 
@@ -494,34 +517,53 @@ export class JustifyCore {
       (this.promptMode as any)._changeQueue = this._changeQueue;
       (this.promptMode as any).setWatchActive(this._watchActive);
       this.promptMode.setColorGetter(() => this.toolbar!.getMarkerColor());
+      // Seed BOTH settings-panel flags onto the fresh PromptMode. Every prompt
+      // entry constructs a new instance, so without this the toolbar's toggle
+      // state is silently ignored unless flipped while the mode is live (the
+      // "toggles don't work" bug, 2026-07-04).
+      (this.promptMode as any)._showHints = (this.toolbar as any).showHints !== false;
       if ((this.promptMode as any).prompt) {
         (this.promptMode as any).prompt._showHints = (this.toolbar as any).showHints !== false;
       }
+      (this.promptMode as any)._showLabels = (this.toolbar as any).showSelectionLabels !== false;
       this.overlay.setHighlightColor(this.toolbar!.getMarkerColor());
+      // Prompt-mode hover carries the manipulate picker's detail level: dotted
+      // outlines on the hovered element's direct children.
+      this.overlay.setChildOutlines(true);
 
-      this.toolbar!.onMarkerColorChange((c: string) => {
-        this.overlay.setHighlightColor(c);
-        this._updateScreenGlowColor(c);
-        this.toolbar?.updateModeButtonStyles();
-        this._syncPromptModeColor(c);
-      });
+      // Register the settings callbacks ONCE per toolbar. switchMode runs on
+      // every mode change; without this guard the callback arrays grow a
+      // duplicate set of closures per prompt entry.
+      if (!(this.toolbar as any)._settingsCbsWired) {
+        (this.toolbar as any)._settingsCbsWired = true;
 
-      this.toolbar!.onHintsChange(((v: boolean) => {
-        if (this.promptMode) {
-          (this.promptMode as any)._showHints = v;
-          if ((this.promptMode as any).prompt) (this.promptMode as any).prompt._showHints = v;
-          if (!v && (this.promptMode as any)._hLabel) (this.promptMode as any)._hLabel.style.opacity = '0';
-        }
-      }).bind(this));
+        // Marker-color callback intentionally NOT re-registered here - it is
+        // registered once at toolbar setup (activate); a second registration
+        // would run every consumer twice per change.
 
-      this.toolbar!.onSelectionLabelChange(((v: boolean) => {
-        if (this.promptMode) {
-          (this.promptMode as any)._showLabels = v;
-          if ((this.promptMode as any)._selOverlays && (this.promptMode as any)._selOverlays.length > 0) {
-            (this.promptMode as any)._showSelOverlays();
+        this.toolbar!.onThemeChange((() => {
+          if (this.promptMode && (this.promptMode as any).applyTheme) {
+            (this.promptMode as any).applyTheme();
           }
-        }
-      }).bind(this));
+        }).bind(this));
+
+        this.toolbar!.onHintsChange(((v: boolean) => {
+          if (this.promptMode) {
+            (this.promptMode as any)._showHints = v;
+            if ((this.promptMode as any).prompt) (this.promptMode as any).prompt._showHints = v;
+            if (!v && (this.promptMode as any)._hLabel) (this.promptMode as any)._hLabel.style.opacity = '0';
+          }
+        }).bind(this));
+
+        this.toolbar!.onSelectionLabelChange(((v: boolean) => {
+          if (this.promptMode) {
+            (this.promptMode as any)._showLabels = v;
+            if ((this.promptMode as any)._selOverlays && (this.promptMode as any)._selOverlays.length > 0) {
+              (this.promptMode as any)._showSelOverlays();
+            }
+          }
+        }).bind(this));
+      }
 
       this.promptMode.onPromptSent((_text: string, _count: number) => {});
       this.promptMode.activate();
@@ -535,6 +577,23 @@ export class JustifyCore {
     } else {
       this._hideScreenGlow();
     }
+  }
+
+  // The marker color rides a CSS custom property on the shadow HOST so every
+  // chrome family inside the shared shadow root (toolbar, picker selection
+  // boxes, property panel accents) can consume var(--justify-marker) and
+  // recolor live without per-element repaint plumbing.
+  private _setMarkerVar(c: string): void {
+    try {
+      (this.overlay.getShadowRoot().host as HTMLElement).style.setProperty('--justify-marker', c);
+    } catch {}
+    // Also on the document root: custom properties inherit into every shadow
+    // tree from the host's context, so this one write reaches ISOLATED trees
+    // (the property panel's own shadow root, body-appended ghosts) and makes
+    // all var(--justify-marker) consumers refresh live on marker change.
+    try {
+      document.documentElement.style.setProperty('--justify-marker', c);
+    } catch {}
   }
 
   private _syncPromptModeColor(c: string): void {
@@ -566,12 +625,51 @@ export class JustifyCore {
   // the SOLID active fill (#D97757) owns the background. The hover must not paint
   // its translucent tint over it or restore a stale value on leave - otherwise the
   // hover look becomes the active look. So hover is a no-op (scale only) while active.
+  private _mk(): string {
+    return (this.toolbar && this.toolbar.getMarkerColor && this.toolbar.getMarkerColor()) || '#D97757';
+  }
+
+  private _claudebarGlowCss(): string {
+    var pal = currentPalette();
+    return '@keyframes justify-claudebar-glow{0%,100%{border-color:' + pal.borderSubtle + ';box-shadow:0 2px 12px rgba(0,0,0,0.4)}50%{border-color:' + markerTint(this._mk(), 0.25) + ';box-shadow:0 2px 12px rgba(0,0,0,0.4),0 0 12px ' + markerTint(this._mk(), 0.06) + '}}';
+  }
+
+  // Re-skin the persistent bar chrome (queue pill, claudebar pill, glow keyframe)
+  // on theme change. Registered in activate(), unregistered in deactivate().
+  private _applyBarTheme(): void {
+    var pal = currentPalette();
+    var pills = [this._queuePill, this._claudePill];
+    for (var i = 0; i < pills.length; i++) {
+      var p = pills[i] as HTMLElement | null;
+      if (!p) continue;
+      p.style.background = pal.surface;
+      if (!p.dataset.claudeBar) p.style.borderColor = pal.borderSubtle;
+      var labels = p.querySelectorAll('span');
+      for (var j = 0; j < labels.length; j++) {
+        var el = labels[j] as HTMLElement;
+        if (!el.style.color) continue;
+        // Marker-accented spans (the queue count) keep the marker; hex inline
+        // colors serialize back as rgb(), so a blanket rgb test would clobber
+        // them to body text on every theme flip.
+        if (el.closest('[data-queue-btn]')) { el.style.color = this._mk(); continue; }
+        if (el.style.color.indexOf('rgb') === 0) el.style.color = pal.text;
+      }
+      var circles = p.querySelectorAll('div');
+      for (var k = 0; k < circles.length; k++) {
+        var c = circles[k] as HTMLElement;
+        if (c.dataset.queueBtn !== undefined && c.dataset.qactive !== '1') c.style.background = pal.hover;
+      }
+    }
+    var glow = document.getElementById('justify-claudebar-glow-style');
+    if (glow) glow.textContent = this._claudebarGlowCss();
+  }
+
   private _addBarPillHover(hoverTarget: HTMLElement, circle: HTMLElement): void {
     var _active = () => circle.dataset.barActive === '1' || circle.dataset.qactive === '1';
     hoverTarget.addEventListener('mouseenter', () => {
       if (_active()) { circle.style.transform = 'scale(1.08)'; return; }
       if (circle.dataset.justifyHovBg === undefined) circle.dataset.justifyHovBg = circle.style.background || '';
-      circle.style.background = 'rgba(217,119,87,0.30)';
+      circle.style.background = markerTint(this._mk(), 0.30);
       circle.style.transform = 'scale(1.08)';
     });
     hoverTarget.addEventListener('mouseleave', () => {
@@ -641,7 +739,7 @@ export class JustifyCore {
       this._toast.remove();
     }
     this._toast = document.createElement('div');
-    this._toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:10px 20px;z-index:2147483647;pointer-events:none;display:flex;align-items:center;gap:10px;font-family:JustifySans,system-ui,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,0.4);animation:justify-toast-slide-in 0.3s cubic-bezier(0.23,1,0.32,1) forwards;overflow:hidden';
+    this._toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:' + currentPalette().surface + ';border:1px solid ' + currentPalette().borderSubtle + ';border-radius:24px;padding:10px 20px;z-index:2147483647;pointer-events:none;display:flex;align-items:center;gap:10px;font-family:JustifySans,system-ui,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,0.4);animation:justify-toast-slide-in 0.3s cubic-bezier(0.23,1,0.32,1) forwards;overflow:hidden';
     const _mColor = this.toolbar ? this.toolbar.getMarkerColor() : '#D97757';
     const _bar = document.createElement('div');
     _bar.style.cssText = 'position:absolute;bottom:0;left:0;height:2px;background:' + _mColor + ';border-radius:0 0 24px 24px;animation:justify-toast-progress 1.5s ease forwards';
@@ -678,7 +776,7 @@ export class JustifyCore {
     this._toast.appendChild(_spin);
 
     const _txt = document.createElement('span');
-    _txt.style.cssText = 'font-size:11px;font-weight:700;color:rgba(255,255,255,0.85);white-space:nowrap';
+    _txt.style.cssText = 'font-size:11px;font-weight:700;color:' + currentPalette().text + ';white-space:nowrap';
     _txt.textContent = 'Sending ' + (elementCount > 0 ? elementCount + ' change' + (elementCount > 1 ? 's' : '') : '') + ' to Claude...';
     this._toast.appendChild(_txt);
 
@@ -740,7 +838,7 @@ export class JustifyCore {
       this._toast = null;
     }
     this._toast = document.createElement('div');
-    this._toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:10px 20px;z-index:2147483647;pointer-events:none;display:flex;align-items:center;gap:10px;font-family:JustifySans,system-ui,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,0.4);animation:justify-toast-slide-in 0.3s cubic-bezier(0.23,1,0.32,1) forwards;max-width:480px';
+    this._toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:' + currentPalette().surface + ';border:1px solid ' + currentPalette().borderSubtle + ';border-radius:24px;padding:10px 20px;z-index:2147483647;pointer-events:none;display:flex;align-items:center;gap:10px;font-family:JustifySans,system-ui,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,0.4);animation:justify-toast-slide-in 0.3s cubic-bezier(0.23,1,0.32,1) forwards;max-width:480px';
 
     const _mColor = this.toolbar ? this.toolbar.getMarkerColor() : '#D97757';
 
@@ -778,7 +876,7 @@ export class JustifyCore {
     this._toast.appendChild(iconWrap);
 
     const label = document.createElement('span');
-    label.style.cssText = 'font-size:11px;font-weight:600;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    label.style.cssText = 'font-size:11px;font-weight:600;color:' + currentPalette().text + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
     if (status === 'completed') {
       label.textContent = message;
     } else if (status === 'needsInfo') {
@@ -933,8 +1031,8 @@ export class JustifyCore {
           pill.dataset.justify = '';
           pill.style.cssText =
             'position:absolute;top:-24px;left:0;padding:2px 8px;border-radius:4px;' +
-            'background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);' +
-            'font-size:10px;font-family:JustifyMono,ui-monospace,monospace;color:rgba(255,255,255,0.7);' +
+            'background:' + currentPalette().surface + ';border:1px solid ' + currentPalette().borderSubtle + ';' +
+            'font-size:10px;font-family:JustifyMono,ui-monospace,monospace;color:' + currentPalette().textDim + ';' +
             'white-space:nowrap;pointer-events:none';
           pill.textContent = selectorChanges.map(c => c.property + ': ' + c.newValue).join('; ');
           highlight.appendChild(pill);
@@ -996,15 +1094,20 @@ export class JustifyCore {
       highlight.dataset.justify = '';
       highlight.style.cssText =
         'position:fixed;pointer-events:none;z-index:2147483646;' +
-        'border:2px ' + (deleted ? 'dashed' : 'solid') + ' #D97757;border-radius:4px;' +
+        'border:2px ' + (deleted ? 'dashed' : 'solid') + ' var(--justify-marker, #D97757);border-radius:4px;' +
         'transition:top 60ms ease,left 60ms ease,width 60ms ease,height 60ms ease';
 
+      // Selector-chain label = the prompt/picker dark hover pill (picker.ts:516).
+      // Fixed dark in BOTH themes (not palette-flipped), matching the picker badge;
+      // color folded into cssText so no later assignment can wipe it. Symmetric
+      // horizontal padding (no leading icon, unlike the picker badge).
       const label = document.createElement('div');
       label.dataset.justify = '';
       label.style.cssText =
-        'position:absolute;top:-22px;left:0;padding:2px 6px;border-radius:3px;' +
-        'background:#D97757;color:#fff;font-size:9px;font-weight:600;' +
-        'font-family:JustifyMono,ui-monospace,monospace;white-space:nowrap;pointer-events:none;' +
+        'position:absolute;top:-30px;left:0;padding:5px 14px;border-radius:20px;' +
+        'background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.85);' +
+        'font-size:11px;font-weight:500;font-family:JustifySans,system-ui,sans-serif;' +
+        'box-shadow:0 2px 8px rgba(0,0,0,0.3);white-space:nowrap;pointer-events:none;' +
         'max-width:240px;overflow:hidden;text-overflow:ellipsis';
       label.textContent = (deleted ? 'removed near ' : '') + sel;
       highlight.appendChild(label);
@@ -1093,13 +1196,18 @@ export class JustifyCore {
           this._claudeState = 'working' as any;
           this._showClaudeBar('Working', 'shimmer', true);
         } else if (s === 'retry') {
+          // Restoring a state the DAEMON reported, not deciding one. _showClaudeBar
+          // mounts the pill synchronously, so the transition happens in the same
+          // tick - the old 100ms defer was cosmetic, and a stopwatch that lands on
+          // _claudeToRetry is exactly what the timer law forbids, however benign
+          // the intent. See __tests__/timer-law.test.ts, which caught this.
           this._claudeState = 'working' as any;
           this._showClaudeBar('Working', 'shimmer', true);
-          setTimeout(() => this._claudeToRetry(), 100);
+          this._claudeToRetry();
         } else if (s === 'review') {
           this._claudeState = 'sending' as any;
           this._showClaudeBar('Review Changes', 'waiting', false);
-          setTimeout(() => this._claudeToReview(), 100);
+          this._claudeToReview();
         }
       })
       .catch(() => {});
@@ -1133,11 +1241,13 @@ export class JustifyCore {
           if (this.promptMode) (this.promptMode as any).setWatchActive(this._watchActive);
         })
         .catch(() => {
-          this._watchMissCount++;
-          if (this._watchActive && this._watchMissCount >= 3) {
-            this._watchActive = false;
-            this._onWatchDisconnected();
-          }
+          // A failed fetch means "I could not ask", NOT "the watch is off". This
+          // used to increment the miss count, so three unlucky polls - fifteen
+          // seconds of a flaky socket - would tear down a live watch and, if the
+          // user was mid-'sending', throw their pill away and blame the daemon.
+          // Silence is not a disarm. Hold the last known state and ask again on
+          // the next tick, forever. Only a REACHABLE daemon that answers
+          // `active: false` is allowed to disconnect us.
         });
     };
     poll();
@@ -1171,7 +1281,6 @@ export class JustifyCore {
     } else if (this._claudeState === 'sending') {
       // Sent, but the watcher went idle before claiming it - Claude isn't
       // listening. Surface the disconnect so the user knows to say "watch justify".
-      if (this._claudeTimeout !== null) { clearTimeout(this._claudeTimeout); this._claudeTimeout = null; }
       this._claudeState = 'none';
       this._removeClaudeBar(true);
       this._showDisconnectedBar();
@@ -1190,7 +1299,7 @@ export class JustifyCore {
     pill.dataset.claudeBar = '';
     pill.style.cssText =
       'height:44px;display:flex;align-items:center;' +
-      'background:#1a1a1a;border:1px solid rgba(217,119,87,0.3);border-radius:22px;' +
+      'background:' + currentPalette().surface + ';border:1px solid ' + markerTint(this._mk(), 0.3) + ';border-radius:22px;' +
       'padding:6px 18px 6px 6px;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,0.4);pointer-events:all;' +
       'opacity:0;transform:translateX(-20px);overflow:visible;cursor:pointer;flex-shrink:0;' +
       'animation:justify-claudebar-glow 2s ease-in-out infinite;' +
@@ -1198,29 +1307,29 @@ export class JustifyCore {
 
     const icon = document.createElement('div');
     icon.style.cssText =
-      'width:32px;height:32px;border-radius:50%;background:rgba(217,119,87,0.12);' +
-      'display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:#D97757';
+      'width:32px;height:32px;border-radius:50%;background:color-mix(in srgb, var(--justify-marker, #D97757) 12%, transparent);' +
+      'display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:var(--justify-marker, #D97757)';
     icon.insertAdjacentHTML('beforeend', JustifyCore._staticSvg);
     const svg = icon.querySelector('svg');
-    if (svg) { svg.setAttribute('width', '18'); svg.setAttribute('height', '18'); svg.setAttribute('fill', '#D97757'); }
+    if (svg) { svg.setAttribute('width', '18'); svg.setAttribute('height', '18'); svg.setAttribute('fill', 'currentColor'); }
     pill.appendChild(icon);
 
     const label = document.createElement('span');
     label.style.cssText =
-      'font-size:14px;font-weight:500;color:rgba(255,255,255,0.85);white-space:nowrap;' +
+      'font-size:14px;font-weight:500;color:' + currentPalette().text + ';white-space:nowrap;' +
       'font-family:JustifySans,system-ui,sans-serif';
-    label.textContent = 'Connection lost';
+    label.textContent = 'Justify watch is off';
     pill.appendChild(label);
 
     const tip = document.createElement('div');
     tip.dataset.justify = '';
     tip.style.cssText =
       'position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(4px);' +
-      'background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 12px;' +
-      'font-size:11px;font-family:JustifySans,system-ui,sans-serif;color:rgba(255,255,255,0.7);' +
+      'background:' + currentPalette().surface + ';border:1px solid ' + currentPalette().borderSubtle + ';border-radius:10px;padding:8px 12px;' +
+      'font-size:11px;font-family:JustifySans,system-ui,sans-serif;color:' + currentPalette().textDim + ';' +
       'white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 150ms ease,transform 150ms ease;' +
       'box-shadow:0 4px 16px rgba(0,0,0,0.4)';
-    tip.textContent = 'Claude disconnected. Say "watch justify" to reconnect.';
+    tip.textContent = 'Justify watch is off. Say "watch justify" to arm it.';
     pill.appendChild(tip);
 
     pill.addEventListener('mouseenter', () => { tip.style.opacity = '1'; tip.style.transform = 'translateX(-50%) translateY(0)'; });
@@ -1248,14 +1357,16 @@ export class JustifyCore {
     container.textContent = '';
     container.insertAdjacentHTML('beforeend', svgText);
     const svg = container.querySelector('svg');
-    if (svg) svg.setAttribute('fill', fill);
+    // Presentation attributes cannot hold var(); route the color through CSS
+    // so marker-var fills resolve (and live-update on marker change).
+    if (svg) { svg.setAttribute('fill', 'currentColor'); (svg as SVGElement).style.color = fill; }
   }
 
   private _animateSpark(container: HTMLDivElement, spriteName: string): Animation | null {
     const svgText = this._spriteSvgs[spriteName];
     const cfg = JustifyCore._spriteConfigs[spriteName];
     if (!svgText || !cfg) return null;
-    this._setSpark(container, svgText, '#D97757');
+    this._setSpark(container, svgText, 'var(--justify-marker, #D97757)');
     const svg = container.querySelector('svg');
     if (!svg) return null;
     (svg as SVGElement).style.width = '18px';
@@ -1304,9 +1415,9 @@ export class JustifyCore {
       if (!existingBtn) {
         const btn = document.createElement('div');
         btn.dataset.queueBtn = '';
-        btn.style.cssText = 'width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;display:flex;align-items:center;justify-content:center;color:#D97757;transition:background 150ms ease,transform 0.1s;flex-shrink:0;padding:0;position:relative';
+        btn.style.cssText = 'width:32px;height:32px;border-radius:50%;background:' + currentPalette().hover + ';border:none;display:flex;align-items:center;justify-content:center;color:' + this._mk() + ';transition:background 150ms ease,transform 0.1s;flex-shrink:0;padding:0;position:relative';
         const count = document.createElement('span');
-        count.style.cssText = 'font-size:13px;font-weight:700;font-family:JustifySans,system-ui,sans-serif;font-variant-numeric:tabular-nums;pointer-events:none;line-height:1;color:#D97757';
+        count.style.cssText = 'font-size:13px;font-weight:700;font-family:JustifySans,system-ui,sans-serif;font-variant-numeric:tabular-nums;pointer-events:none;line-height:1;color:' + this._mk() + '';
         count.textContent = String(this._changeQueue.length);
         btn.appendChild(count);
         this._queuePill.appendChild(btn);
@@ -1316,7 +1427,7 @@ export class JustifyCore {
 
         const label = document.createElement('span');
         label.dataset.queueLabel = '';
-        label.style.cssText = 'font-size:14px;font-weight:500;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;transition:width 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.25s ease;font-family:JustifySans,system-ui,sans-serif;cursor:pointer';
+        label.style.cssText = 'font-size:14px;font-weight:500;color:' + currentPalette().text + ';white-space:nowrap;overflow:hidden;transition:width 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.25s ease;font-family:JustifySans,system-ui,sans-serif;cursor:pointer';
         label.textContent = this._changeQueue.length === 1 ? 'Queued Task' : 'Queued Tasks';
         this._queuePill.appendChild(label);
 
@@ -1340,7 +1451,7 @@ export class JustifyCore {
             qPill.style.padding = '6px';
             // Active state on circle
             btn.dataset.qactive = '1';
-            btn.style.background = '#D97757';
+            btn.style.background = 'var(--justify-marker, #D97757)';
             btn.style.color = '#fff';
             count.style.color = '#fff';
           } else {
@@ -1350,12 +1461,12 @@ export class JustifyCore {
             const isActive = btn.dataset.qactive === '1';
             if (isActive) {
               btn.dataset.qactive = '';
-              btn.style.background = 'rgba(255,255,255,0.08)';
-              btn.style.color = '#D97757';
-              count.style.color = '#D97757';
+              btn.style.background = currentPalette().hover;
+              btn.style.color = this._mk();
+              count.style.color = this._mk();
             } else {
               btn.dataset.qactive = '1';
-              btn.style.background = '#D97757';
+              btn.style.background = 'var(--justify-marker, #D97757)';
               btn.style.color = '#fff';
               count.style.color = '#fff';
             }
@@ -1398,15 +1509,15 @@ export class JustifyCore {
     pill.dataset.claudeBar = '';
     pill.style.cssText =
       'height:44px;display:flex;align-items:center;' +
-      'background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:22px;' +
+      'background:' + currentPalette().surface + ';border:1px solid ' + currentPalette().borderSubtle + ';border-radius:22px;' +
       'padding:6px 18px 6px 6px;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,0.4);pointer-events:all;' +
       'transition:padding 0.35s cubic-bezier(0.4,0,0.2,1),gap 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.25s ease,transform 0.35s cubic-bezier(0.4,0,0.2,1);' +
       'opacity:0;transform:translateX(-20px);overflow:visible;cursor:default;flex-shrink:0';
 
     const icon = document.createElement('div');
     icon.style.cssText =
-      'width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.08);' +
-      'display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:#D97757;' +
+      'width:32px;height:32px;border-radius:50%;background:' + currentPalette().hover + ';' +
+      'display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:' + this._mk() + ';' +
       'transition:background 0.15s,transform 0.1s';
     const spark = document.createElement('div');
     spark.style.cssText = 'width:18px;height:18px;overflow:hidden';
@@ -1417,7 +1528,7 @@ export class JustifyCore {
 
     const label = document.createElement('span');
     label.style.cssText =
-      'font-size:14px;font-weight:500;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;' +
+      'font-size:14px;font-weight:500;color:' + currentPalette().text + ';white-space:nowrap;overflow:hidden;' +
       'transition:width 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.25s ease;font-family:JustifySans,system-ui,sans-serif';
     label.textContent = text;
     if (hasDots) {
@@ -1463,16 +1574,16 @@ export class JustifyCore {
       });
     });
 
-    // Start 60s timeout for retry (skip for transient 'connected' state)
-    if (this._claudeState !== 'connected') {
-      if (this._claudeTimeout !== null) { clearTimeout(this._claudeTimeout); this._claudeTimeout = null; }
-      this._claudeTimeout = window.setTimeout(() => {
-        this._claudeTimeout = null;
-        if (this._claudeState === 'sending' || this._claudeState === 'working' || this._claudeState === 'retrying') {
-          this._claudeToRetry();
-        }
-      }, 60000);
-    }
+    // NO WATCHDOG. Nothing here starts a clock. Justify waits.
+    //
+    // There used to be a 60-second timer that flipped this pill to "Retry Send"
+    // and, later, a smarter one that asked the daemon whether it was busy before
+    // giving up. Both are gone. A timer that can end the wait is a timer that can
+    // end it wrongly, and the only correct wait length is "until the daemon says
+    // something." The daemon is the sole author of this pill's state, via the
+    // /claude-state poll in _loadClaudeState and the explicit POST endpoints.
+    //
+    // The user - and only the user - ends the wait, by disarming.
   }
 
   _claudeToRetry(): void {
@@ -1514,7 +1625,7 @@ export class JustifyCore {
     if (!document.getElementById('justify-claudebar-glow-style')) {
       const s = document.createElement('style');
       s.id = 'justify-claudebar-glow-style';
-      s.textContent = '@keyframes justify-claudebar-glow{0%,100%{border-color:rgba(255,255,255,0.1);box-shadow:0 2px 12px rgba(0,0,0,0.4)}50%{border-color:rgba(217,119,87,0.25);box-shadow:0 2px 12px rgba(0,0,0,0.4),0 0 12px rgba(217,119,87,0.06)}}';
+      s.textContent = this._claudebarGlowCss();
       document.head.appendChild(s);
     }
 
@@ -1553,18 +1664,18 @@ export class JustifyCore {
     (this._claudePill as any)._dotInterval = dotInterval;
     this._claudeLabel.appendChild(dots);
 
-    // Re-send the stored prompt
-    this.transport.request('push_prompt', this._lastPromptData)
-      .catch((e: unknown) => { console.warn('[Justify] Retry failed:', e); });
+    // Re-send the stored prompt through the outbox, which retries until acked.
+    // Reusing the ORIGINAL clientId is what makes this safe: if the first send
+    // already landed (or already ran), the daemon acks the duplicate instead of
+    // queueing the work a second time. Minting a fresh id here would resurrect
+    // the exact double-queue bug the old Retry button had.
+    this._lastPromptClientId = this.transport.sendPrompt(
+      this._lastPromptData,
+      this._lastPromptClientId ?? undefined,
+    );
 
-    // Start a new 60s timeout
-    if (this._claudeTimeout !== null) { clearTimeout(this._claudeTimeout); }
-    this._claudeTimeout = window.setTimeout(() => {
-      this._claudeTimeout = null;
-      if (this._claudeState === 'retrying') {
-        this._claudeToRetry();
-      }
-    }, 60000);
+    // No watchdog. Nothing re-arms a clock here. If the daemon never answers,
+    // the pill sits on "Retrying" and the outbox keeps knocking, forever.
   }
 
   _claudeToWorking(): void {
@@ -1577,8 +1688,6 @@ export class JustifyCore {
     if (!this._claudePill || !this._claudeSpark || !this._claudeLabel) return;
     this._claudeState = 'working';
     this._persistClaudeState();
-    // Clear timeout - we got a response progression
-    if (this._claudeTimeout !== null) { clearTimeout(this._claudeTimeout); this._claudeTimeout = null; }
     if (this._claudeAnim) { this._claudeAnim.cancel(); this._claudeAnim = null; }
     if (this._spriteSvgs.shimmer) {
       this._claudeAnim = this._animateSpark(this._claudeSpark, 'shimmer');
@@ -1607,8 +1716,6 @@ export class JustifyCore {
     if (!this._claudePill || !this._claudeSpark || !this._claudeLabel) return;
     this._claudeState = 'validating';
     this._persistClaudeState();
-    // Clear the retry timeout - Claude is active (validating), not stalled.
-    if (this._claudeTimeout !== null) { clearTimeout(this._claudeTimeout); this._claudeTimeout = null; }
     if (this._claudeAnim) { this._claudeAnim.cancel(); this._claudeAnim = null; }
     if (this._spriteSvgs.shimmer) {
       this._claudeAnim = this._animateSpark(this._claudeSpark, 'shimmer');
@@ -1657,8 +1764,6 @@ export class JustifyCore {
     if (!this._claudePill || !this._claudeSpark || !this._claudeLabel) return;
     this._claudeState = 'review';
     this._persistClaudeState();
-    // Clear timeout - Claude responded
-    if (this._claudeTimeout !== null) { clearTimeout(this._claudeTimeout); this._claudeTimeout = null; }
     if ((this._claudePill as any)._dotInterval) { clearInterval((this._claudePill as any)._dotInterval); }
     if (this._claudeAnim) { this._claudeAnim.cancel(); this._claudeAnim = null; }
     if (this._spriteSvgs.waiting) {
@@ -1669,7 +1774,7 @@ export class JustifyCore {
     if (!document.getElementById('justify-claudebar-glow-style')) {
       const s = document.createElement('style');
       s.id = 'justify-claudebar-glow-style';
-      s.textContent = '@keyframes justify-claudebar-glow{0%,100%{border-color:rgba(255,255,255,0.1);box-shadow:0 2px 12px rgba(0,0,0,0.4)}50%{border-color:rgba(217,119,87,0.25);box-shadow:0 2px 12px rgba(0,0,0,0.4),0 0 12px rgba(217,119,87,0.06)}}';
+      s.textContent = this._claudebarGlowCss();
       document.head.appendChild(s);
     }
     this._claudeLabel.textContent = 'Review Changes';
@@ -1690,7 +1795,7 @@ export class JustifyCore {
       this._claudeState = 'review-active';
       this._claudePill.style.animation = 'none';
       const icon = this._claudePill.querySelector('div') as HTMLElement;
-      if (icon) { icon.style.background = '#D97757'; icon.style.color = '#fff'; icon.dataset.barActive = '1'; delete icon.dataset.justifyHovBg; }
+      if (icon) { icon.style.background = 'var(--justify-marker, #D97757)'; icon.style.color = '#fff'; icon.dataset.barActive = '1'; delete icon.dataset.justifyHovBg; }
       if (this._claudeAnim) { this._claudeAnim.cancel(); this._claudeAnim = null; }
       this._setSpark(this._claudeSpark, JustifyCore._staticSvg, '#fff');
 
@@ -1715,13 +1820,13 @@ export class JustifyCore {
       const isOpen = this._changesPanel?.isVisible();
       if (isOpen) {
         this._changesPanel?.hide();
-        if (icon) { icon.style.background = 'rgba(255,255,255,0.08)'; icon.style.color = '#D97757'; icon.dataset.barActive = ''; }
-        this._setSpark(this._claudeSpark, JustifyCore._staticSvg, '#D97757');
+        if (icon) { icon.style.background = currentPalette().hover; icon.style.color = this._mk(); icon.dataset.barActive = ''; }
+        this._setSpark(this._claudeSpark, JustifyCore._staticSvg, 'var(--justify-marker, #D97757)');
       } else {
         const actionable = this._changeHistory.filter(e => !e.reviewed);
         if (actionable.length > 0) {
           this._changesPanel?.toggle(this._changeHistory as any);
-          if (icon) { icon.style.background = '#D97757'; icon.style.color = '#fff'; icon.dataset.barActive = '1'; delete icon.dataset.justifyHovBg; }
+          if (icon) { icon.style.background = 'var(--justify-marker, #D97757)'; icon.style.color = '#fff'; icon.dataset.barActive = '1'; delete icon.dataset.justifyHovBg; }
           this._setSpark(this._claudeSpark, JustifyCore._staticSvg, '#fff');
         } else {
           this._removeClaudeBar(false);
@@ -1733,8 +1838,6 @@ export class JustifyCore {
   _removeClaudeBar(instant: boolean): void {
     if (!this._claudePill) return;
     if ((this._claudePill as any)._dotInterval) clearInterval((this._claudePill as any)._dotInterval);
-    // Clear timeout on removal
-    if (this._claudeTimeout !== null) { clearTimeout(this._claudeTimeout); this._claudeTimeout = null; }
     this._claudePill.onclick = null;
     if (instant) {
       this._claudePill.remove();
@@ -1783,13 +1886,13 @@ export class JustifyCore {
 
   _buildQueueRow(idx: number, item: QueueItem, isLast: boolean): HTMLDivElement {
     const row = document.createElement('div');
-    row.style.cssText = 'padding:10px 12px;border-radius:10px;' + (isLast ? '' : 'margin-bottom:6px;') + 'background:rgba(255,255,255,0.02);transition:background 80ms ease;cursor:pointer';
+    row.style.cssText = 'padding:10px 12px;border-radius:10px;' + (isLast ? '' : 'margin-bottom:6px;') + 'background:transparent;transition:background 80ms ease;cursor:pointer';
 
     const topRow = document.createElement('div');
     topRow.style.cssText = 'display:flex;align-items:flex-start;gap:8px';
 
     const numCircle = document.createElement('div');
-    numCircle.style.cssText = 'width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#D97757';
+    numCircle.style.cssText = 'width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--justify-marker, #D97757)';
     const numSpan = document.createElement('span');
     numSpan.style.cssText = 'font-size:10px;font-weight:700;color:#1a1a1a;font-variant-numeric:tabular-nums;font-family:JustifySans,system-ui,sans-serif';
     numSpan.textContent = String(idx + 1);
@@ -1800,12 +1903,12 @@ export class JustifyCore {
     body.style.cssText = 'flex:1;min-width:0';
 
     const summary = document.createElement('div');
-    summary.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.85);line-height:1.4';
+    summary.style.cssText = 'font-size:12px;color:' + currentPalette().text + ';line-height:1.4';
     summary.textContent = item.prompt;
     body.appendChild(summary);
 
     const target = document.createElement('div');
-    target.style.cssText = 'font-size:10px;color:rgba(255,255,255,0.35);margin-top:3px;font-family:JustifySans,system-ui,sans-serif';
+    target.style.cssText = 'font-size:10px;color:' + currentPalette().textDim + ';margin-top:3px;font-family:JustifySans,system-ui,sans-serif';
     if (item.elements.length === 1) {
       const el = item.elements[0];
       const lastSeg = (el.selector || '').split(/\s+/).pop() || '';
@@ -1824,7 +1927,7 @@ export class JustifyCore {
     actionsDiv.style.cssText = 'display:flex;gap:4px;flex-shrink:0;opacity:0;transition:opacity 100ms ease';
 
     const editBtn = document.createElement('button');
-    editBtn.style.cssText = 'width:24px;height:24px;border:none;background:transparent;color:rgba(255,255,255,0.4);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 100ms ease,color 100ms ease;padding:0';
+    editBtn.style.cssText = 'width:24px;height:24px;border:none;background:transparent;color:' + currentPalette().textDim + ';border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 100ms ease,color 100ms ease;padding:0';
     editBtn.title = 'Edit';
     const eSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     eSvg.setAttribute('width', '14'); eSvg.setAttribute('height', '14'); eSvg.setAttribute('viewBox', '0 0 24 24');
@@ -1834,13 +1937,13 @@ export class JustifyCore {
     ep.setAttribute('d', 'M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z');
     eSvg.appendChild(ep);
     editBtn.appendChild(eSvg);
-    editBtn.addEventListener('mouseenter', function () { editBtn.style.background = 'rgba(255,255,255,0.08)'; editBtn.style.color = 'rgba(255,255,255,0.85)'; });
-    editBtn.addEventListener('mouseleave', function () { editBtn.style.background = 'transparent'; editBtn.style.color = 'rgba(255,255,255,0.4)'; });
+    editBtn.addEventListener('mouseenter', function () { editBtn.style.background = currentPalette().hover; editBtn.style.color = currentPalette().text; });
+    editBtn.addEventListener('mouseleave', function () { editBtn.style.background = 'transparent'; editBtn.style.color = currentPalette().textDim; });
     editBtn.addEventListener('click', () => { this.promptMode?._editQueueItem(idx); });
     actionsDiv.appendChild(editBtn);
 
     const rmBtn = document.createElement('button');
-    rmBtn.style.cssText = 'width:24px;height:24px;border:none;background:transparent;color:rgba(255,255,255,0.4);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 100ms ease,color 100ms ease;padding:0';
+    rmBtn.style.cssText = 'width:24px;height:24px;border:none;background:transparent;color:' + currentPalette().textDim + ';border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 100ms ease,color 100ms ease;padding:0';
     rmBtn.title = 'Remove';
     const dSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     dSvg.setAttribute('width', '14'); dSvg.setAttribute('height', '14'); dSvg.setAttribute('viewBox', '0 0 24 24');
@@ -1853,15 +1956,15 @@ export class JustifyCore {
     const d5 = document.createElementNS('http://www.w3.org/2000/svg', 'line'); d5.setAttribute('x1', '14'); d5.setAttribute('y1', '11'); d5.setAttribute('x2', '14'); d5.setAttribute('y2', '17'); dSvg.appendChild(d5);
     rmBtn.appendChild(dSvg);
     rmBtn.addEventListener('mouseenter', function () { rmBtn.style.background = 'rgba(239,68,68,0.15)'; rmBtn.style.color = '#ef4444'; });
-    rmBtn.addEventListener('mouseleave', function () { rmBtn.style.background = 'transparent'; rmBtn.style.color = 'rgba(255,255,255,0.4)'; });
+    rmBtn.addEventListener('mouseleave', function () { rmBtn.style.background = 'transparent'; rmBtn.style.color = currentPalette().textDim; });
     rmBtn.addEventListener('click', () => { this.promptMode?._confirmRemoveItem(idx); });
     actionsDiv.appendChild(rmBtn);
 
     topRow.appendChild(actionsDiv);
     row.appendChild(topRow);
 
-    row.addEventListener('mouseenter', function () { row.style.background = 'rgba(255,255,255,0.06)'; actionsDiv.style.opacity = '1'; });
-    row.addEventListener('mouseleave', function () { row.style.background = 'rgba(255,255,255,0.02)'; actionsDiv.style.opacity = '0'; });
+    row.addEventListener('mouseenter', function () { row.style.background = currentPalette().hover; actionsDiv.style.opacity = '1'; });
+    row.addEventListener('mouseleave', function () { row.style.background = 'transparent'; actionsDiv.style.opacity = '0'; });
     row.addEventListener('click', (e: Event) => {
       if ((e.target as HTMLElement).closest('button')) return;
       this.promptMode?._editQueueItem(idx);

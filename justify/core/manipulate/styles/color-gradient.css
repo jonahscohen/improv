@@ -2,11 +2,12 @@
  * color-gradient.css - styling for the Phase 5 color/gradient controls:
  * ColorInput, ColorPicker (cp), FloatingDialog shell, GradientEditor,
  * GradientStopBar. Ported verbatim from Retune overlay/src/overlay/overlay.css.
- * References shared --retune-* tokens BY NAME. Hard-coded hex / rgba inside these
- * rules (#D97757 chit, #ccc/#e0e0e0/#fff checkerboards, rgba(217, 119, 87,...) blue
- * glow focus, #1e1e1e) is mirrored verbatim per plan open-question (o) and is
- * intentionally NOT tokenized. The blue-glow focus ring on color/gradient inputs
- * is a deliberate per-control treatment distinct from the core inputs' 1px outline.
+ * References shared --retune-* tokens BY NAME. The focus-ring glow on color /
+ * gradient inputs now derives from the marker color via color-mix(in srgb,
+ * var(--justify-marker, #D97757) P%, transparent), so it follows the user-selected
+ * marker live; it stays a deliberate per-control treatment distinct from the core
+ * inputs' 1px outline. Remaining neutral hex (#ccc/#e0e0e0/#fff checkerboards) is
+ * intentionally NOT tokenized.
  */
 
 /* ===== ColorInput (split: [swatch|hex] [opacity%]) ===== */
@@ -80,7 +81,7 @@
   padding: 0 10px; font-size: 12px; font-family: inherit; color: var(--retune-text); outline: none; box-sizing: border-box;
 }
 .retune-floating-dialog-search-input::placeholder { color: var(--retune-text-tertiary); }
-.retune-floating-dialog-search-input:focus { box-shadow: 0 0 0 2px rgba(217, 119, 87, 0.15); }
+.retune-floating-dialog-search-input:focus { box-shadow: 0 0 0 2px color-mix(in srgb, var(--justify-marker, #D97757) 15%, transparent); }
 .retune-floating-dialog-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
 /* ===== ColorPicker content ===== */
@@ -118,7 +119,7 @@
   height: 32px; border-radius: 8px; background: var(--retune-surface-hover); border: none; font-family: inherit;
   font-size: 11px; font-weight: 500; color: var(--retune-text); padding: 0 6px; outline: none; width: 100%; min-width: 0;
 }
-.retune-cp-input:focus { outline: none; box-shadow: 0 0 0 1.5px rgba(217, 119, 87, 0.5); }
+.retune-cp-input:focus { outline: none; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--justify-marker, #D97757) 50%, transparent); }
 .retune-cp-input::selection { background: var(--retune-blue-bg); color: var(--retune-text); }
 
 /* ===== GradientEditor ===== */
@@ -145,7 +146,7 @@
   font-family: inherit; font-size: 11px; font-weight: 450; letter-spacing: -0.005em; color: var(--retune-text);
   padding: 0 8px; text-align: left;
 }
-.retune-gradient-angle-input:focus { outline: none; box-shadow: 0 0 0 1.5px rgba(217, 119, 87, 0.5); }
+.retune-gradient-angle-input:focus { outline: none; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--justify-marker, #D97757) 50%, transparent); }
 .retune-gradient-actions { display: flex; align-items: center; gap: 4px; }
 .retune-gradient-action-btn {
   display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: none;
@@ -165,6 +166,6 @@
   font-family: inherit; font-size: 11px; font-weight: 450; letter-spacing: -0.005em; color: var(--retune-text);
   padding: 0 18px 0 6px; text-align: left;
 }
-.retune-gradient-stop-pos-input:focus { outline: none; box-shadow: 0 0 0 1.5px rgba(217, 119, 87, 0.5); }
+.retune-gradient-stop-pos-input:focus { outline: none; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--justify-marker, #D97757) 50%, transparent); }
 .retune-gradient-stop-pos-unit { position: absolute; right: 6px; font-size: 11px; color: var(--retune-text-tertiary); pointer-events: none; }
 .retune-gradient-stop-color { flex: 1; min-width: 0; }

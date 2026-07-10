@@ -369,9 +369,9 @@ In all other cases, `x`/`y` shorthand is fine and more readable. The Vercel dash
 
 ---
 
-## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + tactical-polish don't
 
-**make-interfaces-feel-better's 14-point checklist is structural** (concentric radius, optical alignment, hit-area minimums, scale-on-press). It tells you WHAT to do.
+**tactical-polish's 14-point checklist is structural** (concentric radius, optical alignment, hit-area minimums, scale-on-press). It tells you WHAT to do.
 
 **Emil's contribution is the frequency-first decision tree.** Before any of those tactical rules apply, Emil asks "should this animate AT ALL?" - and his answer is often "no, especially if it's a keyboard surface." That's a category-defining filter neither in-house skill has codified.
 
@@ -379,9 +379,9 @@ In all other cases, `x`/`y` shorthand is fine and more readable. The Vercel dash
 
 1. **The frequency matrix as a first-pass animation gate.** Oracle's `/animate` command doesn't ask "is this a 100+/day surface?" before adding motion. Emil's matrix turns "should I animate this?" from a vibes call into a lookup.
 
-2. **The three named custom easings with verbatim bezier curves.** Sidecoach references "exponential easing" generally; make-interfaces-feel-better mentions easing in passing. Neither names `(0.23, 1, 0.32, 1)` as the canonical ease-out, `(0.77, 0, 0.175, 1)` as ease-in-out, or `(0.32, 0.72, 0, 1)` as the iOS drawer curve. These are concrete, copyable values.
+2. **The three named custom easings with verbatim bezier curves.** Sidecoach references "exponential easing" generally; tactical-polish mentions easing in passing. Neither names `(0.23, 1, 0.32, 1)` as the canonical ease-out, `(0.77, 0, 0.175, 1)` as ease-in-out, or `(0.32, 0.72, 0, 1)` as the iOS drawer curve. These are concrete, copyable values.
 
-3. **The asymmetric enter/exit principle.** Make-interfaces-feel-better says "subtle exits" but doesn't articulate the WHY: slow where the user is deciding, fast where the system is responding. Hold-to-delete is the canonical example.
+3. **The asymmetric enter/exit principle.** Tactical-polish says "subtle exits" but doesn't articulate the WHY: slow where the user is deciding, fast where the system is responding. Hold-to-delete is the canonical example.
 
 4. **The Framer Motion `x`/`y` hardware-accel gotcha.** This is a production-grade bug that almost nobody knows about. Sidecoach motion docs don't mention it. It's the difference between smooth and janky on Vercel-scale apps.
 

@@ -1,6 +1,6 @@
 ---
 name: tilt-lab instrument redesign - QA gate (audit/critique/polish) PASS
-description: Ran the Sidecoach QA triad on the tilt-lab redesign per Jonah. Audit 5-dimension PASS; key theming finding was a stale DESIGN.md - fully resynced to the new instrument tokens (Yes& red, JustifySans/Mono, warm near-black, poster thumbnails) and it now lints 0/0. Slider fills toned to muted (red on active). make-interfaces-feel-better largely satisfied.
+description: Ran the Sidecoach QA triad on the tilt-lab redesign per Jonah. Audit 5-dimension PASS; key theming finding was a stale DESIGN.md - fully resynced to the new instrument tokens (Yes& red, JustifySans/Mono, warm near-black, poster thumbnails) and it now lints 0/0. Slider fills toned to muted (red on active). tactical-polish largely satisfied.
 type: project
 relates_to: [session_2026-05-29_tilt-lab-cd-review.md, session_2026-05-29_tilt-lab-slider-accent.md, session_2026-05-29_tilt-lab-design-direction.md]
 superseded_by: session_2026-06-05_tilt-lab-consolidated.md
@@ -17,7 +17,7 @@ Collaborator: Jonah. 2026-05-29. Jonah chose: tone slider fills to muted (done) 
 
 ## Critique - main item (accent-everywhere on sliders) RESOLVED via muted-fill-red-on-active. Accordions manage cognitive load; instrument POV gives emotional confidence.
 
-## make-interfaces-feel-better (14-pt) - satisfied: tabular-nums (all readouts), font-smoothing, scale-on-press (btn/icon-btn), no transition:all, 40x40 hit, focus rings, flat-by-design (hairlines not shadow - intentional brand inversion). Nice-to-haves NOT done: text-wrap:balance on empty-state hint; subtle inset outline on poster thumbnails.
+## tactical-polish (14-pt) - satisfied: tabular-nums (all readouts), font-smoothing, scale-on-press (btn/icon-btn), no transition:all, 40x40 hit, focus rings, flat-by-design (hairlines not shadow - intentional brand inversion). Nice-to-haves NOT done: text-wrap:balance on empty-state hint; subtle inset outline on poster thumbnails.
 
 ## Minor follow-ups (non-blocking)
 - cobe globe poster gen throws one async exception -> dark "G" fallback (graceful). Guard or accept.

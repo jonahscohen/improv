@@ -62,6 +62,20 @@ if [ "$CORE_ONLY" -eq 0 ]; then
     cp -R "$REPO_DIST/server/." "$INSTALL_DIST/server/"
     echo "synced -> $INSTALL_DIST/server/ (active on next Claude Code restart)"
   fi
+
+  # Sync the CLI scripts the daemon + worker resolve at RUNTIME (justify-worker.sh
+  # is spawned by the daemon dispatcher; arm/disarm/serve back the watch). Without
+  # this, an in-place `npm run deploy` leaves the install root with a stale or
+  # missing worker script and the daemon resolves a null worker at boot.
+  INSTALL_ROOT="$(dirname "$INSTALL_DIST")"
+  SCRIPT_SRC="$(cd "$(dirname "$0")" && pwd)/cli"
+  for f in justify-worker.sh justify-watch-arm.sh justify-watch-disarm.sh justify-watch.sh justify-done.sh justify-serve.sh init.sh remove.sh; do
+    if [ -f "$SCRIPT_SRC/$f" ]; then
+      cp "$SCRIPT_SRC/$f" "$INSTALL_ROOT/$f"
+      chmod +x "$INSTALL_ROOT/$f"
+    fi
+  done
+  echo "synced -> $INSTALL_ROOT/ CLI scripts (worker, arm, disarm, serve, ...)"
 fi
 
 # 2. Sync to every project that has an .justify marker. Each project keeps its

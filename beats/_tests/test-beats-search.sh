@@ -676,6 +676,96 @@ EOF
   fi
 fi
 
+# --- Case PR1: provenance round-trips into search --json (T-0044) ------------
+# A provenanced beat's search --json object must carry its present provenance
+# fields; an unprovenanced beat's object must be byte-identical to the pre-
+# provenance shape (rank/filename/score/name/description only).
+pr="$(newtmp)"; pr_corpus="$pr/corpus"; pr_build="$pr/build"; mkdir -p "$pr_corpus"
+cat > "$pr_corpus/prov_hit.md" <<'EOF'
+---
+name: Provenanced hit
+description: the only beat about xylophone
+type: decision
+author_human: Jonah Cohen
+author_model: claude-opus-4.8
+source: session
+verified: codex-review
+confidence: high
+---
+A beat all about xylophone tuning and provenance.
+EOF
+cat > "$pr_corpus/plain_hit.md" <<'EOF'
+---
+name: Plain hit
+description: the only beat about marimba
+type: project
+---
+A beat all about marimba resonance and woodwork.
+EOF
+python3 "$BEATS_PY" compile --corpus "$pr_corpus" --build "$pr_build" >/dev/null 2>&1
+out="$(python3 "$BEATS_PY" search "xylophone" --json --corpus "$pr_corpus" --build "$pr_build" 2>/dev/null)"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+r = [x for x in d if x["filename"] == "prov_hit.md"][0]
+assert r.get("author_human") == "Jonah Cohen", r
+assert r.get("author_model") == "claude-opus-4.8", r
+assert r.get("source") == "session", r
+assert r.get("verified") == "codex-review", r
+assert r.get("confidence") == "high", r
+assert "session_id" not in r and "machine" not in r, "absent fields must not appear"
+' 2>/dev/null; then
+  pass "casePR1 present provenance fields round-trip into search --json (absent ones omitted)"
+else
+  failcase "casePR1 expected provenance in search --json, rc=$rc :: $out"
+fi
+out2="$(python3 "$BEATS_PY" search "marimba" --json --corpus "$pr_corpus" --build "$pr_build" 2>/dev/null)"
+if printf '%s' "$out2" | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+r = [x for x in d if x["filename"] == "plain_hit.md"][0]
+assert set(r.keys()) == {"rank", "filename", "score", "name", "description"}, r
+' 2>/dev/null; then
+  pass "casePR1 an unprovenanced beat has no provenance keys in search --json (byte-identical)"
+else
+  failcase "casePR1 unprovenanced beat leaked provenance keys :: $out2"
+fi
+
+# --- Case PR2: an OLDER-schema db (no provenance columns) degrades gracefully -
+# When the db predates the provenance columns, search must FEATURE-DETECT their
+# absence and return results (exit 0) with no provenance keys - never crash to
+# exit 4, and never mask a genuine db error as no-provenance (Codex-hardened).
+if [ -n "$SQLITE" ]; then
+  op="$(newtmp)"; op_corpus="$op/corpus"; op_build="$op/build"; mkdir -p "$op_corpus"
+  cat > "$op_corpus/zeb.md" <<'EOF'
+---
+name: Zebra beat
+description: about zebras and stripes
+type: reference
+author_human: Jonah Cohen
+confidence: high
+---
+A beat all about zebras and their stripes.
+EOF
+  python3 "$BEATS_PY" compile --corpus "$op_corpus" --build "$op_build" >/dev/null 2>&1
+  # Rebuild the beats table WITHOUT the 7 provenance columns (a pre-T-0044 db).
+  "$SQLITE" "$op_build/beats.db" \
+    "CREATE TABLE beats_old (filename TEXT PRIMARY KEY, name TEXT, description TEXT, type TEXT, relates_to TEXT, supersedes TEXT, superseded_by TEXT, extra TEXT, body TEXT, sha256 TEXT, mtime INTEGER, size INTEGER, is_stale INTEGER);
+     INSERT INTO beats_old SELECT filename,name,description,type,relates_to,supersedes,superseded_by,extra,body,sha256,mtime,size,is_stale FROM beats;
+     DROP TABLE beats; ALTER TABLE beats_old RENAME TO beats;" >/dev/null 2>&1
+  out="$(python3 "$BEATS_PY" search "zebras stripes" --json --corpus "$op_corpus" --build "$op_build" 2>/dev/null)"; rc=$?
+  if [ "$rc" -eq 0 ] && printf '%s' "$out" | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+r = [x for x in d if x["filename"] == "zeb.md"][0]
+assert set(r.keys()) == {"rank", "filename", "score", "name", "description"}, r
+' 2>/dev/null; then
+    pass "casePR2 search on a pre-provenance-schema db degrades gracefully (exit 0, no provenance keys)"
+  else
+    failcase "casePR2 expected graceful old-schema search, rc=$rc :: $out"
+  fi
+fi
+
 # === Scorer smoke: synthetic benchmark + corpus ==============================
 # Build a self-contained fixture repo tree so validate.py (which reads its own
 # sibling benchmark.json and a repo-relative corpus) and beats.py both resolve

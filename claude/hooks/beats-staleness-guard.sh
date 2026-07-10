@@ -77,7 +77,7 @@ emit_context() {
 # or 124 if the timeout fired (a pathological hang never blocks session start).
 run_verify() {
   local errf="$1"
-  python3 "$BEATS_PY" verify --corpus "$CORPUS_DIR" --build "$BUILD_DIR" >/dev/null 2>"$errf" &
+  python3 "$BEATS_PY" verify --quiet-provenance --corpus "$CORPUS_DIR" --build "$BUILD_DIR" >/dev/null 2>"$errf" &
   local pid=$!
   local max_ticks=$(( TIMEOUT_SECS * 5 )) ticks=0   # 0.2s ticks
   while kill -0 "$pid" 2>/dev/null; do

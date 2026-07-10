@@ -192,11 +192,11 @@ Any 3+ of these means the design is indistinguishable from GPT/Cursor/v0 output.
 
 ---
 
-## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + tactical-polish don't
 
 1. **The "ALWAYS ASK before deciding" protocol.** Sidecoach makes decisions and validates; Bencium proposes and waits. A different design conversation mode.
 
-2. **The 6-principle design philosophy** (Simplicity Through Reduction / Material Honesty / Functional Layering / Obsessive Detail / Coherent Design Language / Invisibility of Technology). A more philosophical layer than make-interfaces-feel-better's tactical rules.
+2. **The 6-principle design philosophy** (Simplicity Through Reduction / Material Honesty / Functional Layering / Obsessive Detail / Coherent Design Language / Invisibility of Technology). A more philosophical layer than tactical-polish's tactical rules.
 
 3. **The "Material Honesty" principle - buttons communicate via color/spacing/typography, NOT shadows; cards use borders/backgrounds, NOT depth.** A specific anti-skeuomorphic rule.
 

@@ -280,6 +280,8 @@ def _intent_eligible():
     if not intent:
         return False
     actions = intent.get("actions", []) or []
+    diagnose = intent.get("diagnose", []) or []
+    diag_targets = intent.get("diagnose_targets", []) or []
     targets = intent.get("substantive_targets", []) or []
     standalone = intent.get("standalone", []) or []
     exempt = intent.get("exempt", []) or []
@@ -302,12 +304,26 @@ def _intent_eligible():
         return [p for p in mlist(pats) if not is_informational(sanitized, p)]
 
     has_action = len(mlist(actions)) > 0
+    has_diagnose = len(subst(diagnose)) > 0
     has_target = len(subst(targets)) > 0
+    # Diagnosis verbs are common in engineering prose, so the diagnose path uses
+    # its OWN positive allowlist of UI-dominant targets (NOT the full target list)
+    # - safe-by-default: it omits cross-domain nouns (header/table/view/grid/site/
+    # interface/component) that also mean HTTP/DB/SQL/code. Build actions keep the
+    # full target list.
+    has_diag_target = len(subst(diag_targets)) > 0
     has_standalone = len(subst(standalone)) > 0
     has_exempt = len(mlist(exempt)) > 0
     has_new_build = len(mlist(new_build)) > 0
-    fires = has_standalone or (has_action and has_target)
-    if has_exempt and not has_new_build and not has_standalone:
+    # A BUILD action (+ any substantive target) OR a DIAGNOSE signal (+ a non-
+    # cross-domain target) fires the nudge. Diagnosis ("what's wrong with the
+    # homepage", "diagnose the dashboard") is the canonical /sidecoach audit case
+    # but carries no build verb; the target gate keeps non-UI diagnosis silent
+    # ("what's wrong with the db query", "inspect the packet header").
+    fires = has_standalone or (has_action and has_target) or (has_diagnose and has_diag_target)
+    # A genuine diagnosis is not a trivial tweak, so an incidental EXEMPT word does
+    # not silence it (only a tweak with no build/standalone/diagnosis signal stays mute).
+    if has_exempt and not has_new_build and not has_standalone and not has_diagnose:
         fires = False
     return fires
 

@@ -207,7 +207,7 @@ Sidecoach has no codified upgrade-order priority. This 7-step priority is portab
 
 ---
 
-## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + tactical-polish don't
 
 The redesign-skill is the AUDIT/UPGRADE flow that Oracle's `/audit` doesn't have at this level of specificity:
 

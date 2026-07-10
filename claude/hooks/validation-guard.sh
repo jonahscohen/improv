@@ -16,7 +16,13 @@ import json, sys
 try:
     data = json.load(sys.stdin)
     inp = data.get("tool_input", {})
-    code = inp.get("javascript", "") or inp.get("code", "") or inp.get("script", "") or inp.get("expression", "")
+    # `text` FIRST: it is the key chrome MCP javascript_tool actually sends.
+    # It was missing, so JS_CODE was ALWAYS empty, the `[ -z "$JS_CODE" ]`
+    # early-exit fired on every call, and this hook blocked NOTHING - not
+    # getComputedStyle, not .click(), not dispatchEvent - for as long as it
+    # has existed. Proven 2026-07-10 by feeding it real payloads.
+    code = (inp.get("text", "") or inp.get("javascript", "") or inp.get("code", "")
+            or inp.get("script", "") or inp.get("expression", ""))
     print(code)
 except:
     print("")
@@ -40,6 +46,40 @@ FEATURE_DETECT=false
 if echo "$JS_CODE" | grep -qE "\btypeof\s|CSS\.supports\(|'[a-zA-Z][a-zA-Z0-9_]*'\s+in\s+(window|document)|\"[a-zA-Z][a-zA-Z0-9_]*\"\s+in\s+(window|document)|navigator\.userAgent|window\.matchMedia\("; then
   FEATURE_DETECT=true
 fi
+
+# Figma-fidelity measurement lane. While a .figma-fidelity.measuring marker exists
+# at the repo root, DOM *measurement* reads are permitted - getComputedStyle,
+# getBoundingClientRect, dimensions, the rendered SVG/markup - because building to
+# spec REQUIRES measuring the DOM object and comparing it to the Figma property
+# (two-sided measurement, not eyeballing).
+#
+# This marker is DELIBERATELY NOT `.figma-fidelity.pending`, which arms the Stop
+# gate. Coupling a PERMISSION to a GATE's arming state produced a deadlock:
+#   1. gate v2 makes `dom_status: not_read` always block, so every check needs a
+#      DOM reading;
+#   2. reading the DOM required `.figma-fidelity.pending`;
+#   3. `.figma-fidelity.pending` blocks Stop - for the lead AND every teammate,
+#      the gate is registered on `Stop` with an empty matcher - until the manifest
+#      already covers the token you have not been able to measure yet.
+# Two finished, correct agents once sat in that wall for 25.6 and 12.6 minutes.
+# The trap was survivable only because this guard was inert until 2026-07-10
+# 03:21; fixing the guard armed it. See
+# session_2026-07-10_deadlock-is-now-load-bearing.md.
+#
+# Do NOT widen this to a `.figma-fidelity*.json` glob: the root manifest
+# `.figma-fidelity.json` always exists, so that glob would hold the lane open
+# forever and silently retire the guard.
+#
+# The interaction-faking blocks (.click(), dispatchEvent, private methods, array
+# mutation) stay in force regardless: measurement is allowed, faking input is not.
+FIGMA_MEASURE=false
+_ffroot="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+if [ -f "$_ffroot/.figma-fidelity.measuring" ]; then
+  FIGMA_MEASURE=true
+fi
+
+# --- DOM READ shortcuts (skipped during an armed Figma-fidelity measurement) ---
+if [ "$FIGMA_MEASURE" = false ]; then
 
 # getComputedStyle - checking CSS values programmatically
 if [ -z "$REASON" ] && echo "$JS_CODE" | grep -qE 'getComputedStyle'; then
@@ -130,6 +170,9 @@ if [ -z "$REASON" ] && echo "$JS_CODE" | grep -qE '\.(disabled|checked|selected)
   REASON="Checking form element state via properties is a developer shortcut."
   REMEDY="Click the form element and observe its behavior like a user would."
 fi
+
+fi
+# --- end DOM READ shortcuts ---
 
 # ===========================================================================
 # Trigger-blocking patterns. The above catches READ shortcuts. These catch

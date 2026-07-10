@@ -1,6 +1,6 @@
 ---
 name: Responsive foundation reference written (2026-05-25)
-description: Canonical sidecoach responsive reference synthesizing Bencium, oracle, component-gallery, make-interfaces-feel-better, and public web research
+description: Canonical sidecoach responsive reference synthesizing Bencium, oracle, component-gallery, tactical-polish, and public web research
 type: project
 relates_to: [all_tasks_complete.md, session_2026-05-23_sidecoach_100_complete.md, sidecoach_consolidation_gameplan.md]
 ---
@@ -16,7 +16,7 @@ Sourced verbatim and synthesized from:
 1. **Bencium's `RESPONSIVE-DESIGN.md`** (https://github.com/bencium/bencium-marketplace/blob/main/bencium-impact-designer/skills/bencium-impact-designer/RESPONSIVE-DESIGN.md): the 5-band breakpoint table (XS 0-479, SM 480-767, MD 768-1023, LG 1024-1439, XL 1440+) reproduced as-is plus extensions (test widths 375/390/414/768/1024/1280/1440, Tailwind name mapping, content-driven breakpoint allowance, clamp() guidance).
 2. **oracle `adapt.md` and `responsive-design.md`** (cached): mobile/tablet/desktop adaptation strategies, layout-vs-interaction-vs-content split, pointer/hover media queries, safe-area env() pattern, responsive images with srcset.
 3. **component-gallery-reference SKILL.md** (`~/.claude/skills/component-gallery-reference/SKILL.md`): the 60 component types map; pulled Navigation, Drawer, Tabs, Segmented control, Modal, Combobox into the mobile-nav decision tree.
-4. **make-interfaces-feel-better SKILL.md** (`~/.agents/skills/make-interfaces-feel-better/SKILL.md`, principle 16): the 40x40 hit-area minimum - sidecoach overrides to 44x44 for WCAG 2.5.5 / iOS HIG / Bencium consistency; documented the override and the pseudo-element extension pattern.
+4. **tactical-polish SKILL.md** (`~/.agents/skills/tactical-polish/SKILL.md`, principle 16): the 40x40 hit-area minimum - sidecoach overrides to 44x44 for WCAG 2.5.5 / iOS HIG / Bencium consistency; documented the override and the pseudo-element extension pattern.
 
 Web research filled gaps Bencium and oracle did not cover:
 
@@ -34,9 +34,9 @@ The reference file follows the requested structure exactly: The Premise, The Bre
 ## Gaps noted during research
 
 - **Component.gallery does not have a dedicated Command Palette type.** Documented that finding in the reference file - the closest catalog entries are Combobox + Modal. Pointed sidecoach at Linear / Raycast / Superhuman as study examples.
-- **WCAG 2.5.5 pseudo-element extension** is not explicitly documented on w3.org. Pulled the pattern from make-interfaces-feel-better's principle 16 and codified the extension recipe.
+- **WCAG 2.5.5 pseudo-element extension** is not explicitly documented on w3.org. Pulled the pattern from tactical-polish's principle 16 and codified the extension recipe.
 - **No public catalog of "responsive degrade plan" templates** exists - the template at the bottom of the file is sidecoach-original, synthesized from the verification steps in CLAUDE.md and the per-pattern transitions documented above.
-- **make-interfaces-feel-better says 40x40, WCAG 2.5.5 says 44x44.** Resolved the contradiction by overriding to 44 explicitly with rationale documented in the Hit Area Rules section.
+- **tactical-polish says 40x40, WCAG 2.5.5 says 44x44.** Resolved the contradiction by overriding to 44 explicitly with rationale documented in the Hit Area Rules section.
 
 ## Files touched
 

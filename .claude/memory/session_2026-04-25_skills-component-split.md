@@ -1,6 +1,6 @@
 ---
 name: Split skills component out of claude so existing Claude users can layer in
-description: Promoted Anthropic Skills install to its own opt-in TUI component (`skills`), separate from the monolithic `claude` component. Lets users with existing Claude Code setups install make-interfaces-feel-better without overwriting their CLAUDE.md/settings.json. Documented the plugins-merge gap as a TODO.
+description: Promoted Anthropic Skills install to its own opt-in TUI component (`skills`), separate from the monolithic `claude` component. Lets users with existing Claude Code setups install tactical-polish without overwriting their CLAUDE.md/settings.json. Documented the plugins-merge gap as a TODO.
 type: project
 ---
 
@@ -11,7 +11,7 @@ Collaborator: Jonah Cohen
 ## install.sh
 
 - Added `skills` as the 2nd component (between `claude` and `ghostty`) in the KEYS/TITLES/DESCS arrays. Default-on. Description: "additive, safe alongside existing setup."
-- Moved the `npx skills add jakubkrehel/make-interfaces-feel-better` block out of the `claude` apply-section into its own `# 2. Anthropic Skills` section guarded by `picked skills`.
+- Moved the `npx skills add jakubkrehel/tactical-polish` block out of the `claude` apply-section into its own `# 2. Anthropic Skills` section guarded by `picked skills`.
 - Renumbered subsequent section comments (3-8) to keep the file's section numbering consistent.
 - `--preset minimal` now picks `claude + skills + nvm` (was `claude + nvm`). Reasoning: minimal is "the bare essentials," and skills are now an explicit opt-in piece of that.
 - `--help` valid keys list updated to include `skills`.
@@ -26,7 +26,7 @@ Collaborator: Jonah Cohen
 
 # Why
 
-User flagged that the previous monolithic `claude` component description ("Skip only if you've configured Claude Code by hand and don't want it overwritten") created a binary trap: skip claude and you lose ALL benefits including the make-interfaces-feel-better skill that doesn't actually need to overwrite anything to work. Skills install into `~/.claude/skills/` and Claude Code reads them regardless of whose CLAUDE.md/settings.json is active - so they're naturally additive and shouldn't be coupled to the overwriting bundle.
+User flagged that the previous monolithic `claude` component description ("Skip only if you've configured Claude Code by hand and don't want it overwritten") created a binary trap: skip claude and you lose ALL benefits including the tactical-polish skill that doesn't actually need to overwrite anything to work. Skills install into `~/.claude/skills/` and Claude Code reads them regardless of whose CLAUDE.md/settings.json is active - so they're naturally additive and shouldn't be coupled to the overwriting bundle.
 
 For plugins: they're declared inside `settings.json`'s `enabledPlugins` block, so cleanly splitting them out requires JSON-merging into someone's existing settings file. Real feature, bigger lift, deferred. Documented the workaround (copy the JSON blocks manually) so the user isn't blocked.
 

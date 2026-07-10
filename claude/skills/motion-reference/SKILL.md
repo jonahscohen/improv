@@ -233,6 +233,93 @@ ScrollTrigger.create({
 });
 ```
 
+## CSS scroll-driven animations (native, no JS)
+
+Modern browsers can bind an animation's progress directly to scroll position or to an element's entry into the viewport, with no JavaScript and no library. Two timeline sources:
+
+- `animation-timeline: scroll()` - progress tracks how far a scroll container has scrolled (0% at the top, 100% at the bottom). Good for reading-progress bars, scroll-linked backgrounds, light parallax.
+- `animation-timeline: view()` - progress tracks a target element's passage through the viewport, tunable with `animation-range`. Good for reveal-on-enter and fade-as-it-leaves.
+
+**Prefer native over ScrollTrigger when:** the effect is a simple reveal or a single-element progress mapping, the page is zero-dependency (or you do not want to ship the GSAP bundle for one effect), and you do not need pinning, snap, or cross-element orchestration. This is the lightest possible way to do "animate as it scrolls."
+
+**ScrollTrigger still wins when:** you need pinning, a scrubbed multi-step timeline, scroll snapping, orchestration across several elements, or the widest browser support. Native scroll-driven animations are Chromium-first; Firefox and Safari support lags, so treat them as progressive enhancement.
+
+### `scroll()` progress bar
+
+```css
+@keyframes grow-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.reading-progress {
+  transform-origin: left;
+  animation: grow-progress linear;
+  animation-timeline: scroll(root block); /* track the root scroller on the block axis */
+}
+```
+
+### `view()` reveal with `animation-range`
+
+```css
+@keyframes reveal { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+
+.card {
+  animation: reveal linear both;
+  animation-timeline: view();
+  animation-range: entry 0% cover 30%; /* start as it enters, finish 30% into view */
+}
+```
+
+**Always gate on support** so the un-animated state is the correct resting state, never a stuck `opacity: 0`:
+
+```css
+@supports (animation-timeline: scroll()) {
+  .card { animation: reveal linear both; animation-timeline: view(); }
+}
+```
+
+Without the `@supports` guard, a browser that does not support `animation-timeline` ignores the property entirely - the animation falls back to the default document (time-driven) timeline and simply plays on load instead of scroll-driving. That is rarely what you want a reveal to do. Author the fallback as the visible, final state, and layer the scroll-driven animation on top only inside `@supports (animation-timeline: view())` (or `scroll()` for the progress case).
+
+## View Transitions API (native shared-element morphs)
+
+`document.startViewTransition()` lets the browser snapshot the page before and after a DOM change and animate between the two - including shared-element morphs, where an element tagged with the same `view-transition-name` in both states smoothly moves and scales between its old and new position. It covers both same-document state changes and, with the multi-page variant, cross-document navigation transitions.
+
+**What it gives you:** browser-native FLIP. The morph, the crossfade of everything else, and the pseudo-element plumbing are handled by the engine. No manual first/last measurement, no cloned ghost node.
+
+**Use it instead of FLIP or manual shared-element work when:** the transition is a state or route change (list -> detail, grid item -> full view, tab swap) and the browser supports it. Reach for GSAP `Flip` instead when you need fine timeline control, coordination with other tweens, interruptibility mid-transition, or support on browsers that lack the API.
+
+### Minimal example
+
+```js
+// Wrap the DOM mutation. The browser animates old -> new automatically.
+function swap() {
+  if (!document.startViewTransition) return applyChange(); // progressive enhancement
+  document.startViewTransition(() => applyChange());
+}
+```
+
+```css
+/* Tag the element that should morph across the two states (same name on both sides) */
+.hero-image { view-transition-name: hero; }
+
+/* Tune the generated animation */
+::view-transition-group(hero) { animation-duration: 300ms; }
+```
+
+### Reduced motion
+
+Fold the transition down to a plain crossfade (or nothing) under `prefers-reduced-motion`:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none; }
+}
+```
+
+### Progressive enhancement
+
+Feature-detect (`if (!document.startViewTransition) ...`) and always run the underlying DOM change directly when the API is absent. The app must reach the same end state with or without the transition - the morph is decoration on top of a state change that already works.
+
 ## Gotchas - the ones that bite
 
 ### SSR (Next.js, Remix, Astro, SvelteKit)
@@ -300,6 +387,10 @@ gsap.registerPlugin(ScrollTrigger, Flip, SplitText);
 
 In React, register inside `useGSAP` or at the module level - just not inside a per-component render path that re-runs.
 
+## Naming an effect
+
+When the task is to NAME a motion effect rather than build one ("what's it called when...", a description of an effect by feel), use [VOCABULARY.md](VOCABULARY.md) - the reverse-lookup glossary that maps sensations to precise terms, with disambiguation for close pairs. Lead with the term, keep it tight.
+
 ## Anti-patterns
 
 - **Do not use GSAP for trivial CSS transitions.** A 200ms hover color change does not need GSAP. CSS transitions are fine; only reach for GSAP when you need timeline coordination, scroll-driving, or features CSS does not have.
@@ -312,7 +403,7 @@ In React, register inside `useGSAP` or at the module level - just not inside a p
 ## Integration with other skills
 
 - `sidecoach` provides the brand strategy (what should this feel like? what register?). This skill provides the implementation tools (how do I make it feel that way?).
-- `make-interfaces-feel-better` overlaps on tactical motion polish (timing, easing, scale-on-press, stagger windows). When both apply, defer to make-interfaces-feel-better for specific timing values; use this skill for the API calls.
+- `tactical-polish` overlaps on tactical motion polish (timing, easing, scale-on-press, stagger windows). When both apply, defer to tactical-polish for specific timing values; use this skill for the API calls. For looping-animation pause rules, rAF stop conditions, and the blur budget, see tactical-polish performance.md and motion-review.md.
 - `design-references` may surface captured patterns that use these libraries; consult both when matching feel from a reference.
 
 ## When NOT to use this stack

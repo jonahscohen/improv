@@ -19,4 +19,4 @@ Choice: slider fill = --muted at rest, swaps to --accent on :active + :focus-vis
 
 Files: app/src/components/controls/Slider.css, app/src/components/LayerStack.css. Builders B/C idle; CD direct edit for cross-component consistency.
 
-Next: verify in Chrome (muted at rest, red on drag/focus) -> run full Sidecoach QA triad (audit/critique/polish + make-interfaces-feel-better) per Jonah.
+Next: verify in Chrome (muted at rest, red on drag/focus) -> run full Sidecoach QA triad (audit/critique/polish + tactical-polish) per Jonah.

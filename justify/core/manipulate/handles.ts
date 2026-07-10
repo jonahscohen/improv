@@ -20,7 +20,7 @@ interface CornerHandle {
 
 const PADDING_COLOR = 'rgba(34, 197, 94, 0.30)';
 const MARGIN_COLOR = 'rgba(249, 115, 22, 0.30)';
-const RADIUS_COLOR = 'rgba(217, 119, 87, 0.50)';
+const RADIUS_COLOR = 'color-mix(in srgb, var(--justify-marker, #D97757) 50%, transparent)';
 
 const HANDLE_WIDTH = 4;
 const CORNER_SIZE = 8;

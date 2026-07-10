@@ -43,8 +43,8 @@ const MARGIN_BG = 'rgba(249, 115, 22, 0.15)';
 const MARGIN_TEXT = '#f97316';
 const PADDING_BG = 'rgba(34, 197, 94, 0.15)';
 const PADDING_TEXT = '#22c55e';
-const CONTENT_BG = 'rgba(217, 119, 87, 0.15)';
-const CONTENT_TEXT = '#EBC8B5';
+const CONTENT_BG = 'color-mix(in srgb, var(--justify-marker, #D97757) 15%, transparent)';
+const CONTENT_TEXT = 'color-mix(in srgb, var(--justify-marker, #D97757) 55%, white)';
 
 function makeEdgeLabel(val: string, color: string, position: 'top' | 'bottom' | 'left' | 'right'): HTMLDivElement {
   const el = document.createElement('div');

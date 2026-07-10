@@ -10,9 +10,10 @@
  *   - Gap     -> pink stripes BETWEEN flex/grid children (computeGapRects)
  * Fixed-position, pointer-events:none, zIndex 2147483645 (just under the panel).
  *
- * Stripe colors are the EXACT literal rgb values from Retune source (padding
- * blue == --retune-blue-500 #D97757 == rgb(217, 119, 87)); kept literal so the
- * visualization matches Retune 1:1 rather than re-tokenized.
+ * Margin and gap stripes keep their EXACT literal rgb values (semantic
+ * dev-tool colors). The padding stripe now derives from the marker color via
+ * color-mix(in srgb, var(--justify-marker, #D97757) 50%, transparent), so it
+ * follows the user-selected marker live instead of a hard-coded accent.
  *
  * The <BoxModelOverlay> component is the verbatim render. BoxModelOverlayController
  * is a thin imperative wrapper (show/hide/destroy) so the spacing section and
@@ -46,12 +47,15 @@ interface Rect {
   height: number;
 }
 
-function diagonalPattern(r: number, g: number, b: number) {
-  const line = `rgba(${r}, ${g}, ${b}, 0.5)`;
+function diagonalPatternColor(line: string) {
   return `repeating-linear-gradient(-45deg, transparent, transparent 3px, ${line} 3px, ${line} 4px)`;
 }
 
-const PADDING_COLOR = diagonalPattern(217, 119, 87);
+function diagonalPattern(r: number, g: number, b: number) {
+  return diagonalPatternColor(`rgba(${r}, ${g}, ${b}, 0.5)`);
+}
+
+const PADDING_COLOR = diagonalPatternColor('color-mix(in srgb, var(--justify-marker, #D97757) 50%, transparent)');
 const MARGIN_COLOR = diagonalPattern(255, 168, 36);
 const GAP_COLOR = diagonalPattern(255, 77, 157);
 

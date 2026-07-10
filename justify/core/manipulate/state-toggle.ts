@@ -68,7 +68,7 @@ export class StateToggle {
       'letter-spacing: 0.02em',
       'transition: background 0.12s, color 0.12s',
       active
-        ? 'background: #D97757; color: #fff;'
+        ? 'background: var(--justify-marker, #D97757); color: #fff;'
         : 'background: #2a2a3e; color: #888;',
     ].join(';');
   }

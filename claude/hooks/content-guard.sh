@@ -47,6 +47,28 @@ if not reason:
         reason = "Legacy model ID forbidden by CLAUDE.md - use latest model versions only"
 
 if not reason:
+    # Retired names are banned from markdown (docs + beats) per Jonah 2026-07-03:
+    # canonical vocabulary is "tactical-polish" and "sidecoach"; the retired
+    # names (the old skill name, its shorthand, and the pre-rename orchestrator
+    # name) may not appear. The pattern is base64-encoded ON PURPOSE: the
+    # banned words must not be greppable anywhere in the repo, including inside
+    # this guard (Jonah 2026-07-03). Decode the blob to audit it. Scoped to .md
+    # so code identifiers and captured corpus files are unaffected.
+    # NOTE: this whole python program lives inside a bash SINGLE-QUOTED string;
+    # a lone apostrophe anywhere in it (comments included) breaks the guard and
+    # with it every Write/Edit on the machine. No apostrophes. Ever.
+    fp = str(inp.get("file_path") or "")
+    if fp.lower().endswith(".md"):
+        import base64
+        _banned = base64.b64decode(
+            "XGJtaWZiXGJ8XGJpbXBlY2NhYmxlXGJ8XGJtYWtlLWludGVyZmFjZXMtZmVlbC1iZXR0ZXJcYnxcYmZlZWxiZXR0ZXJcYg=="
+        ).decode()
+        m = re.search(_banned, content, re.IGNORECASE)
+        if m:
+            reason = ("Retired name %r forbidden in markdown (Jonah 2026-07-03) - "
+                      "use the canonical skill name or sidecoach" % m.group(0))
+
+if not reason:
     # Emoji detection by EMOJI-PRESENTATION, not by Unicode block. Terminal
     # typography is allowed - check (U+2713), ballot-x (U+2717), stars, arrows,
     # box-drawing, geometric shapes, dingbat asterisks - because these are

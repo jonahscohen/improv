@@ -8,7 +8,7 @@ Collaborator: Jonah Cohen
 
 ## Context
 
-Studied Efecto Design Tool (efecto.app/docs) thoroughly - 64 MCP tools, brand system, agent teams, FX engine, shader backgrounds. Compared against existing design suite (Oracle, make-interfaces-feel-better, component-gallery-reference, Figma plugin, Pencil MCP, cmux).
+Studied Efecto Design Tool (efecto.app/docs) thoroughly - 64 MCP tools, brand system, agent teams, FX engine, shader backgrounds. Compared against existing design suite (Oracle, tactical-polish, component-gallery-reference, Figma plugin, Pencil MCP, cmux).
 
 ## Key decisions
 

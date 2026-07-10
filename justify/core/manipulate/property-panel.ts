@@ -155,9 +155,9 @@ const darkTheme: Record<string, string> = {
   [cssVars.textTertiary]: 'color-mix(in srgb, #ffffff 50%, transparent)',
   [cssVars.border]: 'color-mix(in srgb, #ffffff 10%, transparent)',
   [cssVars.inputBg]: 'color-mix(in srgb, #ffffff 5%, transparent)',
-  [cssVars.blueBg]: 'color-mix(in srgb, #A94B30 50%, transparent)',
-  [cssVars.blueText]: '#D97757',
-  [cssVars.blue500]: '#D97757',
+  [cssVars.blueBg]: 'color-mix(in srgb, var(--justify-marker, #D97757) 40%, transparent)',
+  [cssVars.blueText]: 'var(--justify-marker, #D97757)',
+  [cssVars.blue500]: 'var(--justify-marker, #D97757)',
   [cssVars.surfaceActive]: 'color-mix(in srgb, #ffffff 5%, transparent)',
   [cssVars.black]: '#1c1917',
   [cssVars.white]: '#ffffff',
@@ -850,7 +850,7 @@ export class PropertyPanel {
         width: '4px',
         height: '4px',
         borderRadius: '50%',
-        background: '#D97757',
+        background: 'var(--justify-marker, #D97757)',
       });
       previewInner.appendChild(previewDot);
       previewBox.appendChild(previewInner);
@@ -2594,7 +2594,9 @@ export class PropertyPanel {
       height: '72px',
     });
 
-    const activeColor = '#D97757';
+    // currentColor lets the active icon follow the button's CSS color live (a
+    // presentation-attribute fill cannot hold var(), but it can hold currentColor).
+    const activeColor = 'currentColor';
     const inactiveColor = '#a8a29e';
 
     const positions = [
@@ -2628,6 +2630,7 @@ export class PropertyPanel {
         overflow: 'hidden',
       });
       if (isActive) {
+        btn.style.color = v(cssVars.blueText);
         btn.appendChild(pos.icon(activeColor));
       } else {
         btn.appendChild(iconDot(16, inactiveColor));
@@ -2641,7 +2644,7 @@ export class PropertyPanel {
         for (let j = 0; j < btns.length; j++) {
           const pp = positions[j];
           const match = pp.jc === pos.jc && pp.ai === pos.ai;
-          btns[j].style.color = v(match ? cssVars.text : cssVars.textTertiary);
+          btns[j].style.color = v(match ? cssVars.blueText : cssVars.textTertiary);
         }
       };
       btn.addEventListener('mouseenter', onE);

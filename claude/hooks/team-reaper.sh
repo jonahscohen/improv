@@ -24,9 +24,23 @@
 #                       older than MAX_AGE_HOURS. Catches orphans left by a
 #                       crashed/prior session, promptly, at the next start.
 #
+# LIVE-TEAM GUARD (2026-07-08, Jonah - durable fix for the recurring orphan bug):
+# regardless of mode or reason, a team is NEVER reaped while any of its member
+# processes are still alive. A teammate's own SessionStart runs this reaper with
+# ITS session_id (which is not the lead's leadSessionId), so a long-parked
+# executor made the reaper treat the ACTIVE lead team as an idle orphan and
+# rmtree it - the rmtree then partially failed on an open inbox file, leaving a
+# config-less dir that broke every subsequent spawn. cmux launches each member
+# as claude.exe with the team dir name verbatim in its args (--team-name
+# session-<id> and --agent-id <agent>@session-<id>), so we scan the process list
+# once and skip any team whose name appears in a live process. See
+# reference_cmux_team_init_orphan_bug.md.
+#
 # Tunables (env): TEAM_REAP_MAX_AGE_HOURS (default 12),
-#                 TEAM_REAP_IDLE_MINUTES   (default 30),
-#                 TEAM_REAP_DISABLE=1 to disable entirely.
+#                 TEAM_REAP_IDLE_MINUTES   (default 240),
+#                 TEAM_REAP_DISABLE=1 to disable entirely,
+#                 TEAM_REAP_PS_OVERRIDE=<file> to stand in for the ps process
+#                   scan (test-only; contents are scanned for team markers).
 #
 # Mode comes from $1 ("session-end" | "session-start"); falls back to the
 # payload's hook_event_name.
@@ -40,7 +54,10 @@ printf '%s' "$INPUT" | MODE="$MODE" python3 -c '
 import json, sys, os, time, shutil
 
 MAX_AGE_HOURS = float(os.environ.get("TEAM_REAP_MAX_AGE_HOURS", "12"))
-IDLE_MINUTES  = float(os.environ.get("TEAM_REAP_IDLE_MINUTES", "30"))
+# Idle default raised 30 -> 240 (2026-07-04): teammate SessionStarts run this
+# reaper, and a 30m inbox-idle window reaped the ACTIVE lead team mid-run twice
+# (long executor units send no inbox traffic while working). Age-gc still GCs.
+IDLE_MINUTES  = float(os.environ.get("TEAM_REAP_IDLE_MINUTES", "240"))
 
 try:
     data = json.load(sys.stdin)
@@ -111,8 +128,50 @@ def newest_inbox_mtime(team_path):
             newest = 0.0
     return newest
 
+def _proc_scan_text():
+    # Full process-args listing, scanned for live team markers. Overridable via
+    # TEAM_REAP_PS_OVERRIDE (a file whose contents stand in for the ps output)
+    # so the regression test can simulate a live member deterministically.
+    override = os.environ.get("TEAM_REAP_PS_OVERRIDE")
+    if override:
+        try:
+            with open(override) as f:
+                return f.read()
+        except OSError:
+            return ""
+    try:
+        import subprocess
+        return subprocess.check_output(
+            ["ps", "-Axww", "-o", "args="], timeout=5
+        ).decode("utf-8", "replace")
+    except Exception:
+        # If the scan cannot run, fall back to the safe direction: treat every
+        # team as live so nothing is reaped this pass (see team_has_live_process).
+        return None
+
+PROC_TEXT = _proc_scan_text()
+
+def team_has_live_process(name):
+    # A live teammate or lead process carries the team dir name in its args:
+    # cmux spawns claude.exe with --team-name <name> and --agent-id
+    # <agent>@<name>. If ANY live process references this team, the team is
+    # ACTIVE - reaping it would delete config.json out from under running
+    # members (the recurring orphan bug). Bias to NOT reap: a missed reap only
+    # delays a cleanup, whereas a false reap wedges the live team spawn path. A
+    # failed scan (PROC_TEXT is None) skips too. Match the concrete markers, not
+    # a bare substring, so a short team name cannot collide with unrelated args.
+    if not name:
+        return False
+    if PROC_TEXT is None:
+        return True
+    return (("--team-name " + name) in PROC_TEXT
+            or ("--team-name=" + name) in PROC_TEXT
+            or ("@" + name) in PROC_TEXT
+            or ("/teams/" + name) in PROC_TEXT)
+
 now = time.time()
 reaped = []
+skipped = []
 for name in os.listdir(teams_dir):
     team_path = os.path.join(teams_dir, name)
     cfg_path = os.path.join(team_path, "config.json")
@@ -144,11 +203,16 @@ for name in os.listdir(teams_dir):
             if idle_min >= IDLE_MINUTES:
                 should, reason = True, "idle(%.0fm)" % idle_min
 
-    if should and reap(name):
-        reaped.append("%s [%s]" % (name, reason))
+    if should:
+        if team_has_live_process(name):
+            skipped.append("%s [%s: live-member process]" % (name, reason))
+        elif reap(name):
+            reaped.append("%s [%s]" % (name, reason))
 
 if reaped:
     sys.stderr.write("team-reaper(%s): removed %d orphan team(s): %s\n" % (mode, len(reaped), ", ".join(reaped)))
+if skipped:
+    sys.stderr.write("team-reaper(%s): kept %d live team(s): %s\n" % (mode, len(skipped), ", ".join(skipped)))
 
 print("{}")
 '

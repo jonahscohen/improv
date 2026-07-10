@@ -50,7 +50,7 @@ for (const tool of mcpTools) {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`[lotus-mcp] MCP server started (WebSocket port: ${port})`);
+  console.error(`[lotus-mcp] MCP server started (HTTP bridge port: ${port})`);
 }
 
 main().catch((err) => {

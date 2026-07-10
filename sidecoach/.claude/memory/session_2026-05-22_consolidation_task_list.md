@@ -151,7 +151,7 @@ All created files compile with zero TypeScript errors.
 - **Task #4: Embed 27 anti-patterns** - Ready (anti-pattern-validator.ts created)
 - **Task #5: Embed 12-rule critique framework** - Ready (Flow L integration point identified)
 - **Task #6: Embed AI slop detection** - Ready (category-reflex-detector.ts created)
-- **Task #7: Embed 14-point make-interfaces-feel-better** - Ready (Flow J integration point identified)
+- **Task #7: Embed 14-point tactical-polish** - Ready (Flow J integration point identified)
 
 ### Phase 2 Enhancement Tasks (Tasks #8-11)
 - **Task #8: Enhance /sidecoach list** - Blocked until Phase 1 embedding complete
@@ -193,7 +193,7 @@ All created files compile with zero TypeScript errors.
 2. **Task #4: Anti-pattern integration** - Wire anti-pattern-validator into flows K, L, V
 3. **Task #6: Slop detection integration** - Wire category-reflex-detector into flows D, L
 4. **Task #5: Critique framework** - Embed Nielsen heuristics into Flow L
-5. **Task #7: Make-interfaces-feel-better** - Embed 14-point checklist into Flow J
+5. **Task #7: Tactical-polish** - Embed 14-point checklist into Flow J
 
 All Tasks #1-7 depend on Task #17 (domain-flow-matrix.md) which is **COMPLETE**.
 
@@ -221,7 +221,7 @@ All Tasks #1-7 depend on Task #17 (domain-flow-matrix.md) which is **COMPLETE**.
 - Flow D: Design References + category-reflex-detector (ready to wire)
 - Flow E: Motion Reference (already wired)
 - Flow F-I: Domain rule applicator (ready to create)
-- Flow J: Make-interfaces-feel-better (ready to embed)
+- Flow J: Tactical-polish (ready to embed)
 - Flow K, L, V: Anti-pattern validator (ready to wire)
 - Flow L: Critique framework (ready to embed)
 

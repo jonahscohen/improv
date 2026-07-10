@@ -168,7 +168,7 @@ Most AI-generated UI looks the same because most prompts ask for the same vague 
 | 3. Typography | `fontshare-reference` | Which typeface? (refuses training-data defaults) |
 | 4. References | `design-references` + `/curate` | What did you see in the wild worth borrowing? |
 | 5. Motion | `motion-reference` | GSAP + Lenis canonical patterns |
-| 6. Tactical | `make-interfaces-feel-better` | Exact-value polish at implementation time |
+| 6. Tactical | `tactical-polish` | Exact-value polish at implementation time |
 
 Plus two foundations:
 
@@ -185,7 +185,7 @@ A typical "build me a hero section" task routes the pipeline in roughly this ord
 4. `fontshare-reference` triggers if type decisions are in scope.
 5. `motion-reference` triggers if the hero has scroll or motion behavior.
 6. `icon-source` (peer skill) triggers if icons are needed.
-7. `make-interfaces-feel-better` fires during implementation for the tactical polish.
+7. `tactical-polish` fires during implementation for the tactical polish.
 8. `/sidecoach audit + critique + polish` runs at QA time.
 
 Not every layer fires for every task. The pipeline routes by what the task actually needs.
@@ -388,7 +388,7 @@ The `memory` component adds a fourth marker block (Memory Discipline rules). All
 1. `/sidecoach audit <target>` - 5-dimension scan (a11y, perf, theming, responsive, anti-patterns)
 2. `/sidecoach critique <target>` - design review via independent sub-agents
 3. `/sidecoach polish <target>` - final design-system alignment pass
-4. `make-interfaces-feel-better` 14-point checklist - concentric radius, optical alignment, shadows over borders, tabular nums, scale-on-press at 0.96, etc.
+4. `tactical-polish` 14-point checklist - concentric radius, optical alignment, shadows over borders, tabular nums, scale-on-press at 0.96, etc.
 5. `npx @google/design.md lint DESIGN.md` if a DESIGN.md exists
 
 **cmux Browser Pane** - the primary visual verification surface. Commands run via Bash: `cmux browser --surface <id> screenshot --out /tmp/<name>.png` (then Read the PNG), `navigate "<url>"`, `snapshot --interactive`. Each project records its surface in a `reference_cmux_browser.md` memory.
@@ -439,7 +439,7 @@ Google's spec for representing a visual identity to coding agents. YAML frontmat
 
 CLAUDE.md mandates: conform to the Google spec, run lint after every write, resolve every error or warning. Generated UI references tokens via `{path.to.token}`, not hex literals.
 
-### 7. Tactical - make-interfaces-feel-better
+### 7. Tactical - tactical-polish
 
 An Anthropic Skill that auto-triggers on UI keywords. Sixteen specific rules with exact values:
 
@@ -553,7 +553,7 @@ The `skills` component bundles 10 skills:
 
 | Skill | Source |
 |---|---|
-| `make-interfaces-feel-better` | npx (jakubkrehel/make-interfaces-feel-better) |
+| `tactical-polish` | npx (jakubkrehel/tactical-polish) |
 | `component-gallery-reference` | bundled |
 | `fontshare-reference` | bundled |
 | `motion-reference` | bundled |

@@ -31,7 +31,7 @@
 export declare function loadCanonical(name: string): string | null;
 /**
  * Load an extracted reference file by source + relative path.
- * Source values: 'legacy-design-skill', 'make-interfaces-feel-better',
+ * Source values: 'legacy-design-skill', 'tactical-polish',
  * 'external/emil-design-eng', 'external/typeui-fundamentals',
  * 'external/taste-skill', 'external/bencium-design',
  * 'external/refactoring-ui', 'local-skills/<skill-name>'.

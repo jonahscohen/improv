@@ -350,7 +350,7 @@ Before writing ANY React/UI code, output `<design_plan>` block containing:
 
 Source describes Doppelrand as "a glass plate sitting in an aluminum tray." The mechanism: when a flat card sits on a flat background, the eye reads it as a "div with rounded corners." When the card sits inside an OUTER shell with its own border and a slightly larger radius, the eye reads it as TWO objects, which the brain interprets as PHYSICAL DEPTH.
 
-The math `rounded-[calc(2rem-0.375rem)]` matters because concentric radii must be CONCENTRIC (outer = inner + padding). This is also the `make-interfaces-feel-better` "concentric radius" rule, but Soft-Skill specifies the EXACT pattern with calc() math.
+The math `rounded-[calc(2rem-0.375rem)]` matters because concentric radii must be CONCENTRIC (outer = inner + padding). This is also the `tactical-polish` "concentric radius" rule, but Soft-Skill specifies the EXACT pattern with calc() math.
 
 ### The 2-Line Iron Rule - measuring it
 
@@ -365,7 +365,7 @@ GPT-Tasteskill's AIDA structure (Attention/Interest/Desire/Action) is a 1960s ad
 
 ---
 
-## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + tactical-polish don't
 
 The 4 variants are PRE-COMPOSED VIBE SHEETS - each is a complete style system the user can opt into rather than building from scratch.
 
@@ -375,7 +375,7 @@ The 4 variants are PRE-COMPOSED VIBE SHEETS - each is a complete style system th
 
 2. **MINIMALIST: The "Faux-OS Window Chrome" pattern** (three small light gray circles for macOS controls). A specific UI motif for software mockups.
 
-3. **SOFT: The Double-Bezel (Doppelrand) nested architecture** with concentric radius math (`rounded-[calc(2rem-0.375rem)]`). Make-interfaces-feel-better has "concentric radius" as a general rule; Soft-Skill spells out the calc() formula.
+3. **SOFT: The Double-Bezel (Doppelrand) nested architecture** with concentric radius math (`rounded-[calc(2rem-0.375rem)]`). Tactical-polish has "concentric radius" as a general rule; Soft-Skill spells out the calc() formula.
 
 4. **SOFT: The Button-in-Button trailing icon pattern.** Specific: arrow nested inside `w-8 h-8 rounded-full` wrapper flush with main button's right inner padding. A reusable component archetype.
 

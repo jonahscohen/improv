@@ -52,7 +52,7 @@ Custom agents on disk: NONE. `~/.claude/agents/` does not exist, no repo-scoped 
 
 Skill layer carrying specialist behavior:
 - `/sidecoach` (26 flows, 5 modes) - design orchestration
-- `/social-media`, `/visual-effects`, `/icon-source`, `/design-team`, `/make-interfaces-feel-better`, `/motion-reference`, `/fontshare-reference`, `/design-references`, `/component-gallery-reference` - design peer skills
+- `/social-media`, `/visual-effects`, `/icon-source`, `/design-team`, `/tactical-polish`, `/motion-reference`, `/fontshare-reference`, `/design-references`, `/component-gallery-reference` - design peer skills
 - `/verify`, `/security-review`, `/code-review`, `/simplify` - QA layer
 - `superpowers:systematic-debugging`, `superpowers:test-driven-development`, `superpowers:verification-before-completion`, `superpowers:writing-plans`, `superpowers:brainstorming` - process discipline
 - `/reflect`, `/init`, `/run`, `/loop`, `/schedule` - meta and utility

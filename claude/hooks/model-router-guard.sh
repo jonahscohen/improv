@@ -11,9 +11,24 @@
 #   - Workflow: model overrides in agent() opts or phase meta, fable-router refs
 # There is no override flag. If a task seems to need a different model, STOP and
 # ask the user - they decide, never the harness.
+#
+# SCOPED EXCEPTION (Jonah, 2026-07-06, explicit sign-off): when the SESSION model
+# is Fable (claude-fable-5), Fable is a user-mandated orchestrator that delegates
+# production to an Opus teammate. In that ONE case the Agent `model` parameter is
+# allowed (so Fable can spawn the Opus producer). This is still user-directed
+# routing - the user chose Fable-as-orchestrator - so it honors the rule's spirit
+# ("the user decides"). For every other session model the block is unchanged, and
+# the CLI-level routing hacks (fable-router, claude --model, ANTHROPIC_MODEL) stay
+# blocked for ALL models including Fable. See the fable-orchestrator scheme in
+# fable-orchestrator-guard.sh + session_2026-07-06_fable-orchestrator-hook-conflict.md.
 
 INPUT=$(cat)
 TOOL=$(echo "$INPUT" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_name",""))' 2>/dev/null)
+
+# Detect the session model once (used to scope the Fable Agent-model exception).
+_TP=$(printf '%s' "$INPUT" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("transcript_path","") or "")' 2>/dev/null)
+_SID=$(printf '%s' "$INPUT" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("session_id","") or "")' 2>/dev/null)
+SESSION_MODEL=$("$HOME/.claude/hooks/detect-session-model.sh" "$_TP" "$_SID")
 
 REASON=""
 
@@ -34,10 +49,26 @@ elif [ "$TOOL" = "Agent" ]; then
   AGENT_MODEL=$(echo "$INPUT" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",{}).get("model",""))' 2>/dev/null)
   AGENT_PROMPT=$(echo "$INPUT" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",{}).get("prompt",""))' 2>/dev/null)
 
-  if [ -n "$AGENT_MODEL" ]; then
-    REASON="BLOCKED (non-negotiable): the Agent 'model' parameter routes the subagent to another model ($AGENT_MODEL). Omit it - subagents inherit the session model the user chose. If a different model seems needed, ask the user."
-  elif echo "$AGENT_PROMPT" | grep -qiE 'fable[-_]?router'; then
+  if echo "$AGENT_PROMPT" | grep -qiE 'fable[-_]?router'; then
     REASON="BLOCKED (non-negotiable): fable-router is forbidden, including instructing a subagent to use it."
+  elif echo "$AGENT_MODEL" | grep -qiE 'fable[-_]?router'; then
+    REASON="BLOCKED (non-negotiable): fable-router is forbidden as an Agent model value."
+  elif [ -n "$AGENT_MODEL" ]; then
+    case "$SESSION_MODEL" in
+      *fable*)
+        # Fable-orchestrator exception (Jonah 2026-07-06): Fable may spawn its
+        # PRODUCER on Opus only. Any other model (incl. sonnet/haiku/fable-router)
+        # stays blocked so the exception cannot be widened into general routing.
+        if echo "$AGENT_MODEL" | grep -qiE 'opus'; then
+          : # Opus producer - allowed.
+        else
+          REASON="BLOCKED: Fable orchestrator may only delegate production to Opus (Agent model must be opus). Got '$AGENT_MODEL'. Ask the user to broaden this if another producer is needed."
+        fi
+        ;;
+      *)
+        REASON="BLOCKED (non-negotiable): the Agent 'model' parameter routes the subagent to another model ($AGENT_MODEL). Omit it - subagents inherit the session model the user chose. If a different model seems needed, ask the user."
+        ;;
+    esac
   fi
 
 elif [ "$TOOL" = "Workflow" ]; then

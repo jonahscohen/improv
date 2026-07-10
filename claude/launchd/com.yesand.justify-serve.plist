@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.yesand.justify-serve - keep the Justify daemon alive (KeepAlive supervisor).
+
+  The Justify watch now LIVES IN the persistent :9223 daemon (armed state on disk,
+  daemon-spawned headless workers). Making that daemon durable is the last mile:
+  this agent runs the daemon and restarts it if it ever dies.
+
+  MECHANISM (why node DIRECTLY, not justify-serve):
+    launchd tears down a job's process group when the job's main process exits.
+    An earlier design ran `justify-serve` (which nohups node and returns) - launchd
+    then reaped the backgrounded node daemon every cycle, so it flapped
+    (start->reap->restart every ~10s). The correct KeepAlive pattern is to run the
+    long-lived process (node) IN THE FOREGROUND as the job's main process, so
+    launchd supervises the actual daemon and KeepAlive restarts it on crash.
+
+    justify is NOT registered as an MCP server, so nothing else auto-spawns a
+    competing daemon; and the daemon's own boot probe defers to a healthy
+    incumbent, so a manual `justify-serve` or a session can never fight this one
+    for the port.
+
+  INSTALL WIRING (owned by install.sh / the lead):
+    - The absolute paths below are this machine's. install.sh templates $HOME to
+      the installing machine before placing the copy in ~/Library/LaunchAgents.
+    - Placement only; activation (launchctl bootstrap) is the user's choice.
+
+  LOAD / UNLOAD (see claude/docs/justify-daemon-launchd.md):
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.yesand.justify-serve.plist
+    launchctl bootout   gui/$(id -u)/com.yesand.justify-serve
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.yesand.justify-serve</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/node</string>
+        <string>/Users/spare3/.claude/justify/dist/server/index.js</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+
+    <key>StandardInPath</key>
+    <string>/dev/null</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/spare3/.claude/logs/justify-serve.launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/spare3/.claude/logs/justify-serve.launchd.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

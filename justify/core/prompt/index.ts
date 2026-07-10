@@ -1,4 +1,5 @@
-import { InlinePrompt } from './inline-prompt';
+import { InlinePrompt, clampPromptTop } from './inline-prompt';
+import { currentPalette } from '../toolbar';
 import { enableEventIntercept, disableEventIntercept, getElementAtPoint } from '../event-intercept';
 import { generateSelector, getComputedStylesSubset, getNearbyText, getAccessibilityInfo } from '../element-utils';
 import { LassoSelect as Lasso } from '../annotate/lasso';
@@ -232,11 +233,12 @@ export class PromptMode {
 
     enableEventIntercept();
 
+    var _hlPal = currentPalette();
     this._hLabel = document.createElement("div");
-    this._hLabel.style.cssText = "position:fixed;pointer-events:none;background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.85);font-size:11px;font-family:JustifySans,system-ui,sans-serif;font-weight:500;padding:5px 14px 5px 6px;border-radius:20px;z-index:2147483647;opacity:0;transition:opacity 80ms ease;box-shadow:0 2px 8px rgba(0,0,0,0.3);white-space:nowrap;display:flex;align-items:center;gap:6px";
+    this._hLabel.style.cssText = "position:fixed;pointer-events:none;background:" + _hlPal.surface + ";border:1px solid " + _hlPal.borderSubtle + ";color:" + _hlPal.text + ";font-size:11px;font-family:JustifySans,system-ui,sans-serif;font-weight:500;padding:5px 14px 5px 6px;border-radius:20px;z-index:2147483647;opacity:0;transition:opacity 80ms ease;box-shadow:0 2px 8px rgba(0,0,0,0.3);white-space:nowrap;display:flex;align-items:center;gap:6px";
     this.overlay.getContainer().appendChild(this._hLabel);
 
-    this._selColor = "#D97757";
+    this._selColor = (this._getColor ? this._getColor() : "") || "#D97757";
 
     this._lasso = new Lasso(this.overlay.getContainer());
     this._lasso.setColor(this._selColor);
@@ -256,14 +258,16 @@ export class PromptMode {
       this._showSelOverlays();
       var _allL = this.multiSelect.getAll(),
         _mbL = 0,
-        _mlL = Infinity;
+        _mlL = Infinity,
+        _mtL = Infinity;
       for (var _li = 0; _li < _allL.length; _li++) {
         var _lr = _allL[_li].domNode.getBoundingClientRect();
         if (_lr.bottom > _mbL) _mbL = _lr.bottom;
         if (_lr.left < _mlL) _mlL = _lr.left;
+        if (_lr.top < _mtL) _mtL = _lr.top;
       }
       if (_allL.length > 0 && this.prompt) {
-        this.prompt.show(_mlL, _mbL + 12);
+        this.prompt.show(_mlL, _mbL + 12, _mtL === Infinity ? undefined : _mtL);
         this.prompt.onPromptSubmit(function (this: PromptMode, a: string) {
           this.submitPrompt(a);
         }.bind(this));
@@ -331,6 +335,7 @@ export class PromptMode {
         }
         if (this.prompt && this.prompt.isVisible()) {
           var _mb2 = -Infinity,
+            _mt2 = Infinity,
             _be2: Element | null = null;
           for (var _si2 = 0; _si2 < this._selTracked.length; _si2++) {
             var _sr2 = this._selTracked[_si2].el.getBoundingClientRect();
@@ -338,12 +343,13 @@ export class PromptMode {
               _mb2 = _sr2.bottom;
               _be2 = this._selTracked[_si2].el;
             }
+            if (_sr2.top < _mt2) _mt2 = _sr2.top;
           }
           if (_be2) {
             var _br2 = _be2.getBoundingClientRect();
             this.prompt.container.style.transition = "none";
             this.prompt.container.style.left = (_br2.left + _br2.width / 2 - 150) + "px";
-            this.prompt.container.style.top = (_mb2 + 12) + "px";
+            this.prompt.container.style.top = clampPromptTop(_mb2 + 12, _mt2 === Infinity ? undefined : _mt2, this.prompt.container.offsetHeight || 48) + "px";
           }
         }
       }
@@ -375,17 +381,17 @@ export class PromptMode {
     if (!this._queueBtn) {
       this._queueBtn = document.createElement("div");
       this._queueBtn.dataset.queueBtn = '';
-      this._queueBtn.style.cssText = "width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;display:none;align-items:center;justify-content:center;cursor:pointer;color:#D97757;transition:background 150ms ease,transform 0.1s;flex-shrink:0;padding:0;position:relative";
+      this._queueBtn.style.cssText = "width:32px;height:32px;border-radius:50%;background:" + currentPalette().hover + ";border:none;display:none;align-items:center;justify-content:center;cursor:pointer;color:" + this._mkc() + ";transition:background 150ms ease,transform 0.1s;flex-shrink:0;padding:0;position:relative";
 
       this._queueCount = document.createElement("span");
-      this._queueCount.style.cssText = "font-size:13px;font-weight:700;font-family:JustifySans,system-ui,sans-serif;font-variant-numeric:tabular-nums;pointer-events:none;line-height:1;color:#D97757";
+      this._queueCount.style.cssText = "font-size:13px;font-weight:700;font-family:JustifySans,system-ui,sans-serif;font-variant-numeric:tabular-nums;pointer-events:none;line-height:1;color:var(--justify-marker, #D97757)";
       this._queueCount.textContent = "0";
       this._queueBtn.appendChild(this._queueCount);
       this._actionPill!.appendChild(this._queueBtn);
 
       this._queueLabel = document.createElement("span");
       this._queueLabel.dataset.queueLabel = '';
-      this._queueLabel.style.cssText = "font-size:14px;font-weight:500;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;transition:width 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.25s ease;font-family:JustifySans,system-ui,sans-serif;display:none;cursor:pointer";
+      this._queueLabel.style.cssText = "font-size:14px;font-weight:500;color:" + currentPalette().text + ";white-space:nowrap;overflow:hidden;transition:width 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.25s ease;font-family:JustifySans,system-ui,sans-serif;display:none;cursor:pointer";
       this._queueLabel.textContent = "Queued Task";
       this._actionPill!.appendChild(this._queueLabel);
 
@@ -394,14 +400,14 @@ export class PromptMode {
 
       this._pillDivider = document.createElement("div");
       this._pillDivider.dataset.queueDivider = '';
-      this._pillDivider.style.cssText = "width:1px;height:16px;background:rgba(255,255,255,0.12);flex-shrink:0;margin:0 3px;display:none";
+      this._pillDivider.style.cssText = "width:1px;height:16px;background:" + currentPalette().border + ";flex-shrink:0;margin:0 3px;display:none";
       this._actionPill.appendChild(this._pillDivider);
     } else {
       if (!this._queueBtn.parentNode) this.overlay.getContainer().appendChild(this._queueBtn);
     }
 
     this._apTip = document.createElement("div");
-    this._apTip.style.cssText = "position:fixed;transform:translateX(-50%) translateY(4px);background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:5px 14px;font-size:11px;font-family:JustifySans,system-ui,sans-serif;font-weight:500;color:rgba(255,255,255,0.85);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 120ms ease,transform 120ms ease;box-shadow:0 2px 8px rgba(0,0,0,0.3);z-index:2147483647";
+    this._apTip.style.cssText = "position:fixed;transform:translateX(-50%) translateY(4px);background:" + currentPalette().surface + ";border:1px solid " + currentPalette().borderSubtle + ";border-radius:20px;padding:5px 14px;font-size:11px;font-family:JustifySans,system-ui,sans-serif;font-weight:500;color:" + currentPalette().text + ";white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 120ms ease,transform 120ms ease;box-shadow:0 2px 8px rgba(0,0,0,0.3);z-index:2147483647";
 
     // pill already mounted by core
     this.overlay.getContainer().appendChild(this._apTip);
@@ -499,6 +505,7 @@ export class PromptMode {
     this.overlay.trackElement(t);
     var _all = this.multiSelect.getAll(),
       _maxBot = 0,
+      _minTop = Infinity,
       _botEl: Element | null = null;
     for (var _qi = 0; _qi < _all.length; _qi++) {
       var _qr = _all[_qi].domNode.getBoundingClientRect();
@@ -506,10 +513,11 @@ export class PromptMode {
         _maxBot = _qr.bottom;
         _botEl = _all[_qi].domNode;
       }
+      if (_qr.top < _minTop) _minTop = _qr.top;
     }
     var _inputW = 300,
       _cx = _botEl ? _botEl.getBoundingClientRect().left + _botEl.getBoundingClientRect().width / 2 - _inputW / 2 : 0;
-    this.prompt?.show(_cx, _maxBot + 12);
+    this.prompt?.show(_cx, _maxBot + 12, _minTop === Infinity ? undefined : _minTop);
     this.prompt?.onPromptSubmit(function (this: PromptMode, a: string) {
       this.submitPrompt(a);
     }.bind(this));
@@ -531,8 +539,13 @@ export class PromptMode {
       return;
     }
     if (t && t !== document.documentElement && t !== document.body) {
-      this.overlay.showHighlight(t.getBoundingClientRect());
-      if (this._hLabel) {
+      // trackElement, not showHighlight: the tracked path draws the dotted
+      // child outlines (manipulate-parity hover detail) and keeps the box
+      // glued to the element through scrolls.
+      this.overlay.trackElement(t);
+      // The cursor-follow element label is a hint; the highlight box is
+      // selection feedback and stays regardless of the Hints setting.
+      if (this._hLabel && this._showHints !== false) {
         this._hLabel.innerHTML = "";
 
         var _tag = t.tagName.toLowerCase(),
@@ -608,11 +621,8 @@ export class PromptMode {
       this._core._pendingResponses = 1;
       this._core._showClaudeBar('Sending to Claude', 'writing', true);
     }
-    var _core = this._core;
-    this.transport.request("push_prompt", promptData).catch(function (e: unknown) {
-      console.warn('[Justify] Submit failed:', e);
-      if (_core) _core._claudeToRetry();
-    });
+    const _cid = this.transport.sendPrompt(promptData);
+    if (this._core) this._core._lastPromptClientId = _cid;
   }
 
   submitFromQueue(promptText: string, elements: { domNode: Element; selector: string; tagName: string }[]) {
@@ -628,11 +638,8 @@ export class PromptMode {
         this._core._pendingResponses = 1;
         this._core._showClaudeBar('Sending to Claude', 'writing', true);
       }
-      var _core0 = this._core;
-      this.transport.request("push_prompt", promptData).catch(function (e: unknown) {
-        console.warn('[Justify] Submit failed:', e);
-        if (_core0) _core0._claudeToRetry();
-      });
+      const _cid = this.transport.sendPrompt(promptData);
+      if (this._core) this._core._lastPromptClientId = _cid;
       return;
     }
     let o = elements.map(r => {
@@ -655,11 +662,8 @@ export class PromptMode {
       this._core._pendingResponses = 1;
       this._core._showClaudeBar('Sending to Claude', 'writing', true);
     }
-    var _core1 = this._core;
-    this.transport.request("push_prompt", promptData).catch(function (e: unknown) {
-      console.warn('[Justify] Submit failed:', e);
-      if (_core1) _core1._claudeToRetry();
-    });
+    const _cid = this.transport.sendPrompt(promptData);
+    if (this._core) this._core._lastPromptClientId = _cid;
   }
 
   onPromptSent(cb: (prompt: string, count: number) => void) {
@@ -706,6 +710,23 @@ export class PromptMode {
     label.style.top = y + "px";
   }
 
+  applyTheme() {
+    // Re-skin theme-dependent prompt chrome that outlives a theme change:
+    // the cursor-follow hover label restyles in place; selection overlays and
+    // their labels are simply re-rendered (they read the palette at creation).
+    if (this._hLabel) {
+      var _tp = currentPalette();
+      this._hLabel.style.background = _tp.surface;
+      this._hLabel.style.borderColor = _tp.borderSubtle;
+      this._hLabel.style.color = _tp.text;
+    }
+    if (this._selOverlays && this._selOverlays.length > 0) this._showSelOverlays();
+  }
+
+  _mkc(): string {
+    return (this._getColor ? this._getColor() : "") || "#D97757";
+  }
+
   _showSelOverlays() {
     if (this._selOverlays) this._selOverlays.forEach(function (o: HTMLElement) {
       o.remove();
@@ -716,7 +737,8 @@ export class PromptMode {
       this._selRaf = null;
     }
     this._selTracked = [];
-    var c = "#D97757";
+    var c = this._selColor || "#D97757";
+    var _pal = currentPalette();
     var all = this.multiSelect.getAll();
     var self = this;
     for (var i = 0; i < all.length; i++) {
@@ -730,7 +752,7 @@ export class PromptMode {
         self._selOverlays.push(o);
 
         var lb = document.createElement("div") as HTMLDivElement;
-        lb.style.cssText = self._showLabels !== false ? "position:fixed;left:" + (r.right + 4) + "px;top:" + r.top + "px;background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.85);font-size:11px;font-family:JustifySans,system-ui,sans-serif;font-weight:500;padding:4px 8px 4px 6px;border-radius:20px;pointer-events:all;z-index:2147483644;display:flex;align-items:center;gap:5px;box-shadow:0 2px 6px rgba(0,0,0,0.3);white-space:nowrap;cursor:default" : "position:fixed;left:" + (r.right + 4) + "px;top:" + r.top + "px;width:24px;height:24px;background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:50%;pointer-events:all;z-index:2147483644;display:flex;align-items:center;justify-content:center;cursor:default;box-shadow:0 2px 6px rgba(0,0,0,0.3)";
+        lb.style.cssText = self._showLabels !== false ? "position:fixed;left:" + (r.right + 4) + "px;top:" + r.top + "px;background:" + _pal.surface + ";border:1px solid " + _pal.borderSubtle + ";color:" + _pal.text + ";font-size:11px;font-family:JustifySans,system-ui,sans-serif;font-weight:500;padding:4px 8px 4px 6px;border-radius:20px;pointer-events:all;z-index:2147483644;display:flex;align-items:center;gap:5px;box-shadow:0 2px 6px rgba(0,0,0,0.3);white-space:nowrap;cursor:default" : "position:fixed;left:" + (r.right + 4) + "px;top:" + r.top + "px;width:24px;height:24px;background:" + _pal.surface + ";border:1px solid " + _pal.borderSubtle + ";border-radius:50%;pointer-events:all;z-index:2147483644;display:flex;align-items:center;justify-content:center;cursor:default;box-shadow:0 2px 6px rgba(0,0,0,0.3)";
 
         if (self._showLabels !== false) {
           var tag = el.tagName.toLowerCase(),
@@ -798,7 +820,7 @@ export class PromptMode {
           var dv = document.createElement("div");
           // Full-height divider (stretches edge-to-edge via negative vertical margins
           // that cancel the pill's 4px top/bottom padding), with extra space before it.
-          dv.style.cssText = "width:1px;align-self:stretch;margin:-4px 0 -4px 5px;background:rgba(255,255,255,0.1);flex:none";
+          dv.style.cssText = "width:1px;align-self:stretch;margin:-4px 0 -4px 5px;background:" + _pal.borderSubtle + ";flex:none";
           lb.appendChild(dv);
         }
         lb.appendChild(xb);
@@ -851,18 +873,20 @@ export class PromptMode {
         if (self.prompt && self.prompt.isVisible() && self._selTracked.length > 0) {
           self.prompt.container.style.transition = "none";
           var _botTr: Element | null = null,
-            _botBot = -Infinity;
+            _botBot = -Infinity,
+            _topTr = Infinity;
           for (var _bi = 0; _bi < self._selTracked.length; _bi++) {
             var _br = self._selTracked[_bi].el.getBoundingClientRect();
             if (_br.bottom > _botBot) {
               _botBot = _br.bottom;
               _botTr = self._selTracked[_bi].el;
             }
+            if (_br.top < _topTr) _topTr = _br.top;
           }
           var _iwR = 300,
             _cxR = _botTr ? _botTr.getBoundingClientRect().left + _botTr.getBoundingClientRect().width / 2 - _iwR / 2 : _ml;
           self.prompt.container.style.left = _cxR + "px";
-          self.prompt.container.style.top = (_mb + 12) + "px";
+          self.prompt.container.style.top = clampPromptTop(_mb + 12, _topTr === Infinity ? undefined : _topTr, self.prompt.container.offsetHeight || 48) + "px";
         }
         self._selRaf = requestAnimationFrame(_update);
       };
@@ -879,12 +903,12 @@ export class PromptMode {
     if (!this._actionPill) return;
     this._actionPill.onmouseenter = function (this: PromptMode) {
       if (this._queueBtn && !this._queueBtn.dataset.active && this._changeQueue.length > 0) {
-        this._queueBtn.style.background = "rgba(217,119,87,0.12)";
+        this._queueBtn.style.background = "color-mix(in srgb, var(--justify-marker, #D97757) 12%, transparent)";
       }
     }.bind(this);
     this._actionPill.onmouseleave = function (this: PromptMode) {
       if (this._queueBtn && !this._queueBtn.dataset.active) {
-        this._queueBtn.style.background = "rgba(255,255,255,0.08)";
+        this._queueBtn.style.background = currentPalette().hover;
       }
     }.bind(this);
     var pillRef = this._actionPill;
@@ -951,15 +975,15 @@ export class PromptMode {
     if (c > 0 && !this._queueBtn && this._actionPill) {
       var btn = document.createElement("div");
       btn.dataset.queueBtn = "";
-      btn.style.cssText = "width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;display:flex;align-items:center;justify-content:center;color:#D97757;transition:background 150ms ease,transform 0.1s;flex-shrink:0;padding:0;position:relative";
+      btn.style.cssText = "width:32px;height:32px;border-radius:50%;background:" + currentPalette().hover + ";border:none;display:flex;align-items:center;justify-content:center;color:" + this._mkc() + ";transition:background 150ms ease,transform 0.1s;flex-shrink:0;padding:0;position:relative";
       var count = document.createElement("span");
-      count.style.cssText = "font-size:13px;font-weight:700;font-family:JustifySans,system-ui,sans-serif;font-variant-numeric:tabular-nums;pointer-events:none;line-height:1;color:#D97757";
+      count.style.cssText = "font-size:13px;font-weight:700;font-family:JustifySans,system-ui,sans-serif;font-variant-numeric:tabular-nums;pointer-events:none;line-height:1;color:var(--justify-marker, #D97757)";
       count.textContent = String(c);
       btn.appendChild(count);
       this._actionPill.appendChild(btn);
       var label = document.createElement("span");
       label.dataset.queueLabel = "";
-      label.style.cssText = "font-size:14px;font-weight:500;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;transition:width 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.25s ease;font-family:JustifySans,system-ui,sans-serif;cursor:pointer";
+      label.style.cssText = "font-size:14px;font-weight:500;color:" + currentPalette().text + ";white-space:nowrap;overflow:hidden;transition:width 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.25s ease;font-family:JustifySans,system-ui,sans-serif;cursor:pointer";
       label.textContent = c === 1 ? "Queued Task" : "Queued Tasks";
       this._actionPill.appendChild(label);
       this._queueBtn = btn as any;
@@ -1039,9 +1063,9 @@ export class PromptMode {
         this._queuePanel = null; this._queueListEl = null; this._queueHdrText = null;
         // Reset active state
         if (this._queueBtn) {
-          this._queueBtn.style.background = "rgba(255,255,255,0.08)";
-          this._queueBtn.style.color = "rgba(255,255,255,0.65)";
-          if (this._queueCount) this._queueCount.style.color = "#D97757";
+          this._queueBtn.style.background = currentPalette().hover;
+          this._queueBtn.style.color = currentPalette().textDim;
+          if (this._queueCount) this._queueCount.style.color = "var(--justify-marker, #D97757)";
           delete this._queueBtn.dataset.active;
         }
       } else if (this._queueHdrText) {
@@ -1132,19 +1156,19 @@ export class PromptMode {
       setTimeout(function () { _p.remove(); }, 220);
       this._queuePanel = null; this._queueListEl = null; this._queueHdrText = null;
       if (this._queueBtn) {
-        this._queueBtn.style.background = "rgba(255,255,255,0.08)";
-        this._queueBtn.style.color = "#D97757";
-        if (this._queueCount) this._queueCount.style.color = "#D97757";
+        this._queueBtn.style.background = currentPalette().hover;
+        this._queueBtn.style.color = "var(--justify-marker, #D97757)";
+        if (this._queueCount) this._queueCount.style.color = "var(--justify-marker, #D97757)";
         delete this._queueBtn.dataset.active;
       }
       return;
     }
     var p = document.createElement("div");
     p.dataset.justifyQueuePanel = "true";
-    p.style.cssText = "position:fixed;bottom:72px;left:20px;width:340px;max-height:400px;overflow:hidden;background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.5);padding:0;display:flex;flex-direction:column;z-index:2147483647;pointer-events:all;font-family:JustifySans,system-ui,sans-serif;opacity:0;transform:translateY(12px);transition:opacity 0.25s ease,transform 0.25s cubic-bezier(0.4,0,0.2,1)";
+    p.style.cssText = "position:fixed;bottom:72px;left:20px;width:340px;max-height:400px;overflow:hidden;background:" + currentPalette().surface + ";border:1px solid " + currentPalette().borderSubtle + ";border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.5);padding:0;display:flex;flex-direction:column;z-index:2147483647;pointer-events:all;font-family:JustifySans,system-ui,sans-serif;opacity:0;transform:translateY(12px);transition:opacity 0.25s ease,transform 0.25s cubic-bezier(0.4,0,0.2,1)";
 
     var hdr = document.createElement("div");
-    hdr.style.cssText = "font-size:12px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.03em;text-transform:uppercase;padding:14px 16px 10px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between";
+    hdr.style.cssText = "font-size:12px;font-weight:500;color:" + currentPalette().textDim + ";letter-spacing:0.03em;text-transform:uppercase;padding:14px 16px 10px;border-bottom:1px solid " + currentPalette().borderSubtle + ";display:flex;align-items:center;justify-content:space-between";
 
     var hdrText = document.createElement("span");
     hdrText.textContent = "Queued " + (this._changeQueue.length === 1 ? "Task" : "Tasks") + " (" + this._changeQueue.length + ")";
@@ -1152,7 +1176,7 @@ export class PromptMode {
     this._queueHdrText = hdrText;
 
     var hdrClose = document.createElement("button");
-    hdrClose.style.cssText = "border:none;background:transparent;color:rgba(255,255,255,0.5);cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;transition:background 120ms ease,color 120ms ease";
+    hdrClose.style.cssText = "border:none;background:transparent;color:" + currentPalette().textDim + ";cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;transition:background 120ms ease,color 120ms ease";
 
     var _xcSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     _xcSvg.setAttribute("width", "14");
@@ -1174,12 +1198,12 @@ export class PromptMode {
     hdrClose.appendChild(_xcSvg);
 
     hdrClose.addEventListener("mouseenter", function () {
-      hdrClose.style.background = "rgba(255,255,255,0.08)";
-      hdrClose.style.color = "rgba(255,255,255,0.85)";
+      hdrClose.style.background = currentPalette().hover;
+      hdrClose.style.color = currentPalette().text;
     });
     hdrClose.addEventListener("mouseleave", function () {
       hdrClose.style.background = "transparent";
-      hdrClose.style.color = "rgba(255,255,255,0.5)";
+      hdrClose.style.color = currentPalette().textDim;
     });
     hdrClose.addEventListener("click", function (this: PromptMode) {
       this._toggleQueuePanel();
@@ -1203,7 +1227,7 @@ export class PromptMode {
     // Connection alert banner (shown when Claude is not connected)
     var alertBanner = document.createElement("div");
     alertBanner.dataset.watchAlert = '';
-    alertBanner.style.cssText = "margin:0 16px 12px;padding:12px 14px;background:rgba(217,119,87,0.08);border:1px solid rgba(217,119,87,0.2);border-radius:10px;box-shadow:0px -10px 25px 10px #1a1a1a;transition:opacity 0.2s ease,transform 0.2s ease,margin 0.2s ease";
+    alertBanner.style.cssText = "margin:0 16px 12px;padding:12px 14px;background:color-mix(in srgb, var(--justify-marker, #D97757) 8%, transparent);border:1px solid color-mix(in srgb, var(--justify-marker, #D97757) 20%, transparent);border-radius:10px;box-shadow:0px -10px 25px 10px " + currentPalette().surface + ";transition:opacity 0.2s ease,transform 0.2s ease,margin 0.2s ease";
     if (this._watchActive) {
       alertBanner.style.opacity = "0";
       alertBanner.style.height = "0";
@@ -1216,11 +1240,13 @@ export class PromptMode {
     alertIcon.setAttribute("height", "14");
     alertIcon.setAttribute("viewBox", "0 0 24 24");
     alertIcon.setAttribute("fill", "none");
-    alertIcon.setAttribute("stroke", "#D97757");
+    alertIcon.setAttribute("stroke", "currentColor");
     alertIcon.setAttribute("stroke-width", "2");
     alertIcon.setAttribute("stroke-linecap", "round");
     alertIcon.setAttribute("stroke-linejoin", "round");
-    alertIcon.style.cssText = "flex-shrink:0;margin-right:6px;vertical-align:middle;display:inline-block";
+    // color lives IN this cssText: a cssText assignment replaces the whole
+    // inline style, so a separately-set style.color before it gets wiped.
+    alertIcon.style.cssText = "flex-shrink:0;margin-right:6px;vertical-align:middle;display:inline-block;color:var(--justify-marker, #D97757)";
     var alertIconCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     alertIconCircle.setAttribute("cx", "12");
     alertIconCircle.setAttribute("cy", "12");
@@ -1234,37 +1260,41 @@ export class PromptMode {
     alertIcon.appendChild(alertIconLine2);
 
     var alertTitle = document.createElement("div");
-    alertTitle.style.cssText = "font-size:13px;font-weight:700;font-family:JustifySans,system-ui,sans-serif;color:rgba(255,255,255,0.85);margin-bottom:8px;display:flex;align-items:center";
+    alertTitle.style.cssText = "font-size:13px;font-weight:700;font-family:JustifySans,system-ui,sans-serif;color:" + currentPalette().text + ";margin-bottom:8px;display:flex;align-items:center";
     alertTitle.appendChild(alertIcon);
-    alertTitle.appendChild(document.createTextNode("Claude is not connected"));
+    // Truthful to the daemon-owned watch: this banner reflects the DAEMON watch
+    // state (armed = on), not whether a session is live. When disarmed the watch
+    // is genuinely off; arming it ("watch justify") makes the daemon apply
+    // Send-All batches headlessly, with or without a session attached.
+    alertTitle.appendChild(document.createTextNode("Justify watch is off"));
     alertBanner.appendChild(alertTitle);
     var alertBody = document.createElement("div");
-    alertBody.style.cssText = "font-size:11px;font-family:JustifySans,system-ui,sans-serif;color:rgba(255,255,255,0.6);line-height:1.4";
+    alertBody.style.cssText = "font-size:11px;font-family:JustifySans,system-ui,sans-serif;color:" + currentPalette().textDim + ";line-height:1.4";
     alertBody.appendChild(document.createTextNode('Tell Claude '));
     var alertCode = document.createElement("span");
-    alertCode.style.cssText = "font-family:JustifyMono,ui-monospace,monospace;font-size:11px;background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;color:rgba(255,255,255,0.8)";
+    alertCode.style.cssText = "font-family:JustifyMono,ui-monospace,monospace;font-size:11px;background:" + currentPalette().hover + ";padding:2px 6px;border-radius:4px;color:" + currentPalette().text;
     alertCode.textContent = "watch justify";
     alertBody.appendChild(alertCode);
-    alertBody.appendChild(document.createTextNode(' to start receiving tasks.'));
+    alertBody.appendChild(document.createTextNode(' to arm it - the daemon then applies your Send-All batches.'));
     alertBanner.appendChild(alertBody);
     p.appendChild(alertBanner);
 
     // Send All / Clear All buttons inside panel
     var panelActions = document.createElement("div");
-    panelActions.style.cssText = "padding:12px 16px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px";
+    panelActions.style.cssText = "padding:12px 16px;border-top:1px solid " + currentPalette().borderSubtle + ";display:flex;gap:8px";
 
     var clearAllBtn = document.createElement("button");
-    clearAllBtn.style.cssText = "flex:1;height:36px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.65);font-family:JustifySans,system-ui,sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s";
+    clearAllBtn.style.cssText = "flex:1;height:36px;border-radius:8px;border:1px solid " + currentPalette().border + ";background:transparent;color:" + currentPalette().textDim + ";font-family:JustifySans,system-ui,sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s";
     clearAllBtn.textContent = "Clear All";
     clearAllBtn.addEventListener("mouseenter", function () {
-      clearAllBtn.style.background = "rgba(255,255,255,0.08)";
-      clearAllBtn.style.color = "rgba(255,255,255,0.85)";
-      clearAllBtn.style.borderColor = "rgba(255,255,255,0.18)";
+      clearAllBtn.style.background = currentPalette().hover;
+      clearAllBtn.style.color = currentPalette().text;
+      clearAllBtn.style.borderColor = currentPalette().border;
     });
     clearAllBtn.addEventListener("mouseleave", function () {
-      clearAllBtn.style.background = "rgba(255,255,255,0.04)";
-      clearAllBtn.style.color = "rgba(255,255,255,0.65)";
-      clearAllBtn.style.borderColor = "rgba(255,255,255,0.12)";
+      clearAllBtn.style.background = "transparent";
+      clearAllBtn.style.color = currentPalette().textDim;
+      clearAllBtn.style.borderColor = currentPalette().border;
     });
     clearAllBtn.addEventListener("click", function (this: PromptMode) {
       // Discarding all tasks: revert any Manipulate live previews to original.
@@ -1282,9 +1312,9 @@ export class PromptMode {
         setTimeout(function () { _p.remove(); }, 220);
         this._queuePanel = null; this._queueListEl = null; this._queueHdrText = null;
         if (this._queueBtn) {
-          this._queueBtn.style.background = "rgba(255,255,255,0.08)";
-          this._queueBtn.style.color = "#D97757";
-          if (this._queueCount) this._queueCount.style.color = "#D97757";
+          this._queueBtn.style.background = currentPalette().hover;
+          this._queueBtn.style.color = "var(--justify-marker, #D97757)";
+          if (this._queueCount) this._queueCount.style.color = "var(--justify-marker, #D97757)";
           delete this._queueBtn.dataset.active;
         }
       }
@@ -1311,22 +1341,29 @@ export class PromptMode {
     panelActions.appendChild(clearAllBtn);
 
     var sendAllBtn = document.createElement("button");
-    sendAllBtn.style.cssText = "flex:1;height:36px;border-radius:8px;border:1px solid rgba(217,119,87,0.25);background:rgba(217,119,87,0.1);color:#D97757;font-family:JustifySans,system-ui,sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s";
+    sendAllBtn.style.cssText = "flex:1;height:36px;border-radius:8px;border:1px solid color-mix(in srgb, var(--justify-marker, #D97757) 25%, transparent);background:color-mix(in srgb, var(--justify-marker, #D97757) 10%, transparent);color:var(--justify-marker, #D97757);font-family:JustifySans,system-ui,sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s";
     sendAllBtn.textContent = "Send All";
     if (!this._watchActive) sendAllBtn.style.display = "none";
     this._sendAllBtn = sendAllBtn;
     sendAllBtn.addEventListener("mouseenter", function () {
-      sendAllBtn.style.background = "rgba(217,119,87,0.18)";
+      sendAllBtn.style.background = "color-mix(in srgb, var(--justify-marker, #D97757) 18%, transparent)";
       sendAllBtn.style.color = "#e8906e";
-      sendAllBtn.style.borderColor = "rgba(217,119,87,0.35)";
+      sendAllBtn.style.borderColor = "color-mix(in srgb, var(--justify-marker, #D97757) 35%, transparent)";
     });
     sendAllBtn.addEventListener("mouseleave", function () {
-      sendAllBtn.style.background = "rgba(217,119,87,0.1)";
-      sendAllBtn.style.color = "#D97757";
-      sendAllBtn.style.borderColor = "rgba(217,119,87,0.25)";
+      sendAllBtn.style.background = "color-mix(in srgb, var(--justify-marker, #D97757) 10%, transparent)";
+      sendAllBtn.style.color = "var(--justify-marker, #D97757)";
+      sendAllBtn.style.borderColor = "color-mix(in srgb, var(--justify-marker, #D97757) 25%, transparent)";
     });
     sendAllBtn.addEventListener("click", function (this: PromptMode) {
       if (this._changeQueue.length > 0) {
+        // Clear the staging queue AFTER submitting, not before: clearing before
+        // would lose a task if its enqueue failed (gone from queue.json AND never
+        // reached prompts.json). The rare crash-in-the-millisecond-window phantom
+        // is the lesser evil vs data loss, and the specific stale-count phantom
+        // the daemon migration was chasing was the legacy /tmp inbox artifact,
+        // which is now retired. (A fully truthful queuebar wants per-task removal
+        // on submit-confirmation - a follow-up, tracked in the beat.)
         var _cnt = this._changeQueue.length;
         // Set pending count BEFORE the loop so responses wait for all tasks
         if (this._core) this._core._pendingResponses = this._changeQueue.length;
@@ -1344,9 +1381,9 @@ export class PromptMode {
           setTimeout(function () { _p.remove(); }, 220);
           this._queuePanel = null; this._queueListEl = null; this._queueHdrText = null;
           if (this._queueBtn) {
-            this._queueBtn.style.background = "rgba(255,255,255,0.08)";
-            this._queueBtn.style.color = "#D97757";
-            if (this._queueCount) this._queueCount.style.color = "#D97757";
+            this._queueBtn.style.background = currentPalette().hover;
+            this._queueBtn.style.color = "var(--justify-marker, #D97757)";
+            if (this._queueCount) this._queueCount.style.color = "var(--justify-marker, #D97757)";
             delete this._queueBtn.dataset.active;
           }
         }
@@ -1375,7 +1412,7 @@ export class PromptMode {
     p.appendChild(panelActions);
 
     this._queuePanel = p;
-    this._queueBtn!.style.background = "#D97757";
+    this._queueBtn!.style.background = "var(--justify-marker, #D97757)";
     this._queueBtn!.style.color = "#fff";
     if (this._queueCount) this._queueCount.style.color = "#fff";
     this._queueBtn!.dataset.active = "1";
@@ -1400,10 +1437,10 @@ export class PromptMode {
     var box = document.createElement("div");
     // Symmetrical, centered card: centered message + equal-width buttons, even
     // padding all round, with an entrance pop.
-    box.style.cssText = "background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:22px;width:300px;max-width:calc(100vw - 40px);box-sizing:border-box;font-family:JustifySans,system-ui,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,0.55);text-align:center;opacity:0;transform:scale(0.94);transition:opacity 160ms ease,transform 180ms cubic-bezier(0.34,1.56,0.64,1)";
+    box.style.cssText = "background:" + currentPalette().surface + ";border:1px solid " + currentPalette().borderSubtle + ";border-radius:14px;padding:22px;width:300px;max-width:calc(100vw - 40px);box-sizing:border-box;font-family:JustifySans,system-ui,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,0.55);text-align:center;opacity:0;transform:scale(0.94);transition:opacity 160ms ease,transform 180ms cubic-bezier(0.34,1.56,0.64,1)";
 
     var msg = document.createElement("div");
-    msg.style.cssText = "font-size:13px;line-height:1.5;color:rgba(255,255,255,0.85);margin:0 0 18px";
+    msg.style.cssText = "font-size:13px;line-height:1.5;color:" + currentPalette().text + ";margin:0 0 18px";
     msg.textContent = 'Remove "' + item.prompt.slice(0, 40) + (item.prompt.length > 40 ? "..." : "") + '"?';
     box.appendChild(msg);
 
@@ -1421,10 +1458,10 @@ export class PromptMode {
     function _onKey(e: KeyboardEvent) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); _close(); } }
 
     var cancel = document.createElement("button");
-    cancel.style.cssText = "flex:1;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.02);color:rgba(255,255,255,0.7);border-radius:9px;padding:9px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:JustifySans,system-ui,sans-serif;outline:none;transition:background 120ms ease,border-color 120ms ease,color 120ms ease,transform 80ms ease";
+    cancel.style.cssText = "flex:1;border:1px solid " + currentPalette().border + ";background:transparent;color:" + currentPalette().textDim + ";border-radius:9px;padding:9px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:JustifySans,system-ui,sans-serif;outline:none;transition:background 120ms ease,border-color 120ms ease,color 120ms ease,transform 80ms ease";
     cancel.textContent = "Cancel";
-    cancel.addEventListener("mouseenter", function () { cancel.style.background = "rgba(255,255,255,0.08)"; cancel.style.borderColor = "rgba(255,255,255,0.3)"; cancel.style.color = "#fff"; });
-    cancel.addEventListener("mouseleave", function () { cancel.style.background = "rgba(255,255,255,0.02)"; cancel.style.borderColor = "rgba(255,255,255,0.15)"; cancel.style.color = "rgba(255,255,255,0.7)"; });
+    cancel.addEventListener("mouseenter", function () { cancel.style.background = currentPalette().hover; cancel.style.borderColor = currentPalette().border; cancel.style.color = currentPalette().text; });
+    cancel.addEventListener("mouseleave", function () { cancel.style.background = "transparent"; cancel.style.borderColor = currentPalette().border; cancel.style.color = currentPalette().textDim; });
     cancel.addEventListener("mousedown", function () { cancel.style.transform = "scale(0.96)"; });
     cancel.addEventListener("mouseup", function () { cancel.style.transform = "scale(1)"; });
     cancel.addEventListener("click", function () { _close(); });
@@ -1507,7 +1544,7 @@ export class PromptMode {
     // Highlight target elements using the standard selection overlay style
     this._clearEditHighlights();
     var posEl: HTMLElement | null = null;
-    var c = "#D97757";
+    var c = this._selColor || "#D97757";
     var container = this.overlay.getContainer();
     for (var i = 0; i < item.elements.length; i++) {
       var domNode = item.elements[i].domNode as HTMLElement;
@@ -1527,7 +1564,7 @@ export class PromptMode {
       var disp = cs.display || '';
 
       var lb = document.createElement('div');
-      lb.style.cssText = 'position:fixed;left:' + (rect.right + 4) + 'px;top:' + rect.top + 'px;background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.85);font-size:11px;font-family:JustifySans,system-ui,sans-serif;font-weight:500;padding:4px 10px 4px 10px;border-radius:20px;pointer-events:none;z-index:2147483644;display:flex;align-items:center;gap:5px;box-shadow:0 2px 6px rgba(0,0,0,0.3);white-space:nowrap;cursor:default';
+      lb.style.cssText = 'position:fixed;left:' + (rect.right + 4) + 'px;top:' + rect.top + 'px;background:' + currentPalette().surface + ';border:1px solid ' + currentPalette().borderSubtle + ';color:' + currentPalette().text + ';font-size:11px;font-family:JustifySans,system-ui,sans-serif;font-weight:500;padding:4px 10px 4px 10px;border-radius:20px;pointer-events:none;z-index:2147483644;display:flex;align-items:center;gap:5px;box-shadow:0 2px 6px rgba(0,0,0,0.3);white-space:nowrap;cursor:default';
 
       var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('width', '12'); svg.setAttribute('height', '12');
@@ -1597,7 +1634,7 @@ export class PromptMode {
     this._editingIdx = idx;
     if (posEl) {
       var pr = posEl.getBoundingClientRect();
-      this.prompt.show(pr.left + pr.width / 2 - 150, pr.bottom + 12);
+      this.prompt.show(pr.left + pr.width / 2 - 150, pr.bottom + 12, pr.top);
     } else {
       this.prompt.show(window.innerWidth / 2 - 150, window.innerHeight / 2);
     }

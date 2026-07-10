@@ -6,8 +6,11 @@
  * - Flow-aware icons (vertical vs horizontal)
  *
  * Ported verbatim from Retune overlay/src/ui/alignment-grid.tsx.
- * BLUE (#D97757) and GRAY (#a8a29e) are hard-coded outside the token system
- * (mirrored verbatim per plan open-question o).
+ * BLUE now derives from the marker color via var(--justify-marker, #D97757),
+ * so the selected/active cells follow the user-selected marker live. GRAY
+ * (#a8a29e) is a neutral idle tint. Icons apply the color through
+ * style={{ fill }} rather than a fill= presentation attribute, because SVG
+ * presentation attributes cannot hold a CSS var().
  */
 
 import { useState, useCallback } from "react";
@@ -87,7 +90,7 @@ function getFlow(flexDirection: string): FlowDirection {
 function IconDot({ color }: { color: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M8 7C8.55228 7 9 7.44772 9 8C9 8.55228 8.55228 9 8 9C7.44772 9 7 8.55228 7 8C7 7.44772 7.44772 7 8 7Z" fill={color} fillOpacity={0.3} />
+      <path d="M8 7C8.55228 7 9 7.44772 9 8C9 8.55228 8.55228 9 8 9C7.44772 9 7 8.55228 7 8C7 7.44772 7.44772 7 8 7Z" style={{ fill: color }} fillOpacity={0.3} />
     </svg>
   );
 }
@@ -96,7 +99,7 @@ function IconDot({ color }: { color: string }) {
 function IconPositionLeft({ color }: { color: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path fillRule="evenodd" clipRule="evenodd" d="M4 3C3.44772 3 3 3.44772 3 4C3 4.55228 3.44772 5 4 5L9 5C9.55228 5 10 4.55229 10 4C10 3.44772 9.55228 3 9 3L4 3ZM4 7C3.44772 7 3 7.44772 3 8C3 8.55228 3.44772 9 4 9L12 9C12.5523 9 13 8.55229 13 8C13 7.44772 12.5523 7 12 7L4 7ZM3 12C3 11.4477 3.44771 11 4 11L7 11C7.55228 11 8 11.4477 8 12C8 12.5523 7.55228 13 7 13L4 13C3.44771 13 3 12.5523 3 12Z" fill={color} />
+      <path fillRule="evenodd" clipRule="evenodd" d="M4 3C3.44772 3 3 3.44772 3 4C3 4.55228 3.44772 5 4 5L9 5C9.55228 5 10 4.55229 10 4C10 3.44772 9.55228 3 9 3L4 3ZM4 7C3.44772 7 3 7.44772 3 8C3 8.55228 3.44772 9 4 9L12 9C12.5523 9 13 8.55229 13 8C13 7.44772 12.5523 7 12 7L4 7ZM3 12C3 11.4477 3.44771 11 4 11L7 11C7.55228 11 8 11.4477 8 12C8 12.5523 7.55228 13 7 13L4 13C3.44771 13 3 12.5523 3 12Z" style={{ fill: color }} />
     </svg>
   );
 }
@@ -104,7 +107,7 @@ function IconPositionLeft({ color }: { color: string }) {
 function IconPositionCenterH({ color }: { color: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path fillRule="evenodd" clipRule="evenodd" d="M10 3C10.5523 3 11 3.44772 11 4C11 4.55228 10.5523 5 10 5L6 5C5.44772 5 5 4.55228 5 4C5 3.44772 5.44772 3 6 3H10ZM12 7C12.5523 7 13 7.44772 13 8C13 8.55228 12.5523 9 12 9L4 9C3.44772 9 3 8.55228 3 8C3 7.44771 3.44772 7 4 7L12 7ZM10 12C10 11.4477 9.55228 11 9 11H7C6.44772 11 6 11.4477 6 12C6 12.5523 6.44772 13 7 13H9C9.55228 13 10 12.5523 10 12Z" fill={color} />
+      <path fillRule="evenodd" clipRule="evenodd" d="M10 3C10.5523 3 11 3.44772 11 4C11 4.55228 10.5523 5 10 5L6 5C5.44772 5 5 4.55228 5 4C5 3.44772 5.44772 3 6 3H10ZM12 7C12.5523 7 13 7.44772 13 8C13 8.55228 12.5523 9 12 9L4 9C3.44772 9 3 8.55228 3 8C3 7.44771 3.44772 7 4 7L12 7ZM10 12C10 11.4477 9.55228 11 9 11H7C6.44772 11 6 11.4477 6 12C6 12.5523 6.44772 13 7 13H9C9.55228 13 10 12.5523 10 12Z" style={{ fill: color }} />
     </svg>
   );
 }
@@ -112,7 +115,7 @@ function IconPositionCenterH({ color }: { color: string }) {
 function IconPositionRight({ color }: { color: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path fillRule="evenodd" clipRule="evenodd" d="M4 7C3.44772 7 3 7.44772 3 8C3 8.55228 3.44772 9 4 9L12 9C12.5523 9 13 8.55229 13 8C13 7.44772 12.5523 7 12 7L4 7ZM7 3C6.44772 3 6 3.44772 6 4C6 4.55228 6.44772 5 7 5L12 5C12.5523 5 13 4.55229 13 4C13 3.44772 12.5523 3 12 3L7 3ZM8 12C8 11.4477 8.44771 11 9 11L12 11C12.5523 11 13 11.4477 13 12C13 12.5523 12.5523 13 12 13L9 13C8.44771 13 8 12.5523 8 12Z" fill={color} />
+      <path fillRule="evenodd" clipRule="evenodd" d="M4 7C3.44772 7 3 7.44772 3 8C3 8.55228 3.44772 9 4 9L12 9C12.5523 9 13 8.55229 13 8C13 7.44772 12.5523 7 12 7L4 7ZM7 3C6.44772 3 6 3.44772 6 4C6 4.55228 6.44772 5 7 5L12 5C12.5523 5 13 4.55229 13 4C13 3.44772 12.5523 3 12 3L7 3ZM8 12C8 11.4477 8.44771 11 9 11L12 11C12.5523 11 13 11.4477 13 12C13 12.5523 12.5523 13 12 13L9 13C8.44771 13 8 12.5523 8 12Z" style={{ fill: color }} />
     </svg>
   );
 }
@@ -121,7 +124,7 @@ function IconPositionRight({ color }: { color: string }) {
 function IconPositionTop({ color }: { color: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path fillRule="evenodd" clipRule="evenodd" d="M3 4C3 3.44772 3.44772 3 4 3C4.55228 3 5 3.44772 5 4V9C5 9.55228 4.55228 10 4 10C3.44772 10 3 9.55228 3 9V4ZM7 4C7 3.44772 7.44772 3 8 3C8.55228 3 9 3.44772 9 4V12C9 12.5523 8.55228 13 8 13C7.44772 13 7 12.5523 7 12V4ZM12 3C11.4477 3 11 3.44772 11 4V7C11 7.55228 11.4477 8 12 8C12.5523 8 13 7.55228 13 7V4C13 3.44772 12.5523 3 12 3Z" fill={color} />
+      <path fillRule="evenodd" clipRule="evenodd" d="M3 4C3 3.44772 3.44772 3 4 3C4.55228 3 5 3.44772 5 4V9C5 9.55228 4.55228 10 4 10C3.44772 10 3 9.55228 3 9V4ZM7 4C7 3.44772 7.44772 3 8 3C8.55228 3 9 3.44772 9 4V12C9 12.5523 8.55228 13 8 13C7.44772 13 7 12.5523 7 12V4ZM12 3C11.4477 3 11 3.44772 11 4V7C11 7.55228 11.4477 8 12 8C12.5523 8 13 7.55228 13 7V4C13 3.44772 12.5523 3 12 3Z" style={{ fill: color }} />
     </svg>
   );
 }
@@ -129,7 +132,7 @@ function IconPositionTop({ color }: { color: string }) {
 function IconPositionCenterV({ color }: { color: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path fillRule="evenodd" clipRule="evenodd" d="M7 4C7 3.44772 7.44772 3 8 3C8.55228 3 9 3.44772 9 4V12C9 12.5523 8.55228 13 8 13C7.44772 13 7 12.5523 7 12V4ZM3 6C3 5.44772 3.44772 5 4 5C4.55228 5 5 5.44772 5 6V10C5 10.5523 4.55228 11 4 11C3.44772 11 3 10.5523 3 10V6ZM12 6C11.4477 6 11 6.44772 11 7V9C11 9.55228 11.4477 10 12 10C12.5523 10 13 9.55228 13 9V7C13 6.44772 12.5523 6 12 6Z" fill={color} />
+      <path fillRule="evenodd" clipRule="evenodd" d="M7 4C7 3.44772 7.44772 3 8 3C8.55228 3 9 3.44772 9 4V12C9 12.5523 8.55228 13 8 13C7.44772 13 7 12.5523 7 12V4ZM3 6C3 5.44772 3.44772 5 4 5C4.55228 5 5 5.44772 5 6V10C5 10.5523 4.55228 11 4 11C3.44772 11 3 10.5523 3 10V6ZM12 6C11.4477 6 11 6.44772 11 7V9C11 9.55228 11.4477 10 12 10C12.5523 10 13 9.55228 13 9V7C13 6.44772 12.5523 6 12 6Z" style={{ fill: color }} />
     </svg>
   );
 }
@@ -137,7 +140,7 @@ function IconPositionCenterV({ color }: { color: string }) {
 function IconPositionBottom({ color }: { color: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path fillRule="evenodd" clipRule="evenodd" d="M7 4C7 3.44772 7.44772 3 8 3C8.55228 3 9 3.44772 9 4V12C9 12.5523 8.55228 13 8 13C7.44772 13 7 12.5523 7 12V4ZM3 7C3 6.44772 3.44772 6 4 6C4.55228 6 5 6.44772 5 7V12C5 12.5523 4.55228 13 4 13C3.44772 13 3 12.5523 3 12V7ZM12 8C11.4477 8 11 8.44772 11 9V12C11 12.5523 11.4477 13 12 13C12.5523 13 13 12.5523 13 12V9C13 8.44772 12.5523 8 12 8Z" fill={color} />
+      <path fillRule="evenodd" clipRule="evenodd" d="M7 4C7 3.44772 7.44772 3 8 3C8.55228 3 9 3.44772 9 4V12C9 12.5523 8.55228 13 8 13C7.44772 13 7 12.5523 7 12V4ZM3 7C3 6.44772 3.44772 6 4 6C4.55228 6 5 6.44772 5 7V12C5 12.5523 4.55228 13 4 13C3.44772 13 3 12.5523 3 12V7ZM12 8C11.4477 8 11 8.44772 11 9V12C11 12.5523 11.4477 13 12 13C12.5523 13 13 12.5523 13 12V9C13 8.44772 12.5523 8 12 8Z" style={{ fill: color }} />
     </svg>
   );
 }
@@ -147,7 +150,7 @@ function IconSBBarH({ color }: { color: string }) {
   // Full-width horizontal bar (edges in vertical SB)
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M12 7C12.5523 7 13 7.44772 13 8C13 8.55229 12.5523 9 12 9L4 9C3.44772 9 3 8.55228 3 8C3 7.44772 3.44771 7 4 7L12 7Z" fill={color} />
+      <path d="M12 7C12.5523 7 13 7.44772 13 8C13 8.55229 12.5523 9 12 9L4 9C3.44772 9 3 8.55228 3 8C3 7.44772 3.44771 7 4 7L12 7Z" style={{ fill: color }} />
     </svg>
   );
 }
@@ -155,7 +158,7 @@ function IconSBBarH({ color }: { color: string }) {
 function IconSBBarHLeft({ color }: { color: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M4 7C3.44772 7 3 7.44772 3 8C3 8.55228 3.44772 9 4 9L8 9C8.55228 9 9 8.55229 9 8C9 7.44772 8.55228 7 8 7L4 7Z" fill={color} />
+      <path d="M4 7C3.44772 7 3 7.44772 3 8C3 8.55228 3.44772 9 4 9L8 9C8.55228 9 9 8.55229 9 8C9 7.44772 8.55228 7 8 7L4 7Z" style={{ fill: color }} />
     </svg>
   );
 }
@@ -163,7 +166,7 @@ function IconSBBarHLeft({ color }: { color: string }) {
 function IconSBBarHCenter({ color }: { color: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M6 7C5.44772 7 5 7.44772 5 8C5 8.55228 5.44772 9 6 9L10 9C10.5523 9 11 8.55228 11 8C11 7.44772 10.5523 7 10 7L6 7Z" fill={color} />
+      <path d="M6 7C5.44772 7 5 7.44772 5 8C5 8.55228 5.44772 9 6 9L10 9C10.5523 9 11 8.55228 11 8C11 7.44772 10.5523 7 10 7L6 7Z" style={{ fill: color }} />
     </svg>
   );
 }
@@ -171,7 +174,7 @@ function IconSBBarHCenter({ color }: { color: string }) {
 function IconSBBarHRight({ color }: { color: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M8 7C7.44772 7 7 7.44772 7 8C7 8.55228 7.44772 9 8 9L12 9C12.5523 9 13 8.55229 13 8C13 7.44772 12.5523 7 12 7L8 7Z" fill={color} />
+      <path d="M8 7C7.44772 7 7 7.44772 7 8C7 8.55228 7.44772 9 8 9L12 9C12.5523 9 13 8.55229 13 8C13 7.44772 12.5523 7 12 7L8 7Z" style={{ fill: color }} />
     </svg>
   );
 }
@@ -180,7 +183,7 @@ function IconSBBarV({ color }: { color: string }) {
   // Full-height vertical bar (edges in horizontal SB)
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M7 4C7 3.44772 7.44772 3 8 3C8.55228 3 9 3.44772 9 4V12C9 12.5523 8.55228 13 8 13C7.44772 13 7 12.5523 7 12V4Z" fill={color} />
+      <path d="M7 4C7 3.44772 7.44772 3 8 3C8.55228 3 9 3.44772 9 4V12C9 12.5523 8.55228 13 8 13C7.44772 13 7 12.5523 7 12V4Z" style={{ fill: color }} />
     </svg>
   );
 }
@@ -188,7 +191,7 @@ function IconSBBarV({ color }: { color: string }) {
 function IconSBBarVTop({ color }: { color: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path fillRule="evenodd" clipRule="evenodd" d="M8 3C7.44772 3 7 3.44772 7 4V8C7 8.55228 7.44772 9 8 9C8.55228 9 9 8.55228 9 8V4C9 3.44772 8.55228 3 8 3Z" fill={color} />
+      <path fillRule="evenodd" clipRule="evenodd" d="M8 3C7.44772 3 7 3.44772 7 4V8C7 8.55228 7.44772 9 8 9C8.55228 9 9 8.55228 9 8V4C9 3.44772 8.55228 3 8 3Z" style={{ fill: color }} />
     </svg>
   );
 }
@@ -196,7 +199,7 @@ function IconSBBarVTop({ color }: { color: string }) {
 function IconSBBarVCenter({ color }: { color: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path fillRule="evenodd" clipRule="evenodd" d="M8 5C7.44772 5 7 5.44772 7 6V10C7 10.5523 7.44772 11 8 11C8.55228 11 9 10.5523 9 10V6C9 5.44772 8.55228 5 8 5Z" fill={color} />
+      <path fillRule="evenodd" clipRule="evenodd" d="M8 5C7.44772 5 7 5.44772 7 6V10C7 10.5523 7.44772 11 8 11C8.55228 11 9 10.5523 9 10V6C9 5.44772 8.55228 5 8 5Z" style={{ fill: color }} />
     </svg>
   );
 }
@@ -204,14 +207,14 @@ function IconSBBarVCenter({ color }: { color: string }) {
 function IconSBBarVBottom({ color }: { color: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path fillRule="evenodd" clipRule="evenodd" d="M8 7C7.44772 7 7 7.44772 7 8V12C7 12.5523 7.44772 13 8 13C8.55228 13 9 12.5523 9 12V8C9 7.44772 8.55228 7 8 7Z" fill={color} />
+      <path fillRule="evenodd" clipRule="evenodd" d="M8 7C7.44772 7 7 7.44772 7 8V12C7 12.5523 7.44772 13 8 13C8.55228 13 9 12.5523 9 12V8C9 7.44772 8.55228 7 8 7Z" style={{ fill: color }} />
     </svg>
   );
 }
 
 // Icon selection helpers
 
-const BLUE = "#D97757";
+const BLUE = "var(--justify-marker, #D97757)";
 const GRAY = "#a8a29e";
 
 const CELL_TOOLTIPS: Record<string, string> = {

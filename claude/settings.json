@@ -154,6 +154,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "mcp__visualize__show_widget",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/visualizer-guard.sh",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "SessionStart": [

@@ -1015,7 +1015,7 @@ Run, in order, addressing findings above "minor":
 - `/sidecoach audit tilt-lab/app` (fix all Critical + High)
 - `/sidecoach critique tilt-lab/app`
 - `/sidecoach polish tilt-lab/app` (last)
-- `/make-interfaces-feel-better` 14-point pass, recording before/after.
+- `/tactical-polish` 14-point pass, recording before/after.
 - If a DESIGN.md exists for tilt-lab: `npx @google/design.md lint DESIGN.md` to zero findings.
 
 - [ ] **Step 6: Commit any QA fixes**

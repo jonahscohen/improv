@@ -186,7 +186,7 @@ function checkTranslateYInHover(allCss) {
             ruleId: 'taste/translatey-in-hover',
             severity: 'error',
             category: 'motion',
-            message: `:hover uses transform: translateY(...) for a hover-lift. The make-interfaces-feel-better tactical layer specifies scale-on-press (transform: scale(0.96) on :active), not translateY motion on hover. Selector: "${block.selector}"`,
+            message: `:hover uses transform: translateY(...) for a hover-lift. The tactical-polish layer specifies scale-on-press (transform: scale(0.96) on :active), not translateY motion on hover. Selector: "${block.selector}"`,
             excerpt: block.body.trim().slice(0, 160),
         });
     }

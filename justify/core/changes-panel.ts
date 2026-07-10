@@ -1,3 +1,5 @@
+import { currentPalette, registerThemedSurface, type Palette } from './toolbar';
+
 interface DiffLine { t: ' ' | '-' | '+'; oldNo: number | null; newNo: number | null; text: string; }
 interface DiffHunk { oldStart: number; newStart: number; header: string; lines: DiffLine[]; }
 interface FileDiff { file: string; hunks: DiffHunk[]; }
@@ -47,6 +49,15 @@ export class ChangesPanel {
   private revertedPrompts = new Set<string>();
   private getMarkerColor: () => string;
   private boundKeydown: (e: KeyboardEvent) => void;
+  // Persistent chrome refs re-skinned by the single themed applier.
+  private _header!: HTMLDivElement;
+  private _title!: HTMLSpanElement;
+  private _closeBtn!: HTMLButtonElement;
+  private _scrollStyle!: HTMLStyleElement;
+  private _unregisterTheme: (() => void) | null = null;
+  // Current detail-view entry/index, so a theme flip mid-detail can re-skin it.
+  private _detailEntry: ChangeEntry | null = null;
+  private _detailIndex = -1;
 
   constructor(shadowRoot: ShadowRoot, getMarkerColor: () => string) {
     this.shadowRoot = shadowRoot;
@@ -57,33 +68,36 @@ export class ChangesPanel {
     this.container.setAttribute('aria-label', 'Changes from Claude');
     this.container.style.cssText =
       'position:fixed;bottom:68px;left:20px;width:360px;max-height:480px;' +
-      'background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:16px;' +
+      'border:1px solid transparent;border-radius:16px;' +
       'box-shadow:0 8px 32px rgba(0,0,0,0.5);display:none;flex-direction:column;' +
       'z-index:2147483647;pointer-events:all;font-family:"JustifySans",system-ui,sans-serif;' +
       'overflow:hidden;opacity:0;transform:translateY(8px);' +
       'transition:opacity 200ms ease,transform 200ms ease';
 
     const header = document.createElement('div');
+    this._header = header;
     header.style.cssText =
-      'padding:14px 16px 10px;border-bottom:1px solid rgba(255,255,255,0.1);' +
+      'padding:14px 16px 10px;border-bottom:1px solid transparent;' +
       'display:flex;align-items:center;justify-content:space-between;flex-shrink:0';
 
     const titleWrap = document.createElement('div');
     titleWrap.style.cssText = 'display:flex;align-items:center;gap:8px';
     const title = document.createElement('span');
+    this._title = title;
     title.id = 'justify-changes-title';
     title.textContent = 'Changes';
-    title.style.cssText = 'font-size:13px;font-weight:600;color:rgba(255,255,255,0.85)';
+    title.style.cssText = 'font-size:13px;font-weight:600';
     titleWrap.appendChild(title);
     header.appendChild(titleWrap);
     this.container.setAttribute('aria-labelledby', 'justify-changes-title');
 
     const closeBtn = document.createElement('button');
+    this._closeBtn = closeBtn;
     closeBtn.setAttribute('aria-label', 'Close changes panel');
     closeBtn.style.cssText =
       'width:24px;height:24px;border:none;background:transparent;border-radius:6px;' +
       'cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;' +
-      'color:rgba(255,255,255,0.5);transition:background 120ms ease;outline:none';
+      'transition:background 120ms ease;outline:none';
     const closeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     closeSvg.setAttribute('width', '14');
     closeSvg.setAttribute('height', '14');
@@ -100,18 +114,18 @@ export class ChangesPanel {
     closeSvg.appendChild(cp2);
     closeBtn.appendChild(closeSvg);
     closeBtn.addEventListener('mouseenter', () => { closeBtn.style.background = '#D97757'; closeBtn.style.color = '#1a1a1a'; });
-    closeBtn.addEventListener('mouseleave', () => { closeBtn.style.background = 'transparent'; closeBtn.style.color = 'rgba(255,255,255,0.5)'; });
+    closeBtn.addEventListener('mouseleave', () => { closeBtn.style.background = 'transparent'; closeBtn.style.color = this._ink(0.5); });
     closeBtn.addEventListener('click', () => this.hide());
     header.appendChild(closeBtn);
     this.container.appendChild(header);
 
     this.listEl = document.createElement('div');
     this.listEl.setAttribute('role', 'list');
-    this.listEl.style.cssText = 'overflow-y:auto;flex:1;padding:8px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.15) transparent';
+    this.listEl.style.cssText = 'overflow-y:auto;flex:1;padding:8px;scrollbar-width:thin';
 
-    // Webkit scrollbar styles
+    // Webkit scrollbar styles (thumb color re-skinned by the themed applier).
     const scrollStyle = document.createElement('style');
-    scrollStyle.textContent = ':host ::-webkit-scrollbar{width:6px}:host ::-webkit-scrollbar-track{background:transparent}:host ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:3px}:host ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.25)}';
+    this._scrollStyle = scrollStyle;
     this.container.appendChild(scrollStyle);
     this.container.appendChild(this.listEl);
 
@@ -125,7 +139,7 @@ export class ChangesPanel {
     // Bottom bar for the clear button (below the list)
     this.bottomBar = document.createElement('div');
     this.bottomBar.style.cssText =
-      'padding:10px 16px;border-top:1px solid rgba(255,255,255,0.1);flex-shrink:0;display:none';
+      'padding:10px 16px;border-top:1px solid transparent;flex-shrink:0;display:none';
     // Two clear actions, side by side:
     //  - "Clear All Completed" (neutral): removes ONLY status==='completed'
     //    entries, leaving needsInfo / failed in place.
@@ -135,7 +149,7 @@ export class ChangesPanel {
     btnRow.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;align-items:center';
 
     const neutralCss =
-      'border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.45);font-size:11px;cursor:pointer;' +
+      'border:1px solid transparent;font-size:11px;cursor:pointer;' +
       'padding:6px 14px;border-radius:8px;font-family:JustifySans,system-ui,sans-serif;outline:none;white-space:nowrap;transition:background 120ms ease,color 120ms ease,border-color 120ms ease';
 
     // Clear All Completed (neutral) - removes only completed entries.
@@ -144,7 +158,7 @@ export class ChangesPanel {
     this._clearReviewedBtn.setAttribute('aria-label', 'Clear only completed tasks from the review panel');
     this._clearReviewedBtn.style.cssText = neutralCss;
     this._clearReviewedBtn.addEventListener('mouseenter', () => { this._clearReviewedBtn!.style.background = '#D97757'; this._clearReviewedBtn!.style.color = '#1a1a1a'; this._clearReviewedBtn!.style.borderColor = '#D97757'; });
-    this._clearReviewedBtn.addEventListener('mouseleave', () => { this._clearReviewedBtn!.style.background = 'rgba(255,255,255,0.04)'; this._clearReviewedBtn!.style.color = 'rgba(255,255,255,0.45)'; this._clearReviewedBtn!.style.borderColor = 'rgba(255,255,255,0.12)'; });
+    this._clearReviewedBtn.addEventListener('mouseleave', () => { this._clearReviewedBtn!.style.background = this._ink(0.04); this._clearReviewedBtn!.style.color = this._ink(0.45); this._clearReviewedBtn!.style.borderColor = currentPalette().border; });
     this._clearReviewedBtn.addEventListener('click', () => {
       // "Completed" == the user has marked it done (reviewed), NOT the response
       // status. Mark Done sets reviewed=true regardless of status (a needsInfo
@@ -183,6 +197,59 @@ export class ChangesPanel {
 
     this.boundKeydown = this.handleKeydown.bind(this);
     shadowRoot.appendChild(this.container);
+
+    // ONE applier re-skins the long-lived chrome (container, header, title,
+    // close button, scrollbar, footer, neutral clear button) on every theme
+    // change, and refreshes whichever per-render view is on screen so its rows
+    // pick up the new palette too. Called immediately at registration, so the
+    // chrome above is themed before first paint. Registered last, so every
+    // referenced element already exists.
+    this._unregisterTheme = registerThemedSurface((p) => this._applyTheme(p));
+  }
+
+  // Base "ink" RGB triplet for the active theme, parsed from the palette's text
+  // token: dark => 255,255,255, light => 26,31,27. Lets the many off-palette
+  // opacities (0.5, 0.35, 0.06, ...) flip white<->dark-ink with the theme while
+  // preserving the EXACT dark-mode alpha, so dark stays pixel-identical.
+  private _inkRgb(): string {
+    const m = currentPalette().text.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/);
+    return m ? `${m[1]},${m[2]},${m[3]}` : '255,255,255';
+  }
+
+  private _ink(alpha: number): string {
+    return `rgba(${this._inkRgb()},${alpha})`;
+  }
+
+  // Re-skin the long-lived chrome, then refresh the on-screen per-render view.
+  private _applyTheme(p: Palette): void {
+    this.container.style.background = p.surface;
+    this.container.style.borderColor = p.borderSubtle;
+    this._header.style.borderBottomColor = p.borderSubtle;
+    this._title.style.color = p.text;
+    // Resting color only; hover swaps to the marker accent at event time.
+    this._closeBtn.style.color = this._ink(0.5);
+    this.listEl.style.scrollbarColor = this._ink(0.15) + ' transparent';
+    this._scrollStyle.textContent =
+      ':host ::-webkit-scrollbar{width:6px}:host ::-webkit-scrollbar-track{background:transparent}' +
+      ':host ::-webkit-scrollbar-thumb{background:' + this._ink(0.15) + ';border-radius:3px}' +
+      ':host ::-webkit-scrollbar-thumb:hover{background:' + this._ink(0.25) + '}';
+    this.bottomBar.style.borderTopColor = p.borderSubtle;
+    if (this._clearReviewedBtn) {
+      this._clearReviewedBtn.style.borderColor = p.border;
+      this._clearReviewedBtn.style.background = this._ink(0.04);
+      this._clearReviewedBtn.style.color = this._ink(0.45);
+    }
+    // Per-render content (rows, diffs, empty state, detail) is rebuilt so an
+    // open view re-skins on a theme flip instead of going stale (dark rows on
+    // a light surface). Only when visible - at construction visible is false,
+    // so the immediate apply above just themes the chrome.
+    if (this.visible) {
+      if (this._detailEl.style.display !== 'none' && this._detailEntry) {
+        this._showDetailContent(this._detailEntry, this._detailIndex, false);
+      } else {
+        this.render();
+      }
+    }
   }
 
   private handleKeydown(e: KeyboardEvent) {
@@ -304,11 +371,12 @@ export class ChangesPanel {
     let replyWrap = item.querySelector('.justify-reply-wrap') as HTMLDivElement;
     if (replyWrap) { replyWrap.remove(); return; }
 
+    const pal = currentPalette();
     replyWrap = document.createElement('div');
     replyWrap.className = 'justify-reply-wrap';
     replyWrap.style.cssText =
       'display:flex;gap:0;margin-top:8px;align-items:center;' +
-      'background:#252525;border:1px solid rgba(255,255,255,0.12);border-radius:22px;' +
+      'background:' + pal.input + ';border:1px solid ' + pal.border + ';border-radius:22px;' +
       'padding:3px 3px 3px 12px;opacity:0;transform:translateY(6px);' +
       'transition:opacity 180ms ease,transform 180ms cubic-bezier(0.4,0,0.2,1)';
 
@@ -318,7 +386,7 @@ export class ChangesPanel {
     input.setAttribute('aria-label', 'Reply to change');
     input.style.cssText =
       'flex:1;background:transparent;border:none;border-radius:0;' +
-      'padding:4px 0;font-size:12px;color:rgba(255,255,255,0.85);' +
+      'padding:4px 0;font-size:12px;color:' + pal.text + ';' +
       'outline:none;outline-offset:0;box-shadow:none;' +
       'font-family:JustifySans,system-ui,sans-serif;min-width:0';
 
@@ -355,7 +423,7 @@ export class ChangesPanel {
       input.disabled = true;
       submitBtn.style.display = 'none';
       input.value = 'Sending...';
-      input.style.color = 'rgba(255,255,255,0.35)';
+      input.style.color = this._ink(0.35);
       if (this.onReplyCallback) this.onReplyCallback(entry.promptId, replyText);
       setTimeout(() => {
         input.value = 'Sent';
@@ -386,26 +454,27 @@ export class ChangesPanel {
   // editor). Shared by the legacy CSS-tweak render and the real-diff render. When
   // `line` > 0 the open request carries it so code/cursor jump to that line.
   private _buildOpenWith(filename: string, line: number): HTMLDivElement {
+    const pal = currentPalette();
     const openWrap = document.createElement('div');
     openWrap.style.cssText = 'display:flex;align-items:center;gap:4px;flex-shrink:0;position:relative';
 
     const openLabel = document.createElement('span');
-    openLabel.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.3);white-space:nowrap';
+    openLabel.style.cssText = 'font-size:12px;color:' + this._ink(0.3) + ';white-space:nowrap';
     openLabel.textContent = 'Open With';
     openWrap.appendChild(openLabel);
 
     // Split button container: [icon side | chevron side]
     const splitBtn = document.createElement('div');
     splitBtn.style.cssText =
-      'display:flex;align-items:stretch;background:rgba(255,255,255,0.06);border-radius:6px;overflow:hidden';
+      'display:flex;align-items:stretch;background:' + this._ink(0.06) + ';border-radius:6px;overflow:hidden';
 
     // Left side: icon that opens file
     const iconSide = document.createElement('button');
     iconSide.style.cssText =
       'display:flex;align-items:center;justify-content:center;border:none;background:transparent;' +
-      'padding:4px 6px;cursor:pointer;color:rgba(255,255,255,0.5);' +
+      'padding:4px 6px;cursor:pointer;color:' + this._ink(0.5) + ';' +
       'transition:background 120ms ease;outline:none';
-    iconSide.addEventListener('mouseenter', () => { iconSide.style.background = 'rgba(255,255,255,0.1)'; });
+    iconSide.addEventListener('mouseenter', () => { iconSide.style.background = this._ink(0.1); });
     iconSide.addEventListener('mouseleave', () => { iconSide.style.background = 'transparent'; });
     iconSide.addEventListener('mousedown', () => { iconSide.style.transform = 'scale(0.92)'; });
     iconSide.addEventListener('mouseup', () => { iconSide.style.transform = ''; });
@@ -426,15 +495,15 @@ export class ChangesPanel {
 
     // Divider between icon and chevron
     const splitDiv = document.createElement('div');
-    splitDiv.style.cssText = 'width:1px;background:rgba(255,255,255,0.1);flex-shrink:0';
+    splitDiv.style.cssText = 'width:1px;background:' + pal.borderSubtle + ';flex-shrink:0';
 
     // Right side: chevron that opens dropdown
     const chevSide = document.createElement('button');
     chevSide.style.cssText =
       'display:flex;align-items:center;justify-content:center;border:none;background:transparent;' +
-      'padding:4px 4px;cursor:pointer;color:rgba(255,255,255,0.5);' +
+      'padding:4px 4px;cursor:pointer;color:' + this._ink(0.5) + ';' +
       'transition:background 120ms ease;outline:none';
-    chevSide.addEventListener('mouseenter', () => { chevSide.style.background = 'rgba(255,255,255,0.1)'; });
+    chevSide.addEventListener('mouseenter', () => { chevSide.style.background = this._ink(0.1); });
     chevSide.addEventListener('mouseleave', () => { chevSide.style.background = 'transparent'; });
     chevSide.innerHTML = '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
 
@@ -461,11 +530,12 @@ export class ChangesPanel {
         return;
       }
 
+      const dpal = currentPalette();
       dropdown = document.createElement('div');
       const btnRect = splitBtn.getBoundingClientRect();
       dropdown.style.cssText =
-        'position:fixed;background:#1a1a1a;' +
-        'border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:4px;' +
+        'position:fixed;background:' + dpal.surface + ';' +
+        'border:1px solid ' + dpal.borderSubtle + ';border-radius:10px;padding:4px;' +
         'box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:2147483647;min-width:120px;' +
         'opacity:0;transform:translateY(-4px);transition:opacity 120ms ease,transform 120ms ease';
       dropdown.style.top = (btnRect.bottom + 4) + 'px';
@@ -482,10 +552,10 @@ export class ChangesPanel {
         const row = document.createElement('button');
         row.style.cssText =
           'display:flex;align-items:center;gap:8px;width:100%;border:none;background:none;' +
-          'padding:6px 10px;cursor:pointer;border-radius:6px;color:rgba(255,255,255,0.7);' +
+          'padding:6px 10px;cursor:pointer;border-radius:6px;color:' + this._ink(0.7) + ';' +
           'font-size:12px;font-family:JustifySans,system-ui,sans-serif;outline:none;' +
           'transition:background 80ms ease';
-        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(255,255,255,0.08)'; });
+        row.addEventListener('mouseenter', () => { row.style.background = this._ink(0.08); });
         row.addEventListener('mouseleave', () => { row.style.background = 'none'; });
 
         const icon = document.createElement('span');
@@ -558,12 +628,12 @@ export class ChangesPanel {
     for (const fd of fileDiffs) {
       const firstLine = this._firstChangedLine(fd);
       const fileSection = document.createElement('div');
-      fileSection.style.cssText = 'margin-bottom:16px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.06)';
+      fileSection.style.cssText = 'margin-bottom:16px;border-radius:8px;overflow:hidden;border:1px solid ' + this._ink(0.06);
 
       const fileHeader = document.createElement('div');
       fileHeader.style.cssText =
-        'font-size:12px;color:rgba(255,255,255,0.5);font-family:JustifySans,system-ui,sans-serif;' +
-        'padding:6px 8px 6px 12px;background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.06);' +
+        'font-size:12px;color:' + this._ink(0.5) + ';font-family:JustifySans,system-ui,sans-serif;' +
+        'padding:6px 8px 6px 12px;background:' + this._ink(0.03) + ';border-bottom:1px solid ' + this._ink(0.06) + ';' +
         'display:flex;align-items:center;justify-content:space-between;gap:8px';
 
       const fileLabel = document.createElement('span');
@@ -593,12 +663,12 @@ export class ChangesPanel {
             'display:flex;font-size:12px;font-family:JustifyMono,ui-monospace,monospace;line-height:1.5;background:' + bg;
 
           const gutter = document.createElement('span');
-          gutter.style.cssText = 'flex-shrink:0;display:flex;user-select:none;border-right:1px solid rgba(255,255,255,0.06)';
+          gutter.style.cssText = 'flex-shrink:0;display:flex;user-select:none;border-right:1px solid ' + this._ink(0.06);
           const oldG = document.createElement('span');
-          oldG.style.cssText = 'width:34px;text-align:right;padding:1px 6px;color:rgba(255,255,255,0.22)';
+          oldG.style.cssText = 'width:34px;text-align:right;padding:1px 6px;color:' + this._ink(0.22);
           oldG.textContent = ln.oldNo != null ? String(ln.oldNo) : '';
           const newG = document.createElement('span');
-          newG.style.cssText = 'width:34px;text-align:right;padding:1px 6px;color:rgba(255,255,255,0.32)';
+          newG.style.cssText = 'width:34px;text-align:right;padding:1px 6px;color:' + this._ink(0.32);
           newG.textContent = ln.newNo != null ? String(ln.newNo) : '';
           gutter.appendChild(oldG);
           gutter.appendChild(newG);
@@ -606,12 +676,12 @@ export class ChangesPanel {
 
           const mark = document.createElement('span');
           mark.style.cssText = 'flex-shrink:0;width:16px;text-align:center;user-select:none;color:' +
-            (ln.t === '+' ? '#22c55e' : ln.t === '-' ? '#ef4444' : 'rgba(255,255,255,0.3)');
+            (ln.t === '+' ? '#22c55e' : ln.t === '-' ? '#ef4444' : this._ink(0.3));
           mark.textContent = ln.t === ' ' ? '' : ln.t;
           row.appendChild(mark);
 
           const code = document.createElement('span');
-          code.style.cssText = 'white-space:pre-wrap;word-break:break-word;color:rgba(255,255,255,0.82);padding-right:10px;flex:1';
+          code.style.cssText = 'white-space:pre-wrap;word-break:break-word;color:' + this._ink(0.82) + ';padding-right:10px;flex:1';
           code.textContent = ln.text;
           row.appendChild(code);
 
@@ -637,23 +707,28 @@ export class ChangesPanel {
     }, 200);
   }
 
-  private _showDetailContent(entry: ChangeEntry, index: number) {
+  private _showDetailContent(entry: ChangeEntry, index: number, animate = true) {
+    // Track the open entry so a theme flip mid-detail can re-skin this view.
+    this._detailEntry = entry;
+    this._detailIndex = index;
     // Clear and populate detail container
     while (this._detailEl.firstChild) this._detailEl.removeChild(this._detailEl.firstChild);
     this._detailEl.style.display = 'flex';
     this._detailEl.style.flexDirection = 'column';
-    this._detailEl.style.opacity = '0';
-    this._detailEl.style.transform = 'translateX(16px)';
+    if (animate) {
+      this._detailEl.style.opacity = '0';
+      this._detailEl.style.transform = 'translateX(16px)';
+    }
 
     // Back button
     const backBtn = document.createElement('button');
     backBtn.style.cssText =
       'display:flex;align-items:center;gap:6px;border:none;background:none;' +
-      'color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;padding:12px 16px;' +
+      'color:' + this._ink(0.6) + ';font-size:12px;cursor:pointer;padding:12px 16px;' +
       'font-family:JustifySans,system-ui,sans-serif;outline:none;flex-shrink:0;' +
       'transition:color 120ms ease';
     backBtn.addEventListener('mouseenter', () => { backBtn.style.background = '#D97757'; backBtn.style.color = '#1a1a1a'; });
-    backBtn.addEventListener('mouseleave', () => { backBtn.style.background = 'none'; backBtn.style.color = 'rgba(255,255,255,0.6)'; });
+    backBtn.addEventListener('mouseleave', () => { backBtn.style.background = 'none'; backBtn.style.color = this._ink(0.6); });
 
     const arrowSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     arrowSvg.setAttribute('width', '14');
@@ -680,7 +755,7 @@ export class ChangesPanel {
 
     // Separator
     const sep = document.createElement('div');
-    sep.style.cssText = 'height:1px;background:rgba(255,255,255,0.1);flex-shrink:0';
+    sep.style.cssText = 'height:1px;background:' + currentPalette().borderSubtle + ';flex-shrink:0';
     this._detailEl.appendChild(sep);
 
     // Scrollable content area
@@ -701,7 +776,7 @@ export class ChangesPanel {
     summaryHeader.appendChild(numLabel);
 
     const summarySpan = document.createElement('span');
-    summarySpan.style.cssText = 'font-size:13px;color:rgba(255,255,255,0.85);line-height:1.4';
+    summarySpan.style.cssText = 'font-size:13px;color:' + currentPalette().text + ';line-height:1.4';
     summarySpan.textContent = entry.summary;
     summaryHeader.appendChild(summarySpan);
 
@@ -746,13 +821,14 @@ export class ChangesPanel {
     } else {
     // Render each file group as inline diffs
     changesByFile.forEach((fileChanges, filename) => {
+      const pal = currentPalette();
       const fileSection = document.createElement('div');
-      fileSection.style.cssText = 'margin-bottom:16px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.06)';
+      fileSection.style.cssText = 'margin-bottom:16px;border-radius:8px;overflow:hidden;border:1px solid ' + this._ink(0.06);
 
       const fileHeader = document.createElement('div');
       fileHeader.style.cssText =
-        'font-size:12px;color:rgba(255,255,255,0.5);font-family:JustifySans,system-ui,sans-serif;' +
-        'padding:6px 8px 6px 12px;background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.06);' +
+        'font-size:12px;color:' + this._ink(0.5) + ';font-family:JustifySans,system-ui,sans-serif;' +
+        'padding:6px 8px 6px 12px;background:' + this._ink(0.03) + ';border-bottom:1px solid ' + this._ink(0.06) + ';' +
         'display:flex;align-items:center;justify-content:space-between;gap:8px';
 
       const fileLabel = document.createElement('span');
@@ -766,22 +842,22 @@ export class ChangesPanel {
       openWrap.style.cssText = 'display:flex;align-items:center;gap:4px;flex-shrink:0;position:relative';
 
       const openLabel = document.createElement('span');
-      openLabel.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.3);white-space:nowrap';
+      openLabel.style.cssText = 'font-size:12px;color:' + this._ink(0.3) + ';white-space:nowrap';
       openLabel.textContent = 'Open With';
       openWrap.appendChild(openLabel);
 
       // Split button container: [icon side | chevron side]
       const splitBtn = document.createElement('div');
       splitBtn.style.cssText =
-        'display:flex;align-items:stretch;background:rgba(255,255,255,0.06);border-radius:6px;overflow:hidden';
+        'display:flex;align-items:stretch;background:' + this._ink(0.06) + ';border-radius:6px;overflow:hidden';
 
       // Left side: icon that opens file
       const iconSide = document.createElement('button');
       iconSide.style.cssText =
         'display:flex;align-items:center;justify-content:center;border:none;background:transparent;' +
-        'padding:4px 6px;cursor:pointer;color:rgba(255,255,255,0.5);' +
+        'padding:4px 6px;cursor:pointer;color:' + this._ink(0.5) + ';' +
         'transition:background 120ms ease;outline:none';
-      iconSide.addEventListener('mouseenter', () => { iconSide.style.background = 'rgba(255,255,255,0.1)'; });
+      iconSide.addEventListener('mouseenter', () => { iconSide.style.background = this._ink(0.1); });
       iconSide.addEventListener('mouseleave', () => { iconSide.style.background = 'transparent'; });
       iconSide.addEventListener('mousedown', () => { iconSide.style.transform = 'scale(0.92)'; });
       iconSide.addEventListener('mouseup', () => { iconSide.style.transform = ''; });
@@ -802,15 +878,15 @@ export class ChangesPanel {
 
       // Divider between icon and chevron
       const splitDiv = document.createElement('div');
-      splitDiv.style.cssText = 'width:1px;background:rgba(255,255,255,0.1);flex-shrink:0';
+      splitDiv.style.cssText = 'width:1px;background:' + pal.borderSubtle + ';flex-shrink:0';
 
       // Right side: chevron that opens dropdown
       const chevSide = document.createElement('button');
       chevSide.style.cssText =
         'display:flex;align-items:center;justify-content:center;border:none;background:transparent;' +
-        'padding:4px 4px;cursor:pointer;color:rgba(255,255,255,0.5);' +
+        'padding:4px 4px;cursor:pointer;color:' + this._ink(0.5) + ';' +
         'transition:background 120ms ease;outline:none';
-      chevSide.addEventListener('mouseenter', () => { chevSide.style.background = 'rgba(255,255,255,0.1)'; });
+      chevSide.addEventListener('mouseenter', () => { chevSide.style.background = this._ink(0.1); });
       chevSide.addEventListener('mouseleave', () => { chevSide.style.background = 'transparent'; });
       chevSide.innerHTML = '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
 
@@ -837,11 +913,12 @@ export class ChangesPanel {
           return;
         }
 
+        const dpal = currentPalette();
         dropdown = document.createElement('div');
         const btnRect = splitBtn.getBoundingClientRect();
         dropdown.style.cssText =
-          'position:fixed;background:#1a1a1a;' +
-          'border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:4px;' +
+          'position:fixed;background:' + dpal.surface + ';' +
+          'border:1px solid ' + dpal.borderSubtle + ';border-radius:10px;padding:4px;' +
           'box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:2147483647;min-width:120px;' +
           'opacity:0;transform:translateY(-4px);transition:opacity 120ms ease,transform 120ms ease';
         dropdown.style.top = (btnRect.bottom + 4) + 'px';
@@ -858,10 +935,10 @@ export class ChangesPanel {
           const row = document.createElement('button');
           row.style.cssText =
             'display:flex;align-items:center;gap:8px;width:100%;border:none;background:none;' +
-            'padding:6px 10px;cursor:pointer;border-radius:6px;color:rgba(255,255,255,0.7);' +
+            'padding:6px 10px;cursor:pointer;border-radius:6px;color:' + this._ink(0.7) + ';' +
             'font-size:12px;font-family:JustifySans,system-ui,sans-serif;outline:none;' +
             'transition:background 80ms ease';
-          row.addEventListener('mouseenter', () => { row.style.background = 'rgba(255,255,255,0.08)'; });
+          row.addEventListener('mouseenter', () => { row.style.background = this._ink(0.08); });
           row.addEventListener('mouseleave', () => { row.style.background = 'none'; });
 
           const icon = document.createElement('span');
@@ -918,14 +995,14 @@ export class ChangesPanel {
         if (!loose.selector && !loose.property) {
           const descEl = document.createElement('div');
           descEl.style.cssText =
-            'font-size:12px;color:rgba(255,255,255,0.7);padding:8px 12px;line-height:1.45';
+            'font-size:12px;color:' + this._ink(0.7) + ';padding:8px 12px;line-height:1.45';
           descEl.textContent = loose.description || loose.file || '(no detail provided)';
           fileSection.appendChild(descEl);
           continue;
         }
         const selectorEl = document.createElement('div');
         selectorEl.style.cssText =
-          'font-size:10px;color:rgba(255,255,255,0.35);font-family:JustifyMono,ui-monospace,monospace;' +
+          'font-size:10px;color:' + this._ink(0.35) + ';font-family:JustifyMono,ui-monospace,monospace;' +
           'padding:6px 12px 2px;word-break:break-all';
         selectorEl.textContent = (c.selector || '(page)') + ' {';
         fileSection.appendChild(selectorEl);
@@ -939,7 +1016,7 @@ export class ChangesPanel {
         oldMark.textContent = '-';
         oldLine.appendChild(oldMark);
         const oldText = document.createElement('span');
-        oldText.style.cssText = 'color:rgba(255,255,255,0.7)';
+        oldText.style.cssText = 'color:' + this._ink(0.7);
         oldText.innerHTML = (c.property || 'value') + ': <span style="color:#ef4444;background:rgba(239,68,68,0.2);padding:0 3px;border-radius:2px">' +
           this.escapeHtml(c.oldValue ?? '') + '</span>;';
         oldLine.appendChild(oldText);
@@ -954,7 +1031,7 @@ export class ChangesPanel {
         newMark.textContent = '+';
         newLine.appendChild(newMark);
         const newText = document.createElement('span');
-        newText.style.cssText = 'color:rgba(255,255,255,0.7)';
+        newText.style.cssText = 'color:' + this._ink(0.7);
         newText.innerHTML = (c.property || 'value') + ': <span style="color:#22c55e;background:rgba(34,197,94,0.2);padding:0 3px;border-radius:2px">' +
           this.escapeHtml(c.newValue ?? '') + '</span>;';
         newLine.appendChild(newText);
@@ -962,7 +1039,7 @@ export class ChangesPanel {
 
         const closeBrace = document.createElement('div');
         closeBrace.style.cssText =
-          'font-size:10px;color:rgba(255,255,255,0.35);font-family:JustifyMono,ui-monospace,monospace;' +
+          'font-size:10px;color:' + this._ink(0.35) + ';font-family:JustifyMono,ui-monospace,monospace;' +
           'padding:2px 12px 6px';
         closeBrace.textContent = '}';
         fileSection.appendChild(closeBrace);
@@ -1011,10 +1088,12 @@ export class ChangesPanel {
 
     this._detailEl.appendChild(scrollArea);
 
-    // Trigger slide-in animation
-    this._detailEl.getBoundingClientRect();
-    this._detailEl.style.opacity = '1';
-    this._detailEl.style.transform = 'translateX(0)';
+    if (animate) {
+      // Trigger slide-in animation
+      this._detailEl.getBoundingClientRect();
+      this._detailEl.style.opacity = '1';
+      this._detailEl.style.transform = 'translateX(0)';
+    }
   }
 
   private escapeHtml(str: string): string {
@@ -1023,6 +1102,11 @@ export class ChangesPanel {
 
   hideDetail() {
     if (this._detailEl.style.display === 'none') return;
+
+    // Detail is leaving - drop the tracked entry so a theme flip re-skins the
+    // list, not the outgoing detail view.
+    this._detailEntry = null;
+    this._detailIndex = -1;
 
     // Slide detail out to the right
     this._detailEl.style.transition = 'opacity 200ms ease,transform 200ms cubic-bezier(0.4,0,0.2,1)';
@@ -1034,6 +1118,11 @@ export class ChangesPanel {
 
       // Slide list in from the left
       this.listEl.style.display = '';
+      // Rebuild the list against the current palette: a theme flip while the
+      // detail view was open only re-skinned the detail, leaving these hidden
+      // rows stale. The list is display'd (not hidden) here, so render() reads
+      // the retained scroll correctly.
+      this.render();
       this.listEl.style.transform = 'translateX(-16px)';
       this.listEl.style.opacity = '0';
       this.listEl.style.transition = 'opacity 200ms ease,transform 200ms cubic-bezier(0.4,0,0.2,1)';
@@ -1061,10 +1150,11 @@ export class ChangesPanel {
     this.filterEntries();
 
     const mc = this.getMarkerColor();
+    const pal = currentPalette();
 
     if (this.filteredEntries.length === 0) {
       const empty = document.createElement('div');
-      empty.style.cssText = 'padding:24px 16px;text-align:center;color:rgba(255,255,255,0.35);font-size:12px';
+      empty.style.cssText = 'padding:24px 16px;text-align:center;color:' + this._ink(0.35) + ';font-size:12px';
       empty.textContent = 'No changes yet';
       this.listEl.appendChild(empty);
       this._updateClearBtn();
@@ -1085,9 +1175,9 @@ export class ChangesPanel {
       if (isReverted) {
         bgColor = 'rgba(239,68,68,0.08)';
       } else if (i === this.focusedIndex) {
-        bgColor = 'rgba(255,255,255,0.06)';
+        bgColor = this._ink(0.06);
       } else {
-        bgColor = 'rgba(255,255,255,0.02)';
+        bgColor = this._ink(0.02);
       }
 
       item.style.cssText =
@@ -1116,7 +1206,7 @@ export class ChangesPanel {
       summaryEl.style.cssText = 'flex:1;min-width:0';
 
       const summaryText = document.createElement('div');
-      summaryText.style.cssText = 'font-size:12px;color:rgba(255,255,255,0.85);line-height:1.4';
+      summaryText.style.cssText = 'font-size:12px;color:' + pal.text + ';line-height:1.4';
       summaryText.textContent = entry.summary;
       summaryEl.appendChild(summaryText);
 
@@ -1128,7 +1218,7 @@ export class ChangesPanel {
         : diffFiles.length > 0 ? diffFiles.join(', ') : '';
       if (subtitle) {
         const targets = document.createElement('div');
-        targets.style.cssText = 'font-size:10px;color:rgba(255,255,255,0.35);margin-top:3px';
+        targets.style.cssText = 'font-size:10px;color:' + this._ink(0.35) + ';margin-top:3px';
         targets.textContent = subtitle;
         summaryEl.appendChild(targets);
       }
@@ -1160,7 +1250,7 @@ export class ChangesPanel {
         addSpan.textContent = '+' + listAdds;
 
         const sepSpan = document.createElement('span');
-        sepSpan.style.cssText = 'color:rgba(255,255,255,0.25)';
+        sepSpan.style.cssText = 'color:' + this._ink(0.25);
         sepSpan.textContent = ' ';
 
         const delSpan = document.createElement('span');
@@ -1182,11 +1272,11 @@ export class ChangesPanel {
         const noChanges = document.createElement('div');
         if (looseFiles.length > 0) {
           noChanges.style.cssText = 'margin-top:6px;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.5;' +
-            'background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.55)';
+            'background:' + this._ink(0.03) + ';color:' + this._ink(0.55);
           noChanges.textContent = 'Files changed: ' + looseFiles.map(f => f.split('/').pop()).join(', ');
         } else {
           noChanges.style.cssText = 'margin-top:6px;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.5;' +
-            'background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.45);font-style:italic';
+            'background:' + this._ink(0.03) + ';color:' + this._ink(0.45) + ';font-style:italic';
           noChanges.textContent = 'No file changes were made.';
         }
         summaryEl.appendChild(noChanges);
@@ -1299,17 +1389,20 @@ export class ChangesPanel {
     const btn = document.createElement('button');
     btn.textContent = label;
     btn.style.cssText =
-      'border:none;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);' +
+      'border:none;background:' + this._ink(0.06) + ';color:' + this._ink(0.6) + ';' +
       'border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;' +
       'font-family:JustifySans,system-ui,sans-serif;transition:background 120ms ease;outline:none';
     btn.addEventListener('mouseenter', () => { btn.style.background = '#D97757'; btn.style.color = '#1a1a1a'; });
-    btn.addEventListener('mouseleave', () => { btn.style.background = 'rgba(255,255,255,0.06)'; btn.style.color = 'rgba(255,255,255,0.6)'; });
+    btn.addEventListener('mouseleave', () => { btn.style.background = this._ink(0.06); btn.style.color = this._ink(0.6); });
     btn.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
     return btn;
   }
 
   destroy() {
     this.hide();
+    // Unregister the themed applier so the registry does not retain this
+    // destroyed panel's detached nodes.
+    if (this._unregisterTheme) { this._unregisterTheme(); this._unregisterTheme = null; }
     this.container.remove();
   }
 }

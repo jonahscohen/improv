@@ -35,12 +35,18 @@ Source of truth: `sidecoach/src/lanes.generated.ts` (generated task registry), `
 
 ## Invoking the Engine
 
-**QUIET INVOCATION (this is the user experience - treat it as a hard rule).** When you run Sidecoach for the user, the run must be QUIET: one command, then the panel, nothing else.
+**QUIET INVOCATION (this is the user experience - treat it as a hard rule).** When you run Sidecoach for the user, the run must be QUIET: one command, then the executive report, nothing else.
 - Run exactly ONE command (the monitor, below). Do NOT wrap it in greps, file reads, `cat`/`ls`, or exploratory/extra calls - a normal Sidecoach run is a SINGLE call. The detection happens inside the engine; you do not investigate around it.
-- Print ONLY the panel (`renderedPanel`) VERBATIM. Do NOT also print the JSON, the guidance list, the build report, or a recap of the findings.
-- Do NOT narrate. No "let me run sidecoach", no play-by-play of what you're doing, no postamble explaining or summarizing the panel afterward. The panel IS the explanation - let it stand alone.
-- The `guidance`/`checklist`/`buildReport` drive YOUR OWN execution silently; never surface them to the user as prose.
-- The single monitor call itself still renders in the transcript (that is harness behavior, not yours to hide). But everything around it - narration, greps, extra commands, JSON dumps, summaries - is yours to suppress, and you must.
+- Do NOT narrate. No "let me run sidecoach", no play-by-play of what you're doing, no methodology postamble. The report IS the explanation - let it stand alone.
+- The `guidance`/`checklist`/`buildReport` drive YOUR OWN execution silently; never surface them to the user as prose. Do NOT print the raw JSON.
+- The single monitor call itself still renders in the transcript (that is harness behavior, not yours to hide). But everything around it - narration, greps, extra commands, JSON dumps, process recaps - is yours to suppress, and you must.
+
+**FINAL OUTPUT: the executive graphical report (Jonah 2026-07-04 - this replaced the ASCII panel, which is retired; never print `renderedPanel`).** When a Sidecoach task completes, the user sees an executive report, not a scientific one:
+- One block per deliverable, under its own heading.
+- Each block: a before/after table (or finding -> fix table for audits) plus a SHORT SUMMARY - a sentence or two per deliverable in plain language. Explained, not fragmentary; brief, not narrated.
+- Close with one status line: checks passed, N fixed, M remaining.
+- No process story, no gate-by-gate accounting, no tool inventory. That detail lives in the session beats and comes out only when the user asks a follow-up.
+- SURFACE-AWARE rendering: on text surfaces (terminal, cmux, mobile) the report is clean markdown tables. On rich surfaces (Claude Desktop, web/Cowork, VS Code sidebar - check the session's surface context) render the SAME report through the visualizer as a visual artifact instead.
 
 **Before doing any design work**, run the Sidecoach engine and use its output as your implementation plan:
 
@@ -48,25 +54,22 @@ Source of truth: `sidecoach/src/lanes.generated.ts` (generated task registry), `
 node /Users/spare3/Documents/Github/improv/sidecoach/bin/sidecoach-monitor.js "/sidecoach <command> <target>"
 ```
 
-The monitor's **default output is the clean, low-noise panel** - what the user should see. Running it bare (no flag) prints that panel and nothing else; for `/sidecoach audit <url>` the panel is a final REPORT - the verdict, the findings grouped by category and rule, and the concrete priority fixes (full selector + metric). Surface that panel VERBATIM: do not rebuild it, wrap it in prose, or summarize it.
-
-For your OWN execution add `--json` to get the full machine-readable result. It carries the same rendered panel under `renderedPanel` (so you print it for the user from the SAME run - no re-render) plus the structured fields you act on:
-- `renderedPanel: string` - the clean panel; PRINT THIS VERBATIM to the user.
+Always invoke the monitor with `--json` and consume the structured fields. The monitor RENDERS the executive report itself - `renderedReport` in the JSON (also the bare run's stdout). On text surfaces print `renderedReport` VERBATIM; do not rebuild, wrap, or summarize it. On rich surfaces (Desktop, web/Cowork, sidebar) render the same content as a visualizer artifact from the structured fields. (`renderedPanel` still exists as a compat alias of the same string for the postresponse hook - never reference it yourself.)
 - `guidance: string[]` - YOUR ordered steps to execute; act on them, do NOT paste them to the user as prose.
 - `checklist: object[]` - every item must pass before you report done; failures are blockers.
-- `buildReport` / `audit` - structured findings, per-lens outcomes, verdict, grade.
+- `buildReport` / `audit` - structured findings, per-lens outcomes, verdict, grade. These are the SOURCE MATERIAL for the executive report's deliverable blocks and tables.
 - `artifacts: object[]` - reference data (components, tokens, motion patterns); use verbatim.
 - `detectedFlow` - confirms which flow matched.
-- For the lane path (`sidecoach_lane`), each `start` / `advance` result carries `.panel` too - print that snapshot after each op so progress shows live.
+- For the lane path (`sidecoach_lane`), progress between ops stays quiet; the executive report lands once at the end.
 
-**Template for every invocation** (one run: print the panel for the user, act on the structured fields yourself):
+**Template for every invocation** (one run: act on the structured fields yourself, print the engine-rendered report):
 
 ```bash
 RESULT=$(node /Users/spare3/Documents/Github/improv/sidecoach/bin/sidecoach-monitor.js "$UTTERANCE" --json)
 echo "$RESULT" | node -e "
   const r = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
-  if (r.renderedPanel) console.log(r.renderedPanel);   // the panel the user sees - print verbatim
-  // r.guidance / r.checklist / r.buildReport drive YOUR work; do not paste them as prose.
+  if (r.renderedReport) console.log(r.renderedReport);  // the executive report - print verbatim
+  // r.guidance / r.checklist / r.buildReport drive YOUR work; never paste them as prose.
 "
 ```
 
@@ -122,10 +125,10 @@ When unsure, run `/sidecoach list` for the full menu. Once an entry command is l
 ### QA and Validation
 | Command | What it does |
 |---|---|
-| `/sidecoach audit <target>` | 5-dimension technical audit: a11y, performance, theming, responsive, anti-patterns |
-| `/sidecoach critique <target>` | Independent design review: heuristics, cognitive load, emotional journey |
+| `/sidecoach audit <target>` | 5-dimension technical audit: a11y, performance, theming, responsive, anti-patterns. A11y fixes apply per `sidecoach/reference/a11y-remediation.md` (minimal-diff protocol, tool boundaries, audit failure patterns) |
+| `/sidecoach critique <target>` | Independent design review: heuristics, cognitive load, emotional journey. Taste calls check against `sidecoach/reference/design-judgment-rules.md` (seven checkable rules with exception whitelists; its Rule index table is the validator-facing summary) |
 | `/sidecoach optimize <target>` | Performance and efficiency improvements |
-| `/sidecoach harden <target>` | Production-readiness: error states, edge cases, i18n, a11y |
+| `/sidecoach harden <target>` | Production-readiness: error states, edge cases, i18n, a11y. Runs the six-axis stress protocol in `sidecoach/reference/robustness-stress-checklist.md` (spam interaction, interrupt animations, slow network, offline, rapid resize, content extremes) - each axis clears only with a Read screenshot behind it or an explicit punt-with-reason |
 | `/sidecoach adapt <target>` | Responsive design across all breakpoints |
 
 ### Special
@@ -194,19 +197,19 @@ After writing or modifying the file, run `npx @google/design.md lint DESIGN.md` 
 
 The global Verification Protocol still applies. In addition, any substantive UI change (new feature, redesign, significant component edit) must pass this full pipeline before reporting completion:
 
-1. **`/sidecoach audit <target>`** - 5-dimension technical scan (a11y, performance, theming, responsive, anti-patterns). Address all Critical and High findings.
+1. **`/sidecoach audit <target>`** - 5-dimension technical scan (a11y, performance, theming, responsive, anti-patterns). Address all Critical and High findings. Report findings ranked by LEVERAGE within each severity tier: impact divided by effort, weighted by confidence - the fix that buys the most for the least leads its tier. If the project has no runnable verification baseline (tests/typecheck/lint), that is finding #1 ahead of everything else.
 2. **`/sidecoach critique <target>`** - design review via independent sub-agents (AI-slop detection, Nielsen heuristics, cognitive load, emotional journey). Address anything above "minor".
 3. **`/sidecoach polish <target>`** - final alignment pass against the project's design system. Must run last.
-4. **`make-interfaces-feel-better` 16-point checklist** - concentric radius, optical alignment, shadows over borders, interruptible animations (transitions over keyframes on interactive states), split/staggered enters, subtle exits, contextual icon animations, tabular nums, font smoothing, balanced text wrap, image outlines, scale-on-press, skip animation on page load / `initial={false}` on AnimatePresence, no `transition: all`, sparse `will-change`, 40x40 hit areas. Record changes in its before/after table format grouped by principle.
+4. **`tactical-polish` 16-point checklist** - concentric radius, optical alignment, shadows over borders, interruptible animations (transitions over keyframes on interactive states), split/staggered enters, subtle exits, contextual icon animations, tabular nums, font smoothing, balanced text wrap, image outlines, scale-on-press, skip animation on page load / `initial={false}` on AnimatePresence, no `transition: all`, sparse `will-change`, 40x40 hit areas. Record changes in its before/after table format grouped by principle.
 5. **`npx @google/design.md lint DESIGN.md`** - if the project has a DESIGN.md, lint must pass with zero errors and warnings.
 
 Trivial edits (one-line copy tweak, named-token swap) can skip the gate. Anything where the aesthetic result is in question must run all five. "I'll skip polish because it probably looks fine" is not a valid judgment.
 
-## Tactical layer (make-interfaces-feel-better)
+## Tactical layer (tactical-polish)
 
-Sits between Sidecoach's strategy (PRODUCT.md, register, anti-references) and DESIGN.md's tokens. Auto-triggers on UI keywords (border radius, animation, optical alignment, hover state, tabular numbers, etc.) and supplies 16 specific tactical rules with exact values: `scale(0.96)` on press, concentric border radius (`outer = inner + padding`), icon swaps via opacity+scale+blur, image outlines `rgba(0,0,0,0.1)` never tinted, hit areas at least 40x40px, `transition: all` banned, `font-variant-numeric: tabular-nums` on dynamic numbers, `text-wrap: balance` on headings. Full reference at `~/.claude/skills/make-interfaces-feel-better/`.
+Sits between Sidecoach's strategy (PRODUCT.md, register, anti-references) and DESIGN.md's tokens. Auto-triggers on UI keywords (border radius, animation, optical alignment, hover state, tabular numbers, etc.) and supplies 16 specific tactical rules with exact values: `scale(0.96)` on press, concentric border radius (`outer = inner + padding`), icon swaps via opacity+scale+blur, image outlines `rgba(0,0,0,0.1)` never tinted, hit areas at least 40x40px, `transition: all` banned, `font-variant-numeric: tabular-nums` on dynamic numbers, `text-wrap: balance` on headings. Full reference at `~/.claude/skills/tactical-polish/`.
 
-Apply during implementation, not as a separate pass. If the skill auto-triggers, follow it and address every applicable item from the checklist. If you're modifying UI but the skill did NOT auto-trigger, manually invoke `/make-interfaces-feel-better` before reporting done. When summarizing UI changes in PR descriptions or session memory, use the skill's before/after table format grouped by principle.
+Apply during implementation, not as a separate pass. If the skill auto-triggers, follow it and address every applicable item from the checklist. If you're modifying UI but the skill did NOT auto-trigger, manually invoke `/tactical-polish` before reporting done. When summarizing UI changes in PR descriptions or session memory, use the skill's before/after table format grouped by principle.
 
 ## What sidecoach is NOT for
 
@@ -221,7 +224,7 @@ Research:      component-gallery-reference (60 types, 95 systems)
 Typography:    fontshare-reference (fontshare.com catalog, integrates with sidecoach's reflex-reject list)
 References:    design-references (personal catalog, auto-consults) + /curate (capture wizard)
 Motion:        motion-reference (GSAP + Lenis canonical patterns)
-Tactical:      make-interfaces-feel-better (16 CSS polish rules)
+Tactical:      tactical-polish (16 CSS polish rules)
 Social:        /social-media (13 platforms, specs + validation)
 Effects:       /visual-effects (14 shaders + 25 FX + post-processing)
 Icons:         /icon-source (8 libraries, selection protocol)

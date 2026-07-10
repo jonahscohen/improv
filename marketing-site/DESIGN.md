@@ -121,7 +121,7 @@ Inverse (ink/cream) surfaces appear only on cards and widgets, never as section 
 
 Section alternation runs on SHADES, not flipped contrast (decided 2026-06-11, retiring the earlier flipped-plane system). Sections alternate `{colors.surface.canvas}` / `{colors.surface.alt}` down the page in both themes: cream then slightly darker cream (`#ECE5D4`) when the theme is light, dark teal then a slightly lifted dark green (`#073035`) when the theme is dark. No section ever inverts, so text tokens never flip with the plane; dark/cream inverse surfaces remain available to CARDS and widgets (tool cards, carousel cards, install block) as accents riding on the planes. Pure white and near-black planes are retired entirely.
 
-**No tinted neutrals.** Borders are pure black/white at low opacity, never tinted blue or warm gray. This is a `make-interfaces-feel-better` rule and the brand demands it.
+**No tinted neutrals.** Borders are pure black/white at low opacity, never tinted blue or warm gray. This is a `tactical-polish` rule and the brand demands it.
 
 ## Typography
 
@@ -143,7 +143,7 @@ Two elevation levels only:
 - Floating cards / important callouts use `shadow.md`.
 - Sticky / overlay elements use `shadow.lg`.
 
-Shadows over borders, per `make-interfaces-feel-better`. Borders ONLY where structurally required (table cells, form inputs).
+Shadows over borders, per `tactical-polish`. Borders ONLY where structurally required (table cells, form inputs).
 
 ## Shapes
 
@@ -159,7 +159,7 @@ Shadows over borders, per `make-interfaces-feel-better`. Borders ONLY where stru
 - Text: `{colors.brand.cream}`
 - Radius: `{rounded.md}`
 - Padding: `12px 20px` (3rem horizontal, 1.5rem vertical on `spacing.scale`)
-- Press state: `scale(0.96)` with `{motion.duration.fast}` `{motion.ease.spring_quick}` per `make-interfaces-feel-better`
+- Press state: `scale(0.96)` with `{motion.duration.fast}` `{motion.ease.spring_quick}` per `tactical-polish`
 - Min hit area: 44x44 (well above 40x40 floor)
 
 ### Button (secondary)
@@ -185,7 +185,7 @@ Shadows over borders, per `make-interfaces-feel-better`. Borders ONLY where stru
 - Background: ink (`{colors.surface.inverse}`), borderless - the red Copy button is the brand anchor
 - Sized by its flex row: `.hero__cta-row` uses `align-items: stretch` so the block always equals the adjacent CTA button's height (44px floor)
 - Copy button: monospace, cream on `{colors.brand.red}` at rest, attached flush to the container's right edge (no radius), darkens on hover/active
-- Click-to-copy fires a `make-interfaces-feel-better` 240ms acknowledgment
+- Click-to-copy fires a `tactical-polish` 240ms acknowledgment
 
 ### Section heading
 - `{typography.display}` at `{typography.scale.sizes.3xl}` (3rem / 51px)

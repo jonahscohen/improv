@@ -22,14 +22,14 @@ The README claims an 8-step "how the layers stack on a real build" sequence. Her
 | **4. fontshare-reference** | Triggers for type decisions | Did the WORKFLOW mentally - picked Source Serif 4 + Hanken Grotesk + JetBrains Mono, validated against reflex-reject list. The skill's reject list was load-bearing - I caught myself almost picking Inter before remembering. |
 | **5. motion-reference** | Triggers for animation | Applied the canonical GSAP + Lenis 3-line glue snippet from the skill verbatim. Also applied the SSR / cleanup / ScrollTrigger.refresh gotchas. The skill earned its place. |
 | **6. icon-source** | Peer skill for icons | Not invoked. I didn't end up needing icons - the design is pure type + color. |
-| **7. make-interfaces-feel-better** | Tactical polish during impl | Applied DURING construction, not as a separate pass: scale(0.96) on press, text-wrap balance on headings, pretty on body, concentric radius (xl outer + md inner), tabular nums setup, no transition: all, image outlines never tinted. About 10 of the 14 rules ended up in the CSS. |
+| **7. tactical-polish** | Tactical polish during impl | Applied DURING construction, not as a separate pass: scale(0.96) on press, text-wrap balance on headings, pretty on body, concentric radius (xl outer + md inner), tabular nums setup, no transition: all, image outlines never tinted. About 10 of the 14 rules ended up in the CSS. |
 | **8. /oracle audit + critique + polish** | QA gate | NEVER invoked. The site shipped without the documented QA triad. |
 
 ## The honest read
 
 Of the 8 documented pipeline steps, **2 fired as skills the way the README claims** (fontshare-reference's reject list was load-bearing in my decisions; motion-reference's canonical patterns were lifted verbatim). The other 6 either didn't fire or fired only as "I-remembered-the-thing" mental shortcuts, not as the skill auto-triggering.
 
-`make-interfaces-feel-better` is the interesting case - it didn't AUTO-TRIGGER but I applied its 14-point rules DURING the build because I'd read the skill recently. The auto-trigger description matches UI keywords; my work counted, but the keyword routing didn't show me the rules - I remembered them.
+`tactical-polish` is the interesting case - it didn't AUTO-TRIGGER but I applied its 14-point rules DURING the build because I'd read the skill recently. The auto-trigger description matches UI keywords; my work counted, but the keyword routing didn't show me the rules - I remembered them.
 
 The QA gate (`/oracle audit + critique + polish`) genuinely never ran. The site went from "done" to "live" with no design-review step.
 

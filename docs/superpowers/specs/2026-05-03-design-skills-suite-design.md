@@ -68,7 +68,7 @@ Orchestrates multi-agent design sprints with specialized roles, a creative direc
 
 **Phase 2 - Build:** Parallel subagents with designer personas work on separate files/sections simultaneously. Each receives research briefs + PRODUCT.md + DESIGN.md as context. Isolated from each other to prevent cross-contamination.
 
-**Phase 3 - Review:** Runs in the main thread. Creative director persona reviews each builder's output sequentially with full context. Enforces the existing QA pipeline (Sidecoach audit/critique/polish, make-interfaces-feel-better checklist). Produces review document with per-section verdicts: approve, revise (with specific notes), or reject.
+**Phase 3 - Review:** Runs in the main thread. Creative director persona reviews each builder's output sequentially with full context. Enforces the existing QA pipeline (Sidecoach audit/critique/polish, tactical-polish checklist). Produces review document with per-section verdicts: approve, revise (with specific notes), or reject.
 
 **Phase 4 - Revise:** Builders receive review notes and fix. One round only. If the CD still has issues after revision, the CD fixes directly rather than ping-ponging.
 
@@ -135,7 +135,7 @@ The creative director review is not a separate QA system. It runs the same gates
 1. `/sidecoach audit` (a11y, performance, theming, responsive, anti-patterns)
 2. `/sidecoach critique` (AI-slop detection, Nielsen heuristics, cognitive load)
 3. `/sidecoach polish` (alignment pass against design system)
-4. `make-interfaces-feel-better` 14-point checklist
+4. `tactical-polish` 14-point checklist
 5. `DESIGN.md` lint (if present)
 
 The CD's added value is cross-section consistency, brand coherence, and the authority to approve/revise/reject.
@@ -369,7 +369,7 @@ New section documenting the four peer skills, their triggers, and relationship t
 ```
 Strategy:      /sidecoach (23 commands, PRODUCT.md + DESIGN.md)
 Research:      component-gallery-reference (60 types, 95 systems)
-Tactical:      make-interfaces-feel-better (16 CSS polish rules)
+Tactical:      tactical-polish (16 CSS polish rules)
 Social:        /social-media (13 platforms, specs + validation)
 Effects:       /visual-effects (14 shaders + 25 FX + post-processing)
 Icons:         /icon-source (8 libraries, selection protocol)

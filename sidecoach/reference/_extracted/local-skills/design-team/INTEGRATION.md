@@ -46,7 +46,7 @@ Creative director runs in MAIN session (NOT subagent) - needs full context + QA 
    - `/oracle audit` (a11y, performance, theming, responsive, anti-patterns)
    - `/oracle critique` (AI-slop, Nielsen heuristics, cognitive load)
    - `/oracle polish` (alignment pass against design system)
-   - `make-interfaces-feel-better` 14-point checklist
+   - `tactical-polish` 14-point checklist
    - DESIGN.md lint (if present)
 3. Check cross-section consistency (typography, spacing, color palette, components)
 4. Per-section verdict:
@@ -218,7 +218,7 @@ When the user invokes a craft verb on a sufficiently large surface (heuristic: >
       'sidecoach-flow-N-audit',
       'sidecoach-flow-N-critique',
       'sidecoach-flow-N-polish',
-      'make-interfaces-feel-better-checklist',
+      'tactical-polish-checklist',
       'design-md-lint',
     ],
   },

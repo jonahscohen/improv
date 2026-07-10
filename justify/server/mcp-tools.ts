@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { WsServer } from './ws-server.js';
 import type { StyleChange, Annotation, LayoutPlacement } from './types.js';
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, renameSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -13,23 +13,132 @@ function text(content: string) {
 export function registerTools(mcp: McpServer, ws: WsServer): void {
   const pendingChanges: StyleChange[] = [];
   const annotations: Annotation[] = [];
-  const PROMPT_FILE = join(homedir(), '.claude', 'justify', 'prompts.json');
+  // Honor JUSTIFY_STATE_DIR so the browser's push_prompt writes to the SAME
+  // prompts.json the daemon dispatcher reads (production: ~/.claude/justify).
+  const STATE_DIR = process.env.JUSTIFY_STATE_DIR || join(homedir(), '.claude', 'justify');
+  const PROMPT_FILE = join(STATE_DIR, 'prompts.json');
+  const SEQ_FILE = join(STATE_DIR, 'prompt-seq.json');
+  const RESP_FILE = join(STATE_DIR, 'responses.json');
+  const CLIENT_FILE = join(STATE_DIR, 'served-clients.json');
 
-  function readPrompts(): Array<{ id: string; context: string; prompt: string; elementCount: number; timestamp: number; selectors?: string[] }> {
+  // Highest prompt-<N> ever RESPONDED to (responses.json ids are
+  // "prompt-<N>-<ts>"). This is a high-water mark that survives a lost/corrupt
+  // prompt-seq.json AND a cleared queue, so ids can never recycle back down.
+  function maxRespondedSeq(): number {
+    try {
+      const arr = JSON.parse(readFileSync(RESP_FILE, 'utf-8'));
+      if (!Array.isArray(arr)) return 0;
+      let max = 0;
+      for (const r of arr) {
+        const m = /^prompt-(\d+)(?:-|$)/.exec(String(r?.promptId ?? ''));
+        if (m) { const n = parseInt(m[1], 10); if (Number.isFinite(n) && n > max) max = n; }
+      }
+      return max;
+    } catch { return 0; }
+  }
+
+  type QueuePrompt = { id: string; context: string; prompt: string; elementCount: number; timestamp: number; selectors?: string[]; claimedBy?: string; claimedAt?: number; clientId?: string };
+
+  // Ledger of clientIds already accepted, so the browser outbox's forever-retry
+  // can never enqueue the same prompt twice. Capped at CLIENT_LEDGER_MAX entries,
+  // oldest evicted first - a SIZE bound, never an age bound.
+  const CLIENT_LEDGER_MAX = 500;
+
+  function readServedClientIds(): Array<[string, string]> {
+    try {
+      const arr = JSON.parse(readFileSync(CLIENT_FILE, 'utf-8'));
+      return Array.isArray(arr) ? arr : [];
+    } catch { return []; }
+  }
+
+  function lookupServedClientId(clientId: string): string | null {
+    const hit = readServedClientIds().find(([cid]) => cid === clientId);
+    return hit ? hit[1] : null;
+  }
+
+  // Best-effort, and deliberately so. This runs AFTER the prompt is durably
+  // queued. Throwing here would deny the ack, which forces the browser to retry a
+  // prompt that is already safely queued - and if the worker clears it before that
+  // retry lands, the retry double-applies. That is the exact failure the ledger
+  // exists to prevent. So: a ledger write failure is loud, but it still acks.
+  function recordServedClientId(clientId: string, promptId: string): void {
+    const entries = readServedClientIds().filter(([cid]) => cid !== clientId);
+    entries.push([clientId, promptId]);
+
+    // Evict oldest-first. There is deliberately NO "don't evict a still-queued id"
+    // special case: a still-queued prompt is deduped by the QUEUE lookup in
+    // push_prompt, which runs before the ledger is ever consulted. Such a guard
+    // would protect only entries that need no protection, while implying coverage
+    // it does not provide. (I wrote that guard. The test I wrote for it passed
+    // with the guard deleted - it was measuring the queue lookup, not the guard.)
+    //
+    // The ledger's real job is the window between "the worker applied and CLEARED
+    // the prompt" and "the browser finally receives an ack". The outbox retries
+    // every <=15s, so that window is bounded by ack latency, not by prompt volume;
+    // 500 entries is a wide margin over it. The tests pin the exact boundary.
+    while (entries.length > CLIENT_LEDGER_MAX) entries.shift();
+
+    const tmp = `${CLIENT_FILE}.tmp`;
+    try {
+      writeFileSync(tmp, JSON.stringify(entries));
+      renameSync(tmp, CLIENT_FILE);
+    } catch (err) {
+      process.stderr.write(
+        `[justify] WARNING: could not record served clientId ${clientId} -> ${promptId}: ` +
+        `${err instanceof Error ? err.message : String(err)}. ` +
+        `The prompt IS queued; a lost ack could now double-apply it.\n`,
+      );
+    }
+  }
+
+  function readPrompts(): QueuePrompt[] {
     try { return JSON.parse(readFileSync(PROMPT_FILE, 'utf-8')); } catch { return []; }
   }
 
-  function writePrompts(prompts: Array<{ id: string; context: string; prompt: string; elementCount: number; timestamp: number; selectors?: string[] }>): void {
-    try { writeFileSync(PROMPT_FILE, JSON.stringify(prompts)); } catch {}
+  // THROWS on failure, and writes atomically. It used to swallow the error, so
+  // `push_prompt` would answer `{accepted: 1}` for a prompt that never reached
+  // prompts.json - and the browser outbox, seeing an ack, would delete its only
+  // copy. An ack is a promise that the work is durable. Never lie about it.
+  function writePrompts(prompts: QueuePrompt[]): void {
+    const tmp = `${PROMPT_FILE}.tmp`;
+    writeFileSync(tmp, JSON.stringify(prompts));
+    renameSync(tmp, PROMPT_FILE);
   }
 
+  // Server-assigned MONOTONIC prompt id. The old scheme (max currently-queued id
+  // + 1) RECYCLED ids back to prompt-1 whenever the queue emptied after a clear,
+  // so a fresh request could reuse an id an in-flight clear then consumed -
+  // cross-clearing data loss (observed live 2026-07-08: 13 responses all keyed
+  // "prompt-1"; a fresh scrub was cleared unapplied by a clear aimed at an
+  // earlier prompt-1). The counter is persisted and NEVER resets, so every prompt
+  // gets a globally-unique id and a clear-by-id can only ever remove the exact
+  // request it answered.
   function nextPromptId(): string {
-    const prompts = readPrompts();
-    const maxId = prompts.reduce((max, p) => {
-      const n = parseInt(p.id.replace('prompt-', ''));
-      return n > max ? n : max;
+    let persistedNext = 0;
+    try {
+      const raw = JSON.parse(readFileSync(SEQ_FILE, 'utf-8'));
+      if (Number.isFinite(raw?.next)) persistedNext = Math.floor(raw.next);
+    } catch {
+      // no counter yet -> seed from the queue below
+    }
+    // Never collide with an id already in the queue (pre-counter installs, or an
+    // out-of-band write).
+    const maxQueued = readPrompts().reduce((max, p) => {
+      const n = parseInt(String(p.id).replace('prompt-', ''), 10);
+      return Number.isFinite(n) && n > max ? n : max;
     }, 0);
-    return 'prompt-' + (maxId + 1);
+    // Seed from the max of the persisted counter, the queue, AND the responded
+    // high-water mark. Even if prompt-seq.json is lost/corrupt and the queue is
+    // empty, the responses history keeps ids strictly increasing (no recycle).
+    const seq = Math.max(persistedNext, maxQueued + 1, maxRespondedSeq() + 1, 1);
+    try {
+      const tmp = `${SEQ_FILE}.tmp.${process.pid}.${Date.now()}`;
+      writeFileSync(tmp, JSON.stringify({ next: seq + 1 }));
+      renameSync(tmp, SEQ_FILE);
+    } catch (err) {
+      process.stderr.write(`[justify] prompt-seq persist failed (recycle guarded by responses high-water mark): ${err instanceof Error ? err.message : err}\n`);
+    }
+    return 'prompt-' + seq;
   }
   let layoutPlacements: LayoutPlacement[] = [];
 
@@ -46,9 +155,29 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
     return { accepted: incoming.length };
   });
 
+  // Idempotent on `clientId`. The browser outbox (core/outbox.ts) retries a
+  // push_prompt FOREVER - no deadline, no attempt cap - because no clock is
+  // allowed to drop a user's prompt. That is only safe if a retry cannot enqueue
+  // a second copy of work the daemon already has (or already finished, and has
+  // since cleared from the queue). So an acked clientId is remembered in a ledger
+  // that outlives the queue entry, and a repeat is ACKED rather than enqueued.
+  //
+  // The ledger is capped by SIZE, not by age. An age cap would be a clock
+  // deciding when a duplicate is allowed to become a double-apply.
   ws.onMessage('push_prompt', (_connectionId, params) => {
+    const clientId = typeof params?.clientId === 'string' ? params.clientId : null;
+
+    if (clientId) {
+      // Already queued under this clientId? (ack lost before the browser saw it)
+      const queued = readPrompts().find((p) => p.clientId === clientId);
+      if (queued) return { accepted: 0, promptId: queued.id, duplicate: true };
+      // Already served and cleared? (worker applied it, then the ack was lost)
+      const servedId = lookupServedClientId(clientId);
+      if (servedId) return { accepted: 0, promptId: servedId, duplicate: true };
+    }
+
     const id = nextPromptId();
-    const prompt = {
+    const prompt: QueuePrompt = {
       id,
       context: (params?.context ?? '') as string,
       prompt: (params?.prompt ?? '') as string,
@@ -58,8 +187,12 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
       // panel can scroll to + select the target on click.
       selectors: (Array.isArray(params?.selectors) ? params?.selectors : []) as string[],
       timestamp: Date.now(),
+      ...(clientId ? { clientId } : {}),
     };
+    // If this write fails it THROWS, the ws layer returns an error, and the
+    // browser outbox keeps its copy and retries. Never ack an undurable prompt.
     const prompts = readPrompts(); prompts.push(prompt); writePrompts(prompts);
+    if (clientId) recordServedClientId(clientId, id);
     return { accepted: 1, promptId: id };
   });
 
@@ -258,18 +391,32 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
         check();
       });
 
-      const prompts = readPrompts();
-      if (prompts.length === 0) {
-        return text(JSON.stringify({ status: 'idle', message: 'No prompts received. Still watching.' }));
+      const all = readPrompts();
+      const leaseId = `${process.pid}:${Date.now().toString(36)}`;
+      // Claim-aware: only take UNCLAIMED prompts. Daemon-claimed prompts belong to
+      // a headless worker; consuming them here would double-apply and could fool
+      // the dispatcher's observed-effect check. Lease ONLY the ones this call
+      // takes, leaving claimed + newly-arrived prompts queued.
+      const mine = all.filter((p) => !p.claimedBy);
+      if (mine.length === 0) {
+        return text(JSON.stringify({ status: 'idle', message: 'No unclaimed prompts (the daemon may be handling the queue). Still watching.' }));
       }
-
-      for (const p of prompts) {
+      for (const p of mine) {
         ws.broadcastToClients('justify_working', { promptId: p.id, timestamp: Date.now() });
       }
-      const out = prompts.map((p) =>
+      const out = mine.map((p) =>
         `[${p.id}] Prompt: ${p.prompt}\nElements: ${p.elementCount}\nContext:\n${p.context}`
       ).join('\n\n---\n\n');
-      writePrompts([]);
+      // LEASE, do not delete. Removing the prompt here means that if this session
+      // dies between reading it and answering it, the user's work is gone with no
+      // trace - a dropped prompt, which is forbidden. Claiming it instead makes
+      // the read a lease: justify-done's id-scoped clear removes it on success,
+      // and an abandoned claim goes stale and is re-dispatched by the daemon.
+      const takenIds = new Set(mine.map((p) => p.id));
+      const claimedAt = Date.now();
+      writePrompts(all.map((p) =>
+        takenIds.has(p.id) ? { ...p, claimedBy: `interactive:${leaseId}`, claimedAt } : p,
+      ));
       return text(out);
     },
   );
@@ -314,18 +461,30 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
     {},
     async () => {
       ws.recordMcpActivity();
-      ws.recordMcpActivity();
-      const prompts = readPrompts();
-      if (prompts.length === 0) {
-        return text('No pending prompts');
+      const all = readPrompts();
+      const leaseId = `${process.pid}:${Date.now().toString(36)}`;
+      // Claim-aware (see justify_watch): never consume daemon-claimed prompts;
+      // lease only the unclaimed ones.
+      const mine = all.filter((p) => !p.claimedBy);
+      if (mine.length === 0) {
+        return text('No unclaimed prompts (the daemon may be handling the queue).');
       }
-      for (const p of prompts) {
+      for (const p of mine) {
         ws.broadcastToClients('justify_working', { promptId: p.id, timestamp: Date.now() });
       }
-      const out = prompts.map((p) =>
+      const out = mine.map((p) =>
         `[${p.id}] Prompt: ${p.prompt}\nElements: ${p.elementCount}\nContext:\n${p.context}`
       ).join('\n\n---\n\n');
-      writePrompts([]);
+      // LEASE, do not delete. Removing the prompt here means that if this session
+      // dies between reading it and answering it, the user's work is gone with no
+      // trace - a dropped prompt, which is forbidden. Claiming it instead makes
+      // the read a lease: justify-done's id-scoped clear removes it on success,
+      // and an abandoned claim goes stale and is re-dispatched by the daemon.
+      const takenIds = new Set(mine.map((p) => p.id));
+      const claimedAt = Date.now();
+      writePrompts(all.map((p) =>
+        takenIds.has(p.id) ? { ...p, claimedBy: `interactive:${leaseId}`, claimedAt } : p,
+      ));
       return text(out);
     },
   );
@@ -410,11 +569,35 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
   // Tool: justify_end_watch
   mcp.tool(
     'justify_end_watch',
-    'End the watch session. Call this when the user says "end justify", "stop watching", or similar. Signals the browser that Claude is no longer watching.',
+    'Attempt to end the watch. An AGENT CANNOT DISARM THE WATCH: the daemon requires a single-use consent token that only a human can mint by running `justify-watch-disarm` in a terminal and confirming. Calling this tool will refuse and the watch will keep running. Relay the refusal to the user and ask them to run the command themselves.',
     {},
     async () => {
+      // Order matters. Disarm FIRST, and only drop the browser-facing "watching"
+      // flag if the daemon actually disarmed. The old order cleared the session
+      // flag up front, so a refused (or failed) disarm still told the browser
+      // Claude had stopped watching - the UI lied while the daemon kept running.
+      const r = ws.disarmWatch('mcp:end_watch');
+
+      if (!r.available) {
+        ws.setWatchSession(false);
+        return text('Watch session ended (no daemon watch state attached to disarm).');
+      }
+
+      if (r.refused) {
+        return text(
+          `REFUSED: the watch is still ARMED and still watching (${r.reason}).\n` +
+          'Disarming requires human consent. Tell the user to run this themselves, in their terminal:\n\n' +
+          '    justify-watch-disarm\n\n' +
+          'It will ask them to confirm. Do not attempt to work around this.',
+        );
+      }
+
+      if (!r.persisted) {
+        return text('WARNING: disarm did NOT persist to disk - the watch may resume armed on restart. Ask the user to run justify-watch-disarm.');
+      }
+
       ws.setWatchSession(false);
-      return text('Watch session ended. Browser will show disconnected state.');
+      return text('Watch disarmed on the daemon (human consent verified) and session flag cleared.');
     },
   );
 }

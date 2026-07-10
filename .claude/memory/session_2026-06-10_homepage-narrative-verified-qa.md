@@ -26,7 +26,7 @@ Collaborator: Jonah. 2026-06-10.
 - polish (flowJ): 1 real P1 - stat band matches "hero-metric template" shape. Trade-off documented: stat blocks were Jonah's explicit request; styled as editorial ruled dl blocks (serif tabular values, mono labels, top rules), not floating KPI cards. The 3 "optimize" slop findings are in cheatsheet.html, NOT index.html (grep exit 1) - out of scope.
 - `npx @google/design.md lint DESIGN.md`: linter CRASHES internally (colorStr.trim is not a function) on the unchanged DESIGN.md - pre-existing tooling failure, not a token finding. Worth a follow-up ticket.
 
-## make-interfaces-feel-better (applicable points)
+## tactical-polish (applicable points)
 - tabular-nums on stat values | balance on headings (global h rule) | concentric radius (banner xl, inner blocks md) | scale(0.96) press states inherited | no transition:all | reduced-motion on every new animation | 40px+ hit areas after fix | shadows over borders (banner shadow-md).
 
 ## Team

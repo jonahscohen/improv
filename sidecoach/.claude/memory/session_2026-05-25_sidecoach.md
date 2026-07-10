@@ -657,7 +657,7 @@ Design references: 0 patterns researched with color + spatial rules + category-r
 - Component semantic HTML structure
   - Why: <button role="button" aria-label="..."> with BEM naming convention
 - Tactical polish strategy
-  - Why: 16-point refinement framework from make-interfaces-feel-better
+  - Why: 16-point refinement framework from tactical-polish
 - Spacing scale
   - Why: Base 8px unit with 1.5x and 2x ratios for comfortable hierarchy
 - Type scale

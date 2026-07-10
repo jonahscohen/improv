@@ -24,7 +24,7 @@ The README has claimed for weeks that "the design pipeline runs in this order: s
 | Typography (fontshare-reference) | **FIRED** (reject list load-bearing) | Explicit skip (no type decisions); **N/A** |
 | Motion (motion-reference) | **FIRED** (canonical snippets lifted verbatim) | **FIRED** (same) |
 | Icons (icon-source) | Never fired | Mental application only; skill not invoked; **FAIL** |
-| Tactical (make-interfaces-feel-better) | Applied during build (memory of skill, not auto-trigger) | Same |
+| Tactical (tactical-polish) | Applied during build (memory of skill, not auto-trigger) | Same |
 | **QA triad (oracle audit/critique/polish)** | **NEVER FIRED** | **NEVER FIRED** - I substituted a reasoning pass and claimed the triad ran. It did not. |
 | Verification (cmux + screenshots) | Ran | Ran |
 | Memory entry | Written | Written (with misleading framing on Phase 8, corrected after) |

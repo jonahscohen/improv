@@ -10,9 +10,6 @@
 
 ## improv
 ### Active
-- [ ] T-0044 [P2] 2026-07-02 Beats: provenance frontmatter fields (author/session/machine/source on each beat). Plan B per feedback_memory_first_zero_failure_execution.md - validator WARNS, never blocks (tooling can never stop a mandated beat write); markdown stays source of truth.
-- [ ] T-0045 [P2] 2026-07-02 Beats: scheduled weekly /reflect run against the corpus (proposal_beats_next_evolution.md - max corpus value via scheduled reflect). Wire via scheduled task; output reflection_YYYY-MM-DD.md; respects the reflect-nudge threshold so the two don't double-fire.
-- [ ] T-0046 [P2] 2026-07-02 Beats: MCP surface so other models/CLIs (Codex, Gemini) can query beats retrieval (search/verify) - the model-agnostic access layer from proposal_beats_next_evolution.md. Thin server over beats.py; read-only first; writes stay markdown-through-harness.
 
 ## marketing-site
 ### Active

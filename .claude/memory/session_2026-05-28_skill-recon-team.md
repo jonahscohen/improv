@@ -9,7 +9,7 @@ superseded_by: session_2026-05-28_skill-recon-synthesis.md
 Collaborator: Jonah. Deployed 2026-05-28.
 
 ## Context
-Jonah is evaluating new skills to roll into sidecoach's reference layer. First confirmed what's ALREADY baked in: Oracle (extracted to core validators, soft-deprecated), make-interfaces-feel-better (= 14 baseline of the 22-Point Polish Standard, Flow J), Emil Kowalski (reference/_extracted/external/emil-design-eng), Leonxlnx taste-skill (reference/_extracted/external/taste-skill), plus bencium-design, refactoring-ui, typeui-fundamentals. So sidecoach is already a consolidated + partially-codified taste authority. Then Jonah named 4 NEW candidate skills to vet for gaps.
+Jonah is evaluating new skills to roll into sidecoach's reference layer. First confirmed what's ALREADY baked in: Oracle (extracted to core validators, soft-deprecated), tactical-polish (= 14 baseline of the 22-Point Polish Standard, Flow J), Emil Kowalski (reference/_extracted/external/emil-design-eng), Leonxlnx taste-skill (reference/_extracted/external/taste-skill), plus bencium-design, refactoring-ui, typeui-fundamentals. So sidecoach is already a consolidated + partially-codified taste authority. Then Jonah named 4 NEW candidate skills to vet for gaps.
 
 ## Routing
 In cmux-teams mode (per decision_orchestration_routing_cmux_vs_workflows.md), so this runs as a cmux TEAM in panes, not a workflow. Team `skill-recon`, 4 general-purpose teammates (named cmux splits), read-only research, run_in_background, no worktree.

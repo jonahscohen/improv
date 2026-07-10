@@ -3,6 +3,7 @@ name: Audit panel redesign - Jonah reversed staged-progress, wants a FINAL REPOR
 description: Jonah saw the staged panel and reversed his earlier "staged-progress" pick. 4 points - (1) staged framing comes too early / panel should be a final report, (2) still too verbose / exposes machinery (route, flowK, conf, render loaded 1280×800, scanned), (3) truncated "next" is useless, (4) redesign into an attractive, sensible, helpful FINAL report panel.
 type: feedback
 relates_to: [session_2026-06-26_audit-staged-panel-built.md, session_2026-06-26_audit-output-ux-diagnosis.md]
+superseded_by: feedback_executive_report_output_contract.md
 ---
 
 (Note: the staged-panel work it relates to is NOT fully superseded - the JSON-wall-kill,

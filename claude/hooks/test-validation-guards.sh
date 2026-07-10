@@ -215,6 +215,94 @@ val_assert_blocks "typeof + .click() mix"          "typeof X; btn.click()"
 
 echo ""
 echo "============================================================"
+
+# ============================================================================
+# bash-guard: legacy model IDs.
+#
+# This check used `grep -qP` with a PCRE lookahead. BSD grep (what a hook gets on
+# macOS) has no -P, so it errored and `grep -q` reported "no match" - the guard
+# blocked NOTHING for its entire life. It passed by hand because an interactive
+# shell resolves `grep` to ugrep, which supports -P.
+#
+# The identifiers below are ASSEMBLED FROM FRAGMENTS on purpose. If this file
+# contained them literally, content-guard.sh would refuse to write it, and running
+# the suite through the Bash tool would trip the very guard it is testing.
+# ============================================================================
+echo ""
+echo "===== bash-guard: legacy model IDs ====="
+_G=gpt; _C=claude
+bash_assert_blocks "legacy $_G 4o"        "curl -d model=$_G-4o api"
+bash_assert_blocks "legacy $_G 4.1"       "curl -d model=$_G-4.1 api"
+bash_assert_blocks "legacy $_G 3.5"       "curl -d model=$_G-3.5 api"
+bash_assert_blocks "legacy $_C 3 opus"    "echo $_C-3-opus"
+bash_assert_blocks "legacy $_C 3 sonnet"  "echo $_C-3-sonnet"
+bash_assert_blocks "legacy $_C 3 haiku"   "echo $_C-3-haiku"
+bash_assert_allows "the tts exception"    "echo $_G-4o-mini-tts"
+bash_assert_allows "current opus"         "echo $_C-opus-4-8"
+bash_assert_allows "current sonnet"       "echo $_C-sonnet-5"
+bash_assert_allows "current $_G"          "echo $_G-5.4"
+
+# ============================================================================
+# The real chrome MCP payload shape.
+#
+# run_val_hook above sends {"tool_input":{"javascript": ...}}. Chrome MCP sends
+# `text`. That mismatch is why validation-guard.sh blocked NOTHING for its whole
+# life, and this suite could not see it: every one of the 51 tests above passed
+# throughout, because they fed the hook a key it happened to read.
+# Test the shape the tool actually sends.
+# ============================================================================
+echo ""
+echo '===== validation-guard: the REAL chrome MCP key (text) ====='
+
+run_val_text() {
+  python3 -c 'import json,sys; print(json.dumps({"tool_input":{"text":sys.argv[1]}}))' "$1" \
+    | bash "$VAL_HOOK" 2>/dev/null
+}
+text_assert() { # label, js, expect(deny|allow)
+  local out; out=$(run_val_text "$2")
+  local got=allow
+  echo "$out" | grep -qE '"permissionDecision":[[:space:]]*"deny"' && got=deny
+  if [ "$got" = "$3" ]; then echo "PASS [text]: $1"; ((PASS++))
+  else echo "FAIL [text]: $1 (expected $3, got $got)"; FAIL_LABELS+=("[text] $1"); ((FAIL++)); fi
+}
+text_assert "getComputedStyle via text key"  "getComputedStyle(el).color"        deny
+text_assert ".click() via text key"          "document.querySelector('a').click()" deny
+text_assert "dispatchEvent via text key"     "el.dispatchEvent(new Event('x'))"  deny
+text_assert "feature detection via text key" "typeof document.startViewTransition === 'function'" allow
+
+# ============================================================================
+# The Figma measurement lane.
+#
+# `.figma-fidelity.measuring` opens DOM READS. `.figma-fidelity.pending` arms the
+# Stop gate and must NOT open the lane - coupling the two deadlocked two finished
+# agents for 25.6 and 12.6 minutes (session_2026-07-10_deadlock-is-now-load-bearing).
+# Input-FAKING stays blocked in every state.
+# ============================================================================
+echo ""
+echo "===== validation-guard: Figma measurement lane ====="
+
+LANE_TMP="$(mktemp -d)"
+lane() { # label, marker(none|measuring|pending), js, expect
+  rm -f "$LANE_TMP/.figma-fidelity.measuring" "$LANE_TMP/.figma-fidelity.pending"
+  [ "$2" = measuring ] && : > "$LANE_TMP/.figma-fidelity.measuring"
+  [ "$2" = pending ]   && : > "$LANE_TMP/.figma-fidelity.pending"
+  local out; out=$(cd "$LANE_TMP" && python3 -c 'import json,sys; print(json.dumps({"tool_input":{"text":sys.argv[1]}}))' "$3" | bash "$VAL_HOOK" 2>/dev/null)
+  local got=allow
+  echo "$out" | grep -qE '"permissionDecision":[[:space:]]*"deny"' && got=deny
+  if [ "$got" = "$4" ]; then echo "PASS [lane]: $1"; ((PASS++))
+  else echo "FAIL [lane]: $1 (expected $4, got $got)"; FAIL_LABELS+=("[lane] $1"); ((FAIL++)); fi
+}
+GCS="getComputedStyle(el).marginTop"
+FAKE="document.querySelector('a').click()"
+lane "no marker: measurement denied"                none      "$GCS"  deny
+lane ".measuring: measurement ALLOWED"              measuring "$GCS"  allow
+lane ".pending alone must NOT open the lane"        pending   "$GCS"  deny
+lane ".measuring: faking input still denied"        measuring "$FAKE" deny
+lane "no marker: faking input denied"               none      "$FAKE" deny
+rm -rf "$LANE_TMP"
+
+echo ""
+echo "============================================================"
 echo "RESULTS: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
   echo ""

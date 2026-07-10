@@ -10,7 +10,7 @@ relates_to:
 # Phase 1 Implementation - Flow Architecture Expansion
 
 ## Goal
-Map all 23 oracle design commands and all 16 make-interfaces-feel-better rules to comprehensive Sidecoach flows A-Q (17 new flows + 14 legacy = 31 total flows).
+Map all 23 oracle design commands and all 16 tactical-polish rules to comprehensive Sidecoach flows A-Q (17 new flows + 14 legacy = 31 total flows).
 
 ## Work Completed
 
@@ -42,7 +42,7 @@ All flows include:
 - Negative filters to prevent false positives
 
 ### 4. Flow J (16-Point Tactical Polish) - EMBEDDED
-Flow J embeds all 16 make-interfaces-feel-better rules in description and intent markers:
+Flow J embeds all 16 tactical-polish rules in description and intent markers:
 1. Concentric Border Radius
 2. Optical Over Geometric Alignment
 3. Shadows Over Borders

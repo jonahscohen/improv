@@ -339,4 +339,4 @@ Eight additional rules that extend the baseline into comprehensive, opinionated 
 
 Permission to use and reference in internal projects only. Not for public distribution or commercial license without written consent.
 
-Built on industry baseline (make-interfaces-feel-better pattern library), enhanced with original research into optical alignment, typography rhythm, shadow hierarchy, focus visibility, motion respect, contrast verification, state completeness, and anti-pattern detection.
+Built on industry baseline (tactical-polish pattern library), enhanced with original research into optical alignment, typography rhythm, shadow hierarchy, focus visibility, motion respect, contrast verification, state completeness, and anti-pattern detection.

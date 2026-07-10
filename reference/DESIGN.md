@@ -118,7 +118,7 @@ Warm cream canvas (`{colors.brand.cream}` = `#F4EFE4`), off-black ink (`{colors.
 
 Dark sections inverse the palette: ink canvas, cream text, red still as the only accent.
 
-**No tinted neutrals.** Borders are pure black/white at low opacity, never tinted blue or warm gray. This is a `make-interfaces-feel-better` rule and the brand demands it.
+**No tinted neutrals.** Borders are pure black/white at low opacity, never tinted blue or warm gray. This is a `tactical-polish` rule and the brand demands it.
 
 ## Typography
 
@@ -141,7 +141,7 @@ Two elevation levels only:
 - Floating cards / important callouts use `shadow.md`.
 - Sticky / overlay elements use `shadow.lg`.
 
-Shadows over borders, per `make-interfaces-feel-better`. Borders ONLY where structurally required (table cells, form inputs).
+Shadows over borders, per `tactical-polish`. Borders ONLY where structurally required (table cells, form inputs).
 
 ## Shapes
 
@@ -157,7 +157,7 @@ Shadows over borders, per `make-interfaces-feel-better`. Borders ONLY where stru
 - Text: `{colors.brand.cream}`
 - Radius: `{rounded.md}`
 - Padding: `12px 20px` (3rem horizontal, 1.5rem vertical on `spacing.scale`)
-- Press state: `scale(0.96)` with `{motion.duration.fast}` `{motion.ease.spring_quick}` per `make-interfaces-feel-better`
+- Press state: `scale(0.96)` with `{motion.duration.fast}` `{motion.ease.spring_quick}` per `tactical-polish`
 - Min hit area: 44x44 (well above 40x40 floor)
 
 ### Button (secondary)
@@ -182,7 +182,7 @@ Shadows over borders, per `make-interfaces-feel-better`. Borders ONLY where stru
 ### Curl install block (special component, hero-adjacent)
 - Background: ink with red accent border-left (3px solid `{colors.brand.red}`)
 - Copy button: monospace, cream-on-ink, hover state pulls Yes& red
-- Click-to-copy fires a `make-interfaces-feel-better` 240ms acknowledgment
+- Click-to-copy fires a `tactical-polish` 240ms acknowledgment
 
 ### Section heading
 - `{typography.display}` at `{typography.scale.sizes.3xl}` (3rem / 51px)

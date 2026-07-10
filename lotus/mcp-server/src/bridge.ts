@@ -35,9 +35,18 @@ export class FigmaBridge {
   private requestCounter = 0;
   private _isConnected = false;
   private lastPollTime = 0;
-  private connectionCheckInterval: ReturnType<typeof setInterval>;
+  private connectionCheckInterval: ReturnType<typeof setInterval> | undefined;
+  private readonly port: number;
+  // 'owner' = this process bound the port and serves the plugin directly.
+  // 'proxy' = the port was already taken, so forward tool calls to the owner.
+  private mode: 'owner' | 'proxy' = 'owner';
+  // Guards against overlapping re-bind attempts when reclaiming a freed port.
+  private reacquiring = false;
+  // Set by close(); prevents a post-shutdown bind from reviving the server.
+  private closed = false;
 
   constructor(port: number) {
+    this.port = port;
     const handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
       // CORS headers for Figma iframe
       res.setHeader('Access-Control-Allow-Origin', '*');
@@ -82,18 +91,74 @@ export class FigmaBridge {
 
     this.server = http.createServer(handler);
 
-    this.server.listen(port, () => {
-      console.error(`[lotus-mcp] HTTP bridge listening on port ${port}`);
+    // The bridge is constructed synchronously at MCP-server startup, so an
+    // unhandled 'error' event here (e.g. EADDRINUSE when the port is already
+    // held) would crash the whole process and take the stdio MCP transport down
+    // with it - the server then shows up as "disconnected" in the client. Never
+    // let that happen: handle the bind failure instead of crashing. On
+    // EADDRINUSE another lotus bridge already owns the port (a stale orphan from
+    // a previous session, or a concurrently-running Claude session), so fall
+    // back to PROXY mode and forward tool calls to that bridge. The handler is
+    // permanent and idempotent so it also covers re-bind attempts (reacquire()).
+    this.server.on('error', (err: NodeJS.ErrnoException) => {
+      this.reacquiring = false;
+      if (err.code === 'EADDRINUSE') {
+        this.enterProxyMode();
+      } else {
+        console.error('[lotus-mcp] HTTP bridge error:', err);
+      }
     });
 
-    // Consider plugin disconnected if no poll in 5 seconds
+    // ONE persistent success handler, attached here rather than passed to
+    // listen(). listen(port, cb) re-registers cb as a 'listening' listener on
+    // every call - including the failed initial bind, whose callback lingers
+    // (no 'listening' fires on EADDRINUSE) and would then double-fire on a later
+    // successful reacquire. Attaching a single listener avoids that accumulation.
+    this.server.on('listening', () => {
+      // A bind that completes after close() (e.g. an in-flight reacquire) must
+      // not revive the server or restart the watchdog - tear it back down.
+      if (this.closed) { this.server.close(); return; }
+      this.mode = 'owner';
+      this.reacquiring = false;
+      this.startConnectionCheck();
+      console.error(`[lotus-mcp] HTTP bridge listening on port ${this.port}`);
+    });
+
+    this.startListening();
+  }
+
+  /** Attempt to bind the port. On success the 'listening' handler promotes us to
+   *  owner; on EADDRINUSE the 'error' handler flips us to proxy mode instead of
+   *  crashing. Idempotent: a no-op if we are already listening. */
+  private startListening(): void {
+    if (this.server.listening) { this.reacquiring = false; return; }
+    this.server.listen(this.port);
+  }
+
+  /** Drop to proxy mode: forward tool calls to whoever owns the port. */
+  private enterProxyMode(): void {
+    this.mode = 'proxy';
+    this._isConnected = false;
+    if (this.connectionCheckInterval) {
+      clearInterval(this.connectionCheckInterval);
+      this.connectionCheckInterval = undefined;
+    }
+    console.error(
+      `[lotus-mcp] Port ${this.port} already in use - running in PROXY mode ` +
+      `(forwarding tool calls to the existing lotus bridge on ${this.port}).`
+    );
+  }
+
+  /** Start the "plugin disconnected if no poll in 5s" watchdog (owner mode only). */
+  private startConnectionCheck(): void {
+    if (this.connectionCheckInterval) return;
     this.connectionCheckInterval = setInterval(() => {
       const wasConnected = this._isConnected;
       this._isConnected = Date.now() - this.lastPollTime < 5000;
       if (wasConnected && !this._isConnected) {
         console.error('[lotus-mcp] Figma plugin disconnected (poll timeout)');
         // Reject all pending requests
-        for (const [id, req] of this.pending) {
+        for (const [, req] of this.pending) {
           clearTimeout(req.timer);
           req.reject(new Error('Figma plugin disconnected'));
         }
@@ -101,6 +166,17 @@ export class FigmaBridge {
         this.queue = [];
       }
     }, 2000);
+  }
+
+  /** In proxy mode, if the owner has gone away (connection refused/reset), try to
+   *  reclaim the now-free port so future tool calls are served locally instead of
+   *  dead-ending in proxy mode forever. The listen callback promotes us to owner;
+   *  the 'error' handler keeps us in proxy mode if someone else grabbed it first. */
+  private reacquire(): void {
+    if (this.closed || this.mode === 'owner' || this.reacquiring || this.server.listening) return;
+    this.reacquiring = true;
+    console.error(`[lotus-mcp] Owner on port ${this.port} unreachable - attempting to reclaim it.`);
+    this.startListening();
   }
 
   get isConnected(): boolean {
@@ -111,6 +187,10 @@ export class FigmaBridge {
    * Queue a plugin message and wait for a response from the plugin.
    */
   async request(message: Record<string, unknown>): Promise<unknown> {
+    if (this.mode === 'proxy') {
+      return this.forwardToOwner(message);
+    }
+
     if (!this._isConnected) {
       throw new Error(
         'Figma plugin is not connected. Open Lotus in Figma and enable MCP Bridge in Settings.'
@@ -131,6 +211,76 @@ export class FigmaBridge {
 
       this.pending.set(requestId, { resolve, reject, timer });
       this.queue.push({ requestId, message });
+    });
+  }
+
+  /**
+   * Proxy mode: this process does not own the HTTP bridge (another lotus process
+   * already holds the port), so forward the plugin message to that bridge's
+   * /exec endpoint and relay the result. Keeps tool calls working across
+   * concurrent Claude sessions and stale-orphan situations instead of
+   * dead-ending them with a "not connected" error.
+   */
+  private forwardToOwner(message: Record<string, unknown>): Promise<unknown> {
+    const body = JSON.stringify(message);
+    const timeout = message.type === 'send-prompt' ? PROMPT_TIMEOUT_MS : TIMEOUT_MS;
+
+    return new Promise<unknown>((resolve, reject) => {
+      const req = http.request(
+        {
+          host: '127.0.0.1',
+          port: this.port,
+          path: '/exec',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(body),
+          },
+          timeout,
+        },
+        (res) => {
+          let data = '';
+          res.on('data', (chunk: Buffer) => { data += chunk.toString(); });
+          res.on('end', () => {
+            // The owner's /exec returns 200 {success:true,data} on success and
+            // 500 {success:false,error} for application errors (e.g. plugin not
+            // connected), so validate the BODY SHAPE rather than gating on status
+            // - that preserves the real error message while still rejecting a
+            // non-Lotus service that happens to occupy the port.
+            let parsed: { success?: unknown; data?: unknown; error?: unknown };
+            try {
+              parsed = JSON.parse(data);
+            } catch {
+              reject(new Error(`Invalid (non-JSON) response from lotus bridge on port ${this.port} (HTTP ${res.statusCode}) - is another service using this port?`));
+              return;
+            }
+            if (parsed && typeof parsed === 'object' && typeof parsed.success === 'boolean') {
+              if (parsed.success) {
+                resolve(parsed.data);
+              } else {
+                reject(new Error(typeof parsed.error === 'string' ? parsed.error : 'Lotus bridge request failed'));
+              }
+            } else {
+              reject(new Error(`Unexpected response from lotus bridge on port ${this.port} (HTTP ${res.statusCode}) - is another service using this port?`));
+            }
+          });
+        }
+      );
+
+      req.on('error', (err: NodeJS.ErrnoException) => {
+        // Owner likely exited - try to take over the freed port for next time.
+        if (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
+          this.reacquire();
+        }
+        reject(new Error(`Could not reach lotus bridge on port ${this.port}: ${err.message}`));
+      });
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error(`Proxy request timed out after ${timeout}ms: ${String(message.type)}`));
+      });
+
+      req.write(body);
+      req.end();
     });
   }
 
@@ -209,12 +359,21 @@ export class FigmaBridge {
   }
 
   close(): void {
-    clearInterval(this.connectionCheckInterval);
+    this.closed = true;
+    this.reacquiring = false;
+    if (this.connectionCheckInterval) {
+      clearInterval(this.connectionCheckInterval);
+      this.connectionCheckInterval = undefined;
+    }
     for (const [, req] of this.pending) {
       clearTimeout(req.timer);
       req.reject(new Error('Bridge shutting down'));
     }
     this.pending.clear();
+    // Always close the server. Even in proxy mode an in-flight reacquire() may be
+    // mid-bind; closing unconditionally (plus the 'closed' guard in the
+    // 'listening' handler) stops a post-shutdown bind from leaking a live server
+    // and watchdog. close() on a never-listening server is a safe no-op.
     this.server.close();
   }
 }

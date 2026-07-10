@@ -46,7 +46,7 @@ const model_routing_1 = require("./model-routing");
 // TIER 3: POLISH/QA FLOWS
 /**
  * Flow J: 16-Point Tactical Polish
- * Apply make-interfaces-feel-better rules for visual refinement
+ * Apply tactical-polish rules for visual refinement
  */
 const TACTICAL_RULES = {
     radius: 'Concentric border radius: outer = inner + padding (e.g. button 8px + 4px padding = 12px container)',
@@ -154,7 +154,7 @@ class FlowJTacticalPolishHandler extends flow_handler_1.BaseFlowHandler {
             const memoryBuilder = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())
                 .setSummary('16-point tactical polish checklist applied - scale, radius, shadows, transitions, hit areas, text, icons, animation')
                 .addRule('polish', [TACTICAL_RULES.scalePress, TACTICAL_RULES.radius, TACTICAL_RULES.shadows, TACTICAL_RULES.transitions, TACTICAL_RULES.hitAreas, TACTICAL_RULES.optical, TACTICAL_RULES.textWrap, TACTICAL_RULES.smoothing, TACTICAL_RULES.iconSwaps, TACTICAL_RULES.imageOutlines])
-                .addDecision('Tactical polish strategy', '16-point refinement framework from make-interfaces-feel-better')
+                .addDecision('Tactical polish strategy', '16-point refinement framework from the tactical-polish reference')
                 .addMetric('principles-applied', 16, 'pass')
                 .addMetric('required-items', 6, 'pass', 6)
                 .addMetric('optional-items', 10, 'pass', 10)

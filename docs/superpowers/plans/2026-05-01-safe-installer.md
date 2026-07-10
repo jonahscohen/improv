@@ -92,7 +92,7 @@ DESCS=(
   "ADDITIVE: appends team rules (from RULES.md) and shared workflow (from CLAUDE.md) to your ~/.claude/CLAUDE.md between marker comments. Your existing CLAUDE.md content is preserved above and below the markers. If you have a claude/CLAUDE.local.md for personal overrides, those are appended in their own marker block too. Re-runs detect the markers and skip. Deactivation removes only the marked blocks."
   "ADDITIVE: JSON-merges safety hooks (bash-guard, content-guard, memory-approve), memory-write allow patterns, enabled plugins, and marketplace entries into your existing ~/.claude/settings.json. Does NOT touch your defaultMode, model, or other preferences. Copies hook scripts to ~/.claude/hooks/ alongside any hooks you already have. Deactivation removes only our entries by marker."
   "ADDITIVE: appends Memory Discipline rules to your CLAUDE.md between marker comments, JSON-merges three hooks (SessionStart loader, PreCompact reminder, PostCompact reload) into your settings.json, and symlinks the startup-check.sh loader. Does NOT replace or overwrite anything. Marker-guarded so re-runs are no-ops."
-  "ADDITIVE: installs skills to ~/.claude/skills/. Bundles make-interfaces-feel-better (tactical UI polish via npx) and component-gallery-reference (researches component.gallery before building UI components). Does NOT touch your CLAUDE.md, settings.json, or hooks."
+  "ADDITIVE: installs skills to ~/.claude/skills/. Bundles tactical-polish (tactical UI polish via npx) and component-gallery-reference (researches component.gallery before building UI components). Does NOT touch your CLAUDE.md, settings.json, or hooks."
   "Symlinks statusline-command.sh into ~/.claude/. The settings.json statusLine command gracefully falls back if the script is missing, so unticking this just returns to Claude Code's default."
   "Symlinks cmux settings.json for the split-pane terminal browser preview. Skip if you don't use cmux."
   "Adds a one-liner to .zshrc that activates nvm's default Node so claude/node/npm are on PATH in new shells. Harmless no-op if nvm isn't installed. Skip if 'claude' already works in fresh terminals."
@@ -177,7 +177,7 @@ detect_component() {
     brain)      grep -Fq "<!-- claude-dotfiles:brain:begin -->" "$CLAUDE_DIR/CLAUDE.md" 2>/dev/null && echo active || echo not-installed ;;
     config)     [ -f "$CLAUDE_DIR/hooks/bash-guard.sh" ] && echo active || echo not-installed ;;
     memory)     grep -Fq "<!-- claude-dotfiles:memory-discipline:begin -->" "$CLAUDE_DIR/CLAUDE.md" 2>/dev/null && echo active || echo not-installed ;;
-    skills)     { [ -d "$CLAUDE_DIR/skills/make-interfaces-feel-better" ] || [ -d "$CLAUDE_DIR/skills/component-gallery-reference" ]; } && echo active || echo not-installed ;;
+    skills)     { [ -d "$CLAUDE_DIR/skills/tactical-polish" ] || [ -d "$CLAUDE_DIR/skills/component-gallery-reference" ]; } && echo active || echo not-installed ;;
     statusline) [ -L "$CLAUDE_DIR/statusline-command.sh" ] && echo active || echo not-installed ;;
     cmux)       [ -L "$HOME/.config/cmux/settings.json" ] && echo active || echo not-installed ;;
     nvm)        grep -Fq "nvm use default --silent" "$ZSHRC" 2>/dev/null && echo active || echo not-installed ;;

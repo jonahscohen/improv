@@ -35,4 +35,4 @@ Collaborator: Jonah. 2026-05-29. CD review of tilt-design build phase (builders 
 ## Builder C revision VERIFIED: scrub select-all works. Typed "2" (no manual cmd+a) -> 2.00, thumb at 2/3. Typed "4.2" -> clamped to 3.00 (Aurora speed max=3, step 0.05) - correct replace+clamp (a merge would have given ~1.10). 161 tests, tsc 0.
 
 ## STATUS: all 3 builders green + verified. Look transformed, composition works, posters work, scrub+export work, &dev logo in.
-## OPEN: (1) red-slider-fill taste decision (asked Jonah). (2) cobe globe poster async exception -> dark fallback (minor follow-up). (3) formal sidecoach QA triad (audit/critique/polish) + make-interfaces-feel-better not yet run - offered to Jonah.
+## OPEN: (1) red-slider-fill taste decision (asked Jonah). (2) cobe globe poster async exception -> dark fallback (minor follow-up). (3) formal sidecoach QA triad (audit/critique/polish) + tactical-polish not yet run - offered to Jonah.

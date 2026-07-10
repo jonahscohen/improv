@@ -112,7 +112,7 @@ Flows are the handlers the orchestrator chains. Verbs map to one or more flows. 
 
 | Flow ID | Name | Triggered by verb(s) | One-line purpose |
 |---|---|---|---|
-| `flowJ_tactical_polish` | 16-Point Tactical Polish | `craft`, `polish`, `bolder`, `quieter`, `distill`, `optimize` | Applies the make-interfaces-feel-better refinement rules |
+| `flowJ_tactical_polish` | 16-Point Tactical Polish | `craft`, `polish`, `bolder`, `quieter`, `distill`, `optimize` | Applies the tactical-polish refinement rules |
 | `flowK_multi_lens_audit` | Multi-Lens Audit (5 dimensions) | `audit`, `critique` | Runs a technical scan across accessibility, performance, theming, responsive, anti-patterns |
 | `flowL_design_critique` | Design Critique (Nielsen heuristics) | `critique` | Runs an independent design review across heuristics, cognitive load, emotional journey |
 | `flowM_responsive_validation` | Responsive Design Validation | `craft`, `polish`, `adapt` | Validates breakpoints, touch targets at 40x40 minimum, and viewport behavior |

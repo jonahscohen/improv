@@ -3,7 +3,8 @@
  * Drag stops to reposition, click bar to add a new stop. Selected stop chit is blue.
  *
  * Ported verbatim from Retune overlay/src/ui/gradient-stop-bar.tsx.
- * Selected-chit #D97757 is hard-coded outside the token system (plan o).
+ * The selected-chit fill derives from the marker color via
+ * var(--justify-marker, #D97757), so it follows the user-selected marker live.
  */
 
 import { useCallback, useRef } from "react";
@@ -124,7 +125,7 @@ export function GradientStopBar({
             <div
               className="retune-gradient-stop-chit"
               style={{
-                backgroundColor: selectedIndex === index ? "#D97757" : "white",
+                backgroundColor: selectedIndex === index ? "var(--justify-marker, #D97757)" : "white",
               }}
             >
               <div
@@ -135,7 +136,7 @@ export function GradientStopBar({
             <div
               className="retune-gradient-stop-caret"
               style={{
-                backgroundColor: selectedIndex === index ? "#D97757" : "white",
+                backgroundColor: selectedIndex === index ? "var(--justify-marker, #D97757)" : "white",
               }}
             />
           </div>

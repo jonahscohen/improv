@@ -1,4 +1,5 @@
 import type { JsonRpcRequest, JsonRpcResponse } from './types';
+import { Outbox } from './outbox';
 
 type EventCallback = (data: unknown) => void;
 
@@ -24,8 +25,40 @@ export class Transport {
   private static readonly RECONNECT_MIN = 1000;
   private static readonly RECONNECT_MAX = 30000;
 
+  // The durable prompt queue. Created lazily, but ALWAYS instantiated on connect
+  // (not merely on the first send) - otherwise a page reload with a prompt still
+  // sitting in localStorage would never rehydrate or drain it until the user
+  // happened to send another one. Codex caught that; the reload test had
+  // constructed the Outbox directly and so could not see it.
+  private outbox: Outbox | null = null;
+
   constructor(port = 9223) {
     this.port = port;
+  }
+
+  /**
+   * Hand a prompt to the daemon. Unlike `request()`, this CANNOT fail and CANNOT
+   * time out: the prompt goes into a durable outbox that retries forever until
+   * the daemon acks it. See core/outbox.ts for why a caller must never be told a
+   * prompt "failed" - the old behavior dropped a user's Send-All on a one-second
+   * socket blip and showed them a Retry button that double-queued their work.
+   *
+   * Returns the clientId. Pass it back as `clientId` to RE-send the same logical
+   * prompt (the manual Retry pill): the daemon dedupes on it, so a re-send after
+   * the original already landed cannot queue the work twice.
+   */
+  sendPrompt(params: Record<string, unknown>, clientId?: string): string {
+    return this.getOutbox().enqueue('push_prompt', params, clientId).clientId;
+  }
+
+  /** Prompts still waiting to be acked by the daemon. */
+  outboxPending(): number {
+    return this.outbox ? this.outbox.pending() : 0;
+  }
+
+  private getOutbox(): Outbox {
+    if (!this.outbox) this.outbox = new Outbox(this);
+    return this.outbox;
   }
 
   async connect(): Promise<void> {
@@ -66,7 +99,15 @@ export class Transport {
         if (settled) return;
         settled = true;
         this.ws = ws;
-        this.handshake().then(resolve).catch(reject);
+        this.handshake()
+          .then(() => {
+            // The socket is live: rehydrate the outbox from storage and flush it.
+            // getOutbox() (not `this.outbox?.`) so a prompt persisted by a PREVIOUS
+            // page load is picked up on this connect, with no user action.
+            this.getOutbox().onConnected();
+            resolve();
+          })
+          .catch(reject);
       };
 
       ws.onmessage = (event: MessageEvent) => {
@@ -176,6 +217,7 @@ export class Transport {
         // Recovered: reset the backoff floor and re-light any connection-aware
         // UI (the toolbar listens for 'connected').
         this.reconnectDelay = Transport.RECONNECT_MIN;
+        this.getOutbox().onConnected();
         this.emit('connected', null);
       } catch {
         this.reconnectDelay = Math.min(this.reconnectDelay * 2, Transport.RECONNECT_MAX);

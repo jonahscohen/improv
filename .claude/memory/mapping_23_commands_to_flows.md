@@ -71,7 +71,7 @@ type: project
 - **Tier 4 (Special)**: 2 commands (live, onboard)
 - **Cross-tier**: All commands leverage multiple flows for disambiguation
 
-## 16 Make-Interfaces-Feel-Better Rules in Flow J
+## 16 Tactical-Polish Rules in Flow J
 
 ✓ All 16 rules embedded in **flowJ_tactical_polish**:
 1. Concentric border radius

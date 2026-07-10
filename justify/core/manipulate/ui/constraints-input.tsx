@@ -4,8 +4,11 @@
  * constraints visual stay in sync.
  *
  * Ported verbatim from Retune overlay/src/ui/constraints-input.tsx.
- * PinLine stroke hex (#D97757 / #d6d3d1) and center-dot #D97757 are
- * hard-coded outside the token system (mirrored verbatim per plan open-question o).
+ * The pinned PinLine stroke and the center dot derive from the marker color
+ * via var(--justify-marker, #D97757), so they follow the user-selected marker
+ * live; the stroke is applied through style={{ stroke }} because the SVG
+ * stroke= presentation attribute cannot hold a CSS var(). The unpinned stroke
+ * (#d6d3d1) stays a neutral grey. The center-dot fill lives in controls.css.
  */
 
 import { NumberInput } from "./number-input";
@@ -30,9 +33,9 @@ function PinLine({ side, pinned, onClick }: { side: Side; pinned: boolean; onCli
     >
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
         {isVertical ? (
-          <line x1="8" y1="3" x2="8" y2="13" stroke={pinned ? "#D97757" : "#d6d3d1"} strokeWidth="2" strokeLinecap="round" />
+          <line x1="8" y1="3" x2="8" y2="13" style={{ stroke: pinned ? "var(--justify-marker, #D97757)" : "#d6d3d1" }} strokeWidth="2" strokeLinecap="round" />
         ) : (
-          <line x1="3" y1="8" x2="13" y2="8" stroke={pinned ? "#D97757" : "#d6d3d1"} strokeWidth="2" strokeLinecap="round" />
+          <line x1="3" y1="8" x2="13" y2="8" style={{ stroke: pinned ? "var(--justify-marker, #D97757)" : "#d6d3d1" }} strokeWidth="2" strokeLinecap="round" />
         )}
       </svg>
     </button>

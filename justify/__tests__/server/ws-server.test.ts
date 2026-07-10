@@ -100,13 +100,17 @@ describe('WsServer', () => {
     ws.close();
   });
 
-  it('tries next port when first is occupied', async () => {
+  // A bound server owns TWO ports: `port` (http/ws) and `port + 1` (https core).
+  // So the next free slot is port + 2, not port + 1. The old expectation of
+  // port1 + 1 could never pass - the fallback attempt collided with server1's own
+  // https listener and threw EADDRINUSE.
+  it('tries the next port PAIR when the first is occupied', async () => {
     const server1 = new WsServer();
     const port1 = await server1.start(BASE_PORT + 40);
 
     try {
       const port2 = await server.start(BASE_PORT + 40);
-      expect(port2).toBe(port1 + 1);
+      expect(port2).toBe(port1 + 2);
     } finally {
       await server1.stop();
     }

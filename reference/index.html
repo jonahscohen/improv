@@ -694,7 +694,7 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
             CLAUDE.md mandate: conform to the Google spec, run lint after every write, resolve every error or warning before reporting done. Generated UI references tokens via <code>{path.to.token}</code>, not hex literals - the file stays the source of truth.
           </p>
 
-          <h3 id="design-tactical" class="h3">7. Tactical - <code>make-interfaces-feel-better</code></h3>
+          <h3 id="design-tactical" class="h3">7. Tactical - <code>tactical-polish</code></h3>
           <p>
             An Anthropic Skill that auto-triggers on UI keywords. Sixteen specific rules with exact values, applied DURING construction (not as a post-pass).
           </p>
@@ -788,7 +788,7 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
             <article class="component-card">
               <p class="component-card__key"><code>skills</code></p>
               <h3 class="component-card__h">10 Anthropic Skills + catalog seed</h3>
-              <p class="component-card__body">Bundles <code>make-interfaces-feel-better</code> (tactical polish), <code>component-gallery-reference</code> (research), <code>fontshare-reference</code> (typography), <code>motion-reference</code> (GSAP + Lenis), <code>design-build</code> (pipeline orchestrator), <code>curate</code> + <code>design-references</code> (personal catalog), plus four peer skills (<code>social-media</code>, <code>design-team</code>, <code>visual-effects</code>, <code>icon-source</code>). Seeds the empty <code>~/.claude/design-references/</code> catalog with the 14-category vocab.</p>
+              <p class="component-card__body">Bundles <code>tactical-polish</code> (tactical polish), <code>component-gallery-reference</code> (research), <code>fontshare-reference</code> (typography), <code>motion-reference</code> (GSAP + Lenis), <code>design-build</code> (pipeline orchestrator), <code>curate</code> + <code>design-references</code> (personal catalog), plus four peer skills (<code>social-media</code>, <code>design-team</code>, <code>visual-effects</code>, <code>icon-source</code>). Seeds the empty <code>~/.claude/design-references/</code> catalog with the 14-category vocab.</p>
               <p class="component-card__touches">Touches: <code>~/.claude/skills/</code> + <code>~/.claude/design-references/</code></p>
             </article>
 

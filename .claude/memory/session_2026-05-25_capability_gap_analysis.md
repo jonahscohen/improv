@@ -32,7 +32,7 @@ The claim **largely holds**. The 22 verb commands are wired and the deterministi
 14. **Font-pairing rules (one sans + one serif)** - DOCUMENTED-ONLY. `flow-handler-typography-excellence.ts:40` sets a `font-pairing-guidance: true` flag but no validator runs.
 15. **Clamp-based fluid scale formulas** - DOCUMENTED-ONLY/PARTIAL. `extended-domain-validator.ts:1733` mentions `clamp()` as remediation. `verb-command-registry.ts:406` mentions clamp() in guidance. No enforcement.
 
-## Motion (Emil + miFB)
+## Motion (Emil + tactical-polish)
 16. **Frequency-first matrix (100+/day = NO animation)** - MISSING from src. Not in `flow-handler-motion-integration.ts` or `flow-handler-motion-patterns.ts`. No prompt asks usage frequency.
 17. **Three named strong easings** - PARTIAL. `motion-reference.ts:23-71` lists `cubic-bezier(0.25,0.46,0.45,0.94)`, `(0.165,0.84,0.44,1)`, `(0.22,1,0.36,1)`. These are NOT the named three from Emil (`0.23,1,0.32,1` etc.) - different curves. `flow-handler-motion-patterns.ts:93` checks `/cubic-bezier/.test(easing)` only, accepting any cubic-bezier.
 18. **Asymmetric enter/exit (exit faster)** - DOCUMENTED-ONLY. `design-laws.ts:268` lists rule but no validator measures durations.

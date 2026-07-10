@@ -23,7 +23,7 @@ Every component additive. Every uninstall clean. Every pick informed.
 | brain | Team rules + workflow instructions into CLAUDE.md | Marker-guarded append | No |
 | config | Hooks, allow patterns, plugins, marketplaces into settings.json + hook scripts | JSON-merge + file copy | No |
 | memory | Memory discipline rules + memory hooks + loader | Marker-guarded append + JSON-merge (unchanged) | No |
-| skills | make-interfaces-feel-better + component-gallery-reference | npx + file copy (unchanged) | No |
+| skills | tactical-polish + component-gallery-reference | npx + file copy (unchanged) | No |
 | statusline | statusline-command.sh | Symlink (unchanged) | No |
 | cmux | cmux settings.json | Symlink (unchanged) | No |
 | nvm | .zshrc one-liner | Marker-guarded append (unchanged) | No |

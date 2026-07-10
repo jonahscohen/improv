@@ -20,7 +20,7 @@ Jonah's `/Users/spare3/.claude/CLAUDE.md` reached 45.8k chars (40k soft limit, p
 - Entry-command intent to command routing table (DONE)
 - DESIGN.md Google-spec format paragraph (DONE)
 - QA gate triad expanded detail (DONE, 5 steps)
-- Tactical layer (make-interfaces-feel-better) integration notes (DONE)
+- Tactical layer (tactical-polish) integration notes (DONE)
 - "What sidecoach is NOT for" section (DONE)
 - Design stack diagram (DONE, under "Where sidecoach sits in the design stack")
 

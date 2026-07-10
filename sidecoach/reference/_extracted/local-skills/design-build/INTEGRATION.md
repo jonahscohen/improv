@@ -4,10 +4,10 @@ Source: `/Users/spare3/.claude/skills/design-build/SKILL.md`
 
 ## What this skill provides
 
-A **pipeline orchestrator** that explicitly walks the 6 design skills (component-gallery-reference, fontshare-reference, design-references, motion-reference, icon-source, make-interfaces-feel-better) plus the oracle QA triad as ONE coordinated build, instead of relying on each skill's auto-trigger keywords.
+A **pipeline orchestrator** that explicitly walks the 6 design skills (component-gallery-reference, fontshare-reference, design-references, motion-reference, icon-source, tactical-polish) plus the oracle QA triad as ONE coordinated build, instead of relying on each skill's auto-trigger keywords.
 
 The skill exists because of an empirical finding from the 2026-05-20 marketing-site build:
-1. **Auto-triggering didn't fire reliably.** `component-gallery-reference`, `design-references`, and `icon-source` never auto-triggered during the build. `make-interfaces-feel-better` only fired because the agent had read it recently.
+1. **Auto-triggering didn't fire reliably.** `component-gallery-reference`, `design-references`, and `icon-source` never auto-triggered during the build. `tactical-polish` only fired because the agent had read it recently.
 2. **The QA triad never ran.** It's documented as "runs at QA time" but no mechanism actually invokes it.
 
 `design-build` is the explicit orchestrator with mandatory phases and gate checkpoints.
@@ -27,7 +27,7 @@ DO NOT trigger on:
 - Generic UI work ("build a button", "add a hover state", "fix this layout") - too narrow
 - Pure copy/typography changes - run fontshare-reference directly
 - Pure motion changes - read motion-reference directly
-- Tactical polish - read make-interfaces-feel-better directly
+- Tactical polish - read tactical-polish directly
 
 ## The 10-phase orchestration (with 2 gate checkpoints)
 
@@ -58,7 +58,7 @@ ONLY if feature has scroll/animation/transitions/drag/interaction motion. Identi
 ### Phase 6: Icons (icon-source)
 ONLY if icons needed. Check existing project library (one per project). Pick from 8 approved if new. Match to brand voice. Source paths VERBATIM.
 
-### Phase 7: Build (make-interfaces-feel-better applied DURING construction)
+### Phase 7: Build (tactical-polish applied DURING construction)
 Generate code WITH the 14-rule checklist applied as build-time guidance, NOT as post-pass cleanup. Concentric radii, optical centering, shadows over borders, interruptible animations, split+stagger enters, subtle exits, opacity+scale+blur swaps, font smoothing, tabular nums, text-wrap balance, image outlines, scale(0.96) press, initial={false} on AnimatePresence, no `transition: all`, sparse will-change, 40x40px hit areas.
 
 ### Phase 8: QA triad (MANDATORY - the part that never fired before)

@@ -1,8 +1,8 @@
 {
   "_meta": {
     "purpose": "Front-end/design INTENT registry for sidecoach-keyword.sh. The verb/mode registries fire on explicit sidecoach vocabulary (polish, forge, ...). This third tier fires on NATURAL front-end/design requests that contain no sidecoach verb, injecting a light, advisory self-question ('would sidecoach help here?') rather than a hard route. The goal is to ingrain sidecoach into the default evaluation of front-end work without bogging down trivial edits.",
-    "fire_rule": "After no verb/mode match and outside the cooldown window, the intent nudge fires when (a strong build/design ACTION co-occurs with a SUBSTANTIVE_TARGET) OR (any STANDALONE signal appears). Informational framings (what is X / how to X / explain X / define X) are suppressed by the same logic the verb tier uses.",
-    "exempt_rule": "A trivial-modify framing (EXEMPT) with no NEW_BUILD signal and no STANDALONE signal stays silent - it is a tweak, not design work. Minor targets (button, icon, color, font, label) are deliberately NOT in SUBSTANTIVE_TARGETS, so they never fire alone.",
+    "fire_rule": "After no verb/mode match and outside the cooldown window, the intent nudge fires when ((a strong build/design ACTION or a DIAGNOSE signal) co-occurs with a SUBSTANTIVE_TARGET) OR (any STANDALONE signal appears). The DIAGNOSE tier exists because pure read-only diagnosis ('what's wrong with the homepage', 'diagnose the dashboard', 'take a look at the pricing page') is the canonical /sidecoach audit case yet carries no BUILD action - without it those prompts went silent even though the nudge text routes them to audit. Diagnosis verbs (review/inspect/check/look at...) are common in engineering prose, so the DIAGNOSE path uses its OWN positive allowlist DIAGNOSE_TARGETS of UI-dominant nouns - NOT the full SUBSTANTIVE_TARGETS. This is a safe-by-default allowlist (a newly-added overloaded target will not leak into diagnosis): it deliberately omits the cross-domain words that also mean HTTP/DB/SQL/data/code (header, table, view, grid, site='call site', interface='TS interface', component='sw component'), while keeping design-canonical targets (page, layout, section, screen, form, dashboard, hero, navbar, modal, ...). The BUILD-action path keeps the full SUBSTANTIVE_TARGETS list (its build verbs rarely precede those nouns). Informational framings (what is X / how to X / explain X / define X) are suppressed by the same logic the verb tier uses.",
+    "exempt_rule": "A trivial-modify framing (EXEMPT) with no NEW_BUILD signal, no STANDALONE signal, and no DIAGNOSE signal stays silent - it is a tweak, not design work. A genuine diagnosis ('take a look ... and tidy it') is NOT silenced by an incidental tweak word. Minor targets (button, icon, color, font, label) are deliberately NOT in SUBSTANTIVE_TARGETS, so they never fire alone.",
     "cooldown_rule": "On ANY sidecoach engagement (verb route, mode route, or intent nudge) the hook touches config.cooldown_state_file. Intent nudges are suppressed while that file is younger than config.cooldown_seconds, so an active build and its follow-up tweaks are not re-nagged. Explicit verb/mode routes are NEVER suppressed by cooldown. Override seconds with env SIDECOACH_INTENT_COOLDOWN and the state-file path with env SIDECOACH_INTENT_COOLDOWN_FILE (used by the test harness).",
     "pattern_syntax": "Values are regex FRAGMENTS, matched case-insensitively with hyphen-aware word boundaries (?<![\\w-]){pattern}(?![\\w-]). Use [- ]? for optional space/hyphen and (?:a|b) for alternation. Tune freely - this file is the single source of truth for intent triggering."
   },
@@ -14,6 +14,20 @@
     "build", "create", "design", "redesign", "re-?design", "restyle", "re-?style",
     "revamp", "rework", "re-?work", "lay ?out", "mock ?up", "wireframe", "prototype",
     "scaffold", "implement", "put together", "spin up", "code up", "style", "theme", "make"
+  ],
+  "diagnose": [
+    "what(?:['’]s| is| are| was) (?:wrong|off|up) with",
+    "diagnose", "take a look at", "have a look at", "look over", "go over",
+    "look at", "check(?: out)?", "review", "critique", "assess", "evaluate",
+    "inspect", "eyeball"
+  ],
+  "diagnose_targets": [
+    "page", "landing ?page", "home ?page", "hero", "hero section", "section",
+    "nav", "navbar", "navigation", "sidebar", "footer", "menu", "layout",
+    "dashboard", "form", "modal", "dialog", "drawer", "ui", "front[- ]?end",
+    "website", "web ?page", "screen", "design ?system", "style ?guide",
+    "component library", "gallery", "carousel", "pricing (?:page|table)",
+    "feature section", "banner"
   ],
   "substantive_targets": [
     "page", "landing ?page", "home ?page", "hero", "hero section", "section",
@@ -32,7 +46,9 @@
     "motion design", "accessibility", "a11y", "wcag", "redesign", "restyle",
     "looks? (?:off|bad|cheap|dated|generic|boring|amateur|ugly)",
     "feels? (?:off|clunky|cheap|dated|janky)",
-    "make it (?:look|feel|pop)", "more modern", "cleaner", "prettier", "nicer looking"
+    "make it (?:look|feel|pop)", "more modern", "cleaner", "prettier", "nicer looking",
+    "real or fluff", "fluff or real", "genuine or fluff", "just fluff", "all fluff",
+    "marketing fluff", "mostly fluff"
   ],
   "new_build": [
     "build", "create", "design", "redesign", "re-?design", "from scratch",

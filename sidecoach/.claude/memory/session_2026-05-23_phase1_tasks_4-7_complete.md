@@ -34,7 +34,7 @@ Embedded CategoryReflexDetector (AI slop detection) into flows D and L:
 
 ## Task 7: COMPLETE ✓
 
-Embedded make-interfaces-feel-better 14-point checklist into Flow J:
+Embedded tactical-polish 14-point checklist into Flow J:
 - TACTICAL_RULES constant with all 16 polish principles (scale, radius, shadows, transitions, hit areas, text, icons, animation)
 - Full checklist with 16 items (6 required, 10 optional)
 - Complete guidance with detailed instructions per principle

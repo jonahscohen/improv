@@ -440,7 +440,7 @@ The CD reviews each builder's output sequentially:
    - `/sidecoach audit` (a11y, performance, theming, responsive, anti-patterns)
    - `/sidecoach critique` (AI-slop detection, Nielsen heuristics, cognitive load)
    - `/sidecoach polish` (alignment pass against design system)
-   - `make-interfaces-feel-better` 14-point checklist
+   - `tactical-polish` 14-point checklist
    - `DESIGN.md` lint (if present)
 3. Check cross-section consistency (typography, spacing, color palette, component patterns)
 4. Produce a review document with per-section verdicts:
@@ -1328,7 +1328,7 @@ Rigorous protocol for sourcing icons from 8 approved libraries: Heroicons, Lucid
 ```
 Strategy:      /sidecoach (23 commands, PRODUCT.md + DESIGN.md)
 Research:      component-gallery-reference (60 types, 95 systems)
-Tactical:      make-interfaces-feel-better (16 CSS polish rules)
+Tactical:      tactical-polish (16 CSS polish rules)
 Social:        /social-media (13 platforms, specs + validation)
 Effects:       /visual-effects (14 shaders + 25 FX + post-processing)
 Icons:         /icon-source (8 libraries, selection protocol)

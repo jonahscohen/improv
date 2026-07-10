@@ -24,7 +24,7 @@ User said: "wire the library into the flow handlers". The forensic agent found 7
 ## What the absorbed content includes (for reference)
 
 - `sidecoach/reference/_extracted/legacy-design-skill/reference/`: 35 files including brand.md, product.md, color-and-contrast.md, typography.md, motion-design.md, interaction-design.md, responsive-design.md, ux-writing.md, plus 22 verb command references
-- `sidecoach/reference/_extracted/make-interfaces-feel-better/`: SKILL.md (16 principles) + typography.md + surfaces.md + animations.md + performance.md
+- `sidecoach/reference/_extracted/tactical-polish/`: SKILL.md (16 principles) + typography.md + surfaces.md + animations.md + performance.md
 - `sidecoach/reference/_extracted/external/emil-design-eng/`: frequency-first matrix + 3 named easings + FM x/y gotcha
 - `sidecoach/reference/_extracted/external/typeui-fundamentals/`: 7 modular ratios + heading-size-by-role + line-height-by-tier + font-pairing
 - `sidecoach/reference/_extracted/external/taste-skill/`: linguistic ban list + slop archetypes + Strategic Omissions + parametric dials

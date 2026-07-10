@@ -187,9 +187,9 @@ A "clean" symmetric shake (25%/50%/75%/100%) actually looks WORSE because it's t
 
 ---
 
-## SECTION 3: What this covers that oracle + make-interfaces-feel-better don't
+## SECTION 3: What this covers that oracle + tactical-polish don't
 
-1. **The interaction-type duration table.** Make-interfaces-feel-better doesn't have a "Button press = 100ms, Hover = 150ms, Tab switch = 250ms" lookup. Bencium provides this as a cheat sheet.
+1. **The interaction-type duration table.** Tactical-polish doesn't have a "Button press = 100ms, Hover = 150ms, Tab switch = 250ms" lookup. Bencium provides this as a cheat sheet.
 
 2. **The 6 named easings with bezier values** (ease-out, ease-in, ease-in-out, linear, spring, sharp). Complementary to Emil's three; together they cover Material Design defaults AND aggressive custom curves.
 

@@ -1,14 +1,23 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer, type Server as HttpServer, type IncomingMessage, type ServerResponse } from 'http';
 import { createServer as createHttpsServer, type Server as HttpsServer } from 'https';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'fs';
 import { join, dirname } from 'path';
 import { execFile, execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { ConnectionManager } from './connection-manager.js';
 import type { JsonRpcRequest, JsonRpcResponse, JsonRpcMessage } from './types.js';
+import type { WatchStateStore } from './watch-state.js';
+import { DisarmConsentStore } from './consent.js';
 
 type MessageHandler = (connectionId: string, params: Record<string, unknown> | undefined) => unknown | Promise<unknown>;
+
+// The dispatcher surface ws-server needs: kick it after an arm, read its status.
+// Kept as a local interface so ws-server does not hard-import the Dispatcher.
+interface DispatcherLike {
+  kick(): void;
+  status(): Record<string, unknown>;
+}
 
 export class WsServer {
   private wss: WebSocketServer | null = null;
@@ -19,18 +28,76 @@ export class WsServer {
   private port: number | null = null;
   private httpsPort: number | null = null;
   private distDir: string;
+  private stateDir: string;
   private lastPromptPoll: number = 0;
   private lastMcpActivity: number = 0;
   private watchSessionActive: boolean = false;
+  private watchStore: WatchStateStore | null = null;
+  private dispatcher: DispatcherLike | null = null;
+  // Single-use human consent for disarming. Lazily created so tests can point it
+  // at a temp dir via JUSTIFY_STATE_DIR.
+  private consent: DisarmConsentStore = new DisarmConsentStore();
 
   constructor() {
     const serverDir = typeof __dirname !== 'undefined' ? __dirname : dirname(fileURLToPath(import.meta.url));
     this.distDir = join(serverDir, '..');
+    // Data files (prompts.json, responses.json) live at the install root
+    // (dist/..). JUSTIFY_STATE_DIR overrides this so a test daemon can isolate
+    // its queue from the live one.
+    this.stateDir = process.env.JUSTIFY_STATE_DIR || join(this.distDir, '..');
+  }
+
+  // Wire the daemon-owned watch (state store + dispatcher) into the HTTP layer.
+  // Called once at boot by index.ts. Tests that `new WsServer()` without this
+  // keep the legacy session-active watch-status behavior.
+  attachWatch(store: WatchStateStore, dispatcher: DispatcherLike): void {
+    this.watchStore = store;
+    this.dispatcher = dispatcher;
+  }
+
+  private dataFile(name: string): string {
+    return join(this.stateDir, name);
+  }
+
+  // Disarm the daemon watch from a non-HTTP caller (the justify_end_watch MCP
+  // tool's "stop watching" path). Reports whether a store was attached and
+  // whether the disarm durably persisted, so the caller does not claim success on
+  // a persist failure.
+  //
+  // This path is reachable by an AGENT (an MCP tool call), so it is consent-gated
+  // exactly like POST /watch/disarm: it must present a live single-use token that
+  // only a human at a TTY can mint. Without one it refuses and the watch keeps
+  // running. Before 2026-07-09 this called disarm() unguarded, which is how an
+  // agent turned Jonah's watch off without asking.
+  disarmWatch(by: string, consentToken?: string | null): {
+    available: boolean;
+    persisted: boolean;
+    refused?: boolean;
+    reason?: string;
+  } {
+    if (!this.watchStore) return { available: false, persisted: false };
+
+    const verdict = this.consent.verifyAndConsume(consentToken);
+    if (!verdict.ok) {
+      process.stderr.write(`[justify] REFUSED disarmWatch by "${by}" (${verdict.reason}). The watch stays armed.\n`);
+      return { available: true, persisted: false, refused: true, reason: verdict.reason };
+    }
+
+    const state = this.watchStore.disarm(by, { granted: true });
+    if (state.refused) return { available: true, persisted: false, refused: true, reason: state.reason };
+    return { available: true, persisted: state.persisted, refused: false };
+  }
+
+  isWatchArmed(): boolean {
+    return this.watchStore ? this.watchStore.isArmed() : false;
   }
 
   async start(preferredPort: number): Promise<number> {
+    // Step by 2: a successful bind claims `candidate` for http AND `candidate+1`
+    // for https. Scanning by 1 made the fallback collide with our OWN https
+    // listener (EADDRINUSE on the second attempt).
     for (let attempt = 0; attempt < 10; attempt++) {
-      const candidate = preferredPort + attempt;
+      const candidate = preferredPort + attempt * 2;
       try {
         const port = await this.tryListen(candidate);
         this.port = port;
@@ -62,16 +129,44 @@ export class WsServer {
 
       const wss = new WebSocketServer({ server: httpServer });
 
-      httpServer.once('listening', () => {
+      // `ws` attaches its own 'error' listener to the http server and RE-EMITS the
+      // error on the WebSocketServer. An EventEmitter with no 'error' listener
+      // throws, so a plain EADDRINUSE during the port scan became an UNCAUGHT
+      // EXCEPTION instead of a handled rejection - which is why the fallback
+      // never ran. Absorb it here; the authoritative handler is onError below.
+      wss.on('error', () => {});
+
+      const onListening = () => {
+        httpServer.removeListener('error', onError);
         this.httpServer = httpServer;
         this.wss = wss;
         this.attachConnectionHandler();
         resolve(port);
-      });
+      };
 
-      httpServer.once('error', (err) => {
+      const onError = (err: Error) => {
+        httpServer.removeListener('listening', onListening);
+        // Tear the half-built listener down, or every failed port attempt leaks a
+        // WebSocketServer. Two sharp edges here:
+        //   - a bare close() on a server that never listened emits ANOTHER
+        //     'error' (ERR_SERVER_NOT_RUNNING). Our once('error') is already
+        //     spent, so that second event became an UNCAUGHT EXCEPTION and killed
+        //     the port scan. Pass a callback: close(cb) delivers the error to cb
+        //     instead of emitting it.
+        //   - keep a no-op 'error' listener on the dead server for the same
+        //     reason: nothing else is listening for it now.
+        httpServer.on('error', () => {});
+        try {
+          wss.close();
+        } catch {
+          /* already dead */
+        }
+        httpServer.close(() => {});
         reject(err);
-      });
+      };
+
+      httpServer.once('listening', onListening);
+      httpServer.once('error', onError);
 
       httpServer.listen(port);
     });
@@ -146,7 +241,7 @@ IP.1 = 127.0.0.1
 
       // Serve/save responses
       if (req.method === 'GET' && req.url === '/responses') {
-        const respFile = join(this.distDir, '..', 'responses.json');
+        const respFile = this.dataFile('responses.json');
         try {
           const data = existsSync(respFile) ? readFileSync(respFile, 'utf-8') : '[]';
           res.setHeader('Content-Type', 'application/json');
@@ -158,7 +253,7 @@ IP.1 = 127.0.0.1
         let body = '';
         req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
         req.on('end', () => {
-          const respFile = join(this.distDir, '..', 'responses.json');
+          const respFile = this.dataFile('responses.json');
           try { writeFileSync(respFile, body); } catch {}
           res.end('ok');
         });
@@ -393,7 +488,7 @@ IP.1 = 127.0.0.1
         // listen loop (the /justify model) is recognized as a live watcher.
         this.watchSessionActive = true;
         this.lastMcpActivity = Date.now();
-        const promptFile = join(this.distDir, '..', 'prompts.json');
+        const promptFile = this.dataFile('prompts.json');
         try {
           if (existsSync(promptFile)) {
             const content = readFileSync(promptFile, 'utf-8');
@@ -426,22 +521,51 @@ IP.1 = 127.0.0.1
       }
 
       if (req.method === 'GET' && req.url === '/watch-status') {
-        const promptFile = join(this.distDir, '..', 'prompts.json');
+        const promptFile = this.dataFile('prompts.json');
         let pendingCount = 0;
         try {
           if (existsSync(promptFile)) {
             pendingCount = JSON.parse(readFileSync(promptFile, 'utf-8')).length;
           }
         } catch {}
-        // Window is generous (30s) because Claude stops polling /prompts while
-        // it is busy applying a change; a tight window made the browser declare
-        // "Connection lost" mid-apply. The browser also suppresses the disconnect
-        // bar entirely while in the 'working' state, with the 60s retry timeout
-        // as the real backstop for a genuinely dead Claude.
-        const recentActivity = this.lastMcpActivity > 0 && (Date.now() - this.lastMcpActivity) < 30000;
-        const active = this.watchSessionActive && recentActivity;
+        // TRUTHFUL UI: the watch is ARMED on the daemon, independent of any
+        // session. `active` is true whenever the daemon watch is armed - that is
+        // what "Claude is connected" now means (the daemon is watching and will
+        // dispatch a worker), even with zero live sessions. The legacy
+        // session-active heuristic (recent /prompts polling) is kept as a
+        // fallback for an un-armed daemon so an interactive listen loop still
+        // reads as connected.
+        const hasWatchStore = this.watchStore !== null;
+        const armed = hasWatchStore ? this.watchStore!.isArmed() : false;
+        // When this daemon OWNS the watch (store attached), `active` tracks the
+        // armed state EXACTLY - armed = connected, disarmed = off, immediately.
+        //
+        // The legacy (un-owned daemon) path used to AND this with a 30-second
+        // "recent MCP activity" window, so a session that had been quietly
+        // waiting for 31 seconds was reported as not watching. That is a clock
+        // turning the watch off, which is precisely what is forbidden: a watcher
+        // that is waiting IS watching, and it may wait for hours. The session
+        // flag alone is the truth, and it is cleared by an explicit end-watch.
+        const active = hasWatchStore ? armed : this.watchSessionActive;
+        // `workerRunning` exists so the browser can tell "nobody heard me" from
+        // "the daemon is working on it". A `claude -p` worker routinely takes
+        // MINUTES (it boots a full MCP stack), while the claudebar used to give up
+        // after 60 seconds and show "Retry Send" over a perfectly healthy apply.
+        // Hitting Retry then double-queues the same change. 2026-07-09, Jonah.
+        const dispatch = this.dispatcher ? this.dispatcher.status() : null;
+        const workerRunning = dispatch ? dispatch.workerRunning === true : false;
         res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-        res.end(JSON.stringify({ active, session: this.watchSessionActive, lastActivity: this.lastMcpActivity, pendingCount }));
+        res.end(JSON.stringify({
+          active,
+          armed,
+          session: this.watchSessionActive,
+          lastActivity: this.lastMcpActivity,
+          pendingCount,
+          workerRunning,
+          // True when the daemon has the user's work in hand. The browser must not
+          // offer "Retry Send" while this is true.
+          busy: armed && (workerRunning || pendingCount > 0),
+        }));
         return;
       }
 
@@ -458,7 +582,7 @@ IP.1 = 127.0.0.1
         let body = '';
         req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
         req.on('end', () => {
-          const promptFile = join(this.distDir, '..', 'prompts.json');
+          const promptFile = this.dataFile('prompts.json');
           let ids: string[] = [];
           try {
             if (body.trim()) {
@@ -572,12 +696,215 @@ IP.1 = 127.0.0.1
         return;
       }
 
+      // ---- Daemon-owned watch: arm / disarm / state -------------------------
+      // Arming records the project root the daemon dispatches workers against
+      // and persists armed=true so a daemon restart resumes armed. Disarm is the
+      // ONLY thing (besides another explicit user disarm) that stops dispatch.
+      if (req.method === 'POST' && req.url === '/watch/arm') {
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', () => {
+          if (!this.watchStore) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'watch not available on this daemon' }));
+            return;
+          }
+          let projectRoot: string | null = null;
+          let by: string | null = null;
+          try {
+            if (body.trim()) {
+              const parsed = JSON.parse(body);
+              if (typeof parsed?.projectRoot === 'string') projectRoot = parsed.projectRoot;
+              if (typeof parsed?.by === 'string') by = parsed.by;
+            }
+          } catch {}
+          const state = this.watchStore.arm(projectRoot, by);
+          if (!state.persisted) {
+            // Fail LOUD: an arm that did not durably persist must not report OK
+            // (it would silently disarm on the next daemon restart).
+            res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+            res.end(JSON.stringify({ ok: false, error: 'watch-state persist failed', ...state }));
+            return;
+          }
+          // Kick the dispatcher so any already-queued batch dispatches now.
+          if (this.dispatcher) { try { this.dispatcher.kick(); } catch {} }
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          res.end(JSON.stringify({ ok: true, ...state }));
+        });
+        return;
+      }
+
+      // Mint a single-use disarm consent token. Called ONLY by
+      // `justify-watch-disarm` after a human, at a TTY, types the confirmation
+      // phrase. Issuing a token does not disarm anything on its own; it is
+      // worthless without the immediately-following POST /watch/disarm, expires
+      // in ~2 minutes, and is destroyed on first use.
+      if (req.method === 'POST' && req.url === '/watch/consent') {
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', () => {
+          let by: string | null = null;
+          try {
+            if (body.trim()) {
+              const parsed = JSON.parse(body);
+              if (typeof parsed?.by === 'string') by = parsed.by;
+            }
+          } catch {}
+          const issued = this.consent.issue(by);
+          process.stderr.write(`[justify] disarm consent issued to "${by ?? 'unknown'}" (expires in ${Math.round((issued.expiresAt - issued.issuedAt) / 1000)}s)\n`);
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          res.end(JSON.stringify({ ok: true, token: issued.token, expiresAt: issued.expiresAt }));
+        });
+        return;
+      }
+
+      if (req.method === 'POST' && req.url === '/watch/disarm') {
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', () => {
+          if (!this.watchStore) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'watch not available on this daemon' }));
+            return;
+          }
+          let by: string | null = null;
+          let consentToken: string | null = null;
+          try {
+            if (body.trim()) {
+              const parsed = JSON.parse(body);
+              if (typeof parsed?.by === 'string') by = parsed.by;
+              if (typeof parsed?.consentToken === 'string') consentToken = parsed.consentToken;
+            }
+          } catch {}
+
+          // Turning the watch off is the one action that makes Justify silently
+          // stop receiving the user's changes. It requires a live, single-use
+          // token that only a human at a TTY can mint (justify-watch-disarm).
+          const verdict = this.consent.verifyAndConsume(consentToken);
+          if (!verdict.ok) {
+            process.stderr.write(
+              `[justify] REFUSED /watch/disarm by "${by ?? 'unknown'}" (${verdict.reason}). The watch stays armed.\n`,
+            );
+            res.writeHead(403, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+            res.end(JSON.stringify({
+              ok: false,
+              error: verdict.reason,
+              armed: this.watchStore.isArmed(),
+              how: 'A human must run `justify-watch-disarm` in a terminal and confirm. Agents cannot disarm the watch.',
+            }));
+            return;
+          }
+
+          const state = this.watchStore.disarm(by, { granted: true });
+          if (state.refused) {
+            res.writeHead(403, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+            res.end(JSON.stringify({ ok: false, error: state.reason, ...state }));
+            return;
+          }
+          if (!state.persisted) {
+            res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+            res.end(JSON.stringify({ ok: false, error: 'watch-state persist failed', ...state }));
+            return;
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          res.end(JSON.stringify({ ok: true, ...state }));
+        });
+        return;
+      }
+
+      if (req.method === 'GET' && req.url === '/watch/state') {
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        if (!this.watchStore) {
+          res.end(JSON.stringify({ armed: false, available: false }));
+          return;
+        }
+        const state = this.watchStore.get();
+        const dispatch = this.dispatcher ? this.dispatcher.status() : null;
+        res.end(JSON.stringify({ available: true, ...state, dispatch }));
+        return;
+      }
+
+      // Atomic claim: assign every unclaimed-or-stale prompt to `by` so an
+      // interactive session and the daemon dispatcher never double-apply the same
+      // batch. Returns the prompts claimed by this call. A claim goes stale after
+      // ttlMs (default 120s) and becomes reclaimable.
+      if (req.method === 'POST' && req.url === '/prompts/claim') {
+        this.lastMcpActivity = Date.now();
+        this.watchSessionActive = true;
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', () => {
+          let by = 'interactive';
+          // Server-side staleness floor: a claim is only stealable once it is
+          // older than JUSTIFY_CLAIM_TTL_MS (default 30 min, chosen to EXCEED the
+          // worker's max lifetime). A caller may only ask for a LONGER hold, never
+          // a shorter one - otherwise an interactive claim with a tiny ttl could
+          // steal a still-running daemon worker's fresh claim (double-apply).
+          const floorTtlMs = Number(process.env.JUSTIFY_CLAIM_TTL_MS) || 1800000;
+          let ttlMs = floorTtlMs;
+          try {
+            if (body.trim()) {
+              const parsed = JSON.parse(body);
+              if (typeof parsed?.by === 'string' && parsed.by.trim()) by = parsed.by.trim();
+              if (Number.isFinite(parsed?.ttlMs) && parsed.ttlMs > floorTtlMs) ttlMs = Math.floor(parsed.ttlMs);
+            }
+          } catch {}
+          const now = Date.now();
+          const prompts = this.readPromptsFile();
+          const claimed: Array<Record<string, unknown>> = [];
+          for (const p of prompts) {
+            const cb = p.claimedBy as string | undefined;
+            const ca = p.claimedAt as number | undefined;
+            const claimable = !cb || !ca || (now - ca > ttlMs);
+            if (claimable) {
+              (p as Record<string, unknown>).claimedBy = by;
+              (p as Record<string, unknown>).claimedAt = now;
+              claimed.push(p);
+            }
+          }
+          // Atomic write + fail-report: a caller must never believe it claimed
+          // prompts that did not durably land on disk (it could then process a
+          // prompt the daemon also dispatches).
+          let wrote = false;
+          try {
+            const pf = this.dataFile('prompts.json');
+            const tmp = `${pf}.tmp.${process.pid}.${Date.now()}`;
+            writeFileSync(tmp, JSON.stringify(prompts));
+            renameSync(tmp, pf);
+            wrote = true;
+          } catch {}
+          if (!wrote) {
+            res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+            res.end(JSON.stringify({ ok: false, error: 'claim write failed', claimed: [] }));
+            return;
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          res.end(JSON.stringify({ ok: true, claimed }));
+        });
+        return;
+      }
+
       if (req.method === 'GET' && req.url === '/status') {
+        // `watchArmed` alone is not the truth: armed-but-not-dispatching, or
+        // armed-with-a-stalled-queue, both mean the user's changes are NOT being
+        // received. Surface those so no caller can render a green light over a
+        // dead watch.
+        const dispatch = this.dispatcher ? this.dispatcher.status() : null;
+        const armed = this.watchStore ? this.watchStore.isArmed() : false;
+        const dispatcherRunning = dispatch ? dispatch.dispatcherRunning === true : false;
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           server: 'justify',
           port: this.port,
           connections: this.manager.size(),
+          watchArmed: armed,
+          projectRoot: this.watchStore ? this.watchStore.projectRoot() : null,
+          dispatcherRunning,
+          // True only when the watch is armed AND the loop that acts on it is
+          // alive. This is the field a UI should trust.
+          watching: armed && dispatcherRunning,
+          pendingCount: dispatch ? dispatch.pendingCount : 0,
+          stalled: dispatch ? dispatch.stalled === true : false,
         }));
         return;
       }
@@ -727,7 +1054,7 @@ IP.1 = 127.0.0.1
   // writes via push_prompt). Tolerant read for the id-aware clear and the
   // /respond -> targetSelectors join.
   private readPromptsFile(): Array<{ id: string; selectors?: string[]; [k: string]: unknown }> {
-    const promptFile = join(this.distDir, '..', 'prompts.json');
+    const promptFile = this.dataFile('prompts.json');
     try {
       if (!existsSync(promptFile)) return [];
       const parsed = JSON.parse(readFileSync(promptFile, 'utf-8'));
@@ -743,7 +1070,7 @@ IP.1 = 127.0.0.1
   // _changeHistory persists, so a connected client's later full-array write is
   // a clean superset.
   private appendResponseFile(response: Record<string, unknown>): void {
-    const respFile = join(this.distDir, '..', 'responses.json');
+    const respFile = this.dataFile('responses.json');
     try {
       let arr: unknown[] = [];
       if (existsSync(respFile)) {
@@ -772,17 +1099,25 @@ IP.1 = 127.0.0.1
     return this.port;
   }
 
+  // Close BOTH listeners. The https server on port+1 used to be left open here,
+  // so a restarted daemon could not rebind :9224 and silently fell back to
+  // http-only - which breaks the core on every https site (the https core is the
+  // only one that works there). Also clears the handles so a later start() does
+  // not reuse a dead server.
   stop(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (!this.httpServer) {
-        resolve();
-        return;
-      }
-      this.wss?.close();
-      this.httpServer.close((err) => {
-        if (err) reject(err);
-        else resolve();
+    const closeServer = (srv: HttpServer | HttpsServer | null): Promise<void> =>
+      new Promise((resolve) => {
+        if (!srv) return resolve();
+        srv.close(() => resolve());
       });
-    });
+
+    this.wss?.close();
+    const done = Promise.all([closeServer(this.httpServer), closeServer(this.httpsServer)]).then(() => undefined);
+    this.wss = null;
+    this.httpServer = null;
+    this.httpsServer = null;
+    this.port = null;
+    this.httpsPort = null;
+    return done;
   }
 }

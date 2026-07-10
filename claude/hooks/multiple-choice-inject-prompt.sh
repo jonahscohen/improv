@@ -14,9 +14,31 @@
 #   4. THIS hook reads the flag, injects loud reminder into context, clears flag
 #   5. Next assistant turn sees the reminder and uses AskUserQuestion
 
-VIOLATION_FLAG="$HOME/.claude/.multiple-choice-violation"
+# Read stdin so we can key the flag to THIS session. Previously this hook read a
+# single global flag and rm -f'd it, so it consumed whichever session's violation
+# happened to be pending - showing one agent another agent's words, and destroying
+# the real violator's reminder before it was ever delivered. See the note in
+# multiple-choice-detect-stop.sh.
+STDIN_JSON=$(cat 2>/dev/null || true)
+SESSION_ID=$(printf '%s' "$STDIN_JSON" | python3 -c "
+import json, sys
+try:
+    print(json.load(sys.stdin).get('session_id', '') or '')
+except Exception:
+    pass
+" 2>/dev/null)
+SESSION_KEY=$(printf '%s' "$SESSION_ID" | tr -cd 'A-Za-z0-9._-')
+case "$SESSION_KEY" in
+  ""|"."|"..") SESSION_KEY="" ;;
+esac
 
-# No flag - pass through silently.
+if [[ -n "$SESSION_KEY" ]]; then
+  VIOLATION_FLAG="$HOME/.claude/.multiple-choice-violation.$SESSION_KEY"
+else
+  VIOLATION_FLAG="$HOME/.claude/.multiple-choice-violation"
+fi
+
+# No flag for THIS session - pass through silently. Never touch another session's.
 [[ ! -f "$VIOLATION_FLAG" ]] && exit 0
 
 # Read the flag contents.
@@ -56,12 +78,15 @@ EOF
 
 # Emit the JSON hook response. Claude Code reads stdout from UserPromptSubmit
 # hooks; the additionalContext field gets injected into the next turn.
-python3 <<PYEOF
-import json
+# Pass the text via the environment. Interpolating it into a python triple-quoted
+# literal broke the JSON (or injected python) on any response containing a triple
+# quote or a backslash.
+MC_CONTEXT="$ADDITIONAL_CONTEXT" python3 <<'PYEOF'
+import json, os
 payload = {
     "hookSpecificOutput": {
         "hookEventName": "UserPromptSubmit",
-        "additionalContext": """$ADDITIONAL_CONTEXT"""
+        "additionalContext": os.environ.get("MC_CONTEXT", ""),
     }
 }
 print(json.dumps(payload))

@@ -20,4 +20,3 @@ claude/CLAUDE.md Verification Protocol item 8 (the authoritative gate definition
 
 ## Files touched
 - claude/CLAUDE.md (item 8 fallback clause)
-</content>

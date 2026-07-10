@@ -22,8 +22,23 @@ if [ -z "$REASON" ] && echo "$CMD" | grep -qE 'rm[[:space:]]+(-[a-zA-Z]*r[a-zA-Z
   REASON="BLOCKED: rm against .claude/memory destroys session beats. Move to trash or rename instead."
 fi
 
-# Legacy model IDs in any command
-if [ -z "$REASON" ] && echo "$CMD" | grep -qP 'gpt-4o(?!-mini-tts)|gpt-4\.1|gpt-3\.5|gpt-4[^o.\-]|claude-3-(opus|sonnet|haiku)'; then
+# Legacy model IDs in any command.
+#
+# This used `grep -qP` with a PCRE negative lookahead. BSD grep - which is what
+# /usr/bin/grep is on macOS, and what a hook actually gets - has no -P. It printed
+# "invalid option -- P" to stderr and exited non-zero. `grep -q` exiting non-zero
+# reads as "no match", so REASON stayed empty and this guard blocked NOTHING for
+# its entire life. Verified 2026-07-10: four banned identifiers, four allows.
+#
+# It tested clean by hand because an interactive shell here resolves `grep` to
+# ugrep, which DOES support -P. The guard was inert where it ran and healthy where
+# it was tested. Same shape as validation-guard.sh reading the wrong tool_input
+# key. A guard nobody has watched go red is a guard nobody has.
+#
+# Portable ERE has no lookahead, so neutralise the one allowed exception first,
+# then match plainly. Regression tests: test-validation-guards.sh, "legacy model".
+_MODELSCAN="$(printf '%s' "$CMD" | sed -e 's/gpt-4o-mini-tts/_ALLOWED_TTS_/g')"
+if [ -z "$REASON" ] && printf '%s' "$_MODELSCAN" | grep -qE 'gpt-4o|gpt-4\.1|gpt-3\.5|gpt-4[^o.-]|claude-3-(opus|sonnet|haiku)'; then
   REASON="BLOCKED: legacy model ID detected. CLAUDE.md mandates latest model versions only."
 fi
 
@@ -74,8 +89,30 @@ fi
 # only way out is to Read the pending path so the image actually surfaces in
 # the conversation. Mandate enforced by screenshot-open-mandate.sh (captures
 # the path) and screenshot-open-clear.sh (clears on Read).
-if [ -z "$REASON" ] && [ -f "$HOME/.claude/.screenshot-pending" ]; then
-  PENDING_SHOT=$(cat "$HOME/.claude/.screenshot-pending" 2>/dev/null)
+#
+# The pending state is keyed by SESSION and holds a LIST of outstanding paths. It
+# used to be one global file with one path, so a Read in any of the concurrent
+# cmux sessions discharged every other session's obligation, and a second capture
+# erased the first's. Key derivation is duplicated verbatim in
+# screenshot-open-mandate.sh and screenshot-open-clear.sh; change all three.
+_SHOT_KEY=$(printf '%s' "$INPUT" | python3 -c '
+import json, re, sys
+try:
+    s = str(json.load(sys.stdin).get("session_id", ""))
+except Exception:
+    s = ""
+s = re.sub(r"[^A-Za-z0-9._-]", "_", s)
+print(s or "global")
+' 2>/dev/null)
+[ -z "$_SHOT_KEY" ] && _SHOT_KEY=global
+_SHOT_PENDING="$HOME/.claude/.screenshot-pending.$_SHOT_KEY"
+
+if [ -z "$REASON" ] && [ -s "$_SHOT_PENDING" ]; then
+  PENDING_SHOT=$(head -1 "$_SHOT_PENDING" 2>/dev/null)
+  _SHOT_N=$(wc -l < "$_SHOT_PENDING" 2>/dev/null | tr -d ' ')
+  if [ "${_SHOT_N:-1}" -gt 1 ]; then
+    PENDING_SHOT="$PENDING_SHOT (and $((_SHOT_N - 1)) more)"
+  fi
   if [ -n "$PENDING_SHOT" ]; then
     # Block additional screenshots until the pending one is opened
     if echo "$CMD" | grep -qE 'cmux\b[^|;&]*\bscreenshot\b'; then
@@ -253,6 +290,60 @@ PYEOF
       REASON="BLOCKED: $CMUX_TRIGGER_REASON Use cmux click/type/press/screenshot for real interactions. Use 'snapshot --interactive' for the element tree. Do not validate UI by directly invoking app methods or reading computed state - that proves nothing about what the human sees. Read-only feature detection (typeof, CSS.supports, 'feat' in window, navigator.userAgent, window.matchMedia) is allowed if the eval does only that."
     fi
   fi
+fi
+
+# ---------------------------------------------------------------------------
+# Justify watch: an agent may NEVER stop the watch, and may never kill the
+# worker that applies the user's changes.
+#
+# 2026-07-09 (Jonah): Claude ran `justify-watch-disarm` to "unblock itself" while
+# a worker was mid-run, then killed the worker. The user's queued Send-All
+# batches silently stopped being applied and nothing told him. The watch IS the
+# product; turning it off is the user's call alone.
+#
+# The daemon enforces this independently (server/consent.ts requires a single-use
+# token that only a TTY-attached human can mint), and the CLI refuses without a
+# TTY. This hook is the third layer: it stops the agent before the request is
+# even made, and explains what to do instead.
+#
+# Anti-false-block (precedent: T-0003, the self-block of commit 50fc1b0): a hook
+# that blocks PROSE about a command is a hook someone weakens. Strip quoted
+# strings and heredoc bodies before looking for a bare invocation, so writing a
+# beat, echoing an instruction, or grepping for the name all pass, while an
+# actual `justify-watch-disarm` in command position does not.
+CMD_CODE=$(printf '%s' "$CMD" | python3 -c '
+import sys, re
+s = sys.stdin.read()
+# heredoc bodies first (their content is data, not code)
+s = re.sub(r"<<-?\s*[\x27\"]?(\w+)[\x27\"]?.*?^\1\s*$", " ", s, flags=re.S | re.M)
+s = re.sub(r"\x27[^\x27]*\x27", " ", s)   # single-quoted spans
+s = re.sub(r"\"[^\"]*\"", " ", s)          # double-quoted spans
+print(s)' 2>/dev/null || printf '%s' "$CMD")
+
+# Must be in COMMAND POSITION: start of line, or after ; && || | ( - optionally
+# behind `sudo` and/or VAR=val prefixes. A bare space is NOT enough, or the name
+# appearing as an argument (`for f in justify-watch-disarm justify-serve`,
+# `cp cli/justify-watch-disarm.sh ...`) gets blocked, which is a false positive
+# that teaches people to disable the guard.
+if [ -z "$REASON" ] && echo "$CMD_CODE" | grep -qE '(^|[;&|()]+)[[:space:]]*(sudo[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*justify-watch-disarm([[:space:]]|;|$)'; then
+  REASON="BLOCKED: only the user may disarm the Justify watch. Disarming stops Justify from receiving their changes, silently. Ask them to run 'justify-watch-disarm' themselves in their terminal - it requires a TTY and a typed confirmation, and the daemon refuses any disarm without a single-use human consent token. Do not work around this."
+fi
+
+if [ -z "$REASON" ] && echo "$CMD" | grep -qE 'curl[^|;]*(localhost|127\.0\.0\.1):9[0-9]{3}/watch/(disarm|consent)'; then
+  REASON="BLOCKED: the /watch/disarm and /watch/consent endpoints are the user's, not yours. The daemon will refuse an agent anyway (no consent token). If the user wants the watch stopped, they run 'justify-watch-disarm' themselves."
+fi
+
+# The state file is the watch's source of truth. Editing/deleting it is disarming
+# by another name.
+if [ -z "$REASON" ] && echo "$CMD" | grep -qE '(rm|mv|truncate|tee|>|>>)[^|;]*justify/(watch-state|disarm-consent)\.json'; then
+  REASON="BLOCKED: do not write or delete the Justify watch-state / consent files directly. That is disarming the watch behind the user's back. Ask the user to run 'justify-watch-disarm'."
+fi
+
+# Killing the worker abandons the user's queued batch mid-apply. Case-insensitive:
+# the real worker matches on `claude -p You are the Justify headless...` with a
+# capital J, which a case-sensitive pattern let straight through.
+if [ -z "$REASON" ] && echo "$CMD" | grep -qiE '(kill|pkill|killall)([[:space:]]+-[a-zA-Z0-9]+)*[[:space:]]+[^;|]*justify'; then
+  REASON="BLOCKED: do not kill Justify daemon or worker processes. A killed worker abandons the user's queued Send-All batch. If a worker looks stuck, wait for its watchdog (JUSTIFY_WORKER_TIMEOUT_SECS, default 1800s) or tell the user. The dispatcher retries on its own and NEVER disarms."
 fi
 
 if [ -n "$REASON" ]; then

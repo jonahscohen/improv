@@ -7,10 +7,11 @@
     "build": "node build.js",
     "build:server": "npx tsc -p tsconfig.server.json",
     "build:core": "node build.js --core-only",
-    "deploy": "node build.js && bash deploy.sh",
+    "deploy": "npm run build:all && bash deploy.sh",
     "deploy:core": "node build.js --core-only && bash deploy.sh --core-only",
     "test": "npx vitest run",
-    "test:watch": "npx vitest"
+    "test:watch": "npx vitest",
+    "build:all": "node build.js && npx tsc -p tsconfig.server.json"
   },
   "dependencies": {
     "@medv/finder": "^3.2.0",

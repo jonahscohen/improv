@@ -100,7 +100,7 @@
 
 ### Phase 2: Validation Spread
 
-10. **Flow J (Tactical Polish)** - Apply 14-point make-interfaces-feel-better checklist
+10. **Flow J (Tactical Polish)** - Apply 14-point tactical-polish checklist
 11. **Flow K (Multi-Lens Audit)** - 27 anti-pattern scan + 5-dimension technical check
 12. **Flow L (Design Critique)** - 12-rule Nielsen/design heuristics pass
 13. **Flow M (Responsive Validation)** - Breakpoint testing (Domain 6 specialized)

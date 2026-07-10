@@ -18,7 +18,7 @@ The 2026-05-20 marketing-site build was the first time the design pipeline ran o
 1. Of 8 documented pipeline steps, only 2 fired as skills (fontshare-reference's reject list, motion-reference's canonical snippets)
 2. component-gallery-reference, design-references, icon-source never auto-triggered
 3. The QA triad (/oracle audit + critique + polish) never ran
-4. make-interfaces-feel-better only fired because I'd read it recently, not via auto-trigger
+4. tactical-polish only fired because I'd read it recently, not via auto-trigger
 
 The keyword-auto-trigger mechanism is unreliable for orchestration. The QA triad needs explicit invocation. This skill solves both.
 
@@ -33,7 +33,7 @@ The keyword-auto-trigger mechanism is unreliable for orchestration. The QA triad
 | 4. Typography | fontshare-reference workflow IF type decisions in scope |
 | 5. Motion | motion-reference patterns IF animation/scroll in scope |
 | 6. Icons | icon-source protocol IF icons needed |
-| 7. Build | apply make-interfaces-feel-better's 14 rules DURING construction |
+| 7. Build | apply tactical-polish's 14 rules DURING construction |
 | 8. **QA triad (MANDATORY)** | /oracle audit + critique + polish |
 | 8b. **GATE CHECKPOINT 2** | AskUserQuestion on QA findings |
 | 9. Verification | cmux browser, screenshots, real-input testing |

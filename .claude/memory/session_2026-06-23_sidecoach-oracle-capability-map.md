@@ -32,7 +32,7 @@ Phase 1 grounding (task #6). No code changed. Evidence: every file path below wa
   - `category-reflex-detector.ts` reference-metadata keyword scorer w/ stale hardcoded saturatedUntil dates (2027-xx); NOT a code scanner.
   - `project-drift-detector.ts` token-governance (CSS custom props vs DESIGN.md tokens) - UNIQUE, oracle has nothing like it.
   - `regression-detector.ts` flow-output QA (run-to-run status/guidance/checklist deltas), not UI.
-- TASTE DEPTH: largely EXTRACTED from oracle into `reference/_extracted/legacy-design-skill/`. The verb registry's `skillRefPath` points there and `parityChecklist` enforces that legacy reference substrings APPEAR in output (parity-with-legacy, not taste-ahead). Plus external extractions (bencium, emil, refactoring-ui, shadcn, taste-skill, typeui, vercel) + make-interfaces-feel-better (16 tactical rules).
+- TASTE DEPTH: largely EXTRACTED from oracle into `reference/_extracted/legacy-design-skill/`. The verb registry's `skillRefPath` points there and `parityChecklist` enforces that legacy reference substrings APPEAR in output (parity-with-legacy, not taste-ahead). Plus external extractions (bencium, emil, refactoring-ui, shadcn, taste-skill, typeui, vercel) + tactical-polish (16 tactical rules).
 - RUNTIME MATURITY: build GREEN; `npm test` = 56 suites PASS (incl Playwright browser-evidence). So "unverified maturity" is now verified-as-tests-pass - BUT tests verify engine mechanics (guidance/checklist/finding shapes), NOT design-outcome superiority over oracle.
 
 ## WHAT SIDECOACH ALREADY LEADS ON (protect)

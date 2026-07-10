@@ -1,3 +1,23 @@
+// Single source of truth for the prompt input's vertical position. bottomY is
+// the default position (selection bottom + gap); topY is the selection's top
+// edge to flip above when the input would bleed off the viewport bottom; h is
+// the container's current height. The reserve keeps room for the queue/send
+// button row that appears while typing. Every writer of container.style.top
+// (show() here, plus the selection-follow trackers in prompt/index.ts) must
+// route through this or the flip gets overwritten within a frame.
+import { currentPalette, registerThemedSurface, type Palette } from '../toolbar';
+
+export function clampPromptTop(bottomY: number, topY: number | undefined, h: number): number {
+  const margin = 8;
+  const reserve = 28;
+  let top = bottomY;
+  if (top + h + reserve > window.innerHeight - margin) {
+    const flipped = (topY !== undefined ? topY : window.innerHeight) - h - 12;
+    top = flipped >= margin ? flipped : Math.max(margin, window.innerHeight - h - margin);
+  }
+  return top;
+}
+
 export class InlinePrompt {
   container: HTMLDivElement;
   input: HTMLInputElement;
@@ -22,6 +42,8 @@ export class InlinePrompt {
   _editCheckPath?: SVGPathElement;
   _showHints?: boolean;
   _sendBlocked: boolean = false;
+  _themeUnregister?: () => void;
+  _focused: boolean = false;
 
   constructor(shadowRoot: ShadowRoot | HTMLElement) {
     this.container = document.createElement("div");
@@ -33,11 +55,13 @@ export class InlinePrompt {
     this.input.style.cssText = "width:300px;min-width:300px;background:#1a1a1a;color:#e2e8f0;border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:10px 18px;transition:box-shadow 300ms ease,border-color 300ms ease;font-size:13px;font-family:JustifySans,system-ui,sans-serif;outline:none;box-shadow:0 4px 16px rgba(0,0,0,0.4);animation:justify-input-glow 3s ease-in-out infinite";
 
     this.input.addEventListener("focus", () => {
-      this.input.style.borderColor = "#D97757";
+      this._focused = true;
+      this.input.style.borderColor = this._markerColor || "#D97757";
     });
 
     this.input.addEventListener("blur", () => {
-      this.input.style.borderColor = "rgba(255,255,255,0.15)";
+      this._focused = false;
+      this.input.style.borderColor = currentPalette().border;
     });
 
     this.input.addEventListener("keydown", (t) => {
@@ -50,7 +74,7 @@ export class InlinePrompt {
       var hasText = this.input.value.trim().length > 0;
       if (hasText && !this._btnActive) {
         this._btnActive = true;
-        var c = "#D97757";
+        var c = this._markerColor || "#D97757";
         this.queueBtn.style.transform = "scale(1)";
         this.queueBtn.style.opacity = "1";
         if (!this._sendBlocked) {
@@ -80,14 +104,15 @@ export class InlinePrompt {
         this.queueBtn.style.opacity = "0";
         this.sendNowBtn.style.transform = "scale(0)";
         this.sendNowBtn.style.opacity = "0";
-        this.queueBtn.style.background = "#1a1a1a";
-        this.queueBtn.style.borderColor = "rgba(255,255,255,0.15)";
-        this.queueBtn.style.color = "rgba(255,255,255,0.65)";
+        var _rp = currentPalette();
+        this.queueBtn.style.background = _rp.surface;
+        this.queueBtn.style.borderColor = _rp.border;
+        this.queueBtn.style.color = _rp.textDim;
         this.queueBtn.style.animation = "none";
         this.sendNowBtn.style.animation = "none";
-        this.sendNowBtn.style.background = "#1a1a1a";
-        this.sendNowBtn.style.borderColor = "rgba(255,255,255,0.15)";
-        this.sendNowBtn.style.color = "rgba(255,255,255,0.65)";
+        this.sendNowBtn.style.background = _rp.surface;
+        this.sendNowBtn.style.borderColor = _rp.border;
+        this.sendNowBtn.style.color = _rp.textDim;
         this.sendNowBtn.querySelector("svg")!.style.animation = "";
       }
     });
@@ -205,6 +230,22 @@ export class InlinePrompt {
     this.container.appendChild(this._btnWrap);
 
     shadowRoot.appendChild(this.container);
+
+    // The input and button tooltip are long-lived, so re-skin them on theme
+    // change. The resting border is only repainted while the input is unfocused
+    // (a focused input owns its marker-colored border). The queue/send buttons
+    // are excluded here: their resting fill is never visible (they are marker-
+    // colored whenever shown), so they need no theming.
+    this._themeUnregister = registerThemedSurface((pal: Palette) => {
+      this.input.style.background = pal.surface;
+      this.input.style.color = pal.text;
+      if (!this._focused) {
+        this.input.style.borderColor = pal.border;
+      }
+      this._btnTip.style.background = pal.surface;
+      this._btnTip.style.borderColor = pal.borderSubtle;
+      this._btnTip.style.color = pal.text;
+    });
   }
 
   _showBtnTip(text: string, btn: HTMLElement) {
@@ -251,7 +292,7 @@ export class InlinePrompt {
     this.input.style.borderColor = '#D97757';
     this.input.style.boxShadow = '0 0 0 2px rgba(217,119,87,0.3)';
     setTimeout(() => {
-      this.input.style.borderColor = 'rgba(255,255,255,0.15)';
+      this.input.style.borderColor = this._focused ? '#D97757' : currentPalette().border;
       this.input.style.boxShadow = '0 4px 16px rgba(0,0,0,0.4)';
     }, 600);
   }
@@ -278,12 +319,22 @@ export class InlinePrompt {
     this._qH && (this._qH.style.strokeDashoffset = "0");
   }
 
-  show(x: number, y: number) {
-    this.input.style.setProperty("--justify-glow-color", "#D97757");
+  show(x: number, y: number, aboveY?: number) {
+    this.input.style.setProperty("--justify-glow-color", this._markerColor || "#D97757");
+    // Measure hidden first: when the default below-the-selection position
+    // would bleed off the bottom of the viewport (footer selections), flip the
+    // input ABOVE the selection instead. aboveY is the selection's top edge.
+    // The same clamp MUST be applied by every other writer of container.top
+    // (the selection-follow trackers in prompt/index.ts) or it is overwritten
+    // within a frame - that is what clampPromptTop is exported for.
+    this.container.style.visibility = "hidden";
+    this.container.style.display = "flex";
+    const h = this.container.offsetHeight || 48;
+    const top = clampPromptTop(y, aboveY, h);
     this.container.style.transition = "left 200ms cubic-bezier(0.23,1,0.32,1),top 200ms cubic-bezier(0.23,1,0.32,1)";
     this.container.style.left = `${x}px`;
-    this.container.style.top = `${y}px`;
-    this.container.style.display = "flex";
+    this.container.style.top = `${top}px`;
+    this.container.style.visibility = "visible";
     this.visible = true;
     requestAnimationFrame(() => {
       this.input.value = "";
@@ -299,11 +350,11 @@ export class InlinePrompt {
     this.queueBtn.style.opacity = "0";
     this.sendNowBtn.style.transform = "scale(0)";
     this.sendNowBtn.style.opacity = "0";
-    this.queueBtn.style.background = "#1a1a1a";
+    this.queueBtn.style.background = currentPalette().surface;
     this.queueBtn.style.borderColor = "rgba(255,255,255,0.15)";
     this.queueBtn.style.color = "rgba(255,255,255,0.65)";
     this.queueBtn.style.animation = "none";
-    this.sendNowBtn.style.background = "#1a1a1a";
+    this.sendNowBtn.style.background = currentPalette().surface;
     this.sendNowBtn.style.borderColor = "rgba(255,255,255,0.15)";
     this.sendNowBtn.style.color = "rgba(255,255,255,0.65)";
     this.sendNowBtn.querySelector("svg")!.style.animation = "";
@@ -487,6 +538,10 @@ export class InlinePrompt {
   }
 
   destroy() {
+    if (this._themeUnregister) {
+      this._themeUnregister();
+      this._themeUnregister = undefined;
+    }
     this.container.remove();
   }
 }

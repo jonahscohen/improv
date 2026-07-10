@@ -10,7 +10,7 @@
 - [Installer TUI (2026-04-25)](session_2026-04-25_installer-tui.md) - gum checkbox TUI + bootstrap.sh curl entrypoint
 - [Karpathy cherry-pick (2026-04-25)](session_2026-04-25_karpathy-cherry-pick.md) - "name interpretations" + "step->verify plan" rules
 - [DESIGN.md spec (2026-04-25)](session_2026-04-25_design-md-spec.md) - Google spec for DESIGN.md, lint after writes
-- [make-interfaces-feel-better (2026-04-25)](session_2026-04-25_feel-better-skill.md) - Tactical UI skill, 16 rules, auto-triggers
+- [tactical-polish (2026-04-25)](session_2026-04-25_tactical-polish-skill.md) - Tactical UI skill, 16 rules, auto-triggers
 - [Skills component split (2026-04-25)](session_2026-04-25_skills-component-split.md) - SUPERSEDED by safe installer (2026-05-01)
 - [Memory component (2026-04-25)](session_2026-04-25_memory-component.md) - Additive memory subsystem, marker-guarded
 - [Gradient TUI titles (2026-04-25)](session_2026-04-25_gradient-titles.md) - Shimmer reveal, now dark cyan (rebranded 2026-05-01)
@@ -748,8 +748,8 @@
 <!-- archived 2026-06-24 (moved from MEMORY.md to stay under load budget) -->
 
 <!-- archived 2026-06-24 (moved from MEMORY.md to stay under load budget) -->
-- [Sidecoach m-i-f-b gap implement - PROJECT (2026-06-24)](session_2026-06-24_sidecoach-feelbetter-gap-implement.md): #4 interruptible + #13 skip-load detectors wired into both validation paths; Code…
-- [Sidecoach vs m-i-f-b gap analysis - PROJECT (2026-06-24)](session_2026-06-24_sidecoach-vs-feelbetter-gap.md): coverage strong (14/16); gaps = #4 interruptible, #13 skip-load partial, stale 14-poin…
+- [Sidecoach m-i-f-b gap implement - PROJECT (2026-06-24)](session_2026-06-24_sidecoach-tactical-polish-gap-implement.md): #4 interruptible + #13 skip-load detectors wired into both validation paths; Code…
+- [Sidecoach vs m-i-f-b gap analysis - PROJECT (2026-06-24)](session_2026-06-24_sidecoach-vs-tactical-polish-gap.md): coverage strong (14/16); gaps = #4 interruptible, #13 skip-load partial, stale 14-poin…
 
 <!-- archived 2026-06-24 (moved from MEMORY.md to stay under load budget) -->
 
@@ -975,3 +975,53 @@
 <!-- archived 2026-07-02 (superseded IN FLIGHT records - the IMPLEMENTED beats are the current truth) -->
 - [Beats evolution STAGES 4+5 IN FLIGHT (completed; superseded by the IMPLEMENTED beat) - PROJECT (2026-07-02)](session_2026-07-02_beats-stage4-5-hooks.md)
 - [Beats evolution STAGE 3 IN FLIGHT (completed; superseded by the IMPLEMENTED beat) - PROJECT (2026-07-02)](session_2026-07-02_beats-stage3-search.md)
+
+<!-- archived 2026-07-03 (moved from MEMORY.md to stay under load budget) -->
+- [Beats PARALLEL-RUN HARDENING - staleness guard now injects the search mandate every fresh session through 2026-07-16 (auto-expires) + saturated index repaired (stale pins archived+superseded, bloated pins trimmed, evicted pointers restored); suite 21 green, scorer 45/48, Codex CLEAN - PROJECT (2026-07-02)](session_2026-07-02_beats-parallel-run-hardening.md)
+
+<!-- archived 2026-07-03 (moved from MEMORY.md to stay under load budget) -->
+- [Tiny-text recall + SELF-AUDIT - search lapse on parallel-run day 1 (grep not beats.py search); retrospective probe passed; index-eviction gap found - PROJECT (2026-07-02)](session_2026-07-02_tiny-text-recall-and-log-export.md)
+- [Beats backlog T-0044..46 added + cutover plan confirmed documented (parallel run to ~2026-07-16; flip CLAUDE.md + retire index same commit) - PROJECT (2026-07-02)](session_2026-07-02_beats-backlog-and-cutover-confirmation.md)
+
+<!-- archived 2026-07-03 (moved from MEMORY.md to stay under load budget) -->
+- [Beats search protocol AUDIT - startup deviation owned; parallel-run posture already decided; mandate not surfaced to fresh sessions - PROJECT (2026-07-02)](session_2026-07-02_beats-search-protocol-gap.md)
+- [Motion review + vocabulary SHIPPED AS OURS (tactical-polish/motion-review.md + motion-reference/VOCABULARY.md, zero attribution per Jonah, extended with our scroll/FLIP vocabulary + reconciled stagger split) + 3 queued process rules landed (CLAUDE.md #9 baseline-first, #10 commit-stamped plans, leverage-ranked audit findings) - PROJECT (2026-07-03)](session_2026-07-03_motion-review-vocabulary-and-process-rules.md)
+
+<!-- archived 2026-07-04 (moved from MEMORY.md to stay under load budget) -->
+- [June borrow backlog COMPLETE - 4-teammate Opus team delivered all 4 buckets (a11y-remediation + design-judgment-rules + robustness-stress-checklist NEW refs; motion perf rules + native scroll/View-Transitions + blur budget; forced-divergence mode), lead folded 5 Codex findings (2 wrong browser claims, will-change contradiction, Axis-E impossibility, Tailwind bezier), pointers wired, live synced, team retired clean; team-init repair verified 2nd time - PROJECT (2026-07-03)](session_2026-07-03_june-borrows-team-dispatch.md)
+
+<!-- archived 2026-07-04 (moved from MEMORY.md to stay under load budget) -->
+- [Retired-names scrub + TACTICAL-POLISH RENAME complete - polish skill renamed/vendored (upstream npx pull cut), all old-name forms scrubbed from code/docs/beats/installer (42 beats, 4 renamed; 65 sidecoach suites green), content-guard blocks all 4 forms in .md; includes the interpretation-miss self-analysis - PROJECT (2026-07-03)](session_2026-07-03_retired-names-scrub.md)
+
+<!-- archived 2026-07-04 (moved from MEMORY.md to stay under load budget) -->
+- [Beats evolution stage 3 (lexical search + scorer) implemented - honest 79.2% lexical ceiling led to the 3b hybrid - PROJECT (2026-07-02)](session_2026-07-02_beats-stage3-search-impl.md)
+
+<!-- archived 2026-07-05 (moved from MEMORY.md to stay under load budget) -->
+- [Beats evolution stage 2 (compiler beats.py compile/verify) implemented, Codex gate passed - PROJECT (2026-07-02)](session_2026-07-02_beats-stage2-compiler-impl.md)
+- [Beats evolution stage 1 (48-query recall benchmark + validator) shipped - PROJECT (2026-07-02)](session_2026-07-02_beats-stage1-recall-benchmark.md)
+- [Justify LIGHT/DARK HARDENED after Jonah caught white-on-white + validation-by-gloss (my own zoom showed it) - root causes truncated-grep sweeps + wrong-path validation; toolbar/bar-chrome/prompt-family/queue-rows/Review-panel all themed, pixel-verified both themes incl. live flips + real round-trip; defaults restored - PROJECT (2026-07-04)](session_2026-07-04_justify-light-dark-hardening.md)
+- [Justify COLOR PICKER shipped - Theme row (Light/Dark/System, net-new palette system) + marker swatches, both PERSISTED; Codex 1H/2M/1L all folded (marker restore now reaches prompt surfaces; live-label theme fan-out; transient-reset leaks; dup registration); live-verified both directions incl. reload restore; Codex Blue #3B82F6 still provisional - PROJECT (2026-07-04)](session_2026-07-04_justify-color-picker-dispatch.md)
+
+<!-- archived 2026-07-06 (moved from MEMORY.md to stay under load budget) -->
+- [Justify FOOTER INPUT FLIP - prompt input now flips ABOVE bottom-dwelling selections instead of bleeding off-viewport; root cause was THREE writers of the position (show + 2 rAF trackers) - patching one gets overwritten per frame; unified in clampPromptTop, 6 unit tests, live-verified - PROJECT (2026-07-04)](session_2026-07-04_justify-footer-input-flip.md)
+- [Justify TOGGLES FIXED - Hints/Selection Labels state was never seeded onto the fresh PromptMode built per mode entry (only worked if flipped mid-mode); seeding + callback once-guard, E2E verified on the exact failure path - PROJECT (2026-07-04)](session_2026-07-04_justify-toggle-seeding-fix.md)
+- [Justify settings cleanup - dead Verbosity dropdown + Connection rows removed from the toolbar panel; deployed + visually verified; pre-existing justify tsc/test failures catalogued - PROJECT (2026-07-04)](session_2026-07-04_justify-settings-cleanup.md)
+
+<!-- archived 2026-07-06 (moved from MEMORY.md to stay under load budget) -->
+- [Executive report CODE-ENFORCED, COMPLETE - sidecoach-monitor renders renderedReport (66 suites green, postresponse hook aliased) + justify-done card is the report (22 tests, both deploy copies synced, browser Review Changes panel byte-untouched); team-reaper idle bug fixed 30m->240m; both engines own the format, agent drift impossible - PROJECT (2026-07-04)](session_2026-07-04_executive-report-hard-enforcement.md)
+- [Marker-var manipulate sweep (executor unit 1) - 34 sites in property-panel/ui tsx/handles/box-model/controls.css to var(--justify-marker); SVG attr-to-style mechanic; Codex blueText click-reset fold - PROJECT (2026-07-05)](session_2026-07-05_marker-var-manipulate-sweep.md)
+
+<!-- archived 2026-07-06 (moved from MEMORY.md to stay under load budget) -->
+- [Marker-var TOTAL sweep + live refresh - documentElement var hoist reaches isolated shadow trees; truncated-sweep wave 2 in prompt/core; cssText-wipe bug (style.color set then wiped by later cssText assignment); JS-resolved paints converted to var for free live refresh; Preact panel blue RAMP in panel-shell.css isolated via live-flip diagnostics - PROJECT (2026-07-05)](session_2026-07-05_marker-var-total-sweep.md)
+
+<!-- archived 2026-07-07 (moved from MEMORY.md to stay under load budget) -->
+- [Prompt-mode hover child outlines (manipulate parity) - picker recipe ported into Overlay behind setChildOutlines; found prompt hover never used trackElement (showHighlight rect path), switched + rAF-tracked; pixel-verified - PROJECT (2026-07-05)](session_2026-07-05_prompt-hover-child-outlines.md)
+- [Picker/property-panel/state-toggle MARKER-VAR SWEEP (executor unit) - 18 #D97757 + 5 rgba(217,119,87,x) in picker.ts + 4 in property-panel + 1 in state-toggle swept to var(--justify-marker)/color-mix; three sites that cannot hold var() (inline SVG presentation attr -> style attr, data: URI SVG -> JS-resolve, body-appended reparent hl -> seed var in same cssText); Codex Medium folded (alignment active icon live via currentColor + accent token) + Low folded (encodeURIComponent); tsc 160/160 zero-new - PROJECT (2026-07-05)](session_2026-07-05_picker-marker-var-sweep.md)
+
+<!-- archived 2026-07-08 (moved from MEMORY.md to stay under load budget) -->
+- [Justify marker bugs CLOSED (2 waves) - white-buttons repaint + picker marker var + Codex folds; wave 2: Jonah's 'still orange' was the HOVER highlight created lazily with hardcoded orange ignoring the seeded color (overlay.ts fix) + palette module now boots from stored theme so pre-activation chrome (queue pill/launcher) is right at load - all pixel-verified - PROJECT (2026-07-05)](session_2026-07-05_justify-marker-repaint-and-selection-boxes.md)
+
+<!-- archived 2026-07-10 (moved from MEMORY.md to stay under load budget) -->
+- [Beats backlog T-0044/45/46 SHIPPED - provenance fields live in beats.py (warn-only), weekly reflect launchd agent bootstrapped (first run pends backlog decision), read-only beats MCP server built+registered; all Codex-gated and independently verified - PROJECT (2026-07-06)](session_2026-07-06_beats-backlog-shipped.md)
+- [Beats backlog T-0044/45/46 dispatched to three parallel Opus executors (provenance warn-only fields, scheduled weekly reflect, read-only MCP server) - specs grounded in the proposal + Plan B; lead orchestrates - PROJECT (2026-07-06)](session_2026-07-06_beats-backlog-dispatch.md)
+- [TCC outage handoff - macOS revoked Documents access mid-dispatch; executors halted clean; resume checklist inside (pointers, re-dispatch specs, constraints) - PROJECT (2026-07-06)](session_2026-07-06_tcc-outage-handoff.md)

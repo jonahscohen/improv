@@ -24,10 +24,48 @@
 # list item AND that question must not match the binary opener / "X or Y?" shape.
 
 LOG_FILE="$HOME/.claude/.multiple-choice-blocks.log"
-VIOLATION_FLAG="$HOME/.claude/.multiple-choice-violation"
 
 # Read stdin JSON (Claude Code passes session_id, transcript_path, cwd, hook_event_name).
 STDIN_JSON=$(cat)
+
+# The violation flag MUST be keyed per session. It used to be one global file at
+# $HOME/.claude/.multiple-choice-violation, shared by every concurrent session on
+# this machine. Two failures followed, both observed live 2026-07-10:
+#   1. MISATTRIBUTION - whichever session submitted the next prompt was shown
+#      another session's words and told "Do NOT continue with the work you were
+#      doing". A watch owner was ordered to abandon a live watch on a false pretext.
+#   2. SILENT NON-ENFORCEMENT - the injector rm -f's the flag, so the session that
+#      actually violated never sees its own reminder. The mechanism built to stop
+#      us silently skipping a rule silently skipped the rule.
+# Fall back to the global path only when session_id is genuinely absent, so a
+# single-session install cannot regress.
+SESSION_ID=$(printf '%s' "$STDIN_JSON" | python3 -c "
+import json, sys
+try:
+    print(json.load(sys.stdin).get('session_id', '') or '')
+except Exception:
+    pass
+" 2>/dev/null)
+SESSION_KEY=$(printf '%s' "$SESSION_ID" | tr -cd 'A-Za-z0-9._-')
+case "$SESSION_KEY" in
+  ""|"."|"..") SESSION_KEY="" ;;
+esac
+CWD_VAL=$(printf '%s' "$STDIN_JSON" | python3 -c "
+import json, sys
+try:
+    print(json.load(sys.stdin).get('cwd', '') or '')
+except Exception:
+    pass
+" 2>/dev/null)
+
+if [[ -n "$SESSION_KEY" ]]; then
+  VIOLATION_FLAG="$HOME/.claude/.multiple-choice-violation.$SESSION_KEY"
+else
+  VIOLATION_FLAG="$HOME/.claude/.multiple-choice-violation"
+fi
+
+# Reap flags older than 24h so an abandoned session cannot ambush a future one.
+find "$HOME/.claude" -maxdepth 1 -name '.multiple-choice-violation*' -type f -mtime +1 -delete 2>/dev/null
 
 # Extract transcript_path with python (no jq dependency).
 TRANSCRIPT=$(printf '%s' "$STDIN_JSON" | python3 -c "
@@ -268,7 +306,7 @@ fi
 if [[ $should_block -eq 1 ]]; then
   mkdir -p "$(dirname "$LOG_FILE")"
   reason="opt=$opt_count bold=$bold_label_count trailing_q=$trailing_q trailing_deflection=$trailing_deflection"
-  echo "$(date '+%Y-%m-%d %H:%M:%S')  STOP-DETECT  $reason" >> "$LOG_FILE"
+  echo "$(date '+%Y-%m-%d %H:%M:%S')  STOP-DETECT  $reason  session_id=${SESSION_ID:-none}  cwd=${CWD_VAL:-none}" >> "$LOG_FILE"
 
   # Write violation flag for next-turn injection.
   {

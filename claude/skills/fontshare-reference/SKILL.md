@@ -141,9 +141,9 @@ This skill is the catalog / breadth layer in the font-selection sub-stack:
 
 1. **fontshare-reference** (this skill) - Browse the curated catalog. Find candidates the project has not considered.
 2. **sidecoach** (`brand.md` font procedure + `typography.md` anti-reflexes) - Apply brand-voice cross-check and reject training-data defaults.
-3. **make-interfaces-feel-better** - Apply tactical typography polish at implementation time: tabular nums on data, `text-wrap: balance` on headings, `font-optical-sizing: auto` for variable fonts, all-caps tracking, FOUT fallback metrics.
+3. **tactical-polish** - Apply tactical typography polish at implementation time: tabular nums on data, `text-wrap: balance` on headings, `font-optical-sizing: auto` for variable fonts, all-caps tracking, FOUT fallback metrics.
 
-The catalog prevents narrow-search gaps ("settling on Inter because it's the first font Claude thinks of"). Sidecoach prevents brand-strategy gaps (off-register pick). Make-interfaces-feel-better prevents implementation polish gaps.
+The catalog prevents narrow-search gaps ("settling on Inter because it's the first font Claude thinks of"). Sidecoach prevents brand-strategy gaps (off-register pick). Tactical-polish prevents implementation polish gaps.
 
 ## Fallback - when fontshare does not have the right family
 

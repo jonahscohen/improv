@@ -44,15 +44,15 @@ in the Emil/taste-skill precedent format. Evaluation only - NOTHING IMPLEMENTED 
 5. **12-principles-of-animation** (raphaelsalaja) - mis-titled; actually a 14-rule motion
    linter (6 of 12 Disney principles have no rules). Routing correction: motion-reference
    is the WRONG home (it is implementation patterns; this is lint) - the homes are the
-   sidecoach motion validator + MIFB. Take: 3 staging rules (one-focal-point,
+   sidecoach motion validator + tactical-polish. Take: 3 staging rules (one-focal-point,
    dim-background-on-modal, z-index hierarchy), no-linear-motion-easing (linear only for
    progress bars), context-menus-animate-exit-only, spring-for-overshoot heuristic,
-   timing-consistency; MIFB gets the 300ms user-initiated ceiling + 0.95-1.05 squash/
+   timing-consistency; tactical-polish gets the 300ms user-initiated ceiling + 0.95-1.05 squash/
    stretch deformation range. Reject the Web Audio decay rule (leaked from their wiki).
 
 6. **design-lab** (0xdesign) - ~80% duplicate of things we do better (token extraction =
    sidecoach document/extract; feedback overlay = improv/justify; DESIGN_MEMORY.md =
-   beats; principles dump = MIFB/motion-reference/component-gallery). ONE high-value
+   beats; principles dump = tactical-polish/motion-reference/component-gallery). ONE high-value
    net-new idea: the forced-divergence 5-axis variant taxonomy for a single target
    (A=hierarchy, B=layout model, C=density inversion, D=interaction model, E=expressive),
    shared fixtures for fair comparison. Recommended graft: a divergent-exploration phase
@@ -60,7 +60,7 @@ in the Emil/taste-skill precedent format. Evaluation only - NOTHING IMPLEMENTED 
    through the EXISTING CD-review for scoring - fixes design-lab's biggest gap (zero
    automated evaluation). Plus: Interface Robustness stress-test checklist (spam-click,
    interrupt-animation, 3G, offline, rapid-resize, max/min content) -> /sidecoach harden;
-   frequency principle -> MIFB/animate.
+   frequency principle -> tactical-polish/animate.
 
 ## Cross-cutting findings
 
@@ -69,8 +69,8 @@ in the Emil/taste-skill precedent format. Evaluation only - NOTHING IMPLEMENTED 
   tool-boundaries/never-migrate-libraries discipline (fixing-accessibility +
   fixing-motion-performance); frequency principle (Emil + design-lab).
 - **Conflicts to reconcile before implementing:** blur thresholds (FMP <=8px animated vs
-  Emil <20px vs MIFB 4px enter/exit - different axes, unify into one rule); stagger caps
-  (12-principles 50ms/item would FAIL MIFB's 80ms word-stagger - scope per-item list cap
+  Emil <20px vs tactical-polish 4px enter/exit - different axes, unify into one rule); stagger caps
+  (12-principles 50ms/item would FAIL tactical-polish's 80ms word-stagger - scope per-item list cap
   separately from semantic-group staggers).
 - **Why nothing adopted whole:** every skill is either a thinner duplicate of the
   validator/audit surface, stack-coupled (Tailwind/React/Next), or missing the evaluation

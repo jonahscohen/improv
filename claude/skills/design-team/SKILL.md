@@ -49,6 +49,29 @@ Builders work in isolation. They do not see each other's output during the build
 
 Scale the number of builders to the task. One builder for a single component. Three or more for a full page.
 
+#### Forced divergence (exploration-sprint mode)
+
+Invoke this mode when the sprint explores VARIANTS of ONE target - five takes on a hero, a pricing section, a card, an onboarding step - rather than building distinct sections of one page. It is a build-phase override the lead turns on deliberately; the four-phase structure, the roles, and the review gate all stay exactly as described. Nothing else changes.
+
+The problem it solves: parallel unconstrained builders converge. Hand five design engineers the same brief and the same freedom and you get five flavors of the same idea - the same layout with the accent color moved, the same hierarchy with a different typeface. The parallelism is wasted because the outputs cluster. Real exploration needs the variants to be far apart in solution space, and that spread has to be engineered into the dispatch, not hoped for.
+
+The mechanism: lock each builder to exactly ONE divergence axis. Every builder gets the same brief and the same fixtures, plus a single axis it must push and the others it must hold roughly neutral. The axis is the builder's mandate, not a suggestion. One builder cannot own two axes, and two builders cannot own the same axis - that is what forces the spread.
+
+| Axis | Mandate | What the builder pushes |
+|---|---|---|
+| **A - Information hierarchy** | Re-rank what the eye hits first | What leads, what recedes. One variant leads with the headline, another with the media, another with the proof or the primary action. |
+| **B - Layout model** | Change the structural system | Grid vs asymmetric vs stacked vs split. Each builder commits to a different structural skeleton, not a restyle of the same one. |
+| **C - Density** | Invert the obvious | If the natural take is airy, build dense; if the natural take is dense, build airy. This axis is defined against the expected default, so name the expected default in the dispatch and require the opposite. |
+| **D - Interaction model** | Change how the user acts on it | Static vs progressive disclosure vs direct manipulation. One variant reveals everything at once, one drills in, one lets the user manipulate the content in place. |
+| **E - Expressiveness** | Move the register dial off-brief | The dispatcher picks ONE direction for this builder - deliberately quieter or deliberately louder than the brief asks - chosen against the brief's natural pull, the same inversion logic as axis C. This axis tests the edge of the register the brand can hold; probing both edges takes a second E slot in a six-variant sprint, never a double mandate on one builder. |
+
+Two rules make the comparison fair and the review honest:
+
+- **Shared fixtures.** Every variant builds against identical content, identical data, and the identical viewport set. Same headline text, same image slots, same list lengths, same breakpoints rendered. If the fixtures drift, you are comparing the content, not the design decision - and the axis lock is meaningless. Pin the fixtures once and hand the same set to every builder.
+- **Same review, unchanged.** All variants route through the existing creative-director review (Phase 3) for scoring against the same rubric. The axis lock changes GENERATION only - it does not change EVALUATION. The CD does not grade a variant against its own axis; it grades every variant against the one shared bar, then reports which axis produced the strongest result and why. Winning axes inform the next sprint.
+
+Scale the axis count to the variants you want: three variants use A, B, and one of C/D/E; five variants use all five. Do not double up an axis to reach a builder count - if you want six variants, the sixth is a second pass on the winning axis, dispatched after the review, not a duplicate lock in the same round.
+
 ### Phase 3: Review (main thread, sequential)
 
 The creative director review runs in the main session (NOT as a subagent). This is critical - the CD needs full context of what was built and access to the project's QA pipeline.
@@ -60,7 +83,7 @@ The CD reviews each builder's output sequentially:
    - `/sidecoach audit` (a11y, performance, theming, responsive, anti-patterns)
    - `/sidecoach critique` (AI-slop detection, Nielsen heuristics, cognitive load)
    - `/sidecoach polish` (alignment pass against design system)
-   - `make-interfaces-feel-better` 16-point checklist
+   - `tactical-polish` 16-point checklist
    - `DESIGN.md` lint (if present)
 3. Check cross-section consistency (typography, spacing, color palette, component patterns)
 4. Produce a review document with per-section verdicts:

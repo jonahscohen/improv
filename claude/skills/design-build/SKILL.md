@@ -5,13 +5,13 @@ description: Run the full design pipeline as ONE orchestrated build, not as 6 ho
 
 # Design Build (the pipeline orchestrator)
 
-A single skill that runs the design pipeline as ONE coordinated build. The other design skills (`component-gallery-reference`, `fontshare-reference`, `design-references`, `motion-reference`, `icon-source`, `make-interfaces-feel-better`) are READ AND APPLIED by this skill, not auto-triggered alongside it.
+A single skill that runs the design pipeline as ONE coordinated build. The other design skills (`component-gallery-reference`, `fontshare-reference`, `design-references`, `motion-reference`, `icon-source`, `tactical-polish`) are READ AND APPLIED by this skill, not auto-triggered alongside it.
 
 ## Why this skill exists
 
 The 2026-05-20 marketing-site build was the first time the design pipeline ran on a real UI task. The retrospective surfaced two structural problems:
 
-1. **Auto-triggering by description keywords didn't fire reliably.** `component-gallery-reference`, `design-references`, and `icon-source` never auto-triggered during the build. `make-interfaces-feel-better` only fired because the agent had read it recently.
+1. **Auto-triggering by description keywords didn't fire reliably.** `component-gallery-reference`, `design-references`, and `icon-source` never auto-triggered during the build. `tactical-polish` only fired because the agent had read it recently.
 2. **The QA triad (`/sidecoach audit + critique + polish`) never ran.** It's documented as "runs at QA time" in CLAUDE.md but there's no mechanism that actually invokes it.
 
 `design-build` solves both by being a single, explicit orchestrator: the agent runs this skill, the skill walks all the phases, the QA triad is mandatory at the end.
@@ -32,7 +32,7 @@ DO NOT trigger on:
 - Generic UI work ("build a button", "add a hover state", "fix this layout") - these are too narrow for the full pipeline. Let the project's existing patterns handle them.
 - Pure copy/typography changes - run `fontshare-reference` directly if needed.
 - Pure motion changes - read `motion-reference` directly if needed.
-- Tactical polish - read `make-interfaces-feel-better` directly if needed.
+- Tactical polish - read `tactical-polish` directly if needed.
 
 The full pipeline is for substantial UI builds: new pages, new screens, new feature surfaces, new sections of an existing page, redesigns. If the work is a tactical tweak, skip this skill.
 
@@ -169,9 +169,9 @@ If running, read `icon-source` skill protocol:
    "optimize" path data.
 ```
 
-### Phase 7: Build (make-interfaces-feel-better applied DURING construction)
+### Phase 7: Build (tactical-polish applied DURING construction)
 
-Generate the code. While generating, apply `make-interfaces-feel-better`'s 14 rules as a build-time checklist, NOT as a separate post-pass:
+Generate the code. While generating, apply `tactical-polish`'s 14 rules as a build-time checklist, NOT as a separate post-pass:
 
 ```
 - Concentric border radius (outer = inner + padding)
@@ -252,7 +252,7 @@ This is the second mandatory checkpoint. The first was after strategy. Everythin
 
 ## Integration with the rest of the design stack
 
-This skill orchestrates. The others (component-gallery-reference, fontshare-reference, design-references, motion-reference, icon-source, make-interfaces-feel-better) are READ AND APPLIED by this orchestrator, not auto-fired alongside it.
+This skill orchestrates. The others (component-gallery-reference, fontshare-reference, design-references, motion-reference, icon-source, tactical-polish) are READ AND APPLIED by this orchestrator, not auto-fired alongside it.
 
 The other skills CAN still fire on direct invocation - e.g. "/curate this reference", "use fontshare-reference for this typeface decision". They are individual tools. `design-build` is the pipeline.
 
@@ -260,7 +260,7 @@ The other skills CAN still fire on direct invocation - e.g. "/curate this refere
 
 ## What this skill is NOT for
 
-- Tactical CSS tweaks (read `make-interfaces-feel-better` directly)
+- Tactical CSS tweaks (read `tactical-polish` directly)
 - Single-skill consultations (consult them directly when you need them)
 - Backend, infrastructure, or non-UI work
 - A way to skip the QA triad by overwhelming with phases - if Phase 8 gets skipped, the skill failed at its purpose

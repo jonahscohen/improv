@@ -39,10 +39,10 @@ Continuing from completed intent detector. Building flow handler layer and orche
 
 ## Next Phase: Implement High-Priority Handlers
 
-Starting with 4 flows that consolidate /oracle and /make-interfaces-feel-better:
+Starting with 4 flows that consolidate /oracle and /tactical-polish:
 
 ### Flow 2: Polish/Enhance Interaction
-- Trigger: /make-interfaces-feel-better
+- Trigger: /tactical-polish
 - Guidance: 14-point tactile improvement checklist
 - Artifacts: before/after comparison template
 

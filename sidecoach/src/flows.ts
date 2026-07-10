@@ -190,7 +190,7 @@ export const flows: Flow[] = [
   {
     id: 'flowJ_tactical_polish',
     name: '16-Point Tactical Polish',
-    description: 'All make-interfaces-feel-better rules: concentric radius, optical alignment, shadows, animations, hit areas, icons, numbers, wrapping, outlines, scale, motion, transitions, will-change. Absorbed flow2_polish_enhance.',
+    description: 'All tactical-polish rules: concentric radius, optical alignment, shadows, animations, hit areas, icons, numbers, wrapping, outlines, scale, motion, transitions, will-change. Absorbed flow2_polish_enhance.',
     triggers: {
       patterns: [
         'polish [element]',
@@ -200,7 +200,7 @@ export const flows: Flow[] = [
         '[element] 16-point check',
         'interface feel improvement',
         'micro-interaction polish',
-        'apply make-interfaces-feel-better',
+        'apply tactical polish rules',
         'add feeling to [element]',
         'enhance interaction on [element]',
         '[element] needs more life',

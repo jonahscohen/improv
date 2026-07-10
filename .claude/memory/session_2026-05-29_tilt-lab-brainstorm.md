@@ -33,7 +33,7 @@ Runtime contract: `Effect { init, frame, resize, setParam, dispose }`. Generic m
 Reuse jump-start: the dotfiles `visual-effects` skill already ships source for ~13 of these. Regent already has 5 as working Next.js/Three.js /tools generators ("fully cooked shaders, half-cooked presentation").
 
 ## Team plan (executes AFTER writing-plans, not yet dispatched)
-Phase 1 acquisition parallel fan-out (1 agent per source lane) -> Phase 2 runtime + web-component layer + offscreen compositor -> Phase 3 Vite+React playground UI -> Phase 4 server + handoff + sidecoach verb wiring -> Phase 5 QA gate (audit->critique->polish + make-interfaces-feel-better, cmux visual verification).
+Phase 1 acquisition parallel fan-out (1 agent per source lane) -> Phase 2 runtime + web-component layer + offscreen compositor -> Phase 3 Vite+React playground UI -> Phase 4 server + handoff + sidecoach verb wiring -> Phase 5 QA gate (audit->critique->polish + tactical-polish, cmux visual verification).
 
 ## Note
 content-guard blocked the first spec Write for em dashes; rewrote with hyphens. (Reminder: spec prose must avoid em dashes.)

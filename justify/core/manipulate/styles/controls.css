@@ -2,10 +2,11 @@
  * controls.css - styling for the 13 core control primitives (Phase 3b).
  * Ported verbatim from Retune overlay/src/overlay/overlay.css (control blocks).
  * References shared --retune-* tokens BY NAME; token definitions live in the
- * shell/theme layer (shell-analyst owns them). Hard-coded hex inside these rules
- * (#1c1917, #1e1e1e, #292524, rgba(217, 119, 87,...), #D97757, #EBC8B5, #eeeceb,
- * #ccc, #e0e0e0, white) is mirrored verbatim per plan open-question (o) and is
- * intentionally NOT tokenized.
+ * shell/theme layer (shell-analyst owns them). The grid-picker selected/preview
+ * tints and the pin center dot derive from the marker color via
+ * var(--justify-marker, #D97757) so they follow the user-selected marker live;
+ * remaining neutral hex (#1c1917, #1e1e1e, #292524, #eeeceb, #ccc, #e0e0e0,
+ * white) is intentionally NOT tokenized.
  */
 
 /* ===== Row layout helper (side-by-side fields) ===== */
@@ -531,7 +532,7 @@
   padding: 0;
 }
 .retune-pin-center-btn:hover { border-color: var(--retune-border-hover); }
-.retune-pin-center-dot { width: 4px; height: 4px; border-radius: 50%; background: #D97757; }
+.retune-pin-center-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--justify-marker, #D97757); }
 
 /* ===== AlignmentGrid ===== */
 .retune-alignment-grid {
@@ -615,5 +616,5 @@
   cursor: pointer;
 }
 .retune-grid-picker-cell { border-radius: 2px; background: var(--retune-border); }
-.retune-grid-picker-cell.selected { background: #D97757; }
-.retune-grid-picker-cell.preview { background: #EBC8B5; }
+.retune-grid-picker-cell.selected { background: var(--justify-marker, #D97757); }
+.retune-grid-picker-cell.preview { background: color-mix(in srgb, var(--justify-marker, #D97757) 45%, white); }

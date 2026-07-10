@@ -381,7 +381,7 @@ The mobile-nav landscape, synthesized from component.gallery (60 component types
 
 The standard sidecoach enforces is 44x44px minimum at all breakpoints. This is the WCAG 2.5.5 "enhanced" target size, the iOS Human Interface Guidelines minimum, and the size shown by industry research to reduce motor-impairment tap errors to near zero.
 
-The make-interfaces-feel-better skill specifies 40x40px as a floor. Sidecoach overrides that to 44x44 for consistency with WCAG 2.5.5, iOS HIG, and the bencium responsive table. Use 44 anywhere the platform does not specify a larger native minimum (Android's 48dp). When a project's design language demands a smaller visible control (an icon button at 24px, a checkbox at 20px), extend the hit area with a pseudo-element to 44x44 - never shrink the hit area.
+The tactical-polish skill specifies 40x40px as a floor. Sidecoach overrides that to 44x44 for consistency with WCAG 2.5.5, iOS HIG, and the bencium responsive table. Use 44 anywhere the platform does not specify a larger native minimum (Android's 48dp). When a project's design language demands a smaller visible control (an icon button at 24px, a checkbox at 20px), extend the hit area with a pseudo-element to 44x44 - never shrink the hit area.
 
 ### Rules
 
@@ -640,7 +640,7 @@ These are not optional. The Verification Protocol in CLAUDE.md applies in full: 
 - **Beyond Bencium's RESPONSIVE-DESIGN.md.** Adds the named anti-pattern catalogue, the touch-vs-mouse detection rules with the hover-availability check, the iOS safe-area + notch implementation pattern, the mandatory verification steps tied to Flow J, the per-pattern source-to-target code examples, and the deep mobile-nav decision tree.
 - **Beyond the predecessor adapt reference.** Adds the exact breakpoint values (Bencium's table), the exact pattern transitions per breakpoint with code, the WCAG 2.5.5 44x44 standard (the predecessor allows 44 but does not specify a single canonical floor), and the named anti-patterns.
 - **Beyond the predecessor responsive reference.** Adds the deep nav-pattern landscape, the segmented-control vs tab-bar distinction from iOS HIG, the command-palette mobile invocation rules, the FAB rules, container queries vs media queries guidance, and the degrade-plan template.
-- **Beyond make-interfaces-feel-better.** Raises the hit-area floor from 40 to 44 (WCAG 2.5.5), adds the breakpoint-aware density split (coarse vs fine pointer), and turns the single rule into an enforceable degrade-plan checkpoint.
+- **Beyond tactical-polish.** Raises the hit-area floor from 40 to 44 (WCAG 2.5.5), adds the breakpoint-aware density split (coarse vs fine pointer), and turns the single rule into an enforceable degrade-plan checkpoint.
 - **Beyond component.gallery.** Synthesizes the mobile-nav landscape (Navigation, Drawer, Tabs, Segmented control, plus Combobox + Modal for command palette) into a single decision tree with explicit "when to use / when not to use" guidance. The gallery catalogues; this reference decides.
 
 ---
@@ -658,4 +658,4 @@ These are not optional. The Verification Protocol in CLAUDE.md applies in full: 
 - Command palette pattern: https://uxpatterns.dev/patterns/advanced/command-palette and https://maggieappleton.com/command-bar
 - Component.gallery (mobile nav patterns catalogue): https://component.gallery/components/navigation/, /drawer/, /tabs/, /segmented-control/
 - Predecessor adapt and responsive-design references (extracted at sidecoach/reference/_extracted/legacy-design-skill/reference/)
-- Make-interfaces-feel-better, hit area rule (local: /Users/spare3/.agents/skills/make-interfaces-feel-better/SKILL.md, principle 16)
+- Tactical-polish, hit area rule (local: /Users/spare3/.agents/skills/tactical-polish/SKILL.md, principle 16)

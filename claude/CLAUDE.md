@@ -84,6 +84,13 @@ The link check scans one-line MEMORY.md descriptions, not full file contents. On
     relates_to: {{[file1.md, file2.md] - optional, beats sharing topic/context}}
     supersedes: {{file.md - optional, if this beat replaces an older one}}
     superseded_by: {{file.md - optional, if this beat has been replaced}}
+    author_human: {{optional provenance - who authored this, e.g. Jonah Cohen}}
+    author_model: {{optional provenance - which model, e.g. claude-opus-4.8}}
+    session_id: {{optional provenance - the authoring session id}}
+    machine: {{optional provenance - hostname the beat was written on}}
+    source: {{optional provenance - one of: session | hook | import | manual}}
+    verified: {{optional provenance - how it was checked: tests / browser / codex-review / none}}
+    confidence: {{optional provenance - one of: high | medium | low}}
     ---
 
 - `relates_to` is a list (0-N entries). `supersedes` and `superseded_by` are single values. All three are optional.
@@ -91,6 +98,8 @@ The link check scans one-line MEMORY.md descriptions, not full file contents. On
 - `relates_to` is NOT symmetric by default. Only add back-links when genuinely bidirectional.
 - Filenames are relative to the same `.claude/memory/` directory (just `filename.md`, no paths).
 - Most beats should have 0-2 `relates_to` entries. More than 3 means you are linking too broadly.
+- The seven provenance fields (`author_human`, `author_model`, `session_id`, `machine`, `source`, `verified`, `confidence`) are ALL OPTIONAL on every beat type and may be omitted entirely - a beat with none of them is fully valid, and the markdown stays the source of truth.
+- Provenance is lint-only and WARN-only: `beats.py verify` prints a stderr warning for a beat with no provenance and for a `source`/`confidence` value outside its enum, but a warning NEVER blocks a write or changes an exit code (tooling can never stop a mandated beat write). `beats.py verify --quiet-provenance` silences the lint. Enums: `source` is session | hook | import | manual; `confidence` is high | medium | low; `verified` is free text (tests / browser / codex-review / none).
 - List changes as they happen, one line each
 - Record key technical decisions with "Why:" rationale and "How:" approach summary, so reviewers understand both the reasoning and the mechanics
 - List files touched at the bottom
@@ -184,6 +193,10 @@ You are BLOCKED from reporting task completion to the user until ALL of the foll
 7. **For non-UI tasks, state a verifiable plan first.** For refactors, CLI changes, scripts, build-tool work, or any multi-step non-UI task, write a brief plan as `<step> -> verify: <check>` lines before implementing. Each verify clause must be runnable (a command, a test, a grep, an expected exit code), not "looks right" or "should work." If you can't name the verify check, the goal isn't well-defined yet - clarify before coding.
 
 8. **Codex cross-model review required (substantial code/implementation).** Before reporting done on any substantial code change - a feature, a refactor, a multi-file or logic change, or a bug fix with real logic - you MUST run an independent-model Codex review of the diff: the `codex:rescue` agent, `/code-review`, or the codex plugin's `review` / `adversarial-review` (the stop-time review gate covers the per-stop pass). The model that produced a unit does not certify it - a different model checks it (per the standing 2026-06-13 produce-and-verify mandate). **FALLBACK when Codex is unavailable (REQUIRED - the gate always runs):** Codex may not be installed or connected on every machine. Probe it first (`codex --version` or `command -v codex`); if Codex is present, use it (a different MODEL is preferred). If Codex is genuinely unavailable, do NOT skip the gate - deploy an independent CLAUDE reviewer instead: a fresh agent/subagent that reviews the diff and was NOT the producer of the unit. A same-model INDEPENDENT review (different agent, clean context) is the floor; a different-model (Codex) review is the preference. The gate is non-negotiable; only the reviewer identity changes with availability. Fold every finding and re-verify the whole unit (build green, tests pass, behavior observed); do not just patch the flagged line. Trivial edits (copy tweaks, one-liners, pure docs, named-token swaps) are exempt. When work is produced by a spawned teammate/subagent, this Codex pass is part of that unit's verification gate before it is reported complete.
+
+9. **Verification baseline first.** Before starting any multi-step change in a repo, probe its runnable verification baseline: do tests, a typecheck, or a lint actually run and pass? If none exists, establishing one IS the first finding and the first task - do not stack risky changes on a repo where nothing can prove them safe. An audit that finds no working baseline reports that as finding #1 ahead of everything else it found.
+
+10. **Plans and specs carry a commit stamp.** Any plan or spec written to docs/ (or handed to an executor) opens with the short commit hash it was authored against (`git rev-parse --short HEAD`). Before executing a stamped plan, check the stamp: if HEAD has moved, re-verify the plan's current-state claims (paths, excerpts, assumptions) before acting on them. A drifted plan is a hypothesis, not an instruction.
 
 If you cannot verify (no browser available, no dev server running), say so explicitly. Do not claim completion without proof.
 
@@ -285,7 +298,7 @@ The `/sidecoach` skill is the front door for every design or QA task. It auto-tr
 1. `/sidecoach audit <target>` - address all Critical and High findings
 2. `/sidecoach critique <target>` - address anything above "minor"
 3. `/sidecoach polish <target>` - final alignment, must run last
-4. `make-interfaces-feel-better` 16-point checklist - auto-triggers on UI keywords; manually invoke `/make-interfaces-feel-better` if it doesn't fire. Record changes in its before/after table format grouped by principle.
+4. `tactical-polish` 16-point checklist - auto-triggers on UI keywords; manually invoke `/tactical-polish` if it doesn't fire. Record changes in its before/after table format grouped by principle.
 5. If DESIGN.md exists: `npx @google/design.md lint DESIGN.md` with zero findings.
 
 Trivial copy tweaks or named-token swaps can skip the gate. Substantive aesthetic work cannot. "I'll skip polish because it probably looks fine" is not a valid judgment.
@@ -327,9 +340,9 @@ Default scope is the current project's `.claude/memory/`. Say "reflect across ev
 The `claude-surface.sh` SessionStart hook detects which Claude Code SURFACE the session runs in - via `CLAUDE_CODE_ENTRYPOINT` plus the `CMUX_*` vars (full value map in `reference_claude_code_surface_detection.md`) - and injects it into context every session. Adapt how you PRESENT reporting and data to that surface:
 
 - **RICH surfaces** (desktop = `claude-desktop`, web / Cowork = `remote*`, VS Code = `claude-vscode`) render HTML-based custom visuals and artifacts (Anthropic: "Custom visuals in chat and Cowork"). When you present REPORTING, DATA, CHARTS, TABLES, or GRAPHS here, prefer Claude's visualizer - a self-contained interactive/visual artifact (HTML / SVG / React: a chart, a table, a dashboard) - and be creative where it earns its keep. Plain text is the fallback, not the default. Mechanism: produce HTML-based visual content; "custom visuals" are ephemeral inline, "artifacts" are persistent/shareable.
-- **TEXT-ONLY surfaces** (terminal, cmux, mobile = `remote_mobile`, sdk) cannot render custom visuals (Anthropic: not available on iOS/Android; terminals are text). Present as clean text / markdown / ASCII - for example the sidecoach panel. Do NOT build visual artifacts to display data; they will not render.
+- **TEXT-ONLY surfaces** (terminal, cmux, mobile = `remote_mobile`, sdk) cannot render custom visuals (Anthropic: not available on iOS/Android; terminals are text). Present as clean text / markdown / ASCII - for example the sidecoach executive report (deliverable blocks + before/after tables). Do NOT build visual artifacts to display data; they will not render.
 
-The surface is in your context each session - honor it. When unsure whether a specific visual renders in the current surface, fall back to clean markdown/text. This sits alongside the sidecoach panel work: the ASCII report is the text-surface form; the rich-surface form of the same data is a visualizer artifact.
+The surface is in your context each session - honor it. When unsure whether a specific visual renders in the current surface, fall back to clean markdown/text. Sidecoach and Justify final outputs follow the executive-report contract (Jonah 2026-07-04): deliverable blocks with before/after tables and a sentence or two per deliverable - markdown on text surfaces, the same report as a visualizer artifact on rich surfaces. The old ASCII panels are retired.
 
 ## Voice Output
 

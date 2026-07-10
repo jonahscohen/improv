@@ -26,6 +26,7 @@ const SUITES: Suite[] = [
   { rel: 'src/intent-detector.test.ts', required: true },                                 // legacy; outside __tests__/ - must not be dropped
   { rel: 'src/__tests__/classifier-parity.test.ts', required: true },                     // engine classifier copy guard (Task 7/8)
   { rel: 'src/__tests__/slash-phrase.test.ts', required: true },                          // /sidecoach phrase union + near-miss (Task 8)
+  { rel: 'src/__tests__/executive-report.test.ts', required: true },                      // executive-report renderer contract (Jonah 2026-07-04)
   { rel: 'mcp-server/src/__tests__/classifier-parity.test.ts', cwd: 'mcp-server', required: true }, // mcp-server classifier copy guard (separate package)
   { rel: 'src/__tests__/lane-derivation.test.ts', required: true },                       // verbSteps derivation (Task 2)
   { rel: 'src/__tests__/lane-types.test.ts', required: true },

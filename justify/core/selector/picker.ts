@@ -216,7 +216,7 @@ export function createPicker(
   aspectLine.style.cssText = `
     position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:none;overflow:hidden;
   `;
-  aspectLine.innerHTML = `<svg width="100%" height="100%" style="position:absolute;top:0;left:0"><line x1="0" y1="0" x2="100%" y2="100%" stroke="#D97757" stroke-width="1" stroke-dasharray="1 3" stroke-linecap="round" opacity="0.6"/></svg>`;
+  aspectLine.innerHTML = `<svg width="100%" height="100%" style="position:absolute;top:0;left:0"><line x1="0" y1="0" x2="100%" y2="100%" style="stroke:var(--justify-marker, #D97757)" stroke-width="1" stroke-dasharray="1 3" stroke-linecap="round" opacity="0.6"/></svg>`;
   selection.appendChild(aspectLine);
 
   // Parent indicator (dotted outline, no fill — shown during fill snap)
@@ -224,7 +224,7 @@ export function createPicker(
   parentIndicator.setAttribute("data-justify-parent-indicator", "");
   parentIndicator.style.cssText = `
     position:fixed;display:none;pointer-events:none;z-index:2147483644;
-    border:1px dotted #D97757;background:none;border-radius:0;
+    border:1px dotted var(--justify-marker, #D97757);background:none;border-radius:0;
   `;
   shadowRoot.appendChild(parentIndicator);
 
@@ -234,7 +234,7 @@ export function createPicker(
     const outline = document.createElement("div");
     outline.style.cssText = `
       position:fixed;display:none;pointer-events:none;z-index:2147483644;
-      border:1px dotted #D97757;background:none;
+      border:1px dotted var(--justify-marker, #D97757);background:none;
     `;
     shadowRoot.appendChild(outline);
     siblingOutlinePool.push(outline);
@@ -304,7 +304,7 @@ export function createPicker(
     const outline = document.createElement("div");
     outline.style.cssText = `
       position:fixed;display:none;pointer-events:none;z-index:2147483643;
-      border:1px solid #D97757;background:none;
+      border:1px solid var(--justify-marker, #D97757);background:none;
     `;
     shadowRoot.appendChild(outline);
     scopeHighlightPool.push(outline);
@@ -403,7 +403,7 @@ export function createPicker(
         position:fixed;display:block;pointer-events:none;z-index:2147483644;
         top:${parentRect.top}px;left:${elCenterX}px;
         width:0;height:${elRect.top - parentRect.top}px;
-        border-left:1px dashed #D97757;
+        border-left:1px dashed var(--justify-marker, #D97757);
       `;
     } else {
       pinLines.top.style.display = "none";
@@ -415,7 +415,7 @@ export function createPicker(
         position:fixed;display:block;pointer-events:none;z-index:2147483644;
         top:${elRect.bottom}px;left:${elCenterX}px;
         width:0;height:${parentRect.bottom - elRect.bottom}px;
-        border-left:1px dashed #D97757;
+        border-left:1px dashed var(--justify-marker, #D97757);
       `;
     } else {
       pinLines.bottom.style.display = "none";
@@ -427,7 +427,7 @@ export function createPicker(
         position:fixed;display:block;pointer-events:none;z-index:2147483644;
         top:${elCenterY}px;left:${parentRect.left}px;
         width:${elRect.left - parentRect.left}px;height:0;
-        border-top:1px dashed #D97757;
+        border-top:1px dashed var(--justify-marker, #D97757);
       `;
     } else {
       pinLines.left.style.display = "none";
@@ -439,7 +439,7 @@ export function createPicker(
         position:fixed;display:block;pointer-events:none;z-index:2147483644;
         top:${elCenterY}px;left:${elRect.right}px;
         width:${parentRect.right - elRect.right}px;height:0;
-        border-top:1px dashed #D97757;
+        border-top:1px dashed var(--justify-marker, #D97757);
       `;
     } else {
       pinLines.right.style.display = "none";
@@ -523,7 +523,7 @@ export function createPicker(
   // Selection label = terracotta dimensions badge (W × H).
   selectionLabel.style.cssText = `
     position:fixed;pointer-events:none;display:none;z-index:2147483646;white-space:nowrap;
-    background:#D97757;color:#fff;font-size:11px;
+    background:var(--justify-marker, #D97757);color:#fff;font-size:11px;
     font-family:InterVariable, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     padding:2px 6px;border-radius:3px;
   `;
@@ -559,7 +559,7 @@ export function createPicker(
     h.style.cssText = `
       position:fixed;pointer-events:auto;display:none;box-sizing:border-box;
       width:${HANDLE_SIZE}px;height:${HANDLE_SIZE}px;
-      background:#fff;border:1px solid #D97757;border-radius:1px;
+      background:#fff;border:1px solid var(--justify-marker, #D97757);border-radius:1px;
       z-index:2147483645;cursor:${HANDLE_CURSORS[pos]};
     `;
     shadowRoot.appendChild(h);
@@ -733,7 +733,8 @@ export function createPicker(
     `;
     // Draw X using two rotated lines via pseudo-element alternative: use border trick
     // Simpler: use an inline SVG background
-    el.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${XMARK_SIZE * 2}' height='${XMARK_SIZE * 2}'%3E%3Cline x1='2' y1='2' x2='${XMARK_SIZE * 2 - 2}' y2='${XMARK_SIZE * 2 - 2}' stroke='%23D97757' stroke-width='1'/%3E%3Cline x1='${XMARK_SIZE * 2 - 2}' y1='2' x2='2' y2='${XMARK_SIZE * 2 - 2}' stroke='%23D97757' stroke-width='1'/%3E%3C/svg%3E")`;
+    const markerEnc = encodeURIComponent(getComputedStyle(shadowRoot.host).getPropertyValue("--justify-marker").trim() || "#D97757");
+    el.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${XMARK_SIZE * 2}' height='${XMARK_SIZE * 2}'%3E%3Cline x1='2' y1='2' x2='${XMARK_SIZE * 2 - 2}' y2='${XMARK_SIZE * 2 - 2}' stroke='${markerEnc}' stroke-width='1'/%3E%3Cline x1='${XMARK_SIZE * 2 - 2}' y1='2' x2='2' y2='${XMARK_SIZE * 2 - 2}' stroke='${markerEnc}' stroke-width='1'/%3E%3C/svg%3E")`;
     el.style.backgroundSize = "contain";
   }
 
@@ -757,13 +758,13 @@ export function createPicker(
         // Always show dotted parent indicator
         parentIndicator.style.cssText = `
           position:fixed;display:block;pointer-events:none;z-index:2147483644;
-          border:1px dotted #D97757;background:none;
+          border:1px dotted var(--justify-marker, #D97757);background:none;
           top:${pr.top}px;left:${pr.left}px;width:${pr.width}px;height:${pr.height}px;
         `;
 
         if (hasPadding) {
           // Show padding stripe rects
-          const PADDING_BG = "repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(217, 119, 87, 0.5) 3px, rgba(217, 119, 87, 0.5) 4px)";
+          const PADDING_BG = "repeating-linear-gradient(-45deg, transparent, transparent 3px, color-mix(in srgb, var(--justify-marker, #D97757) 50%, transparent) 3px, color-mix(in srgb, var(--justify-marker, #D97757) 50%, transparent) 4px)";
 
           if (guide.axis === "x") {
             if (pad.left > 0 && poolIdx < snapGuidePool.length) {
@@ -1671,9 +1672,10 @@ export function createPicker(
       hl = document.createElement("div");
       hl.setAttribute("data-justify-drag-ghost", "");
       hl.style.cssText = `
+        --justify-marker:${getComputedStyle(shadowRoot.host).getPropertyValue("--justify-marker").trim() || "#D97757"};
         position:fixed;pointer-events:none;z-index:2147483646;
-        border:1px solid #D97757;
-        background:rgba(217, 119, 87,0.04);
+        border:1px solid var(--justify-marker, #D97757);
+        background:color-mix(in srgb, var(--justify-marker, #D97757) 4%, transparent);
       `;
       document.body.appendChild(hl);
       dragState.reparentHighlight = hl;
@@ -1690,7 +1692,7 @@ export function createPicker(
     if (!line) {
       line = document.createElement("div");
       line.setAttribute("data-justify-reparent-line", "");
-      line.style.cssText = `position:absolute;background:#D97757;pointer-events:none;border-radius:1px;`;
+      line.style.cssText = `position:absolute;background:var(--justify-marker, #D97757);pointer-events:none;border-radius:1px;`;
       hl.appendChild(line);
     }
     // Inset relative to container size (3%), clamped between 3-12px
@@ -1754,8 +1756,8 @@ export function createPicker(
       position:fixed;pointer-events:none;z-index:2147483647;
       width:${rect.width}px;height:${rect.height}px;
       left:${rect.left}px;top:${rect.top}px;
-      opacity:0.7;border:2px solid #D97757;border-radius:4px;
-      background:rgba(217, 119, 87,0.06);transition:none;
+      opacity:0.7;border:2px solid var(--justify-marker, #D97757);border-radius:4px;
+      background:color-mix(in srgb, var(--justify-marker, #D97757) 6%, transparent);transition:none;
     `;
     shadowRoot.appendChild(ghost);
     return ghost;
@@ -2357,8 +2359,8 @@ export function createPicker(
     box.style.left = `${rect.left}px`;
     box.style.width = `${rect.width}px`;
     box.style.height = `${rect.height}px`;
-    box.style.border = `1px ${borderStyle} #D97757`;
-    box.style.background = `rgba(217, 119, 87, ${bgAlpha})`;
+    box.style.border = `1px ${borderStyle} var(--justify-marker, #D97757)`;
+    box.style.background = `color-mix(in srgb, var(--justify-marker, #D97757) calc(${bgAlpha} * 100%), transparent)`;
     box.style.display = "";
 
     // Badge: below selection centered, flip to above if near bottom edge
@@ -2439,7 +2441,7 @@ export function createPicker(
       const pr = parent.getBoundingClientRect();
       parentIndicator.style.cssText = `
         position:fixed;display:block;pointer-events:none;z-index:2147483644;
-        border:1px dotted #D97757;background:none;
+        border:1px dotted var(--justify-marker, #D97757);background:none;
         top:${pr.top}px;left:${pr.left}px;width:${pr.width}px;height:${pr.height}px;
       `;
 
@@ -3000,7 +3002,7 @@ export interface PickerInitOpts {
  *  from Retune overlay-css, retune-* -> justify-*). Inlined so the module is
  *  self-contained when it creates its own shadow host. */
 const PICKER_OVERLAY_CSS = `
-:host { --justify-red: #D97757; --justify-blue: #D97757; }
+:host { --justify-red: var(--justify-marker, #D97757); --justify-blue: var(--justify-marker, #D97757); }
 .justify-snap-guide { position: fixed; pointer-events: none; z-index: 2147483645; background: var(--justify-red); display: none; }
 .justify-snap-guide.visible { display: block; }
 .justify-snap-label { position: fixed; pointer-events: none; z-index: 2147483646; font-size: 10px; font-weight: 500; color: #fff; white-space: nowrap; background: var(--justify-red); padding: 1px 4px; border-radius: 2px; opacity: 0; transition: opacity 100ms ease; }

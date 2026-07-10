@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.yesand.beats-reflect-weekly - weekly unattended `reflect` run.
+
+  Runs ~/.claude/hooks/beats-reflect-weekly.sh every Sunday at 09:00 local time.
+  The script self-gates on the reflect threshold, so a quiet week is a cheap
+  no-op; only a corpus with >= REFLECT_THRESHOLD new beats triggers a real run.
+
+  INSTALL WIRING (owned by install.sh / the lead):
+    - The absolute paths below are this machine's. install.sh should template
+      the home dir (/Users/spare3) and BEATS_REPO_ROOT (the dotfiles checkout).
+    - The script is COPIED to ~/.claude/hooks/ (not symlinked), which is why the
+      script cannot self-locate the repo - hence the explicit BEATS_REPO_ROOT and
+      WorkingDirectory below. Keep them in sync with the actual checkout path.
+
+  LOAD / UNLOAD (see claude/docs/beats-scheduled-reflect.md):
+    launchctl bootstrap  gui/$(id -u) ~/Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist
+    launchctl bootout    gui/$(id -u)/com.yesand.beats-reflect-weekly
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.yesand.beats-reflect-weekly</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/spare3/.claude/hooks/beats-reflect-weekly.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>0</integer>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/spare3/Documents/Github/improv</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>BEATS_REPO_ROOT</key>
+        <string>/Users/spare3/Documents/Github/improv</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/spare3/.claude/logs/beats-reflect-weekly.launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/spare3/.claude/logs/beats-reflect-weekly.launchd.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

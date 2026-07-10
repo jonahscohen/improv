@@ -611,6 +611,167 @@ else
   failcase "case23 sqlite3 not on PATH - cannot inject a duplicate row"
 fi
 
+# =============================================================================
+# Unit B (T-0044): optional provenance frontmatter.
+# author_human/author_model/session_id/machine/source/verified/confidence are
+# OPTIONAL on every beat type. Compile lifts them into their own columns + the
+# JSONL (only when present). Verify LINTs them WARN-only (never changes the exit
+# code); --quiet-provenance silences the lint. A schema drift (older tool_version)
+# verifies STALE so it recompiles cleanly.
+# =============================================================================
+
+# --- Case B1: full provenance round-trips into db + JSONL --------------------
+cB1="$(newtmp)"; cB1_corpus="$cB1/corpus"; cB1_build="$cB1/build"; mkdir -p "$cB1_corpus"
+cat > "$cB1_corpus/prov_full.md" <<'EOF'
+---
+name: Fully provenanced beat
+description: carries every provenance field
+type: decision
+author_human: Jonah Cohen
+author_model: claude-opus-4.8
+session_id: sess-xyz
+machine: test-host
+source: session
+verified: tests
+confidence: high
+---
+Body about provenance plumbing verification.
+EOF
+cat > "$cB1_corpus/prov_none.md" <<'EOF'
+---
+name: No provenance beat
+description: has no provenance fields
+type: project
+---
+Plain body about gardening and weather.
+EOF
+out="$(python3 "$BEATS_PY" compile --corpus "$cB1_corpus" --build "$cB1_build" 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "caseB1 provenance compile exits 0"
+else
+  failcase "caseB1 expected 0 got $rc :: $out"
+fi
+if [ -n "$SQLITE" ]; then
+  tv="$("$SQLITE" "$cB1_build/beats.db" "SELECT tool_version FROM meta;")"
+  if [ "$tv" = "3" ]; then
+    pass "caseB1 meta.tool_version bumped to 3 for the provenance schema"
+  else
+    failcase "caseB1 expected tool_version 3 got '$tv'"
+  fi
+  cols="$("$SQLITE" "$cB1_build/beats.db" "SELECT name FROM pragma_table_info('beats');" | tr '\n' ' ')"
+  ok=1
+  for c in author_human author_model session_id machine source verified confidence; do
+    printf '%s' "$cols" | grep -qw "$c" || ok=0
+  done
+  if [ "$ok" = "1" ]; then
+    pass "caseB1 all 7 provenance columns present in the beats table"
+  else
+    failcase "caseB1 missing provenance column(s) :: $cols"
+  fi
+  vals="$("$SQLITE" "$cB1_build/beats.db" "SELECT author_human||'|'||author_model||'|'||session_id||'|'||machine||'|'||source||'|'||verified||'|'||confidence FROM beats WHERE filename='prov_full.md';")"
+  if [ "$vals" = "Jonah Cohen|claude-opus-4.8|sess-xyz|test-host|session|tests|high" ]; then
+    pass "caseB1 full provenance stored verbatim in its columns"
+  else
+    failcase "caseB1 provenance column mismatch :: $vals"
+  fi
+  emp="$("$SQLITE" "$cB1_build/beats.db" "SELECT author_human||author_model||session_id||machine||source||verified||confidence FROM beats WHERE filename='prov_none.md';")"
+  if [ -z "$emp" ]; then
+    pass "caseB1 unprovenanced beat has empty provenance columns (NULL-equivalent)"
+  else
+    failcase "caseB1 expected empty provenance columns got '$emp'"
+  fi
+fi
+if grep 'prov_full.md' "$cB1_build/beats.jsonl" | grep -qE '"author_human": ?"Jonah Cohen"'; then
+  pass "caseB1 JSONL carries provenance for the provenanced beat"
+else
+  failcase "caseB1 JSONL missing provenance for prov_full.md"
+fi
+if grep 'prov_none.md' "$cB1_build/beats.jsonl" | grep -qE '"(author_human|author_model|session_id|machine|source|verified|confidence)"'; then
+  failcase "caseB1 JSONL wrongly added provenance keys to an unprovenanced beat"
+else
+  pass "caseB1 JSONL omits provenance keys for the unprovenanced beat (byte-identical schema)"
+fi
+
+# --- Case B2: verify LINTs a missing-provenance corpus WARN-only (exit 0) -----
+cB2="$(newtmp)"; cB2_corpus="$cB2/corpus"; cB2_build="$cB2/build"
+make_fixture "$cB2_corpus"   # 6 beats, none carry provenance
+python3 "$BEATS_PY" compile --corpus "$cB2_corpus" --build "$cB2_build" >/dev/null 2>&1
+python3 "$BEATS_PY" verify --corpus "$cB2_corpus" --build "$cB2_build" 1>/dev/null 2>"$cB2/err"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "caseB2 verify with a zero-provenance corpus still exits 0 (warn-only)"
+else
+  failcase "caseB2 expected verify 0 got $rc :: $(cat "$cB2/err")"
+fi
+if grep -q "PROVENANCE WARN:.*no provenance fields" "$cB2/err"; then
+  pass "caseB2 verify warns on beats missing provenance"
+else
+  failcase "caseB2 missing 'no provenance fields' WARN :: $(cat "$cB2/err")"
+fi
+if grep -qE "PROVENANCE: [0-9]+ beat\(s\) with no provenance" "$cB2/err"; then
+  pass "caseB2 verify prints the provenance summary line"
+else
+  failcase "caseB2 missing provenance summary line :: $(cat "$cB2/err")"
+fi
+
+# --- Case B3: malformed confidence + source WARN without blocking (exit 0) ----
+cB3="$(newtmp)"; cB3_corpus="$cB3/corpus"; cB3_build="$cB3/build"; mkdir -p "$cB3_corpus"
+cat > "$cB3_corpus/bad.md" <<'EOF'
+---
+name: Malformed provenance beat
+description: confidence and source outside their enums
+type: reference
+confidence: extremely-high
+source: telepathy
+---
+Body text about anything at all.
+EOF
+python3 "$BEATS_PY" compile --corpus "$cB3_corpus" --build "$cB3_build" >/dev/null 2>&1
+python3 "$BEATS_PY" verify --corpus "$cB3_corpus" --build "$cB3_build" 1>/dev/null 2>"$cB3/err"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "caseB3 malformed provenance does not change the verify exit code (0)"
+else
+  failcase "caseB3 expected verify 0 got $rc :: $(cat "$cB3/err")"
+fi
+if grep -q "confidence 'extremely-high' not in" "$cB3/err"; then
+  pass "caseB3 warns on an out-of-enum confidence value"
+else
+  failcase "caseB3 missing confidence WARN :: $(cat "$cB3/err")"
+fi
+if grep -q "source 'telepathy' not in" "$cB3/err"; then
+  pass "caseB3 warns on an out-of-enum source value"
+else
+  failcase "caseB3 missing source WARN :: $(cat "$cB3/err")"
+fi
+
+# --- Case B4: --quiet-provenance suppresses the lint (silent stderr, exit 0) --
+python3 "$BEATS_PY" verify --corpus "$cB3_corpus" --build "$cB3_build" --quiet-provenance 1>/dev/null 2>"$cB3/errq"; rc=$?
+if [ "$rc" -eq 0 ] && [ ! -s "$cB3/errq" ]; then
+  pass "caseB4 --quiet-provenance suppresses all provenance warnings (exit 0, empty stderr)"
+else
+  failcase "caseB4 expected silent exit 0 got rc=$rc stderr='$(cat "$cB3/errq")'"
+fi
+
+# --- Case B5: a tool_version schema drift verifies STALE, then recompiles fresh -
+cB5="$(newtmp)"; cB5_corpus="$cB5/corpus"; cB5_build="$cB5/build"
+make_fixture "$cB5_corpus"
+python3 "$BEATS_PY" compile --corpus "$cB5_corpus" --build "$cB5_build" >/dev/null 2>&1
+if [ -n "$SQLITE" ]; then
+  "$SQLITE" "$cB5_build/beats.db" "UPDATE meta SET tool_version=2;" >/dev/null 2>&1
+  python3 "$BEATS_PY" verify --corpus "$cB5_corpus" --build "$cB5_build" --quiet-provenance 1>/dev/null 2>"$cB5/err"; rc=$?
+  if [ "$rc" -eq 6 ] && grep -q "tool version 2 != current 3" "$cB5/err"; then
+    pass "caseB5 a tool_version schema drift verifies STALE (exit 6)"
+  else
+    failcase "caseB5 expected STALE 6 for tool_version drift got rc=$rc :: $(cat "$cB5/err")"
+  fi
+  python3 "$BEATS_PY" compile --corpus "$cB5_corpus" --build "$cB5_build" >/dev/null 2>&1
+  out="$(python3 "$BEATS_PY" verify --corpus "$cB5_corpus" --build "$cB5_build" --quiet-provenance 2>&1)"; rc=$?
+  if [ "$rc" -eq 0 ]; then
+    pass "caseB5 a clean recompile onto the current schema verifies fresh (exit 0)"
+  else
+    failcase "caseB5 expected fresh 0 after recompile got $rc :: $out"
+  fi
+fi
+
 # --- Summary -----------------------------------------------------------------
 printf '\n%d passed, %d failed\n' "$passes" "$fails"
 [ "$fails" -eq 0 ] || exit 1

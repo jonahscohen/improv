@@ -206,7 +206,7 @@ dispatched. The planned team shape:
   enumeration, package writer, handoff signal, and the sidecoach verb/flow that
   launches the tool.
 - **Phase 5, QA gate:** since this is UI, run the sidecoach QA triad
-  (audit -> critique -> polish) plus make-interfaces-feel-better, with visual
+  (audit -> critique -> polish) plus tactical-polish, with visual
   verification via cmux screenshots.
 
 Acquisition fans out in parallel; the build phases are sequential.

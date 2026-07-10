@@ -25,6 +25,6 @@ Where it belongs: our menu/submenu/dropdown/popover component guidance (componen
 
 Status: INTEGRATED. Added a "Hover-activated menus - the mouse safe area" note to `claude/skills/component-gallery-reference/SKILL.md` under Step 3 item 3 (Interaction patterns), right where the skill already documents the forgotten-detail class (focus trap, scroll lock, Escape). It covers the safe-triangle, marks it table stakes for hover menus, and adds two guardrails: pointer-only so keyboard/touch access is still required, and prefer Radix/Base UI/Floating UI over a bespoke global mouse-position hook (with eldh's gist as the hand-roll reference).
 
-Why component-gallery-reference and not make-interfaces-feel-better or sidecoach: it is the per-component "function layer" research skill, lists Dropdown menu / Navigation / Popover / Tooltip as types, and already enumerates exactly this kind of easy-to-miss interaction requirement. make-interfaces-feel-better (tactical polish) is a viable secondary home if we ever want a polish-checklist entry too.
+Why component-gallery-reference and not tactical-polish or sidecoach: it is the per-component "function layer" research skill, lists Dropdown menu / Navigation / Popover / Tooltip as types, and already enumerates exactly this kind of easy-to-miss interaction requirement. tactical-polish (tactical polish) is a viable secondary home if we ever want a polish-checklist entry too.
 
 Files touched: claude/skills/component-gallery-reference/SKILL.md

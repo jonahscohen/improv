@@ -190,6 +190,6 @@ This skill is the research and gap-analysis layer. The workflow across all three
 
 1. **component-gallery-reference** (this skill) - Research the component type. Understand function, interaction, accessibility, naming. Identify what the project's design system covers and what gaps exist.
 2. **sidecoach** - Apply brand strategy. Ensure the component fits the product's register and personality.
-3. **make-interfaces-feel-better** - Apply tactical polish. Concentric radii, optical alignment, animation timing, hit areas.
+3. **tactical-polish** - Apply tactical polish. Concentric radii, optical alignment, animation timing, hit areas.
 
-The gallery prevents functional gaps (missing keyboard handling, wrong semantics, inaccessible markup). Sidecoach prevents strategic gaps (off-brand, wrong register). Make-interfaces-feel-better prevents polish gaps (janky animations, misaligned icons, wrong cursor). All three layers together produce components that work correctly, look native to the project, and feel polished.
+The gallery prevents functional gaps (missing keyboard handling, wrong semantics, inaccessible markup). Sidecoach prevents strategic gaps (off-brand, wrong register). Tactical-polish prevents polish gaps (janky animations, misaligned icons, wrong cursor). All three layers together produce components that work correctly, look native to the project, and feel polished.

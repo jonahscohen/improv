@@ -5,8 +5,10 @@
  * Generates grid-template-columns/rows as repeat(N, 1fr).
  *
  * Ported verbatim from Retune overlay/src/ui/grid-picker.tsx.
- * Hard-coded hex (#eeeceb hover, #D97757 selected, #EBC8B5 preview) mirrored
- * verbatim per plan open-question o.
+ * The selected/preview cell tints derive from the marker color (see the
+ * .retune-grid-picker-cell rules in controls.css, now var(--justify-marker,
+ * #D97757) based) so they follow the user-selected marker live; the #eeeceb
+ * hover tint stays neutral.
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";

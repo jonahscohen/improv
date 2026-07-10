@@ -71,17 +71,20 @@
   --retune-white-90: color-mix(in srgb, var(--retune-white) 90%, transparent);
   --retune-white-95: color-mix(in srgb, var(--retune-white) 95%, transparent);
 
-  /* ── "Blue" ramp recolored to prompt-mode clay (#D97757); names kept to avoid churn ── */
-  --retune-blue-100: #FCF3EE;
-  --retune-blue-200: #F8E4DB;
-  --retune-blue-300: #F0CBBB;
-  --retune-blue-400: #E6A88C;
-  --retune-blue-500: #D97757;
-  --retune-blue-600: #C75F3E;
-  --retune-blue-700: #A94B30;
-  --retune-blue-800: #8B3B27;
-  --retune-blue-900: #602818;
-  --retune-blue-1000: #3B1810;
+  /* ── "Blue" ramp derived from the marker color (var(--justify-marker, #D97757));
+     lighter steps mix toward white, darker toward black, calibrated to approximate
+     the previous clay ramp when marker = #D97757. Names kept to avoid churn; every
+     step now follows the user-selected marker live. ── */
+  --retune-blue-100: color-mix(in srgb, var(--justify-marker, #D97757) 10%, white);
+  --retune-blue-200: color-mix(in srgb, var(--justify-marker, #D97757) 20%, white);
+  --retune-blue-300: color-mix(in srgb, var(--justify-marker, #D97757) 38%, white);
+  --retune-blue-400: color-mix(in srgb, var(--justify-marker, #D97757) 66%, white);
+  --retune-blue-500: var(--justify-marker, #D97757);
+  --retune-blue-600: color-mix(in srgb, var(--justify-marker, #D97757) 88%, black);
+  --retune-blue-700: color-mix(in srgb, var(--justify-marker, #D97757) 72%, black);
+  --retune-blue-800: color-mix(in srgb, var(--justify-marker, #D97757) 58%, black);
+  --retune-blue-900: color-mix(in srgb, var(--justify-marker, #D97757) 40%, black);
+  --retune-blue-1000: color-mix(in srgb, var(--justify-marker, #D97757) 25%, black);
 
   /* ── Red (Tailwind red ramp) ── */
   --retune-red-100: #FFF5F5;

@@ -105,17 +105,20 @@ async function executeFlow(utterance) {
       projectPath: process.cwd(),
     });
 
-    // Output: the clean, low-noise PANEL is the DEFAULT human surface (so a raw run no
-    // longer dumps a JSON wall - the exact "miles of mumbo jumbo" complaint). `--json`
-    // opts into the full machine-readable result for the skill's own parsing, and embeds
-    // the SAME rendered panel under `renderedPanel` so the skill prints it for the user
-    // without a second (re-rendering) run. `--render` stays as an explicit alias.
-    const { render } = require('./sidecoach-present');
-    const panel = render(result, utterance);
+    // Output: the code-enforced EXECUTIVE REPORT is the DEFAULT human surface (so a raw run
+    // no longer dumps a JSON wall - the exact "miles of mumbo jumbo" complaint, and the format
+    // is engine-rendered, not agent-composed). `--json` opts into the full machine-readable
+    // result and embeds the SAME report string so consumers print it without a second run.
+    // `renderedReport` is the current key; `renderedPanel` is retired but kept as an ALIAS to
+    // the same string because the Stop/PostResponse hook (claude/hooks/sidecoach-postresponse.sh)
+    // still reads result.renderedPanel to surface daemon output - aliasing keeps that path
+    // showing the executive report instead of the dead panel.
+    const { renderExecutiveReport } = require('./sidecoach-present');
+    const executiveReport = renderExecutiveReport(result, utterance);
     if (process.argv.includes('--json')) {
-      console.log(JSON.stringify({ ...result, renderedPanel: panel }, null, 2));
+      console.log(JSON.stringify({ ...result, renderedReport: executiveReport, renderedPanel: executiveReport }, null, 2));
     } else {
-      console.log(panel);
+      console.log(executiveReport);
     }
 
     // Exit with appropriate code

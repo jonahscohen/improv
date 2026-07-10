@@ -61,7 +61,15 @@ cp "$SCRIPT_DIR/cli/init.sh" "$JUSTIFY_DIR/init.sh"
 cp "$SCRIPT_DIR/cli/remove.sh" "$JUSTIFY_DIR/remove.sh"
 cp "$SCRIPT_DIR/cli/justify-watch.sh" "$JUSTIFY_DIR/justify-watch.sh"
 cp "$SCRIPT_DIR/cli/justify-done.sh" "$JUSTIFY_DIR/justify-done.sh"
-chmod +x "$JUSTIFY_DIR/init.sh" "$JUSTIFY_DIR/remove.sh" "$JUSTIFY_DIR/justify-watch.sh" "$JUSTIFY_DIR/justify-done.sh"
+cp "$SCRIPT_DIR/cli/justify-serve.sh" "$JUSTIFY_DIR/justify-serve.sh"
+# Daemon-owned watch (2026-07-08): the headless apply worker the daemon spawns,
+# plus the CLI arm/disarm path (chat "watch justify" / "stop watching" is the
+# other). justify-watch.sh now ARMS the daemon instead of running a session loop.
+cp "$SCRIPT_DIR/cli/justify-worker.sh" "$JUSTIFY_DIR/justify-worker.sh"
+cp "$SCRIPT_DIR/cli/justify-watch-arm.sh" "$JUSTIFY_DIR/justify-watch-arm.sh"
+cp "$SCRIPT_DIR/cli/justify-watch-disarm.sh" "$JUSTIFY_DIR/justify-watch-disarm.sh"
+chmod +x "$JUSTIFY_DIR/init.sh" "$JUSTIFY_DIR/remove.sh" "$JUSTIFY_DIR/justify-watch.sh" "$JUSTIFY_DIR/justify-done.sh" \
+  "$JUSTIFY_DIR/justify-serve.sh" "$JUSTIFY_DIR/justify-worker.sh" "$JUSTIFY_DIR/justify-watch-arm.sh" "$JUSTIFY_DIR/justify-watch-disarm.sh"
 
 # Put commands in PATH - try /usr/local/bin first, then homebrew, then ~/.local/bin
 BIN_DIR=""
@@ -79,7 +87,46 @@ ln -sf "$JUSTIFY_DIR/init.sh" "$BIN_DIR/justify-init"
 ln -sf "$JUSTIFY_DIR/remove.sh" "$BIN_DIR/justify-remove"
 ln -sf "$JUSTIFY_DIR/justify-watch.sh" "$BIN_DIR/justify-watch"
 ln -sf "$JUSTIFY_DIR/justify-done.sh" "$BIN_DIR/justify-done"
-echo "Installed justify-init, justify-remove, justify-watch, justify-done to $BIN_DIR"
+ln -sf "$JUSTIFY_DIR/justify-serve.sh" "$BIN_DIR/justify-serve"
+ln -sf "$JUSTIFY_DIR/justify-watch-arm.sh" "$BIN_DIR/justify-watch-arm"
+ln -sf "$JUSTIFY_DIR/justify-watch-disarm.sh" "$BIN_DIR/justify-watch-disarm"
+ln -sf "$JUSTIFY_DIR/justify-worker.sh" "$BIN_DIR/justify-worker"
+echo "Installed justify-init, justify-remove, justify-watch, justify-done, justify-serve, justify-watch-arm, justify-watch-disarm, justify-worker to $BIN_DIR"
+
+# launchd KeepAlive agent (macOS): make the daemon itself durable. Placement only
+# - activation is the user's choice (see claude/docs/justify-daemon-launchd.md).
+# The committed plist keeps THIS machine's absolute paths; template $HOME to the
+# installing machine before placing it in ~/Library/LaunchAgents.
+JUSTIFY_PLIST_SRC="$SCRIPT_DIR/../claude/launchd/com.yesand.justify-serve.plist"
+if [ "$(uname)" = "Darwin" ] && [ -f "$JUSTIFY_PLIST_SRC" ] && command -v python3 >/dev/null 2>&1; then
+  mkdir -p "$CLAUDE_DIR/logs"
+  LA_DIR="$HOME/Library/LaunchAgents"
+  JUSTIFY_PLIST_DST="$LA_DIR/com.yesand.justify-serve.plist"
+  mkdir -p "$LA_DIR"
+  if python3 - "$JUSTIFY_PLIST_SRC" "$JUSTIFY_PLIST_DST" "$HOME" <<'PYPLIST'
+import re, sys
+from xml.sax.saxutils import escape
+src, dst, home = sys.argv[1:4]
+with open(src, encoding="utf-8") as f:
+    text = f.read()
+# The author's HOME is embedded verbatim in the committed plist; extract it so
+# the rewrite works even if re-authored on another machine. The plist runs node
+# directly on the daemon entrypoint (see the plist header for why not justify-serve).
+m = re.search(r'<string>([^<]+)/\.claude/justify/dist/server/index\.js</string>', text)
+if not m:
+    sys.stderr.write("justify plist template: could not locate author home\n")
+    sys.exit(1)
+text = text.replace(m.group(1), escape(home))
+with open(dst, "w", encoding="utf-8") as f:
+    f.write(text)
+PYPLIST
+  then
+    echo "launchd agent placed at $JUSTIFY_PLIST_DST (templated for $HOME)"
+    echo "  To activate: launchctl bootstrap gui/\$(id -u) $JUSTIFY_PLIST_DST"
+  else
+    echo "WARNING: could not template the justify launchd plist - place it manually from $JUSTIFY_PLIST_SRC"
+  fi
+fi
 
 # Register MCP server in ~/.claude.json
 python3 -c "
@@ -150,14 +197,16 @@ The project's own dev server must be up. For a Lando WordPress site: `lando star
 - VERIFY both: `justify_status` shows >=1 connected tab at the site URL, AND a screenshot shows the Justify toolbar. Read the screenshot and describe it.
 - If the tab is NOT connected, the core did not load. Re-check in order: cert trusted (step 2); the script tag is in the SERVED html (curl + grep, not the source - check `WP_DEBUG` is true and the right theme); a hard reload (cache). Fix and retry from the failing point.
 
-### Step 6 - Listen (the active loop: HTTP polling, NOT the MCP watch)
-This session is the live operative - there is no separate process. The reliable listen loop is HTTP polling against the local server, NOT the MCP `justify_watch` tool. Per `decision_improv_http_polling_watch`, the MCP long-poll disconnects unreliably and silently drops prompts; `curl` against localhost never does. (`justify_watch` also just returns `idle` immediately when empty - it is not a real block.) Loop, and stay in it:
+### Step 6 - The watch is DAEMON-OWNED (arm it; do not run a session poll loop)
+The watch lives in the persistent :9223 daemon, not this session. "watch justify" ARMS the daemon (`justify-watch-arm`); the daemon then spawns a headless worker for every Send-All batch and keeps doing so across session teardowns. You do NOT run a session-owned poll loop.
 
-1. POLL (blocking until a prompt arrives, or `IDLE` after ~60s so you stay responsive - then immediately re-run it):
+If you want to handle a queued batch IN this session instead of waiting for the daemon, CLAIM it first so the daemon does not also dispatch a worker for it (never raw-poll `/prompts` - that returns daemon-claimed prompts too and would double-apply):
+
+1. CLAIM (returns only unclaimed/stale prompts, marks them yours):
    ```bash
-   for i in $(seq 1 30); do P=$(curl -s http://localhost:9223/prompts); [ "$P" != "[]" ] && [ -n "$P" ] && { printf '%s' "$P"; exit 0; }; sleep 2; done; echo IDLE
+   curl -s -X POST http://localhost:9223/prompts/claim -H 'Content-Type: application/json' -d '{"by":"interactive"}'
    ```
-   Each prompt is `{id, context, prompt, elementCount, timestamp}`.
+   Each claimed prompt is `{id, context, prompt, elementCount, timestamp, selectors, claimedBy, claimedAt}`.
 2. APPLY: for each prompt, make the user's intended change in this project's source files.
 3. RESPOND - this is what fills the bottom-left **Changes** panel and flips the claudebar to "Review":
    ```bash

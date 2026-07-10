@@ -58,7 +58,7 @@ Row unit = CANONICAL flow id (flows.ts ships 26; the 37 handler FILES are duplic
 | flowG_component_implementation | prose corpus (production bar) + scan (mechanical) | guidance present; scan finding fixture |
 | flowH_motion_integration | prose corpus + scan (bounce/layout-transition rules) | motion anti-pattern fixture |
 | flowI_accessibility | scan (a11y rules: contrast/skipped-heading/etc) + prose corpus | a11y finding fixture |
-| flowJ_tactical_polish | scan (make-interfaces-feel-better mechanical rules) + prose corpus (16-point) | polish-rule fixtures |
+| flowJ_tactical_polish | scan (tactical-polish mechanical rules) + prose corpus (16-point) | polish-rule fixtures |
 | flowK_multi_lens_audit | scan (5-dimension core) + BuildReport | BuildReport clean/warn/blocked fixtures |
 | flowL_design_critique | critique sub-agents (SEPARATE, untouched) + scan (ai-slop rules) + prose corpus (Nielsen/cognitive-load) | ai-slop fixture; sub-agent unchanged |
 | flowM_responsive_validation | scan (--browser breakpoints + 40x40 touch) + prose corpus | browser-engine fixture |

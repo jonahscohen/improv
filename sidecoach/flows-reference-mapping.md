@@ -111,7 +111,7 @@ All reference systems remain lean and continue accessing live sources. Flows inv
 | 5 | Validate responsive touch targets | none | All interactive elements at least 40x40px |
 
 ### Flow J: Tactical Polish
-**Purpose**: Apply make-interfaces-feel-better principles and final refinement.
+**Purpose**: Apply tactical-polish principles and final refinement.
 
 | Step | Activity | Reference System | Output |
 |------|----------|------------------|--------|

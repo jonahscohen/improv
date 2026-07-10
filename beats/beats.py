@@ -13,7 +13,7 @@ success summary line prints only when every check has passed.
 
 USAGE
   beats.py compile [--corpus PATH] [--build PATH] [--reembed-all]
-  beats.py verify  [--corpus PATH] [--build PATH]
+  beats.py verify  [--corpus PATH] [--build PATH] [--quiet-provenance]
   beats.py search  "natural language query" [--top N] [--json]
                    [--corpus PATH] [--build PATH]
 
@@ -21,6 +21,9 @@ USAGE
   --build   override the build dir  (default: <beats-dir>/.build)
   --top     search: max results after supersession resolution (default 5)
   --json    search: emit a JSON array for the benchmark scorer
+  --quiet-provenance  verify: suppress the WARN-only provenance lint (missing /
+                      malformed optional provenance fields). Never affects the
+                      exit code either way.
 
 EXIT CODES
   0  success (search: including zero hits)
@@ -29,8 +32,18 @@ EXIT CODES
   3  unreadable / non-strictly-decodable corpus file(s)
   4  artifact / db / FTS5 failure (broken, not stale)
   5  parity self-verification failure
-  6  verify-only: artifacts stale vs the corpus
+  6  verify-only: artifacts stale vs the corpus (a content change OR a
+     tool_version schema drift, e.g. a db built before the provenance columns)
 Argparse errors keep argparse's own default (exit 2).
+
+The optional provenance frontmatter (all fields optional on every beat type):
+author_human, author_model, session_id, machine, source (session|hook|import|
+manual), verified (free text: tests / browser / codex-review / none), confidence
+(high|medium|low). Compile lifts them into their own beats columns and the JSONL
+/ search --json objects (emitted only when present, so a corpus with none of them
+compiles and searches byte-identically to before). Verify LINTs them WARN-only:
+one line per beat with no provenance and per value outside its enum, to stderr,
+never changing the exit code.
 
 Search never exits stale (6) and never exits 3: a stale (or even transiently
 unreadable) corpus mid-session still beats retrieving nothing, so search reads
@@ -59,11 +72,30 @@ REPO_ROOT = BEATS_DIR.parent
 DEFAULT_CORPUS = REPO_ROOT / ".claude" / "memory"
 DEFAULT_BUILD = BEATS_DIR / ".build"
 
-TOOL_VERSION = 2
+# Bumped 2 -> 3 when the optional provenance columns were added to the beats
+# table (T-0044). A db compiled by an older tool version lacks those columns, so
+# verify reports it STALE (exit 6) to force a clean recompile; search still reads
+# an older db defensively (missing columns -> no provenance) rather than failing.
+TOOL_VERSION = 3
+
+# Optional provenance frontmatter (T-0044). All seven are optional on EVERY beat
+# type and default to "" when absent. They are lifted into their own columns and
+# emitted only when present, so a corpus with none of them compiles and searches
+# byte-identically to before. `source` and `confidence` have small enums that the
+# verify LINT pass checks (WARN-only, never blocking); `verified` is free text
+# (e.g. tests / browser / codex-review / none) and is not enum-checked.
+PROVENANCE_KEYS = (
+    "author_human", "author_model", "session_id", "machine",
+    "source", "verified", "confidence",
+)
+SOURCE_VALUES = ("session", "hook", "import", "manual")
+CONFIDENCE_VALUES = ("high", "medium", "low")
 
 # Fields lifted into their own columns; everything else in frontmatter is
-# preserved verbatim in `extra`.
-KNOWN_KEYS = ("name", "description", "type", "relates_to", "supersedes", "superseded_by")
+# preserved verbatim in `extra`. Provenance keys join the known set so they parse
+# as scalars (via as_str) rather than landing in `extra`.
+KNOWN_KEYS = ("name", "description", "type", "relates_to", "supersedes",
+              "superseded_by") + PROVENANCE_KEYS
 LIST_KEYS = ("relates_to",)
 
 # Frontmatter is the leading `---\n ... \n---` block. Tolerant: a file without
@@ -202,7 +234,7 @@ def read_records(corpus, md_files):
             has_fm = False
 
         superseded_by = as_str(known.get("superseded_by", ""))
-        records.append({
+        record = {
             "filename": path.name,
             "name": as_str(known.get("name", "")),
             "description": as_str(known.get("description", "")),
@@ -217,7 +249,10 @@ def read_records(corpus, md_files):
             "size": len(raw),
             "is_stale": bool(superseded_by),
             "_has_fm": has_fm,
-        })
+        }
+        for pk in PROVENANCE_KEYS:
+            record[pk] = as_str(known.get(pk, ""))
+        records.append(record)
     records.sort(key=lambda r: r["filename"])
     return records, bad
 
@@ -226,6 +261,52 @@ def corpus_hash(pairs):
     """sha256 over the newline-joined sorted 'filename:sha256' lines."""
     lines = sorted(f"{name}:{sha}" for name, sha in pairs)
     return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
+
+
+def extract_provenance(raw):
+    """Parse the optional provenance fields from a beat's raw bytes.
+
+    Returns a dict mapping every PROVENANCE_KEYS entry to its scalar value ("" if
+    absent), or None if the bytes are not strictly utf-8 decodable (verify does
+    not fail on undecodable files - that is compile's exit-3 job - so the lint
+    just skips them). Mirrors read_records' frontmatter handling exactly so the
+    lint sees the same values compile stored."""
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return None
+    text = text.replace("\r\n", "\n")
+    fm_match = FM_RE.match(text)
+    if not fm_match:
+        return {pk: "" for pk in PROVENANCE_KEYS}
+    known, _extra = parse_frontmatter(fm_match.group(1))
+    return {pk: as_str(known.get(pk, "")) for pk in PROVENANCE_KEYS}
+
+
+def provenance_issues(name, prov):
+    """Return a list of (kind, message) provenance issues for one beat.
+
+    kind is "missing" (no provenance fields at all) or "malformed" (a value
+    outside its small enum). An empty list means the beat is clean. These feed
+    verify's WARN-only lint pass and NEVER influence an exit code - provenance is
+    optional on every beat, and tooling can never block a mandated beat write."""
+    issues = []
+    if all(not prov.get(pk) for pk in PROVENANCE_KEYS):
+        issues.append(("missing", f"{name}: no provenance fields"))
+        return issues
+    src = prov.get("source", "")
+    if src and src not in SOURCE_VALUES:
+        issues.append((
+            "malformed",
+            f"{name}: source {src!r} not in {{{'|'.join(SOURCE_VALUES)}}}",
+        ))
+    conf = prov.get("confidence", "")
+    if conf and conf not in CONFIDENCE_VALUES:
+        issues.append((
+            "malformed",
+            f"{name}: confidence {conf!r} not in {{{'|'.join(CONFIDENCE_VALUES)}}}",
+        ))
+    return issues
 
 
 def probe_fts5():
@@ -277,7 +358,14 @@ def build_db(tmp_db, records, chash, compiled_at, inject_fault,
                 sha256 TEXT,
                 mtime INTEGER,
                 size INTEGER,
-                is_stale INTEGER
+                is_stale INTEGER,
+                author_human TEXT,
+                author_model TEXT,
+                session_id TEXT,
+                machine TEXT,
+                source TEXT,
+                verified TEXT,
+                confidence TEXT
             )
         """)
         con.execute(
@@ -310,9 +398,11 @@ def build_db(tmp_db, records, chash, compiled_at, inject_fault,
             json.dumps(r["extra"], ensure_ascii=False),
             r["body"], r["sha256"], r["mtime"], r["size"],
             1 if r["is_stale"] else 0,
+            r["author_human"], r["author_model"], r["session_id"],
+            r["machine"], r["source"], r["verified"], r["confidence"],
         ) for r in records]
         con.executemany(
-            "INSERT INTO beats VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", beat_rows
+            "INSERT INTO beats VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", beat_rows
         )
         fts_rows = [(r["filename"], r["name"], r["description"], r["body"]) for r in records]
         con.executemany(
@@ -587,6 +677,11 @@ def cmd_compile(corpus, build, inject_fault, reembed_all):
             "supersedes", "superseded_by", "extra", "body", "sha256",
             "mtime", "size", "is_stale",
         )}
+        # Provenance keys are emitted only when present, so a corpus with none of
+        # them yields a JSONL line byte-identical to the pre-provenance format.
+        for pk in PROVENANCE_KEYS:
+            if rec[pk]:
+                obj[pk] = rec[pk]
         jsonl_lines.append(json.dumps(obj, ensure_ascii=False, sort_keys=True))
     try:
         tmp_jsonl.write_text(
@@ -706,7 +801,7 @@ def cmd_compile(corpus, build, inject_fault, reembed_all):
     return 0
 
 
-def cmd_verify(corpus, build):
+def cmd_verify(corpus, build, quiet_provenance=False):
     if not corpus.is_dir():
         eprint(f"CORPUS MISSING: corpus dir does not exist: {corpus}")
         return 2
@@ -733,6 +828,19 @@ def cmd_verify(corpus, build):
             meta = con.execute(
                 "SELECT corpus_hash, file_count FROM meta"
             ).fetchone()
+            # tool_version FEATURE-DETECTED: an ancient db missing the column
+            # yields None and is treated as version-mismatched -> STALE, forcing a
+            # clean recompile onto the current schema (T-0044). Feature-detecting
+            # (rather than catching OperationalError) keeps a genuine locked/IO
+            # error propagating to the outer exit-4 handler instead of being
+            # masked as a stale-but-readable db.
+            meta_cols = {r[1] for r in con.execute(
+                "PRAGMA table_info(meta)").fetchall()}
+            if "tool_version" in meta_cols:
+                tv_row = con.execute("SELECT tool_version FROM meta").fetchone()
+                stored_tool_version = tv_row[0] if tv_row else None
+            else:
+                stored_tool_version = None
             db_rows = con.execute("SELECT filename, sha256 FROM beats").fetchall()
             # A present-but-emptied/desynced beats_fts is a broken artifact, not
             # a stale one: it would verify fresh yet return no FTS matches. Its
@@ -817,16 +925,39 @@ def cmd_verify(corpus, build):
     md_files = sorted(corpus.glob("*.md"), key=lambda p: p.name)
     disk = {}
     bad = []
+    prov_issues = []
     for path in md_files:
         try:
-            disk[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+            raw = path.read_bytes()
         except OSError as exc:
             bad.append((path.name, f"read error: {exc}"))
+            continue
+        disk[path.name] = hashlib.sha256(raw).hexdigest()
+        # Provenance LINT (WARN-only). Parse from the same bytes read for the
+        # hash so it costs one read per file. Undecodable files return None and
+        # are skipped here (compile's exit-3 job, not verify's).
+        if not quiet_provenance:
+            prov = extract_provenance(raw)
+            if prov is not None:
+                prov_issues.extend(provenance_issues(path.name, prov))
     if bad:
         eprint("UNREADABLE CORPUS FILE(S): the following beats could not be read:")
         for name, reason in bad:
             eprint(f"  {name}: {reason}")
         return 3
+
+    # Emit the provenance warnings. HARD RULE: these are advisory only and NEVER
+    # change the exit code (provenance is optional on every beat, and tooling can
+    # never block a mandated beat write). --quiet-provenance suppresses them.
+    if not quiet_provenance and prov_issues:
+        for _kind, msg in prov_issues:
+            eprint(f"PROVENANCE WARN: {msg}")
+        missing = sum(1 for kind, _ in prov_issues if kind == "missing")
+        malformed = sum(1 for kind, _ in prov_issues if kind == "malformed")
+        eprint(
+            f"PROVENANCE: {missing} beat(s) with no provenance, "
+            f"{malformed} malformed value(s) (warn-only; verify exit code unchanged)"
+        )
 
     current_hash = corpus_hash(disk.items())
     if current_hash == stored_hash:
@@ -842,6 +973,18 @@ def cmd_verify(corpus, build):
                 f"{stored_count} != {len(disk)} files on disk; meta is inconsistent"
             )
             return 4
+        # The corpus is unchanged but the artifacts were built by a DIFFERENT
+        # tool version (schema drift, e.g. before the provenance columns existed).
+        # Report STALE (exit 6) so the same background-rebuild path that handles a
+        # content change recompiles onto the current schema. This is NOT a
+        # content delta, so there is no added/removed/changed detail to print.
+        if stored_tool_version != TOOL_VERSION:
+            eprint(
+                f"STALE: corpus matches but artifacts were built by beats tool "
+                f"version {stored_tool_version} != current {TOOL_VERSION}; recompile "
+                f"| corpus_hash {current_hash[:12]}"
+            )
+            return 6
         print(
             f"OK: fresh - {len(disk)} beats match compiled state "
             f"(file_count {stored_count}) | corpus_hash {current_hash[:12]}"
@@ -1163,6 +1306,26 @@ def cmd_search(corpus, build, query, top, as_json):
             rows = con.execute(
                 "SELECT filename, name, description, superseded_by, relates_to FROM beats"
             ).fetchall()
+            # Provenance columns (tool_version 3) are FEATURE-DETECTED: an older
+            # db compiled before they existed lacks them, so we skip the read
+            # entirely rather than swallow the OperationalError (that broad catch
+            # would also hide a genuine "database is locked" / IO error and let a
+            # broken db return exit 0 instead of 4). Any error from the actual read
+            # below propagates to the outer sqlite3.Error handler (exit 4). Only
+            # non-empty fields are retained, so a beat with no provenance never
+            # adds keys to its search --json object.
+            prov_by_file = {}
+            beat_cols = {r[1] for r in con.execute(
+                "PRAGMA table_info(beats)").fetchall()}
+            if all(pk in beat_cols for pk in PROVENANCE_KEYS):
+                prov_cols = ", ".join(PROVENANCE_KEYS)
+                for prow in con.execute(
+                    f"SELECT filename, {prov_cols} FROM beats"
+                ).fetchall():
+                    vals = {pk: (prow[i + 1] or "")
+                            for i, pk in enumerate(PROVENANCE_KEYS)}
+                    if any(vals.values()):
+                        prov_by_file[prow[0]] = vals
             fts_row = con.execute("SELECT COUNT(*) FROM beats_fts").fetchone()
             fts_count = fts_row[0] if fts_row else -1
             if fts_count != len(rows):
@@ -1376,13 +1539,22 @@ def cmd_search(corpus, build, query, top, as_json):
     results = []
     for rank, (head, score) in enumerate(ranked, start=1):
         name, description = info.get(head, ("", ""))
-        results.append({
+        result = {
             "rank": rank,
             "filename": head,
             "score": score,
             "name": name,
             "description": description,
-        })
+        }
+        # Round-trip provenance into the --json object, but ONLY the fields that
+        # are present, so a beat with no provenance yields an object byte-identical
+        # to the pre-provenance format.
+        prov = prov_by_file.get(head)
+        if prov:
+            for pk in PROVENANCE_KEYS:
+                if prov.get(pk):
+                    result[pk] = prov[pk]
+        results.append(result)
 
     if as_json:
         print(json.dumps(results, ensure_ascii=False))
@@ -1415,6 +1587,10 @@ def main():
     ap.add_argument("--reembed-all", action="store_true",
                     help="compile: force a full re-embed, ignoring reusable vectors "
                          "in the existing db (model upgrades / corruption paranoia)")
+    ap.add_argument("--quiet-provenance", action="store_true",
+                    help="verify: suppress the WARN-only provenance lint output "
+                         "(missing / malformed provenance fields). Exit codes are "
+                         "unaffected either way.")
     ap.add_argument("--inject-parity-fault", action="store_true",
                     help=argparse.SUPPRESS)
     args = ap.parse_args()
@@ -1425,7 +1601,7 @@ def main():
     if args.command == "compile":
         return cmd_compile(corpus, build, args.inject_parity_fault, args.reembed_all)
     if args.command == "verify":
-        return cmd_verify(corpus, build)
+        return cmd_verify(corpus, build, args.quiet_provenance)
     # search
     if args.top < 1:
         eprint("UNUSABLE QUERY: --top must be a positive integer")

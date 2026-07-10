@@ -28,7 +28,7 @@ FILES=(
   # memory
   "~/.claude/CLAUDE.md (memory discipline block)\n~/.claude/settings.json (3 hooks merged)\n~/.claude/startup-check.sh (symlink)"
   # skills
-  "~/.claude/skills/make-interfaces-feel-better/\n~/.claude/skills/component-gallery-reference/\n~/.claude/skills/social-media/\n~/.claude/skills/design-team/\n~/.claude/skills/visual-effects/\n~/.claude/skills/icon-source/"
+  "~/.claude/skills/tactical-polish/\n~/.claude/skills/component-gallery-reference/\n~/.claude/skills/social-media/\n~/.claude/skills/design-team/\n~/.claude/skills/visual-effects/\n~/.claude/skills/icon-source/"
   # statusline
   "~/.claude/statusline-command.sh (symlink)"
   # cmux

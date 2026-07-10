@@ -14,9 +14,38 @@
 #   5. A pre-completion gate (in bash-guard) blocks claims of validation if
 #      there's an unread screenshot pending.
 
-PENDING_FILE="$HOME/.claude/.screenshot-pending"
-
 INPUT=$(cat)
+
+# The pending state is keyed by SESSION and holds a LIST of paths.
+#
+# It used to be one global file, `$HOME/.claude/.screenshot-pending`, containing a
+# single path. Two failures, both reproduced on 2026-07-10:
+#   - a second screenshot OVERWROTE the first, so the first capture's obligation
+#     to be Read silently evaporated;
+#   - across concurrent cmux surfaces, one session's Read discharged ANOTHER
+#     session's obligation - a session that never took that screenshot.
+# Structurally identical to the multiple-choice violation flag, which was global
+# across 24 sessions for the same reason.
+# See reference_2026-07-10_screenshot-pending-is-global-and-arms-on-fiction.md.
+#
+# Key derivation is duplicated verbatim in screenshot-open-clear.sh and
+# bash-guard.sh. If you change it, change all three.
+SESSION_KEY=$(printf '%s' "$INPUT" | python3 -c '
+import json, re, sys
+try:
+    s = str(json.load(sys.stdin).get("session_id", ""))
+except Exception:
+    s = ""
+s = re.sub(r"[^A-Za-z0-9._-]", "_", s)
+print(s or "global")
+' 2>/dev/null)
+[ -z "$SESSION_KEY" ] && SESSION_KEY=global
+PENDING_FILE="$HOME/.claude/.screenshot-pending.$SESSION_KEY"
+
+# Reap pending files from sessions that ended without discharging. Without this
+# the per-session files accumulate forever, and a stale one from a dead session
+# would block a fresh one that reuses its key.
+find "$HOME/.claude" -maxdepth 1 -name '.screenshot-pending.*' -mtime +1 -delete 2>/dev/null
 TOOL_NAME=$(printf '%s' "$INPUT" | python3 -c '
 import json, sys
 try:
@@ -107,9 +136,33 @@ except Exception:
     ;;
 esac
 
+# The extractor greps `--out <path>` out of the RAW command text, so it also
+# matches a path inside a quoted string, a heredoc, or a printf template. On
+# 2026-07-10 it scraped `%s"}}'` out of a probe's format string and wrote that
+# into the pending file. Nothing could then discharge the obligation: bash-guard
+# blocks further screenshots and commits until the pending path is Read, and that
+# path was a fragment of shell syntax that had never existed. The guard wedged
+# itself, and no Read could ever free it.
+#
+# This hook is PostToolUse: it runs AFTER the capture, so a real screenshot always
+# has a real file on disk by now. Requiring the path to exist cannot suppress a
+# genuine mandate, and it makes an unsatisfiable one impossible.
+if [ -n "$PATH_TO_READ" ] && [ ! -e "$PATH_TO_READ" ]; then
+  PATH_TO_READ=""
+fi
+
 if [ -n "$PATH_TO_READ" ]; then
-  printf '%s\n' "$PATH_TO_READ" > "$PENDING_FILE"
+  # APPEND, never overwrite. Overwriting is how the previous screenshot's
+  # obligation used to disappear. Every outstanding capture stays outstanding
+  # until its own path is Read.
+  mkdir -p "$(dirname "$PENDING_FILE")"
+  grep -qxF -- "$PATH_TO_READ" "$PENDING_FILE" 2>/dev/null \
+    || printf '%s\n' "$PATH_TO_READ" >> "$PENDING_FILE"
+  OUTSTANDING=$(wc -l < "$PENDING_FILE" 2>/dev/null | tr -d ' ')
   MSG="MANDATORY: a screenshot was just saved to $PATH_TO_READ. You MUST Read that path before composing your next text response, taking another screenshot, or claiming any validation result. Looking at the image is the validation - capturing it without opening it proves nothing."
+  if [ "${OUTSTANDING:-1}" -gt 1 ]; then
+    MSG="$MSG ($OUTSTANDING screenshots are now outstanding in this session; each one must be Read.)"
+  fi
   python3 -c "import json, sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PostToolUse','additionalContext':sys.argv[1]}}))" "$MSG"
 else
   echo '{}'

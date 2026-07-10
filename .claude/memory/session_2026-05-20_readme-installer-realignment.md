@@ -15,7 +15,7 @@ Jonah asked to bring the GitHub README and installer in line with the current st
 ## Drift the audit found
 
 - README claimed "Eleven components" - actually 12 (`reflect` was missing from the table since it was added 2026-05-11)
-- Skills row in "What's in the box" listed only `make-interfaces-feel-better + component-gallery-reference` - actually bundles 10 skills now (fontshare-reference, motion-reference, curate, design-references added in the last 2 days; social-media, design-team, visual-effects, icon-source were already there but unmentioned)
+- Skills row in "What's in the box" listed only `tactical-polish + component-gallery-reference` - actually bundles 10 skills now (fontshare-reference, motion-reference, curate, design-references added in the last 2 days; social-media, design-team, visual-effects, icon-source were already there but unmentioned)
 - "Hooks: refusal, not advice" mentioned only 5 hooks - actually 18 hooks across 5 roles
 - "Three-layer design stack" section assumed strategy / tokens / tactics - now a 6-layer pipeline (strategy / research / typography / references / motion / tactical) + tokens + brand
 - Reference "Hook lifecycle" table listed 6 hooks - rewrote as a categorized 18-hook reference (refusal / gate / nudge / toggle / lifecycle)

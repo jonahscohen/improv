@@ -14,7 +14,7 @@ type: decision
 
 - **Invisible to user** - No slash commands, natural conversation triggers flows
 - **Real-time detection** - Watches conversation continuously
-- **Consolidates workflows** - Replaces /oracle and /make-interfaces-feel-better
+- **Consolidates workflows** - Replaces /oracle and /tactical-polish
 - **Matches architectural vision** - "Natural conversation should evoke sequence of events"
 
 ## Architecture

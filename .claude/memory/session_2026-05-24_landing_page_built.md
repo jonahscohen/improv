@@ -45,7 +45,7 @@ Also called the **icon-source-reference** and **fontshare-reference** systems di
 - DESIGN.md duration tokens: `--d-fast` (180ms), `--d-medium` (260ms), `--d-slow` (420ms)
 - CSS-only `@keyframes lp-reveal-anim` entrance with stagger via `animation-delay` (60/120/180/240/300/360ms) so it works without JS and has no observer race
 - Button :hover background-color transition + arrow-right icon translateX on primary CTA hover
-- Button :active scale(0.96) per make-interfaces-feel-better tactical polish
+- Button :active scale(0.96) per tactical-polish tactical polish
 - `prefers-reduced-motion: reduce` media query nullifies all transitions + animation, sets reveal elements visible immediately
 
 ## Race condition I had to debug

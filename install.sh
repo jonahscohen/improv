@@ -7,7 +7,7 @@ set -euo pipefail
 #   brain        - Team rules + workflow (appended to CLAUDE.md) - ADDITIVE
 #   config       - Hooks, plugins, permissions (merged into settings.json) - ADDITIVE
 #   memory       - Additive memory subsystem (rules + 3 hooks + startup-check.sh loader)
-#   skills       - Anthropic Skills (make-interfaces-feel-better + component-gallery-reference + fontshare-reference + curate + design-references + motion-reference + design-build)
+#   skills       - Anthropic Skills (tactical-polish + component-gallery-reference + fontshare-reference + curate + design-references + motion-reference + design-build)
 #   statusline   - Custom prompt-bar render (~/.claude/statusline-command.sh)
 #   cmux         - cmux settings.json symlink
 #   nvm          - .zshrc auto-activate of nvm default (so claude/node/npm land on PATH)
@@ -81,7 +81,7 @@ DESCS=(
   "ADDITIVE: appends team rules (from RULES.md) and shared workflow (from CLAUDE.md) to your ~/.claude/CLAUDE.md between marker comments. Your existing CLAUDE.md content is preserved above and below the markers. If you have a claude/CLAUDE.local.md for personal overrides, those are appended in their own marker block too. Re-runs detect the markers and skip. Deactivation removes only the marked blocks."
   "ADDITIVE: JSON-merges safety hooks (bash-guard, content-guard, memory-approve), memory-write allow patterns, enabled plugins, and marketplace entries into your existing ~/.claude/settings.json. Does NOT touch your defaultMode, model, or other preferences. Copies hook scripts to ~/.claude/hooks/ alongside any hooks you already have. Deactivation removes only our entries by marker."
   "ADDITIVE memory subsystem: appends our Memory Discipline rules (loading order, per-task updates, file format) to your CLAUDE.md between marker comments, JSON-merges three hooks (SessionStart loader, PreCompact reminder, PostCompact reload) into your settings.json, and symlinks the startup-check.sh loader. Does NOT replace or overwrite anything - all changes are marker-guarded so re-runs are no-ops, and the markers can be removed cleanly if you ever want to undo. Pick this if your team wants to beef up an existing Claude Code with persistent memory capability without losing their config."
-  "Adds skills to ~/.claude/skills/, fully additive. Bundles make-interfaces-feel-better (tactical UI polish via npx), component-gallery-reference (researches component.gallery before building UI components), fontshare-reference (researches fontshare.com before picking typefaces), motion-reference (canonical GSAP + Lenis patterns for animation/scroll/transition work), design-build (the design pipeline orchestrator - one command runs strategy/research/typography/motion/build/QA in sequence with gate checkpoints), and a personal design-reference system: curate (capture wizard via /curate) + design-references (auto-consults your personal catalog of one-off patterns at ~/.claude/design-references/). Does NOT touch your CLAUDE.md, settings.json, hooks, or statusline. Safe to pick standalone if you have your own Claude Code config and just want the skill capability."
+  "Adds skills to ~/.claude/skills/, fully additive. Bundles tactical-polish (tactical UI polish, bundled file), component-gallery-reference (researches component.gallery before building UI components), fontshare-reference (researches fontshare.com before picking typefaces), motion-reference (canonical GSAP + Lenis patterns for animation/scroll/transition work), design-build (the design pipeline orchestrator - one command runs strategy/research/typography/motion/build/QA in sequence with gate checkpoints), and a personal design-reference system: curate (capture wizard via /curate) + design-references (auto-consults your personal catalog of one-off patterns at ~/.claude/design-references/). Does NOT touch your CLAUDE.md, settings.json, hooks, or statusline. Safe to pick standalone if you have your own Claude Code config and just want the skill capability."
   "Symlinks our statusline-command.sh into ~/.claude/. The settings.json statusLine command is tolerant of a missing script, so unticking this cleanly falls back to no custom statusline (Claude Code's default takes over). Pick this if you like our prompt-bar render; skip if you prefer Claude Code's default or a different statusline you've configured yourself."
   "Settings for cmux, the split-pane terminal that hosts the in-app browser preview Claude uses to verify your UI work. Skip if you don't use cmux."
   "A small one-line addition to your zsh config that fixes a specific issue some setups hit: opening a new terminal and getting 'claude not found in PATH' even though Claude is installed. The fix only activates if your zsh config already loads nvm (Node Version Manager) - on most machines this is a harmless no-op, so it's safe to leave on. If 'claude' already runs fine in fresh terminals on your machine, you can skip this."
@@ -101,7 +101,7 @@ FILES=(
   # memory
   "~/.claude/CLAUDE.md (memory discipline block)\n~/.claude/settings.json (3 hooks merged)\n~/.claude/startup-check.sh (symlink)"
   # skills
-  "~/.claude/skills/make-interfaces-feel-better/\n~/.claude/skills/component-gallery-reference/\n~/.claude/skills/fontshare-reference/\n~/.claude/skills/motion-reference/\n~/.claude/skills/design-build/\n~/.claude/skills/curate/\n~/.claude/skills/design-references/\n~/.claude/design-references/ (personal catalog directory)\n~/.claude/skills/social-media/\n~/.claude/skills/design-team/\n~/.claude/skills/visual-effects/\n~/.claude/skills/icon-source/"
+  "~/.claude/skills/tactical-polish/\n~/.claude/skills/component-gallery-reference/\n~/.claude/skills/fontshare-reference/\n~/.claude/skills/motion-reference/\n~/.claude/skills/design-build/\n~/.claude/skills/curate/\n~/.claude/skills/design-references/\n~/.claude/design-references/ (personal catalog directory)\n~/.claude/skills/social-media/\n~/.claude/skills/design-team/\n~/.claude/skills/visual-effects/\n~/.claude/skills/icon-source/"
   # statusline
   "~/.claude/statusline-command.sh (symlink)"
   # cmux
@@ -117,7 +117,7 @@ FILES=(
   # voice-output
   "~/.claude/voice-output/server.js\n~/.claude/tts-generate (symlink)\n~/.claude/.voice-config\n~/.claude/.voice-enabled (toggle)\n~/.claude/hooks/voice-mandate.sh\n~/.claude/hooks/voice-toggle.sh\n~/.claude/toggle-voice.sh\n~/.zshrc (voice-on/voice-off aliases)"
   # reflect
-  "~/.claude/skills/reflect/SKILL.md\n~/.claude/hooks/reflect-nudge.sh\n~/.claude/last-reflect-timestamp"
+  "~/.claude/skills/reflect/SKILL.md\n~/.claude/hooks/reflect-nudge.sh\n~/.claude/hooks/beats-reflect-weekly.sh\n~/.claude/last-reflect-timestamp\n~/Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist (templated, macOS)"
   # sidecoach
   "~/.claude/hooks/sidecoach-sessionstart.sh\n~/.claude/hooks/sidecoach-postuserp.sh\n~/.claude/hooks/sidecoach-postresponse.sh\n~/.claude/sidecoach/ (compiled handlers + daemon)\n~/.local/bin/sidecoach (CLI symlink)"
   # task-list
@@ -149,10 +149,10 @@ PICKS=(1 1 1 1 1 1 1 1 1 1 1 1 1 1)
 # literals above) so the parallel arrays stay aligned by construction.
 # Keys map to ~/.claude/skills/<dir>; the bundle and these share one source.
 # ------------------------------------------------------------
-DESIGN_SKILL_KEYS=(make-interfaces component-gallery fontshare motion design-build curate design-references social-media design-team visual-effects icon-source)
+DESIGN_SKILL_KEYS=(tactical-polish component-gallery fontshare motion design-build curate design-references social-media design-team visual-effects icon-source)
 KEYS+=("${DESIGN_SKILL_KEYS[@]}")
 TITLES+=(
-  "Tactical UI polish (make-interfaces-feel-better)"
+  "Tactical UI polish (tactical-polish)"
   "Component research (component.gallery)"
   "Typeface research (fontshare.com)"
   "GSAP + Lenis motion patterns"
@@ -165,7 +165,7 @@ TITLES+=(
   "Icon sourcing (8-library protocol)"
 )
 DESCS+=(
-  "Installs the make-interfaces-feel-better skill via the npx skills CLI (jakubkrehel/make-interfaces-feel-better). Tactical UI-polish checklist that auto-triggers on UI work. Requires npx; falls back to a manual command if npx is missing. Also included in the 'skills' bundle - pick this alone for just the polish skill."
+  "Installs the tactical-polish skill into ~/.claude/skills/. Tactical UI-polish checklist that auto-triggers on UI work. Bundled file, no npx. Also included in the 'skills' bundle - pick this alone for just the polish skill."
   "Installs component-gallery-reference into ~/.claude/skills/. Researches component.gallery before building/naming/extracting UI components. Bundled file, no npx. Also part of the 'skills' bundle."
   "Installs fontshare-reference into ~/.claude/skills/. Researches fontshare.com's curated catalog before recommending or implementing typefaces. Bundled file. Also part of the 'skills' bundle."
   "Installs motion-reference into ~/.claude/skills/. Canonical GSAP + Lenis glue patterns for animation, scroll-driven effects, and page transitions. Bundled file. Also part of the 'skills' bundle."
@@ -178,7 +178,7 @@ DESCS+=(
   "Installs icon-source into ~/.claude/skills/. Rigorous protocol for sourcing icons verbatim from 8 approved libraries (Heroicons, Lucide, Tabler, Bootstrap Icons, Phosphor, Material Symbols, plus animated variants). Bundled file. Also part of the 'skills' bundle."
 )
 FILES+=(
-  "~/.claude/skills/make-interfaces-feel-better/ (via npx skills CLI)"
+  "~/.claude/skills/tactical-polish/ (bundled)"
   "~/.claude/skills/component-gallery-reference/SKILL.md"
   "~/.claude/skills/fontshare-reference/SKILL.md"
   "~/.claude/skills/motion-reference/SKILL.md"
@@ -191,7 +191,7 @@ FILES+=(
   "~/.claude/skills/icon-source/SKILL.md"
 )
 DIRS+=(
-  "$REPO_DIR/claude/skills"
+  "$REPO_DIR/claude/skills/tactical-polish"
   "$REPO_DIR/claude/skills/component-gallery-reference"
   "$REPO_DIR/claude/skills/fontshare-reference"
   "$REPO_DIR/claude/skills/motion-reference"
@@ -340,7 +340,7 @@ Components (for --only KEYS):
   Core:     brain, config, memory, statusline, nvm, ampersand
   Channels: discord, voice-input, voice-output
   Tools:    cmux, sidecoach, reflect, task-list, tilt-lab, lotus
-  Skills:   skills (bundle), make-interfaces, component-gallery, fontshare,
+  Skills:   skills (bundle), tactical-polish, component-gallery, fontshare,
             motion, design-build, curate, design-references, social-media,
             design-team, visual-effects, icon-source
 
@@ -662,7 +662,7 @@ detect_component() {
     brain)      grep -Fq "<!-- improv:brain:begin -->" "$CLAUDE_DIR/CLAUDE.md" 2>/dev/null && echo active || echo not-installed ;;
     config)     [ -f "$CLAUDE_DIR/hooks/bash-guard.sh" ] && echo active || echo not-installed ;;
     memory)     grep -Fq "<!-- improv:memory-discipline:begin -->" "$CLAUDE_DIR/CLAUDE.md" 2>/dev/null && echo active || echo not-installed ;;
-    skills)     { [ -d "$CLAUDE_DIR/skills/make-interfaces-feel-better" ] || [ -d "$CLAUDE_DIR/skills/component-gallery-reference" ]; } && echo active || echo not-installed ;;
+    skills)     { [ -d "$CLAUDE_DIR/skills/tactical-polish" ] || [ -d "$CLAUDE_DIR/skills/component-gallery-reference" ]; } && echo active || echo not-installed ;;
     statusline) [ -L "$CLAUDE_DIR/statusline-command.sh" ] && echo active || echo not-installed ;;
     cmux)       [ -L "$HOME/.config/cmux/settings.json" ] && echo active || echo not-installed ;;
     nvm)        grep -Fq "nvm use default --silent" "$ZSHRC" 2>/dev/null && echo active || echo not-installed ;;
@@ -677,7 +677,7 @@ detect_component() {
     justify)     [ -d "$CLAUDE_DIR/justify" ] && echo active || echo not-installed ;;
     lotus)       [ -f "$CLAUDE_DIR/skills/lotus/SKILL.md" ] && [ -f "$REPO_DIR/lotus/mcp-server/dist/server.js" ] && echo active || echo not-installed ;;
     # Design peer skills (a la carte). Each detects its own ~/.claude/skills/ dir.
-    make-interfaces)   [ -d "$CLAUDE_DIR/skills/make-interfaces-feel-better" ] && echo active || echo not-installed ;;
+    tactical-polish)   { [ -d "$CLAUDE_DIR/skills/tactical-polish" ] || compgen -G "$CLAUDE_DIR/skills/*interfaces*" >/dev/null; } && echo active || echo not-installed ;;
     component-gallery) [ -d "$CLAUDE_DIR/skills/component-gallery-reference" ] && echo active || echo not-installed ;;
     fontshare)         [ -d "$CLAUDE_DIR/skills/fontshare-reference" ] && echo active || echo not-installed ;;
     motion)            [ -d "$CLAUDE_DIR/skills/motion-reference" ] && echo active || echo not-installed ;;
@@ -880,7 +880,13 @@ PY
 }
 
 deactivate_skills() {
-  [ -d "$CLAUDE_DIR/skills/make-interfaces-feel-better" ] && rm -rf "$CLAUDE_DIR/skills/make-interfaces-feel-better"
+  [ -d "$CLAUDE_DIR/skills/tactical-polish" ] && rm -rf "$CLAUDE_DIR/skills/tactical-polish"
+  # Also purge the legacy pre-rename skill dir. Its name is intentionally not
+  # spelled out (banned from this repo); the *interfaces* glob is unique among
+  # skill dirs and matches only the legacy install (dir or symlink).
+  for _legacy in "$CLAUDE_DIR"/skills/*interfaces*; do
+    [ -e "$_legacy" ] && rm -rf "$_legacy"
+  done
   [ -d "$CLAUDE_DIR/skills/component-gallery-reference" ] && rm -rf "$CLAUDE_DIR/skills/component-gallery-reference"
   [ -d "$CLAUDE_DIR/skills/fontshare-reference" ] && rm -rf "$CLAUDE_DIR/skills/fontshare-reference"
   [ -d "$CLAUDE_DIR/skills/motion-reference" ] && rm -rf "$CLAUDE_DIR/skills/motion-reference"
@@ -1043,6 +1049,15 @@ deactivate_reflect() {
   [ -d "$CLAUDE_DIR/skills/reflect" ] && rm -rf "$CLAUDE_DIR/skills/reflect"
   [ -f "$CLAUDE_DIR/hooks/reflect-nudge.sh" ] && rm -f "$CLAUDE_DIR/hooks/reflect-nudge.sh"
   [ -f "$CLAUDE_DIR/last-reflect-timestamp" ] && rm -f "$CLAUDE_DIR/last-reflect-timestamp"
+  # Scheduled weekly reflect (T-0045): unload the user agent if loaded, then
+  # remove the templated plist and the hook. bootout is user-initiated teardown
+  # here (deactivation), mirroring the plist's documented unload command.
+  if [ "$(uname)" = "Darwin" ]; then
+    launchctl bootout "gui/$(id -u)/com.yesand.beats-reflect-weekly" 2>/dev/null || true
+    [ -f "$HOME/Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist" ] \
+      && rm -f "$HOME/Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist"
+  fi
+  [ -f "$CLAUDE_DIR/hooks/beats-reflect-weekly.sh" ] && rm -f "$CLAUDE_DIR/hooks/beats-reflect-weekly.sh"
 }
 
 deactivate_task_list() {
@@ -1126,7 +1141,7 @@ deactivate_component() {
     tilt-lab)   deactivate_tilt_lab ;;
     justify) deactivate_justify ;;
     lotus)   deactivate_lotus ;;
-    make-interfaces)   deactivate_design_skill make-interfaces-feel-better ;;
+    tactical-polish)   deactivate_design_skill tactical-polish; for _legacy in "$CLAUDE_DIR"/skills/*interfaces*; do [ -e "$_legacy" ] && rm -rf "$_legacy"; done ;;
     component-gallery) deactivate_design_skill component-gallery-reference ;;
     fontshare)         deactivate_design_skill fontshare-reference ;;
     motion)            deactivate_design_skill motion-reference ;;
@@ -1802,6 +1817,17 @@ PY
     warn "python3 not found - skipping settings.json hook merge."
     warn "Add SessionStart, PreCompact, PostCompact hooks manually using $REPO_DIR/claude/settings.json as a reference."
   fi
+
+  # Optional: the read-only beats MCP server (T-0046). Deliberately NOT built by
+  # default - it is an opt-in surface that a user registers in an MCP client
+  # manually (see beats/mcp-server/README.md), so the memory component stays
+  # pure-python with no forced Node dependency. Lazy-build note, shown only when
+  # the server exists in the repo but has not been built yet.
+  if [ -d "$REPO_DIR/beats/mcp-server" ] && [ ! -f "$REPO_DIR/beats/mcp-server/dist/server.js" ]; then
+    info "beats MCP server available (read-only search/get/related/status). To build it:"
+    info "  cd $REPO_DIR/beats/mcp-server && npm install && npm run build"
+    info "  then register it per beats/mcp-server/README.md"
+  fi
 fi
 
 # ============================================================
@@ -1815,22 +1841,14 @@ fi
 if picked skills; then
   echo ""
   info "--- Anthropic Skills ---"
-  if command -v npx >/dev/null 2>&1; then
-    info "Installing make-interfaces-feel-better (tactical UI polish)..."
-    # Note: --yes -g are flags for the skills CLI itself (auto-confirm + global
-    # install), distinct from npx's own --yes (which auto-confirms package
-    # download). Without --yes -g the skills CLI hangs on interactive prompts.
-    if npx --yes skills add jakubkrehel/make-interfaces-feel-better --yes -g 2>/dev/null; then
-      ok "make-interfaces-feel-better installed"
-    else
-      warn "Skill install failed (non-fatal). Run manually:"
-      warn "  npx skills add jakubkrehel/make-interfaces-feel-better --yes -g"
-    fi
-  else
-    warn "npx not found - skipping make-interfaces-feel-better (requires npx)."
-    warn "After installing Node + Claude Code, run:"
-    warn "  npx skills add jakubkrehel/make-interfaces-feel-better --yes -g"
-  fi
+  # Bundled skill: tactical-polish (shipped with dotfiles, no npx needed)
+  info "Installing tactical-polish (tactical UI polish)..."
+  mkdir -p "$CLAUDE_DIR/skills/tactical-polish"
+  for tp_file in SKILL.md typography.md surfaces.md animations.md performance.md motion-review.md; do
+    safe_cp "$REPO_DIR/claude/skills/tactical-polish/$tp_file" \
+       "$CLAUDE_DIR/skills/tactical-polish/$tp_file"
+  done
+  ok "tactical-polish installed"
 
   # Bundled skill: component-gallery-reference (shipped with dotfiles, no npx needed)
   info "Installing component-gallery-reference (UI component research via component.gallery)..."
@@ -1851,6 +1869,8 @@ if picked skills; then
   mkdir -p "$CLAUDE_DIR/skills/motion-reference"
   safe_cp "$REPO_DIR/claude/skills/motion-reference/SKILL.md" \
      "$CLAUDE_DIR/skills/motion-reference/SKILL.md"
+  safe_cp "$REPO_DIR/claude/skills/motion-reference/VOCABULARY.md" \
+     "$CLAUDE_DIR/skills/motion-reference/VOCABULARY.md"
   ok "motion-reference installed"
 
   # Bundled skill: design-build (the design pipeline orchestrator)
@@ -1961,20 +1981,15 @@ install_bundled_skill() {
   ok "skills/$name installed"
 }
 
-if picked make-interfaces; then
+if picked tactical-polish; then
   echo ""
-  info "--- make-interfaces-feel-better (a la carte) ---"
-  if command -v npx >/dev/null 2>&1; then
-    if npx --yes skills add jakubkrehel/make-interfaces-feel-better --yes -g 2>/dev/null; then
-      ok "make-interfaces-feel-better installed"
-    else
-      warn "Skill install failed (non-fatal). Run manually:"
-      warn "  npx skills add jakubkrehel/make-interfaces-feel-better --yes -g"
-    fi
-  else
-    warn "npx not found - skipping make-interfaces-feel-better (requires npx)."
-    warn "  npx skills add jakubkrehel/make-interfaces-feel-better --yes -g"
-  fi
+  info "--- tactical-polish (a la carte) ---"
+  mkdir -p "$CLAUDE_DIR/skills/tactical-polish"
+  for tp_file in SKILL.md typography.md surfaces.md animations.md performance.md motion-review.md; do
+    safe_cp "$REPO_DIR/claude/skills/tactical-polish/$tp_file" \
+       "$CLAUDE_DIR/skills/tactical-polish/$tp_file"
+  done
+  ok "tactical-polish installed"
 fi
 
 picked component-gallery && { echo ""; info "--- component-gallery-reference (a la carte) ---"; install_bundled_skill component-gallery-reference; }
@@ -2577,6 +2592,67 @@ if picked reflect; then
   else
     ok "last-reflect-timestamp already exists"
   fi
+
+  # Scheduled weekly reflect (T-0045): the beats-reflect-weekly hook plus its
+  # launchd user agent. The hook re-runs the dormant reflect skill once a week
+  # when the corpus has accrued >= REFLECT_THRESHOLD new beats (same gate as the
+  # SessionStart nudge, one shared timestamp - no double fire).
+  info "Installing beats-reflect-weekly hook..."
+  safe_cp "$REPO_DIR/claude/hooks/beats-reflect-weekly.sh" "$CLAUDE_DIR/hooks/beats-reflect-weekly.sh"
+  chmod +x "$CLAUDE_DIR/hooks/beats-reflect-weekly.sh"
+  ok "beats-reflect-weekly hook installed"
+
+  # launchd's StandardOut/ErrorPath redirect needs the logs dir to pre-exist
+  # (launchd does not create parents); the hook also mkdir -p's it at runtime.
+  mkdir -p "$CLAUDE_DIR/logs"
+
+  # Templated launchd agent (macOS only). The committed plist keeps THIS
+  # machine's absolute paths so the repo copy is live here; the installer
+  # rewrites the author's $HOME and repo root to the installing machine's paths
+  # before placing the copy in ~/Library/LaunchAgents. Placement only -
+  # activation (launchctl bootstrap) is left to the user (see the plist header
+  # and claude/docs/beats-scheduled-reflect.md).
+  if [ "$(uname)" = "Darwin" ] && command -v python3 >/dev/null 2>&1; then
+    LA_DIR="$HOME/Library/LaunchAgents"
+    PLIST_SRC="$REPO_DIR/claude/launchd/com.yesand.beats-reflect-weekly.plist"
+    PLIST_DST="$LA_DIR/com.yesand.beats-reflect-weekly.plist"
+    mkdir -p "$LA_DIR"
+    if python3 - "$PLIST_SRC" "$PLIST_DST" "$HOME" "$REPO_DIR" <<'PYPLIST'
+import re, sys
+from xml.sax.saxutils import escape
+src, dst, home, repo = sys.argv[1:5]
+with open(src, encoding="utf-8") as f:
+    text = f.read()
+# The author's paths are embedded verbatim in the committed plist. Extract them
+# so the rewrite still works if the repo is re-authored on a different machine.
+m_repo = re.search(r'<key>BEATS_REPO_ROOT</key>\s*<string>([^<]+)</string>', text)
+m_home = re.search(r'<string>([^<]+)/\.claude/hooks/beats-reflect-weekly\.sh</string>', text)
+if not m_repo or not m_home:
+    sys.stderr.write("plist template: could not locate author paths\n")
+    sys.exit(1)
+author_repo, author_home = m_repo.group(1), m_home.group(1)
+# The substituted values land inside XML <string> nodes, so XML-escape any
+# &, <, > in the installing machine's paths (e.g. a dir named "A&B") or the
+# generated plist would be malformed.
+# Replace the repo root FIRST via a sentinel so that a home-substring inside the
+# repo path (or a target path that contains the author's home) can never be
+# double-rewritten by the home replacement.
+SENTINEL = "\x00BEATS_REPO_ROOT\x00"
+text = text.replace(author_repo, SENTINEL)
+text = text.replace(author_home, escape(home))
+text = text.replace(SENTINEL, escape(repo))
+with open(dst, "w", encoding="utf-8") as f:
+    f.write(text)
+PYPLIST
+    then
+      ok "launchd agent placed at $PLIST_DST (templated for $HOME / $REPO_DIR)"
+      info "To activate: launchctl bootstrap gui/\$(id -u) $PLIST_DST"
+    else
+      warn "Could not template the launchd plist - place it manually from $PLIST_SRC"
+    fi
+  else
+    info "Skipping launchd agent (not macOS or python3 missing) - the beats-reflect-weekly hook is installed; schedule it by other means if needed."
+  fi
 fi
 
 # ============================================================
@@ -2739,7 +2815,7 @@ echo "What was installed:"
 picked brain      && echo "  - Brain: team rules + workflow appended to CLAUDE.md (marker-guarded, additive)"
 picked config     && echo "  - Config: hooks, plugins, permissions merged into settings.json (additive)"
 picked memory     && echo "  - Memory subsystem: startup-check.sh + Memory Discipline section appended to CLAUDE.md + 3 hooks merged into settings.json (additive, marker-guarded)"
-picked skills     && echo "  - Anthropic Skills: make-interfaces-feel-better (tactical UI polish; auto-triggers on UI work)"
+picked skills     && echo "  - Anthropic Skills: tactical-polish (tactical UI polish; auto-triggers on UI work)"
 picked statusline && echo "  - Custom statusline: statusline-command.sh symlinked (Claude Code falls back to default if unticked)"
 picked ghostty  && echo "  - Ghostty: config.ghostty (copied from repo - re-run install.sh to sync edits)"
 picked shaders  && echo "  - Ghostty shaders: in-repo chain at $REPO_DIR/shaders, plus library at ~/Documents/Github/ghostty-shaders"

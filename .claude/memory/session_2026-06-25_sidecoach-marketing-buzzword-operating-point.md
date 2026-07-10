@@ -109,7 +109,7 @@ follow-through). I did NOT touch Task #5's checkLowContrast or regenerate (that 
 - src/validators/subjective-rendered-scanner.ts (rule union + SUBJECTIVE_RULES + inPageSubjective block)
 - src/validators/checks/rendered-checks.ts (checkMarketingBuzzword + RENDERED_CHECKS entry)
 - src/product-rule-registry.ts + src/validators.generated.ts + src/__tests__/product-rule-registry.test.ts (registry
-  wiring + golden row + counts 59 / polish-standard 23 - pattern from feelbetter-gap-implement beat)
+  wiring + golden row + counts 59 / polish-standard 23 - pattern from tactical-polish-gap-implement beat)
 - src/__tests__/subjective-rendered-calibration.test.ts (8 marketing-buzzword calibration fixtures)
 - eval/scorecard-score.mjs (RENDERED_SUBJECTIVE += marketing-buzzword - availability-gating consistency for the
   frozen-90; mapping is identity so no scorecard-mapping edit needed)

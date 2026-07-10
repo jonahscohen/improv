@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { isDynamicClassName, filterClasses } from '../../core/selection.js';
+// These helpers live in element-utils, not selection. The import path went stale
+// in the endow+improv -> justify rename (18a82d5) and the whole file has failed
+// with "isDynamicClassName is not a function" ever since.
+import { isDynamicClassName, filterClasses } from '../../core/element-utils.js';
 
 describe('isDynamicClassName', () => {
   it('detects CSS module hashes', () => {

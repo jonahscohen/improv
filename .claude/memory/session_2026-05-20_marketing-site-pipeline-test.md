@@ -22,7 +22,7 @@ Per the README's "how the layers stack on a real build" sequence:
 5. design-references - check the personal catalog (1 reference: unlumen-kbd)
 6. motion-reference - GSAP + Lenis canonical patterns
 7. icon-source - pick one icon library
-8. make-interfaces-feel-better - tactical polish during impl
+8. tactical-polish - tactical polish during impl
 9. /oracle audit + critique + polish at QA time
 
 ## Decisions locked autonomously

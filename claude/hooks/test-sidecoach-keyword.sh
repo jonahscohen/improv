@@ -351,6 +351,38 @@ assert_intent_silent "intent: rename label"           "rename the submit label t
 assert_intent_silent "intent: informational design"   "what is a design system"
 assert_intent_silent "intent: backend task"           "add a database migration for the users table"
 
+# DIAGNOSE tier: pure read-only diagnosis is the canonical /sidecoach audit case
+# but carries no BUILD action. Before this tier these went silent even though the
+# nudge text routes them to audit (the 2026-06-29 invocation-gap stress finding).
+# It must fire on a diagnosis verb + a substantive UI target, and on the "fluff"
+# copy-quality standalone, while staying silent on non-UI diagnosis.
+assert_intent_fires  "diag: what's wrong + page"      "what's wrong with the homepage"
+assert_intent_fires  "diag: what's wrong + dashboard" "what is wrong with the dashboard"
+assert_intent_fires  "diag: diagnose + target"        "diagnose the pricing page"
+assert_intent_fires  "diag: take a look at + target"  "take a look at the landing page"
+assert_intent_fires  "diag: check + navbar"           "check the navbar for me"
+assert_intent_fires  "diag: copy real or fluff"       "is the copy on the homepage real or fluff"
+# Gated by a substantive UI target -> non-UI diagnosis stays silent.
+assert_intent_silent "diag: non-UI db query"          "what's wrong with the database query"
+assert_intent_silent "diag: non-UI deployment"        "diagnose the deployment failure"
+assert_intent_silent "diag: non-UI logs"              "take a look at the server logs"
+# The DIAGNOSE path uses a positive UI-target allowlist (NOT the full target list)
+# so engineering prose with overloaded nouns does not trip the nudge (folded from
+# Codex review, two rounds: header/table/view/grid + site/interface/component).
+assert_intent_silent "diag: HTTP header"              "inspect the packet header"
+assert_intent_silent "diag: response header"          "check the response header"
+assert_intent_silent "diag: DB table"                 "look at the users table"
+assert_intent_silent "diag: SQL view"                 "review the materialized view"
+assert_intent_silent "diag: call site"                "look at the call site for this error"
+assert_intent_silent "diag: TS interface"             "review the TypeScript interface"
+assert_intent_silent "diag: sw component"             "inspect the auth component"
+# But the specific 'pricing table' UI target still fires (not a cross-domain word).
+assert_intent_fires  "diag: pricing table fires"      "what's wrong with the pricing table"
+# Design-canonical targets stay in the allowlist and still fire under diagnosis.
+assert_intent_fires  "diag: layout fires"             "what's wrong with the layout"
+assert_intent_fires  "diag: form fires"               "take a look at the signup form"
+assert_intent_fires  "diag: screen fires"             "what's wrong with the login screen"
+
 # Explicit verbs still hard-route even with the intent tier present.
 assert_fires "verb routes alongside intent tier" "polish the checkout flow" "polish"
 
