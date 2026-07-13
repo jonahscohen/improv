@@ -180,20 +180,26 @@
   }
   .tier-desc { font-size: 12px; color: var(--ink-muted); padding: 0 6px; }
   /* Grid, not wrapping flex: a wrapped node would stretch full-width and read
-     as a tier of its own. Column count is set per tier. */
+     as a tier of its own. Column count is carried by data-cols, NOT by an inline
+     style - an inline custom property outranks every stylesheet rule, so the
+     responsive overrides below could never win against it. */
   .row {
     display: grid;
     grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
     gap: 10px;
     align-items: stretch;
   }
+  .row[data-cols="5"] { --cols: 5; }
+  .row[data-cols="3"] { --cols: 3; }
+  .row[data-cols="2"] { --cols: 2; }
+  .row[data-cols="1"] { --cols: 1; }
 
   .col-head {
     font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
     color: var(--ink-muted); text-transform: uppercase; margin-bottom: 8px;
   }
-  .col-standalone .row { --cols: 1; }
-  .islands .row { --cols: 2; }
+  .col-standalone .row, .col-standalone .row[data-cols] { --cols: 1; }
+  .islands .row, .islands .row[data-cols] { --cols: 2; }
 
   /* ---------- node ---------- */
 
@@ -391,13 +397,14 @@
     border-radius: 4px; padding: 1px 4px;
   }
 
+  /* These must outrank .row[data-cols="5"], so they match the same attribute. */
   @media (max-width: 900px) {
     .layout { grid-template-columns: 1fr; }
-    .row, .col-standalone .row, .islands .row { --cols: 2; }
+    .row, .row[data-cols], .col-standalone .row[data-cols], .islands .row[data-cols] { --cols: 2; }
     #wires { display: none; }
   }
   @media (max-width: 560px) {
-    .row, .col-standalone .row, .islands .row { --cols: 1; }
+    .row, .row[data-cols], .col-standalone .row[data-cols], .islands .row[data-cols] { --cols: 1; }
   }
 </style>
 </head>
@@ -771,7 +778,7 @@
     head.appendChild(el("span", "tier-desc", t.desc));
     sec.appendChild(head);
     var row = el("div", "row");
-    if (t.cols) row.style.setProperty("--cols", String(t.cols));
+    if (t.cols) row.setAttribute("data-cols", String(t.cols));
     t.ids.forEach(function (id) { row.appendChild(buildNode(id)); });
     sec.appendChild(row);
     tiersRoot.appendChild(sec);

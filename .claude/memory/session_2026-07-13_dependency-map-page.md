@@ -77,6 +77,21 @@ Also: the first cmux screenshot was under 900 CSS px, so it rendered the respons
 branch, not the desktop one. Nearly reported "verified" on a layout I had not actually
 seen. Widened via Chrome MCP `resize_window` to 1440 and re-verified.
 
+3. **A responsive regression I shipped in the first commit (fixed in the follow-up).**
+   The per-tier column count was applied as an INLINE custom property
+   (`row.style.setProperty("--cols", ...)`). An inline custom property outranks every
+   stylesheet rule, so the `@media (max-width: 900px)` override that collapses the grid
+   to 2 columns could never win. Result: on a narrow viewport, tier 1 still forced 5
+   columns and squeezed the cards, while the standalone column correctly dropped below.
+   Fixed by carrying the count on a `data-cols` attribute and matching it from CSS, so
+   the media queries (same specificity, later in the sheet) win.
+   **Root cause of the miss:** I verified the narrow branch BEFORE introducing the grid,
+   and only verified desktop AFTER. A change that touches a responsive rule invalidates
+   every breakpoint, not just the one being worked on. The rule for next time: when the
+   layout mechanism changes, RE-verify every branch, not the one you were looking at.
+   It surfaced only because the cmux pane happened to be narrow on a later pass -
+   luck, not process, and that is exactly what needed correcting.
+
 ## Justify daemon state (observed, not assumed)
 
 Daemon was UP: `:9223/justify-core.js` returned HTTP 200 (603191 B) and the
