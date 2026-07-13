@@ -1,0 +1,1017 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Improv Dependency Map</title>
+<style>
+  /* Default is prefers-color-scheme. The toggle only overrides it when the
+     reader explicitly asks, via data-theme on the root. */
+  :root, :root[data-theme="light"] {
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --ink-1: #0b0b0b;
+    --ink-2: #52514e;
+    /* The palette's muted step (#898781) is an axis/gridline ink and lands at
+       3.41:1 on this page plane - under AA for the 11-12px labels it is used
+       for here. Darkened to clear 4.5:1 (4.93 on page, 5.06 on surface).
+       The dark mode keeps #898781, which already clears AA on the dark plane. */
+    --ink-muted: #6e6d66;
+    --rule: #e1e0d9;
+    --baseline: #c3c2b7;
+    --ring: rgba(11, 11, 11, 0.10);
+
+    /* Five classes. Categorical slots 1-5, fixed order, validated. */
+    --cls-foundation: #2a78d6;
+    --cls-tool:       #1baf7a;
+    --cls-leaf:       #eda100;
+    --cls-standalone: #008300;
+    --cls-supportive: #4a3aa7;
+
+    /* Status. Reserved. Never a class color. */
+    --critical: #d03b3b;
+    --warning:  #fab219;
+
+    --edge: #b9b8b1;
+    --edge-strong: #7d7c76;
+
+    --tint: 0.10;
+    --shadow: 0 1px 2px rgba(11, 11, 11, 0.05);
+  }
+
+  /* Dark steps are selected for the dark surface, not flipped from light. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --ink-1: #ffffff;
+      --ink-2: #c3c2b7;
+      --ink-muted: #898781;
+      --rule: #2c2c2a;
+      --baseline: #383835;
+      --ring: rgba(255, 255, 255, 0.10);
+
+      --cls-foundation: #3987e5;
+      --cls-tool:       #199e70;
+      --cls-leaf:       #c98500;
+      --cls-standalone: #008300;
+      --cls-supportive: #9085e9;
+
+      --edge: #4a4a46;
+      --edge-strong: #7d7c76;
+
+      --tint: 0.18;
+      --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --ink-1: #ffffff;
+    --ink-2: #c3c2b7;
+    --ink-muted: #898781;
+    --rule: #2c2c2a;
+    --baseline: #383835;
+    --ring: rgba(255, 255, 255, 0.10);
+
+    --cls-foundation: #3987e5;
+    --cls-tool:       #199e70;
+    --cls-leaf:       #c98500;
+    --cls-standalone: #008300;
+    --cls-supportive: #9085e9;
+
+    --edge: #4a4a46;
+    --edge-strong: #7d7c76;
+
+    --tint: 0.18;
+    --shadow: none;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink-1);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 40px 24px 96px;
+  }
+
+  /* ---------- header ---------- */
+
+  .masthead { position: relative; border-bottom: 1px solid var(--rule); padding-bottom: 20px; margin-bottom: 24px; }
+  .theme-toggle {
+    position: absolute; top: 0; right: 0;
+    font: inherit; font-size: 12px; cursor: pointer;
+    color: var(--ink-2); background: var(--surface-1);
+    border: 1px solid var(--rule); border-radius: 999px;
+    padding: 5px 12px;
+  }
+  .theme-toggle:hover { color: var(--ink-1); border-color: var(--baseline); }
+  .theme-toggle:focus-visible { outline: 2px solid var(--cls-foundation); outline-offset: 2px; }
+  .masthead h1 { font-size: 28px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .masthead p { margin: 0; color: var(--ink-2); max-width: 68ch; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .meta span {
+    font-size: 12px; color: var(--ink-2);
+    border: 1px solid var(--rule); border-radius: 999px;
+    padding: 3px 10px; background: var(--surface-1);
+  }
+  .meta .verified { color: var(--ink-1); border-color: var(--baseline); font-weight: 600; }
+
+  /* ---------- controls + legend ---------- */
+
+  .controls {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 20px;
+    padding: 14px 16px; margin-bottom: 20px;
+    background: var(--surface-1);
+    border: 1px solid var(--rule); border-radius: 10px;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+  .legend-title, .filters-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--ink-muted); font-weight: 600; margin-right: 2px;
+  }
+  .key { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-2); }
+  .swatch {
+    width: 12px; height: 12px; border-radius: 3px; flex: none;
+    box-shadow: 0 0 0 1px var(--ring) inset;
+  }
+  .swatch.foundation { background: var(--cls-foundation); }
+  .swatch.tool       { background: var(--cls-tool); }
+  .swatch.leaf       { background: var(--cls-leaf); }
+  .swatch.standalone { background: var(--cls-standalone); }
+  .swatch.supportive { background: var(--cls-supportive); }
+  .swatch.island     { background: transparent; box-shadow: 0 0 0 2px var(--critical) inset; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding-left: 20px; border-left: 1px solid var(--rule); }
+  .filters label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+  .filters input { accent-color: var(--cls-foundation); margin: 0; }
+  .edge-sample { width: 22px; height: 0; flex: none; border-top: 2px solid var(--edge-strong); }
+  .edge-sample.vendored { border-top-style: dashed; }
+  .edge-sample.deploy { border-top-style: dotted; }
+
+  /* ---------- stage ---------- */
+
+  .stage { position: relative; }
+  #wires {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0; overflow: visible;
+  }
+  .layout { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 232px; gap: 20px; align-items: start; }
+
+  .tier { margin-bottom: 44px; }
+  .tier-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  /* The labels sit in the band the wires route through. Give them the page
+     plane as a background so a connector never strikes through the text. */
+  .tier-num, .tier-desc { position: relative; background: var(--page); }
+  .tier-num {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--ink-muted); text-transform: uppercase;
+    padding-right: 6px;
+  }
+  .tier-desc { font-size: 12px; color: var(--ink-muted); padding: 0 6px; }
+  /* Grid, not wrapping flex: a wrapped node would stretch full-width and read
+     as a tier of its own. Column count is set per tier. */
+  .row {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .col-head {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--ink-muted); text-transform: uppercase; margin-bottom: 8px;
+  }
+  .col-standalone .row { --cols: 1; }
+  .islands .row { --cols: 2; }
+
+  /* ---------- node ---------- */
+
+  /* The node is a DIV, not a button: its supportive children are themselves
+     buttons, and a button inside a button is invalid HTML with unreliable
+     click and keyboard behavior. The whole card is made clickable by a
+     stretched hit-button layered under the content instead. */
+  .node {
+    position: relative;
+    display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start;
+    min-width: 0;
+    text-align: left;
+    background: var(--surface-1);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent, var(--baseline));
+    border-radius: 8px;
+    padding: 10px 12px;
+    box-shadow: var(--shadow);
+    transition: border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+  }
+  .node::before {
+    content: ""; position: absolute; inset: 0; border-radius: 5px;
+    background: var(--accent, transparent); opacity: var(--tint);
+    -webkit-mask-image: linear-gradient(90deg, #000, transparent 42%);
+    mask-image: linear-gradient(90deg, #000, transparent 42%);
+    pointer-events: none;
+  }
+  .node-hit {
+    position: absolute; inset: 0; z-index: 1;
+    width: 100%; height: 100%;
+    padding: 0; margin: 0; border: 0; border-radius: 7px;
+    background: transparent; cursor: pointer; font: inherit; color: transparent;
+  }
+  .node-hit:focus-visible { outline: 2px solid var(--cls-foundation); outline-offset: 2px; }
+  .node:hover { transform: translateY(-1px); border-color: var(--baseline); }
+  .node.sel {
+    border-color: var(--accent, var(--baseline));
+    box-shadow: 0 0 0 2px var(--accent, var(--baseline)), var(--shadow);
+  }
+  .node.foundation { --accent: var(--cls-foundation); }
+  .node.tool       { --accent: var(--cls-tool); }
+  .node.leaf       { --accent: var(--cls-leaf); }
+  .node.standalone { --accent: var(--cls-standalone); }
+  .node.supportive { --accent: var(--cls-supportive); }
+
+  .node-name { position: relative; font-weight: 650; font-size: 14px; color: var(--ink-1); letter-spacing: -0.005em; }
+  .node-sub  { position: relative; font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+  .node-cls  { position: relative; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-muted); font-weight: 600; margin-top: 6px; }
+
+  .flags { position: relative; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+  .flag {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 4px; border: 1px solid;
+  }
+  .flag.risk,
+  .flag.dead,
+  .flag.debt    { color: var(--critical); border-color: var(--critical); background: color-mix(in srgb, var(--critical) 8%, transparent); }
+  .flag.inert,
+  .flag.legacy  { color: var(--ink-2); border-color: var(--baseline); background: transparent; }
+  .flag.external { color: var(--ink-1); border-color: var(--baseline); background: color-mix(in srgb, var(--warning) 22%, transparent); }
+
+  /* Supportive children hang off their parent. z-index lifts them above the
+     stretched hit-button so they take their own clicks. */
+  .kids { position: relative; z-index: 2; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 9px; padding-top: 8px; border-top: 1px dashed var(--rule); }
+  .kid {
+    font: inherit; cursor: pointer; text-align: left;
+    font-size: 11px; color: var(--ink-2);
+    padding: 3px 7px 3px 6px; border-radius: 5px;
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--cls-supportive);
+  }
+  .kid:hover { color: var(--ink-1); border-color: var(--baseline); border-left-color: var(--cls-supportive); }
+  .kid:focus-visible { outline: 2px solid var(--cls-supportive); outline-offset: 1px; }
+  .kid[aria-pressed="true"] { color: var(--ink-1); box-shadow: 0 0 0 1px var(--cls-supportive); }
+  .kid .dot { color: var(--critical); font-weight: 700; }
+
+  /* ---------- islands ---------- */
+
+  .islands {
+    margin-top: 26px; padding: 16px;
+    border: 1px dashed var(--critical); border-radius: 10px;
+    background: color-mix(in srgb, var(--critical) 4%, var(--surface-1));
+  }
+  .islands-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .islands-title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--critical); }
+  .islands-note { font-size: 12px; color: var(--ink-2); margin: 0 0 10px; }
+  .node.island {
+    --accent: var(--critical);
+    border: 1px solid var(--critical); border-left: 3px solid var(--critical);
+  }
+  .node.island::before { opacity: 0.06; }
+
+  /* ---------- detail panel ---------- */
+
+  .panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 92vw);
+    background: var(--surface-1);
+    border-left: 1px solid var(--rule);
+    box-shadow: -8px 0 32px rgba(11, 11, 11, 0.10);
+    transform: translateX(100%);
+    transition: transform 180ms ease;
+    z-index: 20;
+    display: flex; flex-direction: column;
+  }
+  .panel.open { transform: translateX(0); }
+  @media (prefers-reduced-motion: reduce) { .panel { transition: none; } }
+
+  .panel-top {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    padding: 18px 18px 14px; border-bottom: 1px solid var(--rule); flex: none;
+  }
+  .panel-name { font-size: 18px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  .panel-cls { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; margin-top: 4px; }
+  .panel-cls.foundation { color: var(--cls-foundation); }
+  .panel-cls.tool       { color: var(--cls-tool); }
+  .panel-cls.leaf       { color: var(--cls-leaf); }
+  .panel-cls.standalone { color: var(--cls-standalone); }
+  .panel-cls.supportive { color: var(--cls-supportive); }
+  .panel-cls.island     { color: var(--critical); }
+
+  .panel-close {
+    font: inherit; font-size: 20px; line-height: 1; cursor: pointer; flex: none;
+    background: transparent; border: 1px solid var(--rule); border-radius: 6px;
+    color: var(--ink-2); width: 30px; height: 30px;
+  }
+  .panel-close:hover { color: var(--ink-1); border-color: var(--baseline); }
+  .panel-close:focus-visible { outline: 2px solid var(--cls-foundation); outline-offset: 2px; }
+
+  .panel-body { padding: 16px 18px 32px; overflow-y: auto; flex: 1 1 auto; }
+  .panel-body h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--ink-muted); margin: 18px 0 8px; font-weight: 700;
+  }
+  .panel-body h3:first-child { margin-top: 0; }
+  .panel-desc { margin: 0; color: var(--ink-2); font-size: 14px; }
+
+  .ev { list-style: none; margin: 0; padding: 0; }
+  .ev li { padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 13px; }
+  .ev li:last-child { border-bottom: 0; }
+  .ev .ev-what { color: var(--ink-1); }
+  .ev .ev-ref {
+    display: inline-block; margin-top: 3px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px; color: var(--ink-2);
+    background: color-mix(in srgb, var(--ink-1) 5%, transparent);
+    border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px;
+  }
+  .debt { list-style: none; margin: 0; padding: 0; }
+  .debt li {
+    font-size: 13px; color: var(--ink-2);
+    padding: 8px 10px; margin-bottom: 6px;
+    border-left: 2px solid var(--critical); border-radius: 0 5px 5px 0;
+    background: color-mix(in srgb, var(--critical) 6%, transparent);
+  }
+  .debt li.ok { border-left-color: var(--baseline); background: color-mix(in srgb, var(--ink-1) 4%, transparent); }
+  .panel-empty { font-size: 13px; color: var(--ink-muted); font-style: italic; }
+
+  .scrim {
+    position: fixed; inset: 0; z-index: 19;
+    background: rgba(11, 11, 11, 0.28);
+    opacity: 0; pointer-events: none; transition: opacity 180ms ease;
+  }
+  .scrim.open { opacity: 1; pointer-events: auto; }
+
+  /* ---------- findings ---------- */
+
+  .findings { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--rule); }
+  .findings h2 { font-size: 20px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .findings > p { margin: 0 0 18px; color: var(--ink-2); max-width: 74ch; }
+  .findings ol { margin: 0; padding: 0; list-style: none; counter-reset: f; }
+  .findings li {
+    counter-increment: f;
+    position: relative;
+    padding: 12px 14px 12px 44px;
+    margin-bottom: 8px;
+    background: var(--surface-1);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--critical);
+    border-radius: 8px;
+    color: var(--ink-2); font-size: 14px;
+  }
+  .findings li::before {
+    content: counter(f);
+    position: absolute; left: 14px; top: 12px;
+    font-size: 12px; font-weight: 700; color: var(--critical);
+    font-variant-numeric: tabular-nums;
+  }
+  .findings li.note { border-left-color: var(--baseline); }
+  .findings li.note::before { color: var(--ink-muted); }
+  .findings code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px; color: var(--ink-1);
+    background: color-mix(in srgb, var(--ink-1) 6%, transparent);
+    border-radius: 4px; padding: 1px 4px;
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .row, .col-standalone .row, .islands .row { --cols: 2; }
+    #wires { display: none; }
+  }
+  @media (max-width: 560px) {
+    .row, .col-standalone .row, .islands .row { --cols: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <button class="theme-toggle" id="theme-toggle" type="button">Switch theme</button>
+    <h1>Improv Dependency Map</h1>
+    <p>What stands on what. Tiers run top to bottom, most load-bearing to leaf. Every edge below was read out of the tree at a specific file and line; click any node to see its evidence.</p>
+    <div class="meta">
+      <span>Generated 2026-07-13</span>
+      <span class="verified">Evidence-verified</span>
+      <span>16 components</span>
+      <span>5 classes</span>
+      <span>10 open findings</span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="legend">
+      <span class="legend-title">Class</span>
+      <span class="key"><i class="swatch foundation"></i>Foundation</span>
+      <span class="key"><i class="swatch tool"></i>Tool with dependents</span>
+      <span class="key"><i class="swatch leaf"></i>Leaf consumer</span>
+      <span class="key"><i class="swatch standalone"></i>Standalone</span>
+      <span class="key"><i class="swatch supportive"></i>Supportive</span>
+      <span class="key"><i class="swatch island"></i>Island (dead or legacy)</span>
+    </div>
+    <div class="filters">
+      <span class="filters-title">Edges</span>
+      <label><input type="checkbox" id="f-runtime" checked><i class="edge-sample"></i>Runtime</label>
+      <label><input type="checkbox" id="f-vendored" checked><i class="edge-sample vendored"></i>Vendored</label>
+      <label><input type="checkbox" id="f-deploy"><i class="edge-sample deploy"></i>Deploy (install.sh)</label>
+    </div>
+  </div>
+
+  <div class="stage">
+    <svg id="wires" aria-hidden="true"></svg>
+    <div class="layout">
+      <div class="tiers" id="tiers"></div>
+      <aside class="col-standalone">
+        <div class="col-head">Standalone</div>
+        <div class="row" id="standalone"></div>
+      </aside>
+    </div>
+
+    <section class="islands">
+      <div class="islands-head"><span class="islands-title">Islands</span></div>
+      <p class="islands-note">Zero edges in or out beyond name-mentions. Nothing consumes these and they consume nothing. They are still in the tree.</p>
+      <div class="row" id="islands"></div>
+    </section>
+  </div>
+
+  <section class="findings">
+    <h2>Honest findings</h2>
+    <p>Ten things the sweep turned up that are wrong, dead, or fragile. None of them are blocking today. All of them are load-bearing for whoever touches this repo next.</p>
+    <ol id="findings"></ol>
+  </section>
+
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="panel-name" tabindex="-1">
+  <div class="panel-top">
+    <div>
+      <h2 class="panel-name" id="panel-name"></h2>
+      <div class="panel-cls" id="panel-cls"></div>
+    </div>
+    <button class="panel-close" id="panel-close" aria-label="Close detail panel">&times;</button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+</aside>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------------------------------------------------------------- data
+  // Every evidence ref below is a real file:line from the 2026-07-13 sweep.
+
+  var NODES = {
+    "claude-harness": {
+      name: "claude-harness", cls: "foundation",
+      sub: "CLAUDE.md, 60+ hooks, 18 skills, settings.json",
+      desc: "The behavior layer. Every other component is either invoked by a hook here or configured in settings.json. If this is wrong, everything downstream is wrong.",
+      evidence: [
+        ["settings.json wires the beats hooks, which shell out to beats.py", "claude/hooks/beats-rebuild.sh:43"],
+        ["SessionStart hook launches the sidecoach daemon", "claude/hooks/sidecoach-sessionstart.sh:8,21"],
+        ["mcpServers registers the justify MCP server", "claude/settings.json:601-603"],
+        ["10 hooks shell out to the external cmux binary", "claude/hooks/ (10 files)"]
+      ],
+      debt: ["sidecoach-sessionstart.sh:4 hard-codes an absolute /Users/spare3 path. It is the one hook that breaks on any other machine."]
+    },
+    "install": {
+      name: "install.sh", cls: "foundation",
+      sub: "+ bootstrap.sh, sole deploy path, 137KB",
+      desc: "The only way anything gets from this repo onto a machine. Nothing else deploys. A component that install.sh does not know about does not exist on disk.",
+      evidence: [
+        ["Symlinks every component into ~/.claude", "install.sh:2790,2800,2811,2886,2181"],
+        ["Still symlinks the dead cmux/settings.json island", "install.sh (cmux block)"]
+      ],
+      debt: [
+        "install.sh:364 points at ghostty/shaders, a path that does not exist. The real shaders live at the top level. The TUI 'open directory' action for shaders silently fails.",
+        "It will never clean up the orphaned ~/.claude/skills/improv/SKILL.md left behind by the rename."
+      ]
+    },
+    "beats": {
+      name: "beats", cls: "foundation",
+      sub: "Memory and retrieval engine over .claude/memory",
+      desc: "Compiles and serves the beat corpus. Hook-driven, not user-driven. Its hooks derive the repo root correctly, which is what makes it portable across machines.",
+      evidence: [
+        ["Rebuild hook resolves BEATS_PY from a derived repo root", "claude/hooks/beats-rebuild.sh:43"],
+        ["The bench harness scores against beats.py directly", "beats/bench/score.py:50"]
+      ],
+      debt: [],
+      kids: [
+        { name: "beats/bench", desc: "Benchmark and scoring harness for retrieval quality.",
+          evidence: [["Imports and scores against beats.py", "beats/bench/score.py:50"]], debt: [] },
+        { name: "beats/mcp-server", flag: "inert", desc: "Built, registered nowhere. This one is deliberate: it exists as an install hint, not as a live server.",
+          evidence: [["Absent from settings.json mcpServers", "claude/settings.json (mcpServers block)"]],
+          debt: ["Deliberately inert. Called out so nobody 'fixes' it by wiring it up."] }
+      ]
+    },
+    "cmux": {
+      name: "cmux", cls: "foundation", flags: [["external", "external binary"], ["risk", "highest risk"]],
+      sub: "External binary. 10 hooks point outside the repo.",
+      desc: "The highest-risk dependency in the tree. It is not vendored, not pinned, and not in the repo. Ten in-repo consumers assume it is on PATH. If it moves or changes its CLI, ten hooks break at once and the repo cannot fix itself.",
+      evidence: [["10 hooks invoke the cmux binary by name", "claude/hooks/ (10 files)"]],
+      debt: ["An external binary with 10 in-repo consumers and no pin. This is the single largest structural risk on the map."]
+    },
+    "corpus": {
+      name: ".claude/memory", cls: "foundation",
+      sub: "The data substrate. ~880 beats.",
+      desc: "The corpus everything reads from. Not code. It is the reason the beats engine exists and the reason cross-machine continuity works at all.",
+      evidence: [["Default corpus dir resolved by the rebuild hook", "claude/hooks/beats-rebuild.sh:44"]],
+      debt: []
+    },
+
+    "sidecoach": {
+      name: "sidecoach", cls: "tool",
+      sub: "4 hooks, parity contract, design gate",
+      desc: "The most-wired application in the repo. More hook surface than anything else, and the only component with a contractual parity obligation to a server nobody runs.",
+      evidence: [
+        ["SessionStart hook starts the daemon", "claude/hooks/sidecoach-sessionstart.sh:8,21"],
+        ["Its tests read the reference site's DESIGN.md", "sidecoach tests -> reference/DESIGN.md"],
+        ["Its dogfood config points at marketing-site by absolute path", "sidecoach dogfood config"]
+      ],
+      debt: ["The dogfood path is absolute, so it is machine-bound the same way the SessionStart hook is."],
+      kids: [
+        { name: "sidecoach/mcp-server", flag: "inert", desc: "Built, wired to nothing, and yet not removable. Nobody runs it, but the hook sidecoach_lanes.py is contractually bound to its keyword-resolver.ts. The parity contract is the only thing keeping it alive.",
+          evidence: [["Hook is bound to the server's keyword resolver", "claude/hooks/sidecoach_lanes.py <-> keyword-resolver.ts"]],
+          debt: ["Inert but parity-bound. Deleting it breaks a hook that never calls it. This is the strangest edge on the map."] }
+      ]
+    },
+    "justify": {
+      name: "justify", cls: "tool",
+      sub: "MCP daemon :9223 / :9224",
+      desc: "In-browser micro-adjustment tool, served as a daemon. Consumed by 7 marketing-site pages and 3 hooks. The marketing site does not bundle it. It fetches it from localhost at runtime.",
+      evidence: [
+        ["Registered as an MCP server", "claude/settings.json:601-603"],
+        ["7 marketing-site pages load justify-core.js from :9223", "marketing-site/index.html:28"]
+      ],
+      debt: ["The .justify marker still references the pre-rename /public/improv-core.js path."],
+      kids: [
+        { name: "public", flag: "legacy", desc: "A tracked build artifact. It should not be in git at all.",
+          evidence: [["justify-core.js is tracked despite being ignored", ".gitignore:5"]],
+          debt: ["public/justify-core.js is tracked in git despite .gitignore:5. The ignore rule never took effect because the file was committed before it was written."] }
+      ]
+    },
+    "tilt-lab": {
+      name: "tilt-lab", cls: "tool",
+      sub: "Vite workbench :5180",
+      desc: "The visual-effects workbench. Its runtime is not imported by the marketing site. It is vendored into it, byte for byte, as a copied file.",
+      evidence: [
+        ["Runtime vendored into marketing-site, byte-identical at 2,463,252 bytes", "marketing-site/index.html:623"]
+      ],
+      debt: ["Vendored by copy, not by build step. A tilt-lab change does not reach the marketing site until someone re-copies it."],
+      kids: [
+        { name: "bin", desc: "Launcher scripts fronting tilt-lab and cmux.",
+          evidence: [["Wraps the tilt-lab dev server and the cmux binary", "bin/"]], debt: [] }
+      ]
+    },
+
+    "marketing-site": {
+      name: "marketing-site", cls: "leaf",
+      sub: "Port 4830. Consumes justify + vendored tilt-runtime.",
+      desc: "A leaf. Nothing depends on it. It is also not actually a static site, which is the thing most likely to surprise someone.",
+      evidence: [
+        ["Loads justify-core.js from the localhost daemon", "marketing-site/index.html:28"],
+        ["Imports the vendored tilt runtime", "marketing-site/index.html:623"]
+      ],
+      debt: ["7 committed pages hard-code http://localhost:9223/justify-core.js. They degrade to a failed script load whenever the justify daemon is down."]
+    },
+    "reference": {
+      name: "reference", cls: "leaf",
+      sub: "Port 4831. Docs manual.",
+      desc: "The most isolated live component in the repo. It consumes nothing at runtime. Only sidecoach's tests reach into it, and only to read DESIGN.md.",
+      evidence: [["sidecoach tests read its DESIGN.md", "sidecoach tests -> reference/DESIGN.md"]],
+      debt: ["reference/serve.py is a copy of marketing-site's, with the same default port 4830. Only convention keeps the two sites from colliding."]
+    },
+
+    "lotus": {
+      name: "lotus", cls: "standalone",
+      sub: "Figma plugin + :9527 bridge",
+      desc: "Fully self-contained. A launcher skill opens it, and that is the entire relationship. Nothing in the repo consumes its output.",
+      evidence: [["Reached only by its launcher skill", "claude/skills/lotus/SKILL.md"]],
+      debt: []
+    },
+    "ghostty": {
+      name: "ghostty + shaders", cls: "standalone",
+      sub: "Terminal config and GLSL shaders",
+      desc: "Terminal configuration. The config references the shaders, and nothing else references either.",
+      evidence: [["Config points at the shader files", "ghostty/config.ghostty:25"]],
+      debt: ["install.sh:364 looks for these shaders under ghostty/shaders. They are actually at the top level, so that install action silently fails."]
+    },
+    "superpowers": {
+      name: "docs/superpowers", cls: "standalone", flags: [["legacy", "archive"]],
+      sub: "87 files, zero live references",
+      desc: "An archive. 87 files and not one live reference anywhere in the tree. It is documentation that has outlived its wiring.",
+      evidence: [["No inbound references found in the sweep", "docs/superpowers/ (87 files)"]],
+      debt: []
+    },
+    "assets": {
+      name: "assets", cls: "standalone",
+      sub: "Static assets",
+      desc: "Static files. No runtime edges.",
+      evidence: [["No runtime consumers found", "assets/"]],
+      debt: []
+    },
+
+    "test-site-1": {
+      name: "test-site-1", cls: "island", flags: [["dead", "dead since 2026-05-25"]],
+      sub: "Dead since 2026-05-25",
+      desc: "A true island. Zero edges in, zero edges out, beyond bare name-mentions in prose. It has been dead since 2026-05-25 and nothing has noticed.",
+      evidence: [["No inbound or outbound edges beyond name-mentions", "test-site-1/"]],
+      debt: ["Dead since 2026-05-25. Nothing imports it, nothing serves it, nothing tests it."]
+    },
+    "cmux-settings": {
+      name: "cmux/settings.json", cls: "island", flags: [["legacy", "legacy since 2026-04-11"], ["debt", "still symlinked"]],
+      sub: "100% commented-out, still symlinked by install.sh",
+      desc: "Legacy since 2026-04-11 and entirely commented out. Every line is dead. Despite that, install.sh still symlinks it onto every machine, which makes it the only island the deploy path actively keeps alive.",
+      evidence: [["install.sh still symlinks it", "install.sh (cmux block)"]],
+      debt: ["100% commented-out, yet install.sh still symlinks it. The deploy path is keeping a dead file alive."]
+    }
+  };
+
+  var TIERS = [
+    // beats sits next to its corpus on purpose: theirs is a same-row edge, and
+    // adjacency keeps that connector from arcing under an unrelated node.
+    { num: "Tier 1", label: "Foundation", desc: "Everything stands on these.", cols: 5, ids: ["claude-harness", "install", "cmux", "beats", "corpus"] },
+    { num: "Tier 2", label: "Tools with dependents", desc: "Consumed by something else in the tree.", cols: 3, ids: ["sidecoach", "justify", "tilt-lab"] },
+    { num: "Tier 3", label: "Leaf consumers", desc: "Nothing depends on these.", cols: 3, ids: ["marketing-site", "reference"] }
+  ];
+  var STANDALONE = ["lotus", "ghostty", "superpowers", "assets"];
+  var ISLANDS = ["test-site-1", "cmux-settings"];
+
+  var EDGES = [
+    { from: "claude-harness", to: "beats",         kind: "runtime" },
+    { from: "claude-harness", to: "cmux",          kind: "runtime" },
+    { from: "claude-harness", to: "sidecoach",     kind: "runtime" },
+    { from: "claude-harness", to: "justify",       kind: "runtime" },
+    { from: "beats",          to: "corpus",        kind: "runtime" },
+    { from: "marketing-site", to: "justify",       kind: "runtime" },
+    { from: "sidecoach",      to: "reference",     kind: "runtime" },
+    { from: "sidecoach",      to: "marketing-site", kind: "runtime" },
+    { from: "marketing-site", to: "tilt-lab",      kind: "vendored" },
+    { from: "install", to: "claude-harness", kind: "deploy" },
+    { from: "install", to: "beats",          kind: "deploy" },
+    { from: "install", to: "sidecoach",      kind: "deploy" },
+    { from: "install", to: "justify",        kind: "deploy" },
+    { from: "install", to: "tilt-lab",       kind: "deploy" },
+    { from: "install", to: "lotus",          kind: "deploy" },
+    { from: "install", to: "ghostty",        kind: "deploy" },
+    { from: "install", to: "cmux-settings",  kind: "deploy", dead: true }
+  ];
+
+  var FINDINGS = [
+    ["`install.sh:364` points at `ghostty/shaders`, a directory that does not exist. The real shaders live at the top-level `shaders/`. The TUI 'open directory' action for shaders silently fails, and has been failing quietly for as long as the path has been wrong.", false],
+    ["The `.justify` marker file still references the pre-rename `/public/improv-core.js` path. The rename to justify never reached it.", false],
+    ["`public/justify-core.js` is tracked in git despite `.gitignore:5` listing it. The ignore rule never took effect because the file was committed before the rule was written, and git does not retroactively untrack.", false],
+    ["`~/.claude/skills/improv/SKILL.md` is deployed on this machine with no corresponding source in the repo. It is an orphan from the rename, and because install.sh only ever adds symlinks, it will never be cleaned up.", false],
+    ["`sidecoach/mcp-server` is built and wired to nothing. Nobody runs it. The only thing keeping it in the tree is the parity contract in `sidecoach_lanes.py`, which is bound to its keyword-resolver.ts. Deleting the server breaks a hook that never calls it.", false],
+    ["`beats/mcp-server` is also inert, but this one is deliberate: it exists as an install hint, not as a live server. Recorded here so nobody 'fixes' it.", true],
+    ["The marketing site is not actually static. Seven committed pages hard-code `http://localhost:9223/justify-core.js`, so every one of them degrades to a failed script load whenever the justify daemon is down. A static site that depends on a running daemon is not a static site.", false],
+    ["`sidecoach-sessionstart.sh:4` hard-codes an absolute `/Users/spare3` path. It is the one hook in the repo that breaks on any other machine. The beats hooks derive their repo root correctly, which proves the pattern is known and simply was not applied here.", false],
+    ["`reference/serve.py` is a copy of marketing-site's `serve.py`, carrying the same default port 4830. Only convention, not code, keeps the two sites from colliding on the same port.", false],
+    ["cmux is the highest-risk dependency in the tree: an external binary, unpinned and unvendored, with 10 in-repo consumers. If its CLI changes, ten hooks break simultaneously and nothing in this repo can repair itself.", false]
+  ];
+
+  // ---------------------------------------------------------------- render
+
+  var CLS_LABEL = {
+    foundation: "Foundation",
+    tool: "Tool with dependents",
+    leaf: "Leaf consumer",
+    standalone: "Standalone",
+    supportive: "Supportive",
+    island: "Island"
+  };
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function buildNode(id) {
+    var d = NODES[id];
+    var b = el("div", "node " + d.cls);
+    b.id = "n-" + id;
+    b.dataset.id = id;
+
+    // The card's own click target. Stretched under the content so the whole
+    // card is clickable without wrapping the kid buttons in a button.
+    var hit = el("button", "node-hit");
+    hit.type = "button";
+    hit.setAttribute("aria-pressed", "false");
+    hit.setAttribute("aria-label", d.name + ", " + CLS_LABEL[d.cls]);
+    hit.dataset.id = id;
+    b.appendChild(hit);
+
+    b.appendChild(el("div", "node-name", d.name));
+    b.appendChild(el("div", "node-sub", d.sub));
+    b.appendChild(el("div", "node-cls", CLS_LABEL[d.cls]));
+
+    if (d.flags && d.flags.length) {
+      var fw = el("div", "flags");
+      d.flags.forEach(function (f) { fw.appendChild(el("span", "flag " + f[0], f[1])); });
+      b.appendChild(fw);
+    }
+
+    if (d.kids && d.kids.length) {
+      var kw = el("div", "kids");
+      d.kids.forEach(function (k, i) {
+        var kb = el("button", "kid");
+        kb.type = "button";
+        kb.setAttribute("aria-pressed", "false");
+        kb.dataset.parent = id;
+        kb.dataset.kid = String(i);
+        if (k.flag) {
+          kb.appendChild(document.createTextNode(k.name + " "));
+          kb.appendChild(el("span", "dot", k.flag === "inert" ? "inert" : "legacy"));
+        } else {
+          kb.textContent = k.name;
+        }
+        kw.appendChild(kb);
+      });
+      b.appendChild(kw);
+    }
+    return b;
+  }
+
+  // Findings carry inline `code` spans. Built as real text and element nodes
+  // rather than innerHTML, so the page has no HTML-injection path at all if it
+  // is ever regenerated from repo data rather than hand-written.
+  function renderTicked(target, str) {
+    str.split("`").forEach(function (part, i) {
+      if (part === "") return;
+      if (i % 2 === 1) target.appendChild(el("code", null, part));
+      else target.appendChild(document.createTextNode(part));
+    });
+  }
+
+  var tiersRoot = document.getElementById("tiers");
+  TIERS.forEach(function (t) {
+    var sec = el("section", "tier");
+    var head = el("div", "tier-head");
+    head.appendChild(el("span", "tier-num", t.num + " / " + t.label));
+    head.appendChild(el("span", "tier-desc", t.desc));
+    sec.appendChild(head);
+    var row = el("div", "row");
+    if (t.cols) row.style.setProperty("--cols", String(t.cols));
+    t.ids.forEach(function (id) { row.appendChild(buildNode(id)); });
+    sec.appendChild(row);
+    tiersRoot.appendChild(sec);
+  });
+
+  var saRoot = document.getElementById("standalone");
+  STANDALONE.forEach(function (id) { saRoot.appendChild(buildNode(id)); });
+
+  var isRoot = document.getElementById("islands");
+  ISLANDS.forEach(function (id) { isRoot.appendChild(buildNode(id)); });
+
+  var fRoot = document.getElementById("findings");
+  FINDINGS.forEach(function (f) {
+    var li = el("li", f[1] ? "note" : null);
+    renderTicked(li, f[0]);
+    fRoot.appendChild(li);
+  });
+
+  // ---------------------------------------------------------------- wires
+
+  var svg = document.getElementById("wires");
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var filters = {
+    runtime: document.getElementById("f-runtime"),
+    vendored: document.getElementById("f-vendored"),
+    deploy: document.getElementById("f-deploy")
+  };
+
+  function drawWires() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var stage = svg.parentNode;
+    var base = stage.getBoundingClientRect();
+    svg.setAttribute("viewBox", "0 0 " + base.width + " " + base.height);
+
+    EDGES.forEach(function (e) {
+      if (!filters[e.kind] || !filters[e.kind].checked) return;
+      var a = document.getElementById("n-" + e.from);
+      var b = document.getElementById("n-" + e.to);
+      if (!a || !b) return;
+
+      var ra = a.getBoundingClientRect();
+      var rb = b.getBoundingClientRect();
+      var x1 = ra.left - base.left + ra.width / 2;
+      var y1 = ra.top - base.top + ra.height;
+      var x2 = rb.left - base.left + rb.width / 2;
+      var y2 = rb.top - base.top;
+
+      var sameRow = Math.abs(ra.top - rb.top) < 4;
+      var d;
+
+      if (sameRow) {
+        // Peers in one tier. A down-then-up route would hook back on itself, so
+        // dip a shallow arc below the row instead. Each end anchors to its OWN
+        // card's bottom: equal-height cards make those equal, but the router
+        // must not assume it.
+        var yb = rb.top - base.top + rb.height;
+        var dip = 26;
+        var floor = Math.max(y1, yb) + dip;
+        d = "M" + x1 + "," + y1 +
+            " C" + x1 + "," + floor + " " + x2 + "," + floor + " " + x2 + "," + yb;
+      } else {
+        // Upward edges (leaf -> tool) leave from the top of the source.
+        if (rb.top < ra.top) {
+          y1 = ra.top - base.top;
+          y2 = rb.top - base.top + rb.height;
+        }
+        var my = (y1 + y2) / 2;
+        d = "M" + x1 + "," + y1 + " C" + x1 + "," + my + " " + x2 + "," + my + " " + x2 + "," + y2;
+      }
+
+      var p = document.createElementNS(SVGNS, "path");
+      p.setAttribute("d", d);
+      p.setAttribute("fill", "none");
+      p.setAttribute("stroke-width", e.kind === "deploy" ? "1.5" : "2");
+      p.setAttribute("stroke-linecap", "round");
+
+      var css = getComputedStyle(document.body);
+      var stroke = css.getPropertyValue("--edge-strong").trim() || "#7d7c76";
+      if (e.kind === "deploy") stroke = css.getPropertyValue("--edge").trim() || "#b9b8b1";
+      if (e.dead) stroke = css.getPropertyValue("--critical").trim() || "#d03b3b";
+      p.setAttribute("stroke", stroke);
+      p.setAttribute("opacity", e.kind === "deploy" ? "0.75" : "0.9");
+      if (e.kind === "vendored") p.setAttribute("stroke-dasharray", "6 4");
+      if (e.kind === "deploy") p.setAttribute("stroke-dasharray", "2 4");
+      svg.appendChild(p);
+    });
+  }
+
+  Object.keys(filters).forEach(function (k) {
+    filters[k].addEventListener("change", drawWires);
+  });
+  window.addEventListener("resize", drawWires);
+  if (window.ResizeObserver) new ResizeObserver(drawWires).observe(svg.parentNode);
+  drawWires();
+  window.addEventListener("load", drawWires);
+
+  // ---------------------------------------------------------------- theme
+
+  // prefers-color-scheme stays the default. This only sets an explicit override,
+  // and wires are re-stroked because their colors are read from computed style.
+  var toggle = document.getElementById("theme-toggle");
+  var darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+  function isDark() {
+    var override = document.documentElement.getAttribute("data-theme");
+    return override ? override === "dark" : darkQuery.matches;
+  }
+
+  function syncToggle() {
+    // Expose the current state rather than leaving the control unlabelled.
+    toggle.setAttribute("aria-pressed", isDark() ? "true" : "false");
+    toggle.textContent = isDark() ? "Switch to light" : "Switch to dark";
+  }
+
+  toggle.addEventListener("click", function () {
+    document.documentElement.setAttribute("data-theme", isDark() ? "light" : "dark");
+    syncToggle();
+    drawWires();
+  });
+
+  // Wire strokes are snapshotted from computed style, so a system theme change
+  // while the page is open would otherwise leave them stale.
+  var onSchemeChange = function () {
+    if (!document.documentElement.hasAttribute("data-theme")) {
+      syncToggle();
+      drawWires();
+    }
+  };
+  if (darkQuery.addEventListener) darkQuery.addEventListener("change", onSchemeChange);
+  else if (darkQuery.addListener) darkQuery.addListener(onSchemeChange);
+
+  syncToggle();
+
+  // ---------------------------------------------------------------- panel
+
+  var panel = document.getElementById("panel");
+  var scrim = document.getElementById("scrim");
+  var pName = document.getElementById("panel-name");
+  var pCls = document.getElementById("panel-cls");
+  var pBody = document.getElementById("panel-body");
+  var active = null;
+
+  var wrap = document.querySelector(".wrap");
+
+  function clearPressed() {
+    var all = document.querySelectorAll('.node-hit[aria-pressed="true"], .kid[aria-pressed="true"]');
+    for (var i = 0; i < all.length; i++) all[i].setAttribute("aria-pressed", "false");
+    var sel = document.querySelectorAll(".node.sel");
+    for (var j = 0; j < sel.length; j++) sel[j].classList.remove("sel");
+  }
+
+  function section(title) { return el("h3", null, title); }
+
+  function fillPanel(d, clsName) {
+    pName.textContent = d.name;
+    pCls.textContent = CLS_LABEL[clsName] || clsName;
+    pCls.className = "panel-cls " + clsName;
+
+    while (pBody.firstChild) pBody.removeChild(pBody.firstChild);
+
+    if (d.desc) {
+      pBody.appendChild(section("What it is"));
+      pBody.appendChild(el("p", "panel-desc", d.desc));
+    }
+
+    pBody.appendChild(section("Evidence"));
+    if (d.evidence && d.evidence.length) {
+      var ul = el("ul", "ev");
+      d.evidence.forEach(function (ev) {
+        var li = el("li");
+        li.appendChild(el("div", "ev-what", ev[0]));
+        li.appendChild(el("code", "ev-ref", ev[1]));
+        ul.appendChild(li);
+      });
+      pBody.appendChild(ul);
+    } else {
+      pBody.appendChild(el("p", "panel-empty", "No edges recorded."));
+    }
+
+    pBody.appendChild(section("Debt flags"));
+    if (d.debt && d.debt.length) {
+      var dl = el("ul", "debt");
+      d.debt.forEach(function (x) {
+        var li = el("li", /deliberate/i.test(x) ? "ok" : null);
+        li.textContent = x;
+        dl.appendChild(li);
+      });
+      pBody.appendChild(dl);
+    } else {
+      pBody.appendChild(el("p", "panel-empty", "None. This component is clean."));
+    }
+
+    pBody.scrollTop = 0;
+  }
+
+  function openPanel(trigger, d, clsName) {
+    clearPressed();
+    trigger.setAttribute("aria-pressed", "true");
+    var card = trigger.closest(".node");
+    if (card) card.classList.add("sel");
+    active = trigger;
+    fillPanel(d, clsName);
+    panel.classList.add("open");
+    scrim.classList.add("open");
+    // A scrim that blocks the page visually must block it for the keyboard and
+    // for a screen reader too, or the background stays reachable behind it.
+    // inert is the focus trap.
+    wrap.inert = true;
+    panel.focus();
+  }
+
+  function closePanel() {
+    panel.classList.remove("open");
+    scrim.classList.remove("open");
+    wrap.inert = false;
+    clearPressed();
+    if (active) { active.focus(); active = null; }
+  }
+
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest) return;
+    var kid = e.target.closest(".kid");
+    if (kid) {
+      var parent = NODES[kid.dataset.parent];
+      openPanel(kid, parent.kids[Number(kid.dataset.kid)], "supportive");
+      return;
+    }
+    var hit = e.target.closest(".node-hit");
+    if (hit) {
+      var d = NODES[hit.dataset.id];
+      openPanel(hit, d, d.cls);
+    }
+  });
+
+  document.getElementById("panel-close").addEventListener("click", closePanel);
+  scrim.addEventListener("click", closePanel);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && panel.classList.contains("open")) closePanel();
+  });
+})();
+</script>
+</body>
+</html>
