@@ -55,6 +55,115 @@ log()   { printf "${CYAN}[info]${NC}  %s\n" "$1"; }  # alias for info (used by s
 # `set -e`. Use everywhere we copy a tracked file from $REPO_DIR into the user dir.
 safe_cp() { rm -f "$2"; cp "$1" "$2"; }
 
+# ------------------------------------------------------------
+# link_or_copy: how a HOOK reaches ~/.claude/hooks.
+#
+# SYMLINK when this install is running from a git checkout that will stay put (a dev
+# machine), COPY when it is not (someone who ran the installer from a throwaway clone
+# and deleted it - a symlink would dangle and every hook would be dead).
+#
+# Why this is not cosmetic: a hook deployed as a real FILE is pinned to whatever it
+# was on the day it was copied, forever, with no signal that it has gone stale. That
+# is not hypothetical - justify-source-guard.sh sat frozen at a pre-rename source path
+# for a month, printing a directory that no longer existed, while its repo source was
+# correct the entire time. Its four siblings were frozen the same way. Copy-deployment
+# is what made a `git pull` silently not reach the code that actually runs.
+#
+# Idempotent by design: an already-correct symlink is LEFT ALONE, never recreated. The
+# previous behavior (safe_cp = `rm -f` then `cp`) would happily delete a good symlink
+# and write a frozen copy over it, so merely re-running the installer on a dev machine
+# re-introduced the bug across every hook at once.
+#
+# Override: IMPROV_HOOK_DEPLOY=symlink|copy|auto  (default auto).
+hook_deploy_mode() {
+  case "${IMPROV_HOOK_DEPLOY:-auto}" in
+    symlink) printf 'symlink' ;;
+    copy)    printf 'copy' ;;
+    *)
+      # A .git checkout is necessary but NOT sufficient. `git clone /tmp/improv &&
+      # ./install.sh && rm -rf /tmp/improv` has a .git too, and linking into it would
+      # leave all 65 hooks dangling the moment the clone is deleted - a dead harness,
+      # which is worse than a frozen one. So a repo sitting in a TEMP location is
+      # treated as throwaway and gets copies.
+      local tmp_root="${TMPDIR:-/nonexistent}"
+      tmp_root="${tmp_root%/}"
+      # /private/* variants matter: on macOS /var and /tmp are symlinks INTO /private,
+      # so a resolved physical path lands on /private/var/folders/... and would slip a
+      # pattern that only knew the logical name.
+      case "$REPO_DIR" in
+        /tmp/*|/private/tmp/*|/var/tmp/*|/private/var/tmp/*|\
+        /var/folders/*|/private/var/folders/*|"$tmp_root"/*)
+          printf 'copy'
+          return 0
+          ;;
+      esac
+      if [ -d "$REPO_DIR/.git" ] || [ -f "$REPO_DIR/.git" ]; then
+        printf 'symlink'
+      else
+        printf 'copy'
+      fi
+      ;;
+  esac
+}
+
+link_or_copy() {
+  local src="$1" dst="$2"
+
+  # A missing source must FAIL, loudly. safe_cp would have died here under `set -e`;
+  # returning 0 instead would print "ok hooks/x.sh" while the destination stayed
+  # missing or stale, which is the quietest possible way to ship a broken harness.
+  if [ ! -f "$src" ]; then
+    err "hook source missing: $src"
+    return 1
+  fi
+
+  local mode
+  mode="$(hook_deploy_mode)"
+
+  # settings.json invokes every hook DIRECTLY (~/.claude/hooks/x.sh, no `bash` in
+  # front), so the exec bit is load-bearing. The old copy path ran chmod +x on the
+  # DESTINATION, which quietly rescued any source that was missing it. A symlink has no
+  # mode of its own - it inherits the SOURCE's - so in symlink mode that guarantee has
+  # to move to the source. If the source cannot be made executable (a read-only
+  # checkout), fall back to COPY: a working copy beats a dead link.
+  if [ "$mode" = "symlink" ] && [ ! -x "$src" ]; then
+    if ! chmod +x "$src" 2>/dev/null; then
+      warn "cannot chmod +x $src - deploying a copy instead so the hook still runs"
+      mode="copy"
+    fi
+  fi
+
+  if [ "$mode" = "symlink" ]; then
+    if [ -L "$dst" ] && [ "$(readlink "$dst")" = "$src" ]; then
+      return 0                       # already linked correctly - do not churn it
+    fi
+    # Only a REAL file gets backed up; backup_if_exists already ignores symlinks.
+    if declare -f backup_if_exists >/dev/null 2>&1; then
+      backup_if_exists "$dst"
+    fi
+    mkdir -p "$(dirname "$dst")"
+    rm -f "$dst"
+    ln -s "$src" "$dst"
+  else
+    mkdir -p "$(dirname "$dst")"
+    rm -f "$dst"                     # clears a stale symlink, so nothing dangles
+    cp "$src" "$dst"
+    chmod +x "$dst" 2>/dev/null || true
+  fi
+}
+
+# Sourcing this file with IMPROV_INSTALL_LIB_ONLY=1 defines the helpers above and
+# returns WITHOUT running the installer. test-install-hook-deploy.sh uses this to
+# exercise link_or_copy against temp directories - the installer writes into
+# ~/.claude, so a test that actually ran it could destroy every live hook.
+#
+# Matched against exactly "1", not merely non-empty: an inherited IMPROV_INSTALL_LIB_ONLY=0
+# from some parent shell would otherwise make a normal `./install.sh` exit 0 having
+# silently installed nothing, and report success doing it.
+if [ "${IMPROV_INSTALL_LIB_ONLY:-}" = "1" ]; then
+  return 0 2>/dev/null || exit 0
+fi
+
 # ============================================================
 # Component catalogue (parallel arrays for bash 3.2 compatibility)
 # ============================================================
@@ -1047,17 +1156,22 @@ deactivate_ampersand() {
 
 deactivate_reflect() {
   [ -d "$CLAUDE_DIR/skills/reflect" ] && rm -rf "$CLAUDE_DIR/skills/reflect"
-  [ -f "$CLAUDE_DIR/hooks/reflect-nudge.sh" ] && rm -f "$CLAUDE_DIR/hooks/reflect-nudge.sh"
+  # Unconditional `rm -f`, not `[ -f x ] && rm -f x`: now that these hooks deploy as
+  # SYMLINKS, `[ -f ]` follows the link and is FALSE for a dangling one, so a broken
+  # link (repo moved or deleted) would survive deactivation forever. `rm -f` removes a
+  # dangling link and still exits 0 when the path is absent.
+  rm -f "$CLAUDE_DIR/hooks/reflect-nudge.sh"
   [ -f "$CLAUDE_DIR/last-reflect-timestamp" ] && rm -f "$CLAUDE_DIR/last-reflect-timestamp"
   # Scheduled weekly reflect (T-0045): unload the user agent if loaded, then
   # remove the templated plist and the hook. bootout is user-initiated teardown
   # here (deactivation), mirroring the plist's documented unload command.
   if [ "$(uname)" = "Darwin" ]; then
     launchctl bootout "gui/$(id -u)/com.yesand.beats-reflect-weekly" 2>/dev/null || true
-    [ -f "$HOME/Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist" ] \
-      && rm -f "$HOME/Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist"
+    # Unconditional, same reason as the hooks above: [ -f ] is FALSE for a dangling
+    # symlink, so a broken plist link would survive deactivation.
+    rm -f "$HOME/Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist"
   fi
-  [ -f "$CLAUDE_DIR/hooks/beats-reflect-weekly.sh" ] && rm -f "$CLAUDE_DIR/hooks/beats-reflect-weekly.sh"
+  rm -f "$CLAUDE_DIR/hooks/beats-reflect-weekly.sh"   # dangling-link safe, see above
 }
 
 deactivate_task_list() {
@@ -1621,10 +1735,12 @@ if picked config; then
     node-shim-heal.sh cmux-teammate-shim-heal.sh sidecoach-taste-gate.sh
     api-drift-detector.sh api-drift-stop.sh api-drift-ack.sh
   )
+  # link_or_copy, not safe_cp: on a dev checkout these become SYMLINKS so a git pull
+  # reaches the hook that actually runs. safe_cp would delete an existing correct
+  # symlink and freeze a copy over it on every re-run.
   for f in "${CONFIG_HOOKS[@]}"; do
     if [ -f "$REPO_DIR/claude/hooks/$f" ]; then
-      safe_cp "$REPO_DIR/claude/hooks/$f" "$CLAUDE_DIR/hooks/$f"
-      chmod +x "$CLAUDE_DIR/hooks/$f"
+      link_or_copy "$REPO_DIR/claude/hooks/$f" "$CLAUDE_DIR/hooks/$f"
       ok "hooks/$f"
     fi
   done
@@ -2581,8 +2697,7 @@ if picked reflect; then
 
   # Nudge hook
   info "Installing reflect-nudge hook..."
-  safe_cp "$REPO_DIR/claude/hooks/reflect-nudge.sh" "$CLAUDE_DIR/hooks/reflect-nudge.sh"
-  chmod +x "$CLAUDE_DIR/hooks/reflect-nudge.sh"
+  link_or_copy "$REPO_DIR/claude/hooks/reflect-nudge.sh" "$CLAUDE_DIR/hooks/reflect-nudge.sh"
   ok "reflect-nudge hook installed"
 
   # Timestamp file (create if missing, don't overwrite)
@@ -2598,8 +2713,7 @@ if picked reflect; then
   # when the corpus has accrued >= REFLECT_THRESHOLD new beats (same gate as the
   # SessionStart nudge, one shared timestamp - no double fire).
   info "Installing beats-reflect-weekly hook..."
-  safe_cp "$REPO_DIR/claude/hooks/beats-reflect-weekly.sh" "$CLAUDE_DIR/hooks/beats-reflect-weekly.sh"
-  chmod +x "$CLAUDE_DIR/hooks/beats-reflect-weekly.sh"
+  link_or_copy "$REPO_DIR/claude/hooks/beats-reflect-weekly.sh" "$CLAUDE_DIR/hooks/beats-reflect-weekly.sh"
   ok "beats-reflect-weekly hook installed"
 
   # launchd's StandardOut/ErrorPath redirect needs the logs dir to pre-exist

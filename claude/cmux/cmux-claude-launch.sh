@@ -15,6 +15,42 @@
 #   "automation" : { "claudeBinaryPath" : "/Users/<you>/.claude/cmux/cmux-claude-launch.sh" }
 # then `cmux reload-config`. Validate with `cmux config doctor`.
 
+# --- NODE_OPTIONS durability (2026-07-13) -------------------------------------------
+# cmux points NODE_OPTIONS' --require preload at $TMPDIR/cmux-claude-node-options/, and
+# $TMPDIR on macOS is a PURGEABLE dir. Once the OS reaps it, EVERY node process in the
+# session (node-based hooks, npx, npm) dies at startup with MODULE_NOT_FOUND - and a
+# running session's env cannot be edited, so it stays broken. Repoint the preload at the
+# durable canonical copy BEFORE claude is exec'd, so new sessions never carry a purgeable
+# path at all. The canonical file is byte-identical and strips itself from NODE_OPTIONS by
+# BASENAME, so cmux's own semantics are preserved exactly; all other flags are kept.
+#
+# This must stay ABOVE every _ccl_passthrough branch below - passthrough exec's claude
+# directly, and would otherwise skip the repair. It is deliberately fail-safe: if
+# NODE_OPTIONS is absent, already durable, or the canonical copy is missing, it no-ops.
+# The ~/.claude/cmux/node PATH shim is the backstop that covers sessions already running
+# and any cmux release that stops routing launches through this wrapper.
+if [[ -n "${NODE_OPTIONS:-}" && "$NODE_OPTIONS" == *restore-node-options.cjs* ]]; then
+  _ccl_canon="$HOME/.claude/node-shims/restore-node-options.cjs"
+  # NODE_OPTIONS is whitespace-separated, so a canonical path containing a space (a $HOME
+  # like /Users/Ada Lovelace) cannot be expressed in it - node would parse the halves as
+  # separate flags and refuse to start. In that case leave NODE_OPTIONS exactly as cmux
+  # set it: the ~/.claude/cmux/node PATH shim still repairs it at runtime.
+  if [[ -r "$_ccl_canon" && "$_ccl_canon" != *[[:space:]]* ]]; then
+    _ccl_no=()
+    for _t in ${(s: :)NODE_OPTIONS}; do
+      case "$_t" in
+        --require=*restore-node-options.cjs) _t="--require=$_ccl_canon" ;;
+        -r=*restore-node-options.cjs)        _t="-r=$_ccl_canon" ;;
+        *restore-node-options.cjs)           _t="$_ccl_canon" ;;  # `--require <path>` form
+      esac
+      _ccl_no+=("$_t")
+    done
+    export NODE_OPTIONS="${_ccl_no[*]}"
+    unset _ccl_no _t
+  fi
+  unset _ccl_canon
+fi
+
 # a cmux-owned dir whose `claude` would re-enter this wrapper (must never be the target)
 _ccl_is_cmux_dir() { [[ "$1" == *cmux-cli-shims* || "$1" == *cmux.app* || "$1" == *.cmuxterm* ]]; }
 

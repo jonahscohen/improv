@@ -1,6 +1,7 @@
 import { Transport } from './transport';
 import { Overlay } from './overlay';
 import { Toolbar, currentPalette, registerThemedSurface } from './toolbar';
+import { setFrozen, unfreeze, isFrozen } from './freeze-animations';
 
 // Marker hex -> rgba tint for bar-pill hover warmth (theme-independent accent).
 function markerTint(hex: string, alpha: number): string {
@@ -66,7 +67,13 @@ export class JustifyCore {
   private _claudeSpark: HTMLDivElement | null = null;
   private _claudeLabel: HTMLSpanElement | null = null;
   private _claudeAnim: Animation | null = null;
-  _claudeState: 'none' | 'connected' | 'sending' | 'working' | 'validating' | 'review' | 'review-active' | 'retry' | 'retrying' = 'none';
+  // 'queued' - the daemon has ACKED the prompt and it is durable on disk, but no
+  // owner has claimed it yet. In OWNER mode (the default) that is a real, and
+  // potentially long, resting state: the daemon deliberately will not apply the
+  // batch, so it waits for the attached session/agent to pick it up. Without this
+  // state the bar had nowhere to go after 'sending' and sat there lying about an
+  // in-flight send that had already completed. See mcp-tools.ts `justify_queued`.
+  _claudeState: 'none' | 'connected' | 'sending' | 'queued' | 'working' | 'validating' | 'review' | 'review-active' | 'retry' | 'retrying' = 'none';
   _pendingResponses: number = 0;
   _lastPromptData: any = null;
   // clientId of the last prompt handed to the outbox. The manual Retry pill
@@ -111,8 +118,20 @@ export class JustifyCore {
       this.toolbar?.setBadge(0);
     });
 
-    this.transport.on('justify_working', () => {
+    // The daemon has the prompt on disk. The send is OVER - stop saying it isn't.
+    // Only advances a bar that is actually mid-send; a late/duplicate broadcast
+    // must never drag a bar that has already reached Working or Review backwards.
+    this.transport.on('justify_queued', () => {
       if (this._claudeState === 'sending') {
+        this._claudeToQueued();
+      }
+    });
+
+    // An owner picked the batch up. Accepts 'queued' as well as 'sending': in
+    // owner mode the bar now legitimately rests in 'queued' between the ack and
+    // the owner's claim/poll, and that is the state this event exists to end.
+    this.transport.on('justify_working', () => {
+      if (this._claudeState === 'sending' || this._claudeState === 'queued') {
         this._claudeToWorking();
       }
     });
@@ -218,6 +237,9 @@ export class JustifyCore {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '.') {
         e.preventDefault();
         if (this.toolbar) {
+          // Hiding the toolbar takes the only pause control off screen with it,
+          // so never leave the page frozen behind it.
+          unfreeze();
           this.toolbar.destroy();
           this.toolbar = null;
           this.switchMode(null);
@@ -228,6 +250,8 @@ export class JustifyCore {
           this.toolbar.onApply(() => this.applyChanges());
           this.toolbar.onSendToClaude(() => this.sendAnnotations());
           this.toolbar.onClearAll(() => this.clearAll());
+          this.toolbar.onPauseAnimations((paused: boolean) => setFrozen(paused));
+          this.toolbar.setAnimationsPaused(isFrozen());
           this.toolbar.onMarkerColorChange((c: string) => {
             this.overlay.setHighlightColor(c);
             this._updateScreenGlowColor(c);
@@ -289,12 +313,19 @@ export class JustifyCore {
     if (!document.getElementById('justify-font')) {
       const style = document.createElement('style');
       style.id = 'justify-font';
+      // Every asset and every endpoint the core touches must resolve against the
+      // daemon that SERVED this bundle (detectJustifyUrl reads the script src),
+      // never a hardcoded :9223. A second daemon on another port (a test rig, a
+      // second project) used to load its fonts from - and, far worse, POST its
+      // claude-state and its whole change history to - whichever daemon happened
+      // to own 9223. That is cross-daemon corruption, not a cosmetic slip.
+      const base = this.justifyBaseUrl;
       style.textContent = [
-        "@font-face{font-family:JustifySans;src:url('http://localhost:9223/fonts/justifysans-400.woff2') format('woff2');font-weight:400;font-display:swap}",
-        "@font-face{font-family:JustifySans;src:url('http://localhost:9223/fonts/justifysans-700.woff2') format('woff2');font-weight:700;font-display:swap}",
-        "@font-face{font-family:'JustifySerif';src:url('http://localhost:9223/fonts/justifyserif-400.woff2') format('woff2');font-weight:400;font-display:swap}",
-        "@font-face{font-family:'JustifySerif';src:url('http://localhost:9223/fonts/justifyserif-700.woff2') format('woff2');font-weight:700;font-display:swap}",
-        "@font-face{font-family:JustifyMono;src:url('http://localhost:9223/fonts/justifymono-400.woff2') format('woff2');font-weight:400;font-display:swap}",
+        `@font-face{font-family:JustifySans;src:url('${base}/fonts/justifysans-400.woff2') format('woff2');font-weight:400;font-display:swap}`,
+        `@font-face{font-family:JustifySans;src:url('${base}/fonts/justifysans-700.woff2') format('woff2');font-weight:700;font-display:swap}`,
+        `@font-face{font-family:'JustifySerif';src:url('${base}/fonts/justifyserif-400.woff2') format('woff2');font-weight:400;font-display:swap}`,
+        `@font-face{font-family:'JustifySerif';src:url('${base}/fonts/justifyserif-700.woff2') format('woff2');font-weight:700;font-display:swap}`,
+        `@font-face{font-family:JustifyMono;src:url('${base}/fonts/justifymono-400.woff2') format('woff2');font-weight:400;font-display:swap}`,
       ].join('');
       document.head.appendChild(style);
     }
@@ -345,6 +376,10 @@ export class JustifyCore {
     this.toolbar.onApply(() => this.applyChanges());
     this.toolbar.onSendToClaude(() => this.sendAnnotations());
     this.toolbar.onClearAll(() => this.clearAll());
+    this.toolbar.onPauseAnimations((paused: boolean) => setFrozen(paused));
+    // The engine's pause state outlives any one Toolbar instance, so a rebuilt
+    // toolbar adopts it rather than silently claiming the page is running.
+    this.toolbar.setAnimationsPaused(isFrozen());
     this.toolbar.onMarkerColorChange((c: string) => {
       this.overlay.setHighlightColor(c);
       this._updateScreenGlowColor(c);
@@ -362,12 +397,12 @@ export class JustifyCore {
     );
     this._changesPanel.setOnDone((_promptId: string, entry: Record<string, unknown>) => {
       entry.reviewed = true;
-      try { fetch('http://localhost:9223/responses',{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
+      try { fetch(`${this.justifyBaseUrl}/responses`,{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
       this._updateClaudeBadge();
     });
     this._changesPanel.setOnUndoDone((_promptId: string, entry: Record<string, unknown>) => {
       entry.reviewed = false;
-      try { fetch('http://localhost:9223/responses',{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
+      try { fetch(`${this.justifyBaseUrl}/responses`,{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
       this._updateClaudeBadge();
     });
     this._changesPanel.setOnReply((promptId: string, text: string) => {
@@ -385,7 +420,7 @@ export class JustifyCore {
 
     this._changesPanel.setOnClearAll(() => {
       this._changeHistory = [];
-      try { fetch('http://localhost:9223/responses',{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
+      try { fetch(`${this.justifyBaseUrl}/responses`,{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
       this._updateClaudeBadge();
       this._clearTaskHighlights();
       if (this._claudeState === 'review' || this._claudeState === 'review-active') {
@@ -399,7 +434,7 @@ export class JustifyCore {
     // be marked done too.)
     this._changesPanel.setOnClearCompleted(() => {
       this._changeHistory = this._changeHistory.filter(e => !e.reviewed);
-      try { fetch('http://localhost:9223/responses',{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
+      try { fetch(`${this.justifyBaseUrl}/responses`,{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
       this._updateClaudeBadge();
       this._clearTaskHighlights();
       const actionable = this._changeHistory.filter(e => !e.reviewed);
@@ -410,7 +445,7 @@ export class JustifyCore {
 
     this._changesPanel.setOnClearReviewed(() => {
       this._changeHistory = this._changeHistory.filter(e => !e.reviewed);
-      try { fetch('http://localhost:9223/responses',{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
+      try { fetch(`${this.justifyBaseUrl}/responses`,{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
       this._updateClaudeBadge();
       const actionable = this._changeHistory.filter(e => !e.reviewed);
       if (actionable.length === 0) {
@@ -469,6 +504,9 @@ export class JustifyCore {
     this.active = false;
 
     if (this._barThemeUnreg) { this._barThemeUnreg(); this._barThemeUnreg = null; }
+    // Tearing justify down must leave the host page exactly as it was found -
+    // no injected pause stylesheet, no parked animations.
+    unfreeze();
     this.switchMode(null);
     // ChangesPanel registers a themed surface at construction; destroying it
     // here keeps repeated activate/deactivate cycles from stacking detached
@@ -982,8 +1020,8 @@ export class JustifyCore {
   private _hotRefreshTimer: number | null = null;
 
   private _scheduleHotRefresh(): void {
-    if (this._hotRefreshTimer !== null) window.clearTimeout(this._hotRefreshTimer);
-    this._hotRefreshTimer = window.setTimeout(() => {
+    if (this._hotRefreshTimer !== null) clearTimeout(this._hotRefreshTimer);
+    this._hotRefreshTimer = setTimeout(() => {
       window.location.reload();
     }, 1200);
   }
@@ -1175,7 +1213,7 @@ export class JustifyCore {
   // === CLAUDEBAR ===
   private _persistClaudeState(): void {
     try {
-      fetch('http://localhost:9223/claude-state', {
+      fetch(`${this.justifyBaseUrl}/claude-state`, {
         method: 'POST',
         body: JSON.stringify({ state: this._claudeState })
       }).catch(() => {});
@@ -1192,7 +1230,13 @@ export class JustifyCore {
       .then((data: any) => {
         if (!data || !data.state || data.state === 'none') return;
         const s = data.state as string;
-        if (s === 'sending' || s === 'working' || s === 'retrying') {
+        // A reload while the batch is still QUEUED must come back as "Queued for
+        // Claude", not as "Working". Claiming Working here would re-introduce the
+        // same lie one layer down: an unclaimed batch is not being worked on, and
+        // in owner mode it may not be for a long while.
+        if (s === 'queued') {
+          this._claudeToQueued();
+        } else if (s === 'sending' || s === 'working' || s === 'retrying') {
           this._claudeState = 'working' as any;
           this._showClaudeBar('Working', 'shimmer', true);
         } else if (s === 'retry') {
@@ -1205,8 +1249,19 @@ export class JustifyCore {
           this._showClaudeBar('Working', 'shimmer', true);
           this._claudeToRetry();
         } else if (s === 'review') {
-          this._claudeState = 'sending' as any;
-          this._showClaudeBar('Review Changes', 'waiting', false);
+          // This used to park _claudeState on 'sending' before calling
+          // _claudeToReview(). When the history had nothing left to review (all
+          // entries marked done), _claudeToReview() takes its early-out - it
+          // removes the bar and returns WITHOUT setting a state - stranding the
+          // core in 'sending' with no pill and nothing in flight.
+          //
+          // That is not cosmetic. A core stuck in a phantom 'sending' still
+          // reports "sending" to /claude-state, never shows "Connected", and (now)
+          // would swallow the justify_queued for the NEXT batch, because that
+          // handler only fires on a real 'sending'. Restore to a truthful resting
+          // state instead and let _claudeToReview() decide if there is anything to
+          // show.
+          this._claudeState = 'none';
           this._claudeToReview();
         }
       })
@@ -1251,7 +1306,7 @@ export class JustifyCore {
         });
     };
     poll();
-    this._watchPollInterval = window.setInterval(poll, 5000);
+    this._watchPollInterval = setInterval(poll, 5000);
   }
 
   private _onWatchConnected(): void {
@@ -1259,7 +1314,7 @@ export class JustifyCore {
     if (this._claudeState === 'none') {
       this._claudeState = 'connected';
       this._showClaudeBar('Connected', 'thinking', false);
-      this._connectedTimeout = window.setTimeout(() => {
+      this._connectedTimeout = setTimeout(() => {
         this._connectedTimeout = null;
         if (this._claudeState === 'connected') {
           this._claudeState = 'none';
@@ -1278,9 +1333,12 @@ export class JustifyCore {
     if (this._claudeState === 'connected') {
       this._claudeState = 'none';
       this._removeClaudeBar(false);
-    } else if (this._claudeState === 'sending') {
-      // Sent, but the watcher went idle before claiming it - Claude isn't
-      // listening. Surface the disconnect so the user knows to say "watch justify".
+    } else if (this._claudeState === 'sending' || this._claudeState === 'queued') {
+      // Sent (or safely QUEUED), but the watcher went idle before claiming it -
+      // Claude isn't listening. A queued batch is durable and will survive, but in
+      // owner mode nobody is coming for it while the watch is down, so the user
+      // must be told to say "watch justify" rather than left staring at a bar that
+      // implies someone is on the way.
       this._claudeState = 'none';
       this._removeClaudeBar(true);
       this._showDisconnectedBar();
@@ -1502,7 +1560,27 @@ export class JustifyCore {
 
   _showClaudeBar(text: string, sprite: string, hasDots: boolean): void {
     this._loadSprites();
-    this._removeClaudeBar(true);
+    // Unmount any existing pill WITHOUT resetting _claudeState.
+    //
+    // THIS LINE USED TO CALL _removeClaudeBar(true), AND THAT WAS THE SECOND
+    // (and, in practice, the more common) CAUSE OF THE FROZEN CLAUDEBAR.
+    //
+    // _removeClaudeBar sets _claudeState = 'none'. It early-returns when no pill
+    // exists, so a SINGLE prompt was unharmed - the caller set 'sending', no pill
+    // existed yet, the reset was skipped, and the bar advanced normally. But a
+    // "Send All" of N>1 tasks loops submitFromQueue, and every iteration does
+    // `_claudeState = 'sending'` and then `_showClaudeBar(...)`. From the second
+    // iteration on, a pill DOES exist - so the teardown ran, and it wiped the
+    // 'sending' the caller had just set, back to 'none'.
+    //
+    // The bar was then left reading "Sending to Claude." while its state was
+    // 'none', which made it DEAF: justify_queued and justify_working both gate on
+    // `_claudeState === 'sending'`, so neither could ever advance it. The batch
+    // applied fine and the queue drained, but the pill sat there lying until the
+    // page was reloaded. Batching is the normal way to use the queue, which is why
+    // this kept getting re-reported. Measured live 2026-07-12: a 2-task Send All
+    // left /claude-state reporting "none" behind a "Sending to Claude." pill.
+    this._teardownClaudePill(true);
 
     const pill = document.createElement('div');
     pill.dataset.justify = '';
@@ -1678,6 +1756,34 @@ export class JustifyCore {
     // the pill sits on "Retrying" and the outbox keeps knocking, forever.
   }
 
+  // "Queued for Claude" - the daemon ACKED the batch and it is durable on disk,
+  // but nobody has claimed it yet.
+  //
+  // This is a RESTING state, not a progress state, and it is deliberately styled
+  // as one: the ellipsis is dropped (nothing is ticking; a "Sending..." that never
+  // resolves is exactly the lie being fixed) while the spark keeps animating, so
+  // the bar still reads as alive rather than hung. That is the distinction the
+  // user needs - "your batch is safe and waiting for Claude to pick it up" versus
+  // "nothing happened / it never sent."
+  _claudeToQueued(): void {
+    if (!this._claudePill || !this._claudeSpark || !this._claudeLabel) {
+      this._showClaudeBar('Queued for Claude', 'thinking', false);
+    }
+    if (!this._claudePill || !this._claudeSpark || !this._claudeLabel) return;
+    this._claudeState = 'queued';
+    this._persistClaudeState();
+    if (this._claudeAnim) { this._claudeAnim.cancel(); this._claudeAnim = null; }
+    if (this._spriteSvgs.thinking) {
+      this._claudeAnim = this._animateSpark(this._claudeSpark, 'thinking');
+    }
+    // Kill the "Sending" ellipsis. The send is finished.
+    if ((this._claudePill as any)._dotInterval) {
+      clearInterval((this._claudePill as any)._dotInterval);
+      (this._claudePill as any)._dotInterval = null;
+    }
+    this._claudeLabel.textContent = 'Queued for Claude';
+  }
+
   _claudeToWorking(): void {
     // Create the pill if there isn't one (e.g. forced via POST /working after a
     // disconnect dropped the prior pill), mirroring _claudeToValidating - so an
@@ -1740,15 +1846,45 @@ export class JustifyCore {
     const actionable = this._changeHistory.filter(e => !e.reviewed);
     if (actionable.length === 0) return;
     // Don't override an in-flight job or an already-open review.
-    if (this._claudeState === 'sending' || this._claudeState === 'working' ||
+    if (this._claudeState === 'sending' || this._claudeState === 'queued' ||
+        this._claudeState === 'working' ||
         this._claudeState === 'retrying' || this._claudeState === 'retry' ||
         (this._claudeState as string) === 'validating' ||
         this._claudeState === 'review' || this._claudeState === 'review-active') return;
     if (!this._barTray) {
-      if (attempts > 0) window.setTimeout(() => this._surfaceReviewIfPending(attempts - 1), 300);
+      if (attempts > 0) setTimeout(() => this._surfaceReviewIfPending(attempts - 1), 300);
       return;
     }
-    this._claudeToReview();
+
+    // "Review Changes" means THE BATCH IS DONE. Do not say it while the daemon is
+    // still holding prompts for this project.
+    //
+    // A completed response hot-refreshes the page (by design - the page must show
+    // the new code). That reload wipes _pendingResponses, and this function then
+    // saw one unreviewed entry in the persisted history and announced the whole
+    // batch finished - while tasks 2..N were still queued or being applied. So a
+    // 5-task Send All flashed "Review Changes" after the FIRST task landed. The
+    // in-memory counter cannot survive the reload; the daemon's queue can, and it
+    // is the only thing that actually knows.
+    //
+    // claimedCount is what separates the two truthful in-flight states: prompts
+    // an owner has taken (Working) from prompts still waiting for one (Queued).
+    // If the daemon cannot be reached we fall through to the old behaviour rather
+    // than hiding the user's changes - an unreachable daemon is not a reason to
+    // strand completed work out of reach.
+    fetch(`${this.justifyBaseUrl}/watch-status`)
+      .then(r => r.json())
+      .then((w: { pendingCount?: number; claimedCount?: number }) => {
+        const pending = typeof w?.pendingCount === 'number' ? w.pendingCount : 0;
+        if (pending > 0) {
+          const claimed = typeof w?.claimedCount === 'number' ? w.claimedCount : 0;
+          if (claimed > 0) this._claudeToWorking();
+          else this._claudeToQueued();
+          return;
+        }
+        this._claudeToReview();
+      })
+      .catch(() => this._claudeToReview());
   }
 
   _claudeToReview(): void {
@@ -1835,7 +1971,11 @@ export class JustifyCore {
     }
   }
 
-  _removeClaudeBar(instant: boolean): void {
+  // Tear down the pill's DOM, timers and animation, and NOTHING ELSE. In
+  // particular it does not touch _claudeState - unmounting a pill in order to
+  // mount a different one is a REPLACEMENT, not a cancellation of the job the
+  // bar is describing.
+  private _teardownClaudePill(instant: boolean): void {
     if (!this._claudePill) return;
     if ((this._claudePill as any)._dotInterval) clearInterval((this._claudePill as any)._dotInterval);
     this._claudePill.onclick = null;
@@ -1851,6 +1991,13 @@ export class JustifyCore {
     this._claudeSpark = null;
     this._claudeLabel = null;
     this._claudeAnim = null;
+  }
+
+  // "There is no job. Show nothing." Resets the STATE as well as the pill - this
+  // is the cancellation, and only callers that mean it should use it.
+  _removeClaudeBar(instant: boolean): void {
+    if (!this._claudePill) return;
+    this._teardownClaudePill(instant);
     this._claudeState = 'none';
     this._persistClaudeState();
   }

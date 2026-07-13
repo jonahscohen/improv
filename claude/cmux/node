@@ -1,0 +1,195 @@
+#!/bin/bash
+# _CMUX_NODE_SHIM_MARKER - do not remove: this string is how the shim recognizes another
+# copy of ITSELF on PATH (see _shim_is_self below) without depending on inode identity.
+#
+# `node` PATH shim - makes the cmux NODE_OPTIONS preload unbreakable.
+#
+# THE BUG (recurring; 2026-05-31, 2026-06-11, 2026-07-13):
+# cmux launches every claude session with
+#   NODE_OPTIONS=--require=$TMPDIR/cmux-claude-node-options/restore-node-options.cjs
+# $TMPDIR on macOS is /var/folders/<...>/T/, a PURGEABLE per-user temp dir. When the OS
+# reaps it, that preload target vanishes - and because it is a --require in NODE_OPTIONS,
+# EVERY node process in the session dies at startup with MODULE_NOT_FOUND: node-based
+# hooks, npx, npm, all of it. The env of a running session cannot be edited, so the path
+# stays poisoned until the file is put back.
+#
+# WHY A PATH SHIM AND NOT A HOOK:
+# Claude Code runs "all matching hooks in parallel" (hooks docs) with NO ordering
+# guarantee. A healer hook therefore CANNOT be made to run before the node-based hooks it
+# is meant to protect - they are all spawned at the same instant. That is exactly what was
+# observed on 2026-07-13: the healer hook ran and re-planted the file, and TWO node hooks
+# in the same Stop chain still failed, because all three started together. Ordering cannot
+# be fixed from inside the hook list, and the plugin-provided node hooks (codex, vercel,
+# and others) are vendor files we do not own and cannot prepend a heal step to.
+#
+# `node` itself is the one choke point every one of those callers passes through, and they
+# all resolve it via PATH. So we intercept there: heal (or neutralize) NODE_OPTIONS at the
+# moment of exec, which is strictly BEFORE node reads its preload. No ordering dependency,
+# no race, and it covers hooks we do not own plus npx/npm.
+#
+# PLACEMENT: ~/.claude/cmux is a symlink to <repo>/claude/cmux and sits at PATH position 2
+# inside a Claude/cmux session (ahead of /opt/homebrew/bin), so this shim wins there. In a
+# plain login shell /opt/homebrew/bin comes FIRST, so the user's normal `node` is
+# untouched - the blast radius is exactly the sessions that carry the poisoned NODE_OPTIONS.
+#
+# TRANSPARENCY RULES (learned from a cross-model review of the first draft):
+#  * Do NOT export any marker/guard env var into the real node process. Doing so leaks into
+#    every descendant `node` (npm lifecycle scripts, test runners, child_process.spawn),
+#    which would then take a degraded code path. Self-detection must be inode/content
+#    based, never env based.
+#  * Re-plant the preload ATOMICALLY (temp file + mv). A plain `cp` is observable
+#    half-written, and the whole point of this shim is that hooks run CONCURRENTLY - two
+#    shims healing at once must never let a third process preload a truncated file.
+#  * argv, stdin, and exit codes pass through untouched.
+#
+# HAPPY PATH IS FREE: when NODE_OPTIONS is absent, or its preload is present (the
+# overwhelmingly common case), this does nothing but exec the real node.
+
+# Is $1 this shim (or another copy of it)? Inode identity first (covers symlinks to us),
+# then a content marker (covers a genuine COPY at a different inode, which -ef misses and
+# which could otherwise ping-pong between two PATH dirs forever). The marker grep only
+# runs on files that start with '#!', so a real node binary is never scanned - and a
+# legitimate wrapper script (nvm/mise/asdf/volta shims are scripts) simply fails to match
+# the marker and is used normally.
+# Callers must only pass a REGULAR file (see the -f guards on the PATH scan): reading from
+# a FIFO named `node` would block head/grep forever and wedge the session.
+_shim_is_self() {
+  [ "$1" -ef "$0" ] && return 0
+  # Read the magic bytes with the `read` BUILTIN, not `head` - this runs on every single
+  # node invocation in a session, and a fork here cost ~14ms per call (measured). A real
+  # node binary fails the '#!' test on its first two bytes, so the grep below never runs
+  # for it: the happy path is now fork-free.
+  local _magic=""
+  IFS= read -r -n 2 _magic < "$1" 2>/dev/null || return 1
+  [ "$_magic" = '#!' ] || return 1
+  grep -q '_CMUX_NODE_SHIM_MARKER' -- "$1" 2>/dev/null
+}
+
+# Ensure a preload target exists; re-plant it from the durable canonical copy if not.
+# Returns 0 if the path is usable after this call, 1 if it could not be restored.
+_shim_ensure_preload() {
+  # Demand a NON-EMPTY REGULAR file, not merely a readable path: a zero-byte or stale
+  # leftover would otherwise be accepted forever and keep every node process broken, and a
+  # FIFO here would make node block while preloading. (Both of our writers - this shim and
+  # node-shim-heal.sh - are atomic, so neither can produce a partial file itself.)
+  [ -f "$1" ] && [ -s "$1" ] && return 0
+
+  # Locate the canonical copy. $HOME first; otherwise resolve it relative to this
+  # script's REAL location - following symlinks all the way back into the repo, so this
+  # works on any machine with no install step and no hardcoded path.
+  _canon="$HOME/.claude/node-shims/restore-node-options.cjs"
+  if [ ! -r "$_canon" ]; then
+    _self="$0"
+    while [ -L "$_self" ]; do
+      _link=$(readlink "$_self")
+      case "$_link" in
+        /*) _self="$_link" ;;
+        *)  _self="$(dirname -- "$_self")/$_link" ;;
+      esac
+    done
+    _canon="$(cd -- "$(dirname -- "$_self")" 2>/dev/null && pwd -P)/../node-shims/restore-node-options.cjs"
+  fi
+  [ -r "$_canon" ] || return 1
+
+  _dir="$(dirname -- "$1")"
+  mkdir -p -- "$_dir" 2>/dev/null || return 1
+
+  # Atomic: write to a unique temp in the SAME directory, then rename over the target.
+  # rename(2) within a filesystem is atomic, so a concurrent shim either sees no file or
+  # sees the COMPLETE file - never a partial one.
+  _tmp="$_dir/.restore-node-options.$$.tmp"
+  cp -- "$_canon" "$_tmp" 2>/dev/null || { rm -f -- "$_tmp" 2>/dev/null; return 1; }
+  mv -f -- "$_tmp" "$1" 2>/dev/null || { rm -f -- "$_tmp" 2>/dev/null; return 1; }
+  [ -f "$1" ] && [ -s "$1" ]
+}
+
+# --- repair NODE_OPTIONS, but only when it is actually broken -------------------
+case "${NODE_OPTIONS:-}" in
+  *restore-node-options.cjs*)
+    _rebuilt=""
+    _changed=""
+    _pending=""   # a bare --require / -r awaiting its path argument
+
+    for _tok in ${NODE_OPTIONS:-}; do
+      if [ -n "$_pending" ]; then
+        # _tok is the path argument belonging to $_pending
+        case "$_tok" in
+          *restore-node-options.cjs)
+            if _shim_ensure_preload "$_tok"; then
+              _rebuilt="${_rebuilt:+$_rebuilt }$_pending $_tok"
+            else
+              _changed=1   # drop the flag AND its path together
+            fi
+            ;;
+          *) _rebuilt="${_rebuilt:+$_rebuilt }$_pending $_tok" ;;
+        esac
+        _pending=""
+        continue
+      fi
+
+      case "$_tok" in
+        --require|-r)
+          _pending="$_tok"
+          ;;
+        --require=*restore-node-options.cjs|-r=*restore-node-options.cjs)
+          if _shim_ensure_preload "${_tok#*=}"; then
+            _rebuilt="${_rebuilt:+$_rebuilt }$_tok"
+          else
+            _changed=1
+          fi
+          ;;
+        *)
+          _rebuilt="${_rebuilt:+$_rebuilt }$_tok"
+          ;;
+      esac
+    done
+
+    # A dangling --require with no argument: leave it exactly as we found it.
+    [ -n "$_pending" ] && _rebuilt="${_rebuilt:+$_rebuilt }$_pending"
+
+    # Only rewrite the env when we actually dropped something. Dropping the preload is
+    # safe: the ONLY job of restore-node-options.cjs is to strip itself from NODE_OPTIONS
+    # for child processes, so removing it here reaches the same end state instead of
+    # letting node die on a missing file. All other flags (--max-old-space-size, ...)
+    # are preserved verbatim.
+    if [ -n "$_changed" ]; then
+      if [ -n "$_rebuilt" ]; then
+        export NODE_OPTIONS="$_rebuilt"
+      else
+        unset NODE_OPTIONS
+      fi
+    fi
+    ;;
+esac
+
+# --- exec the REAL node ---------------------------------------------------------
+# Walk PATH and take the first `node` that is not this shim. Nothing about the shim is
+# exported, so the process we exec - and every node it goes on to spawn - sees a pristine
+# environment and gets the full treatment above on its own.
+# Split PATH by hand rather than with IFS word-splitting: splitting DROPS a trailing empty
+# field, so a PATH like "/dir:" would silently lose its final (empty = cwd) component and
+# we would resolve a different node than the shell would have.
+_rest="$PATH"
+_more=1
+while [ -n "$_more" ]; do
+  case "$_rest" in
+    *:*) _d="${_rest%%:*}"; _rest="${_rest#*:}" ;;
+    *)   _d="$_rest"; _more="" ;;
+  esac
+  # An EMPTY PATH component means the current directory (execvp semantics). Honor that, so
+  # our resolution picks exactly the same `node` the shell would have picked without us.
+  [ -n "$_d" ] || _d="."
+  _cand="$_d/node"
+  # Regular + executable only: a directory or a FIFO named `node` must never be exec'd, and
+  # must never be read by _shim_is_self (a FIFO read would block forever).
+  [ -f "$_cand" ] && [ -x "$_cand" ] || continue
+  _shim_is_self "$_cand" && continue
+  exec "$_cand" "$@"
+done
+
+for _c in /opt/homebrew/bin/node /usr/local/bin/node /usr/bin/node; do
+  [ -f "$_c" ] && [ -x "$_c" ] && ! _shim_is_self "$_c" && exec "$_c" "$@"
+done
+
+echo "node shim: no real node found on PATH" >&2
+exit 127

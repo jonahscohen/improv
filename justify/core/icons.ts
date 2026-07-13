@@ -166,6 +166,74 @@ export function iconClose(size: number): SVGSVGElement {
   return svg;
 }
 
+// Pause / play, taken VERBATIM from LUCIDE ANIMATED (pqoqubbw/icons ->
+// icons/pause.tsx, icons/play.tsx): the geometry AND the hover motion are that
+// library's, not ours. `svgBase` already emits exactly that library's svg
+// attributes (viewBox 0 0 24 24, fill none, stroke currentColor, stroke-width 2,
+// round caps and joins), so nothing is overridden here.
+//
+// BOTH glyphs are mounted at once and the toggle only CROSS-FADES their opacity.
+// That is not merely a nicer transition: it keeps the icon NODE stable. The hover
+// handler closes over the element it was built with, so swapping the node out on
+// toggle would leave it animating a detached orphan - hover motion would work at
+// rest and die the instant the button was pressed.
+export function iconPausePlay(size: number): SVGSVGElement {
+  const svg = svgBase(size);
+  const ns = 'http://www.w3.org/2000/svg';
+
+  // Pause: two RECTS (not stroked lines). Lucide Animated bounces them VERTICALLY,
+  // staggered - left dips first, right follows. Each is tagged so the two can be
+  // driven out of phase; a stagger is by definition two elements moving apart, so
+  // they cannot be animated as one group.
+  const bars = document.createElementNS(ns, 'g');
+  bars.dataset.pp = 'pause';
+  const barX = ['6', '14'];
+  barX.forEach((x, i) => {
+    const r = document.createElementNS(ns, 'rect');
+    r.setAttribute('x', x);
+    r.setAttribute('y', '4');
+    r.setAttribute('width', '4');
+    r.setAttribute('height', '16');
+    r.setAttribute('rx', '1');
+    r.dataset.pb = String(i + 1);
+    bars.appendChild(r);
+  });
+  svg.appendChild(bars);
+
+  // Play: a POLYGON. Lucide Animated winds it back and tilts it (x -1, rotate -10deg)
+  // then pokes it right (x 2) and settles.
+  //
+  // NOT transform-box: fill-box. The svg is fill="none", and pinning the transform box
+  // to the fill box of an unfilled shape silently kills the transform outright -
+  // MEASURED: the bars (no fill-box) animated while this polygon sat dead still. The
+  // SVG default (view-box) works, and `center` then resolves to the viewBox centre
+  // (12,12), which is within a pixel of the triangle's own visual centre anyway.
+  const play = document.createElementNS(ns, 'polygon');
+  play.dataset.pp = 'play';
+  play.setAttribute('points', '6 3 20 12 6 21 6 3');
+  play.style.transformOrigin = 'center';
+  svg.appendChild(play);
+
+  setPausePlayState(svg, false);
+  return svg;
+}
+
+// Cross-fade the two glyphs in place. The transition is declared on the parts, not
+// swapped nodes, so the icon element the hover handler holds stays live forever.
+export function setPausePlayState(svg: SVGSVGElement, paused: boolean): void {
+  const bars = svg.querySelector('[data-pp="pause"]') as SVGGElement | null;
+  // A polygon now, not a path (Lucide Animated's play glyph).
+  const play = svg.querySelector('[data-pp="play"]') as SVGElement | null;
+  for (const [el, shown] of [
+    [bars, !paused],
+    [play, paused],
+  ] as Array<[SVGElement | null, boolean]>) {
+    if (!el) continue;
+    el.style.transition = 'opacity 160ms cubic-bezier(0.23, 1, 0.32, 1)';
+    el.style.opacity = shown ? '1' : '0';
+  }
+}
+
 export type IconBuilder = (size: number) => SVGSVGElement;
 
 export const MODE_ICON_BUILDERS: Record<string, IconBuilder> = {

@@ -50,7 +50,13 @@ function constantTimeEquals(a: string, b: string): boolean {
   return timingSafeEqual(ab, bb);
 }
 
-export class DisarmConsentStore {
+// Single-use human consent, generic over PURPOSE. Each purpose gets its OWN
+// token file, and that separation is load-bearing: a token minted to disarm the
+// watch must not be replayable to enable headless dispatch (which is a different,
+// and in some ways larger, grant - it lets the daemon run `claude -p
+// --permission-mode bypassPermissions` on its own). Same mechanism, separate
+// keys, no confused deputy.
+export class ConsentStore {
   private path: string;
   private ttlMs: number;
 
@@ -121,4 +127,15 @@ export class DisarmConsentStore {
     this.clear();
     return { ok: true };
   }
+}
+
+// The original name, kept so existing imports/tests keep working. Disarm consent
+// lives at disarm-consent.json (the default path).
+export class DisarmConsentStore extends ConsentStore {}
+
+// Consent to ENABLE headless dispatch. Separate file => a disarm token cannot be
+// presented to POST /watch/mode, and vice versa.
+export function modeConsentPath(): string {
+  const base = process.env.JUSTIFY_STATE_DIR || join(homedir(), '.claude', 'justify');
+  return join(base, 'mode-consent.json');
 }

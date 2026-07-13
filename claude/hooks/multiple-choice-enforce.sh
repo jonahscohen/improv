@@ -24,6 +24,26 @@
 # strong-signal override so the original Failure 2 catch is preserved. The trailing_q
 # detector now requires a "?" within ~250 chars of the last list item, and the
 # question must not match a binary opener / simple "X or Y?" shape.
+#
+# 2026-07-12 (MANDATE CHANGE - Jonah): the binary exemption from T-0005(a)/(c) is
+# REVOKED. Every question posed to the user must go through AskUserQuestion, and a
+# yes/no is now a 2-option AskUserQuestion. A hook fire on a plain-text binary is
+# INTENDED, not a false positive.
+# New layer L6 (direct_question): fires on a plain-text question POSED TO THE USER,
+# binary included, with no option list required. Two conditions must BOTH hold, and
+# that conjunction is what keeps rhetorical prose and fact lists clean:
+#   POSITION - the question sits in the trailing region (last 5 non-empty lines).
+#              A rhetorical question the prose then answers is not there.
+#   SHAPE    - the question is USER-DIRECTED: addresses the user ("you"), asks
+#              permission for the agent's next action ("Should I", "Want me to",
+#              "Should we"), seeks confirmation ("Sound good?"), poses a this-or-that
+#              ("Ship now or wait?"), or prompts a pick ("Which one?"). A bare
+#              interrogative with none of those markers ("Why did it break?", "What
+#              changed?") is rhetorical prose and does NOT fire.
+# The T-0005(b) carve-out SURVIVES intact: a factual enumeration with no trailing
+# question has no "?" in the trailing region, so L6 cannot fire on it.
+# Blockquoted lines are stripped before analysis: "> ..." is quoting the user, not
+# asking them something.
 
 LOG_FILE="$HOME/.claude/.multiple-choice-blocks.log"
 
@@ -95,6 +115,106 @@ is_binary_question() {
   return 1
 }
 
+# ---- BEGIN L6 SHARED DETECTION (parity-checked against multiple-choice-detect-stop.sh
+# ---- by test-multiple-choice-enforce.sh; keep the two copies byte-identical) ----
+
+# L6 (2026-07-12): USER-DIRECTED question shapes. Matched against a single
+# lowercased, left-trimmed question sentence. Any hit means the question is being
+# POSED TO THE USER rather than used as rhetorical prose.
+# Note "you're"/"you'd" need no pattern of their own: the bare `you` alternative
+# already matches them, because the apostrophe is a non-[a-z] boundary char.
+USER_DIRECTED_PATTERNS=(
+  '(^|[^a-z])(you|your|yours)([^a-z]|$)'                       # addresses the user
+  '^(should|shall|can|could|may|do|would|will|did|am)[[:space:]]+(i|we)([^a-z]|$)'  # "Should I", "Should we"
+  '^(want|need)[[:space:]]+me[[:space:]]+to([^a-z]|$)'         # "Want me to ...?"
+  '^(sound|sounds|look|looks|make|makes)[[:space:]]+(good|right|sense|ok|okay)'     # "Sound good?"
+  '^(ok|okay|ready|alright|agreed|deal|fair|correct)([^a-z]|$)'                     # bare confirmation
+  '^(which|pick|choose|select|confirm)([^a-z]|$)'              # explicit pick prompt
+)
+
+# Interrogative introducer that is itself a question to the user even with no "?"
+# ("Want me to:" / "Should I:" opening a list). Deliberately EXCLUDES "You can:",
+# which introduces a factual capability list, not a question - that stays gated
+# behind the opt_count >= 3 option-list path so fact lists keep their carve-out.
+QUESTION_INTRO_PATTERN='^[[:space:]]*(Would you (like|prefer)|Want me to|Should I|Should we|Do you want|What.s your)[^?]*:[[:space:]]*$'
+
+# TERMINAL question: the "?" is the last non-whitespace character on its line.
+TERMINAL_Q_PATTERN='\?[[:space:]]*$'
+
+# is_user_directed_question: 0 (true) if this question sentence is aimed at the user.
+is_user_directed_question() {
+  local q="$1"
+  q=$(printf '%s' "$q" | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//')
+  [[ -z "$q" ]] && return 1
+
+  local p
+  for p in "${USER_DIRECTED_PATTERNS[@]}"; do
+    [[ "$q" =~ $p ]] && return 0
+  done
+
+  # This-or-that alternation ("Ship now or wait for review?"): exactly one " or "
+  # and no commas. Commas + "or" is an enumerated 3+ list, already handled above.
+  local comma_count or_count
+  comma_count=$(printf '%s' "$q" | tr -cd ',' | wc -c | tr -d ' ')
+  or_count=$(printf '%s' "$q" | grep -oE '[[:space:]]or[[:space:]]' | wc -l | tr -d ' ')
+  if [[ $comma_count -eq 0 ]] && [[ $or_count -eq 1 ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+# detect_direct_question: 0 (true) if the response poses a plain-text question to
+# the user. THREE conditions must hold, and their conjunction is what keeps
+# rhetorical prose and factual enumerations clean:
+#   POSITION - the question sits in the trailing region (last 5 non-empty lines).
+#   TERMINAL - the question ENDS its line. You ask, then you stop. A rhetorical
+#              question is answered by the prose right after it ("Why did it
+#              break? The key rolled."), so a "?" with prose trailing it on the
+#              same line is narration, not an ask. This is the rule that keeps
+#              self-answered rhetoric clean even when it contains "you" or "or".
+#   SHAPE    - the question is user-directed (USER_DIRECTED_PATTERNS above).
+# Known limitation: only unindented ``` fences and physical "> " lines are
+# stripped, so an indented/tilde fence or a lazy blockquote continuation can leak.
+detect_direct_question() {
+  local text="$1"
+  local non_code trailing line q
+
+  # Strip fenced code (example questions) and blockquotes (quoting the user).
+  non_code=$(printf '%s\n' "$text" | sed '/^```/,/^```/d' | grep -v '^[[:space:]]*>')
+
+  # POSITION: only the trailing region can hold a question awaiting an answer.
+  trailing=$(printf '%s\n' "$non_code" | grep -v '^[[:space:]]*$' | tail -5)
+
+  # Colon-form introducer ("Want me to:") counts even with no "?", but it must
+  # ALSO sit in the trailing region - POSITION applies to it like everything else.
+  if printf '%s\n' "$trailing" | grep -qE "$QUESTION_INTRO_PATTERN"; then
+    DIRECT_QUESTION_TEXT=$(printf '%s\n' "$trailing" | grep -E "$QUESTION_INTRO_PATTERN" | tail -1 | sed 's/^[[:space:]]*//')
+    return 0
+  fi
+
+  [[ "$trailing" != *\?* ]] && return 1
+
+  # TERMINAL + SHAPE, evaluated per line.
+  while IFS= read -r line; do
+    [[ "$line" =~ $TERMINAL_Q_PATTERN ]] || continue
+    q=$(printf '%s' "$line" | python3 -c "
+import re, sys
+m = re.findall(r'[^.!?\n]*\?', sys.stdin.read())
+print(m[-1].strip() if m else '')
+" 2>/dev/null)
+    [[ -z "$q" ]] && continue
+    if is_user_directed_question "$q"; then
+      DIRECT_QUESTION_TEXT="$q"
+      return 0
+    fi
+  done <<< "$trailing"
+
+  return 1
+}
+
+# ---- END L6 SHARED DETECTION ----
+
 check_for_deflection() {
   local text="$1"
   local option_count=0
@@ -159,15 +279,28 @@ print(matches[-1].strip() if matches else '')
     trailing_deflection=1
   fi
 
+  # L6: plain-text question posed to the user (binary included, no list required).
+  local direct_question=0
+  DIRECT_QUESTION_TEXT=""
+  if detect_direct_question "$text"; then
+    direct_question=1
+  fi
+
   # Fire decision:
   #   - bold_label_count >= 2 is always a block (strong structural signal).
-  #   - Otherwise, require opt_count >= 3 AND a trailing-question signal.
+  #   - opt_count >= 3 AND a trailing-question signal (option-list deflection).
+  #   - direct_question == 1 (2026-07-12 mandate: ANY question to the user, binary
+  #     included, must go through AskUserQuestion).
   if [[ $bold_label_count -ge 2 ]]; then
-    DETECTED_REASON="opt=$opt_count bold=$bold_label_count trailing_q=$trailing_q trailing_deflection=$trailing_deflection (bold-heuristic)"
+    DETECTED_REASON="opt=$opt_count bold=$bold_label_count trailing_q=$trailing_q trailing_deflection=$trailing_deflection direct_q=$direct_question (bold-heuristic)"
     return 0  # BLOCK
   fi
   if [[ $opt_count -ge 3 ]] && ( [[ $trailing_q -eq 1 ]] || [[ $trailing_deflection -eq 1 ]] ); then
-    DETECTED_REASON="opt=$opt_count bold=$bold_label_count trailing_q=$trailing_q trailing_deflection=$trailing_deflection"
+    DETECTED_REASON="opt=$opt_count bold=$bold_label_count trailing_q=$trailing_q trailing_deflection=$trailing_deflection direct_q=$direct_question"
+    return 0  # BLOCK
+  fi
+  if [[ $direct_question -eq 1 ]]; then
+    DETECTED_REASON="opt=$opt_count bold=$bold_label_count trailing_q=$trailing_q trailing_deflection=$trailing_deflection direct_q=1 (direct-question: \"$DIRECT_QUESTION_TEXT\")"
     return 0  # BLOCK
   fi
 
@@ -195,21 +328,28 @@ if [[ -n "$RESPONSE_TEXT" ]]; then
     if ! response_has_askuserquestion "$TOOL_LOG"; then
       log_block "$DETECTED_REASON"
       cat >&2 <<EOF
-BLOCKED: Multiple choice deflection detected ($DETECTED_REASON)
+BLOCKED: Plain-text question or option deflection detected ($DETECTED_REASON)
 
-You offered 3 or more options in text form (with a trailing question)
-without using AskUserQuestion tool, or you used 2+ bold-labeled option paragraphs.
+You posed a question to the user in plain text, or offered options in text form,
+without using the AskUserQuestion tool.
 
-RULE: When offering 3+ choices to the user, you MUST use the AskUserQuestion tool.
-  - Binary (yes/no, X or Y) questions are allowed in plain text.
+RULE (revised 2026-07-12): EVERY question to the user goes through AskUserQuestion.
+  - Binary (yes/no, X or Y) questions are NOT exempt. A yes/no is a 2-option
+    AskUserQuestion. A fire on a binary is INTENDED, not a false positive.
   - Mark the recommended option with "(Recommended)" when using the tool.
   - Hook detects: Option/Approach/Path/Plan/Choice/Alternative/Strategy/Way/Route/Step
   - Hook detects: 2+ paragraphs starting with **CapitalizedWord (regardless of which word)
+  - Hook detects: a user-directed question in the trailing region ("Should I...?",
+    "Want me to...?", "Ship now or wait?", "Sound good?")
+
+NOT detected (still fine in plain text): factual enumerations with no question
+attached, and rhetorical questions inside prose ("Why did it break? The key rolled.").
 
 Detected lines (first 5):
-$(printf '%s' "$RESPONSE_TEXT" | grep -E "^[[:space:]]*\*\*[A-Z][A-Za-z]+[[:space:]]+[A-Z0-9]|^[[:space:]]*(Option|Approach|Path|Plan|Choice|Alternative|Strategy|Way|Route|Step)[[:space:]]+[A-Z0-9]" | head -5)
+$(printf '%s' "$RESPONSE_TEXT" | grep -E "^[[:space:]]*\*\*[A-Z][A-Za-z]+[[:space:]]+[A-Z0-9]|^[[:space:]]*(Option|Approach|Path|Plan|Choice|Alternative|Strategy|Way|Route|Step)[[:space:]]+[A-Z0-9]|\?" | head -5)
 
-FIX: Use AskUserQuestion with your options, then compose a text response acknowledging their choice.
+FIX: Use AskUserQuestion with your options (two options for a binary), then compose
+a text response acknowledging their choice.
 EOF
       exit 1
     fi

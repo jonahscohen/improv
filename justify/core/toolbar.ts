@@ -7,6 +7,8 @@ import {
   iconEraser,
   iconSend,
   iconClose,
+  iconPausePlay,
+  setPausePlayState,
   MODE_ICON_BUILDERS,
   type IconBuilder,
 } from './icons';
@@ -187,6 +189,11 @@ export class Toolbar {
   sendToClaudeCallbacks: ActionCallback[] = [];
   clearAllCallbacks: ActionCallback[] = [];
   modeButtons = new Map<JustifyMode, HTMLButtonElement>();
+  // Pause is a toggle, not a mode, so it is deliberately kept out of modeButtons
+  // (selecting a mode must not clear it, and it must not clear a mode).
+  pauseBtn: HTMLButtonElement | null = null;
+  animationsPaused: boolean = false;
+  pauseCallbacks: Array<(paused: boolean) => void> = [];
   badgeEl: HTMLSpanElement;
   badgeDivider: HTMLDivElement;
   sendBtnWrap: HTMLButtonElement;
@@ -213,6 +220,7 @@ export class Toolbar {
   // the panel opens (see toggleSettingsPanel), so it never grows unbounded.
   private _panelThemers: Array<() => void> = [];
 
+  private _pauseIcon: SVGSVGElement | null = null;
   private _closeBtn!: HTMLButtonElement;
   private _closeSvg!: SVGSVGElement;
   private _closeP1!: SVGPathElement;
@@ -313,6 +321,43 @@ export class Toolbar {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(90deg); }
       }
+      /* Pause and play hover motion, taken VERBATIM from LUCIDE ANIMATED
+         (pqoqubbw/icons -> icons/pause.tsx, icons/play.tsx). Nothing here is
+         invented; these are that library's own Framer Motion variants transcribed
+         to keyframes:
+
+           pause  left  rect   y: [0, 2, 0, 0]                times [0, .2, .5, 1]
+           pause  right rect   y: [0, 0, 2, 0]                times [0, .2, .5, 1]
+           play   polygon      x: [0, -1, 2, 0]
+                               rotate: [0, -10, 0, 0]         times [0, .2, .5, 1]
+           duration 0.5s
+
+         The bars bounce VERTICALLY and the stagger is baked into the two variants -
+         the LEFT bar dips at 20%, the RIGHT bar dips at 50%. It is not a delay bolted
+         onto one shared keyframe, which is how we kept getting it wrong.
+
+         One motion per GLYPH, not one per button: both glyphs are always mounted and
+         the toggle only cross-fades their opacity, so each carries its own animation
+         and the cross-fade decides which one is SEEN. That is why nothing here has to
+         branch on the paused state. */
+      @keyframes justify-icon-hover-pause-bar-l {
+        0% { transform: translateY(0); }
+        20% { transform: translateY(2px); }
+        50% { transform: translateY(0); }
+        100% { transform: translateY(0); }
+      }
+      @keyframes justify-icon-hover-pause-bar-r {
+        0% { transform: translateY(0); }
+        20% { transform: translateY(0); }
+        50% { transform: translateY(2px); }
+        100% { transform: translateY(0); }
+      }
+      @keyframes justify-icon-hover-play-poke {
+        0% { transform: translateX(0) rotate(0deg); }
+        20% { transform: translateX(-1px) rotate(-10deg); }
+        50% { transform: translateX(2px) rotate(0deg); }
+        100% { transform: translateX(0) rotate(0deg); }
+      }
 
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
@@ -397,6 +442,26 @@ export class Toolbar {
       this.el.appendChild(btn);
       btnDelay += 30;
     }
+
+    // Pause animations. MODES ends on 'manipulate', so appending here puts this
+    // immediately to the right of the Manipulate button.
+    const pauseBtn = this.createToolbarButton(iconPausePlay, 'Pause Animations');
+    pauseBtn.setAttribute('aria-label', 'Pause Animations');
+    pauseBtn.setAttribute('aria-pressed', 'false');
+    pauseBtn.style.animation = `justify-icon-in 0.2s cubic-bezier(0.23, 1, 0.32, 1) ${btnDelay}ms both`;
+    pauseBtn.addEventListener('animationend', function () {
+      this.style.animation = 'none';
+    }, { once: true });
+    pauseBtn.addEventListener('click', () => {
+      // Flip our own state first, then tell core what the state now IS. The
+      // engine setter is idempotent, so the two can never drift apart.
+      this.setAnimationsPaused(!this.animationsPaused);
+      this.pauseCallbacks.forEach((cb) => cb(this.animationsPaused));
+    });
+    this.pauseBtn = pauseBtn;
+    this._pauseIcon = pauseBtn.querySelector('svg');
+    this.el.appendChild(pauseBtn);
+    btnDelay += 30;
 
     this.actionDivider = this.createVerticalDivider();
     this.actionDivider.style.display = 'none';
@@ -542,7 +607,11 @@ export class Toolbar {
             _ch.style.pointerEvents = '';
           }
         }
-        this.el.style.width = '157px';
+        // 157px was: 6px padding + Prompt(32) + Manipulate(32) + Settings(32)
+        // + 3 x 2px gaps + the 7px divider, with the absolutely-positioned close
+        // button needing 32 + 5px of clear space on the right. The pause toggle
+        // adds one more 32px button and one more 2px gap.
+        this.el.style.width = '191px';
       }
     });
 
@@ -740,6 +809,26 @@ export class Toolbar {
           }
           if (p < 1) requestAnimationFrame(_step);
         })(performance.now());
+      } else if (tooltip === 'Pause Animations') {
+        // Per-GLYPH motion. Both glyphs are mounted at once and the toggle only
+        // cross-fades their opacity, so each part can carry its own animation and the
+        // cross-fade picks the one you see. This sidesteps the trap that the lookup
+        // below keys off the CREATION-time tooltip, which never changes on relabel and
+        // therefore could never tell the pause state from the play state.
+        // Lucide Animated's own easing is a spring; the toolbar has no spring, so the
+        // bar's shared ease is used. The DISPLACEMENTS and the phasing are the
+        // library's, untouched.
+        const _ease = 'cubic-bezier(0.23,1,0.32,1)';
+        const _bar1 = icon.querySelector('[data-pb="1"]') as SVGElement | null;
+        const _bar2 = icon.querySelector('[data-pb="2"]') as SVGElement | null;
+        const _play = icon.querySelector('[data-pp="play"]') as SVGElement | null;
+        // The stagger lives INSIDE the two keyframe sets (left dips at 20%, right at
+        // 50%), exactly as Lucide Animated phases them. It is deliberately NOT an
+        // animation-delay on a shared keyframe - that was our invention, and it was
+        // the wrong shape.
+        if (_bar1) _bar1.style.animation = `justify-icon-hover-pause-bar-l 0.5s ${_ease}`;
+        if (_bar2) _bar2.style.animation = `justify-icon-hover-pause-bar-r 0.5s ${_ease}`;
+        if (_play) _play.style.animation = `justify-icon-hover-play-poke 0.5s ${_ease}`;
       } else {
         const _anim: Record<string, string> = {
           Settings: 'justify-icon-hover-spin',
@@ -755,7 +844,10 @@ export class Toolbar {
           this._ttTimer = null;
         }
         if (this.showHints === false) return;
-        this._tt.textContent = tooltip;
+        // dataset.tt lets a button relabel itself after construction (the pause
+        // toggle becomes "Resume Animations"); the creation-time label is the
+        // fallback for every static button.
+        this._tt.textContent = btn.dataset.tt || tooltip;
         const w = btn.getBoundingClientRect();
         const bx = w.left + w.width / 2;
         const by = this.el.getBoundingClientRect().top - this._tt.offsetHeight - 8;
@@ -772,6 +864,12 @@ export class Toolbar {
         btn.style.color = currentPalette().textDim;
       }
       icon.style.animation = '';
+      // The pause glyphs are animated per PART, so clearing the svg root is not
+      // enough - and without clearing, a second hover cannot restart the motion.
+      const _hp = icon.querySelectorAll('[data-pb], [data-pp="play"]');
+      for (let _i = 0; _i < _hp.length; _i++) {
+        (_hp[_i] as SVGElement).style.animation = '';
+      }
       if (icon._slAnim) {
         icon._slAnim = false;
         const _els2 = icon.querySelectorAll('[data-sl]');
@@ -1076,6 +1174,54 @@ export class Toolbar {
     // keeps the old marker after a swatch change (this repaint runs on both
     // marker changes and mode switches).
     if (this.badgeEl) this.badgeEl.style.background = _mc;
+    // Pause is not a mode, but it borrows the mode buttons' engaged affordance -
+    // a marker fill - so "pause is ON" reads at a glance rather than needing a
+    // second visual language.
+    if (this.pauseBtn) {
+      if (this.animationsPaused) {
+        this.pauseBtn.style.background = _mc;
+        this.pauseBtn.style.color = _ic;
+      } else {
+        this.pauseBtn.style.background = 'transparent';
+        this.pauseBtn.style.color = currentPalette().textDim;
+      }
+    }
+  }
+
+  onPauseAnimations(cb: (paused: boolean) => void): void {
+    this.pauseCallbacks.push(cb);
+  }
+
+  getAnimationsPaused(): boolean {
+    return this.animationsPaused;
+  }
+
+  // Reflect the pause state onto the button: swap the Lucide pause glyph for the
+  // play glyph, flip the tooltip and aria state, and light it up like an active
+  // mode button. Called on click and on toolbar rebuild (so a toolbar that is
+  // hidden and reopened while the page is frozen comes back showing "paused").
+  setAnimationsPaused(paused: boolean): void {
+    this.animationsPaused = paused;
+    const btn = this.pauseBtn;
+    if (!btn) return;
+
+    // Cross-fade the two glyphs that are BOTH already in the icon. Never swap the
+    // node: the hover handler closes over this element, and replacing it would leave
+    // that closure animating a detached orphan.
+    if (this._pauseIcon) setPausePlayState(this._pauseIcon, paused);
+
+    const label = paused ? 'Resume Animations' : 'Pause Animations';
+    btn.dataset.tt = label;
+    btn.setAttribute('aria-label', label);
+    btn.setAttribute('aria-pressed', paused ? 'true' : 'false');
+    if (paused) btn.dataset.active = '1';
+    else delete btn.dataset.active;
+
+    // The click lands while the pointer is still on the button, so an open
+    // tooltip would otherwise keep the pre-toggle wording until the next hover.
+    if (this._tt && this._tt.style.opacity === '1') this._tt.textContent = label;
+
+    this.updateModeButtonStyles();
   }
 
   setActiveMode(mode: JustifyMode | null): void {

@@ -191,21 +191,22 @@ YOU_CAN="You can:
 mc_assert_blocks "You can: + numbered list" "$YOU_CAN"
 
 # =============================================================================
-# T-0005 false-fire regression tests (2026-05-27)
-# Patterns that previously over-fired and should now PASS:
-#  (a) Binary "X or Y?" questions
-#  (b) Numbered fact lists with NO trailing question
-#  (c) Numbered list with a question >80 chars away from the last item
-#  (d) Numbered fact list + binary trailing question ("Want me to queue any?")
+# T-0005 regression tests (2026-05-27), REVISED 2026-07-12 for the all-questions
+# mandate. The binary carve-out is REVOKED, so two of these deliberately FLIP:
+#  (a) Binary "X or Y?" questions           -> now BLOCKS (was ALLOW)
+#  (b) Numbered fact lists, NO question     -> still ALLOWS (carve-out preserved)
+#  (c) Numbered list, question far from list -> still ALLOWS (carve-out preserved)
+#  (d) Fact list + binary trailing question -> now BLOCKS (was ALLOW)
 # And one positive control: a genuine 3+ option question with trailing question
 # must still BLOCK.
 # =============================================================================
 
-# T-0005a: Binary "should we use X or Y?" - no list, just a binary question.
+# T-0005a (FLIPPED 2026-07-12): Binary "should we use X or Y?" - no list, just a
+# binary question. Under the all-questions mandate this MUST now block.
 BINARY_X_OR_Y="Looking at the routing options for the Discord thread.
 
 Should we use channel-A or channel-B for this?"
-mc_assert_allows "T-0005a: binary 'X or Y?' question (no list)" "$BINARY_X_OR_Y"
+mc_assert_blocks "T-0005a FLIPPED: binary 'X or Y?' question (no list) now BLOCKS" "$BINARY_X_OR_Y"
 
 # T-0005b: Numbered fact list with NO trailing question (Peekaboo capabilities pattern).
 FACT_LIST_NO_Q="Peekaboo can do these things today:
@@ -232,8 +233,9 @@ Long preamble line one with extra padding to ensure distance from the list below
 4. Finding delta"
 mc_assert_allows "T-0005c: numbered list with question >80 chars from last item" "$FACT_LIST_FAR_Q"
 
-# T-0005d: Today's live false-fire - 5-item fact list followed by a binary
-# trailing question. The trailing question is yes/no, not "pick one of the 5".
+# T-0005d (FLIPPED 2026-07-12): 5-item fact list followed by a binary trailing
+# question. The list itself is factual (carve-out), but "Want me to queue any?" is
+# a question POSED TO THE USER, so the response must now block on the question.
 FACT_LIST_BINARY_Q="The follow-ups we tabled today:
 
 1. Tighten the bash-guard regex on git --no-verify
@@ -243,7 +245,7 @@ FACT_LIST_BINARY_Q="The follow-ups we tabled today:
 5. Roll the sidecoach mandate prompt into the SKILL frontmatter
 
 Want me to queue any?"
-mc_assert_allows "T-0005d: 5-item fact list + 'Want me to queue any?' binary trailing q" "$FACT_LIST_BINARY_Q"
+mc_assert_blocks "T-0005d FLIPPED: fact list + 'Want me to queue any?' binary q now BLOCKS" "$FACT_LIST_BINARY_Q"
 
 # T-0005e: Positive control - a genuine 3-option deflection with trailing
 # question that explicitly references the options. MUST still BLOCK.
@@ -255,6 +257,154 @@ GENUINE_DEFLECTION="Three approaches I see:
 
 Which one would you prefer?"
 mc_assert_blocks "T-0005e: positive control - 3-option list + 'Which one would you prefer?'" "$GENUINE_DEFLECTION"
+
+# =============================================================================
+# 2026-07-12 ALL-QUESTIONS MANDATE (Jonah): every question posed to the user must
+# go through AskUserQuestion, binaries included. These tests falsify the change:
+# a plain-text binary FLAGS; an AskUserQuestion call is CLEAN; a factual
+# enumeration and a rhetorical prose question stay CLEAN.
+# =============================================================================
+
+# T-MQ1: plain-text binary "should I do X or Y" - the canonical new catch.
+MQ_BINARY_XY="I traced the regression to the cache key rollover.
+
+Should I patch the TTL or roll back the commit?"
+mc_assert_blocks "T-MQ1: plain-text binary 'Should I do X or Y?' BLOCKS" "$MQ_BINARY_XY"
+
+# T-MQ2: plain-text yes/no with no alternation at all.
+MQ_YES_NO="The bugfix is staged and the suite is green.
+
+Should I commit it now?"
+mc_assert_blocks "T-MQ2: plain-text yes/no 'Should I commit it now?' BLOCKS" "$MQ_YES_NO"
+
+# T-MQ3: this-or-that with no first-person opener.
+MQ_THIS_OR_THAT="The branch is ready.
+
+Ship now or wait for review?"
+mc_assert_blocks "T-MQ3: bare this-or-that 'Ship now or wait for review?' BLOCKS" "$MQ_THIS_OR_THAT"
+
+# T-MQ4: bare confirmation question.
+MQ_CONFIRM="I'll refactor the validator into its own module and keep the flag.
+
+Sound good?"
+mc_assert_blocks "T-MQ4: bare confirmation 'Sound good?' BLOCKS" "$MQ_CONFIRM"
+
+# T-MQ5: second-person question.
+MQ_SECOND_PERSON="The migration touches three tables.
+
+Do you want me to run it against staging first?"
+mc_assert_blocks "T-MQ5: second-person 'Do you want me to...?' BLOCKS" "$MQ_SECOND_PERSON"
+
+# T-MQ6: colon-form question introducer with NO question mark.
+MQ_COLON_INTRO="Two follow-ups are outstanding.
+
+Want me to:
+- Queue the first
+- Queue the second"
+mc_assert_blocks "T-MQ6: colon-form 'Want me to:' introducer (no ?) BLOCKS" "$MQ_COLON_INTRO"
+
+# T-MQ7 (CLEAN): the SAME binary, but AskUserQuestion was called. Must ALLOW.
+mc_assert_allows_with_aq "T-MQ7: binary question WITH AskUserQuestion in tool log ALLOWS" "$MQ_BINARY_XY"
+
+# T-MQ8 (CLEAN): rhetorical question inside prose, self-answered, response ends on
+# a statement. Not a question to the user -> must ALLOW.
+MQ_RHETORICAL="The regression traced back to the cache key.
+
+Why did it only surface today? The TTL rolled over at midnight, so the stale entry
+finally expired and the cold path ran for the first time in a week.
+
+All 24 tests pass and the fix is staged."
+mc_assert_allows "T-MQ8: rhetorical self-answered prose question ALLOWS" "$MQ_RHETORICAL"
+
+# T-MQ9 (CLEAN): rhetorical question sitting IN the trailing region but not
+# user-directed (no you/I/we, no alternation). Must ALLOW.
+MQ_RHETORICAL_TRAILING="The build is green again.
+
+What changed? The lockfile pin. That was the whole delta."
+mc_assert_allows "T-MQ9: non-user-directed trailing rhetorical 'What changed?' ALLOWS" "$MQ_RHETORICAL_TRAILING"
+
+# T-MQ10 (CLEAN): factual enumeration, no question attached. Carve-out preserved.
+MQ_ENUMERATION="Findings from the audit, ranked by severity:
+
+1. No runnable verification baseline
+2. Contrast failure on the muted caption text
+3. Heading order skips h2 to h4
+4. Two broken image references in the footer
+
+The first one blocks the rest."
+mc_assert_allows "T-MQ10: factual enumeration with no question ALLOWS (carve-out)" "$MQ_ENUMERATION"
+
+# T-MQ11 (CLEAN): a question that lives only inside a fenced code block.
+MQ_CODE_ONLY_Q='Here is the prompt template we ship:
+
+```txt
+Should I proceed with the migration?
+```
+
+The template is checked in.'
+mc_assert_allows "T-MQ11: question only inside a code fence ALLOWS" "$MQ_CODE_ONLY_Q"
+
+# T-MQ12 (CLEAN): quoting the USER's question back in a blockquote is not asking.
+MQ_BLOCKQUOTE="You asked:
+
+> Should I patch the TTL or roll back?
+
+I patched the TTL. The suite is green and the fix is staged."
+mc_assert_allows "T-MQ12: blockquoted user question (quoted, not asked) ALLOWS" "$MQ_BLOCKQUOTE"
+
+# ---- Codex-review regressions (2026-07-12). Each of these false-fired against the
+# ---- first cut of the L6 layer; the TERMINAL rule and the POSITION-scoped colon
+# ---- introducer are what fixed them. They stay as permanent guards.
+
+# T-MQ13 (CLEAN): self-answered rhetorical question that contains a single " or ".
+# The naive this-or-that rule fired on this. The TERMINAL rule saves it: the "?"
+# is mid-line, with the answer following it, so it is narration and not an ask.
+MQ_RHETORICAL_OR="I profiled the slow path end to end.
+
+Was it CPU-bound or I/O-bound? CPU-bound, per the profile. The fix is staged."
+mc_assert_allows "T-MQ13: self-answered rhetorical with ' or ' ALLOWS (Codex regression)" "$MQ_RHETORICAL_OR"
+
+# T-MQ14 (CLEAN): self-answered rhetorical question that contains "you".
+# The second-person rule fired on this before the TERMINAL rule was added.
+MQ_RHETORICAL_YOU="The cache namespace is salted per tenant.
+
+Why would you invalidate the namespace? Because the salt changed. That is all it was."
+mc_assert_allows "T-MQ14: self-answered rhetorical with 'you' ALLOWS (Codex regression)" "$MQ_RHETORICAL_YOU"
+
+# T-MQ15 (CLEAN): colon-form introducer that is NOT in the trailing region. The
+# introducer check used to scan the whole response, ignoring POSITION.
+# The introducer must fall OUTSIDE the last 5 non-empty lines to be ignored, so
+# this fixture carries 6+ non-empty lines after it.
+MQ_INTRO_FAR="Want me to:
+- (the plan I proposed earlier, quoted back here for context)
+
+I went ahead and did both, since you had already approved the shape.
+
+The validator is extracted into its own module.
+
+The feature flag is wired and defaults to off.
+
+The suite is green, 48 passing and 0 failing.
+
+The beat is written and the diff is staged.
+
+Nothing is outstanding on this one."
+mc_assert_allows "T-MQ15: colon introducer OUTSIDE trailing region ALLOWS (Codex regression)" "$MQ_INTRO_FAR"
+
+# T-PARITY: the L6 detection block must be byte-identical across the twin hooks.
+# multiple-choice-detect-stop.sh is the hook wired in settings.json; enforce.sh is
+# its detection twin. Drift between them means the live hook and the tested hook
+# disagree, which is exactly how a mandate silently stops being enforced.
+l6_enforce=$(awk '/# ---- BEGIN L6 SHARED DETECTION/,/# ---- END L6 SHARED DETECTION ----/' "$MC_HOOK" | shasum | cut -d' ' -f1)
+l6_stop=$(awk '/# ---- BEGIN L6 SHARED DETECTION/,/# ---- END L6 SHARED DETECTION ----/' "$STOP_HOOK" | shasum | cut -d' ' -f1)
+if [[ -n "$l6_enforce" ]] && [[ "$l6_enforce" == "$l6_stop" ]]; then
+  echo "PASS [parity]: L6 detection block byte-identical across both twin hooks"
+  ((PASS++))
+else
+  echo "FAIL [parity]: L6 block DIVERGED  enforce=$l6_enforce stop=$l6_stop"
+  FAIL_LABELS+=("[parity] L6 block divergence")
+  ((FAIL++))
+fi
 
 # =============================================================================
 # question-enforcement.sh tests
@@ -453,12 +603,58 @@ build_transcript_simple "$T21_FIX" "$NUMBERED_OPTIONS"
 stop_assert_blocks "numbered-options prose (Failure 1 pattern)" "$T21_FIX"
 rm -f "$T21_FIX"
 
-# T22: trailing question alone is NOT enough to flag without option signals.
+# T22 (FLIPPED 2026-07-12): a trailing question with no option list used to be
+# allowed. Under the all-questions mandate it is exactly what we now catch.
 QUESTION_ONLY="The build is green. Ready to move on?"
 T22_FIX=$(mktemp /tmp/sidecoach-test-XXXXXX.jsonl)
 build_transcript_simple "$T22_FIX" "$QUESTION_ONLY"
-stop_assert_allows "simple trailing question with no options (allowed; covered by inject-on-fail loop)" "$T22_FIX"
+stop_assert_blocks "T22 FLIPPED: bare trailing question 'Ready to move on?' now flags" "$T22_FIX"
 rm -f "$T22_FIX"
+
+# =============================================================================
+# 2026-07-12 all-questions mandate, exercised through the LIVE Stop pipeline
+# (multiple-choice-detect-stop.sh is the hook actually wired in settings.json;
+# multiple-choice-enforce.sh is its unwired detection twin). These prove the
+# mandate fires in the real wiring, not just in the twin.
+# =============================================================================
+
+# T25: plain-text binary question through the real Stop hook -> must flag.
+STOP_BINARY="I traced the regression to the cache key rollover.
+
+Should I patch the TTL or roll back the commit?"
+T25_FIX=$(mktemp /tmp/sidecoach-test-XXXXXX.jsonl)
+build_transcript_simple "$T25_FIX" "$STOP_BINARY"
+stop_assert_blocks "T25: plain-text binary 'Should I patch or roll back?' flags (live hook)" "$T25_FIX"
+rm -f "$T25_FIX"
+
+# T26: the SAME binary, but AskUserQuestion was used in the turn -> must NOT flag.
+T26_FIX=$(mktemp /tmp/sidecoach-test-XXXXXX.jsonl)
+build_transcript_with_aq "$T26_FIX" "$STOP_BINARY"
+stop_assert_allows "T26: same binary WITH AskUserQuestion in the turn (live hook)" "$T26_FIX"
+rm -f "$T26_FIX"
+
+# T27: factual enumeration with no question -> carve-out must survive.
+STOP_ENUMERATION="Findings from the audit, ranked by severity:
+
+1. No runnable verification baseline
+2. Contrast failure on the muted caption text
+3. Heading order skips h2 to h4
+4. Two broken image references in the footer
+
+The first one blocks the rest."
+T27_FIX=$(mktemp /tmp/sidecoach-test-XXXXXX.jsonl)
+build_transcript_simple "$T27_FIX" "$STOP_ENUMERATION"
+stop_assert_allows "T27: factual enumeration, no question (carve-out, live hook)" "$T27_FIX"
+rm -f "$T27_FIX"
+
+# T28: rhetorical prose question -> must NOT flag.
+STOP_RHETORICAL="The build is green again.
+
+What changed? The lockfile pin. That was the whole delta."
+T28_FIX=$(mktemp /tmp/sidecoach-test-XXXXXX.jsonl)
+build_transcript_simple "$T28_FIX" "$STOP_RHETORICAL"
+stop_assert_allows "T28: rhetorical 'What changed?' prose question (live hook)" "$T28_FIX"
+rm -f "$T28_FIX"
 
 # =============================================================================
 # multiple-choice-inject-prompt.sh tests (UserPromptSubmit injector)

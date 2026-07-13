@@ -21,6 +21,21 @@ export interface WatchState {
   armedBy: string | null;
   disarmedAt: number | null;
   disarmedBy: string | null;
+  /**
+   * Dispatch mode. false (default) = OWNER mode: the daemon owns the queue but
+   * an attached owner does the work. true = HEADLESS: the daemon spawns
+   * justify-worker.sh itself, for an unattended machine.
+   *
+   * This is PERSISTED, not env-only, and that is the whole point. The daemon is
+   * a long-lived background process that gets restarted by `justify-serve
+   * --restart` from arbitrary shells and hooks. An env-var-only opt-in
+   * evaporates on the next restart, so `JUSTIFY_HEADLESS=1` was a switch that
+   * could be documented but never actually held (2026-07-12). Armed state
+   * already persists for exactly this reason; the dispatch mode has to persist
+   * with it or "the daemon applies my batches" silently stops being true the
+   * next time anything bounces the daemon.
+   */
+  headless: boolean;
 }
 
 const DEFAULT_STATE: WatchState = {
@@ -30,6 +45,7 @@ const DEFAULT_STATE: WatchState = {
   armedBy: null,
   disarmedAt: null,
   disarmedBy: null,
+  headless: false,
 };
 
 function defaultStatePath(): string {
@@ -51,8 +67,15 @@ export class WatchStateStore {
       if (existsSync(this.path)) {
         const parsed = JSON.parse(readFileSync(this.path, 'utf-8')) as Partial<WatchState>;
         // armed is coerced to a strict boolean so a malformed file can never
-        // leave the watch in an ambiguous "truthy" armed state.
-        return { ...DEFAULT_STATE, ...parsed, armed: parsed.armed === true };
+        // leave the watch in an ambiguous "truthy" armed state. headless gets the
+        // same treatment, and a state file written before headless existed simply
+        // loads as false - owner mode, the safe default.
+        return {
+          ...DEFAULT_STATE,
+          ...parsed,
+          armed: parsed.armed === true,
+          headless: parsed.headless === true,
+        };
       }
     } catch {
       // Corrupt/unreadable state file -> start disarmed (safe default). The next
@@ -88,6 +111,23 @@ export class WatchStateStore {
 
   projectRoot(): string | null {
     return this.state.projectRoot;
+  }
+
+  isHeadless(): boolean {
+    return this.state.headless === true;
+  }
+
+  // Set the dispatch mode. Unlike disarm() this is NOT consent-gated: it never
+  // stops Justify from receiving changes, it only decides WHO applies them.
+  // Fail-closed on the disk write, same as arm(): if the mode does not durably
+  // land, keep the prior state so memory == disk == truth and let the caller
+  // report the failure rather than a false OK.
+  setHeadless(headless: boolean): WatchState & { persisted: boolean } {
+    const prev = { ...this.state };
+    this.state.headless = headless === true;
+    const persisted = this.persist();
+    if (!persisted) this.state = prev;
+    return { ...this.get(), persisted };
   }
 
   // Arm the watch. Requires a projectRoot (where the daemon dispatches workers);
@@ -142,4 +182,20 @@ export class WatchStateStore {
   statePath(): string {
     return this.path;
   }
+}
+
+/**
+ * Resolve the dispatch mode the daemon should boot in. This is the ONE place that
+ * decides it, so index.ts cannot drift from what the tests assert (an earlier
+ * version of this logic was inlined in index.ts, which meant a test could only
+ * re-implement it and would have kept passing if the daemon stopped honoring the
+ * persisted mode entirely).
+ *
+ * Precedence: an explicit JUSTIFY_HEADLESS=1 in the environment wins, for one-off
+ * and test runs. Otherwise the PERSISTED mode, which is what `justify-serve
+ * --headless` sets and what survives a daemon restart. Default: false (owner).
+ */
+export function resolveHeadless(store: WatchStateStore, env: NodeJS.ProcessEnv = process.env): boolean {
+  if (env.JUSTIFY_HEADLESS === '1') return true;
+  return store.isHeadless();
 }

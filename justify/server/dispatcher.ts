@@ -29,6 +29,12 @@ interface QueuePrompt {
   selectors?: string[];
   claimedBy?: string;
   claimedAt?: number;
+  /**
+   * When GET /prompts last handed this prompt to an HTTP owner (a curl listen
+   * loop). Only stamped in headless mode. A poll is NOT a claim, so this is the
+   * only signal that an unclaimed prompt may already be being applied by someone.
+   */
+  servedToOwnerAt?: number;
 }
 
 export interface DispatcherOptions {
@@ -57,7 +63,16 @@ export interface DispatcherOptions {
    * POST /prompts/claim, drives the pill with POST /working and /validating, and
    * finishes with justify-done, which is what raises "Review Changes".
    *
-   * Opt in with JUSTIFY_HEADLESS=1 for an unattended machine.
+   * Opt in for an unattended machine with EITHER:
+   *   justify-serve --headless        (persisted; survives daemon restarts)
+   *   POST /watch/mode {"headless":true}
+   *   JUSTIFY_HEADLESS=1 in the daemon's env  (one-off / tests)
+   *
+   * The env var alone used to be the ONLY documented opt-in, and it did not work
+   * in practice: justify-serve launches the daemon with `nohup node "$SERVER"`
+   * and never set it, so nothing on the supported path could turn headless on.
+   * The mode is now PERSISTED in watch-state.json (2026-07-12) so it holds across
+   * the restarts justify-serve performs.
    */
   headless?: boolean;
   /**
@@ -68,6 +83,23 @@ export interface DispatcherOptions {
    * reasonably concludes it was never received. (Jonah, 2026-07-09.)
    */
   broadcast?: (event: string, payload?: Record<string, unknown>) => void;
+  /**
+   * Is a legacy HTTP owner (a curl loop polling GET /prompts) currently attached?
+   *
+   * A GET /prompts poll returns prompts WITHOUT writing `claimedBy` - it is a
+   * peek, not a claim. An owner that polls and then applies without calling
+   * POST /prompts/claim holds no lock, so a headless dispatcher would claim the
+   * same prompt and apply it twice, corrupting the user's source. The documented
+   * contract is claim-before-apply, but "the other guy violated the contract" is
+   * not an acceptable reason to double-write someone's code.
+   *
+   * So: while an owner is demonstrably attached and polling, the daemon does not
+   * take the work, even in headless mode. On the unattended machine headless
+   * exists for, nobody polls and this is always false.
+   */
+  ownerActive?: (withinMs: number) => boolean;
+  /** How long after a GET /prompts poll an HTTP owner is still considered live. */
+  ownerGraceMs?: number;
 }
 
 export class Dispatcher {
@@ -80,9 +112,13 @@ export class Dispatcher {
   private maxBackoffMs: number;
   private broadcast: (event: string, payload?: Record<string, unknown>) => void;
   private headless: boolean;
+  private ownerActive: (withinMs: number) => boolean;
+  private ownerGraceMs: number;
+  private lastOwnerDeferLog = 0;
 
   private timer: ReturnType<typeof setInterval> | null = null;
   private ticking = false;
+  private stopped = false;
   private worker: ChildProcess | null = null;
   private workerRunId: string | null = null;
   private workerClaimedIds: string[] = [];
@@ -107,9 +143,12 @@ export class Dispatcher {
     this.maxBackoffMs = opts.maxBackoffMs ?? (Number(process.env.JUSTIFY_MAX_BACKOFF_MS) || 60000);
     this.broadcast = opts.broadcast ?? (() => {});
     this.headless = opts.headless ?? process.env.JUSTIFY_HEADLESS === '1';
+    this.ownerActive = opts.ownerActive ?? (() => false);
+    this.ownerGraceMs = opts.ownerGraceMs ?? (Number(process.env.JUSTIFY_OWNER_GRACE_MS) || 30000);
   }
 
   start(): void {
+    this.stopped = false;
     if (this.timer) return;
     this.timer = setInterval(() => this.tick(), this.tickMs);
     // Do not hold the event loop open on the dispatcher timer alone; the HTTP
@@ -117,7 +156,12 @@ export class Dispatcher {
     if (typeof this.timer.unref === 'function') this.timer.unref();
   }
 
+  // Clearing the timer is NOT enough to stop dispatching. onWorkerExit() calls
+  // tick() directly to pick up a batch that landed while a worker ran, so a worker
+  // that exits AFTER stop() would spawn its successor from a dispatcher that is
+  // supposed to be dead. Latch it.
   stop(): void {
+    this.stopped = true;
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
@@ -128,6 +172,18 @@ export class Dispatcher {
   // waiting for the next tick.
   kick(): void {
     this.tick();
+  }
+
+  // Flip the dispatch mode on a LIVE dispatcher (POST /watch/mode). Without this
+  // a mode change would only take effect on the next daemon restart, which is a
+  // trap: the user flips the switch, sees "ok", and the batch sitting in the
+  // queue right now still does not get applied.
+  setHeadless(headless: boolean): void {
+    this.headless = headless === true;
+  }
+
+  isHeadless(): boolean {
+    return this.headless;
   }
 
   workerRunning(): boolean {
@@ -204,12 +260,23 @@ export class Dispatcher {
   }
 
   private isClaimable(p: QueuePrompt, now: number): boolean {
+    // Handed to an HTTP owner by GET /prompts and not yet resolved. That owner is
+    // very likely applying it right now, and it took no `claimedBy` lock because a
+    // poll is not a claim - so this stamp is the only evidence it exists. Treat it
+    // like a claim: not claimable until it goes stale.
+    //
+    // Stale-ness matters as much as the guard: an owner that polled once and then
+    // died must not wedge the prompt forever. Past claimTtlMs it is fair game
+    // again and gets re-dispatched, exactly like a dead worker's abandoned claim.
+    if (p.servedToOwnerAt && now - p.servedToOwnerAt <= this.claimTtlMs) return false;
+
     if (!p.claimedBy) return true;
     if (!p.claimedAt) return true;
     return now - p.claimedAt > this.claimTtlMs;
   }
 
   private tick(): void {
+    if (this.stopped) return; // a stopped dispatcher never dispatches
     if (this.ticking) return;
     this.ticking = true;
     try {
@@ -230,6 +297,25 @@ export class Dispatcher {
       // agent that armed the watch - to claim, apply, and narrate. Spawning a
       // silent detached worker here is what hid the work from the user.
       if (!this.headless) return;
+
+      // HEADLESS, but an owner is attached and polling. Stand down.
+      //
+      // A GET /prompts poll hands prompts to a curl owner WITHOUT writing a claim,
+      // so if that owner is mid-apply we cannot see it in the queue - the prompt
+      // still looks claimable. Claiming it here would apply the same change to the
+      // same source files twice. Defer while the owner is demonstrably alive; if
+      // it goes away (or was never there, which is the unattended case headless is
+      // FOR), the next tick dispatches normally. Nothing is lost either way: the
+      // prompt stays queued.
+      if (this.ownerActive(this.ownerGraceMs)) {
+        if (now - this.lastOwnerDeferLog > 30000) {
+          this.lastOwnerDeferLog = now;
+          process.stderr.write(
+            '[justify] dispatcher: headless, but an HTTP owner is polling /prompts - deferring so the batch is not applied twice.\n',
+          );
+        }
+        return;
+      }
 
       const runId = `daemon-worker:${now}:${Math.random().toString(36).slice(2, 8)}`;
       const claimedIds = claimable.map((p) => p.id);

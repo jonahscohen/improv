@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 import { ConnectionManager } from './connection-manager.js';
 import type { JsonRpcRequest, JsonRpcResponse, JsonRpcMessage } from './types.js';
 import type { WatchStateStore } from './watch-state.js';
-import { DisarmConsentStore } from './consent.js';
+import { DisarmConsentStore, ConsentStore, modeConsentPath } from './consent.js';
 
 type MessageHandler = (connectionId: string, params: Record<string, unknown> | undefined) => unknown | Promise<unknown>;
 
@@ -17,6 +17,7 @@ type MessageHandler = (connectionId: string, params: Record<string, unknown> | u
 interface DispatcherLike {
   kick(): void;
   status(): Record<string, unknown>;
+  setHeadless(headless: boolean): void;
 }
 
 export class WsServer {
@@ -37,6 +38,9 @@ export class WsServer {
   // Single-use human consent for disarming. Lazily created so tests can point it
   // at a temp dir via JUSTIFY_STATE_DIR.
   private consent: DisarmConsentStore = new DisarmConsentStore();
+  // Consent to ENABLE headless dispatch. A separate token file from the disarm
+  // consent above, so neither grant can be replayed as the other.
+  private modeConsent: ConsentStore = new ConsentStore(modeConsentPath());
 
   constructor() {
     const serverDir = typeof __dirname !== 'undefined' ? __dirname : dirname(fileURLToPath(import.meta.url));
@@ -57,6 +61,22 @@ export class WsServer {
 
   private dataFile(name: string): string {
     return join(this.stateDir, name);
+  }
+
+  // Temp + rename, matching Dispatcher.writePrompts. prompts.json carries claim
+  // ownership and the live queue; a torn write here loses the user's changes.
+  // Returns false on failure so the caller can fall back to serving what it read
+  // rather than reporting a stamp that never landed.
+  private writeJsonAtomic(path: string, value: unknown): boolean {
+    try {
+      const tmp = `${path}.tmp.${process.pid}.${Date.now()}`;
+      writeFileSync(tmp, JSON.stringify(value));
+      renameSync(tmp, path);
+      return true;
+    } catch (err) {
+      process.stderr.write(`[justify] atomic write failed for ${path}: ${err instanceof Error ? err.message : err}\n`);
+      return false;
+    }
   }
 
   // Disarm the daemon watch from a non-HTTP caller (the justify_end_watch MCP
@@ -90,6 +110,24 @@ export class WsServer {
 
   isWatchArmed(): boolean {
     return this.watchStore ? this.watchStore.isArmed() : false;
+  }
+
+  // Has a legacy HTTP owner - a curl listen loop polling GET /prompts - been alive
+  // in the last `withinMs`?
+  //
+  // This exists because GET /prompts is a PEEK, not a claim: it never writes
+  // `claimedBy`. So an owner that polls, gets prompt P, and starts applying it has
+  // taken no durable lock, and a headless dispatcher would happily claim P and
+  // apply it a SECOND time. The claim path (POST /prompts/claim) is the real mutex
+  // and the SKILL mandates it, but a legacy loop that skips it must not be able to
+  // cause a double-apply of the user's source.
+  //
+  // The browser core does NOT poll this endpoint (checked: only a curl owner
+  // does), so on the unattended machine that headless mode exists for, this is
+  // always false and dispatch proceeds immediately.
+  httpOwnerActive(withinMs: number): boolean {
+    if (!this.lastPromptPoll) return false;
+    return Date.now() - this.lastPromptPoll < withinMs;
   }
 
   async start(preferredPort: number): Promise<number> {
@@ -492,23 +530,65 @@ IP.1 = 127.0.0.1
         try {
           if (existsSync(promptFile)) {
             const content = readFileSync(promptFile, 'utf-8');
-            // In the HTTP (curl) listen model a GET /prompts that returns
-            // pending prompts IS Claude claiming them - the same moment the MCP
-            // justify_watch/justify_get_prompts tools fire justify_working. Mirror
-            // it here so the browser advances "Sending to Claude" -> "Working".
-            // The browser ignores the event unless its state is 'sending', so
-            // re-broadcasting on every poll while the prompt sits in the queue is
-            // a harmless no-op.
+            // THIS POLL BROADCASTS NOTHING. A GET IS A READ, NOT A CLAIM.
+            //
+            // It used to fire `justify_working` for every pending prompt, which
+            // drove the browser pill "Sending to Claude." -> "Working". That was a
+            // lie, and once the bar gained a real `queued` state it became an
+            // actively harmful one: ANY read of this endpoint - a heartbeat, a
+            // second owner, a human running `curl :9223/prompts` to look at the
+            // queue - announced that work had started on a prompt that is still
+            // sitting UNCLAIMED. An owner that polls and then dies before claiming
+            // left the bar parked on "Working" forever, describing a worker that
+            // does not exist.
+            //
+            // The honest trigger for "Working" is the owner TAKING the work, which
+            // is POST /prompts/claim (it broadcasts there now), or the dispatcher
+            // spawning a worker, or an explicit POST /working. All three are real
+            // events. A peek is not. Flagged by an adversarial Codex review,
+            // 2026-07-12, against exactly the compat shim I had left in place here.
+            //
+            // The same "a poll is not a claim" truth is why servedToOwnerAt exists
+            // below: reading a prompt takes no lock, so headless must be told that
+            // an HTTP owner is probably applying it, or it would double-apply.
+            let served = content;
             try {
               const parsed = JSON.parse(content);
               if (Array.isArray(parsed) && parsed.length > 0) {
-                for (const p of parsed) {
-                  this.broadcastToClients('justify_working', { promptId: p.id, timestamp: Date.now() });
+                // Stamp what we just handed to an HTTP owner, so the dispatcher can
+                // SEE that someone is (probably) applying it and stand down. A poll
+                // is not a claim, so without this the prompt still looks claimable
+                // and headless would apply it a second time - writing the same edit
+                // into the user's source twice.
+                //
+                // ONLY in headless mode. In owner mode the dispatcher never claims
+                // anything, so there is nothing to protect against, and this path
+                // stays byte-for-byte what it has always been - no new writes on the
+                // hot poll path that the interactive flow depends on.
+                //
+                // The stamp goes STALE (dispatcher.isClaimable honors claimTtlMs),
+                // so an owner that polls once and dies does not wedge the queue
+                // forever: the prompt becomes claimable again and is re-dispatched.
+                // That is the same recovery contract a dead worker's claim gets.
+                if (this.dispatcher?.status().headless === true) {
+                  const now = Date.now();
+                  let changed = false;
+                  for (const p of parsed) {
+                    // Do not rewrite the file on every 2s poll; refresh at most
+                    // every 5s. Still far tighter than any claim TTL.
+                    if (!p.servedToOwnerAt || now - p.servedToOwnerAt > 5000) {
+                      p.servedToOwnerAt = now;
+                      changed = true;
+                    }
+                  }
+                  if (changed && this.writeJsonAtomic(promptFile, parsed)) {
+                    served = JSON.stringify(parsed);
+                  }
                 }
               }
             } catch {}
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(content);
+            res.end(served);
           } else {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end('[]');
@@ -523,9 +603,24 @@ IP.1 = 127.0.0.1
       if (req.method === 'GET' && req.url === '/watch-status') {
         const promptFile = this.dataFile('prompts.json');
         let pendingCount = 0;
+        // How many of those pending prompts an owner has actually CLAIMED.
+        //
+        // The browser needs this to tell "waiting for an owner to pick it up"
+        // (Queued for Claude) from "an owner has it and is applying it" (Working)
+        // after a reload - and it must not learn it from GET /prompts. That
+        // endpoint stamps lastPromptPoll, which httpOwnerActive() reads to decide
+        // an HTTP owner is attached; a browser polling it would make the headless
+        // dispatcher stand down forever, believing a curl owner was on the job.
+        // The browser core deliberately never touches /prompts. So the count comes
+        // out on the status endpoint it already polls.
+        let claimedCount = 0;
         try {
           if (existsSync(promptFile)) {
-            pendingCount = JSON.parse(readFileSync(promptFile, 'utf-8')).length;
+            const parsed = JSON.parse(readFileSync(promptFile, 'utf-8'));
+            pendingCount = parsed.length;
+            claimedCount = parsed.filter(
+              (p: Record<string, unknown>) => typeof p.claimedBy === 'string',
+            ).length;
           }
         } catch {}
         // TRUTHFUL UI: the watch is ARMED on the daemon, independent of any
@@ -561,6 +656,7 @@ IP.1 = 127.0.0.1
           session: this.watchSessionActive,
           lastActivity: this.lastMcpActivity,
           pendingCount,
+          claimedCount,
           workerRunning,
           // True when the daemon has the user's work in hand. The browser must not
           // offer "Retry Send" while this is true.
@@ -734,6 +830,125 @@ IP.1 = 127.0.0.1
         return;
       }
 
+      // NOTE: there is deliberately NO mint endpoint for headless consent.
+      //
+      // The first cut of this had a POST /watch/mode/consent that handed a token
+      // to any caller, which made the whole gate theater: a hostile page could
+      // mint a token with a CORS simple request, read it, and immediately spend it
+      // on /watch/mode. A gate whose key is available at the gate is not a gate.
+      // (Caught in adversarial review, 2026-07-12.)
+      //
+      // Instead, `justify-serve --headless` WRITES the consent token to
+      // mode-consent.json (0600) in the state dir after a human types ENABLE at a
+      // TTY, and then presents it here. The grant therefore requires WRITE ACCESS
+      // TO THE STATE DIRECTORY, which a web page can never have. A local process
+      // running as the user could forge it - but that process could already edit
+      // watch-state.json or run `claude` itself, so it is not a boundary we are
+      // pretending to hold. The boundary that matters (the browser) is closed.
+
+      // Set the dispatch mode: who APPLIES a queued batch.
+      //   {"headless": true}  -> the daemon spawns justify-worker.sh itself
+      //   {"headless": false} -> OWNER mode (default): the batch waits, unclaimed,
+      //                          for the attached owner to claim and apply
+      //
+      // The mode persists to watch-state.json, so it survives the daemon restarts
+      // that `justify-serve --restart` performs - the difference between a switch
+      // that works and the env-only JUSTIFY_HEADLESS that could never hold.
+      //
+      // ASYMMETRIC GATE (2026-07-12, from an adversarial review of this endpoint):
+      // ENABLING headless is consent-gated; DISABLING is not. Turning headless ON
+      // grants the daemon autonomous execution - it will spawn `claude -p
+      // --permission-mode bypassPermissions` in the armed project root with no
+      // human attached. An unauthenticated localhost POST is reachable from any
+      // local process, and from a web page using a CORS "simple request"
+      // (text/plain body, no preflight), so leaving the ON direction open would
+      // let a hostile page turn a passive daemon into one that writes code. That
+      // is a different risk class from /watch/arm, and it gets the same TTY-human
+      // consent that /watch/disarm requires. Turning headless OFF returns the
+      // daemon to the safe default and never needs a token - a caller must always
+      // be able to reach for the brake.
+      if (req.method === 'POST' && req.url === '/watch/mode') {
+        // NOT A BROWSER ENDPOINT. handleHttpRequest sets
+        // Access-Control-Allow-Origin: * globally (the browser core needs it for
+        // the other routes), which means a hostile page can reach this one too. A
+        // page cannot ENABLE headless - that needs the on-disk token it can never
+        // read - but it could POST {"headless":false} and shove an unattended
+        // headless daemon back into owner mode, where nothing gets applied and the
+        // queue silently piles up. That is a denial of the tool.
+        //
+        // Only a real browser attaches an Origin header. curl and the CLI do not.
+        // So: any request carrying an Origin is a page, and pages have no business
+        // changing the dispatch mode, in either direction.
+        if (req.headers.origin) {
+          process.stderr.write(
+            `[justify] REFUSED /watch/mode from a browser origin (${req.headers.origin}). Mode unchanged.\n`,
+          );
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            ok: false,
+            refused: true,
+            error: 'the dispatch mode cannot be changed from a browser; use justify-serve --headless/--owner',
+          }));
+          return;
+        }
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', () => {
+          if (!this.watchStore || !this.dispatcher) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'watch not available on this daemon' }));
+            return;
+          }
+          let headless: boolean | null = null;
+          let consentToken: string | null = null;
+          try {
+            if (body.trim()) {
+              const parsed = JSON.parse(body);
+              if (typeof parsed?.headless === 'boolean') headless = parsed.headless;
+              if (typeof parsed?.consentToken === 'string') consentToken = parsed.consentToken;
+            }
+          } catch {}
+          if (headless === null) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'body must be {"headless": true|false}' }));
+            return;
+          }
+
+          if (headless === true) {
+            const verdict = this.modeConsent.verifyAndConsume(consentToken);
+            if (!verdict.ok) {
+              process.stderr.write(
+                `[justify] REFUSED enabling HEADLESS dispatch (${verdict.reason}) - no human consent. Mode unchanged.\n`,
+              );
+              res.writeHead(403, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({
+                ok: false,
+                refused: true,
+                reason: verdict.reason,
+                error: 'enabling headless dispatch requires human consent: run `justify-serve --headless` at a TTY',
+              }));
+              return;
+            }
+          }
+
+          const state = this.watchStore.setHeadless(headless);
+          if (!state.persisted) {
+            // Fail LOUD, same as /watch/arm: a mode that did not durably persist
+            // must not report OK - it would silently revert on the next restart.
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'watch-state persist failed', ...state }));
+            return;
+          }
+          // Apply to the LIVE dispatcher too, so the mode takes effect now rather
+          // than only after the next daemon restart.
+          try { this.dispatcher.setHeadless(headless); this.dispatcher.kick(); } catch {}
+          process.stderr.write(`[justify] dispatch mode set to ${headless ? 'HEADLESS' : 'OWNER'}\n`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, ...state }));
+        });
+        return;
+      }
+
       // Mint a single-use disarm consent token. Called ONLY by
       // `justify-watch-disarm` after a human, at a TTY, types the confirmation
       // phrase. Issuing a token does not disarm anything on its own; it is
@@ -878,6 +1093,29 @@ IP.1 = 127.0.0.1
             res.end(JSON.stringify({ ok: false, error: 'claim write failed', claimed: [] }));
             return;
           }
+          // A CLAIM IS THE OWNER TAKING THE WORK. That is the honest trigger for
+          // "Working" in owner mode, and it does not depend on the owner
+          // REMEMBERING to also POST /working - which the justify SKILL never told
+          // it to do, and which is why the bar's forward motion was unreliable
+          // whenever the daemon was not the one applying the batch.
+          //
+          // Only fires when a claim actually landed on disk (wrote === true, above)
+          // and something was really claimed - never on a no-op claim of an empty
+          // queue, which would flash "Working" at a user with nothing in flight.
+          //
+          // GATED (`justify_working`), NOT forced. A broadcast reaches EVERY client,
+          // and the forced variant moves a bar out of ANY state. A second tab that
+          // is sitting on "Review Changes" (or showing nothing at all) has no work
+          // in flight, and must not be dragged into "Working" because a batch sent
+          // from another tab got claimed. The gated event advances only a client
+          // that is actually waiting - 'sending' or 'queued' - and is a no-op
+          // everywhere else. A browser that reconnected mid-flight is restored to
+          // 'queued' by _loadClaudeState, so it is still reachable by this event
+          // and does not need the force. POST /working stays ungated on purpose:
+          // that one is an operator explicitly overriding the bar.
+          if (claimed.length > 0) {
+            this.broadcastToClients('justify_working', { timestamp: Date.now() });
+          }
           res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
           res.end(JSON.stringify({ ok: true, claimed }));
         });
@@ -905,6 +1143,14 @@ IP.1 = 127.0.0.1
           watching: armed && dispatcherRunning,
           pendingCount: dispatch ? dispatch.pendingCount : 0,
           stalled: dispatch ? dispatch.stalled === true : false,
+          // WHICH MODE. Without this, `watching:true` reads identically whether
+          // the daemon will apply a queued batch itself or will never touch it -
+          // and a caller cannot tell a working watch from one that is silently
+          // waiting for an owner who does not exist. `autoApply` is the question
+          // every caller is actually asking: will this batch get applied if no
+          // session is attached?
+          headless: dispatch ? dispatch.headless === true : false,
+          autoApply: armed && dispatcherRunning && (dispatch ? dispatch.headless === true : false),
         }));
         return;
       }

@@ -51,7 +51,10 @@ MATCHED=$(awk '/^matched_lines<<MATCHEOF$/{flag=1; next} /^MATCHEOF$/{flag=0} fl
 ADDITIONAL_CONTEXT=$(cat <<EOF
 MULTIPLE-CHOICE VIOLATION DETECTED IN PREVIOUS RESPONSE ($TIMESTAMP):
 
-You presented options to the user in plain-text form (labeled paragraphs, bold-prefixed approaches, numbered alternatives, or similar) WITHOUT invoking the AskUserQuestion tool. This is a hard violation of the global mandate documented in CLAUDE.md and MEMORY.md.
+You posed a question to the user in plain text, or presented options in plain-text
+form (labeled paragraphs, bold-prefixed approaches, numbered alternatives, or
+similar), WITHOUT invoking the AskUserQuestion tool. This is a hard violation of the
+global mandate documented in CLAUDE.md and MEMORY.md.
 
 Detected signal: $REASON
 
@@ -60,19 +63,22 @@ $MATCHED
 
 REQUIRED ACTION on this turn:
 1. Acknowledge the violation explicitly (one sentence).
-2. Re-issue the choice using the AskUserQuestion tool with concrete options.
+2. Re-issue the question using the AskUserQuestion tool with concrete options.
+   A yes/no is a TWO-option AskUserQuestion - it is not exempt.
 3. Mark the recommended option with "(Recommended)".
-4. Do NOT continue with the work you were doing until the user picks via the tool.
+4. Do NOT continue with the work you were doing until the user answers via the tool.
 
-This violation is the third multiple-choice failure on 2026-05-24. See:
+MANDATE (revised 2026-07-12): EVERY question to the user goes through
+AskUserQuestion. The old binary/plain-text carve-out is REVOKED. If this fired on a
+binary yes/no or a simple "X or Y?", that is INTENDED - not a false positive. See:
 - .claude/memory/feedback_multiple_choice_2026-05-24_third_failure_root_cause.md
 - .claude/memory/feedback_multiple_choice_2026-05-24_double_failure.md
 - .claude/memory/feedback_options_use_multiple_choice.md
 
-If you genuinely believe the detection is a false positive (e.g. the bold-labeled
-paragraphs were illustrating a concept, not asking the user to pick one), say so
-plainly and explain why - but the default assumption is that the detection is
-correct, because the historical failure rate is high.
+The only genuine false positives left are a factual ENUMERATION with no question
+attached, and a rhetorical question inside prose. If you believe you hit one of
+those, say so plainly and explain why - but the default assumption is that the
+detection is correct, because the historical failure rate is high.
 EOF
 )
 

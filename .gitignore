@@ -11,3 +11,6 @@ node_modules/
 # justify daemon's self-signed TLS cert + PRIVATE KEY - generated per-machine on
 # first run (ws-server ensureCert); never commit the key.
 justify/server/certs/
+
+# transient fixtures from claude/hooks/test-install-hook-deploy.sh
+.test-fixtures-*

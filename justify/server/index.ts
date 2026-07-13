@@ -6,7 +6,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { WsServer } from './ws-server.js';
 import { registerTools } from './mcp-tools.js';
-import { WatchStateStore } from './watch-state.js';
+import { WatchStateStore, resolveHeadless } from './watch-state.js';
 import { Dispatcher } from './dispatcher.js';
 
 // Port is overridable via JUSTIFY_WS_PORT so a test daemon can run off the live
@@ -98,20 +98,41 @@ async function main(): Promise<void> {
     const port = await wsServer.start(DEFAULT_WS_PORT);
     process.stderr.write(`Justify WebSocket server listening on port ${port}\n`);
     // Daemon-owned watch: state persisted to disk (resumes armed across
-    // restarts), dispatcher spawns headless workers when armed and a batch
-    // arrives.
+    // restarts). The daemon always owns the QUEUE. Whether it also does the WORK
+    // depends on the dispatch mode: in OWNER mode (default) a batch waits
+    // unclaimed for the attached owner; only in HEADLESS mode does the daemon
+    // spawn justify-worker.sh itself. See dispatcher.ts.
     const watchStore = new WatchStateStore();
+    // Dispatch mode, resolved ONCE and passed EXPLICITLY rather than left to the
+    // Dispatcher's env fallback. An env var read deep inside the constructor is
+    // invisible at the wiring layer and cannot survive a daemon restart, which is
+    // how `JUSTIFY_HEADLESS=1` ended up documented-but-unreachable: nothing on the
+    // supported launch path (justify-serve) ever set it. resolveHeadless() is the
+    // single source of that decision, and it is directly under test.
+    const headless = resolveHeadless(watchStore);
     dispatcher = new Dispatcher(watchStore, {
       port,
       workerScript: resolveWorkerScript(),
+      headless,
+      // Never take the work out from under an attached HTTP owner: a GET /prompts
+      // poll is not a claim, so an owner mid-apply is invisible in the queue and
+      // dispatching would double-apply it. See Dispatcher.ownerActive.
+      ownerActive: (withinMs) => wsServer.httpOwnerActive(withinMs),
       // So a spawned worker immediately flips the browser pill off "Sending".
       broadcast: (event, payload) => wsServer.broadcastToClients(event, payload),
     });
     wsServer.attachWatch(watchStore, dispatcher);
     dispatcher.start();
     const st = watchStore.get();
+    // Say WHICH MODE, not just "dispatcher live". The old line reported a live
+    // dispatcher in both modes, so an owner-mode daemon that will never apply a
+    // batch by itself looked identical to a headless one that will. That is the
+    // reassuring green light that cost days of misdiagnosis (2026-07-12).
+    const mode = headless
+      ? 'HEADLESS - the daemon applies batches itself'
+      : 'OWNER - batches WAIT for an attached owner to claim; the daemon will NOT apply them';
     process.stderr.write(
-      `[justify] watch state: ${st.armed ? `ARMED (root=${st.projectRoot ?? 'none'}) - dispatcher live` : 'disarmed'}\n`,
+      `[justify] watch state: ${st.armed ? `ARMED (root=${st.projectRoot ?? 'none'}) - dispatcher live, mode=${mode}` : 'disarmed'}\n`,
     );
 
     // WATCHDOG: armed must mean watching. If the dispatch loop is ever not

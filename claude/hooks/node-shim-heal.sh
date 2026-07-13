@@ -15,15 +15,25 @@
 
 CANONICAL="$HOME/.claude/node-shims/restore-node-options.cjs"
 if [ ! -f "$CANONICAL" ]; then
-  # fall back to the repo path on this machine
-  CANONICAL="/Users/spare3/Documents/Github/improv/claude/node-shims/restore-node-options.cjs"
+  # Fall back to the repo copy, resolved from THIS script's real location (follow the
+  # ~/.claude/hooks symlink back into the dotfiles repo). Previously this was a hardcoded
+  # /Users/<name>/... path, which silently made the fallback dead on any other machine.
+  SELF="$0"
+  while [ -L "$SELF" ]; do
+    LINK=$(readlink "$SELF")
+    case "$LINK" in
+      /*) SELF="$LINK" ;;
+      *)  SELF="$(dirname -- "$SELF")/$LINK" ;;
+    esac
+  done
+  CANONICAL="$(cd -- "$(dirname -- "$SELF")" 2>/dev/null && pwd -P)/../node-shims/restore-node-options.cjs"
 fi
 
 [ -f "$CANONICAL" ] || exit 0  # nothing to heal from; stay silent and non-blocking
 
 # Pull every restore-node-options.cjs path referenced by NODE_OPTIONS
 # (handles --require=<path>, --require <path>, and -r <path> forms).
-PATHS=$(printf '%s\n' "$NODE_OPTIONS" | tr ' ' '\n' | grep 'restore-node-options\.cjs' | sed 's/^--require=//; s/^-r=//')
+PATHS=$(printf '%s\n' "${NODE_OPTIONS:-}" | tr ' ' '\n' | grep 'restore-node-options\.cjs' | sed 's/^--require=//; s/^-r=//')
 
 HEALED=""
 for P in $PATHS; do
@@ -32,7 +42,19 @@ for P in $PATHS; do
     *) continue ;;  # skip non-path tokens (e.g. a bare --require flag)
   esac
   if [ ! -f "$P" ]; then
-    mkdir -p "$(dirname "$P")" 2>/dev/null && cp "$CANONICAL" "$P" 2>/dev/null && HEALED="$HEALED $P"
+    # Re-plant ATOMICALLY: copy to a unique temp in the same directory, then rename over
+    # the target. A plain `cp` is observable half-written, and hooks run CONCURRENTLY with
+    # each other and with the ~/.claude/cmux/node PATH shim - a racing node must never be
+    # able to preload a truncated file.
+    D="$(dirname "$P")"
+    T="$D/.restore-node-options.$$.tmp"
+    if mkdir -p "$D" 2>/dev/null &&
+       cp "$CANONICAL" "$T" 2>/dev/null &&
+       mv -f "$T" "$P" 2>/dev/null; then
+      HEALED="$HEALED $P"
+    else
+      rm -f "$T" 2>/dev/null
+    fi
   fi
 done
 

@@ -258,14 +258,15 @@ Precedent (2026-06-25): cmux launches `claude` with hooks of the form `"${CMUX_C
 
 ## Question-Asking Protocol (MANDATORY - MECHANICAL ENFORCEMENT VIA TOOL)
 
-**CRITICAL RULE: Use AskUserQuestion for genuinely multiple-choice questions (3+ options). Binary questions can stay plain text.**
+**CRITICAL RULE: EVERY question you pose to the user goes through AskUserQuestion. No exceptions, no size threshold.**
 
-Scope (clarified 2026-05-26):
-- **Binary questions** (yes/no, true/false, this-or-that, two mutually-exclusive options) -> plain text is fine. A binary already has structured choice-space; the tool would add ceremony without adding clarity.
-- **Three or more options** -> AskUserQuestion is required. This is where structured choice presentation actually helps - the tool surfaces all options as equals, lets the user provide their own answer, and prevents a long plain-text list from collapsing into noise.
+Scope (revised 2026-07-12 - this REVOKES the 2026-05-26 binary carve-out):
+- **Binary questions** (yes/no, true/false, this-or-that, "should I ship or wait") -> AskUserQuestion with TWO options. The plain-text exemption for binaries is GONE. A yes/no is posed as a 2-option question with the recommended option marked. "It is just a yes/no" is not a reason to drop to plain text - the quick binary is the most common shape of the deflection this mandate exists to prevent.
+- **Three or more options** -> AskUserQuestion, as before.
+- **Free-form questions** -> AskUserQuestion still applies. The tool always presents an "Other" option, so the user can type an answer you did not anticipate.
 
-**When you have a 3+ option question:**
-1. Reframe it into concrete, mutually-exclusive options
+**Every question, regardless of shape:**
+1. Reframe it into concrete, mutually-exclusive options (a binary is simply two options)
 2. Mark the option you believe is best with "(Recommended)" - your judgment matters; make it visible
 3. Call AskUserQuestion with multiSelect: false (or true if multiple selections are valid)
 4. Let the user select or provide their own answer
@@ -276,9 +277,11 @@ Scope (clarified 2026-05-26):
 - Ensure the recommended option makes sense given the context
 - Ensure no option contradicts what the user has already decided
 
-**The hook (multiple-choice-enforce.sh) is the mechanical gate.** It flags plain-text option lists. It currently over-fires on binaries and on numbered factual enumerations (see T-0005 in TASKS.md) - if it flags a binary or a list with no trailing question, that's a false positive worth noting rather than apologizing for.
+**The hook is the mechanical gate.** `multiple-choice-detect-stop.sh` is the live enforcer (Stop event, pairs with `multiple-choice-inject-prompt.sh`); `multiple-choice-enforce.sh` is its detection twin. Both flag plain-text option lists AND plain-text questions posed to the user - binaries included. **A hook fire on a binary question is now INTENDED, not a false positive.** Do not argue with it and do not rephrase around it - re-ask through the tool.
 
-**The "size doesn't matter" principle still holds for genuine multi-choice.** Don't rationalize "this 3-option question is small enough to skip the tool" - that's the failure mode the mandate exists to prevent. Three options goes through the tool every time.
+**Still a genuine false positive (do NOT weaken your writing to dodge it):** a factual numbered ENUMERATION that is not a question - a list of findings, capabilities, or files with no question attached. The hook carves these out (a list with no trailing question does not fire), and a rhetorical question inside prose ("Why did it break? The cache key rolled over.") is not a question to the user and does not fire either. If the hook ever fires on one of those, that is a bug in the hook worth reporting, not a violation by you.
+
+**The "size doesn't matter" principle is now absolute.** Don't rationalize "this is just a quick yes/no" or "this 3-option question is small enough to skip the tool." Every question goes through the tool, every time. That rationalization IS the failure mode the mandate exists to prevent.
 
 ---
 
@@ -408,6 +411,17 @@ If a project's beats do not yet declare a surface id, ask the user for it before
 - Any UI/CSS/layout change - take a cmux screenshot, Read the image, and describe what you see before reporting done.
 - Interactive verification - use `snapshot --interactive` to get element refs, then drive clicks/hovers.
 - When the user says "refresh the tab in cmux" or similar, this is the tool they mean.
+
+## Browser Tab Hygiene (Claude-in-Chrome MCP - MANDATORY)
+
+Close your Claude-in-Chrome MCP tab group when browser work is done. Every session that opens a group and walks away leaves an orphaned tab group in the user's Chrome, and they pile up across sessions (flagged by Jonah 2026-07-11).
+
+The rules:
+- **Reuse one tab per session.** Call `tabs_context_mcp` once, reuse that tab with `navigate` for subsequent pages. Do not spawn a fresh group per verification.
+- **Close before you finish.** When the browser verification for a task is done, call `tabs_context_mcp` then `tabs_close_mcp` on each tab id. Closing the last tab auto-removes the group. This is the browser counterpart of Teammate Teardown below - clean up what you opened.
+- **Only the owning session can close its group.** `tabs_close_mcp` reaches only the current session's group, so a later session cannot clean up an earlier one's leftovers. Cleanup has to happen in-session, which is why this is a discipline and not something a future session fixes.
+
+The `chrome-tabgroup-{track,clear,stop}.sh` hooks enforce this: track records an open group, clear drops the record when you close it, and the Stop hook blocks ONCE (per open-group burst, after the browser has been idle ~90s) to remind you to close before the session ends. A shell hook cannot close a Chrome tab - only your `tabs_close_mcp` call can - so the hook reminds and you act. The one gap the timer misses is a session that ends within ~90s of its last browser action; this rule is the backstop for that case. Threshold: `CHROME_TABGROUP_IDLE_SECONDS`. Tests: `test-chrome-tabgroup.sh`.
 
 ## Teammate Teardown (cmux subagent lifecycle - MANDATORY)
 

@@ -170,7 +170,26 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
     if (clientId) {
       // Already queued under this clientId? (ack lost before the browser saw it)
       const queued = readPrompts().find((p) => p.clientId === clientId);
-      if (queued) return { accepted: 0, promptId: queued.id, duplicate: true };
+      if (queued) {
+        // The prompt is still in the queue - re-announce its CURRENT state, or a
+        // browser that missed the first broadcast would sit on "Sending" forever
+        // for a prompt that is safely on disk. The re-send is a duplicate; the
+        // STATE is not.
+        //
+        // But announce what is actually TRUE of it now. A prompt an owner has
+        // already CLAIMED is being worked on, not waiting: its `justify_working`
+        // went out at claim time, and a retry that arrives afterwards (a lost ack,
+        // a reconnect) must not walk the bar BACKWARDS into "Queued for Claude" -
+        // it would strand there, because the claim event that would have moved it
+        // on has already been and gone. Caught by an adversarial Codex review,
+        // 2026-07-12.
+        const isClaimed = typeof (queued as Record<string, unknown>).claimedBy === 'string';
+        ws.broadcastToClients(isClaimed ? 'justify_working' : 'justify_queued', {
+          promptId: queued.id,
+          timestamp: Date.now(),
+        });
+        return { accepted: 0, promptId: queued.id, duplicate: true };
+      }
       // Already served and cleared? (worker applied it, then the ack was lost)
       const servedId = lookupServedClientId(clientId);
       if (servedId) return { accepted: 0, promptId: servedId, duplicate: true };
@@ -193,6 +212,27 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
     // browser outbox keeps its copy and retries. Never ack an undurable prompt.
     const prompts = readPrompts(); prompts.push(prompt); writePrompts(prompts);
     if (clientId) recordServedClientId(clientId, id);
+
+    // THE PROMPT IS NOW DURABLE. Say so, immediately.
+    //
+    // This broadcast is the fix for the Claudebar sitting on "Sending to Claude."
+    // forever (Jonah, repeatedly; measured 2026-07-12). The browser had no state
+    // for "accepted and queued, waiting for an owner", so its ONLY exit from
+    // 'sending' was `justify_working` - which the daemon fires from the GET
+    // /prompts poll and from the dispatcher spawning a worker.
+    //
+    // In HEADLESS mode that was invisible: the dispatcher claimed the batch about
+    // a tick after it landed, so "Sending" -> "Working" took ~a second and nobody
+    // noticed the missing state. In OWNER mode (the default since 2026-07-09) the
+    // batch legitimately WAITS, unclaimed, until a live owner gets around to
+    // polling - which can be minutes, or never. For that entire gap the bar said
+    // "Sending to Claude.", which is FALSE (the send finished, was acked, and is
+    // on disk) and is indistinguishable from a lost send. That is why the bug kept
+    // getting re-reported as "my batch vanished."
+    //
+    // Fired on the ACK path, so it cannot lie: it is emitted only after
+    // writePrompts() durably landed the prompt.
+    ws.broadcastToClients('justify_queued', { promptId: id, timestamp: Date.now() });
     return { accepted: 1, promptId: id };
   });
 

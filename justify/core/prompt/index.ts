@@ -1365,11 +1365,20 @@ export class PromptMode {
         // which is now retired. (A fully truthful queuebar wants per-task removal
         // on submit-confirmation - a follow-up, tracked in the beat.)
         var _cnt = this._changeQueue.length;
-        // Set pending count BEFORE the loop so responses wait for all tasks
-        if (this._core) this._core._pendingResponses = this._changeQueue.length;
         for (var qi = 0; qi < this._changeQueue.length; qi++) {
           this.submitFromQueue(this._changeQueue[qi].prompt, this._changeQueue[qi].elements);
         }
+        // Set the pending count AFTER the loop, not before.
+        //
+        // It used to be set before, and every submitFromQueue() in the loop then
+        // overwrote it with 1 - so an N-prompt Send All ended up expecting exactly
+        // ONE response. The first prompt answered flipped the bar to "Review
+        // Changes" while the other N-1 were still queued or being applied, which is
+        // the same class of lie as the "Sending" freeze: a bar describing a state
+        // the system is not in. Assigning here makes the batch size the last write
+        // that wins. Safe: the loop is synchronous, so no response can land before
+        // it finishes. Caught by an adversarial Codex review, 2026-07-12.
+        if (this._core) this._core._pendingResponses = _cnt;
         this._changeQueue.length = 0;
         this._persistQueue();
         // Slide-fade panel out

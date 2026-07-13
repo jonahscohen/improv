@@ -20,6 +20,16 @@ await esbuild.build({
   // adapters below are host-framework shims and must NOT be aliased.
   jsx: 'automatic',
   jsxImportSource: 'preact',
+  // Justify's own chrome must never be caught by the timer/rAF freeze that
+  // freeze-animations.ts applies to the HOST PAGE - a toolbar whose tooltips, icon
+  // hovers, Preact renders and daemon polling all stop the moment you press pause
+  // is a toolbar you cannot press pause OFF with. This substitutes the ORIGINAL,
+  // unpatched setTimeout / setInterval / requestAnimationFrame for every free
+  // identifier of those names across the whole bundle - Justify's ~100 call sites
+  // AND the timer calls inside bundled Preact's scheduler, which no source-level
+  // sweep could reach. `window.setTimeout(...)` is a member expression, not a free
+  // identifier, so the host page still goes through the patch.
+  inject: ['core/timers-shim.ts'],
   alias: {
     react: 'preact/compat',
     'react-dom': 'preact/compat',
