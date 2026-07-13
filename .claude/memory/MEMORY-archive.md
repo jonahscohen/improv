@@ -1028,3 +1028,6 @@
 
 <!-- archived 2026-07-13 (moved from MEMORY.md to stay under load budget) -->
 - [Justify change-highlight selector-pill -> DARK BADGE (clay pill retired) - _locateAndSelect's selector-chain label was a clay pill (var(--justify-marker) bg, white mono 9px); restyled to the picker's dark hover badge (picker.ts:516 - #1a1a1a, near-white, JustifySans 11px, radius 20px, shadow), theme-independent both modes, no close button, truncation kept; box border already var(--justify-marker) and follows live; verified via real Changes-panel round-trip + live marker flip, Codex clean - PROJECT (2026-07-07)](session_2026-07-07_justify-change-highlight-pill.md)
+
+<!-- archived 2026-07-13 (moved from MEMORY.md to stay under load budget) -->
+- [Justify WATCH MOVED INTO THE DAEMON (permanent, session-independent) - armed state on disk (resumes on restart), daemon-spawned headless claude -p workers per Send-All batch, claim (claimedBy+claimedAt) + stale-expiry + monotonic prompt-seq ids for exactly-once (closes 2 live races: detached-poller-no-consumer + non-unique-id clear-by-id data loss); .justify-watch-on flag + relaunch-nag Stop hook retired; launchd KeepAlive supervisor; A-D verified live incl a real claude -p worker apply, tsc 160/vitest +7 pass, Codex-gated - PROJECT (2026-07-08)](session_2026-07-08_justify-daemon-watch.md)

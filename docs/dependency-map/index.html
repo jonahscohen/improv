@@ -420,7 +420,7 @@
       <span class="verified">Evidence-verified</span>
       <span>16 components</span>
       <span>5 classes</span>
-      <span>10 open findings</span>
+      <span>11 open findings</span>
     </div>
   </header>
 
@@ -461,7 +461,7 @@
 
   <section class="findings">
     <h2>Honest findings</h2>
-    <p>Ten things the sweep turned up that are wrong, dead, or fragile. None of them are blocking today. All of them are load-bearing for whoever touches this repo next.</p>
+    <p>Eleven things the sweep turned up that are wrong, dead, or fragile. None of them are blocking today. All of them are load-bearing for whoever touches this repo next.</p>
     <ol id="findings"></ol>
   </section>
 
@@ -590,14 +590,18 @@
     },
 
     "marketing-site": {
-      name: "marketing-site", cls: "leaf",
-      sub: "Port 4830. Consumes justify + vendored tilt-runtime.",
-      desc: "A leaf. Nothing depends on it. It is also not actually a static site, which is the thing most likely to surprise someone.",
+      name: "marketing-site", cls: "leaf", flags: [["external", "moved out 2026-07-13"]],
+      sub: "EXTERNAL. Now ~/Documents/Github/improv-site. Still consumes justify + vendored tilt-runtime.",
+      desc: "No longer in this repo. Moved out on 2026-07-13 to its own project at ~/Documents/Github/improv-site, still served on :4830. The node stays on the map because its edges are still real: the site continues to fetch justify-core.js from the :9223 daemon at runtime and still ships tilt-lab's runtime as a vendored copy. Those two edges are exactly why the separation matters - the site left the repo, but it did not stop depending on it.",
       evidence: [
-        ["Loads justify-core.js from the localhost daemon", "marketing-site/index.html:28"],
-        ["Imports the vendored tilt runtime", "marketing-site/index.html:623"]
+        ["Loads justify-core.js from the localhost daemon", "improv-site/index.html:28 (was marketing-site/index.html:28)"],
+        ["Imports the vendored tilt runtime", "improv-site/index.html:623 (was marketing-site/index.html:623)"],
+        ["Removed from this repo", "git rm -r marketing-site, 2026-07-13"]
       ],
-      debt: ["7 committed pages hard-code http://localhost:9223/justify-core.js. They degrade to a failed script load whenever the justify daemon is down."]
+      debt: [
+        "7 pages hard-code http://localhost:9223/justify-core.js. They degrade to a failed script load whenever the justify daemon is down - and now that dependency crosses a repo boundary, so nothing in this tree can fix it.",
+        "The vendored tilt-runtime.js is now a cross-repo copy. A tilt-lab change reaches the site only if someone re-copies it into a different project."
+      ]
     },
     "reference": {
       name: "reference", cls: "leaf",
@@ -689,10 +693,11 @@
     ["`~/.claude/skills/improv/SKILL.md` is deployed on this machine with no corresponding source in the repo. It is an orphan from the rename, and because install.sh only ever adds symlinks, it will never be cleaned up.", false],
     ["`sidecoach/mcp-server` is built and wired to nothing. Nobody runs it. The only thing keeping it in the tree is the parity contract in `sidecoach_lanes.py`, which is bound to its keyword-resolver.ts. Deleting the server breaks a hook that never calls it.", false],
     ["`beats/mcp-server` is also inert, but this one is deliberate: it exists as an install hint, not as a live server. Recorded here so nobody 'fixes' it.", true],
-    ["The marketing site is not actually static. Seven committed pages hard-code `http://localhost:9223/justify-core.js`, so every one of them degrades to a failed script load whenever the justify daemon is down. A static site that depends on a running daemon is not a static site.", false],
+    ["The marketing site is not actually static. Seven of its pages hard-code `http://localhost:9223/justify-core.js`, so every one of them degrades to a failed script load whenever the justify daemon is down. A static site that depends on a running daemon is not a static site. As of 2026-07-13 those pages are no longer committed here - they live in ~/Documents/Github/improv-site - so the daemon dependency now crosses a repo boundary and nothing in this tree can fix it.", false],
     ["`sidecoach-sessionstart.sh:4` hard-codes an absolute `/Users/spare3` path. It is the one hook in the repo that breaks on any other machine. The beats hooks derive their repo root correctly, which proves the pattern is known and simply was not applied here.", false],
     ["`reference/serve.py` is a copy of marketing-site's `serve.py`, carrying the same default port 4830. Only convention, not code, keeps the two sites from colliding on the same port.", false],
-    ["cmux is the highest-risk dependency in the tree: an external binary, unpinned and unvendored, with 10 in-repo consumers. If its CLI changes, ten hooks break simultaneously and nothing in this repo can repair itself.", false]
+    ["cmux is the highest-risk dependency in the tree: an external binary, unpinned and unvendored, with 10 in-repo consumers. If its CLI changes, ten hooks break simultaneously and nothing in this repo can repair itself.", false],
+    ["The sidecoach dogfood scripts and the TASKS.md marketing-site area now point at a path that left the repo. `dogfood-craft-step2.ts:10` and `dogfood-teach-step1.ts:8` both hard-code the absolute `/Users/spare3/Documents/Github/improv/marketing-site`, and `TASKS.md:14` still heads a marketing-site area. The site moved to ~/Documents/Github/improv-site on 2026-07-13. These are documented dead references, deliberately left in place pending the separate site workstream. Worse than a clean break: `dogfood-teach-step1.ts:14-15` calls mkdirSync when the path is missing, so running it will silently recreate an empty marketing-site/ directory inside this repo instead of failing loudly.", false]
   ];
 
   // ---------------------------------------------------------------- render
