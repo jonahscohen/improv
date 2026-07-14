@@ -34,10 +34,10 @@
 | 3 hook-logic fixes | 1 | `claude/hooks/verify-before-done.sh`, `memory-nudge.sh`, `beats-staleness-guard.sh` + their tests |
 | 4 sidecoach portability | 1 | `claude/hooks/sidecoach-sessionstart.sh` |
 | 5 dogfood + reference | 1 | `sidecoach/src/dogfood-*.ts`, `TASKS.md`, `reference/serve.py` |
-| 7 harness guardrails | 2 | `claude/settings.json`, `fable-orchestrator-guard.sh` + new hooks |
+| 7 harness guardrails | 2 | `claude/settings.json`, `fable-orchestrator-guard.sh`, `team-reaper.sh` + new hooks (relay-stop, push-ahead) |
 | 7b harness false-positives | 2 | `claude/hooks/memory-nudge.sh`, `verify-before-done.sh`, `bash-guard.sh` + tests |
-| 11 dependency-map correction | 2 | `docs/dependency-map/index.html`, `docs/dependency-map/serve.py` |
-| 12 test-site-1 repoint | 2 | sprint1-integration tests (src+dist), a new fixtures dir, `test-site-1/` |
+| 12 test-site-1 repoint | 2 | sprint1-integration tests (src+dist) + `.js.map`, new fixtures dir, `test-site-1/`, the install.sh:203 mention |
+| 11 dependency-map correction | 2 (LAST, after U12) | `docs/dependency-map/index.html`, `docs/dependency-map/serve.py` |
 | 8 cmux research | 3 | `.claude/memory/decision_cmux_hardening_proposal.md` only |
 | 9 sidecoach-mcp research | 3 | `.claude/memory/decision_sidecoach_mcpserver_fate.md` only |
 | 10 beats cutover B | 3 | `CLAUDE.md`, `MEMORY.md`/index, beats hooks |
@@ -179,13 +179,13 @@ The only files touched by more than one unit are the three chokepoints, and thei
 
 ---
 
-# WAVE 2 - after Wave 1 is merged (parallel; disjoint files)
+# WAVE 2 - after Wave 1 is MERGED (base worktrees from the merge commit, NOT 7eb21eca)
 
-Original guardrails (U7) plus the follow-ups Wave 1 surfaced (U7b harness false-positives, U11 dependency-map correction, U12 test-site-1 repoint). All own disjoint files, so they run in parallel each in its own worktree, same as Wave 1. Only U7 touches `settings.json`.
+U7 (guardrails), U7b (harness false-positives), and U12 (test-site-1 repoint) own disjoint files and run in parallel, each in its own worktree created from the post-Wave-1 merge commit (Wave 2 builds on Wave 1's merged state, so dispatching from the original stamped commit is a hazard). **U11 (dependency-map correction) runs LAST, after U12 is integrated** - U11 and U12 are file-disjoint but STATE-COUPLED (U11 must document the final post-Wave-2 reality: test-site-1 retired and its fixture relocated by U12, cmux/settings.json live with disposition pending U8), so they cannot run concurrently. Only U7 touches `settings.json`; its hook-registration changes need a session restart to take effect.
 
 ## Unit 7: harness guardrails
 
-**Owns:** `claude/settings.json`, `claude/hooks/fable-orchestrator-guard.sh`, and any new hook files + tests. One unit because every item registers in or edits `settings.json`.
+**Owns (explicit - no loose "any hook"):** `claude/settings.json`, `claude/hooks/fable-orchestrator-guard.sh`, `claude/hooks/team-reaper.sh` (the team-dir orphan fix is confined here, not to resume-guard.sh / agent-teams-guard.sh), plus NEW hook files it creates (the teammate-relay Stop hook and the push-ahead drift check) and their tests. It edits no other existing hook. One unit because every item registers in or edits `settings.json`.
 
 **Problems (from the state-of-the-union):**
 - Orchestrator-mode has no beat-write path: `fable-orchestrator-guard.sh` blocks all Write/Edit on Fable, including MANDATED `.claude/memory` beat writes, and in-process delegated scribes inherit the block (proven this session). Add a carve-out.
@@ -203,7 +203,7 @@ Original guardrails (U7) plus the follow-ups Wave 1 surfaced (U7b harness false-
 
 **Done:** beat writes work on Fable; relay hook fires on an unsent report; push-ahead surfaced; team-dir orphan handled.
 
-**Dispatch prompt:** "In your worktree of /Users/spare3/Documents/Github/improv, own `claude/settings.json`, `fable-orchestrator-guard.sh`, and any new hooks + tests. Implement four guardrails (docs/plans/2026-07-14-parallel-dispatch-plan.md Unit 7): Fable carve-out for `.claude/memory` writes, teammate-relay Stop hook, push-ahead drift check, team-dir orphan lazy-init. TDD each; keep settings.json valid JSON. Flag that a session restart is required for hook-registration changes. Do not commit; report your diff."
+**Dispatch prompt:** "In your worktree of /Users/spare3/Documents/Github/improv (based on the post-Wave-1 merge commit), own EXACTLY these and no other existing hook: `claude/settings.json`, `claude/hooks/fable-orchestrator-guard.sh`, `claude/hooks/team-reaper.sh` (the team-dir orphan fix is confined here), plus the NEW hook files you create for the teammate-relay Stop hook and the push-ahead drift check, and their tests. Implement four guardrails (docs/plans/2026-07-14-parallel-dispatch-plan.md Unit 7): Fable carve-out for `.claude/memory` writes, teammate-relay Stop hook, push-ahead drift check, team-dir orphan lazy-init in team-reaper.sh. Do NOT edit resume-guard.sh, agent-teams-guard.sh, or any other existing hook. TDD each; keep settings.json valid JSON. Flag that a session restart is required for hook-registration changes. Do not commit; report your diff."
 
 ## Unit 7b: harness false-positives (surfaced by Wave 1)
 
@@ -219,46 +219,50 @@ Original guardrails (U7) plus the follow-ups Wave 1 surfaced (U7b harness false-
 - [ ] memory-dirty clear-on-beat-write: make a Bash write into `.claude/memory/` (matched by path) clear/not-set `.memory-dirty`, so committing harvested beats is not falsely blocked; and stop a read-only/diagnostic command from re-dirtying after a beat write. Test the cp-a-beat-then-commit path.
 - [ ] verify-before-done: extend the exemption to cover the repo-source hook dir `claude/hooks/` (and worktree paths ending in `claude/hooks/`), so a hook-source edit does not arm. Test.
 
-**Verify:** `bash claude/hooks/test-memory-nudge.sh` and the verify-before-done suite exit 0 with the new cases; manually, a `cp` of a beat followed by a commit is not blocked, and an `install.sh`-naming read-only command leaves `.memory-dirty` unset.
+**Invariant (do NOT weaken the gate - the fix is narrow, per Codex's Wave-2 review):** a REAL project write still dirties memory; a recognized Bash write INTO `.claude/memory/` (matched by path) clears the flag; a read-only / diagnostic command NEVER re-dirties after a beat write; a real `git commit` while genuinely dirty STILL blocks. The fix removes false positives only - it must not make it possible to commit real project changes without a beat. Add an explicit test asserting all four behaviors.
 
-**Done:** the three Wave-1 harness false-positives are closed.
+**Verify:** `bash claude/hooks/test-memory-nudge.sh` and the verify-before-done suite exit 0 with the new cases; the four-part invariant test passes; manually, a `cp` of a beat followed by a commit is not blocked, an `install.sh`-naming read-only command leaves `.memory-dirty` unset, and a real source-file edit still requires a beat before commit.
+
+**Done:** the three Wave-1 harness false-positives are closed with the gate's real purpose intact.
 
 **Dispatch prompt:** "In your worktree of /Users/spare3/Documents/Github/improv, own only `claude/hooks/memory-nudge.sh`, `verify-before-done.sh`, `bash-guard.sh` and their tests. Close three harness false-positives observed during Wave 1 (details in docs/plans/2026-07-14-parallel-dispatch-plan.md Unit 7b): the memory-nudge `install`-substring write-token, the memory-dirty commit-gate not recognizing a Bash beat-write (cp into .claude/memory) plus the re-dirty race, and the verify-before-done exemption missing the repo-source `claude/hooks/` dir. TDD each. Do not commit; report your diff."
 
 ## Unit 11: dependency-map correction (surfaced by Wave 1)
 
-**Owns:** `docs/dependency-map/index.html`, `docs/dependency-map/serve.py`. Depends on Wave 1 being merged (the page must reflect the landed state).
+**Owns:** `docs/dependency-map/index.html`, `docs/dependency-map/serve.py`. Runs LAST in Wave 2, AFTER U12 is integrated, so the page reflects the FINAL post-Wave-2 state (test-site-1 already retired by U12).
 
-**Problem:** Codex flagged the `:4832` dependency-map page as stale three times during Wave 1. It still states, falsely after Wave 1: `.justify` references `/public/improv-core.js` (now `/public/justify-core.js`), `public/justify-core.js` is tracked (now untracked), `reference/serve.py` defaults to 4830 (now 4831), and `dogfood-teach-step1.ts` silently `mkdirSync`s (now fail-loud). Critically, it classifies `test-site-1` and `cmux/settings.json` as dead islands with zero edges - BOTH are LIVE: `test-site-1/landing.css` is read by the sidecoach sprint1-integration tests, and `cmux/settings.json` is symlinked by `install.sh:2181` and drives the cmux component's active-detection. The map's island calls are unreliable and must be corrected.
+**Problem:** Codex flagged the `:4832` dependency-map page as stale three times during Wave 1. It still states, falsely: `.justify` references `/public/improv-core.js` (now `/public/justify-core.js`), `public/justify-core.js` is tracked (now untracked), `reference/serve.py` defaults to 4830 (now 4831), and `dogfood-teach-step1.ts` silently `mkdirSync`s (now fail-loud). It also classifies `test-site-1` and `cmux/settings.json` as dead islands, which was WRONG - both had live edges. By the time U11 runs, U12 has RETIRED test-site-1 (relocated its fixture, removed the dir), so the map must DROP test-site-1 as a node (not reclassify it live). `cmux/settings.json` is LIVE (install.sh:2181 symlink + cmux active-detection) with disposition pending U8's research, so the map must reclassify it from dead island to a live node marked disposition-pending-U8.
 
 **Steps:**
-- [ ] Update the eleven findings and node states to the post-Wave-1 reality (`.justify` path, justify-core untracked, reference port 4831, mkdirSync guarded).
-- [ ] Reclassify `test-site-1` and `cmux/settings.json` from dead islands to live nodes, documenting their real edges (test fixture; install symlink + cmux detection).
+- [ ] Update the findings and node states to the final post-Wave-2 reality (`.justify` path, justify-core untracked, reference port 4831, mkdirSync guarded).
+- [ ] REMOVE `test-site-1` from the map entirely (retired by U12); if the map tracked its edge, show the relocated test fixture instead.
+- [ ] Reclassify `cmux/settings.json` from dead island to a LIVE node with its real edges (install symlink + cmux detection), marked "disposition pending U8".
 - [ ] Fix the `docs/dependency-map/serve.py` stale 4830 note if present.
 
-**Verify:** the page no longer asserts any now-false finding; the two former "islands" show their live edges; render the page and confirm.
+**Verify:** the page asserts no now-false finding; `test-site-1` is gone from the map; `cmux/settings.json` shows as live/disposition-pending-U8; render the page and confirm.
 
-**Done:** the dependency map reflects reality after Wave 1.
+**Done:** the dependency map reflects the final post-Wave-2 reality.
 
-**Dispatch prompt:** "In your worktree of /Users/spare3/Documents/Github/improv (post-Wave-1-merge), own only `docs/dependency-map/index.html` and `docs/dependency-map/serve.py`. Correct the now-false findings after Wave 1 (details in docs/plans/2026-07-14-parallel-dispatch-plan.md Unit 11): .justify path, justify-core untracked, reference port 4831, mkdirSync guarded; and reclassify test-site-1 and cmux/settings.json from dead islands to LIVE nodes with their real edges. Render to verify. Do not commit; report your diff."
+**Dispatch prompt:** "In your worktree of /Users/spare3/Documents/Github/improv, based on the branch AFTER U12 is integrated (final post-Wave-2 state), own only `docs/dependency-map/index.html` and `docs/dependency-map/serve.py`. Correct the now-false findings (details in docs/plans/2026-07-14-parallel-dispatch-plan.md Unit 11): .justify path, justify-core untracked, reference port 4831, mkdirSync guarded. REMOVE test-site-1 from the map (U12 retired it). Reclassify cmux/settings.json from dead island to a LIVE node marked disposition-pending-U8. Render to verify test-site-1 is gone and cmux/settings.json is live. Do not commit; report your diff."
 
 ## Unit 12: test-site-1 fixture repoint + removal (surfaced by Wave 1)
 
-**Owns:** `sidecoach/src/__tests__/sprint1-integration.test.ts`, `sidecoach/dist/__tests__/sprint1-integration.test.js`, `test-site-1/`, and a new fixture location under the tests. Depends on Wave 1 merged (test-site-1 is still present; U2 correctly did not remove it).
+**Owns:** `sidecoach/src/__tests__/sprint1-integration.test.ts`, `sidecoach/dist/__tests__/sprint1-integration.test.js`, `sidecoach/dist/__tests__/sprint1-integration.test.js.map`, a new fixtures dir under the tests (e.g. `sidecoach/src/__tests__/fixtures/`), `test-site-1/`, and `install.sh` (ONLY the single `test-site-1` task-list mention at ~line 203 - no other Wave-2 unit touches install.sh). Depends on Wave 1 merged (test-site-1 still present; U2 correctly did not remove it).
 
-**Problem:** U2 could not retire `test-site-1/` because the sprint1-integration tests read `test-site-1/landing.css` via `fs.readFileSync`. Give the tests their own fixture first, then retire the island.
+**Problem:** U2 could not retire `test-site-1/` because the sprint1-integration tests read `test-site-1/landing.css` via `fs.readFileSync`. Codex's Wave-2 review confirmed the removal gate ALSO snags on two more `test-site-1` references: the compiled test's source map (`sprint1-integration.test.js.map`) and a `test-site-1` task-list area name in `install.sh:203`. Distinguish FUNCTIONAL refs (a `readFileSync` that breaks if the dir is gone) from COSMETIC refs (source maps, task-list area names) and clear both classes before removal.
 
 **Steps:**
 - [ ] Copy the `landing.css` the tests need into a fixtures dir the tests own (e.g. `sidecoach/src/__tests__/fixtures/landing.css`).
-- [ ] Repoint the `fs.readFileSync(... test-site-1/landing.css ...)` paths in both the src and dist test files to the new fixture.
+- [ ] Repoint the FUNCTIONAL `fs.readFileSync(... test-site-1/landing.css ...)` paths in both the src and dist test files to the new fixture. Regenerate or hand-update the dist source map so it no longer references `test-site-1`.
+- [ ] Handle the COSMETIC `install.sh:203` mention: it is a task-list area NAME, not a filesystem dependency - update it so it no longer names `test-site-1` (or, if it must stay, state explicitly that it does not block removal since it is not a functional ref).
 - [ ] Run the sprint1-integration tests; confirm green against the relocated fixture.
 - [ ] Re-run U2's precondition (clean state + no live refs outside docs/.claude), then `git rm -r test-site-1`.
 
-**Verify:** the sprint1-integration tests pass against the new fixture; `grep -rn "test-site-1" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=docs --exclude-dir=.claude` shows no live refs; `test-site-1/` removed.
+**Verify:** the sprint1-integration tests pass against the new fixture; `grep -rn "test-site-1" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=docs --exclude-dir=.claude` returns NOTHING (functional and cosmetic refs both cleared, including the `.js.map` and `install.sh:203`); `test-site-1/` removed.
 
 **Done:** test-site-1 retired without breaking any test.
 
-**Dispatch prompt:** "In your worktree of /Users/spare3/Documents/Github/improv (post-Wave-1-merge), own the sprint1-integration test files (src + dist), a new test fixtures dir, and `test-site-1/`. Relocate the `landing.css` the tests read into the tests' own fixtures dir, repoint both readFileSync paths, confirm the tests pass, then remove `test-site-1/` only after re-checking no live refs remain outside docs/.claude. Do not commit; report your diff and test output."
+**Dispatch prompt:** "In your worktree of /Users/spare3/Documents/Github/improv (based on the post-Wave-1 merge commit), own: the sprint1-integration test files `sidecoach/src/__tests__/sprint1-integration.test.ts` and `sidecoach/dist/__tests__/sprint1-integration.test.js`, its source map `sidecoach/dist/__tests__/sprint1-integration.test.js.map`, a new fixtures dir (e.g. `sidecoach/src/__tests__/fixtures/`), `test-site-1/`, and the single `test-site-1` task-list mention in `install.sh` (~line 203). Relocate the `landing.css` the tests read into the fixtures dir and repoint both readFileSync paths (FUNCTIONAL refs). Update the dist `.js.map` and the `install.sh:203` task-list area name (COSMETIC refs) so neither still names test-site-1. Confirm the sprint1-integration tests pass against the relocated fixture. Then `git rm -r test-site-1` only after `grep -rn \"test-site-1\" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=docs --exclude-dir=.claude` returns NOTHING. Do not commit; report your diff, the grep output, and the test results."
 
 ---
 
@@ -320,7 +324,9 @@ Original guardrails (U7) plus the follow-ups Wave 1 surfaced (U7b harness false-
 
 # Self-review (author checklist, updated after Codex round 1)
 
-- **Spec coverage:** all 11 findings dispositioned (1->U1, 2 and 3->U2, 4->U1, 5->U9, 6->not-dispatched/deliberate, 7->not-dispatched/separate-repo, 8->U4, 9 and 11->U5, 10->U8); harness findings (verify re-arm, memory-nudge, orchestrator carve-out, relay, push-ahead, team-dir)->U3/U7; suites-not-run->U6; islands (test-site-1->U2, cmux/settings.json->U1); beats cutover->U10.
+- **Spec coverage:** all 11 findings dispositioned (1->U1, 2 and 3->U2, 4->U1, 5->U9, 6->not-dispatched/deliberate, 7->not-dispatched/separate-repo, 8->U4, 9 and 11->U5, 10->U8); harness findings (verify re-arm, memory-nudge, orchestrator carve-out, relay, push-ahead, team-dir)->U3/U7; suites-not-run->U6; beats cutover->U10.
+- **Islands turned out LIVE (Wave-1 finding):** test-site-1 and cmux/settings.json were BOTH found live, not dead. test-site-1 was NOT retired by U2 (live test fixture) - retirement moved to U12 (repoint-then-remove); cmux/settings.json is live (install.sh:2181 symlink + cmux active-detection) - NOT retired by U1, disposition folded into U8's research; U11 reclassifies both as live on the dependency map.
+- **Wave-1 follow-ups (added after execution):** harness false-positives (memory-nudge `install`-token, memory commit-gate + re-dirty race, verify-before-done repo-source exemption)->U7b; stale dependency map->U11; test-site-1 repoint+removal->U12; cmux/settings.json disposition->U8.
 - **Collision guard:** three chokepoints (install.sh, settings.json, CLAUDE.md/index) each have one owner in separate waves; U8/U9 own only their one named beat each; real per-unit git worktrees isolate the git index; agents never commit concurrently.
 - **Sequencing:** U6 is a Wave-0 barrier (baseline uncontaminated). U10 is fully blocked by U3 except P0a. U8/U9 integrate before U10 touches the index.
 - **Safety:** U1 prune is fixture-tested and home-mutation is human-gated; U2 `git rm -r` is precondition-guarded with a docs-excluding live-ref check; U3 compile-on-drift is locked, atomic, and fail-closed.
