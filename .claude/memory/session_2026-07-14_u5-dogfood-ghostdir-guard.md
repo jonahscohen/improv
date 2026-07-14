@@ -81,6 +81,27 @@ string stays and is guarded.
 
 Collaborator: Jonah Cohen.
 
+## Follow-up: compiled dist artifacts patched (orchestrator granted 2 more files)
+
+After the HIGH Codex finding, the orchestrator granted ownership of the two tracked compiled
+artifacts and asked for a hand-patch mirroring the source (explicitly NO tsc / npm build, which
+would regenerate many dist files and collide with the parallel dispatch).
+
+- `sidecoach/dist/dogfood-teach-step1.js`: removed `fs.mkdirSync(projectPath, {recursive:true})`
+  (was ~line 46), replaced with the same fail-loud `throw` naming ~/Documents/Github/improv-site.
+- `sidecoach/dist/dogfood-craft-step2.js`: added the identical guard at the top of run(), before
+  the flow-history clear.
+
+Verified by running the COMPILED artifacts directly with node (full node_modules symlinked from
+main reversibly for the runtime require graph, then restored):
+- `node dist/dogfood-teach-step1.js` -> exit 1, threw my error at dist/dogfood-teach-step1.js:51:15,
+  no marketing-site dir created (worktree + improv root absent before and after).
+- `node dist/dogfood-craft-step2.js` -> exit 1, threw at dist/dogfood-craft-step2.js:52:15, no dir,
+  and short-circuited before writing /tmp/sidecoach-craft-output.md.
+Committed as a follow-up on w1-u5, only the two dist files (plus this beat, mandated by the gate).
+Sourcemaps (.js.map) were intentionally left untouched - not in the grant, and a hand-edit shifts
+line numbers slightly; a future tsc rebuild will regenerate them in sync.
+
 ## Hook note (memory-dirty false-positive, recorded per Hook Error Response Protocol)
 
 The `git commit` on w1-u5 was blocked by bash-guard's memory-before-commit gate even AFTER
