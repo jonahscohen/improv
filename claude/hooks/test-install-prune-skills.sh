@@ -78,9 +78,17 @@ ln -s "$FIXREPO/claude/skills/gone-skill" "$SKILLS/gone-skill"
 # The skills/improv orphan: a repo-sourced broken link - must be REMOVED.
 ln -s "$FIXREPO/claude/skills/improv" "$SKILLS/improv"
 
-# A BROKEN repo link whose target's PARENT is ALSO gone (exercises the lexical
-# fallback path, since the parent cannot be canonicalized) - must be REMOVED.
+# A BROKEN repo link whose target's PARENT subtree is ALSO gone. The parent cannot
+# be canonicalized, so the prune CANNOT prove the target resolves inside the repo and
+# must fail SAFE and LEAVE it (it never prunes on an unprovable target).
 ln -s "$FIXREPO/claude/gone-subtree/deep-skill" "$SKILLS/deep-skill"
+
+# A MULTI-HOP broken chain: the skills link points at an in-repo PROXY that is itself
+# a symlink pointing OUTSIDE the repo (to a missing path). The immediate target's
+# parent is in-repo, but the link's ULTIMATE residence is outside - must be LEFT
+# UNTOUCHED (the immediate target is a symlink, so the chain is unprovable).
+ln -s /nonexistent/outside/ultimate "$FIXREPO/claude/skills/proxy"   # in-repo proxy -> outside/missing
+ln -s "$FIXREPO/claude/skills/proxy" "$SKILLS/multihop"              # skills link -> in-repo proxy
 
 # A NON-repo BROKEN link (target outside the repo) - must be LEFT ALONE.
 ln -s /nonexistent/outside/thing "$SKILLS/external-broken"
@@ -108,14 +116,14 @@ else
   fail "dry run (default arg) exits 0" "rc=$DRY_RC"
 fi
 DRY_OK=true
-for n in live-skill gone-skill improv deep-skill external-broken external-live real-dir-skill; do
+for n in live-skill gone-skill improv deep-skill multihop external-broken external-live real-dir-skill; do
   if [ ! -e "$SKILLS/$n" ] && [ ! -L "$SKILLS/$n" ]; then
     DRY_OK=false
     echo "  (dry run wrongly removed $n)"
   fi
 done
 if [ "$DRY_OK" = true ]; then
-  pass "dry run mutated nothing (all 7 planted entries intact)"
+  pass "dry run mutated nothing (all 8 planted entries intact)"
 else
   fail "dry run mutated nothing" "see above"
 fi
@@ -140,12 +148,17 @@ if [ ! -L "$SKILLS/improv" ] && [ ! -e "$SKILLS/improv" ]; then
 else
   fail "apply removed the skills/improv orphan" "still present"
 fi
-if [ ! -L "$SKILLS/deep-skill" ] && [ ! -e "$SKILLS/deep-skill" ]; then
-  pass "apply removed a repo link whose target subtree is gone (lexical fallback)"
-else
-  fail "apply removed a repo link whose target subtree is gone" "still present"
-fi
 # Left alone:
+if [ -L "$SKILLS/deep-skill" ]; then
+  pass "apply LEFT the unprovable link (parent subtree gone) - fail safe, never pruned"
+else
+  fail "apply LEFT the unprovable link (parent subtree gone)" "it was pruned on an unprovable target"
+fi
+if [ -L "$SKILLS/multihop" ]; then
+  pass "apply LEFT the multi-hop chain (in-repo proxy -> outside) - fail safe, never pruned"
+else
+  fail "apply LEFT the multi-hop chain (in-repo proxy -> outside)" "pruned though its ultimate target was outside the repo"
+fi
 if [ -L "$SKILLS/live-skill" ] && [ -e "$SKILLS/live-skill" ]; then
   pass "apply left the LIVE repo link untouched (live-skill)"
 else
@@ -189,6 +202,43 @@ if [ "$RC_REFUSE" -eq 5 ] && [ -L "$SKILLS/gone-again" ]; then
 else
   fail "unresolvable REPO_DIR returns 5 and prunes nothing" "rc=$RC_REFUSE link=$([ -L "$SKILLS/gone-again" ] && echo present || echo gone)"
 fi
+
+echo ""
+echo "===== apply returns 6 (fail-loud) when a removal cannot complete ====="
+# A broken, in-repo link (a real candidate) sitting in a READ-ONLY skills dir: the
+# link is enumerated and classified for removal, but the unlink fails because the
+# parent dir is not writable. The prune must surface that as exit 6, not swallow it.
+RO_HOME=$(mktemp -d) || exit 1
+RO_SKILLS="$RO_HOME/.claude/skills"
+mkdir -p "$RO_SKILLS"
+ln -s "$FIXREPO/claude/skills/ro-gone" "$RO_SKILLS/ro-gone"   # broken, resolves in-repo
+chmod -w "$RO_SKILLS"                                          # read-only parent: unlink must fail
+HOME="$RO_HOME" REPO_DIR="$FIXREPO" prune_broken_skill_symlinks apply >/dev/null 2>&1
+RC6=$?
+chmod +w "$RO_SKILLS"                                          # restore so cleanup can remove it
+if [ "$RC6" -eq 6 ] && [ -L "$RO_SKILLS/ro-gone" ]; then
+  pass "apply returns 6 when a removal fails, and leaves the link in place"
+else
+  fail "apply returns 6 when a removal fails" "rc=$RC6 link=$([ -L "$RO_SKILLS/ro-gone" ] && echo present || echo gone)"
+fi
+rm -rf "$RO_HOME"
+
+echo ""
+echo "===== a global --dry-run forces the prune to dry-run (dry-run beats apply) ====="
+# Drives the real installer CLI: --dry-run together with --prune-skills-apply must
+# NOT destroy - the global dry-run wins. REPO_DIR inside install.sh resolves to the
+# real repo root, so the planted candidate points at a missing path under it.
+DR_HOME=$(mktemp -d) || exit 1
+mkdir -p "$DR_HOME/.claude/skills"
+ln -s "$REPO_ROOT/claude/skills/__prune_dryrun_probe_missing__" "$DR_HOME/.claude/skills/__prune_dryrun_probe__"
+HOME="$DR_HOME" bash "$INSTALL_SH" --dry-run --prune-skills-apply >/dev/null 2>&1
+DR_RC=$?
+if [ "$DR_RC" -eq 0 ] && [ -L "$DR_HOME/.claude/skills/__prune_dryrun_probe__" ]; then
+  pass "--dry-run --prune-skills-apply exits 0 and removes NOTHING (dry-run wins over apply)"
+else
+  fail "--dry-run --prune-skills-apply must not mutate" "rc=$DR_RC link=$([ -L "$DR_HOME/.claude/skills/__prune_dryrun_probe__" ] && echo present || echo gone)"
+fi
+rm -rf "$DR_HOME"
 
 echo ""
 echo "===== SAFETY: the real ~/.claude/skills was never touched ====="

@@ -43,6 +43,13 @@ Removing line 2181 would break the live cmux component. Per execution rules (sto
 - verify-before-done and second-fix-gate hooks fired asking for screenshots on a non-UI shell tool; verified via test suites + dry-run instead (the correct proof for a CLI tool).
 - Codex cross-model review is the lead's integration step per the plan (codex-review.py on the w1-u1 diff vs 7eb21eca); not run inside this executor.
 
+## Codex review rounds 1-2 (folded)
+The lead ran Codex on the w1-u1 diff across two rounds. Task 3 STOP confirmed correct (do not touch install.sh:2181). All findings folded:
+1. Prune fail-safe gap: the canonicalize-failure branch fell back to a LEXICAL `$REPO_DIR/*` prefix test, which is not proof of in-repo residence (an intermediate symlink on the vanished path could have pointed outside). Removed the lexical fallback entirely - if the target's parent cannot be canonically resolved, the prune now SKIPS (fails safe, never prunes on an unprovable target).
+2. Global --dry-run did not cover the prune-apply path (the driver exits before the global dry-run block), so `--dry-run --prune-skills-apply` still destroyed. Fixed: the driver now forces the prune to dryrun whenever DRY_RUN=1 (dry-run wins over apply).
+3. Multi-hop fail-safe (round 2): a skills link whose immediate target is an IN-REPO proxy that is itself a symlink pointing OUTSIDE the repo would be pruned - parent-canonicalization proved the immediate parent in-repo, but the link's ultimate residence was outside. Fixed: after resolving the immediate target `$tgt_abs`, if it is itself a symlink (`[ -L "$tgt_abs" ]`) the chain is multi-hop and unprovable for a broken link, so SKIP. Only a real (non-symlink) immediate target whose parent canonicalizes inside the repo is ever pruned.
+4. Test coverage extended: a read-only skills dir drives the apply-mode rm failure and asserts exit code 6; a real `install.sh --dry-run --prune-skills-apply` subprocess asserts no mutation (dry-run wins); a parent-subtree-gone case and a multi-hop (in-repo proxy -> outside) case both assert "left untouched". Suite now 16/16 (was 13); test-install-hook-deploy.sh still 26/26.
+
 ## Files touched
 - install.sh (Tasks 1+2)
 - claude/hooks/test-install-prune-skills.sh (new prune test suite)

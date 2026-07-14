@@ -209,19 +209,26 @@ prune_broken_skill_symlinks() {
       /*) tgt_abs="$tgt" ;;
       *)  tgt_abs="$(cd "$(dirname "$link")" 2>/dev/null && pwd -P)/$tgt" ;;
     esac
+    # Multi-hop chains are unprovable: if the immediate target is ITSELF a symlink,
+    # this broken link's ULTIMATE residence cannot be proven in-repo (the next hop can
+    # point anywhere - e.g. an in-repo proxy that itself points outside), so fail SAFE
+    # and skip. We only prune when the immediate target is a real, non-symlink path
+    # whose parent canonicalizes inside the repo.
+    if [ -L "$tgt_abs" ]; then continue; fi
     tgt_dir="$(dirname "$tgt_abs")"
     tgt_base="$(basename "$tgt_abs")"
 
     # "Inside repo?" The leaf is gone, so canonicalize the PARENT (physical, which
     # also collapses /tmp -> /private/tmp the way $REPO_DIR already is) and re-append
-    # the leaf. If the parent is gone too, fall back to a lexical prefix test against
-    # both the canonical and the raw repo dir.
+    # the leaf. If the parent CANNOT be canonicalized (its subtree is gone too) we
+    # cannot PROVE the target resolves inside the repo - a lexical prefix match is not
+    # proof, because an intermediate symlink on the vanished path could have pointed
+    # out of the repo - so we fail SAFE and skip it. Only a canonically-proven in-repo
+    # target is ever pruned.
     inside=0
     if canon_dir="$(cd "$tgt_dir" 2>/dev/null && pwd -P)"; then
       canon="$canon_dir/$tgt_base"
       case "$canon" in "$repo_canon"/*) inside=1 ;; esac
-    else
-      case "$tgt_abs" in "$repo_canon"/*|"$REPO_DIR"/*) inside=1 ;; esac
     fi
     if [ "$inside" != "1" ]; then continue; fi
 
@@ -600,7 +607,11 @@ done
 # Neither is reachable from an unattended --yes/--only/--preset run, so those never
 # mutate ~/.claude via the prune.
 if [ -n "${PRUNE_SKILLS:-}" ]; then
-  prune_broken_skill_symlinks "$PRUNE_SKILLS"
+  # A global --dry-run overrides an apply request: dry-run always wins, so
+  # `--dry-run --prune-skills-apply` reports without ever destroying anything.
+  _prune_mode="$PRUNE_SKILLS"
+  if [ "${DRY_RUN:-0}" = "1" ]; then _prune_mode=dryrun; fi
+  prune_broken_skill_symlinks "$_prune_mode"
   exit $?
 fi
 
