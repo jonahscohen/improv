@@ -3,6 +3,7 @@
 **/.DS_Store
 claude/CLAUDE.local.md
 public/justify-core.js
+public/justify-core.js.map
 
 # transient / dependency dirs (added during tilt-lab work)
 node_modules/
