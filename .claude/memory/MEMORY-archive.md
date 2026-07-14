@@ -1031,3 +1031,6 @@
 
 <!-- archived 2026-07-13 (moved from MEMORY.md to stay under load budget) -->
 - [Justify WATCH MOVED INTO THE DAEMON (permanent, session-independent) - armed state on disk (resumes on restart), daemon-spawned headless claude -p workers per Send-All batch, claim (claimedBy+claimedAt) + stale-expiry + monotonic prompt-seq ids for exactly-once (closes 2 live races: detached-poller-no-consumer + non-unique-id clear-by-id data loss); .justify-watch-on flag + relaunch-nag Stop hook retired; launchd KeepAlive supervisor; A-D verified live incl a real claude -p worker apply, tsc 160/vitest +7 pass, Codex-gated - PROJECT (2026-07-08)](session_2026-07-08_justify-daemon-watch.md)
+
+<!-- archived 2026-07-14 (moved from MEMORY.md to stay under load budget) -->
+- [The timer purge](session_2026-07-09_justify-timer-purge.md) - no clock may stop Justify; durable outbox + clientId idempotency; a guard you never saw fail is not a guard, 2026-07-09
