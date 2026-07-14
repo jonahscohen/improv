@@ -12,6 +12,18 @@ const outputFile = '/tmp/sidecoach-craft-output.md';
 const historyFile = path.join(os.homedir(), '.claude', 'sidecoach-flow-history.json');
 
 async function run() {
+  // The marketing site moved out of the improv repo on 2026-07-13; it now lives in its own
+  // project at ~/Documents/Github/improv-site. This path no longer exists inside improv.
+  // Fail loud instead of running craft against a dead path. Repoint projectPath at
+  // ~/Documents/Github/improv-site to run this dogfood against the moved site.
+  if (!fs.existsSync(projectPath)) {
+    throw new Error(
+      `Project path not found: ${projectPath}\n` +
+        `The marketing site moved out of the improv repo on 2026-07-13 and now lives at ` +
+        `~/Documents/Github/improv-site. Repoint projectPath there (or restore the site) before running this dogfood script.`,
+    );
+  }
+
   // Sprint 12 T2: clear persistent flow history so the dogfood probes a clean
   // chain state. Without this, latent prereq gaps get masked by stale entries
   // recorded in earlier sprints' runs.
