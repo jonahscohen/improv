@@ -73,6 +73,16 @@ resp = d.get("tool_response", d.get("tool_result", ""))
 if tool == "SendMessage" and isinstance(resp, dict) and resp.get("success") is True:
     print("{}"); sys.exit(0)
 
+# Agent async-launch results ECHO the natural-language prompt (and sync results
+# carry the subagent report), which legitimately contain words like "removed" /
+# "deprecated" / "no longer exists" - e.g. a dispatch prompt about pruning symlinks
+# whose target "no longer exists". A successful spawn (an agentId / async_launched
+# status / isAsync) means the Agent contract held; genuine Agent drift is a FAILED
+# call (InputValidationError, no agentId) and still falls through to the scan.
+if tool == "Agent" and isinstance(resp, dict) and (
+        resp.get("agentId") or resp.get("status") == "async_launched" or resp.get("isAsync") is True):
+    print("{}"); sys.exit(0)
+
 try:
     blob = resp if isinstance(resp, str) else json.dumps(resp)
 except Exception:
