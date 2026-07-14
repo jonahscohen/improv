@@ -173,6 +173,57 @@ echo "===== NEGATIVE: build look-alikes that should NOT skip ====="
 assert_fires "npm run build:prod"  "npm run build:prod"
 
 echo ""
+echo "===== ARM-SIDE FILE-TYPE FILTER (bug a): a .md-only Bash write must not re-arm ====="
+# The flag-SET (arm) side of the Bash branch used to skip the file-type filter
+# that the Write/Edit branch already applies via is_code_file. A .md-only write
+# (cp/mv/sed/tee touching only markdown) therefore re-armed ~/.claude/.needs-verification
+# right after a browser verification cleared it. These cases assert the arm flag
+# directly (the stdout mandate is debounce-suppressible, so it is not a reliable
+# signal for the arm side). Save + restore the real flag so a live session is safe.
+VFLAG="$HOME/.claude/.needs-verification"
+__VFLAG_EXISTED=no; __VFLAG_SAVED=""
+if [ -f "$VFLAG" ]; then __VFLAG_EXISTED=yes; __VFLAG_SAVED="$(cat "$VFLAG" 2>/dev/null)"; fi
+restore_vflag() { if [ "$__VFLAG_EXISTED" = yes ]; then printf '%s' "$__VFLAG_SAVED" > "$VFLAG"; else rm -f "$VFLAG"; fi; }
+
+# Start from a CLEARED flag (a browser verification just cleared it), run the hook,
+# report whether the arm flag is now present.
+arm_state() { rm -f "$VFLAG"; run_hook "$1" >/dev/null 2>&1; [ -f "$VFLAG" ] && echo armed || echo clear; }
+assert_no_rearm() {
+  local got; got="$(arm_state "$2")"
+  if [ "$got" = clear ]; then echo "PASS: $1"; ((PASS++));
+  else echo "FAIL: $1  (expected clear, flag=$got)"; FAIL_LABELS+=("$1"); ((FAIL++)); fi
+}
+assert_arms() {
+  local got; got="$(arm_state "$2")"
+  if [ "$got" = armed ]; then echo "PASS: $1"; ((PASS++));
+  else echo "FAIL: $1  (expected armed, flag=$got)"; FAIL_LABELS+=("$1"); ((FAIL++)); fi
+}
+
+assert_no_rearm "sed -i on a .md does not re-arm"   "sed -i 's/a/b/' README.md"
+assert_no_rearm "cp .md to .md does not re-arm"     "cp draft.md final.md"
+assert_no_rearm "tee into a .md does not re-arm"    "tee notes.md < input.txt"
+assert_no_rearm "mv a .md does not re-arm"          "mv old.md new.md"
+# Controls: a code-file write and a real build MUST still arm.
+assert_arms     "cp a .ts (code) still arms"        "cp src/foo.ts dest/app.ts"
+assert_arms     "sed -i a .ts (code) still arms"    "sed -i 's/a/b/' src/app.ts"
+assert_arms     "npm run build still arms"          "npm run build"
+# Intentional PREFERRED false-positive: a code file present only as a READ source
+# still arms. We never risk UNDER-arming a real code write, even at the cost of a
+# spurious prompt when the actual write target is markdown (feedback_hooks_prefer_false_positives).
+assert_arms     "code file as a read source still arms (preferred FP)" "cp src/foo.ts README.md"
+
+# Headline: browser verification clears the flag, a subsequent .md-only write
+# must NOT re-arm it (the exact bug).
+rm -f "$VFLAG"
+run_hook "sed -i 's/a/b/' src/app.ts" >/dev/null 2>&1                                  # code change arms
+run_hook "cmux browser --surface surface:01 screenshot --out /tmp/v.png" >/dev/null 2>&1 # verification clears
+run_hook "sed -i 's/a/b/' CHANGELOG.md" >/dev/null 2>&1                                 # .md-only write
+if [ ! -f "$VFLAG" ]; then echo "PASS: post-clear .md write leaves the flag CLEAR (headline)"; ((PASS++));
+else echo "FAIL: post-clear .md write RE-ARMED the flag (headline)"; FAIL_LABELS+=("headline re-arm"); ((FAIL++)); fi
+
+restore_vflag
+
+echo ""
 echo "============================================================"
 echo "RESULTS: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
