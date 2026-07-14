@@ -66,6 +66,25 @@ check "\"sed -i s/a/b/ src/app.ts\""                            clean DIRTY "rea
 check "\"sed -i s/a/b/ src/real.ts && $GA src/real.ts\""        clean DIRTY "mixed sed-i + git add still dirties"
 check "\"echo hello\""                                          clean clean "plain read-only echo"
 
+echo "--- Read-only + /dev/null redirect classification (bug b) ---"
+# A read-only command that carries a redirect to the null device writes NOTHING;
+# it must not be misread as a project-file write. Same for fd-dups (2>&1). A bare
+# grep is read-only. A redirect into a NAMED file is still a real write.
+check "\"python3 beats/beats.py verify > /dev/null 2>&1\"" clean clean "read-only verify piped to /dev/null does NOT dirty"
+check "\"rg TODO src/ > /dev/null\""                       clean clean "rg search piped to /dev/null does NOT dirty"
+check "\"grep -rn foo src/\""                              clean clean "bare grep does NOT dirty"
+check "\"cat build.log > /dev/null 2>&1\""                 clean clean "read-only cat to /dev/null does NOT dirty"
+check "\"python3 app.py 2>/dev/null\""                     clean clean "stderr-only to /dev/null does NOT dirty"
+check "\"python3 gen.py > report.txt\""                    clean DIRTY "real redirect to a NAMED file still dirties"
+check "\"python3 gen.py > /dev/null.log\""                 clean DIRTY "redirect to /dev/null.log (a real named file) still dirties"
+check "\"python3 gen.py > /dev/nullx\""                    clean DIRTY "redirect to /dev/nullx (a real named file) still dirties"
+check "\"tee /dev/null < in.txt\""                         clean clean "tee to the null device (sole sink) writes nothing, does NOT dirty"
+check "\"make all | tee -a /dev/null\""                    clean clean "tee -a to /dev/null (piped, sole sink) does NOT dirty"
+check "\"make all | tee /dev/null 2>&1\""                  clean clean "tee /dev/null then an fd redirect (sole sink) does NOT dirty"
+check "\"tee out.txt < in.txt\""                           clean DIRTY "tee to a NAMED file is a real write, dirties"
+check "\"printf x | tee /dev/null out.txt\""               clean DIRTY "tee to /dev/null AND a named file still dirties (named sink present)"
+check "\"printf x | tee /dev/null.log\""                   clean DIRTY "tee to /dev/null.log (a real named file) still dirties"
+
 echo "--- Write/Edit path branch ---"
 check_path "/Users/x/proj/.claude/memory/session_x.md" clean clean "beat write clears (starts clean, stays clean)"
 check_path "/Users/x/proj/.claude/memory/MEMORY.md"    dirty clean "MEMORY.md write clears"

@@ -44,7 +44,13 @@ BEATS_PY="${BEATS_PY:-$REPO_ROOT/beats/beats.py}"
 CORPUS_DIR="$(_realpath "${BEATS_CORPUS:-$REPO_ROOT/.claude/memory}")"
 BUILD_DIR="${BEATS_BUILD:-$REPO_ROOT/beats/.build}"
 LOG="$BUILD_DIR/compile.log"
-LOCK="$BUILD_DIR/.lock"
+# SHARED compile lock: this rebuild hook and beats-staleness-guard.sh acquire the SAME
+# mkdir lock before compiling, so only ONE compiler ever mutates the live index. This
+# hook also uses it as its debounce/single-runner lock. If this hook cannot get it (the
+# guard is compiling synchronously), enqueue just marks .dirty and defers - a later write
+# re-triggers the rebuild. If the guard cannot get it (this hook is compiling), the guard
+# fails closed and warns. The name MUST match COMPILE_LOCK in beats-staleness-guard.sh.
+LOCK="$BUILD_DIR/.compile.lock"
 DIRTY="$BUILD_DIR/.dirty"
 DEBOUNCE_SECS="${BEATS_DEBOUNCE_SECS:-2}"
 LOG_MAX_BYTES=1048576
@@ -52,6 +58,12 @@ LOG_MAX_BYTES=1048576
 log_note() { printf '%s beats-rebuild: %s\n' "$(date '+%Y-%m-%dT%H:%M:%S')" "$*" >> "$LOG" 2>/dev/null || true; }
 
 # --- the detached background runner ------------------------------------------
+# Compile into a TEMP build dir then atomically move the artifacts into the live
+# BUILD_DIR (db LAST), mirroring beats-staleness-guard.sh's install: a reader never
+# sees a half-written index, and a failed compile leaves the live index untouched.
+# The db move is the effective commit point (search + verify key off beats.db). The
+# BEATS_COMPILE_CMD override (tests) runs against the temp dir too; when it produces no
+# artifacts (a stub) nothing is moved, which is correct.
 run_compile_once() {
   # Log rotation guard: truncate an oversized log before appending.
   if [ -f "$LOG" ]; then
@@ -59,11 +71,22 @@ run_compile_once() {
     sz="$(wc -c < "$LOG" 2>/dev/null | tr -d ' ')"
     if [ -n "$sz" ] && [ "$sz" -gt "$LOG_MAX_BYTES" ]; then : > "$LOG" 2>/dev/null || true; fi
   fi
+  local tmp_build="$BUILD_DIR/.rebuild-compile.$$" crc
+  rm -rf "$tmp_build" 2>/dev/null || true
+  mkdir -p "$tmp_build" 2>/dev/null || true
+  # Seed the temp db so incremental vector reuse avoids a full re-embed.
+  [ -f "$BUILD_DIR/beats.db" ] && cp "$BUILD_DIR/beats.db" "$tmp_build/beats.db" 2>/dev/null || true
   if [ -n "${BEATS_COMPILE_CMD:-}" ]; then
-    bash -c "$BEATS_COMPILE_CMD" >> "$LOG" 2>&1
+    BEATS_BUILD="$tmp_build" BEATS_CORPUS="$CORPUS_DIR" bash -c "$BEATS_COMPILE_CMD" >> "$LOG" 2>&1; crc=$?
   else
-    python3 "$BEATS_PY" compile --corpus "$CORPUS_DIR" --build "$BUILD_DIR" >> "$LOG" 2>&1
+    python3 "$BEATS_PY" compile --corpus "$CORPUS_DIR" --build "$tmp_build" >> "$LOG" 2>&1; crc=$?
   fi
+  # Atomic install: jsonl first, db LAST, only on success + both artifacts present.
+  if [ "$crc" -eq 0 ] && [ -f "$tmp_build/beats.jsonl" ] && [ -f "$tmp_build/beats.db" ]; then
+    mv -f "$tmp_build/beats.jsonl" "$BUILD_DIR/beats.jsonl" 2>/dev/null \
+      && mv -f "$tmp_build/beats.db" "$BUILD_DIR/beats.db" 2>/dev/null
+  fi
+  rm -rf "$tmp_build" 2>/dev/null || true
 }
 
 run_compile_loop() {
@@ -85,7 +108,7 @@ run_compile_loop() {
   done
 }
 
-# --- debounced enqueue (shared by the hook and the stage-5 guard) -------------
+# --- debounced enqueue (hook mode + the --enqueue entrypoint) -----------------
 enqueue() {
   mkdir -p "$BUILD_DIR" 2>/dev/null || true
   touch "$DIRTY" 2>/dev/null || true         # mark work pending BEFORE the lock
