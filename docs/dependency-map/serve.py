@@ -12,9 +12,11 @@ subject of findings on the page this serves:
      inherited from the process cwd, so the server cannot be started against the
      wrong tree.
   2. The default port is 4832, distinct from marketing-site (4830) and reference
-     (4831). Finding 9 on the map is that reference/serve.py is a copy carrying
-     marketing-site's 4830 default, leaving only convention between them and a
-     port collision. Copying that default forward would have made it worse.
+     (4831). Finding 9 on the map was that reference/serve.py, copied from
+     marketing-site, inherited the same default and risked a port collision;
+     Wave 1 (U5) gave reference its own 4831 default, so that collision risk is
+     closed. This server keeps its own 4832 either way, so it never collides
+     with either site.
 
 Exit codes:
   0  served until interrupted
