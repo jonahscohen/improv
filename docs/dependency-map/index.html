@@ -150,7 +150,6 @@
   .swatch.leaf       { background: var(--cls-leaf); }
   .swatch.standalone { background: var(--cls-standalone); }
   .swatch.supportive { background: var(--cls-supportive); }
-  .swatch.island     { background: transparent; box-shadow: 0 0 0 2px var(--critical) inset; }
 
   .filters { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding-left: 20px; border-left: 1px solid var(--rule); }
   .filters label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
@@ -199,7 +198,6 @@
     color: var(--ink-muted); text-transform: uppercase; margin-bottom: 8px;
   }
   .col-standalone .row, .col-standalone .row[data-cols] { --cols: 1; }
-  .islands .row, .islands .row[data-cols] { --cols: 2; }
 
   /* ---------- node ---------- */
 
@@ -277,22 +275,6 @@
   .kid[aria-pressed="true"] { color: var(--ink-1); box-shadow: 0 0 0 1px var(--cls-supportive); }
   .kid .dot { color: var(--critical); font-weight: 700; }
 
-  /* ---------- islands ---------- */
-
-  .islands {
-    margin-top: 26px; padding: 16px;
-    border: 1px dashed var(--critical); border-radius: 10px;
-    background: color-mix(in srgb, var(--critical) 4%, var(--surface-1));
-  }
-  .islands-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
-  .islands-title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--critical); }
-  .islands-note { font-size: 12px; color: var(--ink-2); margin: 0 0 10px; }
-  .node.island {
-    --accent: var(--critical);
-    border: 1px solid var(--critical); border-left: 3px solid var(--critical);
-  }
-  .node.island::before { opacity: 0.06; }
-
   /* ---------- detail panel ---------- */
 
   .panel {
@@ -319,7 +301,6 @@
   .panel-cls.leaf       { color: var(--cls-leaf); }
   .panel-cls.standalone { color: var(--cls-standalone); }
   .panel-cls.supportive { color: var(--cls-supportive); }
-  .panel-cls.island     { color: var(--critical); }
 
   .panel-close {
     font: inherit; font-size: 20px; line-height: 1; cursor: pointer; flex: none;
@@ -400,11 +381,11 @@
   /* These must outrank .row[data-cols="5"], so they match the same attribute. */
   @media (max-width: 900px) {
     .layout { grid-template-columns: 1fr; }
-    .row, .row[data-cols], .col-standalone .row[data-cols], .islands .row[data-cols] { --cols: 2; }
+    .row, .row[data-cols], .col-standalone .row[data-cols] { --cols: 2; }
     #wires { display: none; }
   }
   @media (max-width: 560px) {
-    .row, .row[data-cols], .col-standalone .row[data-cols], .islands .row[data-cols] { --cols: 1; }
+    .row, .row[data-cols], .col-standalone .row[data-cols] { --cols: 1; }
   }
 </style>
 </head>
@@ -417,10 +398,11 @@
     <p>What stands on what. Tiers run top to bottom, most load-bearing to leaf. Every edge below was read out of the tree at a specific file and line; click any node to see its evidence.</p>
     <div class="meta">
       <span>Generated 2026-07-13</span>
+      <span>Updated 2026-07-15 (post Wave 2)</span>
       <span class="verified">Evidence-verified</span>
-      <span>16 components</span>
+      <span>14 components</span>
       <span>5 classes</span>
-      <span>11 open findings</span>
+      <span>11 findings, 5 resolved</span>
     </div>
   </header>
 
@@ -432,7 +414,6 @@
       <span class="key"><i class="swatch leaf"></i>Leaf consumer</span>
       <span class="key"><i class="swatch standalone"></i>Standalone</span>
       <span class="key"><i class="swatch supportive"></i>Supportive</span>
-      <span class="key"><i class="swatch island"></i>Island (dead or legacy)</span>
     </div>
     <div class="filters">
       <span class="filters-title">Edges</span>
@@ -451,17 +432,11 @@
         <div class="row" id="standalone"></div>
       </aside>
     </div>
-
-    <section class="islands">
-      <div class="islands-head"><span class="islands-title">Islands</span></div>
-      <p class="islands-note">Zero edges in or out beyond name-mentions. Nothing consumes these and they consume nothing. They are still in the tree.</p>
-      <div class="row" id="islands"></div>
-    </section>
   </div>
 
   <section class="findings">
     <h2>Honest findings</h2>
-    <p>Eleven things the sweep turned up that are wrong, dead, or fragile. None of them are blocking today. All of them are load-bearing for whoever touches this repo next.</p>
+    <p>Eleven things the sweep turned up. Wave 1 and 2 resolved five of them (marked resolved below). The rest are still wrong, dead, or fragile - none blocking today, all load-bearing for whoever touches this repo next.</p>
     <ol id="findings"></ol>
   </section>
 
@@ -497,7 +472,7 @@
         ["mcpServers registers the justify MCP server", "claude/settings.json:601-603"],
         ["10 hooks shell out to the external cmux binary", "claude/hooks/ (10 files)"]
       ],
-      debt: ["sidecoach-sessionstart.sh:4 hard-codes an absolute /Users/spare3 path. It is the one hook that breaks on any other machine."]
+      debt: []
     },
     "install": {
       name: "install.sh", cls: "foundation",
@@ -505,11 +480,10 @@
       desc: "The only way anything gets from this repo onto a machine. Nothing else deploys. A component that install.sh does not know about does not exist on disk.",
       evidence: [
         ["Symlinks every component into ~/.claude", "install.sh:2790,2800,2811,2886,2181"],
-        ["Still symlinks the dead cmux/settings.json island", "install.sh (cmux block)"]
+        ["Symlinks cmux/settings.json - a LIVE config, not a dead island: the cmux component keys its active/deactivate detection off the symlink", "install.sh:2304,899,1231"]
       ],
       debt: [
-        "install.sh:364 points at ghostty/shaders, a path that does not exist. The real shaders live at the top level. The TUI 'open directory' action for shaders silently fails.",
-        "It will never clean up the orphaned ~/.claude/skills/improv/SKILL.md left behind by the rename."
+        "The orphaned ~/.claude/skills/improv/SKILL.md left behind by the rename may still be deployed. Wave 1 (U1) added a human-gated, dry-run-default prune (prune_broken_skill_symlinks) that can now remove such orphans, but it is not applied automatically - an already-deployed orphan persists until someone runs it."
       ]
     },
     "beats": {
@@ -534,7 +508,16 @@
       sub: "External binary. 10 hooks point outside the repo.",
       desc: "The highest-risk dependency in the tree. It is not vendored, not pinned, and not in the repo. Ten in-repo consumers assume it is on PATH. If it moves or changes its CLI, ten hooks break at once and the repo cannot fix itself.",
       evidence: [["10 hooks invoke the cmux binary by name", "claude/hooks/ (10 files)"]],
-      debt: ["An external binary with 10 in-repo consumers and no pin. This is the single largest structural risk on the map."]
+      debt: ["An external binary with 10 in-repo consumers and no pin. This is the single largest structural risk on the map."],
+      kids: [
+        { name: "cmux/settings.json", desc: "The cmux config. Found LIVE by U1, not the dead legacy symlink the earlier sweep assumed: install.sh symlinks it onto every machine and the cmux component keys its active and deactivate detection off that symlink. Whether it should be retired is open, deferred to U8's cmux-hardening research.",
+          evidence: [
+            ["install.sh symlinks it into the cmux config dir", "install.sh:2304"],
+            ["cmux component reports 'active' by testing the symlink", "install.sh:899"],
+            ["cmux deactivation removes the same symlink", "install.sh:1231"]
+          ],
+          debt: ["Disposition pending U8. It is live (deploy symlink + active-detection), not dead - but whether cmux still needs it is the open question U8's research will answer."] }
+      ]
     },
     "corpus": {
       name: ".claude/memory", cls: "foundation",
@@ -553,7 +536,7 @@
         ["Its tests read the reference site's DESIGN.md", "sidecoach tests -> reference/DESIGN.md"],
         ["Its dogfood config points at marketing-site by absolute path", "sidecoach dogfood config"]
       ],
-      debt: ["The dogfood path is absolute, so it is machine-bound the same way the SessionStart hook is."],
+      debt: ["The dogfood scripts still hard-code an absolute marketing-site path (machine-bound), but the silent mkdirSync is gone: dogfood-teach-step1.ts now throws a clear error naming ~/Documents/Github/improv-site instead of recreating a ghost directory (Wave 1, U5)."],
       kids: [
         { name: "sidecoach/mcp-server", flag: "inert", desc: "Built, wired to nothing, and yet not removable. Nobody runs it, but the hook sidecoach_lanes.py is contractually bound to its keyword-resolver.ts. The parity contract is the only thing keeping it alive.",
           evidence: [["Hook is bound to the server's keyword resolver", "claude/hooks/sidecoach_lanes.py <-> keyword-resolver.ts"]],
@@ -566,13 +549,13 @@
       desc: "In-browser micro-adjustment tool, served as a daemon. Consumed by 7 marketing-site pages and 3 hooks. The marketing site does not bundle it. It fetches it from localhost at runtime.",
       evidence: [
         ["Registered as an MCP server", "claude/settings.json:601-603"],
-        ["7 marketing-site pages load justify-core.js from :9223", "marketing-site/index.html:28"]
+        ["7 marketing-site pages load justify-core.js from :9223", "improv-site/index.html:28 (was marketing-site/index.html:28)"]
       ],
-      debt: ["The .justify marker still references the pre-rename /public/improv-core.js path."],
+      debt: [],
       kids: [
-        { name: "public", flag: "legacy", desc: "A tracked build artifact. It should not be in git at all.",
-          evidence: [["justify-core.js is tracked despite being ignored", ".gitignore:5"]],
-          debt: ["public/justify-core.js is tracked in git despite .gitignore:5. The ignore rule never took effect because the file was committed before it was written."] }
+        { name: "public", desc: "A build artifact directory for justify's core. Its justify-core.js was tracked in git despite .gitignore:5 (committed before the ignore rule); Wave 1 (U2) git-rm-cached it, so it is no longer tracked - a gitignored generated build artifact, present only where it was built and absent from a fresh clone.",
+          evidence: [["justify-core.js is no longer tracked (git-rm-cached in Wave 1); gitignored build artifact, not present in a fresh clone", ".gitignore:5"]],
+          debt: [] }
       ]
     },
     "tilt-lab": {
@@ -580,7 +563,7 @@
       sub: "Vite workbench :5180",
       desc: "The visual-effects workbench. Its runtime is not imported by the marketing site. It is vendored into it, byte for byte, as a copied file.",
       evidence: [
-        ["Runtime vendored into marketing-site, byte-identical at 2,463,252 bytes", "marketing-site/index.html:623"]
+        ["Runtime vendored into marketing-site, byte-identical at 2,463,252 bytes", "improv-site/index.html:623 (was marketing-site/index.html:623)"]
       ],
       debt: ["Vendored by copy, not by build step. A tilt-lab change does not reach the marketing site until someone re-copies it."],
       kids: [
@@ -608,7 +591,7 @@
       sub: "Port 4831. Docs manual.",
       desc: "The most isolated live component in the repo. It consumes nothing at runtime. Only sidecoach's tests reach into it, and only to read DESIGN.md.",
       evidence: [["sidecoach tests read its DESIGN.md", "sidecoach tests -> reference/DESIGN.md"]],
-      debt: ["reference/serve.py is a copy of marketing-site's, with the same default port 4830. Only convention keeps the two sites from colliding."]
+      debt: []
     },
 
     "lotus": {
@@ -623,7 +606,7 @@
       sub: "Terminal config and GLSL shaders",
       desc: "Terminal configuration. The config references the shaders, and nothing else references either.",
       evidence: [["Config points at the shader files", "ghostty/config.ghostty:25"]],
-      debt: ["install.sh:364 looks for these shaders under ghostty/shaders. They are actually at the top level, so that install action silently fails."]
+      debt: []
     },
     "superpowers": {
       name: "docs/superpowers", cls: "standalone", flags: [["legacy", "archive"]],
@@ -638,21 +621,6 @@
       desc: "Static files. No runtime edges.",
       evidence: [["No runtime consumers found", "assets/"]],
       debt: []
-    },
-
-    "test-site-1": {
-      name: "test-site-1", cls: "island", flags: [["dead", "dead since 2026-05-25"]],
-      sub: "Dead since 2026-05-25",
-      desc: "A true island. Zero edges in, zero edges out, beyond bare name-mentions in prose. It has been dead since 2026-05-25 and nothing has noticed.",
-      evidence: [["No inbound or outbound edges beyond name-mentions", "test-site-1/"]],
-      debt: ["Dead since 2026-05-25. Nothing imports it, nothing serves it, nothing tests it."]
-    },
-    "cmux-settings": {
-      name: "cmux/settings.json", cls: "island", flags: [["legacy", "legacy since 2026-04-11"], ["debt", "still symlinked"]],
-      sub: "100% commented-out, still symlinked by install.sh",
-      desc: "Legacy since 2026-04-11 and entirely commented out. Every line is dead. Despite that, install.sh still symlinks it onto every machine, which makes it the only island the deploy path actively keeps alive.",
-      evidence: [["install.sh still symlinks it", "install.sh (cmux block)"]],
-      debt: ["100% commented-out, yet install.sh still symlinks it. The deploy path is keeping a dead file alive."]
     }
   };
 
@@ -664,7 +632,6 @@
     { num: "Tier 3", label: "Leaf consumers", desc: "Nothing depends on these.", cols: 3, ids: ["marketing-site", "reference"] }
   ];
   var STANDALONE = ["lotus", "ghostty", "superpowers", "assets"];
-  var ISLANDS = ["test-site-1", "cmux-settings"];
 
   var EDGES = [
     { from: "claude-harness", to: "beats",         kind: "runtime" },
@@ -682,22 +649,21 @@
     { from: "install", to: "justify",        kind: "deploy" },
     { from: "install", to: "tilt-lab",       kind: "deploy" },
     { from: "install", to: "lotus",          kind: "deploy" },
-    { from: "install", to: "ghostty",        kind: "deploy" },
-    { from: "install", to: "cmux-settings",  kind: "deploy", dead: true }
+    { from: "install", to: "ghostty",        kind: "deploy" }
   ];
 
   var FINDINGS = [
-    ["`install.sh:364` points at `ghostty/shaders`, a directory that does not exist. The real shaders live at the top-level `shaders/`. The TUI 'open directory' action for shaders silently fails, and has been failing quietly for as long as the path has been wrong.", false],
-    ["The `.justify` marker file still references the pre-rename `/public/improv-core.js` path. The rename to justify never reached it.", false],
-    ["`public/justify-core.js` is tracked in git despite `.gitignore:5` listing it. The ignore rule never took effect because the file was committed before the rule was written, and git does not retroactively untrack.", false],
-    ["`~/.claude/skills/improv/SKILL.md` is deployed on this machine with no corresponding source in the repo. It is an orphan from the rename, and because install.sh only ever adds symlinks, it will never be cleaned up.", false],
+    ["Resolved (Wave 1, U1). `install.sh` pointed at `ghostty/shaders`, a directory that does not exist - the real shaders live at the top-level `shaders/`, so the TUI 'open directory' action failed silently. install.sh now points at `$REPO_DIR/shaders`.", true],
+    ["Resolved (Wave 1, U2). The `.justify` marker file still pointed at the pre-rename core script path; it now reads `/public/justify-core.js`.", true],
+    ["Resolved (Wave 1, U2). `public/justify-core.js` was tracked in git despite `.gitignore:5` (committed before the ignore rule, so it never took effect). Wave 1 git-rm-cached it, so it is no longer tracked - a gitignored generated build artifact that exists only where built and is absent from a fresh clone.", true],
+    ["`~/.claude/skills/improv/SKILL.md` is deployed on this machine with no corresponding source in the repo - an orphan from the rename. Wave 1 (U1) added a human-gated, dry-run-default prune (`prune_broken_skill_symlinks`) so install.sh can now remove such orphans, but it is not applied automatically, so an already-deployed orphan persists until someone runs the prune.", false],
     ["`sidecoach/mcp-server` is built and wired to nothing. Nobody runs it. The only thing keeping it in the tree is the parity contract in `sidecoach_lanes.py`, which is bound to its keyword-resolver.ts. Deleting the server breaks a hook that never calls it.", false],
     ["`beats/mcp-server` is also inert, but this one is deliberate: it exists as an install hint, not as a live server. Recorded here so nobody 'fixes' it.", true],
     ["The marketing site is not actually static. Seven of its pages hard-code `http://localhost:9223/justify-core.js`, so every one of them degrades to a failed script load whenever the justify daemon is down. A static site that depends on a running daemon is not a static site. As of 2026-07-13 those pages are no longer committed here - they live in ~/Documents/Github/improv-site - so the daemon dependency now crosses a repo boundary and nothing in this tree can fix it.", false],
-    ["`sidecoach-sessionstart.sh:4` hard-codes an absolute `/Users/spare3` path. It is the one hook in the repo that breaks on any other machine. The beats hooks derive their repo root correctly, which proves the pattern is known and simply was not applied here.", false],
-    ["`reference/serve.py` is a copy of marketing-site's `serve.py`, carrying the same default port 4830. Only convention, not code, keeps the two sites from colliding on the same port.", false],
+    ["Resolved (Wave 1, U4). `sidecoach-sessionstart.sh` hard-coded an absolute `/Users/spare3` path - the one hook in the repo that broke on any other machine. It now derives the repo root from its own real path through the deploy symlink, like the beats hooks, with no machine-specific literal.", true],
+    ["Resolved (Wave 1, U5). `reference/serve.py` was a copy of marketing-site's `serve.py` and inherited its default port, so only convention kept the two sites from colliding. Its default is now 4831, distinct from marketing-site.", true],
     ["cmux is the highest-risk dependency in the tree: an external binary, unpinned and unvendored, with 10 in-repo consumers. If its CLI changes, ten hooks break simultaneously and nothing in this repo can repair itself.", false],
-    ["The sidecoach dogfood scripts and the TASKS.md marketing-site area now point at a path that left the repo. `dogfood-craft-step2.ts:10` and `dogfood-teach-step1.ts:8` both hard-code the absolute `/Users/spare3/Documents/Github/improv/marketing-site`, and `TASKS.md:14` still heads a marketing-site area. The site moved to ~/Documents/Github/improv-site on 2026-07-13. These are documented dead references, deliberately left in place pending the separate site workstream. Worse than a clean break: `dogfood-teach-step1.ts:14-15` calls mkdirSync when the path is missing, so running it will silently recreate an empty marketing-site/ directory inside this repo instead of failing loudly.", false]
+    ["Partly resolved (Wave 1, U5). The sidecoach dogfood scripts still name the departed `/Users/spare3/Documents/Github/improv/marketing-site` (`dogfood-craft-step2.ts:10`, `dogfood-teach-step1.ts:8`); the site moved to ~/Documents/Github/improv-site. But the silent mkdirSync that used to recreate an empty ghost `marketing-site/` here is gone - `dogfood-teach-step1.ts` now throws a clear error naming improv-site instead of failing quietly. `TASKS.md` still heads a marketing-site area, now annotated to point at the separate improv-site project.", false]
   ];
 
   // ---------------------------------------------------------------- render
@@ -707,8 +673,7 @@
     tool: "Tool with dependents",
     leaf: "Leaf consumer",
     standalone: "Standalone",
-    supportive: "Supportive",
-    island: "Island"
+    supportive: "Supportive"
   };
 
   function el(tag, cls, text) {
@@ -791,9 +756,6 @@
 
   var saRoot = document.getElementById("standalone");
   STANDALONE.forEach(function (id) { saRoot.appendChild(buildNode(id)); });
-
-  var isRoot = document.getElementById("islands");
-  ISLANDS.forEach(function (id) { isRoot.appendChild(buildNode(id)); });
 
   var fRoot = document.getElementById("findings");
   FINDINGS.forEach(function (f) {
