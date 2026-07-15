@@ -248,6 +248,12 @@
             "command": "~/.claude/hooks/memory-compact.sh",
             "timeout": 5,
             "statusMessage": "Keeping the beats index under load budget..."
+          },
+          {
+            "type": "command",
+            "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/push-ahead-check.sh",
+            "timeout": 5,
+            "statusMessage": "Checking for unpushed commits..."
           }
         ]
       },
@@ -511,6 +517,15 @@
             "type": "command",
             "command": "~/.claude/hooks/justify-watch-guard.sh",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/teammate-relay-stop.sh",
+            "timeout": 5
           }
         ]
       },
