@@ -1,6 +1,6 @@
 ---
-name: sidecoach/mcp-server fate - RETIRE (dead at runtime, one-line test tether)
-description: U9 research - sidecoach/mcp-server has zero runtime consumers; its only tether is a single required-suite line in the engine test runner. Recommend RETIRE with an exact ordered removal sequence; the parity intent survives in the two live classifier copies.
+name: sidecoach/mcp-server fate - RULED WIRE-UP (Jonah 2026-07-15; built as external surface, never wired)
+description: U9 research recommended RETIRE, but Jonah RULED WIRE-IT-UP on 2026-07-15 given the origin (built T-0018 as the hardened model-facing MCP surface, then never connected to a consumer). The retire analysis is retained as the weighed-and-rejected alternative; wire-up is specced in the 2026-07-15 change plan.
 type: decision
 relates_to: [session_2026-07-14_parallel-dispatch-plan.md, reference_component_dependency_map.md]
 author_human: Jonah Cohen
@@ -10,7 +10,15 @@ verified: code-read + grep (analysis only; no code changed, removal steps NOT ex
 confidence: high
 ---
 
+> **RULING (2026-07-15, Jonah): WIRE IT UP, not retire.** The archaeology (section 0) showed the external MCP surface was a real, sustained intent, not an accident - so Jonah chose to realize it: register the server portably and make it live, rather than delete it. Everything below from section 1 on is the RETIRE analysis, retained as the record of the alternative that was weighed and rejected. Wire-up work is specced in docs/plans/2026-07-15-cmux-fable-scoping-and-sidecoach-wireup.md.
+
 Authored against commit 0b65e983. Unit 9 of docs/plans/2026-07-14-parallel-dispatch-plan.md, addressing finding 5 ("sidecoach/mcp-server is built but wired to nothing; only the parity contract in sidecoach_lanes.py keeps it alive"). Read-only research; the ruling (retire vs wire-up) is Jonah's.
+
+## 0. Origin - why it was built (2026-07-15 archaeology, folded in)
+
+Built as task T-0018 on 2026-05-28 (origin commit 577b10cc) on a direct Jonah mandate, quoted in session_2026-05-28_t0018_mcp_server.md:10-13: "do not build me a flimsy custom MCP server. I need it hardened to work when expected with zero drops and zero failures. Make it the best." Intended purpose (sidecoach/mcp-server/DESIGN.md:24-27, README.md:3-11): expose sidecoach's already-existing rule-based building blocks - the verbs, modes/lanes, flow registry, polish/domain/taste validators, keyword->intent resolver, cost ledger, cheatsheet - as a hardened, protocol-conformant MCP tool surface any MCP host could call directly (Claude Code via settings.json `mcpServers`, the desktop app, a test harness), not just the in-process orchestrator. Explicit non-goal from day one (DESIGN.md:51-55): no LLM invocation - rule-based, read-mostly.
+
+The tension that makes this a real decision and not a cleanup: it was not abandoned early. As recently as 2026-06-14 (session_2026-06-14_p4d-mcp-migration-exec.md) it was actively EXTENDED via TDD - classify_intent / list_lanes / sidecoach_lane added - and described there (line 10) as "the model-facing MCP server." Real, sustained investment went into it as the intended model-facing surface, yet it was never wired to an actual runtime consumer (no root `.mcp.json` ever registered it). So RETIRE = abandoning the external-MCP-surface vision; WIRE-UP = finally realizing it. Either way the capabilities themselves are not lost - they are triplicated into the two LIVE copies (Python hook + engine TS). The question is purely whether the external, host-callable surface is still wanted.
 
 **Choice recommended: RETIRE the `sidecoach/mcp-server` package.**
 

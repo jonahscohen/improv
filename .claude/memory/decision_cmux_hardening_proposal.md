@@ -3,6 +3,7 @@ name: cmux hardening proposal (finding 10 + cmux/settings.json disposition)
 description: Coupling map of the 8 cmux-touching hooks with file:line evidence, three hardening options, and the cmux/settings.json keep-vs-retire ruling; recommends per-hook fail-soft + a WARN-only version-drift check, rejects vendoring, keeps settings.json.
 type: decision
 relates_to: [session_2026-07-14_parallel-dispatch-plan.md, reference_cmux_team_init_orphan_bug.md, reference_claude_code_surface_detection.md]
+superseded_by: session_2026-07-15_cmux-fable-alacarte-leak.md
 author_human: Jonah Cohen
 author_model: claude-opus-4.8
 source: session
