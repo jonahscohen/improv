@@ -26,5 +26,9 @@ Two buckets of Codex catches this session:
 
 **Calibration for future me:** the WORK held up (5 units TDD'd, 14/14 suites green, concurrency correct, clean integration). The failure was planning-consistency in first drafts, caught before execution. The bar to raise is my own first-pass rigor, not the model's coding ability. When Codex's findings are dominated by bucket-2 (my own inconsistencies), that is the signal I skipped self-review.
 
+## The mechanism was built (2026-07-15)
+Jonah chose "build the plan-consistency lint hook, but run it by Codex first." Applied the corrected discipline to the hook itself: (1) I wrote a self-reviewed design spec (and honestly flagged its limitation - it catches intra-unit drift, NOT the cross-unit U11/U12 state-coupling class); (2) ran the DESIGN by Codex PRE-BUILD (Codex found the raw heuristics too naive - whole-prompt comparison over-fires, bare "after" is a dangerous contradiction signal - and I refined before building); (3) delegated the build to an opus-executor which TDD'd it + ran Codex 3 rounds to GO; (4) I independently VERIFIED rather than relaying: ran the 27 tests myself (green), linted the real plan doc myself (LOW, zero HIGH - no false block on ourselves), confirmed settings.json valid + registered, spot-read the detectors + the correctly-declined "after" finding. Hook = claude/hooks/plan-consistency-lint.sh (Stop event; Detector A = Owns vs dispatch-prompt ownership-clause drift; Detector B = scope-aware sequencing contradiction with a `<!-- plan-lint: sequencing-ok -->` escape). Committed to wave1-debt-burndown. Activation needs ~/.claude/settings.json synced + a session restart (repo source registered, live copy not).
+
 ## Files touched
 - .claude/memory/feedback_self_review_before_codex.md (this beat) + MEMORY.md
+- claude/hooks/plan-consistency-lint.sh + test-plan-consistency-lint.sh + claude/settings.json (the built hook)

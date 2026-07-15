@@ -500,6 +500,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "~/.claude/hooks/plan-consistency-lint.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
             "command": "~/.claude/hooks/justify-watch-guard.sh",
             "timeout": 10
           }
