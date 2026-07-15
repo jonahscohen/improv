@@ -224,6 +224,57 @@ else echo "FAIL: post-clear .md write RE-ARMED the flag (headline)"; FAIL_LABELS
 restore_vflag
 
 echo ""
+echo "===== REPO-SOURCE HOOK DIR EXEMPTION (U7b issue 3): editing claude/hooks/*.sh must NOT arm ====="
+# EXEMPT_PATHS listed only the dot-prefixed deploy dir `.claude/hooks/`, so a Write/Edit
+# to the repo SOURCE dir `claude/hooks/` - or a worktree path ending in claude/hooks/ -
+# armed the visual-verify flag. Editing a shell hook is not a rendered-UI change; it has
+# nothing to screenshot. Assert the arm flag directly through the Write-tool (file_path)
+# branch AND the Bash (sed -i) branch. Own save/restore so a live session is safe.
+VF2="$HOME/.claude/.needs-verification"
+__VF2_EXISTED=no; __VF2_SAVED=""
+if [ -f "$VF2" ]; then __VF2_EXISTED=yes; __VF2_SAVED="$(cat "$VF2" 2>/dev/null)"; fi
+restore_vf2() { if [ "$__VF2_EXISTED" = yes ]; then printf '%s' "$__VF2_SAVED" > "$VF2"; else rm -f "$VF2"; fi; }
+
+# Feed a Write tool_input.file_path, report whether the arm flag is now set.
+arm_state_path() {
+  rm -f "$VF2"
+  python3 -c 'import json,sys; print(json.dumps({"tool_name":"Write","tool_input":{"file_path":sys.argv[1]}}))' "$1" \
+    | bash "$HOOK" >/dev/null 2>&1
+  [ -f "$VF2" ] && echo armed || echo clear
+}
+assert_path_no_arm() {
+  local got; got="$(arm_state_path "$2")"
+  if [ "$got" = clear ]; then echo "PASS: $1"; ((PASS++));
+  else echo "FAIL: $1  (expected clear, flag=$got)"; FAIL_LABELS+=("$1"); ((FAIL++)); fi
+}
+assert_path_arms() {
+  local got; got="$(arm_state_path "$2")"
+  if [ "$got" = armed ]; then echo "PASS: $1"; ((PASS++));
+  else echo "FAIL: $1  (expected armed, flag=$got)"; FAIL_LABELS+=("$1"); ((FAIL++)); fi
+}
+
+assert_path_no_arm "repo-source claude/hooks/*.sh does not arm"     "/Users/x/Documents/Github/improv/claude/hooks/memory-nudge.sh"
+assert_path_no_arm "worktree .../claude/hooks/*.sh does not arm"    "/Users/x/Documents/Github/improv-wt/u7b/claude/hooks/verify-before-done.sh"
+assert_path_no_arm "dotfiles .claude/hooks/*.sh still does not arm" "/Users/x/.claude/hooks/bash-guard.sh"
+# Bash-branch path token: sed -i on a hook source must not arm either.
+assert_no_rearm    "sed -i on a repo-source hook does not arm"      "sed -i 's/a/b/' claude/hooks/memory-nudge.sh"
+# Controls: a real UI source edit MUST still arm.
+assert_path_arms   "UI src/*.tsx still arms (control)"              "/Users/x/proj/src/App.tsx"
+assert_path_arms   "styles/*.css still arms (control)"              "/Users/x/proj/src/styles/app.css"
+# The exemption is a path SEGMENT, not a bare substring: a UI path that merely EMBEDS
+# the letters (no `/` boundary before `claude`) must still arm (Codex U7b finding 3).
+assert_path_arms   "src/myclaude/hooks/*.tsx still arms (embedded, not a segment)" "/Users/x/proj/src/myclaude/hooks/App.tsx"
+assert_path_arms   "vendor/aclaude/hooks/*.css still arms (embedded)"              "/Users/x/proj/vendor/aclaude/hooks/theme.css"
+# The exemption is scoped to NON-visual files: a real `claude/hooks/` path segment holding
+# a VISUAL file is still renderable UI and must arm (Codex U7b finding 3), while a hook
+# SCRIPT under any such segment stays exempt (it has no UI to screenshot).
+assert_path_arms   "src/claude/hooks/App.tsx arms (real segment but VISUAL)"      "/Users/x/proj/src/claude/hooks/App.tsx"
+assert_path_arms   "vendor/claude/hooks/theme.css arms (real segment but VISUAL)" "/Users/x/proj/vendor/claude/hooks/theme.css"
+assert_path_no_arm ".sh under a nested claude/hooks/ stays exempt (a hook script)" "/Users/x/proj/tools/claude/hooks/helper.sh"
+
+restore_vf2
+
+echo ""
 echo "============================================================"
 echo "RESULTS: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

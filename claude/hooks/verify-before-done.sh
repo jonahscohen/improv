@@ -23,7 +23,7 @@ VERIFY_FLAG="$HOME/.claude/.needs-verification"
 
 INPUT=$(cat)
 printf '%s' "$INPUT" | python3 -c '
-import json, sys, os, time
+import json, sys, os, time, re
 
 # Debounce window: skip nudge text if a screenshot Read happened within this many seconds.
 # Flag-setting is unaffected; only the additionalContext string is suppressed.
@@ -97,6 +97,15 @@ CODE_EXTS = {
     ".sh", ".zsh", ".bash"
 }
 
+# Visual files render UI - a change to one demands a REAL screenshot, never a
+# curl/test/log off-ramp. Subset of CODE_EXTS. (Defined ahead of the exemption logic
+# because the hook-dir exemption below is scoped to NON-visual files.)
+VISUAL_EXTS = {
+    ".css", ".scss", ".sass", ".less",
+    ".html", ".htm", ".ejs", ".hbs", ".pug", ".twig",
+    ".vue", ".svelte", ".jsx", ".tsx",
+}
+
 # Paths exempt from verification requirement. Everything under a `/eval/` dir is
 # detector TEST INPUTS / harness data (Sidecoach Phase 2 scanner corpus + migration
 # harness: planted-defect / known-good / candidate / golden-fixture HTML+CSS that the
@@ -104,32 +113,45 @@ CODE_EXTS = {
 # not trip the visual-verify gate. Also `__fixtures__` / `test-fixtures` anywhere.
 # (added 2026-06-23; Jonah, Sidecoach reimplement-and-own eval; broadened from the
 # per-subdir list after migration-harness/inputs/ slipped through.)
-EXEMPT_PATHS = [".claude/memory/", "MEMORY.md", ".claude/hooks/", ".claude/skills/",
+EXEMPT_PATHS = [".claude/memory/", "MEMORY.md", ".claude/skills/",
                 "/eval/", "/__fixtures__/", "/test-fixtures/"]
+
+# The hook directory, matched as a real path SEGMENT in any of its shapes: the dotfiles
+# DEPLOY dir `.claude/hooks/`, the repo SOURCE dir `claude/hooks/`, and any worktree path
+# ending in `.../claude/hooks/`. Anchored to a `/` or start (with an optional leading dot)
+# so it exempts a genuine hook dir but NOT a UI path that merely embeds the letters - e.g.
+# `src/myclaude/hooks/App.tsx` stays ARMED. Editing a shell hook is not a rendered-UI
+# change and has nothing to screenshot (U7b issue 3: a worktree edit to claude/hooks/*.sh
+# falsely armed CODE FILE CHANGED because only the dot-prefixed deploy dir was exempt).
+_HOOK_DIR_RE = re.compile(r"(^|/)\.?claude/hooks/")
+
+def is_exempt(path):
+    if any(exempt in path for exempt in EXEMPT_PATHS):
+        return True
+    # A file under a claude/hooks/ segment is exempt only if it is NOT a VISUAL file.
+    # Hook scripts (.sh/.py/.ts/...) have no UI to screenshot, but a VISUAL file that
+    # merely lives under such a path - a contrived `src/claude/hooks/App.tsx` or
+    # `vendor/claude/hooks/theme.css` - IS renderable and must still arm the gate
+    # (Codex U7b review: the segment anchor alone was still too broad for real UI files).
+    if _HOOK_DIR_RE.search(path):
+        _, ext = os.path.splitext(path)
+        if ext.lower() not in VISUAL_EXTS:
+            return True
+    return False
 
 def is_code_file(path):
     if not path:
         return False
-    for exempt in EXEMPT_PATHS:
-        if exempt in path:
-            return False
+    if is_exempt(path):
+        return False
     _, ext = os.path.splitext(path)
     return ext.lower() in CODE_EXTS
-
-# Visual files render UI - a change to one demands a REAL screenshot, never a
-# curl/test/log off-ramp. Subset of CODE_EXTS.
-VISUAL_EXTS = {
-    ".css", ".scss", ".sass", ".less",
-    ".html", ".htm", ".ejs", ".hbs", ".pug", ".twig",
-    ".vue", ".svelte", ".jsx", ".tsx",
-}
 
 def is_visual_file(path):
     if not path:
         return False
-    for exempt in EXEMPT_PATHS:
-        if exempt in path:
-            return False
+    if is_exempt(path):
+        return False
     _, ext = os.path.splitext(path)
     return ext.lower() in VISUAL_EXTS
 
