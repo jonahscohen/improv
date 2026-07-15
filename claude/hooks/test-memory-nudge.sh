@@ -12,12 +12,15 @@
 
 set -u
 HOOK="$(cd "$(dirname "$0")" && pwd)/memory-nudge.sh"
-FLAG="$HOME/.claude/.memory-dirty"
 PASS=0; FAIL=0
 
-# Use an isolated temp flag so we never touch the real one.
+# Fully isolated HOME so the real ~/.claude/.memory-dirty is never touched. Every hook
+# invocation below runs with HOME="$TMPHOME", and FLAG points inside it, so this suite
+# is hermetic even when a live session has its own dirty flag set (Codex review, U7b).
 TMPHOME="$(mktemp -d)"
+mkdir -p "$TMPHOME/.claude"
 trap 'rm -rf "$TMPHOME"' EXIT
+FLAG="$TMPHOME/.claude/.memory-dirty"
 
 state() { [ -f "$FLAG" ] && echo "DIRTY" || echo "clean"; }
 
@@ -25,7 +28,7 @@ state() { [ -f "$FLAG" ] && echo "DIRTY" || echo "clean"; }
 check() {
   if [ "$2" = dirty ]; then : > "$FLAG"; else rm -f "$FLAG"; fi
   printf '%s' "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":$1}}" \
-    | bash "$HOOK" >/dev/null 2>&1
+    | HOME="$TMPHOME" bash "$HOOK" >/dev/null 2>&1
   local got; got="$(state)"
   if [ "$got" = "$3" ]; then
     PASS=$((PASS+1)); echo "PASS  $4  -> $got"
@@ -38,7 +41,7 @@ check() {
 check_path() {
   if [ "$2" = dirty ]; then : > "$FLAG"; else rm -f "$FLAG"; fi
   printf '%s' "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$1\"}}" \
-    | bash "$HOOK" >/dev/null 2>&1
+    | HOME="$TMPHOME" bash "$HOOK" >/dev/null 2>&1
   local got; got="$(state)"
   if [ "$got" = "$3" ]; then
     PASS=$((PASS+1)); echo "PASS  $4  -> $got"
@@ -89,6 +92,53 @@ echo "--- Write/Edit path branch ---"
 check_path "/Users/x/proj/.claude/memory/session_x.md" clean clean "beat write clears (starts clean, stays clean)"
 check_path "/Users/x/proj/.claude/memory/MEMORY.md"    dirty clean "MEMORY.md write clears"
 check_path "/Users/x/proj/src/app.ts"                  clean DIRTY "source-file write dirties"
+
+echo "--- install VERB vs install-NAME substring (U7b issue 1) ---"
+# The write-token list carried the bare substring "install", so any command that
+# merely NAMED install.sh / test-install-*.sh / an -install- path was misread as a
+# project-file write and set .memory-dirty (blocked U1's commit 3x during Wave 1).
+# The fix matches the coreutils `install` VERB in command position (start, or after
+# a ; && || | separator) followed by whitespace - the file-writing form - and no
+# longer the substring. A real `install` write still dirties.
+check "\"bash install.sh --dry-run\""                     clean clean "running install.sh (name only) does NOT dirty"
+check "\"bash claude/hooks/test-install-hook-deploy.sh\"" clean clean "running test-install-*.sh (name only) does NOT dirty"
+check "\"./install.sh\""                                  clean clean "./install.sh (name only) does NOT dirty"
+check "\"npm uninstall left-pad\""                        clean clean "npm uninstall (install as inner substring) does NOT dirty"
+check "\"grep -n installer install.sh\""                  clean clean "read-only grep naming installer/install.sh does NOT dirty"
+# Argument-position `install` (NOT the segment's command word) must NOT dirty -
+# command-position matching, not the bare substring (Codex U7b finding 1).
+check "\"npm help install react\""                        clean clean "npm help install <arg> does NOT dirty (install is an argument)"
+check "\"node scripts/check.js install\""                 clean clean "install as a trailing argument does NOT dirty"
+check "\"printf %s install\""                             clean clean "install echoed as an argument does NOT dirty"
+# Real install VERB in command position - bare, wrapped, or path-qualified - MUST
+# dirty. Path-qualified forms were the dangerous under-match (Codex U7b finding 2).
+check "\"install -m 0755 bin/tool /usr/local/bin/tool\""  clean DIRTY "coreutils install VERB (leading) still dirties"
+check "\"sudo install -d /opt/app\""                      clean DIRTY "install verb behind sudo still dirties"
+check "\"/usr/bin/install -m 644 a.conf /etc/a.conf\""    clean DIRTY "path-qualified /usr/bin/install still dirties"
+check "\"./bin/install -m 644 a b\""                      clean DIRTY "relative-path ./bin/install still dirties"
+check "\"make build && install -m 644 a.conf /etc/a\""    clean DIRTY "install verb after && separator still dirties"
+check "\"VER=1 install -m 644 a b\""                      clean DIRTY "install verb after a VAR= assignment still dirties"
+# Wrapper-carried installs (Codex U7b finding 2): path-qualified wrappers and env VAR=
+# operands must not hide a real install write.
+check "\"env FOO=bar install -m 644 a b\""                clean DIRTY "env with a VAR= operand before install still dirties"
+check "\"/usr/bin/env install -m 644 a b\""               clean DIRTY "path-qualified /usr/bin/env install still dirties"
+# KNOWN GAP (accepted, flagged for lead): a wrapper VALUE-flag that eats the next word
+# (sudo -u root install) is not detected - that needs per-flag arg parsing this simple
+# hook does not carry. Such forms target system dirs, not project files. Pinned so the
+# behavior is visible if a future change closes it.
+check "\"sudo -u root install -m 644 a b\""               clean clean "KNOWN GAP: sudo VALUE-flag before install is not detected"
+
+echo "--- read-only memory command must NOT clear a dirty flag (U7b finding 1) ---"
+# The clear side fires only on a real WRITE into a memory path. A read-only command that
+# merely NAMES one must leave a legitimately-dirty flag DIRTY - otherwise a source edit
+# followed by `ls .claude/memory` would slip a beat-less commit past the gate.
+check "\"ls .claude/memory/\""                            dirty DIRTY "ls of a memory dir does NOT clear"
+check "\"grep -rn foo .claude/memory/\""                  dirty DIRTY "grep inside a memory dir does NOT clear"
+check "\"cat .claude/memory/MEMORY.md\""                  dirty DIRTY "cat of a memory file does NOT clear"
+check "\"git status .claude/memory/\""                    dirty DIRTY "git status of a memory path does NOT clear"
+# Controls: a real WRITE into memory still clears (the intended beat-write path).
+check "\"cp /tmp/b.md .claude/memory/session_x.md\""      dirty clean "cp a beat into memory still clears"
+check "\"cat /tmp/b.md >> .claude/memory/MEMORY.md\""     dirty clean "redirect-append into MEMORY.md still clears"
 
 rm -f "$FLAG"
 echo ""

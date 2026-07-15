@@ -127,12 +127,56 @@ if tool == "Bash":
     # token and dirties (out.txt is a real sink), and `tee /dev/null.log` / `/dev/nullx`
     # (a real named path, not the device) are not matched either.
     cmd_scan = _re.sub(r"\btee(?:\s+-\S+)*\s+/dev/null(?=\s*(?:$|[|&;)]|<|\d*>))", " ", cmd_scan)
-    # Commands that write files
-    writes = ["cp ", "mv ", "python3 <<", "cat <<", "> ", ">>", "tee ", "install",
+    # Commands that write files.
+    writes = ["cp ", "mv ", "python3 <<", "cat <<", "> ", ">>", "tee ",
               "sed -i", "chmod", "ln -s", "mkdir", "touch ", "rm "]
-    is_write = any(w in cmd_scan for w in writes) and not is_pure_git
+    # The coreutils `install` file-writing verb, matched only in COMMAND POSITION -
+    # the first real word of a segment (past VAR= assignments and sudo/env-style
+    # wrappers), optionally path-qualified (/usr/bin/install, ./bin/install).
+    # ROOT-CAUSE FIX (U7b issue 1): the old bare substring "install" matched every
+    # command that merely NAMED an install script - `bash install.sh`, `./install.sh`,
+    # `bash claude/hooks/test-install-hook-deploy.sh`, `npm uninstall x`, even
+    # `npm help install topic` - so a read-only run of the installer or its test suite
+    # falsely set .memory-dirty and blocked worktree commits (Wave 1: U1 hit this 3x).
+    # Command-position plus a trailing \s is what separates the real verb from those:
+    #   - install.sh / ./install.sh (a dot follows the command word - no \s)
+    #   - test-install-*.sh, `npm help install topic`, `node x.js install` (install is
+    #     an ARGUMENT, not the segment command word)
+    #   - installer / uninstall / reinstall (install is not the whole command word)
+    # are all excluded, while `install -m ...`, `sudo install -d ...`, a path-qualified
+    # `/usr/bin/install ...`, and env-wrapped `env FOO=bar install ...` /
+    # `/usr/bin/env install ...` still dirty (the DANGEROUS direction is a real install
+    # write that fails to dirty, so the wrapper clause allows each wrapper to be
+    # path-qualified and to carry -flags and VAR= operands). Runs over _segments
+    # (already split on && || ; | \n) so a real install after a separator -
+    # `make x && install -m 644 a /etc/a` - is caught too. A false-dirty is the safe
+    # direction (it just asks for a beat). KNOWN GAP (Codex U7b review, accepted): a
+    # wrapper VALUE-flag that consumes the next word - `sudo -u root install ...`,
+    # `timeout -s TERM 5 install ...` - is not detected (that needs the per-flag
+    # arg-parsing bash-guard.sh carries in head_name; not replicated in this simpler
+    # hook). Such forms almost always target system dirs, not project files, so the
+    # miss is low-risk; flagged for the lead rather than over-fitting the regex.
+    _install_cmd = _re.compile(
+        r"^\s*(?:[A-Za-z_][\w]*=\S*\s+)*"
+        r"(?:(?:\S*/)?(?:sudo|env|command|exec|time|nice|nohup|xargs|timeout|setsid|stdbuf)"
+        r"(?:\s+-\S+)*(?:\s+[A-Za-z_][\w]*=\S*)*\s+)*"
+        r"(?:\S*/)?install\s")
+    is_install_verb = any(_install_cmd.search(seg) for seg in _segments)
+    is_write = (any(w in cmd_scan for w in writes) or is_install_verb) and not is_pure_git
 
-    if is_memory:
+    # Clear the dirty flag only on a real WRITE into a memory path - a `cp`/`tee`/redirect
+    # /`sed -i` whose path is under .claude/memory or MEMORY.md. A READ-ONLY command that
+    # merely NAMES a memory path (`ls .claude/memory`, `grep MEMORY.md docs/`,
+    # `cat .claude/memory/x.md`) must NOT clear a legitimately-dirty flag - that was a
+    # false-clean hole (Codex U7b review, High): source edited -> `ls .claude/memory` ->
+    # `git commit` slipped past the gate beat-less. Gating on is_write also matches issue
+    # 2 as written ("a recognized Bash WRITE INTO .claude/memory/ clears"). is_write is
+    # already `... and not is_pure_git`, so a commit message naming a memory path never
+    # clears. (Residual, accepted: a compound that writes a NON-memory file AND names a
+    # memory path in the same segment, e.g. `sed -i s/a/b/ src/app.ts && cp x .claude/
+    # memory/y`, still clears - separating write TARGETS from mere mentions needs the
+    # target parser bash-guard.sh carries; not replicated here. Flagged for the lead.)
+    if is_memory and is_write:
         try:
             os.remove(dirty_flag)
         except FileNotFoundError:
