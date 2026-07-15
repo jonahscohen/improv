@@ -60,11 +60,6 @@
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/cmux-close-guard.sh",
-            "timeout": 12
-          },
-          {
-            "type": "command",
             "command": "~/.claude/hooks/destructive-ops-guard.sh",
             "timeout": 5
           },
@@ -188,55 +183,13 @@
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/voice-mandate.sh",
-            "timeout": 5,
-            "statusMessage": "Checking voice output..."
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/team-reaper.sh session-start",
-            "timeout": 5,
-            "statusMessage": "Reaping orphaned teams..."
-          },
-          {
-            "type": "command",
             "command": "~/.claude/hooks/node-shim-heal.sh",
             "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/cmux-teammate-shim-heal.sh",
-            "timeout": 5,
-            "statusMessage": "Healing cmux teammate shim..."
           }
         ]
       },
       {
         "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/sidecoach-sessionstart.sh"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/sidecoach-preamble.sh",
-            "timeout": 5,
-            "statusMessage": "Loading project design context..."
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/reflect-nudge.sh",
-            "timeout": 5,
-            "statusMessage": "Checking reflection status..."
-          },
           {
             "type": "command",
             "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/consolidate-nudge.sh",
@@ -288,18 +241,6 @@
             "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/startup-check.sh",
             "timeout": 10,
             "statusMessage": "Reloading memory after compaction..."
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/voice-mandate.sh",
-            "timeout": 5,
-            "statusMessage": "Checking voice output..."
-          },
-          {
-            "type": "command",
-            "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/sidecoach-preamble.sh",
-            "timeout": 5,
-            "statusMessage": "Reloading project design context..."
           }
         ]
       }
@@ -310,16 +251,6 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/claude-surface.sh turn",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/resume-toggle.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/voice-toggle.sh",
             "timeout": 5
           },
           {
@@ -340,23 +271,9 @@
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/sidecoach-keyword.sh",
-            "timeout": 5,
-            "statusMessage": "Detecting sidecoach verbs..."
-          },
-          {
-            "type": "command",
             "command": "~/.claude/hooks/grounding-gate.sh",
             "timeout": 5,
             "statusMessage": "Grounding check (read code+beats before probing)..."
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/sidecoach-postuserp.sh"
           }
         ]
       },
@@ -408,11 +325,6 @@
             "type": "command",
             "command": "~/.claude/hooks/memory-compact.sh",
             "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/sidecoach-taste-gate.sh",
-            "timeout": 30
           }
         ]
       },
@@ -480,14 +392,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/sidecoach-postresponse.sh"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "~/.claude/hooks/multiple-choice-detect-stop.sh",
             "timeout": 10
           }
@@ -521,15 +425,6 @@
         ]
       },
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/teammate-relay-stop.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
         "matcher": "",
         "hooks": [
           {
@@ -544,22 +439,6 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/api-drift-stop.sh"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/resume-guard.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/team-reaper.sh session-end",
-            "timeout": 5
           }
         ]
       }

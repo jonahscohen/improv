@@ -443,6 +443,16 @@ FILES+=("<repo>/lotus/dist/ + mcp-server/dist/ (build)\n<repo>/lotus/node_module
 DIRS+=("$REPO_DIR/lotus")
 PICKS+=(0)
 
+# fable - orchestrator-only guard for the Fable model (cost control, Jonah
+# 2026-07-06). Opt-in; a no-op for every non-Fable session. One PreToolUse hook
+# + its shared detect-session-model dependency. No repo dir (hook-only).
+KEYS+=(fable)
+TITLES+=("Fable orchestrator-only guard")
+DESCS+=("Installs the fable-orchestrator-guard hook. When your SESSION model is Fable (claude-fable-5), Fable is orchestrator-only: its own Write/Edit/MultiEdit/NotebookEdit/Bash are blocked and it is directed to delegate production to an Opus teammate and review to Codex (cost control, authorized 2026-07-06). A complete no-op for every other model (Opus/Sonnet/Haiku) - your model choice is honored. Opt-in; wires one PreToolUse hook into settings.json and needs detect-session-model.sh (shared with the model-router).")
+FILES+=("~/.claude/hooks/fable-orchestrator-guard.sh\n~/.claude/hooks/detect-session-model.sh\n~/.claude/settings.json (1 PreToolUse hook)")
+DIRS+=("")
+PICKS+=(0)
+
 # Personal components - hidden from public TUI and --help. Surfaced only when
 # the maintainer passes --personal (undocumented, undocumented-on-purpose).
 # Lets one human keep cross-machine sync for ghostty and shaders without exposing
@@ -555,7 +565,7 @@ Usage:
 Components (for --only KEYS):
   Core:     brain, config, memory, statusline, nvm, ampersand
   Channels: discord, voice-input, voice-output
-  Tools:    cmux, sidecoach, reflect, task-list, tilt-lab, lotus
+  Tools:    cmux, fable, sidecoach, reflect, task-list, tilt-lab, lotus
   Skills:   skills (bundle), tactical-polish, component-gallery, fontshare,
             motion, design-build, curate, design-references, social-media,
             design-team, visual-effects, icon-source
@@ -908,6 +918,7 @@ detect_component() {
     tilt-lab)   [ -L "$HOME/.local/bin/tilt-lab" ] && echo active || echo not-installed ;;
     justify)     [ -d "$CLAUDE_DIR/justify" ] && echo active || echo not-installed ;;
     lotus)       [ -f "$CLAUDE_DIR/skills/lotus/SKILL.md" ] && [ -f "$REPO_DIR/lotus/mcp-server/dist/server.js" ] && echo active || echo not-installed ;;
+    fable)      [ -L "$CLAUDE_DIR/hooks/fable-orchestrator-guard.sh" ] && echo active || echo not-installed ;;
     # Design peer skills (a la carte). Each detects its own ~/.claude/skills/ dir.
     tactical-polish)   { [ -d "$CLAUDE_DIR/skills/tactical-polish" ] || compgen -G "$CLAUDE_DIR/skills/*interfaces*" >/dev/null; } && echo active || echo not-installed ;;
     component-gallery) [ -d "$CLAUDE_DIR/skills/component-gallery-reference" ] && echo active || echo not-installed ;;
@@ -1236,28 +1247,27 @@ deactivate_cmux() {
     sed -i.bak '/# === improv:claude-teams:begin ===/,/# === improv:claude-teams:end ===/d' "$ZSHRC"
     rm -f "$ZSHRC.bak"
   fi
-  # Remove resume hooks
-  [ -L "$CLAUDE_DIR/hooks/resume-guard.sh" ] && rm -f "$CLAUDE_DIR/hooks/resume-guard.sh"
-  [ -L "$CLAUDE_DIR/hooks/resume-toggle.sh" ] && rm -f "$CLAUDE_DIR/hooks/resume-toggle.sh"
+  # Remove cmux hook symlinks + the teammate tmux-shim dir
+  local f
+  for f in resume-guard.sh resume-toggle.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh team-reaper.sh teammate-relay-stop.sh; do
+    rm -f "$CLAUDE_DIR/hooks/$f"
+  done
   [ -L "$CLAUDE_DIR/toggle-resume.sh" ] && rm -f "$CLAUDE_DIR/toggle-resume.sh"
   rm -f "$CLAUDE_DIR/.no-auto-resume"
-  # Remove resume hooks from settings.json
+  [ -L "$CLAUDE_DIR/cmux" ] && rm -f "$CLAUDE_DIR/cmux"
+  # Remove ALL cmux hooks from settings.json (strip by basename across every event)
   if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
     python3 -c "
 import json
 p = '$SETTINGS_JSON'
 with open(p) as f: d = json.load(f)
 hooks = d.get('hooks', {})
-GUARD_CMD = '~/.claude/hooks/resume-guard.sh'
-TOGGLE_CMD = '~/.claude/hooks/resume-toggle.sh'
-for event in ['SessionEnd']:
-    for entry in hooks.get(event, []):
-        hl = entry.get('hooks', [])
-        entry['hooks'] = [h for h in hl if h.get('command') != GUARD_CMD]
-for event in ['UserPromptSubmit']:
-    for entry in hooks.get(event, []):
-        hl = entry.get('hooks', [])
-        entry['hooks'] = [h for h in hl if h.get('command') != TOGGLE_CMD]
+NAMES = ['resume-guard.sh', 'resume-toggle.sh', 'cmux-close-guard.sh', 'cmux-teammate-shim-heal.sh', 'team-reaper.sh', 'teammate-relay-stop.sh']
+for ev in list(hooks.keys()):
+    for g in hooks.get(ev, []):
+        g['hooks'] = [h for h in g.get('hooks', []) if not any(n in h.get('command', '') for n in NAMES)]
+    hooks[ev] = [g for g in hooks[ev] if g.get('hooks')]
+    if not hooks[ev]: del hooks[ev]
 with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 "
   fi
@@ -1284,6 +1294,21 @@ deactivate_reflect() {
   # link (repo moved or deleted) would survive deactivation forever. `rm -f` removes a
   # dangling link and still exits 0 when the path is absent.
   rm -f "$CLAUDE_DIR/hooks/reflect-nudge.sh"
+  # Strip reflect-nudge from settings.json SessionStart (block-wired now).
+  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
+    python3 -c "
+import json
+p = '$SETTINGS_JSON'
+with open(p) as f: d = json.load(f)
+hooks = d.get('hooks', {})
+for entry in hooks.get('SessionStart', []):
+    entry['hooks'] = [h for h in entry.get('hooks', []) if 'reflect-nudge' not in h.get('command', '')]
+if 'SessionStart' in hooks:
+    hooks['SessionStart'] = [g for g in hooks['SessionStart'] if g.get('hooks')]
+    if not hooks['SessionStart']: del hooks['SessionStart']
+with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
+"
+  fi
   [ -f "$CLAUDE_DIR/last-reflect-timestamp" ] && rm -f "$CLAUDE_DIR/last-reflect-timestamp"
   # Scheduled weekly reflect (T-0045): unload the user agent if loaded, then
   # remove the templated plist and the hook. bootout is user-initiated teardown
@@ -1304,7 +1329,7 @@ deactivate_task_list() {
 deactivate_sidecoach() {
   [ -d "$CLAUDE_DIR/skills/sidecoach" ] && rm -rf "$CLAUDE_DIR/skills/sidecoach"
   local f
-  for f in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh sidecoach-keyword.sh sidecoach-preamble.sh sidecoach-verbs.json sidecoach-lanes.json sidecoach-intent.json sidecoach_lanes.py; do
+  for f in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh sidecoach-keyword.sh sidecoach-preamble.sh sidecoach-taste-gate.sh sidecoach-verbs.json sidecoach-lanes.json sidecoach-intent.json sidecoach_lanes.py; do
     [ -L "$CLAUDE_DIR/hooks/$f" ] && rm -f "$CLAUDE_DIR/hooks/$f"
   done
   [ -L "$HOME/.local/bin/sidecoach" ] && rm -f "$HOME/.local/bin/sidecoach"
@@ -1315,7 +1340,7 @@ import json
 p = '$SETTINGS_JSON'
 with open(p) as f: d = json.load(f)
 hooks = d.get('hooks', {})
-for event in ['SessionStart', 'UserPromptSubmit', 'Stop']:
+for event in ['SessionStart', 'UserPromptSubmit', 'Stop', 'PostCompact', 'PostToolUse']:
     out = []
     for entry in hooks.get(event, []):
         hl = [h for h in entry.get('hooks', []) if 'sidecoach' not in h.get('command', '')]
@@ -1329,12 +1354,42 @@ for event in ['SessionStart', 'UserPromptSubmit', 'Stop']:
 with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 "
   fi
+  # Remove the sidecoach MCP server registration from ~/.claude.json
+  if command -v python3 >/dev/null 2>&1 && [ -f "$HOME/.claude.json" ]; then
+    python3 -c "
+import json
+p = '$HOME/.claude.json'
+with open(p) as f: d = json.load(f)
+d.get('mcpServers', {}).pop('sidecoach', None)
+with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
+"
+  fi
 }
 
 deactivate_tilt_lab() {
   # Remove only the PATH launcher. Leave <repo>/tilt-lab/node_modules intact -
   # it's repo-local build state, cheap to keep and expensive to reinstall.
   [ -L "$HOME/.local/bin/tilt-lab" ] && rm -f "$HOME/.local/bin/tilt-lab"
+}
+
+deactivate_fable() {
+  # Remove the guard symlink + its PreToolUse wiring. Leave detect-session-model
+  # (shared with the base model-router-guard).
+  rm -f "$CLAUDE_DIR/hooks/fable-orchestrator-guard.sh"
+  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
+    python3 -c "
+import json
+p = '$SETTINGS_JSON'
+with open(p) as f: d = json.load(f)
+hooks = d.get('hooks', {})
+for entry in hooks.get('PreToolUse', []):
+    entry['hooks'] = [h for h in entry.get('hooks', []) if 'fable-orchestrator-guard' not in h.get('command', '')]
+if 'PreToolUse' in hooks:
+    hooks['PreToolUse'] = [g for g in hooks['PreToolUse'] if g.get('hooks')]
+    if not hooks['PreToolUse']: del hooks['PreToolUse']
+with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
+"
+  fi
 }
 
 # Design peer skills: each removes only its own ~/.claude/skills/ dir.
@@ -1367,6 +1422,7 @@ deactivate_component() {
     skills)     deactivate_skills ;;
     statusline) deactivate_statusline ;;
     cmux)       deactivate_cmux ;;
+    fable)      deactivate_fable ;;
     nvm)        deactivate_nvm ;;
     ampersand)  deactivate_ampersand ;;
     discord)    deactivate_discord ;;
@@ -1839,9 +1895,11 @@ if picked config; then
   # claude/settings.json wires into PreToolUse / Stop / UserPromptSubmit /
   # SessionStart events. The settings.json JSON-merge below references every
   # one of these by command path, so they must all land on disk or the wired
-  # hooks dangle (command-not-found at runtime). Component-owned hooks
-  # (resume-*, team-reaper, voice-*, reflect-nudge, sidecoach-*) are copied by
-  # their own components and intentionally excluded here.
+  # hooks dangle (command-not-found at runtime). App-owned hooks (resume-*,
+  # team-reaper, teammate-relay-stop, cmux-close-guard, cmux-teammate-shim-heal,
+  # voice-mandate/voice-toggle, reflect-nudge, sidecoach-*) are wired AND deployed
+  # by their own components and are intentionally excluded here. detect-session-model
+  # is a shared library (model-router-guard + fable-orchestrator-guard exec it).
   CONFIG_HOOKS=(
     bash-guard.sh content-guard.sh memory-approve.sh
     destructive-ops-guard.sh destructive-confirm-detect.sh
@@ -1855,8 +1913,12 @@ if picked config; then
     block-clickup-writes.sh consolidate-nudge.sh content-guard-stop.sh
     grounding-gate.sh grounding-guard.sh justify-source-guard.sh
     justify-watch-guard.sh memory-compact.sh model-router-guard.sh
-    node-shim-heal.sh cmux-teammate-shim-heal.sh sidecoach-taste-gate.sh
+    node-shim-heal.sh
     api-drift-detector.sh api-drift-stop.sh api-drift-ack.sh
+    detect-session-model.sh
+    claude-surface.sh visualizer-guard.sh surface-visual-gate.sh
+    plan-consistency-lint.sh push-ahead-check.sh
+    codex-failure-watcher.sh codex-rescue-guard.sh
   )
   # link_or_copy, not safe_cp: on a dev checkout these become SYMLINKS so a git pull
   # reaches the hook that actually runs. safe_cp would delete an existing correct
@@ -1867,16 +1929,6 @@ if picked config; then
       ok "hooks/$f"
     fi
   done
-
-  # Canonical fixed cmux agent-teams tmux shim. cmux-teammate-shim-heal.sh
-  # (a SessionStart hook above) re-plants this over cmux's stock shim every
-  # cmux-teams launch so spawned teammates render as real cmux panes. Symlinked
-  # (not copied) so it tracks git pulls. See claude/cmux/teammate-tmux-shim and
-  # .claude/memory/session_2026-06-23_cmux-teammate-pane-FIX.md.
-  if [ -d "$REPO_DIR/claude/cmux" ]; then
-    make_symlink "$REPO_DIR/claude/cmux" "$CLAUDE_DIR/cmux"
-    ok "cmux/ (teammate tmux-shim canonical)"
-  fi
 
   # Copy startup-check.sh
   safe_cp "$REPO_DIR/claude/startup-check.sh" "$CLAUDE_DIR/startup-check.sh"
@@ -2298,6 +2350,11 @@ if picked cmux; then
   echo ""
   info "--- cmux ---"
 
+  # Standalone-safe: reachable via `--only cmux` without config, so ensure the
+  # hooks dir + settings.json exist before wiring into them.
+  mkdir -p "$CLAUDE_DIR/hooks"
+  [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
+
   CMUX_CONFIG_DIR="$HOME/.config/cmux"
   mkdir -p "$CMUX_CONFIG_DIR"
 
@@ -2318,6 +2375,22 @@ if picked cmux; then
   # linger as phantom workspaces. Never touches memory/beats.
   chmod +x "$REPO_DIR/claude/hooks/team-reaper.sh"
   make_symlink "$REPO_DIR/claude/hooks/team-reaper.sh" "$CLAUDE_DIR/hooks/team-reaper.sh"
+
+  # cmux-close-guard (PreToolUse/Bash), cmux-teammate-shim-heal (SessionStart),
+  # teammate-relay-stop (Stop): moved out of base settings.json into the cmux
+  # component so a non-cmux install never wires them (was exit-127 dangling refs).
+  for h in cmux-close-guard.sh cmux-teammate-shim-heal.sh teammate-relay-stop.sh; do
+    chmod +x "$REPO_DIR/claude/hooks/$h"
+    make_symlink "$REPO_DIR/claude/hooks/$h" "$CLAUDE_DIR/hooks/$h"
+  done
+
+  # Canonical fixed cmux agent-teams tmux shim (moved here from the config block).
+  # cmux-teammate-shim-heal.sh re-plants this over cmux's stock shim so spawned
+  # teammates render as real cmux panes. Symlinked so it tracks git pulls.
+  if [ -d "$REPO_DIR/claude/cmux" ]; then
+    make_symlink "$REPO_DIR/claude/cmux" "$CLAUDE_DIR/cmux"
+    ok "cmux/ (teammate tmux-shim canonical)"
+  fi
 
   # JSON-merge resume hooks into settings.json
   if command -v python3 >/dev/null 2>&1; then
@@ -2354,9 +2427,25 @@ for event, cmd in (('SessionStart', REAP_START_CMD), ('SessionEnd', REAP_END_CMD
     if not any(h.get('command') == cmd for h in hook_list):
         hook_list.append({'type': 'command', 'command': cmd, 'timeout': 5})
 
+# PreToolUse (matcher Bash): cmux-close-guard
+CLOSE_CMD = '~/.claude/hooks/cmux-close-guard.sh'
+groups = hooks.setdefault('PreToolUse', [])
+grp = next((g for g in groups if g.get('matcher') == 'Bash'), None)
+if grp is None:
+    grp = {'matcher': 'Bash', 'hooks': []}; groups.append(grp)
+if not any(h.get('command') == CLOSE_CMD for h in grp.setdefault('hooks', [])):
+    grp['hooks'].append({'type': 'command', 'command': CLOSE_CMD, 'timeout': 12})
+
+# SessionStart: cmux-teammate-shim-heal.  Stop: teammate-relay-stop
+for event, cmd in (('SessionStart', '~/.claude/hooks/cmux-teammate-shim-heal.sh'),
+                   ('Stop', '~/.claude/hooks/teammate-relay-stop.sh')):
+    hook_list = hooks.setdefault(event, [{}])[0].setdefault('hooks', [])
+    if not any(h.get('command') == cmd for h in hook_list):
+        hook_list.append({'type': 'command', 'command': cmd, 'timeout': 5})
+
 with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 "
-    ok "Resume hooks merged into settings.json (SessionEnd + UserPromptSubmit)"
+    ok "cmux hooks merged into settings.json (close-guard, resume, team-reaper, shim-heal, relay-stop)"
   else
     warn "python3 not found - cannot merge resume hooks. Add manually to settings.json"
   fi
@@ -2672,6 +2761,10 @@ if picked voice-output; then
   echo ""
   info "--- Voice output (OpenAI TTS) ---"
 
+  # Standalone-safe: reachable via `--only voice-output` without config.
+  mkdir -p "$CLAUDE_DIR/hooks"
+  [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
+
   # Copy MCP server
   mkdir -p "$CLAUDE_DIR/voice-output"
   safe_cp "$REPO_DIR/claude/voice-output/server.js" "$CLAUDE_DIR/voice-output/server.js"
@@ -2820,8 +2913,27 @@ if picked reflect; then
 
   # Nudge hook
   info "Installing reflect-nudge hook..."
+  mkdir -p "$CLAUDE_DIR/hooks"; [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
   link_or_copy "$REPO_DIR/claude/hooks/reflect-nudge.sh" "$CLAUDE_DIR/hooks/reflect-nudge.sh"
   ok "reflect-nudge hook installed"
+
+  # Wire reflect-nudge into settings.json (SessionStart) - moved out of base so a
+  # non-reflect install never wires it.
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c "
+import json
+p = '$SETTINGS_JSON'
+with open(p) as f: d = json.load(f)
+hooks = d.setdefault('hooks', {})
+CMD = 'SESSION_CWD=\"\$(pwd)\" ~/.claude/hooks/reflect-nudge.sh'
+groups = hooks.setdefault('SessionStart', [])
+if not groups: groups.append({})
+hl = groups[0].setdefault('hooks', [])
+if not any(h.get('command') == CMD for h in hl):
+    hl.append({'type': 'command', 'command': CMD, 'timeout': 5})
+with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
+" && ok "reflect-nudge wired (SessionStart)" || warn "Could not wire reflect-nudge"
+  fi
 
   # Timestamp file (create if missing, don't overwrite)
   if [ ! -f "$CLAUDE_DIR/last-reflect-timestamp" ]; then
@@ -2931,6 +3043,10 @@ fi
 if picked sidecoach; then
   log "Installing Sidecoach..."
 
+  # Standalone-safe: reachable via `--only sidecoach` without config.
+  mkdir -p "$CLAUDE_DIR/hooks"
+  [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
+
   (cd "$REPO_DIR/sidecoach" && npm install --silent && npm run build) \
     || warn "Sidecoach build failed - run 'cd sidecoach && npm run build' manually"
 
@@ -2938,7 +3054,7 @@ if picked sidecoach; then
   ln -sf "$REPO_DIR/claude/skills/sidecoach/SKILL.md" \
          "$HOME/.claude/skills/sidecoach/SKILL.md"
 
-  for hook in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh sidecoach-keyword.sh sidecoach-preamble.sh; do
+  for hook in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh sidecoach-keyword.sh sidecoach-preamble.sh sidecoach-taste-gate.sh; do
     ln -sf "$REPO_DIR/claude/hooks/$hook" "$HOME/.claude/hooks/$hook"
     chmod +x "$HOME/.claude/hooks/$hook"
   done
@@ -2968,27 +3084,116 @@ if picked sidecoach; then
     *) warn "~/.local/bin is not on PATH - add it to use the \`sidecoach\` CLI" ;;
   esac
 
-  node -e "
-    const fs = require('fs');
-    const path = process.env.HOME + '/.claude/settings.json';
-    const s = JSON.parse(fs.readFileSync(path, 'utf8'));
-    s.hooks = s.hooks || {};
-    const hooksDir = process.env.HOME + '/.claude/hooks';
-    const addHook = (event, cmd) => {
-      s.hooks[event] = s.hooks[event] || [];
-      const already = s.hooks[event].some(h =>
-        (h.hooks||[]).some(x => x.command && x.command.includes('sidecoach'))
-      );
-      if (!already) s.hooks[event].push({ hooks: [{ type: 'command', command: cmd }] });
-    };
-    addHook('SessionStart', hooksDir + '/sidecoach-sessionstart.sh');
-    addHook('UserPromptSubmit', hooksDir + '/sidecoach-postuserp.sh');
-    addHook('Stop', hooksDir + '/sidecoach-postresponse.sh');
-    fs.writeFileSync(path, JSON.stringify(s, null, 2));
-  " && log "Sidecoach hooks wired in settings.json" \
-    || warn "Could not wire Sidecoach hooks - check settings.json manually"
+  # Wire all 6 sidecoach hooks into settings.json (moved out of base; this block
+  # is now the sole owner). Exact-command dedup so multiple hooks share an event.
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c "
+import json
+p = '$SETTINGS_JSON'
+with open(p) as f: d = json.load(f)
+hooks = d.setdefault('hooks', {})
+H = '~/.claude/hooks'
+# Normalize first: strip ANY existing sidecoach entries (removes stale absolute-path
+# wirings from pre-refactor installs), then drop emptied groups/events. Makes re-runs
+# idempotent regardless of the old path form.
+for ev in list(hooks.keys()):
+    for g in hooks.get(ev, []):
+        g['hooks'] = [h for h in g.get('hooks', []) if 'sidecoach' not in h.get('command', '')]
+    hooks[ev] = [g for g in hooks[ev] if g.get('hooks')]
+    if not hooks[ev]: del hooks[ev]
+def add(event, cmd, matcher=None, timeout=None):
+    groups = hooks.setdefault(event, [])
+    if matcher is not None:
+        g = next((x for x in groups if x.get('matcher') == matcher), None)
+        if g is None:
+            g = {'matcher': matcher, 'hooks': []}; groups.append(g)
+    else:
+        if not groups: groups.append({})
+        g = groups[0]
+    hl = g.setdefault('hooks', [])
+    e = {'type': 'command', 'command': cmd}
+    if timeout is not None: e['timeout'] = timeout
+    if not any(h.get('command') == cmd for h in hl):
+        hl.append(e)
+add('SessionStart', H + '/sidecoach-sessionstart.sh')
+add('SessionStart', 'SESSION_CWD=\"\$(pwd)\" ' + H + '/sidecoach-preamble.sh', timeout=5)
+add('PostCompact', 'SESSION_CWD=\"\$(pwd)\" ' + H + '/sidecoach-preamble.sh', timeout=5)
+add('UserPromptSubmit', H + '/sidecoach-postuserp.sh')
+add('UserPromptSubmit', H + '/sidecoach-keyword.sh', timeout=5)
+add('PostToolUse', H + '/sidecoach-taste-gate.sh', matcher='Write|Edit|MultiEdit', timeout=30)
+add('Stop', H + '/sidecoach-postresponse.sh')
+with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
+" && log "Sidecoach hooks wired in settings.json (6 hooks)" \
+      || warn "Could not wire Sidecoach hooks - check settings.json manually"
+  fi
+
+  # Build + register the sidecoach MCP server (Jonah 2026-07-15: wire it up, do
+  # not retire). Register ONLY on a successful build, and REPLACE any stale entry
+  # (e.g. the machine-specific path in sidecoach/.mcp.json) with a generated one.
+  MCP_OK=0
+  if (cd "$REPO_DIR/sidecoach/mcp-server" && npm install --silent && npm run build); then
+    MCP_OK=1
+  else
+    warn "sidecoach mcp-server build failed - run 'cd sidecoach/mcp-server && npm run build' manually"
+  fi
+  MCP_DIST="$REPO_DIR/sidecoach/mcp-server/dist/index.js"
+  if [ "$MCP_OK" = 1 ] && [ -f "$MCP_DIST" ] && command -v python3 >/dev/null 2>&1; then
+    CLAUDE_JSON="$HOME/.claude.json"
+    [ -f "$CLAUDE_JSON" ] || echo '{}' > "$CLAUDE_JSON"
+    python3 -c "
+import json
+p = '$CLAUDE_JSON'
+with open(p) as f: d = json.load(f)
+servers = d.setdefault('mcpServers', {})
+servers['sidecoach'] = {'type': 'stdio', 'command': 'node', 'args': ['$MCP_DIST'], 'env': {'SIDECOACH_MCP_LOG_LEVEL': 'info'}}
+with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
+"
+    ok "Sidecoach MCP server registered in ~/.claude.json - restart Claude Code once for its tools to load"
+  fi
 
   ok "Sidecoach installed"
+fi
+
+# ============================================================
+# 16c. Fable orchestrator-only guard
+# ============================================================
+
+if picked fable; then
+  echo ""
+  info "--- fable (orchestrator-only guard) ---"
+
+  # Standalone-safe: reachable via `--only fable` without config.
+  mkdir -p "$CLAUDE_DIR/hooks"
+  [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
+
+  # The guard + its shared dependency (detect-session-model; config also deploys
+  # it for the model-router, but --only fable must be self-sufficient).
+  for h in fable-orchestrator-guard.sh detect-session-model.sh; do
+    chmod +x "$REPO_DIR/claude/hooks/$h"
+    make_symlink "$REPO_DIR/claude/hooks/$h" "$CLAUDE_DIR/hooks/$h"
+  done
+
+  # Wire the PreToolUse guard (Write|Edit|MultiEdit|NotebookEdit|Bash).
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c "
+import json
+p = '$SETTINGS_JSON'
+with open(p) as f: d = json.load(f)
+hooks = d.setdefault('hooks', {})
+CMD = '~/.claude/hooks/fable-orchestrator-guard.sh'
+MATCHER = 'Write|Edit|MultiEdit|NotebookEdit|Bash'
+groups = hooks.setdefault('PreToolUse', [])
+g = next((x for x in groups if x.get('matcher') == MATCHER), None)
+if g is None:
+    g = {'matcher': MATCHER, 'hooks': []}; groups.append(g)
+hl = g.setdefault('hooks', [])
+if not any(h.get('command') == CMD for h in hl):
+    hl.append({'type': 'command', 'command': CMD, 'timeout': 10})
+with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
+" && ok "fable-orchestrator-guard wired (PreToolUse)" || warn "Could not wire fable guard"
+  fi
+
+  ok "fable orchestrator-only guard installed"
 fi
 
 # ============================================================
