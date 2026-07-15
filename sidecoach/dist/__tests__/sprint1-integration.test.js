@@ -63,7 +63,7 @@ function assertTrue(cond, label) {
     // Drift detector e2e coverage against the real landing page CSS
     const designMd = fs.readFileSync(path.resolve(__dirname, '../../../reference/DESIGN.md'), 'utf8');
     const tokens = (0, design_md_parser_1.parseDesignMd)(designMd);
-    const landingCss = fs.readFileSync(path.resolve(__dirname, '../../../test-site-1/landing.css'), 'utf8');
+    const landingCss = fs.readFileSync(path.resolve(__dirname, '../../fixtures/sprint1/landing.css'), 'utf8');
     const drift = (0, project_drift_detector_1.detectTokenDrift)(landingCss, tokens);
     console.log('drift summary:', drift.summary);
     console.log('  new color tokens:', drift.newColorTokens.length);
