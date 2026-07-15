@@ -54,7 +54,7 @@ where `<repo-name>` is the basename of the repo root.
 ## Modes and areas
 
 - **Global mode** keeps the `## <area>` layer (known areas: `sidecoach`, `improv`,
-  `marketing-site`, `test-site-1`, `dotfiles`, plus any existing `## <name>` section), with
+  `marketing-site`, `dotfiles`, plus any existing `## <name>` section), with
   cwd-path inference and new-area confirmation, exactly as the `add` verb describes.
 - **Project-local mode** has **no** `## <area>` layer - a single repo is a single list. The
   sub-sections (`### Active`, `### Blocked`, `### Done`) live at the **top level** of the
@@ -73,12 +73,11 @@ own independent T-NNNN sequence.
    entirely; the destination is the top-level `### Active`. Continue at step 3.
 1. **(global mode only) Determine area.** Parse the first whitespace-delimited token as
    `[area]` only if it matches a known area name (`sidecoach`, `improv`, `marketing-site`,
-   `test-site-1`, `dotfiles`) or matches an existing `## <name>` section in the file.
+   `dotfiles`) or matches an existing `## <name>` section in the file.
    Otherwise the whole arg string is the description and area is inferred from cwd:
    - cwd path contains `/sidecoach` -> `sidecoach`
    - cwd path contains `/improv` -> `improv`
    - cwd path contains `/marketing-site` -> `marketing-site`
-   - cwd path contains `/test-site-1` -> `test-site-1`
    - anything else -> `dotfiles`
 2. **(global mode only) New area confirmation.** If the chosen area does not already appear
    as `## <area>` in the file AND is not one of the known names above, confirm via
