@@ -176,6 +176,21 @@ for name in os.listdir(teams_dir):
     team_path = os.path.join(teams_dir, name)
     cfg_path = os.path.join(team_path, "config.json")
     if not os.path.isfile(cfg_path):
+        # Config-LESS orphan: a team dir with NO config.json. The harness writes
+        # config.json only at startup, so a dir that has inboxes/ but no config
+        # is a broken orphan - a partial reap, or a compaction-continued session
+        # whose new teamId was never initialized (reference_cmux_team_init_orphan
+        # _bug.md). The OLD reaper `continue`d past every config-less dir, so it
+        # lingered forever and broke every subsequent named spawn (the config
+        # read fails). Reap it so the next startup can re-init cleanly - but
+        # NEVER while a live process still references the team (it may be
+        # mid-init): the same live-member guard used for configured teams, biased
+        # to not-reap on any uncertainty. Skip stray non-dir entries.
+        if os.path.isdir(team_path):
+            if team_has_live_process(name):
+                skipped.append("%s [config-less orphan: live-member process]" % name)
+            elif reap(name):
+                reaped.append("%s [config-less orphan]" % name)
         continue
     try:
         cfg = json.load(open(cfg_path))

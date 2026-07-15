@@ -82,6 +82,42 @@ printf '%s\n' 'claude.exe --team-name live_ancient --model opus' > "$LIVE_PS"
 PS_OVERRIDE="$LIVE_PS" run session-end SESS_ZZ SessionEnd
 exists live_ancient && ok "age-GC also spares a team with a live member";  exists live_ancient || bad "age-GC reaped a live team"
 
+echo "--- config-less orphan reap (dir with inboxes/ but no config.json) ---"
+# A broken orphan: inboxes/ present, NO config.json. The harness writes
+# config.json only at startup, so this is a partial reap or a compaction-
+# continued session whose new teamId was never initialized. The OLD reaper
+# skipped any config-less dir forever, so it lingered and broke every subsequent
+# named spawn (reference_cmux_team_init_orphan_bug.md). It must now be reaped.
+mk_orphan() { mkdir -p "$TEAMS/$1/inboxes" "$TASKS/$1"; : > "$TEAMS/$1/inboxes/team-lead.json"; }
+rm -rf "$TEAMS"/* "$TASKS"/*
+mk_orphan orphan_dead
+run session-start SESS_ANY SessionStart
+exists orphan_dead && bad "config-less orphan (no live proc) should be reaped" || ok "config-less orphan reaped at session-start"
+[ -d "$TASKS/orphan_dead" ] && bad "config-less orphan task dir should be gone" || ok "config-less orphan matching task dir also reaped"
+
+# ...but NEVER while a live member process references it (it may be mid-init).
+rm -rf "$TEAMS"/* "$TASKS"/*
+mk_orphan orphan_live
+LIVE_ORPHAN_PS="$SANDBOX/ps_live_orphan.txt"
+printf '%s\n' 'claude.exe --team-name orphan_live --agent-id lead@orphan_live --model opus' > "$LIVE_ORPHAN_PS"
+PS_OVERRIDE="$LIVE_ORPHAN_PS" run session-start SESS_ANY SessionStart
+exists orphan_live || bad "config-less orphan with a live member was reaped (mid-init hazard)"
+exists orphan_live && ok "config-less orphan with a live member is kept"
+
+# Config-less orphans are broken in every mode, so session-end reaps them too.
+rm -rf "$TEAMS"/* "$TASKS"/*
+mk_orphan orphan_end
+run session-end SESS_ANY SessionEnd
+exists orphan_end && bad "config-less orphan should also reap in session-end mode" || ok "config-less orphan reaped at session-end"
+
+# A HEALTHY team must still be governed by the normal rules, not the config-less
+# path: a fresh other-session team with a live-ish (recent) inbox is preserved.
+rm -rf "$TEAMS"/* "$TASKS"/*
+mk_team healthy SESS_H "$fresh_ms" 60
+run session-start SESS_OTHER SessionStart
+exists healthy || bad "healthy recent team must not be swept up by config-less handling"
+exists healthy && ok "healthy configured team untouched by config-less path"
+
 echo "--- memory safety ---"
 echo "BEAT CONTENT" > "$MEM/session_x.md"
 # A maliciously-named team dir must never let the reaper escape into memory.
