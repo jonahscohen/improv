@@ -1034,3 +1034,23 @@
 
 <!-- archived 2026-07-14 (moved from MEMORY.md to stay under load budget) -->
 - [The timer purge](session_2026-07-09_justify-timer-purge.md) - no clock may stop Justify; durable outbox + clientId idempotency; a guard you never saw fail is not a guard, 2026-07-09
+
+<!-- archived 2026-07-14 (moved from MEMORY.md to stay under load budget) -->
+- [The server half was never deployed](session_2026-07-09_stale-server-deploy.md) - npm run deploy built only the browser bundle; the dispatcher never announced a worker, so every prompt looked lost,…
+- [Results are not persisted while a tab is connected](session_2026-07-10_responses-not-persisted.md) - the core never writes justify_response; the daemon skips it when clients exist; reload loses th…
+
+<!-- archived 2026-07-14 (moved from MEMORY.md to stay under load budget) -->
+- [The validation guard was inert](session_2026-07-10_validation-guard-was-inert.md) - it read tool_input keys that do not exist, so it never blocked getComputedStyle, .click() or dispatchEvent; fixe…
+- [** STATE OF THE UNION 2026-07-13 ** - consolidated audit record (11 findings + classifications), day log (3 deliverables, all commits), harness findings (workspace mis-bind, orchestrator gaps, relay failures), beats-cutover RIPE status, and the ranked 8-item next-step queue - PROJECT (2026-07-13)](session_2026-07-13_state-of-the-union.md)
+
+<!-- archived 2026-07-14 (moved from MEMORY.md to stay under load budget) -->
+- [Commit and push the accumulated tree (2026-07-13)](session_2026-07-13_commit-push-accumulated-work.md): cca3aba3, 45 files - hook guards, justify freeze/consent, cmux node shim. The push carried T…
+- [Dependency map page + servers (2026-07-13)](session_2026-07-13_dependency-map-page.md) - built docs/dependency-map as one offline HTML file on :4832; palette computed via dataviz validator; 10 Cod…
+
+<!-- archived 2026-07-14 (moved from MEMORY.md to stay under load budget) -->
+- [Marketing site moved OUT of the repo (2026-07-13)](session_2026-07-13_marketing-site-move.md) - extracted to ~/Documents/Github/improv-site (own git init, no remote); git rm -r'd here. `git rm` al…
+- [Teammate panes render but in the WRONG WORKSPACE (2026-07-13)](session_2026-07-13_teammate-pane-wrong-workspace.md) - NOT a shim regression: the shim was byte-identical to canonical and heal was a…
+- [PM structural briefing + hook-level dependency breakout - cmux is the ONLY foundation dep OUTSIDE the repo (6 cmux-only hooks: 1 execs binary, 5 couple to cmux internals, 1 env); 11 findings triaged (3H/3M/4L); beats cutover plan (cut over on the 48-query benchmark since the usage-evidence gate was never run) + live findings (index stale-on-pull, re-saturated); Jonah's 5 corrections incl. :4832-notes-are-problems-not-design - PROJECT (2026-07-14)](session_2026-07-14_structural-briefing-and-hook-deps.md)
+
+<!-- archived 2026-07-15 (moved from MEMORY.md to stay under load budget) -->
+- [plan-consistency-lint Stop hook BUILT (the candidate hook from feedback_self_review_before_codex) - lints docs/plans/*.md for U7/U12 Owns-vs-dispatch-prompt drift + U10 blocked-but-proceed-immediately sequencing; blocks on HIGH, warns on LOW, FAIL-OPEN + loop-guard; 16/16 fixtures green; caught+fixed 2 of my own false positives on the real doc (e.g.-abbreviation clause truncation, Owns Note:-prose /dev/null tokenization) before reporting; registered in claude/settings.json Stop (live ~/.claude sync + restart pending) - PROJECT (2026-07-15)](session_2026-07-15_plan-consistency-lint-hook.md)

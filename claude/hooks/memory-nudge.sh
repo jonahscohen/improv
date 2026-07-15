@@ -92,7 +92,7 @@ if tool == "Bash":
     cmd_bare = _re.sub(_DQ + "[^" + _DQ + "]*" + _DQ, " ", cmd_bare)  # strip double-quoted spans
 
     # Skip read-only commands
-    read_only = ["ls", "cat", "head", "tail", "grep", "find", "echo", "pwd",
+    read_only = ["ls", "cat", "head", "tail", "grep", "rg ", "find", "echo", "pwd",
                  "git status", "git log", "git diff", "git show", "git branch",
                  "wc ", "diff ", "readlink", "which", "type ", "file ",
                  "curl -s", "node -e", "python3 -c"]
@@ -108,10 +108,29 @@ if tool == "Bash":
     # Skip memory-related commands (match the bare command so a quoted mention
     # of a memory path in a message neither falsely clears nor sets the flag)
     is_memory = ".claude/memory" in cmd_bare or "MEMORY.md" in cmd_bare
+    # A redirection to the null device writes NOTHING. Strip it from a SCAN copy
+    # BEFORE the write-token match so a read-only command sunk into /dev/null -
+    # `beats.py verify > /dev/null 2>&1`, `rg foo src/ > /dev/null` - is not
+    # misclassified as a project-file write that falsely sets .memory-dirty (bug
+    # fixed 2026-07-14: a pull-time verify/search redirected to /dev/null re-dirtied
+    # the flag). The (?![\w./-]) guard strips ONLY the exact /dev/null device: a real
+    # named path like `> /dev/null.log` or `> /dev/nullx` keeps its `> file` token in
+    # cmd_scan and dirties exactly as before. fd-redirect chars ($fd>&$fd, e.g. 2>&1)
+    # never contained a `> ` / `>>` write token to begin with, so they need no strip.
+    cmd_scan = _re.sub(r"(?:\d*|&)>>?\s*/dev/null(?![\w./-])", " ", cmd_bare)
+    # `tee /dev/null` (with optional -a/-i flags) also writes only to the null device,
+    # so strip it too: `cmd | tee /dev/null` (swallow output while still running) must
+    # not be read as a `tee ` write. The -\S+ run only eats dash-flags, never a file
+    # operand. Strip ONLY when /dev/null is the SOLE tee sink: the lookahead requires it
+    # be followed by end / a pipe-or-terminator (| & ; )) / a stdin or fd redirect
+    # (< or [n]>), NOT another output file. So `tee /dev/null out.txt` keeps its `tee `
+    # token and dirties (out.txt is a real sink), and `tee /dev/null.log` / `/dev/nullx`
+    # (a real named path, not the device) are not matched either.
+    cmd_scan = _re.sub(r"\btee(?:\s+-\S+)*\s+/dev/null(?=\s*(?:$|[|&;)]|<|\d*>))", " ", cmd_scan)
     # Commands that write files
     writes = ["cp ", "mv ", "python3 <<", "cat <<", "> ", ">>", "tee ", "install",
               "sed -i", "chmod", "ln -s", "mkdir", "touch ", "rm "]
-    is_write = any(w in cmd_bare for w in writes) and not is_pure_git
+    is_write = any(w in cmd_scan for w in writes) and not is_pure_git
 
     if is_memory:
         try:

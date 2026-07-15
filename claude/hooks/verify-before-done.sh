@@ -83,7 +83,11 @@ def touch_last_screenshot_read():
     except Exception:
         pass
 
-# Code file extensions that require verification after change
+# Code file extensions that require verification after change.
+# NOTE: data/config files (.json, .yaml, .toml, .md, .txt) are intentionally OUT of
+# this set - a package.json / tsconfig / config write is not itself a visual change,
+# so it does not arm the screenshot gate. If such a write changes rendered UI, the
+# accompanying source-file edit (or the build command) arms it.
 CODE_EXTS = {
     ".js", ".jsx", ".ts", ".tsx", ".vue", ".svelte",
     ".css", ".scss", ".sass", ".less",
@@ -392,10 +396,23 @@ if tool == "Bash":
     if is_verification_only(cmd):
         print("{}"); sys.exit(0)
 
-    # Check if command writes/deploys code files
-    write_indicators = ["cp ", "mv ", "> ", ">> ", "tee ", "sed -i",
-                        "node build", "npm run build", "npx ", "make "]
-    if any(w in cmd for w in write_indicators):
+    # Check if command writes/deploys code files. Two classes of indicator:
+    #   - DEPLOY/BUILD (node build, npm run build, npx, make): no single file
+    #     target and may emit UI -> ALWAYS arm (unchanged behavior).
+    #   - FILE-TARGET writes (cp/mv/>/>>/tee/sed -i): the target file(s) are
+    #     determinable, so apply the SAME file-type filter the Write/Edit arm
+    #     side already uses (is_code_file). A write that touches ONLY non-code
+    #     files (a .md beat/notes/doc, a .txt, a .json) must NOT arm the
+    #     visual-verify flag - markdown has no UI to screenshot. Before this
+    #     split the Bash arm side skipped the filter entirely, so `sed -i ... notes.md`
+    #     or `cp a.md b.md` re-armed .needs-verification right after a screenshot
+    #     cleared it (2026-07-14 re-arm bug). is_code_file already honors EXEMPT_PATHS
+    #     (.claude/memory/, MEMORY.md, hooks, eval fixtures) and CODE_EXTS.
+    import re as _vre
+    deploy_indicators = ["node build", "npm run build", "npx ", "make "]
+    file_write_indicators = ["cp ", "mv ", "> ", ">> ", "tee ", "sed -i"]
+
+    def arm_and_report():
         set_flag("code")
         if recently_verified() or IS_SUBAGENT:
             print("{}"); sys.exit(0)
@@ -406,6 +423,34 @@ if tool == "Bash":
             }
         }))
         sys.exit(0)
+
+    if any(w in cmd for w in deploy_indicators):
+        arm_and_report()
+
+    if any(w in cmd for w in file_write_indicators):
+        # Extract tokens that look like a filename (end in a short dot-extension) and
+        # arm iff ANY is a CODE file. A command referencing only non-code files (a .md
+        # beat/notes/doc, a .txt) does NOT arm - that is the re-arm bug being fixed.
+        # This intentionally treats every file operand alike, so a code file that
+        # appears only as a READ source (e.g. `cp src/a.ts notes.md`, `tee notes.md <
+        # src/a.ts`) still arms. That is an over-arm - a FALSE POSITIVE - which is the
+        # deliberately-preferred direction for this enforcement gate
+        # (feedback_hooks_prefer_false_positives): never UNDER-arm a real code write,
+        # even at the cost of an occasional spurious screenshot prompt. Precisely
+        # separating write-targets from read-sources (cp source is a read, but mv
+        # source is deleted and a redirect target is a write) would risk false
+        # negatives, so we do not. No file-ish token at all (cannot tell) -> arm
+        # conservatively. The separator class is built via chr() so no literal single
+        # quote appears inside this shell single-quoted python3 -c block.
+        _sep_re = "[" + _vre.escape(chr(39) + chr(34) + "<>|;&()") + "]"
+        tokens = _vre.sub(_sep_re, " ", cmd).split()
+        file_tokens = [t for t in tokens if _vre.search(r"\.[A-Za-z0-9]{1,8}$", t)]
+        if not file_tokens:
+            arm_and_report()
+        if any(is_code_file(t) for t in file_tokens):
+            arm_and_report()
+        # else: only non-code files touched -> do NOT arm
+        print("{}"); sys.exit(0)
 
     print("{}"); sys.exit(0)
 

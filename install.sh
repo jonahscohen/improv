@@ -152,6 +152,110 @@ link_or_copy() {
   fi
 }
 
+# ------------------------------------------------------------
+# prune_broken_skill_symlinks: remove DEAD skill symlinks under ~/.claude/skills.
+#
+# A skill deployed as a symlink into this repo dangles the moment the repo stops
+# shipping that skill (renamed, retired, path changed). Those broken links pile up
+# in ~/.claude/skills and Claude Code still tries to load them. This clears them -
+# but only the ones THIS repo is responsible for, and only once the target is gone.
+#
+# HARD SAFETY RULES (all enforced, none optional):
+#   - Symlinks only. A real file or real directory is never touched.
+#   - Broken only. A link whose target still EXISTS (a live skill) is never touched.
+#   - Repo-owned only. A link whose resolved target is OUTSIDE $REPO_DIR is never
+#     touched - that is someone else's link, not part of our deploy footprint.
+#   - Direct children of skills/ only - exactly where install.sh deploys skills.
+#   - DRY RUN by default. It prints what it WOULD remove and mutates nothing. A real
+#     removal happens only in "apply" mode, which the CLI reaches only via the
+#     explicit --prune-skills-apply flag (human approval). An unattended
+#     --yes / --only / --preset install never invokes this, so it never mutates
+#     ~/.claude on its own.
+#
+# Args:  $1 = mode: "dryrun" (default) or "apply".
+# Reads: $HOME (-> ~/.claude/skills) and $REPO_DIR (the footprint boundary).
+# Returns: 0 on success; 5 if $REPO_DIR cannot be resolved (footprint unknown -
+#          refuse to prune rather than guess); 6 if an apply-mode removal fails.
+prune_broken_skill_symlinks() {
+  local mode="${1:-dryrun}"
+  local skills_dir="$HOME/.claude/skills"
+
+  # The footprint boundary. If the repo path cannot be canonicalized we cannot
+  # PROVE a target lives inside it, so we prune nothing and say so. Guessing the
+  # boundary is exactly how you delete a link you never deployed.
+  local repo_canon
+  if ! repo_canon="$(cd "$REPO_DIR" 2>/dev/null && pwd -P)"; then
+    err "prune: cannot resolve REPO_DIR ($REPO_DIR) - refusing to prune"
+    return 5
+  fi
+
+  if [ ! -d "$skills_dir" ]; then
+    info "prune: no skills directory at $skills_dir - nothing to prune"
+    return 0
+  fi
+
+  local found=0 removed=0
+  local link tgt tgt_abs tgt_dir tgt_base canon_dir canon inside
+  for link in "$skills_dir"/*; do
+    # Symlinks only. Skips real dirs/files AND the un-expanded glob when the dir is
+    # empty (that literal is neither a symlink nor extant).
+    if [ ! -L "$link" ]; then continue; fi
+    # Broken only. -e follows the link, so a live target makes this true -> skip.
+    if [ -e "$link" ]; then continue; fi
+
+    tgt="$(readlink "$link")" || continue
+    # Resolve to an absolute path (install writes absolute targets, but be safe).
+    case "$tgt" in
+      /*) tgt_abs="$tgt" ;;
+      *)  tgt_abs="$(cd "$(dirname "$link")" 2>/dev/null && pwd -P)/$tgt" ;;
+    esac
+    # Multi-hop chains are unprovable: if the immediate target is ITSELF a symlink,
+    # this broken link's ULTIMATE residence cannot be proven in-repo (the next hop can
+    # point anywhere - e.g. an in-repo proxy that itself points outside), so fail SAFE
+    # and skip. We only prune when the immediate target is a real, non-symlink path
+    # whose parent canonicalizes inside the repo.
+    if [ -L "$tgt_abs" ]; then continue; fi
+    tgt_dir="$(dirname "$tgt_abs")"
+    tgt_base="$(basename "$tgt_abs")"
+
+    # "Inside repo?" The leaf is gone, so canonicalize the PARENT (physical, which
+    # also collapses /tmp -> /private/tmp the way $REPO_DIR already is) and re-append
+    # the leaf. If the parent CANNOT be canonicalized (its subtree is gone too) we
+    # cannot PROVE the target resolves inside the repo - a lexical prefix match is not
+    # proof, because an intermediate symlink on the vanished path could have pointed
+    # out of the repo - so we fail SAFE and skip it. Only a canonically-proven in-repo
+    # target is ever pruned.
+    inside=0
+    if canon_dir="$(cd "$tgt_dir" 2>/dev/null && pwd -P)"; then
+      canon="$canon_dir/$tgt_base"
+      case "$canon" in "$repo_canon"/*) inside=1 ;; esac
+    fi
+    if [ "$inside" != "1" ]; then continue; fi
+
+    found=$((found + 1))
+    if [ "$mode" = "apply" ]; then
+      if rm -f "$link"; then
+        removed=$((removed + 1))
+        ok "prune: removed dead skill link $link -> $tgt"
+      else
+        err "prune: failed to remove $link"
+        return 6
+      fi
+    else
+      warn "prune: would remove dead skill link $link -> $tgt"
+    fi
+  done
+
+  if [ "$found" -eq 0 ]; then
+    info "prune: no dead repo-sourced skill links under $skills_dir"
+  elif [ "$mode" = "apply" ]; then
+    ok "prune: removed $removed dead skill link(s)"
+  else
+    info "prune: $found dead skill link(s) would be removed (dry run) - re-run with --prune-skills-apply to remove"
+  fi
+  return 0
+}
+
 # Sourcing this file with IMPROV_INSTALL_LIB_ONLY=1 defines the helpers above and
 # returns WITHOUT running the installer. test-install-hook-deploy.sh uses this to
 # exercise link_or_copy against temp directories - the installer writes into
@@ -341,7 +445,7 @@ PICKS+=(0)
 
 # Personal components - hidden from public TUI and --help. Surfaced only when
 # the maintainer passes --personal (undocumented, undocumented-on-purpose).
-# Lets one human keep cross-machine sync for ghostty/shaders without exposing
+# Lets one human keep cross-machine sync for ghostty and shaders without exposing
 # them as Yes&-team defaults.
 PERSONAL_KEYS=(ghostty shaders justify)
 PERSONAL_TITLES=(
@@ -356,12 +460,12 @@ PERSONAL_DESCS=(
 )
 PERSONAL_FILES=(
   "~/.config/ghostty/config (copy)"
-  "~/.config/ghostty/shaders/ (symlinks)"
+  "<repo>/shaders/*.glsl (loaded by Ghostty)\n~/Documents/Github/ghostty-shaders/ (community library clone)"
   "~/.claude/justify/ (server + core + adapters)\n~/.claude/skills/justify/SKILL.md\n~/.claude.json (MCP registration)"
 )
 PERSONAL_DIRS=(
   "$REPO_DIR/ghostty"
-  "$REPO_DIR/ghostty/shaders"
+  "$REPO_DIR/shaders"
   "$REPO_DIR/justify"
 )
 PERSONAL_PICKS=(1 1 1)
@@ -443,6 +547,9 @@ Usage:
   ./install.sh --preset NAME    Non-interactive preset: all | minimal | none
   ./install.sh --only KEYS      Non-interactive, comma-separated keys
   ./install.sh --dry-run        Print resolved picks and exit
+  ./install.sh --prune-skills   List dead repo skill symlinks (dry run), then exit
+  ./install.sh --prune-skills-apply
+                                Remove those dead skill symlinks (explicit approval)
   ./install.sh --help           Show this help
 
 Components (for --only KEYS):
@@ -486,11 +593,27 @@ while [[ $# -gt 0 ]]; do
     --only)         NONINTERACTIVE=1; HAS_ONLY=1; apply_only "${2:-}"; shift 2 ;;
     --preset)       NONINTERACTIVE=1; HAS_PRESET=1; apply_preset "${2:-}"; shift 2 ;;
     --dry-run|-n)   DRY_RUN=1; shift ;;
+    --prune-skills)       PRUNE_SKILLS=dryrun; shift ;;
+    --prune-skills-apply) PRUNE_SKILLS=apply;  shift ;;
     --help|-h)      print_help; exit 0 ;;
     --personal)     shift ;;  # already consumed in pre-pass, just shift past it
     *)              err "Unknown flag: $1"; print_help; exit 2 ;;
   esac
 done
+
+# Standalone maintenance action: prune dead skill symlinks under ~/.claude/skills
+# and exit, without running the installer. --prune-skills is a DRY RUN (prints only);
+# the destructive form needs the explicit --prune-skills-apply flag (human approval).
+# Neither is reachable from an unattended --yes/--only/--preset run, so those never
+# mutate ~/.claude via the prune.
+if [ -n "${PRUNE_SKILLS:-}" ]; then
+  # A global --dry-run overrides an apply request: dry-run always wins, so
+  # `--dry-run --prune-skills-apply` reports without ever destroying anything.
+  _prune_mode="$PRUNE_SKILLS"
+  if [ "${DRY_RUN:-0}" = "1" ]; then _prune_mode=dryrun; fi
+  prune_broken_skill_symlinks "$_prune_mode"
+  exit $?
+fi
 
 # --yes without --only/--preset means "install everything"
 # --yes WITH --only/--preset defers to their selection

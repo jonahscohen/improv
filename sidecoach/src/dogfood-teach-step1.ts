@@ -11,8 +11,17 @@ const projectPath = '/Users/spare3/Documents/Github/improv/marketing-site';
 const brief = `Build a brand new marketing landing page for the Improv repo, advertising justify, sidecoach, and memory tools, as well as mentions of our other tools. The page links to two other pages, one for justify and one for sidecoach. Both pages serve as marketing pages for each. Use the existing Improv DESIGN.md for color tokens and brand materials. The system chooses the new fonts.`;
 
 async function run() {
+  // The marketing site moved out of the improv repo on 2026-07-13; it now lives in its own
+  // project at ~/Documents/Github/improv-site. This path no longer exists inside improv.
+  // Fail loud instead of silently recreating an empty ghost marketing-site/ directory here
+  // (the removed mkdirSync did exactly that). Repoint projectPath at ~/Documents/Github/improv-site
+  // to run this dogfood against the moved site.
   if (!fs.existsSync(projectPath)) {
-    fs.mkdirSync(projectPath, { recursive: true });
+    throw new Error(
+      `Project path not found: ${projectPath}\n` +
+        `The marketing site moved out of the improv repo on 2026-07-13 and now lives at ` +
+        `~/Documents/Github/improv-site. Repoint projectPath there (or restore the site) before running this dogfood script.`,
+    );
   }
 
   console.log(`Project path: ${projectPath}`);

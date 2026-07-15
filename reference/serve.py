@@ -9,7 +9,7 @@ server says no-store, so a plain reload always reflects the working tree.
 import http.server
 import sys
 
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 4830
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 4831
 
 
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
