@@ -23,6 +23,7 @@ set -euo pipefail
 #   --only KEYS        non-interactive, pick comma-separated keys (e.g. brain,config,memory)
 #   --preset NAME      non-interactive preset: all | minimal | none
 #                      minimal = brain + config + memory + skills + nvm
+#   --browser          interactive bucket browser (groups -> members -> hooks)
 #   --dry-run          print picks and exit; touches no files
 #   --help             print usage
 #
@@ -845,6 +846,8 @@ Usage:
   ./install.sh --yes            Non-interactive, install everything
   ./install.sh --preset NAME    Non-interactive preset: all | minimal | none
   ./install.sh --only KEYS      Non-interactive, comma-separated keys
+  ./install.sh --browser        Bucket browser: drill into groups, toggle any
+                                component or individual hook, apply in one pass
   ./install.sh --dry-run        Print resolved picks and exit
   ./install.sh --prune-skills   List dead repo skill symlinks (dry run), then exit
   ./install.sh --prune-skills-apply
@@ -892,12 +895,14 @@ fi
 
 HAS_ONLY=0
 HAS_PRESET=0
+BROWSER=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --yes|-y)       NONINTERACTIVE=1; shift ;;
     --only)         NONINTERACTIVE=1; HAS_ONLY=1; apply_only "${2:-}"; shift 2 ;;
     --preset)       NONINTERACTIVE=1; HAS_PRESET=1; apply_preset "${2:-}"; shift 2 ;;
     --dry-run|-n)   DRY_RUN=1; shift ;;
+    --browser)      BROWSER=1; shift ;;
     --prune-skills)       PRUNE_SKILLS=dryrun; shift ;;
     --prune-skills-apply) PRUNE_SKILLS=apply;  shift ;;
     --help|-h)      print_help; exit 0 ;;
@@ -2080,6 +2085,830 @@ returning_flow() {
 }
 
 # ============================================================
+# Bucket browser - render + navigation (the VIEW over browser-lib.sh)
+# ============================================================
+#
+# browser-lib.sh owns the DATA and LOGIC (tree accessors, item_state/counts, the
+# staging sets, apply_pending, update_status/update_apply). Everything below is the
+# VIEW: it turns a node path into rows, draws one screen, and maps the chosen row
+# back to an action.
+#
+# Ported from the validated prototype
+# (docs/superpowers/specs/2026-07-16-installer-bucket-browser-prototype.html); its
+# render / buildRows / itemRow / activate functions are the layout+behavior spec, and
+# docs/superpowers/specs/2026-07-16-installer-bucket-browser-design.md is the written
+# spec. Where the two disagree on a glyph, design.md wins (it spells the carets out as
+# ASCII "<" / ">" / "v", which also matches the house prefer-ASCII rule).
+#
+# ONE `gum choose` per screen: gum cannot do a live expand/collapse tree, and a raw
+# terminal render loop was rejected as too fragile for a bash installer (design.md
+# "Approved decisions" 1). A numbered plain-text menu covers no-gum terminals. Both
+# renderers fill the SAME ROW_* arrays and hand an index to the SAME `activate`, so
+# behavior is defined exactly once.
+#
+# THREE THINGS THE PROTOTYPE DOES THAT ONE-CHOOSE-PER-SCREEN CANNOT (documented, not
+# silently dropped):
+#   1. The detail bar cannot follow the cursor - gum choose has no on-highlight
+#      callback. It renders instead as a status line under the rows, carrying the
+#      prototype's toast() messages (toast writes to that same bar) and otherwise the
+#      current node's description. Per-row descriptions are NOT lost: they ride inline
+#      in the tag column, which for every hook leaf IS its description (the prototype's
+#      hleaf sets tag and desc to the same string).
+#   2. Section labels and separators are not skippable - gum makes every line
+#      selectable. They are rendered in position and `activate` treats them as no-ops.
+#   3. The `a`/`q` key bindings do not exist - gum owns the keyboard. They are rows.
+#
+# bash 3.2: NO associative arrays. Rows are PARALLEL INDEXED ARRAYS, appended via
+# _br_rows_add, and every loop is C-style (`${!arr[@]}` on an empty array trips
+# `set -u` on bash 3.2).
+
+# Column widths. The tag column is elastic (it absorbs whatever the terminal has
+# left) because hook DESCRIPTIONS live there and they are the point of the drill-in;
+# everything else is fixed so the columns line up down the screen.
+BR_NAME_W=30
+BR_STAT_W=13
+BR_CNT_W=5
+BR_PEND_W=11
+
+# _br_term_width - the real terminal width.
+#
+# NOT `$(tput cols)`. tput reads the window size from its STDOUT, and inside a command
+# substitution stdout is a PIPE, not the terminal - the ioctl fails and tput silently
+# falls back to terminfo's default 80. It never errors and never warns; it just always
+# says 80. That would have pinned the elastic tag column to 13 characters on every
+# terminal no matter how wide, which is where the hook DESCRIPTIONS render. (MEASURED
+# under a 140-column pty: `stty size` -> "60 140" while `$(tput cols)` -> "80".)
+#
+# stty reads STDIN instead, so pointing it at /dev/tty gets the truth even from inside
+# a command substitution. tput remains the fallback for the no-tty case (its 80 is a
+# fine default when there is genuinely no terminal to measure).
+_br_term_width() {
+  local w="" sz
+  if [ -r /dev/tty ]; then
+    sz="$(stty size </dev/tty 2>/dev/null || true)"
+    w="${sz##* }"
+  fi
+  case "$w" in
+    ''|*[!0-9]*) w="$(tput cols 2>/dev/null || true)" ;;
+  esac
+  case "$w" in
+    ''|*[!0-9]*) w=80 ;;
+  esac
+  [ "$w" -lt 60 ] && w=60
+  printf '%s\n' "$w"
+}
+
+# _br_rtrim <str> - drop trailing spaces. Load-bearing, not cosmetic: gum returns the
+# chosen item and we map it back by EXACT string match, so what we store must be what
+# gum echoes. Padding the last column would also stretch gum's selection highlight.
+_br_rtrim() {
+  local s="$1"
+  while [ -n "$s" ] && [ "${s%" "}" != "$s" ]; do s="${s%" "}"; done
+  printf '%s' "$s"
+}
+
+# _br_fit <str> <width> - hard-truncate to width (no ellipsis; the columns are tight).
+_br_fit() {
+  local s="$1" w="$2"
+  if [ "${#s}" -gt "$w" ]; then s="${s:0:$w}"; fi
+  printf '%s' "$s"
+}
+
+# _br_display_name <path> - what a row/message calls a node.
+#
+# A HOOK LEAF IS NOT A NODE. browser-lib only walks buckets and their members, so a
+# hook path ("Beats/Hooks/beats-rebuild") has NO stored LABEL and NO stored KIND -
+# node_label and node_kind both return EMPTY for one. Hooks live in the tree only as
+# their parent's CHILDREN string plus the by-name HOOKPATH/HOOKDESC/PINNED entries.
+# So every display of a node name needs the key fallback, and it lives here rather
+# than being re-derived at each call site (the pinned toast rendered as " is always
+# on - ..." because it had node_label without the fallback).
+_br_display_name() {
+  local path="$1" label
+  label="$(node_label "$path")"
+  if [ -z "$label" ]; then label="${path##*/}"; fi
+  printf '%s' "$label"
+}
+
+_br_glyph() {
+  case "$1" in
+    active)  printf '%s' "●" ;;
+    partial) printf '%s' "◐" ;;
+    *)       printf '%s' "○" ;;
+  esac
+}
+
+_br_statlabel() {
+  case "$1" in
+    active)  printf '%s' "active" ;;
+    partial) printf '%s' "partial" ;;
+    *)       printf '%s' "not installed" ;;
+  esac
+}
+
+# _br_is_pinned_leaf <leafpath> - 0 when the leaf is a PINNED hook (project-scoped,
+# always-on, NOT installer-toggleable). The view must never offer these as a toggle.
+_br_is_pinned_leaf() {
+  local leaf="$1" key parent
+  key="${leaf##*/}"
+  parent="${leaf%/*}"
+  [ "$(node_kind "$parent")" = "hooks" ] && hook_pinned "$key"
+}
+
+# --- pending helpers ---------------------------------------------------------
+# browser-lib exposes pending_under (a TOTAL). The prototype renders the +ins/-un
+# SPLIT, so derive it here from the same public leaf_paths plus the lib's membership
+# test. Space-safe: leaf paths can contain spaces ("Voice & chat/...").
+
+_br_pend_split() {
+  local path="$1" leaf ins=0 un=0
+  : "${PENDING_INSTALL:=}" "${PENDING_UNINSTALL:=}"
+  while IFS= read -r leaf; do
+    [ -n "$leaf" ] || continue
+    if _pend_has "$PENDING_INSTALL" "$leaf"; then
+      ins=$((ins + 1))
+    elif _pend_has "$PENDING_UNINSTALL" "$leaf"; then
+      un=$((un + 1))
+    fi
+  done < <(leaf_paths "$path")
+  printf '%s %s\n' "$ins" "$un"
+}
+
+# _br_pend_total - every staged leaf, whole tree. Counts the SETS directly rather than
+# walking the tree, so it stays correct no matter which screen we are on.
+_br_pend_total() {
+  local leaf n=0 set
+  : "${PENDING_INSTALL:=}" "${PENDING_UNINSTALL:=}"
+  for set in "$PENDING_INSTALL" "$PENDING_UNINSTALL"; do
+    while IFS= read -r leaf; do
+      [ -n "$leaf" ] || continue
+      n=$((n + 1))
+    done < <(_set_lines "$set")
+  done
+  printf '%s\n' "$n"
+}
+
+# _br_pend_mark <path> - the pending column. Leaf: "+ install" / "- uninstall".
+# Group/hooks: the "+a -b" rollup. Empty when nothing under it is staged.
+_br_pend_mark() {
+  local path="$1" kind split ins un out=""
+  kind="$(node_kind "$path")"
+  if [ "$kind" = "group" ] || [ "$kind" = "hooks" ]; then
+    split="$(_br_pend_split "$path")"
+    ins="${split%% *}"; un="${split##* }"
+    [ "$ins" -gt 0 ] && out="+$ins"
+    if [ "$un" -gt 0 ]; then
+      [ -n "$out" ] && out="$out "
+      out="$out-$un"
+    fi
+    printf '%s' "$out"
+    return 0
+  fi
+  : "${PENDING_INSTALL:=}" "${PENDING_UNINSTALL:=}"
+  if _pend_has "$PENDING_INSTALL" "$path"; then
+    printf '%s' "+ install"
+  elif _pend_has "$PENDING_UNINSTALL" "$path"; then
+    printf '%s' "- uninstall"
+  fi
+  return 0
+}
+
+# --- personal gate -----------------------------------------------------------
+# The tree marks the Personal bucket `"personal": true`, but browser-lib.sh does not
+# expose that field and is not ours to change. Read it straight from the JSON once per
+# browser launch rather than hard-coding the bucket name here - the data stays the
+# single source of truth.
+_br_personal_load() {
+  BR_PERSONAL_KEYS="$(python3 - "$REPO_DIR/claude/hooks/browser-tree.json" <<'PY' 2>/dev/null || true
+import json, sys
+tree = json.load(open(sys.argv[1]))
+for b in tree["buckets"]:
+    if b.get("personal"):
+        print(b["key"])
+PY
+)"
+  return 0
+}
+
+_br_is_personal() {
+  local key="$1" k
+  while IFS= read -r k; do
+    [ -n "$k" ] || continue
+    [ "$k" = "$key" ] && return 0
+  done <<EOF
+${BR_PERSONAL_KEYS:-}
+EOF
+  return 1
+}
+
+# --- nav-stack helpers -------------------------------------------------------
+# BR_NAV is the current node PATH ("" = root, else "Beats" / "Beats/Hooks"). Keys never
+# contain "/", so "/" is an unambiguous separator (browser-lib.sh data model).
+
+_br_nav_last()   { printf '%s' "${BR_NAV##*/}"; }
+_br_nav_parent() { case "${BR_NAV:-}" in */*) printf '%s' "${BR_NAV%/*}" ;; *) printf '' ;; esac; }
+
+# --- update row --------------------------------------------------------------
+
+# _browser_update_refresh - cache update_status into BR_UPD (line 1) + BR_UPD_INFO
+# (the commit subjects). Split with parameter expansion, NOT `head`/`tail` pipes: a
+# `head` pipe here is what made check_updates report a far-behind repo as "unknown"
+# (see the check_updates SIGPIPE note above).
+_browser_update_refresh() {
+  local out
+  if out="$(update_status)"; then :; else out="unknown"; fi
+  BR_UPD="${out%%$'\n'*}"
+  if [ "$out" = "$BR_UPD" ]; then BR_UPD_INFO=""; else BR_UPD_INFO="${out#*$'\n'}"; fi
+  return 0
+}
+
+# --- row construction (the prototype's buildRows + itemRow) ------------------
+
+_br_rows_reset() { ROW_DISP=(); ROW_KIND=(); ROW_PATH=(); }
+
+_br_rows_add() {
+  ROW_DISP[${#ROW_DISP[@]}]="$1"
+  ROW_KIND[${#ROW_KIND[@]}]="$2"
+  ROW_PATH[${#ROW_PATH[@]}]="$3"
+}
+
+# _br_item_row <path> - one component/hook row:
+#   caret + glyph + name + tag + status + count + pending marker
+_br_item_row() {
+  local path="$1" key label kind st caret glyph stat cnt pend tag disp w tagw
+  key="${path##*/}"
+  label="$(_br_display_name "$path")"
+  kind="$(node_kind "$path")"
+  st="$(item_state "$path")"
+  tag="$(node_tag "$path")"
+
+  # A hook leaf carries no tag of its own; its DESCRIPTION is the tag (prototype hleaf).
+  if [ -z "$tag" ] && [ "$(node_kind "${path%/*}")" = "hooks" ]; then
+    tag="$(hook_desc "$key")"
+  fi
+
+  case "$kind" in
+    hooks) caret="v" ;;   # a hook folder
+    group) caret=">" ;;   # a drillable component group
+    *)     caret=" " ;;
+  esac
+
+  glyph="$(_br_glyph "$st")"
+  stat="$(_br_statlabel "$st")"
+
+  # PINNED hooks are always-on and not toggleable: say so in the status column instead
+  # of "active", so the row never reads as something the user could turn off.
+  if _br_is_pinned_leaf "$path"; then
+    stat="always on"
+  fi
+
+  cnt=""
+  if [ "$kind" = "group" ] || [ "$kind" = "hooks" ]; then
+    cnt="$(counts "$path")"
+  fi
+  pend="$(_br_pend_mark "$path")"
+
+  w="$(_br_term_width)"
+  tagw=$(( w - 2 - 2 - (BR_NAME_W + 1) - BR_STAT_W - (BR_CNT_W + 1) - (BR_PEND_W + 1) - 1 ))
+  [ "$tagw" -lt 10 ] && tagw=10
+
+  disp="$(printf '%s %s %-*s %-*s %-*s %*s %*s' \
+    "$caret" "$glyph" \
+    "$BR_NAME_W" "$(_br_fit "$label" "$BR_NAME_W")" \
+    "$tagw" "$(_br_fit "$tag" "$tagw")" \
+    "$BR_STAT_W" "$stat" \
+    "$BR_CNT_W" "$cnt" \
+    "$BR_PEND_W" "$pend")"
+  _br_rows_add "$(_br_rtrim "$disp")" "item" "$path"
+  return 0
+}
+
+# build_rows - fill ROW_* for the current BR_NAV. Mirrors the prototype's buildRows:
+# root gets the update row + the two labeled sections + apply/quit; every deeper screen
+# gets back + install-all/uninstall-all + its children.
+build_rows() {
+  local b k here label n kids hooks_label bucket_rows
+  _br_rows_reset
+
+  if [ -z "${BR_NAV:-}" ]; then
+    bucket_rows=0
+    case "${BR_UPD:-}" in
+      available)
+        _br_rows_add "↻ Update available - sync your setup to the latest Improv" "update" "" ;;
+      up-to-date)
+        _br_rows_add "✓ Up to date" "uptodate" "" ;;
+      *)
+        # design.md: no remote or offline -> say so rather than failing silently.
+        _br_rows_add "? Update check unavailable - could not reach the remote" "updunknown" "" ;;
+    esac
+
+    _br_rows_add "CORE COMPONENTS" "label" ""
+    while IFS= read -r b; do
+      [ -n "$b" ] || continue
+      [ "$(bucket_section "$b")" = "core" ] || continue
+      if _br_is_personal "$b" && [ "${PERSONAL:-0}" != "1" ]; then continue; fi
+      _br_item_row "$b"
+      bucket_rows=$((bucket_rows + 1))
+    done < <(printf '%s\n' "${BR_BUCKETS//$'\t'/$'\n'}")
+
+    _br_rows_add "MORE COMPONENTS" "label" ""
+    while IFS= read -r b; do
+      [ -n "$b" ] || continue
+      [ "$(bucket_section "$b")" = "core" ] && continue
+      if _br_is_personal "$b" && [ "${PERSONAL:-0}" != "1" ]; then continue; fi
+      _br_item_row "$b"
+      bucket_rows=$((bucket_rows + 1))
+    done < <(printf '%s\n' "${BR_BUCKETS//$'\t'/$'\n'}")
+
+    # A root screen with NO component rows means the tree failed to load (or every
+    # bucket was filtered away). The screen would still LOOK legitimate - update row,
+    # both section labels, Apply, Quit - just with nothing to install. Fail loudly
+    # instead of rendering a browser that silently offers nothing.
+    if [ "$bucket_rows" -eq 0 ]; then
+      err "The component tree loaded no buckets - refusing to render an empty browser."
+      return 1
+    fi
+
+    _br_rows_add "$(_br_sep_line)" "sep" ""
+    n="$(_br_pend_total)"
+    if [ "$n" = "1" ]; then
+      _br_rows_add "Apply 1 change" "apply" ""
+    else
+      _br_rows_add "Apply $n changes" "apply" ""
+    fi
+    _br_rows_add "Quit" "quit" ""
+    return 0
+  fi
+
+  here="$(_br_nav_last)"
+  label="$(node_label "$BR_NAV")"
+  [ -n "$label" ] || label="$here"
+
+  local parent parent_label
+  parent="$(_br_nav_parent)"
+  if [ -z "$parent" ]; then
+    parent_label="all groups"
+  else
+    parent_label="$(node_label "$parent")"
+    [ -n "$parent_label" ] || parent_label="${parent##*/}"
+  fi
+  _br_rows_add "< Back to $parent_label" "back" ""
+
+  if [ "$(node_kind "$BR_NAV")" = "hooks" ]; then
+    # design.md: "Enable all hooks..." when the folder is literally named "Hooks".
+    if [ "$here" = "Hooks" ]; then hooks_label="all hooks"; else hooks_label="all $label hooks"; fi
+    _br_rows_add "+ Enable $hooks_label..." "installall" ""
+    _br_rows_add "- Disable $hooks_label..." "uninstallall" ""
+  else
+    _br_rows_add "+ Install all of $label..." "installall" ""
+    _br_rows_add "- Remove all of $label..." "uninstallall" ""
+  fi
+  _br_rows_add "$(_br_sep_line)" "sep" ""
+
+  # _br_children_lines is browser-lib's own TAB->newline splitter. Use it rather than
+  # splitting node_children's space-joined output: that would be lossy the moment a key
+  # ever carries a space (the bucket keys already do - "Voice & chat", "Dev surface").
+  while IFS= read -r k; do
+    [ -n "$k" ] || continue
+    _br_item_row "$BR_NAV/$k"
+  done < <(_br_children_lines "$BR_NAV")
+
+  # The prototype applies with the `a` key from any screen; gum owns the keyboard, so a
+  # deeper screen surfaces Apply as a ROW instead - and only when something is staged.
+  n="$(_br_pend_total)"
+  if [ "$n" != "0" ]; then
+    _br_rows_add "$(_br_sep_line)" "sep" ""
+    if [ "$n" = "1" ]; then
+      _br_rows_add "Apply 1 change" "apply" ""
+    else
+      _br_rows_add "Apply $n changes" "apply" ""
+    fi
+  fi
+  return 0
+}
+
+# --- screen chrome -----------------------------------------------------------
+# Printed around the row list: breadcrumb, lead line + "N of M installed", and the
+# detail/footer bar. All of it goes to normal stdout - only gum's choose UI is special
+# (gum renders to the tty and prints just the selection to stdout, which is what lets
+# BR_CHOSEN capture a selection without swallowing the chrome).
+
+_br_print_header() {
+  local seg acc first=1 desc c on total noun
+  printf '\n'
+  printf "${DIM}ampersand${NC}"
+  if [ -n "${BR_NAV:-}" ]; then
+    acc=""
+    while IFS= read -r seg; do
+      [ -n "$seg" ] || continue
+      if [ -z "$acc" ]; then acc="$seg"; else acc="$acc/$seg"; fi
+      if [ "$acc" = "$BR_NAV" ]; then
+        printf "${DIM} > ${NC}${CYAN}%s${NC}" "$(node_label "$acc")"
+      else
+        printf "${DIM} > %s${NC}" "$(node_label "$acc")"
+      fi
+    done < <(printf '%s\n' "${BR_NAV//\//$'\n'}")
+  fi
+  printf '\n'
+
+  if [ -z "${BR_NAV:-}" ]; then
+    printf "Choose what runs on this machine. Open a group, toggle items to stage changes, then apply.\n\n"
+  else
+    desc="$(node_desc "$BR_NAV")"
+    [ -n "$desc" ] || desc="$(node_tag "$BR_NAV")"
+    c="$(counts "$BR_NAV")"
+    on="${c%/*}"; total="${c#*/}"
+    if [ "$(node_kind "$BR_NAV")" = "hooks" ]; then noun="hooks on"; else noun="installed"; fi
+    printf '%s  ' "$desc"
+    printf "${DIM}%s of %s %s${NC}\n\n" "$on" "$total" "$noun"
+  fi
+  return 0
+}
+
+# _br_sep_line - the horizontal rule used by `sep` rows. Sized to the terminal so it
+# reads as a rule rather than a stray "----". Built ONCE into ROW_DISP so the gum path
+# (which can only show ROW_DISP) and the text path render the identical line.
+_br_sep_line() {
+  local w i out=""
+  w="$(_br_term_width)"
+  w=$(( w - 2 ))
+  [ "$w" -gt 118 ] && w=118
+  for (( i=0; i<w; i++ )); do out="$out-"; done
+  printf '%s' "$out"
+}
+
+# _br_footer_text - the detail bar as ONE plain line (no ANSI: it doubles as gum's
+# --header, and gum strips escape codes out of header/item text).
+#
+# This is the prototype's detail bar minus the cursor-following half (see the section
+# header note): it carries toast() messages, else the screen's orientation line, plus
+# the staged rollup the prototype keeps in its footer.
+_br_footer_text() {
+  local n split ins un line
+  if [ -n "${BR_TOAST:-}" ]; then
+    line="$BR_TOAST"
+  elif [ -z "${BR_NAV:-}" ] && [ "${BR_UPD:-}" = "available" ] && [ -n "${BR_UPD_INFO:-}" ]; then
+    line="Incoming: $(printf '%s' "$BR_UPD_INFO" | tr '\n' ';' | sed 's/;/; /g')"
+  else
+    line="Open a group to drill in. Select an item to stage it. Pinned hooks are always on."
+  fi
+  n="$(_br_pend_total)"
+  if [ "$n" != "0" ]; then
+    split="$(_br_pend_split_all)"
+    ins="${split%% *}"; un="${split##* }"
+    line="$line   [ +$ins -$un staged ]"
+  fi
+  printf '%s' "$line"
+}
+
+# _br_print_footer - the text path's detail bar. The gum path cannot print BELOW its
+# chooser (gum owns the bottom of the screen and the screen is cleared on the next
+# render), so there the same text rides in gum's --header, directly above the rows.
+_br_print_footer() {
+  local n
+  printf '\n'
+  if [ -n "${BR_TOAST:-}" ]; then
+    printf "${ACCENT}%s${NC}\n" "$BR_TOAST"
+  else
+    printf "${DIM}%s${NC}\n" "$(_br_footer_text)"
+    return 0
+  fi
+  n="$(_br_pend_total)"
+  if [ "$n" != "0" ]; then
+    local split ins un
+    split="$(_br_pend_split_all)"
+    ins="${split%% *}"; un="${split##* }"
+    printf "${GREEN}+%s${NC} ${YELLOW}-%s${NC} ${DIM}staged${NC}\n" "$ins" "$un"
+  fi
+  return 0
+}
+
+# _br_pend_split_all - the whole-tree +ins/-un split for the footer.
+_br_pend_split_all() {
+  local leaf ins=0 un=0
+  : "${PENDING_INSTALL:=}" "${PENDING_UNINSTALL:=}"
+  while IFS= read -r leaf; do
+    [ -n "$leaf" ] || continue
+    ins=$((ins + 1))
+  done < <(_set_lines "$PENDING_INSTALL")
+  while IFS= read -r leaf; do
+    [ -n "$leaf" ] || continue
+    un=$((un + 1))
+  done < <(_set_lines "$PENDING_UNINSTALL")
+  printf '%s %s\n' "$ins" "$un"
+}
+
+# --- renderers ---------------------------------------------------------------
+# Both fill BR_CHOSEN with the chosen ROW INDEX and return 0; they return 1 for
+# "escape/back out" (gum abort, EOF, or `0` in the text menu).
+
+# render_screen - the gum renderer. ONE `gum choose` per screen. Items are PLAIN TEXT
+# with no embedded ANSI: gum STRIPS escape codes out of items (measured against gum
+# 0.17.0), so color comes from gum's own palette flags, matching the flags the existing
+# run_tui_gum / returning_flow already use.
+render_screen() {
+  local i chosen height rows
+  clear
+  _br_print_header
+
+  rows=${#ROW_DISP[@]}
+  height=$(( rows + 1 ))
+  [ "$height" -gt 22 ] && height=22
+
+  # A NON-ZERO exit is the user ABORTING (esc / ctrl-c) - that is the back/quit signal.
+  # It is the only thing that may be read as "back".
+  chosen="$(printf '%s\n' "${ROW_DISP[@]}" \
+    | gum choose \
+        --height "$height" \
+        --header "$(_br_footer_text)" \
+        --header.foreground "#0e7490" \
+        --cursor.foreground "#67e8f9" \
+        --selected.foreground "#67e8f9" \
+        --item.foreground "#ffffff")" || return 1
+  [ -n "$chosen" ] || return 1
+
+  # Map the chosen row back by exact string match. Rows within a screen are unique by
+  # construction (child keys are unique, and the two label rows differ), EXCEPT the
+  # `sep` rules, which are byte-identical - harmless, since both map to kind=sep and
+  # activate no-ops on it, so first-match is correct there.
+  for (( i=0; i<${#ROW_DISP[@]}; i++ )); do
+    if [ "$chosen" = "${ROW_DISP[$i]}" ]; then
+      BR_CHOSEN="$i"
+      return 0
+    fi
+  done
+
+  # gum returned something we cannot map. This is an INTERNAL defect, not a back-out.
+  # Returning 1 here would make it indistinguishable from esc, i.e. an unmappable row
+  # would silently walk the user up a level (or quit the installer) with no explanation.
+  # Say so and re-render instead; an empty BR_CHOSEN makes activate a no-op.
+  BR_CHOSEN=""
+  BR_TOAST="Internal: could not match the selected row. Nothing was changed - please pick again."
+  return 0
+}
+
+# render_screen_text - the no-gum fallback: a numbered menu over the SAME rows. Uses
+# install.sh's existing fallback idiom (printf + `read -r </dev/tty`). Unlike gum, this
+# path CAN skip labels/separators properly - they simply get no number.
+render_screen_text() {
+  local i n num=0 reply
+  local -a NUMIDX
+  NUMIDX=()
+  clear
+  _br_print_header
+
+  for (( i=0; i<${#ROW_DISP[@]}; i++ )); do
+    case "${ROW_KIND[$i]}" in
+      label)
+        printf "\n${ACCENT}%s${NC}\n" "${ROW_DISP[$i]}"
+        ;;
+      sep)
+        printf "${DIM}%s${NC}\n" "${ROW_DISP[$i]}"
+        ;;
+      *)
+        num=$((num + 1))
+        NUMIDX[${#NUMIDX[@]}]="$i"
+        printf "  ${GREEN}%2d)${NC} %s\n" "$num" "${ROW_DISP[$i]}"
+        ;;
+    esac
+  done
+
+  _br_print_footer
+  printf "\nEnter a number (or 0 to go back): "
+
+  reply=""
+  if [ -r /dev/tty ]; then
+    read -r reply </dev/tty || return 1
+  else
+    return 1
+  fi
+  case "$reply" in
+    ''|0) return 1 ;;
+    *[!0-9]*) BR_CHOSEN=""; return 0 ;;   # non-numeric: re-render, no action
+  esac
+  if [ "$reply" -ge 1 ] && [ "$reply" -le "${#NUMIDX[@]}" ]; then
+    BR_CHOSEN="${NUMIDX[$((reply - 1))]}"
+    return 0
+  fi
+  BR_CHOSEN=""
+  return 0
+}
+
+# --- pause + confirm helpers -------------------------------------------------
+
+_br_pause() {
+  printf "\n${DIM}Press enter to continue...${NC}"
+  if [ -r /dev/tty ]; then read -r </dev/tty || true; fi
+  printf '\n'
+  return 0
+}
+
+# --- activate (the prototype's activate) -------------------------------------
+#
+# SET -E NOTE (load-bearing, same hazard as apply_pending in browser-lib.sh): callers
+# test this function's status, and bash DISABLES errexit for the whole body of a
+# function whose status is tested. Nothing here may lean on `set -e` - every call that
+# can fail is checked EXPLICITLY, or an unchecked failure would silently continue and
+# report success.
+#
+# Returns 0 to keep browsing, 1 to quit.
+activate() {
+  local idx="$1" kind path rc n
+  [ -n "$idx" ] || return 0
+  kind="${ROW_KIND[$idx]}"
+  path="${ROW_PATH[$idx]}"
+  BR_TOAST=""
+
+  case "$kind" in
+    label|sep)
+      return 0
+      ;;
+    item)
+      case "$(node_kind "$path")" in
+        group|hooks)
+          BR_NAV="$path"
+          ;;
+        *)
+          if _br_is_pinned_leaf "$path"; then
+            BR_TOAST="$(_br_display_name "$path") is always on - it is project-scoped and cannot be toggled here."
+          elif ! stage_toggle "$path"; then
+            # Checked, not assumed: errexit is OFF in this body, so an unchecked
+            # stage_toggle failure would fall straight through to `return 0` and the
+            # next render would just show the item unstaged with no explanation.
+            BR_TOAST="Could not stage $(_br_display_name "$path") - nothing was changed."
+          fi
+          ;;
+      esac
+      return 0
+      ;;
+    back)
+      BR_NAV="$(_br_nav_parent)"
+      return 0
+      ;;
+    installall)
+      if ! stage_all "$BR_NAV" install; then
+        BR_TOAST="Could not stage everything under $(_br_display_name "$BR_NAV") for install."
+      fi
+      return 0
+      ;;
+    uninstallall)
+      if ! stage_all "$BR_NAV" uninstall; then
+        BR_TOAST="Could not stage everything under $(_br_display_name "$BR_NAV") for removal."
+      fi
+      return 0
+      ;;
+    update)
+      printf "\n${CYAN}Pulling and re-running the installer for your active components...${NC}\n\n"
+      if update_apply; then rc=0; else rc=$?; fi
+      case "$rc" in
+        0) BR_TOAST="Synced your setup to the latest Improv." ;;
+        2) BR_TOAST="The pull did not happen - resolve the repo first (git status / git pull --rebase), then try again. Nothing was re-installed." ;;
+        3) BR_TOAST="The repo pulled, but the re-install FAILED - your repo is updated, your deployment is not. See the log above." ;;
+        *) BR_TOAST="Update failed (exit $rc). See the log above." ;;
+      esac
+      _br_pause
+      _browser_update_refresh
+      return 0
+      ;;
+    uptodate|updunknown)
+      _browser_update_refresh
+      case "${BR_UPD:-}" in
+        available) BR_TOAST="Checked - an update IS available." ;;
+        up-to-date) BR_TOAST="Checked - you are on the latest Improv." ;;
+        *) BR_TOAST="Could not check for updates - no remote, or the network is unreachable." ;;
+      esac
+      return 0
+      ;;
+    apply)
+      n="$(_br_pend_total)"
+      if [ "$n" = "0" ]; then
+        BR_TOAST="Nothing staged to apply."
+        return 0
+      fi
+      printf "\n${CYAN}Applying %s staged change(s)...${NC}\n\n" "$n"
+      if apply_pending; then
+        BR_TOAST="Applied - your setup now matches what you staged."
+      else
+        rc=$?
+        BR_TOAST="Apply FAILED (exit $rc). Your staged changes were kept so you can retry."
+      fi
+      _br_pause
+      return 0
+      ;;
+    quit)
+      n="$(_br_pend_total)"
+      if [ "$n" = "0" ]; then
+        return 1
+      fi
+      _br_quit_with_pending "$n"
+      return $?
+      ;;
+  esac
+  return 0
+}
+
+# _br_quit_with_pending <n> - the quit warn (design.md: "Quit with unapplied changes
+# warns (apply / discard / cancel)"). Returns 1 to quit, 0 to keep browsing.
+_br_quit_with_pending() {
+  local n="$1" pick rc reply
+  printf "\n${YELLOW}%s staged change(s) have not been applied.${NC}\n\n" "$n"
+  if command -v gum >/dev/null 2>&1; then
+    pick="$(printf '%s\n' "Apply them now" "Discard them and quit" "Keep browsing" \
+      | gum choose --header "Unapplied changes" \
+          --header.foreground "#0e7490" \
+          --cursor.foreground "#67e8f9" \
+          --selected.foreground "#67e8f9" \
+          --item.foreground "#ffffff")" || pick="Keep browsing"
+  else
+    printf "  1) Apply them now\n  2) Discard them and quit\n  3) Keep browsing\n\nPick: "
+    reply=""
+    if [ -r /dev/tty ]; then read -r reply </dev/tty || reply="3"; fi
+    case "$reply" in
+      1) pick="Apply them now" ;;
+      2) pick="Discard them and quit" ;;
+      *) pick="Keep browsing" ;;
+    esac
+  fi
+
+  case "$pick" in
+    "Apply them now")
+      printf "\n${CYAN}Applying %s staged change(s)...${NC}\n\n" "$n"
+      if apply_pending; then
+        ok "Applied."
+        _br_pause
+        return 1
+      fi
+      rc=$?
+      err "Apply failed (exit $rc). Your staged changes were kept."
+      _br_pause
+      return 0
+      ;;
+    "Discard them and quit")
+      stage_reset
+      return 1
+      ;;
+    *)
+      BR_TOAST="Still staged - nothing was applied."
+      return 0
+      ;;
+  esac
+}
+
+# --- the browser loop --------------------------------------------------------
+#
+# Nav stack: root -> bucket -> member -> hooks. `activate` decides drill vs toggle vs
+# action; this loop only re-renders and owns the exit.
+component_browser() {
+  local rc n
+  if ! browser_load "$REPO_DIR/claude/hooks/browser-tree.json"; then
+    err "Could not load the component tree (claude/hooks/browser-tree.json)."
+    return 1
+  fi
+  _br_personal_load
+  stage_reset
+  BR_NAV=""
+  BR_TOAST=""
+  BR_CHOSEN=""
+  _browser_update_refresh
+
+  while true; do
+    # Checked, not assumed. component_browser's status is tested by its caller, which
+    # DISABLES errexit for this whole body - so a failed build_rows would otherwise
+    # continue and render a partial or stale screen that still looks legitimate.
+    if ! build_rows; then
+      err "Could not build the component list. Aborting the browser rather than showing a partial screen."
+      return 1
+    fi
+    if command -v gum >/dev/null 2>&1; then
+      if render_screen; then rc=0; else rc=1; fi
+    else
+      if render_screen_text; then rc=0; else rc=1; fi
+    fi
+
+    if [ "$rc" != "0" ]; then
+      # Escape / back-out: up one level from a deeper screen, quit from the root
+      # (mirrors the prototype's left/esc = back).
+      if [ -n "${BR_NAV:-}" ]; then
+        BR_NAV="$(_br_nav_parent)"
+        BR_TOAST=""
+        continue
+      fi
+      n="$(_br_pend_total)"
+      if [ "$n" = "0" ]; then break; fi
+      if _br_quit_with_pending "$n"; then continue; else break; fi
+    fi
+
+    if activate "$BR_CHOSEN"; then continue; else break; fi
+  done
+
+  clear
+  printf '\n'
+  ok "Done."
+  printf '\n'
+  return 0
+}
+
+# ============================================================
 # Entry point: dispatch to fresh, returning, or non-interactive flag path
 # ============================================================
 
@@ -2098,6 +2927,20 @@ if [ "${_AMPERSAND_APPLY_TEST:-}" = "1" ]; then
   PENDING_UNINSTALL="${_AMPERSAND_TEST_PU:-}"
   unset _AMPERSAND_APPLY_TEST _AMPERSAND_TEST_PI _AMPERSAND_TEST_PU
   if apply_pending; then exit 0; else exit $?; fi
+fi
+
+# --- Bucket browser entry seam ----------------------------------------------
+# `install.sh --browser` runs the component browser and exits. It sits BEFORE the
+# interactive dispatch below and exits unconditionally, so it never falls through to
+# fresh_flow / returning_flow or the apply phase.
+#
+# DELIBERATELY ADDITIVE (Task 8 scope): the default interactive entry still dispatches
+# to run_tui_gum / run_tui_fallback / returning_flow exactly as before. Retiring those
+# in favor of this browser is Task 9's job, so --browser is the only way in for now.
+# --browser does NOT set NONINTERACTIVE, so no unattended path can reach it.
+if [ "${BROWSER:-0}" = "1" ]; then
+  ensure_gum >/dev/null 2>&1 || true
+  if component_browser; then exit 0; else exit $?; fi
 fi
 
 if [[ "$NONINTERACTIVE" == "0" ]]; then
