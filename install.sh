@@ -837,17 +837,110 @@ apply_preset() {
 NONINTERACTIVE=0
 DRY_RUN=0
 
+# _help_components - the body of the "Components (for --only KEYS)" block, GENERATED
+# from claude/hooks/browser-tree.json.
+#
+# WHY GENERATED: this block was hand-maintained and had already drifted from the tree
+# the browser renders. Two lists of the same thing, edited by hand, disagree - it is a
+# matter of when. Deriving it means `--help` and the browser cannot contradict each
+# other, because there is only one list now.
+#
+# The GROUPING is the tree's buckets, so help reads in the same order and under the
+# same names the browser shows. Per bucket it emits the `--only` keys reachable there:
+#   leaf  -> its own key
+#   hooks -> the hook_owner of each of its hooks (Beats/Hooks is owned by memory +
+#            reflect, NOT by a key called "Hooks" - which is exactly the kind of thing
+#            a hand-written list gets wrong)
+#   group -> recurse
+# De-duplicated per bucket, tree order preserved. The Personal bucket is gated on
+# --personal by the tree's own `"personal": true` flag - the same field _br_is_personal
+# reads - so those keys stay invisible without the flag, as they are in the browser.
+#
+# NEVER let this break `--help`: no python3, or a tree that will not parse, degrades to
+# a pointer at the file rather than a stale hard-coded copy (a stale copy is the exact
+# failure being removed here).
+#
+# HEREDOC NOTE (bash 3.2, load-bearing): the python body below must contain NO single
+# quotes. Inside `$( ... )`, bash 3.2 counts quotes even within a quoted heredoc while
+# scanning for the closing paren, so one apostrophe silently swallows the rest of the
+# file. Same constraint as browser_load in browser-lib.sh.
+_help_components() {
+  local out
+  if ! command -v python3 >/dev/null 2>&1; then
+    printf '  (needs python3 to list; the components are in claude/hooks/browser-tree.json)\n'
+    return 0
+  fi
+  if out="$(python3 - "$REPO_DIR/claude/hooks/browser-tree.json" "${PERSONAL:-0}" 2>/dev/null <<'PY'
+import json, sys, textwrap
+
+tree = json.load(open(sys.argv[1]))
+personal = sys.argv[2] == "1"
+owner = tree.get("hook_owner", {})
+
+def kind_of(node):
+    if node.get("members") is not None:
+        return "group"
+    if node.get("hooks") is not None:
+        return "hooks"
+    return "leaf"
+
+def collect(node, acc):
+    k = kind_of(node)
+    if k == "group":
+        for child in node["members"]:
+            collect(child, acc)
+    elif k == "hooks":
+        for h in node["hooks"]:
+            o = owner.get(h)
+            if o and o not in acc:
+                acc.append(o)
+    elif node.get("key") not in acc:
+        acc.append(node["key"])
+    return acc
+
+rows = []
+for b in tree["buckets"]:
+    if b.get("personal") and not personal:
+        continue
+    keys = collect(b, [])
+    if keys:
+        rows.append((b.get("label", b["key"]) + ":", ", ".join(keys)))
+
+if not rows:
+    sys.exit(1)
+
+width = max(len(label) for label, _ in rows) + 2
+for label, keys in rows:
+    lead = "  " + label.ljust(width)
+    # break_on_hyphens=False is not cosmetic: every key here is a literal the user
+    # types after --only, and textwrap will happily split "api-drift" across two
+    # lines at the hyphen, printing a key that does not exist. break_long_words
+    # likewise - a key must survive this block intact or the block is worse than
+    # useless.
+    lines = textwrap.wrap(keys, 78 - len(lead),
+                          break_on_hyphens=False, break_long_words=False)
+    for i, line in enumerate(lines):
+        print((lead if i == 0 else " " * len(lead)) + line)
+PY
+  )"; then
+    printf '%s\n' "$out"
+  else
+    printf '  (component list unavailable; see claude/hooks/browser-tree.json)\n'
+  fi
+  return 0
+}
+
 print_help() {
   cat <<'EOF'
 Improv installer
 
 Usage:
-  ./install.sh                  Interactive checkbox TUI (gum or text fallback)
+  ./install.sh                  Bucket browser: drill into groups, toggle any
+                                component or individual hook, apply in one pass
   ./install.sh --yes            Non-interactive, install everything
   ./install.sh --preset NAME    Non-interactive preset: all | minimal | none
   ./install.sh --only KEYS      Non-interactive, comma-separated keys
-  ./install.sh --browser        Bucket browser: drill into groups, toggle any
-                                component or individual hook, apply in one pass
+  ./install.sh --browser        Same as no flags (the browser is the default entry)
   ./install.sh --dry-run        Print resolved picks and exit
   ./install.sh --prune-skills   List dead repo skill symlinks (dry run), then exit
   ./install.sh --prune-skills-apply
@@ -855,22 +948,16 @@ Usage:
   ./install.sh --help           Show this help
 
 Components (for --only KEYS):
-  Core:     brain, config, memory, statusline, nvm, ampersand
-  Channels: discord, voice-input, voice-output
-  Tools:    cmux, fable, sidecoach, reflect, task-list, tilt-lab, lotus
-  Apps:     clickup, visualizer, codex, justify, chrome, figma (opt-in
-            hook-owning components; each wires only its own hooks into settings.json)
-  Clusters: safety, verification, question-discipline, grounding, api-drift,
-            planning-git, surface, model-routing (each a QA-hook bundle; every
-            member hook is also --only-able, e.g. --only bash-guard)
-  Skills:   skills (bundle), tactical-polish, component-gallery, fontshare,
-            motion, design-build, curate, design-references, social-media,
-            design-team, visual-effects, icon-source
+EOF
+  _help_components
+  cat <<'EOF'
 
-  'skills' installs the whole design pipeline + peer skills as a bundle; the
-  individual skill keys let you take just one (e.g. --only icon-source).
+  Grouped as the browser groups them (claude/hooks/browser-tree.json is the one
+  source both read, so this list cannot drift from what the browser shows).
+  'skills' is also valid: it takes the whole design-pipeline bundle at once, where
+  the skill keys above take just one (e.g. --only icon-source).
   'config' installs CORE only (permissions/plugins/statusline + startup-check + hud).
-  The QA-hook suite is the 8 clusters above; app hooks belong to their own apps.
+  Every individual hook is --only-able too, e.g. --only bash-guard.
 EOF
 }
 
@@ -895,14 +982,19 @@ fi
 
 HAS_ONLY=0
 HAS_PRESET=0
-BROWSER=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --yes|-y)       NONINTERACTIVE=1; shift ;;
     --only)         NONINTERACTIVE=1; HAS_ONLY=1; apply_only "${2:-}"; shift 2 ;;
     --preset)       NONINTERACTIVE=1; HAS_PRESET=1; apply_preset "${2:-}"; shift 2 ;;
     --dry-run|-n)   DRY_RUN=1; shift ;;
-    --browser)      BROWSER=1; shift ;;
+    # --browser: ACCEPTED AND INERT, on purpose. It used to select the browser back when
+    # the browser was an additive seam beside the old TUI; the browser is now the default
+    # interactive entry, so the flag is a synonym for passing nothing. It is kept because
+    # it is documented and in muscle memory, and because rejecting it would be a gratuitous
+    # break. Deliberately sets NO variable: a `BROWSER=1` that nothing reads is worse than
+    # no variable at all - it reads like live wiring and silently is not.
+    --browser)      shift ;;
     --prune-skills)       PRUNE_SKILLS=dryrun; shift ;;
     --prune-skills-apply) PRUNE_SKILLS=apply;  shift ;;
     --help|-h)      print_help; exit 0 ;;
@@ -1055,110 +1147,6 @@ print_yes_and_banner() {
   printf '\n'
 }
 
-run_tui_gum() {
-  print_yes_and_banner
-  gum style --border double --margin "1 0" --padding "1 2" --border-foreground "#0e7490" \
-    "Improv installer" "Pick what to install on this machine."
-
-  local i
-  for i in "${!KEYS[@]}"; do
-    print_title_animated "${KEYS[$i]} - ${TITLES[$i]}"
-    gum style --faint "  ${DESCS[$i]}"
-  done
-  printf "\n"
-
-  # Default-selected list = currently picked keys (CSV for gum --selected)
-  local sel=""
-  for i in "${!KEYS[@]}"; do
-    if [[ "${PICKS[$i]}" == "1" ]]; then
-      [[ -n "$sel" ]] && sel="${sel},"
-      sel="${sel}${KEYS[$i]}"
-    fi
-  done
-
-  local chosen
-  chosen="$(printf '%s\n' "${KEYS[@]}" \
-    | gum choose --no-limit --selected "$sel" \
-        --header "Space to toggle, enter to confirm" \
-        --cursor.foreground "#67e8f9" \
-        --selected.foreground "#67e8f9" \
-        --item.foreground "#ffffff" \
-        --cursor-prefix "[ ] " \
-        --selected-prefix "[✓] " \
-        --unselected-prefix "[ ] ")" || return 1
-
-  set_all 0
-  local k
-  while IFS= read -r k; do
-    [[ -z "$k" ]] && continue
-    set_pick "$k" 1
-  done <<< "$chosen"
-
-  # Phase 2 (nested drill-in): for each picked cluster, optionally edit which of
-  # its hooks install. Default is all; deselecting a hook adds it to HOOK_OFF.
-  HOOK_OFF=""
-  local _c _members _keepcsv _keep _m
-  for _c in "${CLUSTER_KEYS[@]}"; do
-    picked "$_c" || continue
-    _members="$(cluster_hooks "$_c")"
-    if gum confirm "Customize the hooks in '$_c'? (default: install all)" --default=false \
-         --selected.background "#0e7490" --selected.foreground "#ffffff" 2>/dev/null; then
-      _keepcsv="$(printf '%s\n' $_members | paste -sd, -)"
-      _keep="$(printf '%s\n' $_members \
-        | gum choose --no-limit --selected "$_keepcsv" \
-            --header "'$_c' hooks - space to toggle off, enter to confirm" \
-            --cursor.foreground "#67e8f9" --selected.foreground "#67e8f9" \
-            --item.foreground "#ffffff" \
-            --cursor-prefix "[ ] " --selected-prefix "[✓] " --unselected-prefix "[ ] ")" || _keep="$_members"
-      for _m in $_members; do
-        case $'\n'"$_keep"$'\n' in *$'\n'"$_m"$'\n'*) ;; *) HOOK_OFF="$HOOK_OFF $_m" ;; esac
-      done
-    fi
-  done
-
-  clear
-  show_picks_summary
-  gum confirm "Proceed with these components?" \
-    --selected.background "#0e7490" \
-    --selected.foreground "#ffffff" || return 1
-  return 0
-}
-
-run_tui_fallback() {
-  printf "\n${CYAN}Improv installer${NC}\n"
-  printf "Pick what to install. Default is everything on.\n\n"
-  local i
-  for i in "${!KEYS[@]}"; do
-    printf "  ${GREEN}%d)${NC} %s ${DIM}- %s${NC}\n" "$((i+1))" "${TITLES[$i]}" "${KEYS[$i]}"
-    printf "     ${DIM}%s${NC}\n" "${DESCS[$i]}"
-  done
-  printf "\n"
-  printf "Enter the numbers to toggle off (space-separated), or press Enter to keep all: "
-
-  local toggles=""
-  if [ -r /dev/tty ]; then read -r toggles </dev/tty || true; fi
-
-  local n
-  for n in $toggles; do
-    [[ "$n" =~ ^[0-9]+$ ]] || continue
-    local idx=$((n-1))
-    if [[ "$idx" -ge 0 && "$idx" -lt "${#KEYS[@]}" ]]; then
-      PICKS[$idx]=0
-    fi
-  done
-
-  clear
-  show_picks_summary
-  printf "Proceed? [Y/n] "
-  local reply=""
-  if [ -r /dev/tty ]; then read -r reply </dev/tty || true; fi
-  reply="${reply:-Y}"
-  case "$reply" in
-    [Nn]*) return 1 ;;
-  esac
-  return 0
-}
-
 # ============================================================
 # State file infrastructure (JSON, ~/.claude/.dotfiles-state)
 # ============================================================
@@ -1275,40 +1263,66 @@ effective_state() {
 }
 
 # ============================================================
-# Update check (git fetch + git log HEAD..origin/main)
+# Update check (git fetch + git rev-list --count / git log HEAD..origin/main)
 # ============================================================
 
+# check_updates - is this checkout behind origin/main, and by what?
+#
+# CONTRACT (update_status in browser-lib.sh is the only consumer):
+#   exit 1  -> cd, fetch, rev-list, or log FAILED. Availability is UNKNOWN. Never
+#              guess "up to date" here: a row that claims you are current when it
+#              could not check is the one lie this function must not tell.
+#   exit 0  -> line 1  : COUNT of incoming commits, a bare integer. "0" = up to date.
+#              lines 2+: up to 10 incoming commit SUBJECTS, newest first. DISPLAY ONLY,
+#                        and legitimately ABSENT even when the count is > 0.
+#
+# AVAILABILITY IS A COUNT, NOT SUBJECT TEXT (fixed here, deliberately, once the
+# returning-flow consumer was retired and this contract was free to change).
+# The previous cut inferred "are there updates?" from whether `git log --pretty=%s`
+# printed anything. `git commit --allow-empty-message` is legal, so a repo whose first
+# <=10 incoming commits ALL have empty subjects printed nothing and was reported
+# UP TO DATE while updates existed. Reproduced, not theorised. `git rev-list --count`
+# answers the availability question directly and cannot be fooled by message text;
+# the subjects are now fetched separately and only for the row's display.
 check_updates() {
   cd "$REPO_DIR" || return 1
   git fetch origin main >/dev/null 2>&1 || return 1
-  local commits
-  # `--max-count=10` REPLACES a `| head -10` pipe, and the two changes on this line are
-  # COUPLED - neither is safe alone:
-  #   - `|| return 1` alone (over the old pipe) would be a REGRESSION. Under `pipefail`,
-  #     `git log ... | head -10` can yield status 141: head exits once it has 10 lines,
-  #     and git log takes SIGPIPE on its next write. `|| return 1` would then turn a repo
-  #     WITH updates into "unknown" - the row claiming it cannot tell, precisely when it
-  #     can. (The old code only got away with the pipe because nothing read its status.)
-  #   - `--max-count=10` alone would leave git log failures silently indistinguishable
-  #     from up-to-date.
-  # The SIGPIPE trigger is OUTPUT SIZE crossing the pipe buffer (~64KB), NOT the commit
-  # count: git log must still be WRITING when head exits, so a small backlog whose subjects
-  # fit in the buffer completes and exits 0. MEASURED (test-check-updates.sh): 15 commits
-  # (215B) -> 0, 65 commits (10KB) -> 0, 165 commits (91KB) -> 141. That size-dependence is
-  # what makes it nasty - it fires only for far-behind repos, i.e. exactly the installs that
-  # most need the update row to work.
-  # No pipe means no SIGPIPE means no 141, which is what lets `|| return 1` mean what it
-  # says: git log GENUINELY failed. `2>/dev/null` stays - the exit code carries the signal
-  # now. Real-repo coverage (the stubbed unit tests cannot reach any of this):
-  # claude/hooks/test-check-updates.sh.
-  commits=$(git log HEAD..origin/main --max-count=10 --pretty=format:'%s' 2>/dev/null) || return 1
-  [ -n "$commits" ] && printf '%s\n' "$commits"
-  # Explicit: without this the `[ -n ... ] &&` above is the last command, so the
-  # up-to-date case (no commits) returns 1 - indistinguishable from a failed
-  # cd/fetch. The contract callers rely on is:
-  #   exit 1            -> cd, fetch, or log failed; update state is UNKNOWN
-  #   exit 0 + output   -> commits available (one subject per line, newest first, max 10)
-  #   exit 0 + no output -> up to date
+  local count subjects=""
+  count=$(git rev-list --count HEAD..origin/main 2>/dev/null) || return 1
+  # rev-list --count prints a bare integer on success. Anything else means git did not
+  # behave as contracted, so report unknown rather than doing integer math on it (an
+  # empty $count would make `[ "$count" -ne 0 ]` below fail with a syntax error, not a
+  # clean classification).
+  case "$count" in ''|*[!0-9]*) return 1 ;; esac
+  if [ "$count" -ne 0 ]; then
+    # `--max-count=10` REPLACES a `| head -10` pipe, and the two things on this line are
+    # COUPLED - neither is safe alone:
+    #   - `|| return 1` alone (over the old pipe) would be a REGRESSION. Under `pipefail`,
+    #     `git log ... | head -10` can yield status 141: head exits once it has 10 lines,
+    #     and git log takes SIGPIPE on its next write. `|| return 1` would then turn a repo
+    #     WITH updates into "unknown" - the row claiming it cannot tell, precisely when it
+    #     can. (The old code only got away with the pipe because nothing read its status.)
+    #   - `--max-count=10` alone would leave git log failures silently indistinguishable
+    #     from up-to-date.
+    # The SIGPIPE trigger is OUTPUT SIZE crossing the pipe buffer (~64KB), NOT the commit
+    # count: git log must still be WRITING when head exits, so a small backlog whose subjects
+    # fit in the buffer completes and exits 0. MEASURED (test-check-updates.sh): 15 commits
+    # (215B) -> 0, 65 commits (10KB) -> 0, 165 commits (91KB) -> 141. That size-dependence is
+    # what makes it nasty - it fires only for far-behind repos, i.e. exactly the installs that
+    # most need the update row to work.
+    # No pipe means no SIGPIPE means no 141, which is what lets `|| return 1` mean what it
+    # says: git log GENUINELY failed. `2>/dev/null` stays - the exit code carries the signal
+    # now. Real-repo coverage (the stubbed unit tests cannot reach any of this):
+    # claude/hooks/test-check-updates.sh.
+    subjects=$(git log HEAD..origin/main --max-count=10 --pretty=format:'%s' 2>/dev/null) || return 1
+  fi
+  # Nothing is printed until BOTH git calls have succeeded, so a failure path never
+  # leaves a half-written count on stdout for the caller to misread.
+  printf '%s\n' "$count"
+  # `[ -n ... ] &&` must NOT be the last command in this function: when it is false its
+  # status becomes the function's, and exit 1 means UNKNOWN. The explicit `return 0`
+  # below is what keeps "count printed, no subjects to show" a KNOWN state.
+  [ -n "$subjects" ] && printf '%s\n' "$subjects"
   return 0
 }
 
@@ -1795,294 +1809,6 @@ deactivate_component() {
   esac
 }
 
-# ============================================================
-# Fresh-install flow: logo + 2 options (whole / a la carte)
-# ============================================================
-
-fresh_flow() {
-  clear
-  print_yes_and_banner
-
-  local choice
-  if command -v gum >/dev/null 2>&1; then
-    choice=$(printf '%s\n' "Install the whole thing" "Install à la carte" | \
-      gum choose --header "Welcome. Two ways to do this:" \
-        --cursor.foreground "#67e8f9" \
-        --selected.foreground "#67e8f9" \
-        --item.foreground "#ffffff") || { warn "Aborted."; exit 0; }
-  else
-    printf "\nWelcome. Two ways to do this:\n  1) Install the whole thing\n  2) Install à la carte\n\nEnter 1 or 2 [1]: "
-    local n=""
-    [ -r /dev/tty ] && read -r n </dev/tty
-    case "${n:-1}" in
-      2) choice="Install à la carte" ;;
-      *) choice="Install the whole thing" ;;
-    esac
-  fi
-
-  if [[ "$choice" == "Install the whole thing" ]]; then
-    set_all 1
-    clear
-    show_picks_summary
-    if command -v gum >/dev/null 2>&1; then
-      gum confirm "Install all of these?" \
-        --selected.background "#0e7490" \
-        --selected.foreground "#ffffff" || { warn "Aborted."; exit 0; }
-    else
-      printf "Install all of these? [Y/n] "
-      local r=""
-      [ -r /dev/tty ] && read -r r </dev/tty
-      case "$r" in [Nn]*) warn "Aborted."; exit 0 ;; esac
-    fi
-  else
-    if command -v gum >/dev/null 2>&1; then
-      run_tui_gum || { warn "Aborted at confirmation."; exit 0; }
-    else
-      run_tui_fallback || { warn "Aborted at confirmation."; exit 0; }
-    fi
-  fi
-}
-
-# ============================================================
-# Returning-user flow: update check + per-component action loop
-# ============================================================
-
-returning_flow() {
-  clear
-  print_yes_and_banner
-
-  printf "Checking for updates...\n\n"
-  local updates
-  updates=$(check_updates 2>/dev/null || true)
-  if [ -n "$updates" ]; then
-    printf "${GREEN}Updates available:${NC}\n"
-    printf "%s\n" "$updates" | sed 's/^/  + /'
-    printf "\n"
-
-    local apply_choice="no"
-    if command -v gum >/dev/null 2>&1; then
-      gum confirm "Pull updates now?" \
-        --selected.background "#0e7490" \
-        --selected.foreground "#ffffff" \
-        && apply_choice=yes || apply_choice=no
-    else
-      printf "Pull updates now? [Y/n] "
-      local r=""
-      [ -r /dev/tty ] && read -r r </dev/tty
-      case "$r" in [Nn]*) apply_choice=no ;; *) apply_choice=yes ;; esac
-    fi
-
-    if [[ "$apply_choice" == "yes" ]]; then
-      apply_update
-      ok "Updates applied."
-      printf "\n${ACCENT}Restart 'ampersand' to pick up the new version.${NC}\n\n"
-      exit 0
-    fi
-  else
-    ok "Up to date."
-  fi
-
-  # Action loop
-  local did_install=0
-  while true; do
-    clear
-    print_yes_and_banner
-    printf "${ACCENT}Components${NC}\n"
-    local i status display
-    for i in "${!KEYS[@]}"; do
-      status=$(effective_state "${KEYS[$i]}")
-      case "$status" in
-        active)        display="${GREEN}active${NC}" ;;
-        inactive)      display="${YELLOW}inactive${NC}" ;;
-        not-installed) display="${DIM}not installed${NC}" ;;
-      esac
-      printf "  %-14s %-20b ${DIM}%s${NC}\n" "${KEYS[$i]}" "$display" "${TITLES[$i]}"
-    done
-    printf "\n"
-
-    local options=()
-    options+=("(quit)")
-    for i in "${!KEYS[@]}"; do
-      options+=("$(printf '%-14s %s' "${KEYS[$i]}" "${TITLES[$i]}")")
-    done
-
-    local pick=""
-    if command -v gum >/dev/null 2>&1; then
-      local raw_pick
-      raw_pick=$(printf '%s\n' "${options[@]}" | \
-        gum choose --header "Pick a component, or quit" \
-          --height 15 \
-          --header.foreground "#0e7490" \
-          --cursor.foreground "#67e8f9" \
-          --selected.foreground "#67e8f9" \
-          --item.foreground "#ffffff") || break
-      # Extract just the key (first word)
-      pick="${raw_pick%% *}"
-    else
-      printf "\nComponents:\n"
-      for i in "${!KEYS[@]}"; do
-        printf "  %-12s %s\n" "${KEYS[$i]}" "${TITLES[$i]}"
-      done
-      printf "\nPick (or 'quit'): "
-      [ -r /dev/tty ] && read -r pick </dev/tty || break
-    fi
-    [[ -z "$pick" || "$pick" == "(quit)" || "$pick" == "quit" ]] && break
-
-    if [[ "$(key_index "$pick")" == "-1" ]]; then
-      warn "Unknown component: $pick"
-      continue
-    fi
-
-    local current; current=$(effective_state "$pick")
-    local idx; idx=$(key_index "$pick")
-
-    # Detail screen + action loop (loops back for non-destructive actions)
-    while true; do
-      clear
-      print_yes_and_banner
-
-      # Status badge
-      local status_label
-      case "$current" in
-        active)        status_label="${GREEN}active${NC}" ;;
-        inactive)      status_label="${YELLOW}inactive${NC}" ;;
-        not-installed) status_label="${DIM}not installed${NC}" ;;
-      esac
-
-      # Title + status
-      printf "${ACCENT}%s${NC}  %b\n" "$pick" "$status_label"
-      printf "${DIM}%s${NC}\n\n" "${TITLES[$idx]}"
-
-      # Description (wrapped to terminal width)
-      local term_width
-      term_width=$(tput cols 2>/dev/null || echo 80)
-      if command -v gum >/dev/null 2>&1; then
-        printf '%s' "${DESCS[$idx]}" | gum style --faint --width "$((term_width - 4))"
-      else
-        printf "${DIM}%s${NC}\n" "${DESCS[$idx]}" | fold -s -w "$((term_width - 4))"
-      fi
-      printf "\n"
-
-      # Files list
-      printf "${ACCENT}Files:${NC}\n"
-      printf '%b\n' "${FILES[$idx]}" | while IFS= read -r fline; do
-        printf "  ${DIM}%s${NC}\n" "$fline"
-      done
-      printf "\n"
-
-      # Build action list
-      local actions=()
-      case "$current" in
-        active)        actions=("deactivate") ;;
-        inactive)      actions=("activate" "remove from state") ;;
-        not-installed) actions=("install") ;;
-      esac
-      actions+=("view in Finder" "list files" "(back)")
-
-      local action=""
-      if command -v gum >/dev/null 2>&1; then
-        action=$(printf '%s\n' "${actions[@]}" | \
-          gum choose --header "Actions" \
-            --header.foreground "#0e7490" \
-            --cursor.foreground "#67e8f9" \
-            --selected.foreground "#67e8f9" \
-            --item.foreground "#ffffff") || break
-      else
-        printf "Actions:\n"
-        local ai
-        for ai in "${!actions[@]}"; do
-          printf "  %d) %s\n" "$((ai+1))" "${actions[$ai]}"
-        done
-        printf "Pick: "
-        local action_num=""
-        [ -r /dev/tty ] && read -r action_num </dev/tty || break
-        if [[ "$action_num" =~ ^[0-9]+$ ]] && [ "$action_num" -ge 1 ] && [ "$action_num" -le "${#actions[@]}" ]; then
-          action="${actions[$((action_num-1))]}"
-        else
-          continue
-        fi
-      fi
-      [[ -z "$action" || "$action" == "(back)" ]] && break
-
-      case "$action" in
-        "view in Finder")
-          open "${DIRS[$idx]}" 2>/dev/null || warn "Could not open directory"
-          sleep 0.3
-          ;;
-        "list files")
-          printf "\n${ACCENT}Installed paths for %s:${NC}\n\n" "$pick"
-          printf '%b\n' "${FILES[$idx]}" | while IFS= read -r fline; do
-            local expanded="${fline/#\~/$HOME}"
-            if [ -e "$expanded" ] || [ -L "$expanded" ]; then
-              printf "  ${GREEN}%s${NC}\n" "$fline"
-            else
-              printf "  ${DIM}%s${NC}\n" "$fline"
-            fi
-          done
-          printf "\n${DIM}(green = exists on this machine)${NC}\n"
-          printf "\nPress enter to continue..."
-          [ -r /dev/tty ] && read -r </dev/tty
-          ;;
-        install|activate)
-          local logfile; logfile=$(mktemp)
-          # Cluster picks get the same phase-2 member drill-in the fresh install
-          # offers: optionally deselect member hooks. Deselected members ride to the
-          # recursive install as HOOK_OFF via env (the child's HOOK_OFF init respects
-          # an inherited value; apply_only leaves it intact; the install pass subtracts
-          # it). Non-cluster picks leave _hook_off empty, so behavior is unchanged.
-          local _hook_off=""
-          if [[ " ${CLUSTER_KEYS[*]} " == *" $pick "* ]] && command -v gum >/dev/null 2>&1; then
-            local _members _keepcsv _keep _m
-            _members="$(cluster_hooks "$pick")"
-            if gum confirm "Customize the hooks in '$pick'? (default: install all)" --default=false \
-                 --selected.background "#0e7490" --selected.foreground "#ffffff" 2>/dev/null; then
-              _keepcsv="$(printf '%s\n' $_members | paste -sd, -)"
-              _keep="$(printf '%s\n' $_members \
-                | gum choose --no-limit --selected "$_keepcsv" \
-                    --header "'$pick' hooks - space to toggle off, enter to confirm" \
-                    --cursor.foreground "#67e8f9" --selected.foreground "#67e8f9" \
-                    --item.foreground "#ffffff" \
-                    --cursor-prefix "[ ] " --selected-prefix "[✓] " --unselected-prefix "[ ] ")" || _keep="$_members"
-              for _m in $_members; do
-                case $'\n'"$_keep"$'\n' in *$'\n'"$_m"$'\n'*) ;; *) _hook_off="$_hook_off $_m" ;; esac
-              done
-            fi
-          fi
-          printf "\nInstalling %s...\n" "$pick"
-          if _AMPERSAND_HOOK_OFF="$_hook_off" _AMPERSAND_NO_SUMMARY=1 bash "$0" --only "$pick" --yes >"$logfile" 2>&1; then
-            ok "$pick installed."
-            current="active"
-          else
-            err "$pick install failed. Last 20 lines:"
-            tail -20 "$logfile"
-          fi
-          rm -f "$logfile"
-          sleep 1.0
-          ;;
-        deactivate)
-          deactivate_component "$pick"
-          state_set "$pick" "inactive"
-          ok "$pick deactivated."
-          current="inactive"
-          sleep 0.8
-          ;;
-        "remove from state")
-          state_set "$pick" "not-installed"
-          ok "$pick cleared from state."
-          current="not-installed"
-          sleep 0.8
-          ;;
-      esac
-    done
-  done
-
-  if [ "$did_install" -eq 0 ]; then
-    state_record_sha
-    printf "\n"
-    exit 0
-  fi
-  # else: fall through to existing apply phase, which will install the picked component
-}
 
 # ============================================================
 # Bucket browser - render + navigation (the VIEW over browser-lib.sh)
@@ -2702,8 +2428,15 @@ _br_print_header() {
     meta="$on of $total $noun"
     # The one fact worth keeping from the orientation line, folded in where it is true
     # so the gum path does not have to stack a second near-duplicate line above the rows.
+    # THIS IS THE ONLY PLACE THE PINNED NOTE IS SAID. The text footer used to repeat it
+    # verbatim, so a hooks screen printed the same sentence twice (lead + footer).
+    # Punctuation is load-bearing, not decoration: the separator used to be two spaces,
+    # and _br_print_prose word-wraps through _br_wrap_words, which re-joins on SINGLE
+    # spaces - so on the wrapped path the two facts collided into the run-on
+    # "7 of 7 hooks on Pinned hooks are always on." A " - " separator survives the
+    # re-join because it is its own word.
     if _br_has_pinned_child; then
-      meta="$meta  Pinned hooks are always on."
+      meta="$meta - pinned hooks are always on."
     fi
     w="$(_br_term_width)"
     if [ "$(( ${#desc} + 2 + ${#meta} ))" -le "$w" ]; then
@@ -2780,8 +2513,11 @@ _br_footer_text() {
   elif [ -z "${BR_NAV:-}" ] && [ "${BR_UPD:-}" = "available" ] && [ -n "${BR_UPD_INFO:-}" ]; then
     line="Incoming: $(printf '%s' "$BR_UPD_INFO" | tr '\n' ';' | sed 's/;/; /g')"
   else
+    # No pinned note here. The section comment above has always said it is folded into
+    # the lead by _br_print_header "and only on screens that really have a pinned hook" -
+    # but this line kept appending it anyway, so a hooks screen said the identical
+    # sentence twice: once in the lead, once here. _br_print_header is the single source.
     line="Open a group to drill in. Select an item to stage it."
-    if _br_has_pinned_child; then line="$line Pinned hooks are always on."; fi
   fi
   n="$(_br_pend_total)"
   if [ "$n" != "0" ]; then
@@ -2831,8 +2567,9 @@ _br_pend_split_all() {
 
 # render_screen - the gum renderer. ONE `gum choose` per screen. Items are PLAIN TEXT
 # with no embedded ANSI: gum STRIPS escape codes out of items (measured against gum
-# 0.17.0), so color comes from gum's own palette flags, matching the flags the existing
-# run_tui_gum / returning_flow already use.
+# 0.17.0), so color comes from gum's own palette flags. The flag values below were
+# inherited from the retired run_tui_gum / returning_flow, which is why the browser
+# looks like the installer it replaced rather than like a new app.
 render_screen() {
   local i chosen height rows hdr
   local -a gargs
@@ -3186,21 +2923,29 @@ if [ "${_AMPERSAND_APPLY_TEST:-}" = "1" ]; then
   if apply_pending; then exit 0; else exit $?; fi
 fi
 
-# --- Bucket browser entry seam ----------------------------------------------
-# `install.sh --browser` runs the component browser and exits. It sits BEFORE the
-# interactive dispatch below and exits unconditionally, so it never falls through to
-# fresh_flow / returning_flow or the apply phase.
+# --- Interactive entry: the bucket browser ----------------------------------
+# THE browser IS the interactive experience now. There is no fresh-vs-returning
+# branch any more, and that is by design, not by omission: the browser probes every
+# item's status LIVE, so a first-run machine and a drifted one render through the
+# identical code path - one shows everything not-installed, the other does not. The
+# retired returning_flow existed only to answer "which of the two screens do I draw",
+# a question the browser does not have to ask. Retired with it: run_tui_gum,
+# run_tui_fallback, fresh_flow. Nothing calls them; nothing replaces them.
 #
-# DELIBERATELY ADDITIVE (Task 8 scope): the default interactive entry still dispatches
-# to run_tui_gum / run_tui_fallback / returning_flow exactly as before. Retiring those
-# in favor of this browser is Task 9's job, so --browser is the only way in for now.
-# --browser does NOT set NONINTERACTIVE, so no unattended path can reach it.
-if [ "${BROWSER:-0}" = "1" ]; then
-  ensure_gum >/dev/null 2>&1 || true
-  if component_browser; then exit 0; else exit $?; fi
-fi
-
-if [[ "$NONINTERACTIVE" == "0" ]]; then
+# The update check survives, but ONLY as the browser's update row (_browser_update_refresh
+# -> update_status). returning_flow ran it as a blocking prologue before you could reach
+# anything else; the row states it and gets out of the way.
+#
+# `--browser` is kept as an explicit synonym for the default entry: it is parsed, sets
+# nothing, and lands here exactly as passing no flags does (see the flag loop).
+#
+# WHY DRY_RUN GATES THIS BLOCK: --dry-run promises "print resolved picks and exit;
+# touches no files". The browser is an interactive applier - entering it under
+# --dry-run would let a documented no-op path write to disk. Dry-run wins and falls
+# through to the picks summary below, the same precedent --prune-skills-apply already
+# follows ("a global --dry-run overrides an apply request"). This is also why the
+# gate is DRY_RUN and not NONINTERACTIVE: --dry-run alone never set NONINTERACTIVE.
+if [[ "$NONINTERACTIVE" == "0" && "$DRY_RUN" == "0" ]]; then
   ensure_gum >/dev/null 2>&1 || true
 
   # If any component is already active on disk but the state file is missing,
@@ -3239,11 +2984,12 @@ with open('$STATE_FILE', 'w') as f:
     fi
   fi
 
-  if [ -f "$STATE_FILE" ]; then
-    returning_flow
-  else
-    fresh_flow
-  fi
+  # The state bootstrap + legacy migration above still run FIRST, and still only here:
+  # they are what makes the browser's probed status agree with the state file on a
+  # machine that predates either. The browser then owns the whole session and exits
+  # with its own status - it never falls through to the apply phase below (which is
+  # driven by PICKS, a set the browser does not populate).
+  if component_browser; then exit 0; else exit $?; fi
 fi
 
 if [[ "$DRY_RUN" == "1" ]]; then

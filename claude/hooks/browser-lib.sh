@@ -795,22 +795,49 @@ EOF
 
 # update_status - classify the repo against origin/main for the update row.
 #
-# Output (stdout):
+# Output (stdout) - UNCHANGED contract, this is what the row renders:
 #   line 1  : exactly one of  available | up-to-date | unknown
-#   lines 2+: when "available", the incoming commit subjects VERBATIM from check_updates
+#   lines 2+: when "available", the DISPLAY detail for the row
 #
-# Mapping from check_updates' contract (install.sh ~1276):
-#   exit non-zero      -> unknown     (cd or git fetch failed; offline, no remote, ...)
-#   exit 0 + output    -> available   (+ the subject lines)
-#   exit 0 + no output -> up-to-date
+# Mapping from check_updates' contract (install.sh ~1281):
+#   exit non-zero  -> unknown     (cd, fetch, rev-list, or log failed; offline, ...)
+#   exit 0, line 1 -> the COUNT of incoming commits: "0" -> up-to-date, else available
+#   exit 0, 2+     -> up to 10 incoming subjects, newest first (may be absent)
 # The exit-0-means-known half of that contract only became true when check_updates got
 # its explicit `return 0`; before that, up-to-date and offline were both exit 1.
+#
+# THIS IS THE DISPLAY LAYER, and that is the point of the split. check_updates answers
+# "are there updates, and how many" from a COUNT that commit-message text cannot fool.
+# Deciding what the row SAYS - including what to say when there is a real backlog but
+# nothing quotable to show - is UX, so it lives here rather than in the git primitive.
+#
+# THE EMPTY-SUBJECT CASES: `git commit --allow-empty-message` is legal, so "N commits
+# incoming" and "N subjects to print" are genuinely independent, and BOTH degenerate
+# shapes have to be handled:
+#
+#   ALL subjects empty -> check_updates prints the count and nothing else. There is
+#     nothing to quote, but the row must STILL say updates exist, so the count itself
+#     becomes the detail line ("3 new commits"). Reporting up-to-date here was the bug;
+#     a silent "available" with no detail would be a quieter version of the same lie.
+#
+#   SOME subjects empty -> git prints EMPTY LINES for them, and an empty line is not a
+#     subject. Passing them through made the row render "Incoming: ; fix config"
+#     (the footer joins detail lines with "; "). So empty lines are FILTERED out.
+#     Found by Codex review; reproduced against a real repo before being fixed.
+#
+# WHICH BRANCH FIRES WHEN: `out="$(check_updates)"` strips trailing newlines, so a count
+# followed only by blanks arrives here as the count ALONE - the first case. That means
+# whenever out != count, the block after the count ends in a non-blank line and $detail
+# cannot filter down to empty. The `-n "$detail"` guard is DEFENSIVE, not load-bearing;
+# the count fallback is reached via the count-only shape. Kept anyway: a filter whose
+# empty case silently printed no detail would be a worse bug than a redundant branch.
 #
 # SET -E NOTE (load-bearing): check_updates returning 1 is an EXPECTED, handled case,
 # not an error. The call is wrapped in `if` so errexit cannot abort the caller on the
 # offline path - see the same note on apply_pending.
 update_status() {
-  local out rc
+  local out rc count line subjects detail=""
+
   if out="$(check_updates 2>/dev/null)"; then
     rc=0
   else
@@ -821,12 +848,46 @@ update_status() {
     printf 'unknown\n'
     return 0
   fi
-  if [ -z "$out" ]; then
+
+  count="${out%%$'\n'*}"
+  # A zero-exit check_updates that did not print a valid count is a BROKEN primitive,
+  # not an up-to-date repo. Say unknown: the honest answer when the contract is violated.
+  case "$count" in ''|*[!0-9]*) printf 'unknown\n'; return 0 ;; esac
+
+  if [ "$count" -eq 0 ]; then
     printf 'up-to-date\n'
     return 0
   fi
+
+  # Keep only the lines that are actually subjects.
+  #
+  # Two bash 3.2 traps, both hit while writing this:
+  #   1. A here-doc, NOT a pipe: `... | while read` runs the loop in a SUBSHELL, so $detail
+  #      would be built and thrown away, silently yielding the count fallback every time.
+  #   2. The strip is computed into $subjects FIRST. A here-doc body undergoes parameter
+  #      expansion but NOT quote removal, so `$'\n'` written inside one is literal - the
+  #      pattern never matches, the count line is never stripped, and the row renders
+  #      "Incoming: 3; fix config" with the count masquerading as a subject. Caught by
+  #      running it against a real repo; the unit stubs alone would have shown the same
+  #      wrong output without explaining it.
+  if [ "$out" != "$count" ]; then
+    subjects="${out#*$'\n'}"
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      detail="$detail$line"$'\n'
+    done <<EOF
+$subjects
+EOF
+  fi
+
   printf 'available\n'
-  printf '%s\n' "$out"
+  if [ -n "$detail" ]; then
+    printf '%s' "$detail"
+  elif [ "$count" -eq 1 ]; then
+    printf '1 new commit\n'
+  else
+    printf '%s new commits\n' "$count"
+  fi
   return 0
 }
 

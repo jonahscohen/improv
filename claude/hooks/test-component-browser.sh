@@ -411,8 +411,14 @@ unset BR_STATE_PROBE
 # redirect and a trap meant to catch an unwanted re-run would silently never fire.
 # (Task 6 hit exactly this trap.)
 
+# NOTE ON THE STUB SHAPE (Task 9): check_updates now prints a COUNT on line 1 and the
+# subjects on 2+. Availability comes from that count, never from whether subject text was
+# printed - `git commit --allow-empty-message` is legal, so a real backlog can have nothing
+# to quote. These stubs speak the new contract; test-check-updates.sh proves the real
+# function honours it against actual git repos.
+
 # 26. commits available -> "available" + every subject line, verbatim.
-check_updates() { printf 'fix the widget\nbump the dep\n'; return 0; }
+check_updates() { printf '2\nfix the widget\nbump the dep\n'; return 0; }
 _us_out="$(update_status)"
 [ "$(printf '%s\n' "$_us_out" | sed -n 1p)" = "available" ] \
   && ok "update_status line 1 is available" || bad "update_status line 1 is available (got $(printf '%s\n' "$_us_out" | sed -n 1p))"
@@ -422,15 +428,73 @@ printf '%s\n' "$_us_out" | grep -Fqx "bump the dep" \
   && ok "update_status carries second commit subject" || bad "update_status carries second commit subject"
 # The EXACT whole output, not just "line 1 + the subjects appear somewhere": the contract is
 # "line 1 exactly, lines 2+ verbatim IN ORDER". Greps alone would pass an implementation
-# that duplicated, reordered, or padded the subject lines.
+# that duplicated, reordered, or padded the subject lines. The COUNT must be consumed, not
+# forwarded: it is an input to the classification, not part of the row's detail.
 [ "$_us_out" = "$(printf 'available\nfix the widget\nbump the dep')" ] \
-  && ok "update_status emits exactly available + subjects in order" \
+  && ok "update_status emits exactly available + subjects in order (count consumed, not echoed)" \
   || bad "update_status emits exactly available + subjects in order (got '$_us_out')"
 
-# 27. no commits, exit 0 -> "up-to-date". This is the case the missing `return 0` in
-# check_updates used to render indistinguishable from "unknown".
-check_updates() { return 0; }
+# 26b. THE EMPTY-SUBJECT CASE - count > 0 with NO subject lines. The row must still say
+# updates exist, and the count becomes the detail line because there is nothing to quote.
+# Reporting up-to-date here was a REAL shipped bug (see test-check-updates.sh scenario 4).
+check_updates() { printf '3\n'; return 0; }
+[ "$(update_status)" = "$(printf 'available\n3 new commits')" ] \
+  && ok "update_status: count>0 with no subjects -> available + the count as detail" \
+  || bad "update_status: count>0 with no subjects -> available + '3 new commits' (got '$(update_status)')"
+
+# 26c. Singular. A row reading "1 new commits" is the kind of thing nobody fixes later.
+check_updates() { printf '1\n'; return 0; }
+[ "$(update_status)" = "$(printf 'available\n1 new commit')" ] \
+  && ok "update_status: a single commit reads '1 new commit', not '1 new commits'" \
+  || bad "update_status: singular detail line (got '$(update_status)')"
+
+# 26d. MIXED empty and non-empty subjects (Codex review, reproduced before fixing).
+# git prints an EMPTY LINE for a commit with no message, and an empty line is not a
+# subject. Passing them through made the footer - which joins detail lines with "; " -
+# render "Incoming: ; fix config". Empty lines are filtered out; the real subjects
+# survive, in order.
+check_updates() { printf '3\n\nfix config\n'; return 0; }
+[ "$(update_status)" = "$(printf 'available\nfix config')" ] \
+  && ok "update_status: empty subject lines are filtered, real ones survive (no 'Incoming: ; fix config')" \
+  || bad "update_status: mixed empty/non-empty subjects (got '$(update_status)')"
+
+# 26e. THE BOUNDARY, pinned deliberately (Codex round-2 caught the earlier version of this
+# test claiming to cover something it could not reach).
+#
+# update_status reads check_updates through `out="$(check_updates)"`, and command
+# substitution STRIPS TRAILING NEWLINES. So a check_updates that emits a count followed by
+# nothing but blank lines is INDISTINGUISHABLE from one that emits the count alone - the
+# blanks never reach the filter, and this is exactly why the real all-empty-message git
+# case (test-check-updates.sh scenario 4) renders as the count.
+#
+# The consequence is worth stating, because it is not obvious: when out != count, the block
+# after the count always ends in a NON-blank line, so `detail` can never filter down to
+# empty. The count fallback is reachable ONLY via the count-only shape. The `-n "$detail"`
+# guard in update_status is therefore defensive, not load-bearing - kept because a filter
+# whose empty case silently printed nothing would be a worse failure than a redundant test.
+check_updates() { printf '2\n\n\n'; return 0; }
+[ "$(update_status)" = "$(printf 'available\n2 new commits')" ] \
+  && ok "update_status: trailing blank lines are stripped by \$() before the filter sees them, so count-plus-blanks IS the count-only shape and the count speaks" \
+  || bad "update_status: count-plus-trailing-blanks should fall back to the count (got '$(update_status)')"
+
+# 27. count 0 -> "up-to-date". This is the case the missing `return 0` in check_updates used
+# to render indistinguishable from "unknown".
+check_updates() { printf '0\n'; return 0; }
 [ "$(update_status)" = "up-to-date" ] && ok "update_status up-to-date" || bad "update_status up-to-date (got $(update_status))"
+
+# 27b. CONTRACT VIOLATION: exit 0 but no count (or a non-integer one). A primitive that
+# exits clean while printing garbage is BROKEN, and a broken check is not an up-to-date
+# repo - the one thing this row must never do is claim you are current when it cannot tell.
+# Under the old contract "exit 0 + no output" MEANT up-to-date, so this case could not be
+# detected at all; the count makes it detectable, and it must fail closed.
+check_updates() { return 0; }
+[ "$(update_status)" = "unknown" ] \
+  && ok "update_status: exit 0 with no count is a BROKEN primitive -> unknown, not up-to-date" \
+  || bad "update_status: exit 0 with no count -> unknown (got '$(update_status)')"
+check_updates() { printf 'lots\n'; return 0; }
+[ "$(update_status)" = "unknown" ] \
+  && ok "update_status: exit 0 with a non-integer count -> unknown" \
+  || bad "update_status: exit 0 with a non-integer count -> unknown (got '$(update_status)')"
 
 # 28. cd/fetch failed -> "unknown".
 check_updates() { return 1; }
