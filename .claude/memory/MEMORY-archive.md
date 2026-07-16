@@ -1090,3 +1090,6 @@
 
 <!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
 - [Codex broken-from-Bash-tool FIXED - shell node was v12 but codex 0.142.5 needs >=16; codex-review.py now resolves a node>=16 absolutely (co-located-with-codex node + fallbacks) and invokes node+codex.js directly; codex component now DEPLOYS codex-review.py; cross-model gate restored (smoke HEALTHY, real Codex review exit 0) - PROJECT (2026-07-15)](session_2026-07-15_codex-node12-fix.md)
+
+<!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
+- [settings.json Write()/MultiEdit() allow rules warn - consolidated to Edit() (Claude Code now honors only Edit(path) for all file-editing tools); removed 18 redundant entries, kept 9 Edit() twins, lossless; also flagged that ~/.claude/settings.json is a real file, not a symlink - PROJECT (2026-07-16)](session_2026-07-16_settings-write-multiedit-allow-fix.md)
