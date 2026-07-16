@@ -2122,13 +2122,38 @@ returning_flow() {
 # _br_rows_add, and every loop is C-style (`${!arr[@]}` on an empty array trips
 # `set -u` on bash 3.2).
 
-# Column widths. The tag column is elastic (it absorbs whatever the terminal has
-# left) because hook DESCRIPTIONS live there and they are the point of the drill-in;
-# everything else is fixed so the columns line up down the screen.
-BR_NAME_W=30
+# Column widths.
+#
+# THE LAYOUT PROBLEM (measured, not guessed): the tag column carries the hook
+# DESCRIPTIONS, which are the entire point of the drill-in. The longest is 52 chars and
+# the longest hook name is 29. Name + description + status + glyphs CANNOT share an
+# 80-column line - the classic default width, and what a teammate on a fresh machine
+# gets. A fixed 30-wide name column made this worse: bucket names are at most 12 chars
+# ("Design Tools"), so 18 columns were being burned on every root row.
+#
+# THE STRATEGY, in three parts:
+#   1. NAME WIDTH IS PER-SCREEN, not fixed - the widest name actually on that screen,
+#      clamped to [BR_NAME_MIN, BR_NAME_MAX]. Root/bucket screens reclaim ~18 columns
+#      for the tag; hook screens still get their 29-30.
+#   2. TRUNCATION IS WORD-BOUNDARY + ELLIPSIS (_br_fit_words), never a mid-word cut, so
+#      a shortened tag reads as intentional.
+#   3. WHEN A HOOKS SCREEN STILL CANNOT FIT ITS DESCRIPTIONS, the description WRAPS onto
+#      its own indented continuation line under the row instead of being amputated. That
+#      is the only way an 80-column terminal can show what a hook actually does. The
+#      continuation row carries the SAME path as its parent row, so in gum (where every
+#      line is selectable) picking either line acts on the same hook - no dead stops.
+# Wide terminals (>=~118) still get the prototype's exact one-line-per-item layout.
+BR_NAME_MIN=10
+BR_NAME_MAX=30
 BR_STAT_W=13
 BR_CNT_W=5
 BR_PEND_W=11
+
+# Width the row-number prefix steals from the usable line. The text renderer prints
+# "  NN) " (6); gum draws a 2-column cursor prefix. Set once per session by
+# component_browser, because build_rows must lay out for whichever renderer will draw.
+BR_PREFIX_W=2
+BR_AVAIL_W=80
 
 # _br_term_width - the real terminal width.
 #
@@ -2167,11 +2192,91 @@ _br_rtrim() {
   printf '%s' "$s"
 }
 
-# _br_fit <str> <width> - hard-truncate to width (no ellipsis; the columns are tight).
+# _br_fit <str> <width> - hard-truncate to width. Used for NAMES, which are single
+# tokens (a mid-token cut is the only option) and which the per-screen name width is
+# sized to avoid cutting in the first place.
 _br_fit() {
   local s="$1" w="$2"
   if [ "${#s}" -gt "$w" ]; then s="${s:0:$w}"; fi
   printf '%s' "$s"
+}
+
+# _br_fit_words <str> <width> - truncate PROSE to width without ever cutting mid-word:
+# back off to the last whole word that fits and append "...". A mid-word cut
+# ("rules, settin") reads like a rendering bug; an ellipsis reads as intentional.
+# Falls back to a hard cut only when the first word alone exceeds the width.
+_br_fit_words() {
+  local s="$1" w="$2" cut
+  if [ "${#s}" -le "$w" ]; then printf '%s' "$s"; return 0; fi
+  if [ "$w" -le 3 ]; then printf '%s' "${s:0:$w}"; return 0; fi
+  cut="${s:0:$((w - 3))}"
+  # Only back off to the previous word when the cut actually LANDED INSIDE A WORD, i.e.
+  # the next character continues one. If it is a space OR punctuation the word is already
+  # complete, and backing off would throw away a word that fit: "rules, settings, shell"
+  # at 18 cuts after "settings" with a "," next, and must yield "rules, settings..." -
+  # not "rules,...".
+  case "${s:$((w - 3)):1}" in
+    [A-Za-z0-9])
+      case "$cut" in
+        *' '*) cut="${cut% *}" ;;
+      esac
+      ;;
+  esac
+  while [ -n "$cut" ] && [ "${cut% }" != "$cut" ]; do cut="${cut% }"; done
+  if [ -z "$cut" ]; then cut="${s:0:$((w - 3))}"; fi
+  printf '%s...' "$cut"
+}
+
+# _br_wrap_words <str> <width> - greedy word wrap, ONE LINE PER OUTPUT LINE.
+# `set -f` guards the unquoted word split: descriptions are prose and could contain a
+# glob character, which would otherwise expand against the cwd.
+_br_wrap_words() {
+  local s="$1" w="$2" line="" word had_f=0
+  case "$-" in *f*) had_f=1 ;; esac
+  set -f
+  for word in $s; do
+    if [ -z "$line" ]; then
+      line="$word"
+    elif [ "$(( ${#line} + 1 + ${#word} ))" -le "$w" ]; then
+      line="$line $word"
+    else
+      printf '%s\n' "$line"
+      line="$word"
+    fi
+  done
+  [ -n "$line" ] && printf '%s\n' "$line"
+  [ "$had_f" = "0" ] && set +f
+  return 0
+}
+
+# _br_screen_metrics - "<name_w> <max_tag_len>" for the CURRENT screen: the widest
+# display name among the rows about to be drawn (clamped), and the longest tag/desc.
+# Sizing to the actual screen is what reclaims ~18 columns on the root (widest bucket
+# name is "Design Tools" = 12) while still giving hook screens their 29-30.
+_br_screen_metrics() {
+  local b k nm d maxn="$BR_NAME_MIN" maxd=0 kind
+  if [ -z "${BR_NAV:-}" ]; then
+    while IFS= read -r b; do
+      [ -n "$b" ] || continue
+      if _br_is_personal "$b" && [ "${PERSONAL:-0}" != "1" ]; then continue; fi
+      nm="$(_br_display_name "$b")"
+      [ "${#nm}" -gt "$maxn" ] && maxn="${#nm}"
+      d="$(node_tag "$b")"
+      [ "${#d}" -gt "$maxd" ] && maxd="${#d}"
+    done < <(printf '%s\n' "${BR_BUCKETS//$'\t'/$'\n'}")
+  else
+    kind="$(node_kind "$BR_NAV")"
+    while IFS= read -r k; do
+      [ -n "$k" ] || continue
+      nm="$(_br_display_name "$BR_NAV/$k")"
+      [ "${#nm}" -gt "$maxn" ] && maxn="${#nm}"
+      d="$(node_tag "$BR_NAV/$k")"
+      if [ -z "$d" ] && [ "$kind" = "hooks" ]; then d="$(hook_desc "$k")"; fi
+      [ "${#d}" -gt "$maxd" ] && maxd="${#d}"
+    done < <(_br_children_lines "$BR_NAV")
+  fi
+  [ "$maxn" -gt "$BR_NAME_MAX" ] && maxn="$BR_NAME_MAX"
+  printf '%s %s\n' "$maxn" "$maxd"
 }
 
 # _br_display_name <path> - what a row/message calls a node.
@@ -2332,10 +2437,13 @@ _br_rows_add() {
   ROW_PATH[${#ROW_PATH[@]}]="$3"
 }
 
-# _br_item_row <path> - one component/hook row:
+# _br_item_row <path> <name_w> <tag_w> <wrap:0|1> - one component/hook row:
 #   caret + glyph + name + tag + status + count + pending marker
+# In WRAP mode the tag is omitted from this line and emitted as indented continuation
+# `desc` rows carrying the SAME path, so acting on either line acts on the same item.
 _br_item_row() {
-  local path="$1" key label kind st caret glyph stat cnt pend tag disp w tagw
+  local path="$1" name_w="$2" tag_w="$3" wrap="$4"
+  local key label kind st caret glyph stat cnt pend tag disp indent line
   key="${path##*/}"
   label="$(_br_display_name "$path")"
   kind="$(node_kind "$path")"
@@ -2368,14 +2476,30 @@ _br_item_row() {
   fi
   pend="$(_br_pend_mark "$path")"
 
-  w="$(_br_term_width)"
-  tagw=$(( w - 2 - 2 - (BR_NAME_W + 1) - BR_STAT_W - (BR_CNT_W + 1) - (BR_PEND_W + 1) - 1 ))
-  [ "$tagw" -lt 10 ] && tagw=10
+  if [ "$wrap" = "1" ]; then
+    # No room for the description inline: drop the tag column from the row entirely
+    # (rather than showing a useless stub) and give the description its own line.
+    disp="$(printf '%s %s %-*s %-*s %*s %*s' \
+      "$caret" "$glyph" \
+      "$name_w" "$(_br_fit "$label" "$name_w")" \
+      "$BR_STAT_W" "$stat" \
+      "$BR_CNT_W" "$cnt" \
+      "$BR_PEND_W" "$pend")"
+    _br_rows_add "$(_br_rtrim "$disp")" "item" "$path"
+    if [ -n "$tag" ]; then
+      indent=6
+      while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        _br_rows_add "$(printf '%*s%s' "$indent" "" "$line")" "desc" "$path"
+      done < <(_br_wrap_words "$tag" "$(( BR_AVAIL_W - indent ))")
+    fi
+    return 0
+  fi
 
   disp="$(printf '%s %s %-*s %-*s %-*s %*s %*s' \
     "$caret" "$glyph" \
-    "$BR_NAME_W" "$(_br_fit "$label" "$BR_NAME_W")" \
-    "$tagw" "$(_br_fit "$tag" "$tagw")" \
+    "$name_w" "$(_br_fit "$label" "$name_w")" \
+    "$tag_w" "$(_br_fit_words "$tag" "$tag_w")" \
     "$BR_STAT_W" "$stat" \
     "$BR_CNT_W" "$cnt" \
     "$BR_PEND_W" "$pend")"
@@ -2388,7 +2512,43 @@ _br_item_row() {
 # gets back + install-all/uninstall-all + its children.
 build_rows() {
   local b k here label n kids hooks_label bucket_rows
+  local metrics name_w max_tag tag_w wrap
   _br_rows_reset
+
+  # Per-screen layout. BR_AVAIL_W is the usable line once the renderer's row prefix is
+  # accounted for; tag_w is whatever the fixed columns leave.
+  BR_AVAIL_W=$(( $(_br_term_width) - BR_PREFIX_W ))
+  metrics="$(_br_screen_metrics)"
+  name_w="${metrics%% *}"
+  max_tag="${metrics##* }"
+
+  # Clamp the name column so the fixed columns alone can never overrun the line on a
+  # very narrow terminal (a 60-col window cannot seat a 29-char hook name plus status,
+  # count and pending). Names truncate there; that is the honest trade at that width,
+  # and it is bounded rather than an overflow.
+  local name_max_fit
+  name_max_fit=$(( BR_AVAIL_W - 2 - 2 - 1 - BR_STAT_W - (BR_CNT_W + 1) - (BR_PEND_W + 1) ))
+  [ "$name_max_fit" -lt "$BR_NAME_MIN" ] && name_max_fit="$BR_NAME_MIN"
+  [ "$name_w" -gt "$name_max_fit" ] && name_w="$name_max_fit"
+
+  tag_w=$(( BR_AVAIL_W - 2 - 2 - (name_w + 1) - BR_STAT_W - (BR_CNT_W + 1) - (BR_PEND_W + 1) - 1 ))
+
+  # Wrap when the tag does not fit AND either the description IS the point (a hooks
+  # screen) or the leftover column is too narrow to say anything useful. Everywhere else
+  # an ellipsised tag is honest and keeps the prototype's one-line layout.
+  #
+  # There is deliberately NO minimum-width FLOOR on tag_w. An earlier cut floored it to
+  # 12 to avoid a useless stub column, which silently RE-OVERFLOWED the line: the floor
+  # ignored the width the name clamp had just budgeted, so a 60-column root row rendered
+  # ~61 chars + the menu's 6-char prefix. When the tag cannot fit, the answer is to wrap
+  # it onto its own line, never to widen the column past the terminal.
+  wrap=0
+  if [ "$max_tag" -gt "$tag_w" ]; then
+    if [ "$(node_kind "${BR_NAV:-}")" = "hooks" ] || [ "$tag_w" -lt 12 ]; then
+      wrap=1
+    fi
+  fi
+  [ "$tag_w" -lt 0 ] && tag_w=0
 
   if [ -z "${BR_NAV:-}" ]; then
     bucket_rows=0
@@ -2407,7 +2567,7 @@ build_rows() {
       [ -n "$b" ] || continue
       [ "$(bucket_section "$b")" = "core" ] || continue
       if _br_is_personal "$b" && [ "${PERSONAL:-0}" != "1" ]; then continue; fi
-      _br_item_row "$b"
+      _br_item_row "$b" "$name_w" "$tag_w" "$wrap"
       bucket_rows=$((bucket_rows + 1))
     done < <(printf '%s\n' "${BR_BUCKETS//$'\t'/$'\n'}")
 
@@ -2416,7 +2576,7 @@ build_rows() {
       [ -n "$b" ] || continue
       [ "$(bucket_section "$b")" = "core" ] && continue
       if _br_is_personal "$b" && [ "${PERSONAL:-0}" != "1" ]; then continue; fi
-      _br_item_row "$b"
+      _br_item_row "$b" "$name_w" "$tag_w" "$wrap"
       bucket_rows=$((bucket_rows + 1))
     done < <(printf '%s\n' "${BR_BUCKETS//$'\t'/$'\n'}")
 
@@ -2429,11 +2589,14 @@ build_rows() {
       return 1
     fi
 
+    # Apply appears only when there is something to apply - matching the sub-screens.
+    # "Apply 0 changes" offered to do nothing, and root was the only screen that showed
+    # it. The sep stays: it separates the component list from Quit either way.
     _br_rows_add "$(_br_sep_line)" "sep" ""
     n="$(_br_pend_total)"
     if [ "$n" = "1" ]; then
       _br_rows_add "Apply 1 change" "apply" ""
-    else
+    elif [ "$n" != "0" ]; then
       _br_rows_add "Apply $n changes" "apply" ""
     fi
     _br_rows_add "Quit" "quit" ""
@@ -2470,7 +2633,7 @@ build_rows() {
   # ever carries a space (the bucket keys already do - "Voice & chat", "Dev surface").
   while IFS= read -r k; do
     [ -n "$k" ] || continue
-    _br_item_row "$BR_NAV/$k"
+    _br_item_row "$BR_NAV/$k" "$name_w" "$tag_w" "$wrap"
   done < <(_br_children_lines "$BR_NAV")
 
   # The prototype applies with the `a` key from any screen; gum owns the keyboard, so a
@@ -2493,8 +2656,24 @@ build_rows() {
 # (gum renders to the tty and prints just the selection to stdout, which is what lets
 # BR_CHOSEN capture a selection without swallowing the chrome).
 
+# _br_print_prose <text> <color> - print prose WRAPPED to the terminal. Lead lines and
+# toasts are full sentences and routinely exceed 80 columns; unwrapped they rely on the
+# terminal's soft wrap, which breaks mid-word and looks like a bug.
+_br_print_prose() {
+  local text="$1" color="$2" line
+  [ -n "$text" ] || return 0
+  while IFS= read -r line; do
+    # %b, NOT %s, for the colors: install.sh's palette vars are single-quoted
+    # (NC='\033[0m'), so they hold a LITERAL backslash-0-3-3 and only become escapes
+    # when printf interprets them. As a %s argument they print as the visible text
+    # "\033[0m". %s stays on $line so prose is never reinterpreted.
+    printf '%b%s%b\n' "$color" "$line" "$NC"
+  done < <(_br_wrap_words "$text" "$(_br_term_width)")
+  return 0
+}
+
 _br_print_header() {
-  local seg acc first=1 desc c on total noun
+  local seg acc first=1 desc c on total noun meta w
   printf '\n'
   printf "${DIM}ampersand${NC}"
   if [ -n "${BR_NAV:-}" ]; then
@@ -2512,15 +2691,39 @@ _br_print_header() {
   printf '\n'
 
   if [ -z "${BR_NAV:-}" ]; then
-    printf "Choose what runs on this machine. Open a group, toggle items to stage changes, then apply.\n\n"
+    _br_print_prose "Choose what runs on this machine. Open a group, toggle items to stage changes, then apply." ""
+    printf '\n'
   else
     desc="$(node_desc "$BR_NAV")"
     [ -n "$desc" ] || desc="$(node_tag "$BR_NAV")"
     c="$(counts "$BR_NAV")"
     on="${c%/*}"; total="${c#*/}"
     if [ "$(node_kind "$BR_NAV")" = "hooks" ]; then noun="hooks on"; else noun="installed"; fi
-    printf '%s  ' "$desc"
-    printf "${DIM}%s of %s %s${NC}\n\n" "$on" "$total" "$noun"
+    meta="$on of $total $noun"
+    # The one fact worth keeping from the orientation line, folded in where it is true
+    # so the gum path does not have to stack a second near-duplicate line above the rows.
+    if _br_has_pinned_child; then
+      meta="$meta  Pinned hooks are always on."
+    fi
+    w="$(_br_term_width)"
+    if [ "$(( ${#desc} + 2 + ${#meta} ))" -le "$w" ]; then
+      # Fits: keep the prototype's one-line lead with the dim meta inline.
+      printf '%s  ' "$desc"
+      printf "${DIM}%s${NC}\n" "$meta"
+    else
+      # Too long: wrap the description and give the meta its own dim line, rather than
+      # letting the terminal shear it mid-word.
+      _br_print_prose "$desc" ""
+      _br_print_prose "$meta" "$DIM"
+    fi
+    printf '\n'
+  fi
+
+  # gum owns the bottom of the screen, so a toast has to appear ABOVE the rows there.
+  # The text path prints it in the footer, where the prototype puts it.
+  if [ "${1:-text}" = "gum" ] && [ -n "${BR_TOAST:-}" ]; then
+    _br_print_prose "$BR_TOAST" "$ACCENT"
+    printf '\n'
   fi
   return 0
 }
@@ -2537,26 +2740,55 @@ _br_sep_line() {
   printf '%s' "$out"
 }
 
-# _br_footer_text - the detail bar as ONE plain line (no ANSI: it doubles as gum's
-# --header, and gum strips escape codes out of header/item text).
+# _br_has_pinned_child - 0 when the CURRENT screen actually contains a pinned hook. The
+# "pinned hooks are always on" note is only worth screen space where a pinned row is
+# visible; anywhere else it is noise.
+_br_has_pinned_child() {
+  local k
+  [ "$(node_kind "${BR_NAV:-}")" = "hooks" ] || return 1
+  while IFS= read -r k; do
+    [ -n "$k" ] || continue
+    hook_pinned "$k" && return 0
+  done < <(_br_children_lines "$BR_NAV")
+  return 1
+}
+
+# _br_footer_text <gum|text> - the detail bar as ONE plain line (no ANSI: it doubles as
+# gum's --header, and gum strips escape codes out of header/item text).
 #
 # This is the prototype's detail bar minus the cursor-following half (see the section
 # header note): it carries toast() messages, else the screen's orientation line, plus
 # the staged rollup the prototype keeps in its footer.
+#
+# WHY THE MODE ARGUMENT: in the TEXT path the lead sits at the top and this sits at the
+# bottom, so a general orientation line reads fine. In the GUM path both are forced
+# ABOVE the rows (nothing can print below the chooser), which stacked two adjacent lines
+# saying the same thing. So gum gets ONLY the genuinely new information - a toast, or
+# the staged rollup - and returns EMPTY when there is nothing to add, in which case
+# render_screen omits the --header entirely rather than drawing a blank line. The one
+# non-redundant fact from the orientation line, "Pinned hooks are always on", is folded
+# into the lead by _br_print_header, and only on screens that really have a pinned hook.
 _br_footer_text() {
-  local n split ins un line
-  if [ -n "${BR_TOAST:-}" ]; then
+  local mode="${1:-text}" n split ins un line=""
+  if [ "$mode" = "gum" ]; then
+    # gum gets ONLY the staged rollup: the toast is printed above the rows by
+    # _br_print_header (it can be long and needs wrapping, which a --header cannot do),
+    # and the orientation line would just restate the lead directly above it.
+    :
+  elif [ -n "${BR_TOAST:-}" ]; then
     line="$BR_TOAST"
   elif [ -z "${BR_NAV:-}" ] && [ "${BR_UPD:-}" = "available" ] && [ -n "${BR_UPD_INFO:-}" ]; then
     line="Incoming: $(printf '%s' "$BR_UPD_INFO" | tr '\n' ';' | sed 's/;/; /g')"
   else
-    line="Open a group to drill in. Select an item to stage it. Pinned hooks are always on."
+    line="Open a group to drill in. Select an item to stage it."
+    if _br_has_pinned_child; then line="$line Pinned hooks are always on."; fi
   fi
   n="$(_br_pend_total)"
   if [ "$n" != "0" ]; then
     split="$(_br_pend_split_all)"
     ins="${split%% *}"; un="${split##* }"
-    line="$line   [ +$ins -$un staged ]"
+    if [ -n "$line" ]; then line="$line   "; fi
+    line="$line[ +$ins -$un staged ]"
   fi
   printf '%s' "$line"
 }
@@ -2565,20 +2797,15 @@ _br_footer_text() {
 # chooser (gum owns the bottom of the screen and the screen is cleared on the next
 # render), so there the same text rides in gum's --header, directly above the rows.
 _br_print_footer() {
-  local n
+  local line
+  line="$(_br_footer_text text)"
   printf '\n'
+  [ -n "$line" ] || return 0
+  # A toast is the reason the user is looking here; everything else is ambient.
   if [ -n "${BR_TOAST:-}" ]; then
-    printf "${ACCENT}%s${NC}\n" "$BR_TOAST"
+    _br_print_prose "$line" "$ACCENT"
   else
-    printf "${DIM}%s${NC}\n" "$(_br_footer_text)"
-    return 0
-  fi
-  n="$(_br_pend_total)"
-  if [ "$n" != "0" ]; then
-    local split ins un
-    split="$(_br_pend_split_all)"
-    ins="${split%% *}"; un="${split##* }"
-    printf "${GREEN}+%s${NC} ${YELLOW}-%s${NC} ${DIM}staged${NC}\n" "$ins" "$un"
+    _br_print_prose "$line" "$DIM"
   fi
   return 0
 }
@@ -2607,36 +2834,58 @@ _br_pend_split_all() {
 # 0.17.0), so color comes from gum's own palette flags, matching the flags the existing
 # run_tui_gum / returning_flow already use.
 render_screen() {
-  local i chosen height rows
+  local i chosen height rows hdr
+  local -a gargs
   clear
-  _br_print_header
+  _br_print_header gum
 
   rows=${#ROW_DISP[@]}
   height=$(( rows + 1 ))
   [ "$height" -gt 22 ] && height=22
 
+  # --header is passed ALWAYS, even empty. OMITTING it makes gum fall back to its own
+  # default header ("Choose:"), which is noise directly under our lead line; an EXPLICIT
+  # empty header renders nothing at all. (Measured both ways in real captures.)
+  hdr="$(_br_footer_text gum)"
+  gargs=(--height "$height"
+         --header "$hdr"
+         --header.foreground "#0e7490"
+         --cursor.foreground "#67e8f9"
+         --selected.foreground "#67e8f9"
+         --item.foreground "#ffffff")
+
   # A NON-ZERO exit is the user ABORTING (esc / ctrl-c) - that is the back/quit signal.
   # It is the only thing that may be read as "back".
-  chosen="$(printf '%s\n' "${ROW_DISP[@]}" \
-    | gum choose \
-        --height "$height" \
-        --header "$(_br_footer_text)" \
-        --header.foreground "#0e7490" \
-        --cursor.foreground "#67e8f9" \
-        --selected.foreground "#67e8f9" \
-        --item.foreground "#ffffff")" || return 1
+  chosen="$(printf '%s\n' "${ROW_DISP[@]}" | gum choose "${gargs[@]}")" || return 1
   [ -n "$chosen" ] || return 1
 
-  # Map the chosen row back by exact string match. Rows within a screen are unique by
-  # construction (child keys are unique, and the two label rows differ), EXCEPT the
-  # `sep` rules, which are byte-identical - harmless, since both map to kind=sep and
-  # activate no-ops on it, so first-match is correct there.
+  # Map the chosen row back by exact string match - gum hands back the item TEXT and
+  # nothing else, so the text is the only handle we have.
+  #
+  # AMBIGUITY IS A FAIL-SAFE, NOT AN ASSUMPTION. Item rows are unique by construction
+  # (child keys are unique), and byte-identical rows that share a PATH are harmless:
+  # the `sep` rules (both no-op) and a wrapped `desc` line versus its own item. But two
+  # DIFFERENT items could in principle render identically - most plausibly two wrapped
+  # description lines with the same text. Measured: all 55 wrapped description lines in
+  # the tree are currently unique, so this never fires today. It is one description edit
+  # away from being live, and the failure it would cause is SILENT and wrong: first-match
+  # would toggle a DIFFERENT hook than the one the user picked. So refuse instead.
+  local match=-1
   for (( i=0; i<${#ROW_DISP[@]}; i++ )); do
     if [ "$chosen" = "${ROW_DISP[$i]}" ]; then
-      BR_CHOSEN="$i"
-      return 0
+      if [ "$match" -lt 0 ]; then
+        match="$i"
+      elif [ "${ROW_PATH[$i]}" != "${ROW_PATH[$match]}" ]; then
+        BR_CHOSEN=""
+        BR_TOAST="Two rows on this screen render identically, so the selection is ambiguous. Nothing was changed - please widen the terminal or pick the row above."
+        return 0
+      fi
     fi
   done
+  if [ "$match" -ge 0 ]; then
+    BR_CHOSEN="$match"
+    return 0
+  fi
 
   # gum returned something we cannot map. This is an INTERNAL defect, not a back-out.
   # Returning 1 here would make it indistinguishable from esc, i.e. an unmappable row
@@ -2655,7 +2904,7 @@ render_screen_text() {
   local -a NUMIDX
   NUMIDX=()
   clear
-  _br_print_header
+  _br_print_header text
 
   for (( i=0; i<${#ROW_DISP[@]}; i++ )); do
     case "${ROW_KIND[$i]}" in
@@ -2663,6 +2912,11 @@ render_screen_text() {
         printf "\n${ACCENT}%s${NC}\n" "${ROW_DISP[$i]}"
         ;;
       sep)
+        printf "${DIM}%s${NC}\n" "${ROW_DISP[$i]}"
+        ;;
+      desc)
+        # A wrapped description belongs to the numbered row above it; giving it its own
+        # number would imply it is a separate thing to pick.
         printf "${DIM}%s${NC}\n" "${ROW_DISP[$i]}"
         ;;
       *)
@@ -2723,7 +2977,7 @@ activate() {
     label|sep)
       return 0
       ;;
-    item)
+    item|desc)
       case "$(node_kind "$path")" in
         group|hooks)
           BR_NAV="$path"
@@ -2866,6 +3120,9 @@ component_browser() {
   fi
   _br_personal_load
   stage_reset
+  # gum draws a 2-column cursor prefix; the text menu prints "  NN) " (6). build_rows
+  # sizes the columns against the usable width, so it has to know which one will draw.
+  if command -v gum >/dev/null 2>&1; then BR_PREFIX_W=2; else BR_PREFIX_W=6; fi
   BR_NAV=""
   BR_TOAST=""
   BR_CHOSEN=""

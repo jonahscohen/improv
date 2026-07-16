@@ -111,7 +111,7 @@ PY
 #
 # Returns: 0 ok | 2 harness error (nothing proven) | 3 watchdog (hung).
 _drive() {
-  local name="$1" use_gum="$2" keyscript="$3"
+  local name="$1" use_gum="$2" keyscript="$3" cols="${4:-$COLS}"
   local raw="$OUT_PREFIX-$name.raw" txt="$OUT_PREFIX-$name.txt"
   local path_env spid wpid rc nonce
 
@@ -140,7 +140,7 @@ _drive() {
   # pty and the run would die by watchdog instead of rendering.
   eval "$keyscript" | /usr/bin/script -q "$raw" /bin/bash -c "
     printf '%s\n' '$nonce'
-    stty cols $COLS rows $ROWS 2>/dev/null
+    stty cols $cols rows $ROWS 2>/dev/null
     export TERM=xterm-256color
     export PATH='$path_env'
     export GIT_TERMINAL_PROMPT=0
@@ -215,6 +215,26 @@ assert_re() {
   fi
 }
 
+# assert_in_flow <file> <needle> <label> - presence of <needle> as CONTIGUOUS TEXT with
+# whitespace normalized, so a phrase still counts when the renderer legitimately WRAPS it
+# across lines (which is exactly what narrow widths do to a description). Without this a
+# wrapped-but-fully-readable description would fail for the wrong reason.
+_flow_has() {
+  python3 - "$1" "$2" <<'PYX'
+import re, sys
+d = open(sys.argv[1]).read()
+flow = re.sub(r"\s+", " ", d)
+sys.exit(0 if re.sub(r"\s+", " ", sys.argv[2]) in flow else 1)
+PYX
+}
+
+assert_in_flow() {
+  local f="$1" needle="$2" label="$3"
+  if _flow_has "$f" "$needle"; then pass "$label"; else
+    fail "$label  (not present even across line wraps in $f)"
+  fi
+}
+
 # assert_not_in <file> <needle> <label>
 assert_not_in() {
   local f="$1" needle="$2" label="$3"
@@ -251,6 +271,21 @@ _keys_gum() {
   printf 'sleep 1.5'
 }
 
+# HARNESS SELF-CHECK: assert_in_flow is what proves "the description is readable", so a
+# broken matcher would turn the whole width matrix green while proving nothing. Prove it
+# matches text the renderer WRAPPED across lines, and prove it can still FAIL.
+_selfchk="/tmp/.browser-render-selfcheck.$$"
+printf 'Recompiles the beats search index in the\n      background.\n' > "$_selfchk"
+if _flow_has "$_selfchk" "Recompiles the beats search index in the background." \
+   && ! _flow_has "$_selfchk" "a sentence that is definitely not present"; then
+  :
+else
+  printf '%sharness: assert_in_flow is broken (it cannot match across wraps, or cannot fail) - its verdicts are worthless%s\n' "$RED" "$NC"
+  rm -f "$_selfchk"
+  exit 2
+fi
+rm -f "$_selfchk"
+
 printf '\n%sBucket browser render harness%s\n' "$YELLOW" "$NC"
 printf '%sinstaller: %s%s\n' "$DIM" "$INSTALLER" "$NC"
 printf '%spty: %sx%s via /usr/bin/script%s\n\n' "$DIM" "$COLS" "$ROWS" "$NC"
@@ -273,7 +308,7 @@ F="$OUT_PREFIX-text-root.txt"
   assert_re "$F" '(Up to date|Update available|Update check unavailable)' "two-state update row renders"
   assert_re "$F" '[0-9]+/[0-9]+' "per-group installed/total count column"
   assert_re "$F" '(active|partial|not installed)' "status per row"
-  assert_in "$F" "Apply 0 changes" "Apply row (nothing staged)"
+  assert_not_in "$F" "Apply 0 changes" "root hides the Apply row at zero pending (matches sub-screens)"
   assert_in "$F" "Quit" "Quit row"
   assert_in "$F" "Open a group to drill in" "footer / detail bar"
   assert_in "$F" "Enter a number" "numbered-menu prompt"
@@ -404,9 +439,14 @@ if [ -n "$GUM_BIN" ] && [ -x "$GUM_BIN" ]; then
     assert_re "$F" '(Up to date|Update available|Update check unavailable)' "two-state update row renders"
     assert_re "$F" '[0-9]+/[0-9]+' "per-group installed/total count column"
     assert_re "$F" '(active|partial|not installed)' "status per row"
-    assert_in "$F" "Apply 0 changes" "Apply row"
+    assert_not_in "$F" "Apply 0 changes" "root hides the Apply row at zero pending"
     assert_in "$F" "Quit" "Quit row"
-    assert_in "$F" "Open a group to drill in" "detail bar (rides in gum's --header)"
+    # Defect 2 regression: the lead and the orientation line were adjacent above the
+    # rows saying the same thing twice. gum now gets only non-redundant text.
+    assert_not_in "$F" "Open a group to drill in" "gum path does not restate the lead as a second instruction line"
+    # Omitting --header entirely makes gum print its own default "Choose:" under our
+    # lead. We pass an explicit (possibly empty) header to suppress it.
+    assert_not_in "$F" "Choose:" "gum default header suppressed"
   else
     fail "gum-root: the driven run did not produce a fresh capture (see harness error above)"
   fi
@@ -432,6 +472,70 @@ else
   printf '%sHalf of this harness premise is the gum path; skipping it green would be a false success.%s\n' "$RED" "$NC"
   HARNESS_ERR=1
 fi
+
+# ============================================================
+# 7. WIDTH MATRIX - the description column must survive narrow terminals
+# ============================================================
+# The tag column carries the hook DESCRIPTIONS, which are the whole point of the
+# drill-in. 80 columns is the classic default and what a teammate on a fresh machine
+# gets, and name(29) + desc(52) + status can never share an 80-col line - so at narrow
+# widths the description wraps to its own continuation line rather than being amputated.
+# These captures prove a user can READ every description at each width, and that nothing
+# is ever cut mid-word.
+printf '\n%s[7] width matrix: descriptions readable at 60 / 80 / 100 / 120%s\n' "$YELLOW" "$NC"
+LONGEST_DESC="Recompiles the beats search index in the background."
+for width in 60 80 100 120; do
+  # 3=Beats, 6=Hooks, 4=TOGGLE memory-approve, 0=back, 0=root, 0=quit->warn, 2=discard.
+  #
+  # The toggle is LOAD-BEARING for the overflow check, not incidental. _br_rtrim strips
+  # trailing spaces, so a row whose pending column is empty gets trimmed back and a
+  # too-wide layout hides. Staging one item fills the pending column on the hooks row AND
+  # puts a rollup marker on the root row, which is the widest the layout ever gets - the
+  # only state in which an overflow is actually observable.
+  if _drive "text-w$width" 0 "$(_keys_text 3 6 4 0 0 0 2)" "$width"; then
+    F="$OUT_PREFIX-text-w$width.txt"
+    # THE REQUIREMENT: a user can READ what each hook does at this width. Flow-normalized,
+    # because at the narrowest widths a description correctly wraps across lines.
+    assert_in_flow "$F" "$LONGEST_DESC" "w$width: longest hook description readable in full"
+    assert_in_flow "$F" "Guards writes to your beats files." "w$width: memory-approve description readable"
+    assert_in_flow "$F" "Suggests a reflect pass when new beats pile up." "w$width: reflect-nudge description readable"
+    assert_in_flow "$F" "Verifies the beats index at session start." "w$width: beats-staleness-guard description readable"
+    assert_row_has "$F" "beats-rebuild" "always on" "w$width: pinned still reads always-on"
+    # POSITIVE: a bare assert_not_in "rules, settin " passes vacuously if the tag never
+    # rendered at all. At >=80 the root name column shrinks to fit "Design Tools" (12),
+    # which leaves room for the whole bucket tag on one line.
+    if [ "$width" -ge 80 ]; then
+      assert_in "$F" "rules, settings, shell" "w$width: bucket tag renders in FULL (name column reclaimed)"
+    fi
+    # The regression this replaced: "rules, settings, shell" sheared to "rules, settin".
+    assert_not_in "$F" "rules, settin " "w$width: bucket tag not sheared mid-word"
+    # No rendered line may exceed the terminal. 60 is below the renderer's 60-col floor,
+    # so it is the true worst case.
+    # Prove the widest state was actually exercised (see the toggle note above).
+    assert_re "$F" '(\+ install|- uninstall)' "w$width: pending column populated (widest layout exercised)"
+    # Count DISPLAY COLUMNS, not bytes. awk's length() counts BYTES in this locale, and
+    # the status glyphs (● ◐ ○) are 3-byte UTF-8 sequences that occupy ONE column each -
+    # so a byte count reports every full-width row as ~2 columns over and invents an
+    # overflow that is not there. (Measured: a correct 120-column row is 122 bytes.)
+    overflow="$(python3 - "$F" "$width" <<'PYX'
+import sys
+w = int(sys.argv[2])
+n = 0
+for line in open(sys.argv[1]):
+    if len(line.rstrip("\n")) > w:
+        n += 1
+print(n)
+PYX
+)"
+    if [ "$overflow" = "0" ]; then
+      pass "w$width: no line overflows $width columns"
+    else
+      fail "w$width: $overflow line(s) exceed $width columns ($F)"
+    fi
+  else
+    fail "text-w$width: the driven run did not produce a fresh capture (see harness error above)"
+  fi
+done
 
 # ============================================================
 # Summary

@@ -3,6 +3,7 @@ name: Bucket browser Task 8 - render + nav + text fallback
 description: The VIEW layer over browser-lib.sh (render_screen/render_screen_text/component_browser/activate) plus a pty-driven render harness; caught a silent tput-cols bug and a harness that could pass on stale captures
 type: project
 relates_to: [session_2026-07-16_bucket-browser-task7-update-flow.md]
+superseded_by: session_2026-07-16_bucket-browser-task8-width-header.md
 author_human: Jonah Cohen
 author_model: claude-opus-4.8
 source: session
