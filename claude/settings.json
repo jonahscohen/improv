@@ -39,83 +39,6 @@
   },
   "model": "opus[1m]",
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "mcp__claude_ai_ClickUp__clickup_",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/block-clickup-writes.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/justify-source-guard.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "mcp__voice-output__speak",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/voice-gate.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Agent|Workflow",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/agent-teams-guard.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/codex-rescue-guard.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/memory-approve.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/justify-source-guard.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "mcp__visualize__show_widget",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/visualizer-guard.sh",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "hooks": [
@@ -124,37 +47,6 @@
             "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/startup-check.sh",
             "timeout": 10,
             "statusMessage": "Loading memory..."
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/node-shim-heal.sh",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/consolidate-nudge.sh",
-            "timeout": 5,
-            "statusMessage": "Checking for consolidatable beat clusters..."
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/memory-compact.sh",
-            "timeout": 5,
-            "statusMessage": "Keeping the beats index under load budget..."
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/justify-watch-guard.sh",
-            "timeout": 10,
-            "statusMessage": "Checking justify watch..."
           }
         ]
       }
@@ -179,58 +71,6 @@
             "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/startup-check.sh",
             "timeout": 10,
             "statusMessage": "Reloading memory after compaction..."
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit|Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/memory-nudge.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/codex-failure-watcher.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/memory-compact.sh",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/node-shim-heal.sh",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/justify-watch-guard.sh",
-            "timeout": 10
           }
         ]
       }

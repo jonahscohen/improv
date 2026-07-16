@@ -1,0 +1,184 @@
+{
+  "memory-approve.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Write|Edit|MultiEdit",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/memory-approve.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "memory-nudge.sh": [
+    {
+      "event": "PostToolUse",
+      "matcher": "Write|Edit|MultiEdit|Bash",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/memory-nudge.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "memory-compact.sh": [
+    {
+      "event": "SessionStart",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/memory-compact.sh",
+        "timeout": 5,
+        "statusMessage": "Keeping the beats index under load budget..."
+      }
+    },
+    {
+      "event": "PostToolUse",
+      "matcher": "Write|Edit|MultiEdit",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/memory-compact.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "consolidate-nudge.sh": [
+    {
+      "event": "SessionStart",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/consolidate-nudge.sh",
+        "timeout": 5,
+        "statusMessage": "Checking for consolidatable beat clusters..."
+      }
+    }
+  ],
+  "agent-teams-guard.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Agent|Workflow",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/agent-teams-guard.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "node-shim-heal.sh": [
+    {
+      "event": "SessionStart",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/node-shim-heal.sh",
+        "timeout": 10
+      }
+    },
+    {
+      "event": "Stop",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/node-shim-heal.sh",
+        "timeout": 10
+      }
+    }
+  ],
+  "voice-gate.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "mcp__voice-output__speak",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/voice-gate.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "block-clickup-writes.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "mcp__claude_ai_ClickUp__clickup_",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/block-clickup-writes.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "justify-source-guard.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/justify-source-guard.sh",
+        "timeout": 5
+      }
+    },
+    {
+      "event": "PreToolUse",
+      "matcher": "Write|Edit|MultiEdit",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/justify-source-guard.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "justify-watch-guard.sh": [
+    {
+      "event": "SessionStart",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/justify-watch-guard.sh",
+        "timeout": 10,
+        "statusMessage": "Checking justify watch..."
+      }
+    },
+    {
+      "event": "Stop",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/justify-watch-guard.sh",
+        "timeout": 10
+      }
+    }
+  ],
+  "visualizer-guard.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "mcp__visualize__show_widget",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/visualizer-guard.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "codex-failure-watcher.sh": [
+    {
+      "event": "PostToolUse",
+      "matcher": "Bash",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/codex-failure-watcher.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "codex-rescue-guard.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Agent",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/codex-rescue-guard.sh",
+        "timeout": 5
+      }
+    }
+  ]
+}

@@ -498,32 +498,52 @@ FILES+=(
 DIRS+=("" "" "" "" "" "" "" "")
 PICKS+=(1 1 1 1 1 1 1 1)
 
+# App components (Stage 3) - hook-owning apps. Their hooks wire from app-wirings.json
+# in section 16e. Default-off, opt-in.
+KEYS+=(clickup visualizer codex justify)
+TITLES+=(
+  "ClickUp write-guard"
+  "Visualizer guard (show_widget)"
+  "Codex integration guards"
+  "Justify visual design tool"
+)
+DESCS+=(
+  "ClickUp: blocks writes to ClickUp via the MCP unless confirmed. Opt-in; installs block-clickup-writes."
+  "Visualizer: gates the mcp__visualize__show_widget tool (surface + quality checks). Opt-in; installs visualizer-guard."
+  "Codex: guards for the Codex integration - watches codex CLI failures and governs codex-rescue agent spawns. Opt-in; installs codex-failure-watcher + codex-rescue-guard."
+  "Justify: in-browser visual micro-adjustment tool (server + core + adapters + MCP + /justify skill) plus its source-guard and watch hooks. Was personal; now public."
+)
+FILES+=(
+  "~/.claude/hooks/block-clickup-writes.sh\n~/.claude/settings.json (1 PreToolUse hook)"
+  "~/.claude/hooks/visualizer-guard.sh\n~/.claude/settings.json (1 PreToolUse hook)"
+  "~/.claude/hooks/codex-failure-watcher.sh + codex-rescue-guard.sh\n~/.claude/settings.json (2 hooks)"
+  "~/.claude/justify/ + ~/.claude/skills/justify/ + ~/.claude.json (MCP)\n~/.claude/hooks/justify-source-guard.sh + justify-watch-guard.sh"
+)
+DIRS+=("" "" "" "$REPO_DIR/justify")
+PICKS+=(0 0 0 0)
+
 # Personal components - hidden from public TUI and --help. Surfaced only when
 # the maintainer passes --personal (undocumented, undocumented-on-purpose).
 # Lets one human keep cross-machine sync for ghostty and shaders without exposing
 # them as Yes&-team defaults.
-PERSONAL_KEYS=(ghostty shaders justify)
+PERSONAL_KEYS=(ghostty shaders)
 PERSONAL_TITLES=(
   "Ghostty terminal look"
   "Ghostty visual effects (shaders)"
-  "Justify visual design tool"
 )
 PERSONAL_DESCS=(
   "Personal: Ghostty terminal appearance (PolySans Neutral Mono font, custom 256-color palette, transparency, blur)."
   "Personal: cinematic Ghostty effects (CRT curvature, TFT pixel grid, blazing cursor trail). Also clones the wider community shader library."
-  "In-browser visual micro-adjustment tool. Two modes: Manipulate (CSS sliders/handles) and Prompt (context extraction). All changes flow through Claude Code via MCP."
 )
 PERSONAL_FILES=(
   "~/.config/ghostty/config (copy)"
   "<repo>/shaders/*.glsl (loaded by Ghostty)\n~/Documents/Github/ghostty-shaders/ (community library clone)"
-  "~/.claude/justify/ (server + core + adapters)\n~/.claude/skills/justify/SKILL.md\n~/.claude.json (MCP registration)"
 )
 PERSONAL_DIRS=(
   "$REPO_DIR/ghostty"
   "$REPO_DIR/shaders"
-  "$REPO_DIR/justify"
 )
-PERSONAL_PICKS=(1 1 1)
+PERSONAL_PICKS=(1 1)
 
 key_index() {
   local target="$1" i
@@ -642,6 +662,75 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
   fi
 }
 
+# Generic app-hook installer (Stage 3): symlink + wire the given scripts from
+# app-wirings.json. Standalone-safe. A component block calls this to own its hooks.
+install_app_hooks() {
+  mkdir -p "$CLAUDE_DIR/hooks"
+  ensure_real_settings
+  [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
+  local h okh=""
+  for h in "$@"; do
+    [ -f "$REPO_DIR/claude/hooks/$h" ] || { warn "app hook missing in repo: $h"; continue; }
+    chmod +x "$REPO_DIR/claude/hooks/$h"
+    link_or_copy "$REPO_DIR/claude/hooks/$h" "$CLAUDE_DIR/hooks/$h"
+    [ -e "$CLAUDE_DIR/hooks/$h" ] && okh="$okh $h"
+  done
+  if [ -n "${okh// /}" ] && command -v python3 >/dev/null 2>&1; then
+    OKH="$okh" python3 -c "
+import json, os
+p='$SETTINGS_JSON'; wp='$REPO_DIR/claude/hooks/app-wirings.json'
+okh=set(os.environ['OKH'].split())
+d=json.load(open(p)); hooks=d.setdefault('hooks',{})
+wir=json.load(open(wp)) if os.path.exists(wp) else {}
+def add(event, matcher, hookobj):
+    groups=hooks.setdefault(event,[])
+    if matcher is not None:
+        g=next((x for x in groups if x.get('matcher')==matcher),None)
+        if g is None: g={'matcher':matcher,'hooks':[]}; groups.append(g)
+    else:
+        g=next((x for x in groups if 'matcher' not in x),None)
+        if g is None: g={}; groups.append(g)
+    hl=g.setdefault('hooks',[])
+    if not any(x.get('command')==hookobj.get('command') for x in hl): hl.append(hookobj)
+for s,entries in wir.items():
+    if s in okh:
+        for e in entries: add(e['event'], e.get('matcher'), e['hook'])
+with open(p,'w') as f: json.dump(d,f,indent=2); f.write('\n')
+"
+  fi
+}
+
+# Generic app-hook deactivator (Stage 3): rm_hook_if_ours + strip the EXACT
+# app-wirings.json commands (ownership-aware, empty-group cleanup).
+deactivate_app_hooks() {
+  local h
+  for h in "$@"; do rm_hook_if_ours "$h"; done
+  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
+    ensure_real_settings
+    NAMES="$*" python3 -c "
+import json, os
+p='$SETTINGS_JSON'; wp='$REPO_DIR/claude/hooks/app-wirings.json'
+names=set(os.environ['NAMES'].split())
+wir=json.load(open(wp)) if os.path.exists(wp) else {}
+cmds=set(e['hook'].get('command') for s in names for e in wir.get(s,[]))
+d=json.load(open(p)); hooks=d.get('hooks',{})
+for ev in list(hooks.keys()):
+    ng=[]
+    for g in hooks[ev]:
+        g['hooks']=[x for x in g.get('hooks',[]) if x.get('command') not in cmds]
+        if g.get('hooks'): ng.append(g)
+    if ng: hooks[ev]=ng
+    else: del hooks[ev]
+with open(p,'w') as f: json.dump(d,f,indent=2); f.write('\n')
+"
+  fi
+}
+
+# New hook-only app components (Stage 3): remove their hooks via the generic helper.
+deactivate_clickup()    { deactivate_app_hooks block-clickup-writes.sh; }
+deactivate_visualizer() { deactivate_app_hooks visualizer-guard.sh; }
+deactivate_codex()      { deactivate_app_hooks codex-failure-watcher.sh codex-rescue-guard.sh; }
+
 apply_only() {
   local csv="$1"
   set_all 0
@@ -718,8 +807,8 @@ Components (for --only KEYS):
 
   'skills' installs the whole design pipeline + peer skills as a bundle; the
   individual skill keys let you take just one (e.g. --only icon-source).
-  'config' installs core (permissions/plugins/statusline) + app-owned hooks;
-  the QA-hook suite is now the 8 selectable clusters above (default-on, removable).
+  'config' installs CORE only (permissions/plugins/statusline + startup-check + hud).
+  The QA-hook suite is the 8 clusters above; app hooks belong to their own apps.
 EOF
 }
 
@@ -1101,6 +1190,9 @@ detect_component() {
     visual-effects)    [ -d "$CLAUDE_DIR/skills/visual-effects" ] && echo active || echo not-installed ;;
     icon-source)       [ -d "$CLAUDE_DIR/skills/icon-source" ] && echo active || echo not-installed ;;
     safety|verification|question-discipline|grounding|api-drift|planning-git|surface|model-routing) cluster_detect "$key" ;;
+    clickup)    is_our_hook block-clickup-writes.sh && echo active || echo not-installed ;;
+    visualizer) is_our_hook visualizer-guard.sh && echo active || echo not-installed ;;
+    codex)      { is_our_hook codex-failure-watcher.sh || is_our_hook codex-rescue-guard.sh; } && echo active || echo not-installed ;;
     *)          echo not-installed ;;
   esac
 }
@@ -1160,20 +1252,8 @@ deactivate_brain() {
 }
 
 deactivate_config() {
-  local f
-  # Stage 2: config owns only the app-owned residue now. The QA-suite hooks moved
-  # to their clusters and are removed by deactivate_cluster, NOT here.
-  for f in memory-approve.sh agent-teams-guard.sh memory-nudge.sh memory-compact.sh \
-           consolidate-nudge.sh voice-gate.sh block-clickup-writes.sh \
-           justify-source-guard.sh justify-watch-guard.sh \
-           node-shim-heal.sh visualizer-guard.sh \
-           codex-failure-watcher.sh codex-rescue-guard.sh; do
-    if [ -L "$CLAUDE_DIR/hooks/$f" ] && [[ "$(readlink "$CLAUDE_DIR/hooks/$f")" == "$REPO_DIR/"* ]]; then
-      rm -f "$CLAUDE_DIR/hooks/$f"
-    elif [ -f "$CLAUDE_DIR/hooks/$f" ] && grep -Fq "Improv" "$CLAUDE_DIR/hooks/$f" 2>/dev/null; then
-      rm -f "$CLAUDE_DIR/hooks/$f"
-    fi
-  done
+  # Stage 3: config is core-only. Every hook moved to its app component and is
+  # removed by that component's deactivate, NOT here.
   # startup-check.sh is shared with - and owned by - the memory component (memory
   # symlinks + wires it too). Do NOT remove it on config deactivate, or an active
   # memory install would be left wiring a missing loader.
@@ -1191,22 +1271,8 @@ try:
         d = json.load(f)
 except Exception:
     sys.exit(0)
-# Stage 2: config owns only the app-owned residue (cluster hooks are cluster-owned).
-RESIDUE = ["memory-approve.sh", "agent-teams-guard.sh", "memory-nudge.sh", "memory-compact.sh",
-           "consolidate-nudge.sh", "voice-gate.sh", "block-clickup-writes.sh",
-           "justify-source-guard.sh", "justify-watch-guard.sh", "node-shim-heal.sh",
-           "visualizer-guard.sh", "codex-failure-watcher.sh", "codex-rescue-guard.sh"]
-hooks = d.get("hooks", {})
-for hook_type in list(hooks.keys()):
-    ng = []
-    for g in hooks[hook_type]:
-        g["hooks"] = [h for h in g.get("hooks", []) if not any(m in h.get("command", "") for m in RESIDUE)]
-        if g.get("hooks"):
-            ng.append(g)
-    if ng:
-        hooks[hook_type] = ng
-    else:
-        del hooks[hook_type]
+# Stage 3: config is core-only - it owns NO hooks now, so nothing to strip from
+# hooks here. App hooks are removed by their own components' deactivate.
 OUR_ALLOW = [
     "Bash(npx create-next-app@latest:*)", "Bash(claude mcp:*)", "mcp__pencil",
 ]
@@ -1253,7 +1319,7 @@ for m in OUR_MARKETS:
     markets.pop(m, None)
 if not markets and "extraKnownMarketplaces" in d:
     del d["extraKnownMarketplaces"]
-if not hooks:
+if not d.get("hooks"):
     d.pop("hooks", None)
 if not perms.get("allow") and "defaultMode" not in perms:
     d.pop("permissions", None)
@@ -1265,6 +1331,7 @@ PYCONFIG
 }
 
 deactivate_memory() {
+  deactivate_app_hooks memory-approve.sh memory-nudge.sh memory-compact.sh consolidate-nudge.sh
   [ -L "$CLAUDE_DIR/startup-check.sh" ] && rm -f "$CLAUDE_DIR/startup-check.sh"
   if [ -f "$CLAUDE_DIR/CLAUDE.md" ] && [ ! -L "$CLAUDE_DIR/CLAUDE.md" ] \
       && grep -Fq "<!-- improv:memory-discipline:begin -->" "$CLAUDE_DIR/CLAUDE.md"; then
@@ -1339,6 +1406,7 @@ deactivate_discord() {
 }
 
 deactivate_voice_output() {
+  deactivate_app_hooks voice-gate.sh
   rm -rf "$CLAUDE_DIR/voice-output"
   rm -f "$CLAUDE_DIR/tts-generate"
   rm -f "$CLAUDE_DIR/.voice-enabled"
@@ -1383,6 +1451,7 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 }
 
 deactivate_justify() {
+  deactivate_app_hooks justify-source-guard.sh justify-watch-guard.sh
   rm -rf "$CLAUDE_DIR/justify"
   rm -rf "$CLAUDE_DIR/skills/justify"
   # Remove MCP server from ~/.claude.json
@@ -1418,6 +1487,7 @@ deactivate_statusline() {
 }
 
 deactivate_cmux() {
+  deactivate_app_hooks agent-teams-guard.sh node-shim-heal.sh
   [ -L "$HOME/.config/cmux/settings.json" ] && rm -f "$HOME/.config/cmux/settings.json"
   # Remove Claude Teams launcher
   [ -L "$CLAUDE_DIR/claude-teams-launcher.sh" ] && rm -f "$CLAUDE_DIR/claude-teams-launcher.sh"
@@ -1603,6 +1673,9 @@ deactivate_component() {
     cmux)       deactivate_cmux ;;
     fable)      deactivate_fable ;;
     safety|verification|question-discipline|grounding|api-drift|planning-git|surface|model-routing) deactivate_cluster "$1" ;;
+    clickup)    deactivate_clickup ;;
+    visualizer) deactivate_visualizer ;;
+    codex)      deactivate_codex ;;
     nvm)        deactivate_nvm ;;
     ampersand)  deactivate_ampersand ;;
     discord)    deactivate_discord ;;
@@ -2085,17 +2158,14 @@ if picked config; then
   # - those hooks + detect-session-model now deploy+wire via the cluster pass, NOT
   # here. What remains is the app-owned residue that Stage 3 will move to its apps
   # (memory / cmux / voice / clickup / justify / visualizer / codex).
-  CONFIG_HOOKS=(
-    memory-approve.sh agent-teams-guard.sh memory-nudge.sh memory-compact.sh
-    consolidate-nudge.sh voice-gate.sh block-clickup-writes.sh
-    justify-source-guard.sh justify-watch-guard.sh
-    node-shim-heal.sh visualizer-guard.sh
-    codex-failure-watcher.sh codex-rescue-guard.sh
-  )
+  # Stage 3: config is now CORE-ONLY. Every app hook moved to its component (section
+  # 16e wires each from app-wirings.json). CONFIG_HOOKS is empty; config deploys only
+  # startup-check + hud + the permissions/plugins/statusLine merge.
+  CONFIG_HOOKS=()
   # link_or_copy, not safe_cp: on a dev checkout these become SYMLINKS so a git pull
   # reaches the hook that actually runs. safe_cp would delete an existing correct
   # symlink and freeze a copy over it on every re-run.
-  for f in "${CONFIG_HOOKS[@]}"; do
+  for f in ${CONFIG_HOOKS[@]+"${CONFIG_HOOKS[@]}"}; do   # +expansion: safe when empty under set -u
     if [ -f "$REPO_DIR/claude/hooks/$f" ]; then
       link_or_copy "$REPO_DIR/claude/hooks/$f" "$CLAUDE_DIR/hooks/$f"
       ok "hooks/$f"
@@ -3489,6 +3559,19 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
   fi
   ok "QA-hook clusters installed"
 fi
+
+# ============================================================
+# 16e. App-owned hooks (Stage 3) - each picked component owns its hooks, wired
+# from app-wirings.json. This moves the last config residue to its apps so config
+# becomes core-only.
+# ============================================================
+picked memory       && install_app_hooks memory-approve.sh memory-nudge.sh memory-compact.sh consolidate-nudge.sh
+picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh
+picked voice-output && install_app_hooks voice-gate.sh
+picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh
+picked clickup      && install_app_hooks block-clickup-writes.sh
+picked visualizer   && install_app_hooks visualizer-guard.sh
+picked codex        && install_app_hooks codex-failure-watcher.sh codex-rescue-guard.sh
 
 # ============================================================
 # 17. tilt-lab (visual-effects playground dev app)
