@@ -704,8 +704,19 @@ install_app_hooks() {
   mkdir -p "$CLAUDE_DIR/hooks"
   ensure_real_settings
   [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
-  local h okh=""
+  # Honor the per-hook off-list (HOOK_OFF, seeded from _AMPERSAND_HOOK_OFF), mirroring
+  # the QA-hook cluster pass: split the requested hooks into KEEP (deploy + wire) and
+  # DROP (reconcile-remove). HOOK_OFF entries are hook FILENAMES WITH .sh; an entry
+  # naming a DIFFERENT component's hook won't match this call's args, so it is inert.
+  local h keep="" drop=""
   for h in "$@"; do
+    case " $HOOK_OFF " in
+      *" $h "*) drop="$drop $h" ;;
+      *)        keep="$keep $h" ;;
+    esac
+  done
+  local okh=""
+  for h in $keep; do
     [ -f "$REPO_DIR/claude/hooks/$h" ] || { warn "app hook missing in repo: $h"; continue; }
     chmod +x "$REPO_DIR/claude/hooks/$h"
     link_or_copy "$REPO_DIR/claude/hooks/$h" "$CLAUDE_DIR/hooks/$h"
@@ -733,6 +744,14 @@ for s,entries in wir.items():
         for e in entries: add(e['event'], e.get('matcher'), e['hook'])
 with open(p,'w') as f: json.dump(d,f,indent=2); f.write('\n')
 "
+  fi
+  # Reconcile: any requested hook that is off-listed gets removed (its deployed file
+  # + its EXACT app-wirings.json commands), so re-running --only <comp> with a hook
+  # toggled off REMOVES a previously-installed hook. DRY reuse of the tested
+  # deactivator; DROP and KEEP are distinct hooks with distinct wiring commands, so
+  # stripping DROP's commands cannot touch KEEP's.
+  if [ -n "${drop// /}" ]; then
+    deactivate_app_hooks $drop
   fi
 }
 

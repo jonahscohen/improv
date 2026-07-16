@@ -1108,3 +1108,6 @@
 
 <!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
 - [Lead SELF-ANALYSIS concurrent-edit sequencing miss - dispatched two teammate units that both edit the central registry/codegen/golden in a shared tree (isolation is a no-op); rule = sequence registry-touching units or have one regen from the combined tree; no damage (changes composed) - FEEDBACK (2026-06-25)](session_2026-06-25_concurrent-edit-sequencing-miss.md)
+
+<!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
+- [bucket-browser Task 5 - install_app_hooks now honors per-hook off-list (HOOK_OFF): KEEP deploy+wire / DROP reconcile-remove via deactivate_app_hooks, matching the QA-hook cluster pass; new test-app-hook-offlist.sh (36/36), parity green, Codex clean - PROJECT (2026-07-16)](session_2026-07-16_bucket-browser-task5-app-offlist.md)
