@@ -957,7 +957,10 @@ EOF
   'skills' is also valid: it takes the whole design-pipeline bundle at once, where
   the skill keys above take just one (e.g. --only icon-source).
   'config' installs CORE only (permissions/plugins/statusline + startup-check + hud).
-  Every individual hook is --only-able too, e.g. --only bash-guard.
+  Hooks in the 8 QA clusters (safety, verification, question-discipline, grounding,
+  api-drift, planning-git, surface, model-routing) are individually --only-able too,
+  e.g. --only bash-guard. Other components' hooks are toggled in the browser, not
+  by --only.
 EOF
 }
 
@@ -1070,56 +1073,6 @@ show_picks_summary() {
   printf "\n"
 }
 
-# Print a string with a one-shot shimmer reveal that settles into a static
-# dark-cyan-to-light-cyan gradient. Replaces `gum style --foreground 212` for
-# component titles in the TUI. Endpoints: dark cyan (#0e7490 = 14,116,144)
-# -> light cyan (#67e8f9 = 103,232,249), with a brighter shimmer band
-# (#cffafe = 207,250,254) that sweeps left-to-right once.
-# Requires a 24-bit-color-capable terminal; falls back gracefully (text still
-# prints, just without the gradient) if escape codes are stripped.
-print_title_animated() {
-  local text="$1"
-  local len=${#text}
-  [ "$len" -eq 0 ] && return
-
-  local frames=6 frame i pos d intensity divisor
-  local shimmer_width=5
-  local r g b char
-  divisor=$(( len > 1 ? len - 1 : 1 ))
-
-  for ((frame=0; frame<frames; frame++)); do
-    pos=$(( -shimmer_width + (len + 2 * shimmer_width) * frame / (frames - 1) ))
-    printf '\r\033[K'
-    for ((i=0; i<len; i++)); do
-      char="${text:$i:1}"
-      r=$(( 14  + (103 -  14) * i / divisor ))
-      g=$(( 116 + (232 - 116) * i / divisor ))
-      b=$(( 144 + (249 - 144) * i / divisor ))
-      d=$(( i - pos ))
-      [ "$d" -lt 0 ] && d=$(( -d ))
-      if [ "$d" -lt "$shimmer_width" ]; then
-        intensity=$(( (shimmer_width - d) * 100 / shimmer_width ))
-        r=$(( r + (207 - r) * intensity / 100 ))
-        g=$(( g + (250 - g) * intensity / 100 ))
-        b=$(( b + (254 - b) * intensity / 100 ))
-      fi
-      printf '\033[38;2;%d;%d;%dm%s' "$r" "$g" "$b" "$char"
-    done
-    printf '\033[0m'
-    sleep 0.03
-  done
-
-  # Settle: pure static gradient, no shimmer.
-  printf '\r\033[K'
-  for ((i=0; i<len; i++)); do
-    char="${text:$i:1}"
-    r=$(( 14  + (103 -  14) * i / divisor ))
-    g=$(( 116 + (232 - 116) * i / divisor ))
-    b=$(( 144 + (249 - 144) * i / divisor ))
-    printf '\033[38;2;%d;%d;%dm%s' "$r" "$g" "$b" "$char"
-  done
-  printf '\033[0m\n'
-}
 
 # yes& brand banner. Hand-shaded ASCII; @/%/-/: outline 'yes', #/*/+/. shade '&'.
 # Rendered in a single red (#dc2626) because the two letterforms interleave
@@ -1880,6 +1833,20 @@ BR_PEND_W=11
 # component_browser, because build_rows must lay out for whichever renderer will draw.
 BR_PREFIX_W=2
 BR_AVAIL_W=80
+
+# Minimum seconds the launch banner holds the screen before the browser's first render
+# clears it (see the launch beat in component_browser). Whole seconds: `date +%s` is the
+# only clock bash 3.2 has without spawning something, and this floor only has to tell
+# "seen" apart from "flashed". Overridable so the pty render harness can drive the
+# browser without paying the beat on every one of its runs - the beat itself is proven
+# separately, by capture, through the real default entry.
+BR_LAUNCH_DWELL="${BR_LAUNCH_DWELL:-2}"
+
+# Exact column width of print_yes_and_banner's art. MEASURED (every art row is 64), not
+# estimated: below this the logo shears mid-glyph and reads as a rendering bug rather
+# than as branding, so the launch beat is skipped entirely on a narrower terminal.
+# Caught by the width matrix at 60 columns - the art overflowed by 4.
+BR_BANNER_COLS=64
 
 # _br_term_width - the real terminal width.
 #
@@ -2863,7 +2830,50 @@ component_browser() {
   BR_NAV=""
   BR_TOAST=""
   BR_CHOSEN=""
+
+  # --- the launch beat (Jonah, 2026-07-16: "show once on launch") ---------------
+  #
+  # THE PROBLEM: the render loop below opens with `clear`. A banner printed and then
+  # immediately followed by the loop is erased within milliseconds - present in a byte
+  # capture, never actually seen. "It rendered" is not "it was visible".
+  #
+  # THE MECHANISM: the banner OWNS THE SCREEN for the update check, which is a real
+  # network round-trip (_browser_update_refresh -> check_updates -> git fetch). This is
+  # exactly what the retired returning_flow did - banner, "Checking for updates...",
+  # then the fetch - so the brand moment is spent on work the installer has to do anyway
+  # rather than on an invented pause.
+  #
+  # THE FLOOR: a fetch can finish in milliseconds (offline, or a warm local remote), which
+  # would put us right back to a flash. So the beat is padded to a MINIMUM total dwell.
+  # Slow networks pay nothing extra - the fetch already covers it.
+  #
+  # After this, the loop clears and the root screen renders exactly as it does without a
+  # banner: this is a launch beat, not a header. The banner never competes for rows with
+  # the component list, which is what keeps 80x24 usable.
+  #
+  # THE NARROW-TERMINAL GATE: the art is a fixed 64 columns and cannot reflow. Below that
+  # it shears mid-glyph, which reads as a bug rather than as branding, so the beat is
+  # skipped and the browser opens straight away. No banner means no dwell either - there
+  # is nothing to hold the screen for.
+  local _t0 _spent _beat=0
+  if [ "$(_br_term_width)" -ge "$BR_BANNER_COLS" ]; then
+    _beat=1
+    _t0="$(date +%s)"
+    clear
+    print_yes_and_banner
+    printf "  ${DIM}Checking for updates...${NC}\n"
+  fi
+
   _browser_update_refresh
+
+  if [ "$_beat" = "1" ]; then
+    # `date +%s` is whole-second, so this floor is coarse by design - it only has to
+    # distinguish "seen" from "flashed", and 2s of brand is plenty of either.
+    _spent=$(( $(date +%s) - _t0 ))
+    if [ "$_spent" -lt "$BR_LAUNCH_DWELL" ]; then
+      sleep "$(( BR_LAUNCH_DWELL - _spent ))"
+    fi
+  fi
 
   while true; do
     # Checked, not assumed. component_browser's status is tested by its caller, which

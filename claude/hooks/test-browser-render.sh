@@ -138,6 +138,19 @@ _drive() {
   # GIT_TERMINAL_PROMPT=0 + BatchMode: the browser's update row calls the REAL
   # check_updates (git fetch). Without these, a credential prompt would block on the
   # pty and the run would die by watchdog instead of rendering.
+  #
+  # BR_LAUNCH_DWELL=0 removes the launch banner's minimum dwell, NOT the banner. This is
+  # a timing seam, not a coverage hole, and the distinction matters:
+  #   - The banner still DRAWS on every driven run, so the width assertions below still
+  #     measure it (they are what caught the 64-column art overflowing a 60-col terminal).
+  #   - Only the padding is dropped. The dwell exists so a human SEES the beat; a pty
+  #     that reads bytes does not need to be shown anything. Worse, it actively breaks
+  #     these runs: keys are sent on a fixed schedule, and gum LOSES anything typed
+  #     before it enters raw mode (see _keys_gum), so a 2s pause ahead of gum silently
+  #     ate the first keystroke and every gum assertion failed.
+  # The dwell is proven separately, against the real default entry with the real default
+  # dwell, by killing the pty mid-beat and asserting the banner is on screen while the
+  # root screen is not. That is a visibility claim, and it cannot be made from here.
   eval "$keyscript" | /usr/bin/script -q "$raw" /bin/bash -c "
     printf '%s\n' '$nonce'
     stty cols $cols rows $ROWS 2>/dev/null
@@ -145,6 +158,7 @@ _drive() {
     export PATH='$path_env'
     export GIT_TERMINAL_PROMPT=0
     export GIT_SSH_COMMAND='ssh -o BatchMode=yes'
+    export BR_LAUNCH_DWELL=0
     cd '$REPO_DIR'
     /bin/bash '$INSTALLER' --browser
   " >/dev/null 2>&1 &
