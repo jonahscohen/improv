@@ -60,5 +60,24 @@ browser_load "$TREE"
 [ "$(bucket_section 'Foundation')" = "core" ] && ok "Foundation section core" || bad "Foundation section core"
 [ "$(bucket_section 'Guardrails')" = "more" ] && ok "Guardrails section more" || bad "Guardrails section more"
 
+# ---- status + rollup tests (Task 3) ----
+# inject a deterministic probe: a leaf is "installed" iff its path is in INSTALLED
+BR_STATE_PROBE='fake_probe'
+fake_probe(){ case "$INSTALLED" in *"|$1|"*) return 0;; *) return 1;; esac; }
+INSTALLED="|Beats/memory|Beats/Hooks/memory-approve|Beats/Hooks/memory-nudge|"
+[ "$(item_state 'Beats/Hooks/memory-approve')" = "active" ] && ok "leaf active" || bad "leaf active"
+[ "$(item_state 'Beats/Hooks/reflect-nudge')" = "none" ] && ok "leaf none" || bad "leaf none"
+[ "$(item_state 'Beats/Hooks')" = "partial" ] && ok "hooks folder partial" || bad "hooks folder partial"
+[ "$(counts 'Beats/Hooks')" = "2/7" ] && ok "hooks folder counts" || bad "hooks folder counts"
+[ "$(item_state 'Beats')" = "partial" ] && ok "group partial" || bad "group partial"
+[ "$(counts 'Beats')" = "3/9" ] && ok "group counts" || bad "group counts"
+INSTALLED_ALL=""
+while IFS= read -r p; do INSTALLED_ALL="$INSTALLED_ALL|$p|"; done < <(leaf_paths 'Beats/Hooks')
+INSTALLED="$INSTALLED_ALL"
+[ "$(item_state 'Beats/Hooks')" = "active" ] && ok "hooks folder all active" || bad "hooks folder all active"
+INSTALLED="||"
+[ "$(item_state 'Beats/Hooks')" = "none" ] && ok "hooks folder none" || bad "hooks folder none"
+unset BR_STATE_PROBE
+
 echo "== $pass passed, $fail failed =="
 [ "$fail" = 0 ]

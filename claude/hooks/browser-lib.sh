@@ -142,3 +142,116 @@ hook_desc() { _br_untab "$(_br_get HOOKDESC "$1")"; }
 
 # bucket_section <bucketKey> -> core|more (empty if unknown).
 bucket_section() { _br_untab "$(_br_get SECTION "$1")"; }
+
+# --- status + rollup layer (Task 3) -----------------------------------------
+#
+# A NODE's install state is derived from a per-leaf PROBE. At runtime the probe
+# is _real_probe (which asks install.sh whether a hook/component is installed);
+# tests inject a deterministic probe by setting BR_STATE_PROBE to a function
+# name. Group/hooks nodes roll their leaves up into none|partial|active.
+#
+# Space-safety: node PATHs can contain spaces (bucket keys "Voice & chat",
+# "Dev surface", "Design Tools"), so every list of paths is newline-delimited
+# and iterated with `while IFS= read -r`, never `for x in $(...)`.
+
+# _br_children_lines <path> - child keys of a node, ONE PER LINE (space-safe).
+# Children are stored TAB-delimited internally; convert TAB -> newline. A child
+# key never contains a space or a tab, so this round-trips losslessly. Emits
+# nothing for a leaf/unknown node. Always returns 0.
+_br_children_lines() {
+  local v
+  v="$(_br_get CHILDREN "$1")"
+  if [ -n "$v" ]; then
+    printf '%s\n' "${v//$'\t'/$'\n'}"
+  fi
+  return 0
+}
+
+# leaf_paths <path> - every leaf path under a node, ONE PER LINE.
+#   leaf         -> the path itself
+#   hooks node   -> path/<hook> for each hook (hooks have no sub-node entry, so
+#                   they are emitted directly rather than recursed into)
+#   group node   -> recurse into each child sub-node (children carry their own
+#                   KIND, so leaf_paths resolves them)
+leaf_paths() {
+  local path="$1" kind child
+  kind="$(node_kind "$path")"
+  case "$kind" in
+    group)
+      while IFS= read -r child; do
+        [ -n "$child" ] || continue
+        leaf_paths "$path/$child"
+      done < <(_br_children_lines "$path")
+      ;;
+    hooks)
+      while IFS= read -r child; do
+        [ -n "$child" ] || continue
+        printf '%s\n' "$path/$child"
+      done < <(_br_children_lines "$path")
+      ;;
+    *)
+      printf '%s\n' "$path"
+      ;;
+  esac
+  return 0
+}
+
+# counts <path> - "on/total" over the leaves under a node. total = number of
+# leaf_paths; on = number whose probe returns 0. Iterated space-safe.
+counts() {
+  local path="$1" probe total on leaf
+  probe="${BR_STATE_PROBE:-_real_probe}"
+  total=0; on=0
+  while IFS= read -r leaf; do
+    [ -n "$leaf" ] || continue
+    total=$((total + 1))
+    if "$probe" "$leaf"; then
+      on=$((on + 1))
+    fi
+  done < <(leaf_paths "$path")
+  printf '%s/%s\n' "$on" "$total"
+}
+
+# item_state <path> -> none | partial | active.
+#   leaf:        probe -> active if installed else none.
+#   group/hooks: derived from counts (on==0 none, on==total active, else partial).
+item_state() {
+  local path="$1" kind probe c on total
+  kind="$(node_kind "$path")"
+  if [ "$kind" = "group" ] || [ "$kind" = "hooks" ]; then
+    c="$(counts "$path")"
+    on="${c%/*}"; total="${c#*/}"
+    if [ "$on" = "0" ]; then
+      printf '%s\n' "none"
+    elif [ "$on" = "$total" ]; then
+      printf '%s\n' "active"
+    else
+      printf '%s\n' "partial"
+    fi
+  else
+    probe="${BR_STATE_PROBE:-_real_probe}"
+    if "$probe" "$path"; then
+      printf '%s\n' "active"
+    else
+      printf '%s\n' "none"
+    fi
+  fi
+  return 0
+}
+
+# _real_probe <path> - the default runtime probe (used inside install.sh, NOT in
+# tests, which inject BR_STATE_PROBE). A leaf is a HOOK when its parent node is a
+# hooks node, otherwise a COMPONENT.
+#   hook      -> is_our_hook "<key>.sh"
+#   component -> detect_component "<key>" == active
+# is_our_hook and detect_component are install.sh functions in scope at runtime.
+_real_probe() {
+  local path="$1" key parent
+  key="${path##*/}"
+  parent="${path%/*}"
+  if [ "$(node_kind "$parent")" = "hooks" ]; then
+    is_our_hook "$key.sh"
+  else
+    [ "$(detect_component "$key")" = "active" ]
+  fi
+}
