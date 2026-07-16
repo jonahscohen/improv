@@ -692,7 +692,8 @@ EOF
 #
 # RUNTIME CONTRACT: apply_pending only ever runs at install.sh runtime. browser-lib.sh is
 # SOURCED into install.sh, so "$0" is install.sh (the recursive-install idiom the
-# returning flow already uses), and deactivate_component / stage_reset are in scope.
+# returning flow already uses), and deactivate_component / state_set / stage_reset are in
+# scope.
 #
 # Order is installs THEN deactivates. The two lists are disjoint by construction (apply_plan
 # emits exactly ONE line per owner); step (0) VERIFIES that before touching anything, so a
@@ -750,10 +751,28 @@ EOF
   fi
 
   # (2) Whole-component removals. Status checked explicitly (see SET -E NOTE above).
+  #
+  # Each SUCCESSFUL removal is recorded "inactive" in the state file, mirroring what the
+  # returning flow does after its own deactivate (install.sh:2033). This is NOT redundant
+  # with the installer's end-of-run sync (install.sh ~3903, which re-reads all KEYS from
+  # disk): that sync runs inside the CHILD install pass, which finishes BEFORE these
+  # deactivates, so it records the about-to-be-removed owner as still "active". A
+  # deactivate-only apply spawns no child at all and so gets no sync whatsoever. Without
+  # this line the bookkeeping returning_flow does today would be silently dropped when
+  # the browser replaces it.
+  #
+  # Recorded ONLY on success: a component that failed to deactivate is not inactive.
   for owner in $deact; do
     [ -n "$owner" ] || continue
     if deactivate_component "$owner"; then
-      :
+      # A state_set failure is reported loudly but does NOT fail the apply: the removal
+      # itself succeeded (the real outcome), effective_state reads DISK first so a stale
+      # entry can never mis-report a removed component as active (install.sh
+      # effective_state), and failing here would preserve pending and send a retry back
+      # through deactivate_component, which is not reliably idempotent.
+      if ! state_set "$owner" "inactive"; then
+        printf 'apply_pending: WARNING - %s was deactivated but recording its inactive state FAILED; the state file entry is stale (status still reads correctly from disk)\n' "$owner" >&2
+      fi
     else
       rc=$?
       printf 'apply_pending: deactivate FAILED (exit %s) for component %s (pending preserved)\n' "$rc" "$owner" >&2

@@ -40,7 +40,19 @@ The `unset` is load-bearing: without it the recursive `bash "$0" --only ...` chi
 
 **Why merging all owners' off-lists into ONE `_AMPERSAND_HOOK_OFF` is safe (and how it is now guarded).** Off-lists are component-scoped: install_app_hooks only matches HOOK_OFF against the hooks each call passes in, so another component's entry is inert. Codex sharpened this: the merge actually depends on hook filenames being GLOBALLY unique across owners, not merely on component scoping. If two owners ever shipped the same filename, off-listing it for A would silently drop it from B in the same pass. The merge is spec'd by the plan, so the design stands - but the hidden precondition is now mechanically guarded by test 22, which parses install.sh's REAL call sites (`picked X && install_app_hooks ...` + the `cluster_hooks()` arms; 17 owners / 45 filenames) and fails if any filename has two owners.
 
-**Deferred (needs a Task 9 ruling): STATE_FILE ownership.** apply_pending does not touch `~/.claude/.dotfiles-state`. The browser layer needs no refresh (item_state/counts re-probe disk live via _real_probe), and the recursive install pass writes its own state. But `deactivate_component` via apply_pending leaves the state file saying "active" - returning_flow calls `state_set "$pick" "inactive"` after its deactivate. Implemented to the literal spec (stage_reset only) rather than improvising; Task 9 (which replaces returning_flow) should decide whether apply_pending owns that bookkeeping.
+**RESOLVED (Jonah ruled 2026-07-16, follow-up commit): apply_pending DOES state_set. Not deferred to Task 9.** I had implemented the literal spec (stage_reset only) and flagged STATE_FILE ownership as an open question. Jonah traced it and ruled: after each SUCCESSFUL `deactivate_component "$owner"`, call `state_set "$owner" "inactive"` (returning_flow parity, install.sh:2033). NOT for install owners - the child install pass's end-of-run sync reconciles those from disk.
+
+Why the ruling is right (I verified all three claims against install.sh before folding):
+- `effective_state` (install.sh:1263) checks `detect_component` (DISK) FIRST, so a stale entry can NEVER mis-report a removed component as active. Stale state is cosmetic, not a correctness bug - which is why this was easy to under-weight.
+- BUT the end-of-run sync (install.sh ~3903, `for k in "${KEYS[@]}"; state_set "$k" "$(detect_component "$k")"`) runs inside the CHILD install pass, which completes BEFORE the parent's deactivates. So it records the about-to-be-removed owner as "active", and the deactivate half leaves that stale.
+- A DEACTIVATE-ONLY apply spawns no child at all, so it gets no sync whatsoever. Nothing but apply_pending will ever record the removal.
+- returning_flow does this bookkeeping today and Task 9 retires it, so omitting it would SILENTLY DROP existing behavior. That is the real cost, and it is invisible in any single test.
+
+Proven empirically: removing the `state_set` call makes the deactivate-only integration assertion fail with `deactivated owner state is 'active' (want inactive)` - exactly the stale entry Jonah predicted.
+
+**Judgment call inside the ruling (Codex-validated):** a `state_set` FAILURE is reported loudly to stderr but does NOT fail the apply. The removal itself succeeded (the real outcome), effective_state reads disk first so status stays correct, and failing would preserve pending and send a retry back through `deactivate_component`, which is NOT reliably idempotent (`deactivate_task_list` is `[ -d dir ] && rm -rf dir`, returning 1 once the dir is gone - a retry would report a bogus deactivate failure forever). Codex round 3 attacked this specifically and cleared it: "not the round-1 silent-success pattern in disguise: the failure is explicitly checked, loudly reported, and intentionally classified as non-authoritative bookkeeping."
+
+**My error worth recording:** I classified this as "deferred design" partly because I checked `effective_state` saw disk first and concluded "not a correctness bug, therefore not mine." That reasoning stopped one step short - the question was never "does status break" but "does the browser drop behavior returning_flow has today." Correctness and parity are different tests, and I only ran the first.
 
 ## Cross-model review (Codex, real, 2 rounds)
 
@@ -65,13 +77,13 @@ Fixing the test-25 gap, I stubbed `bash()` to echo `INSTALL_RAN` to **stderr** a
 
 ## Verification (all re-run AFTER folding both review rounds)
 
-| Gate | Result |
-|---|---|
-| `bash -n install.sh` + browser-lib + both test files | clean |
-| `/bin/bash claude/hooks/test-component-browser.sh` | **73 passed, 0 failed** (was 53; +20) |
-| `/bin/bash claude/hooks/test-apply-pending.sh` | **30 passed, 0 failed** - ALL APPLY-PENDING CHECKS PASSED |
-| `bash claude/hooks/test-settings-deploy-parity.sh` | **ALL PARITY CHECKS PASSED** (seam does not break parity) |
-| `bash claude/hooks/test-app-hook-offlist.sh` | **36 passed, 0 failed** (no Task 5 regression) |
+| Gate | After first commit (81fb0833) | After the state_set ruling |
+|---|---|---|
+| `bash -n install.sh` + browser-lib + both test files | clean | clean |
+| `/bin/bash claude/hooks/test-component-browser.sh` | 73 passed, 0 failed (was 53) | **75 passed, 0 failed** |
+| `/bin/bash claude/hooks/test-apply-pending.sh` | 30 passed, 0 failed | **33 passed, 0 failed** |
+| `bash claude/hooks/test-settings-deploy-parity.sh` | ALL PARITY CHECKS PASSED | **ALL PARITY CHECKS PASSED** |
+| `bash claude/hooks/test-app-hook-offlist.sh` | 36 passed, 0 failed | **36 passed, 0 failed** |
 
 Canonical contract asserted (justify + codex installed; stage codex-rescue-guard OFF + chrome install):
 
@@ -86,7 +98,13 @@ Negative controls run (each temporarily broken, confirmed FAIL, restored): `.sh`
 
 ## Files touched
 
+Commit 81fb0833 (`browser: apply_pending runs installs + uninstalls in one pass`):
 - `claude/hooks/browser-lib.sh` - added `apply_pending_plan` + `apply_pending`
 - `install.sh` - added the 17-line `_AMPERSAND_APPLY_TEST` seam (only change)
 - `claude/hooks/test-component-browser.sh` - tests 15-25 (+20 assertions)
 - `claude/hooks/test-apply-pending.sh` - NEW sandbox integration suite (30 assertions)
+
+Follow-up commit (`browser: apply_pending records inactive state on deactivate (returning_flow parity)`):
+- `claude/hooks/browser-lib.sh` - `state_set "$owner" "inactive"` after each successful deactivate
+- `claude/hooks/test-apply-pending.sh` - `state_of` reader + 3 state assertions (seed active, install owner active, deactivate-only recorded inactive)
+- `claude/hooks/test-component-browser.sh` - stubs `state_set` (apply_pending now requires it; an undefined call would return 127 and, with errexit off, silently continue) + asserts state is recorded on success and NOT on failure. Staged despite not being on Jonah's file list: leaving it out would leave the unit suite silently degraded against the new dependency.

@@ -89,6 +89,22 @@ sys.exit(1)
 "
 }
 
+# state_of <SB> <owner> -> the owner's recorded status from the installer's state file
+# (~/.claude/.dotfiles-state), or "" when the file or the entry is absent. This is the
+# bookkeeping returning_flow maintains via `state_set "$pick" "inactive"` (install.sh:2033);
+# apply_pending must keep parity with it.
+state_of() {
+  python3 -c "
+import json, os, sys
+p = os.path.join('$1', '.claude', '.dotfiles-state')
+try:
+    d = json.load(open(p))
+except Exception:
+    sys.exit(0)
+sys.stdout.write(d.get('components', {}).get('$2', ''))
+"
+}
+
 # run_apply <SB> <pending_install> <pending_uninstall> -> echoes install.sh's exit code.
 # Drives apply_pending through the test seam with an isolated HOME.
 run_apply() {
@@ -110,6 +126,9 @@ cmd_in_settings "$SB" "$CMD_RESCUE"         && pass "seed: codex-rescue-guard wi
 cmd_in_settings "$SB" "$CMD_WATCHER"        && pass "seed: codex-failure-watcher wired"   || fail "seed: codex-failure-watcher wiring absent"
 [ -f "$SB/.claude/skills/task-list/SKILL.md" ] && pass "seed: task-list skill present" || fail "seed: task-list skill missing"
 hook_present "$SB" chrome-tabgroup-track.sh && fail "seed: chrome already installed (should be absent)" || pass "seed: chrome NOT installed"
+# The seed's end-of-run sync (install.sh ~3903) records every KEY from disk. task-list must
+# read "active" here, else the Scenario B state assertion below would pass vacuously.
+[ "$(state_of "$SB" task-list)" = "active" ] && pass "seed: task-list state is active" || fail "seed: task-list state is '$(state_of "$SB" task-list)' (want active)"
 
 echo
 echo "== Scenario A: stage 'install chrome' + 'uninstall ONE codex hook' -> one install pass =="
@@ -135,16 +154,23 @@ cmd_in_settings "$SB" "$CMD_WATCHER" && pass "codex-failure-watcher still wired"
 hook_present "$SB" codex-review.py && pass "codex-review.py survives" || fail "codex-review.py wrongly removed"
 # untouched bystander
 [ -f "$SB/.claude/skills/task-list/SKILL.md" ] && pass "task-list untouched" || fail "task-list wrongly removed"
+# install owners are reconciled from disk by the install pass's own end-of-run sync -
+# apply_pending must NOT be recording state for them itself.
+[ "$(state_of "$SB" chrome)" = "active" ] && pass "installed owner state is active" || fail "installed owner state is '$(state_of "$SB" chrome)' (want active)"
 
 echo
-echo "== Scenario B: stage a WHOLE-component uninstall -> the deactivate pass runs =="
+echo "== Scenario B: DEACTIVATE-ONLY apply -> removal runs AND state is recorded inactive =="
 # apply_pending_plan for this staged set is:
 #   INSTALL |
 #   DEACTIVATE task-list
-# No install owners, so apply_pending runs no install pass at all - only deactivate_component.
+# No install owners, so apply_pending spawns NO child install pass - which means there is no
+# end-of-run sync (install.sh ~3903) to reconcile the state file afterward. This path is the
+# whole reason apply_pending must state_set itself (returning_flow parity, install.sh:2033):
+# nothing else will ever record the removal.
 rc="$(run_apply "$SB" "" "$PU_TASKLIST")"
 [ "$rc" = "0" ] && pass "deactivate-only apply exit 0" || fail "deactivate-only apply exit was $rc (want 0)"
 [ -f "$SB/.claude/skills/task-list/SKILL.md" ] && fail "task-list STILL present (deactivate pass did not run)" || pass "task-list deactivated"
+[ "$(state_of "$SB" task-list)" = "inactive" ] && pass "deactivated owner recorded inactive (no-install-pass path)" || fail "deactivated owner state is '$(state_of "$SB" task-list)' (want inactive)"
 # the deactivate pass must not disturb anything else
 hook_present "$SB" chrome-tabgroup-track.sh && pass "chrome survives deactivate pass" || fail "chrome wrongly removed"
 cmd_in_settings "$SB" "$CMD_TRACK" && pass "chrome wiring survives deactivate pass" || fail "chrome wiring wrongly removed"

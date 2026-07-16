@@ -343,23 +343,37 @@ PY
 # These paths are load-bearing: callers test apply_pending's status (`if apply_pending`),
 # which DISABLES errexit for its whole body. Every failure inside it must therefore be
 # checked explicitly or it silently returns 0. That is exactly what these tests pin.
+#
+# state_set is an install.sh function that apply_pending calls after a successful
+# deactivate. It does not exist in this process, so it is STUBBED here (like
+# deactivate_component) rather than left undefined - an undefined call would return 127 and,
+# with errexit off, silently continue, which is the very failure mode these tests exist to
+# catch. _apl_state records what apply_pending asked to be recorded.
 BR_STATE_PROBE='fake_probe'
+_apl_state=""
+state_set() { _apl_state="$1=$2"; return 0; }
 
-# 23. a failing deactivate must PROPAGATE its code and PRESERVE pending (never a silent 0).
+# 23. a failing deactivate must PROPAGATE its code and PRESERVE pending (never a silent 0),
+# and must NOT record an inactive state for a component that is still installed.
 INSTALLED="|tilt-lab|"; stage_reset
 stage_toggle 'tilt-lab'                       # ON -> plan is "INSTALL |" + "DEACTIVATE tilt-lab"
 deactivate_component() { return 7; }          # stub a failing deactivator
+_apl_state=""
 rc=0; if apply_pending >/dev/null 2>&1; then rc=0; else rc=$?; fi
 [ "$rc" = "7" ] && ok "apply_pending propagates deactivate failure" || bad "apply_pending propagates deactivate failure (got $rc)"
 [ -n "$PENDING_UNINSTALL" ] && ok "apply_pending preserves pending on deactivate failure" || bad "apply_pending preserves pending on deactivate failure"
+[ -z "$_apl_state" ] && ok "apply_pending records no state on deactivate failure" || bad "apply_pending records no state on deactivate failure (got $_apl_state)"
 
-# 24. the success path still clears pending and returns 0.
+# 24. the success path clears pending, returns 0, and records the owner inactive
+# (returning_flow parity, install.sh:2033).
 INSTALLED="|tilt-lab|"; stage_reset
 stage_toggle 'tilt-lab'
 deactivate_component() { return 0; }
+_apl_state=""
 rc=0; if apply_pending >/dev/null 2>&1; then rc=0; else rc=$?; fi
 [ "$rc" = "0" ] && ok "apply_pending returns 0 on a clean deactivate" || bad "apply_pending returns 0 on a clean deactivate (got $rc)"
 [ -z "$PENDING_UNINSTALL" ] && ok "apply_pending clears pending on success" || bad "apply_pending clears pending on success"
+[ "$_apl_state" = "tilt-lab=inactive" ] && ok "apply_pending records deactivated owner inactive" || bad "apply_pending records deactivated owner inactive (got $_apl_state)"
 
 # 25. a self-contradicting plan is REFUSED with exit 3 before ANY work runs. Unreachable via
 # the real apply_plan (one line per owner), so the plan is stubbed to force the path.
@@ -384,7 +398,7 @@ unset -f bash
 [ -s "$_apl_i" ] && bad "apply_pending ran no install pass on refusal" || ok "apply_pending ran no install pass on refusal"
 [ "$PENDING_UNINSTALL" = "|sentinel|" ] && ok "apply_pending preserves pending on refusal" || bad "apply_pending preserves pending on refusal"
 rm -f "$_apl_i" "$_apl_d"
-unset -f apply_pending_plan deactivate_component
+unset -f apply_pending_plan deactivate_component state_set
 stage_reset
 unset BR_STATE_PROBE
 
