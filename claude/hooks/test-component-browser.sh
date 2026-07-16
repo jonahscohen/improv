@@ -3,6 +3,10 @@
 set -u
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TREE="$REPO_DIR/claude/hooks/browser-tree.json"
+# install.sh is READ (never run) by the installer<->tree completeness check below: the
+# `picked X && install_app_hooks ...` lines are the installer's declaration of which hooks
+# each component owns, and that is the only source the tree can be checked against.
+INSTALL="$REPO_DIR/install.sh"
 pass=0; fail=0
 ok(){ echo "PASS $1"; pass=$((pass+1)); }
 bad(){ echo "FAIL $1"; fail=$((fail+1)); }
@@ -52,7 +56,11 @@ browser_load "$TREE"
 [ "$(node_kind 'tilt-lab')" = "leaf" ] && ok "tilt-lab is leaf" || bad "tilt-lab is leaf"
 [ "$(node_kind 'Beats/Hooks')" = "hooks" ] && ok "Beats/Hooks is hooks" || bad "Beats/Hooks is hooks"
 [ "$(node_children 'Beats')" = "memory reflect Hooks" ] && ok "Beats children" || bad "Beats children"
-[ "$(node_children 'sidecoach')" = "sidecoach-keyword sidecoach-sessionstart" ] && ok "sidecoach hook children" || bad "sidecoach hook children"
+# All SIX sidecoach hooks, in the order install_app_hooks deploys them. The tree used to
+# list only 2 of the 6 the installer actually deploys and wires, so the browser rendered
+# "2/2 active" for a component with 6 managed hooks and gave no toggle for the other 4.
+[ "$(node_children 'sidecoach')" = "sidecoach-sessionstart sidecoach-preamble sidecoach-postuserp sidecoach-keyword sidecoach-taste-gate sidecoach-postresponse" ] \
+  && ok "sidecoach hook children" || bad "sidecoach hook children (got '$(node_children 'sidecoach')')"
 [ "$(node_label 'sidecoach')" = "Sidecoach" ] && ok "sidecoach label" || bad "sidecoach label"
 [ "$(node_label 'Beats')" = "Beats" ] && ok "Beats label falls back to key" || bad "Beats label falls back to key"
 [ -n "$(node_tag 'Beats')" ] && ok "node tag present" || bad "node tag present"
@@ -111,6 +119,80 @@ print("missing owner:",missing,file=sys.stderr)
 sys.exit(0 if not missing else 1)
 PY
 
+# INSTALLER <-> TREE COMPLETENESS, BOTH DIRECTIONS.
+#
+# THIS IS THE TEST THAT SHOULD HAVE CAUGHT THE SIDECOACH GAP AND DID NOT. Everything above
+# only checks the tree against ITSELF (every hook has a desc, every hook has an owner). A
+# tree that simply OMITS hooks the installer deploys passes all of it - which is exactly
+# what happened: the tree claimed sidecoach owned 2 hooks while the installer deployed and
+# wired 6, and cmux's tree omitted resume-toggle + teammate-relay-stop. The browser then
+# renders "2/2 active" for a component that really has 6 managed hooks - a status row
+# stating something untrue, and 4 hooks with no toggle at all.
+#
+# The invariant is now STRUCTURAL, derived from install.sh itself rather than restated by
+# hand: every app hook deploys through a `picked <owner> && install_app_hooks <hooks...>`
+# line, so that line IS the installer's truth and this test reads it directly. Both
+# directions are checked, because each catches a different lie:
+#   installer -> tree : a hook that installs but has no toggle (the sidecoach gap)
+#   tree -> installer : a toggle for a hook that never installs (a row that lies)
+#
+# EXEMPT, deliberately: pinned hooks (beats-rebuild, beats-staleness-guard) appear in the
+# tree as always-on but are NOT globally installed - they are improv-repo-specific and
+# wired project-scoped in the repo's own .claude/settings.json
+# (decision_beats_hooks_stay_project_scoped.md). Cluster hooks are exempt from the
+# install_app_hooks half: they deploy through the cluster pass + cluster-wirings.json.
+python3 - "$TREE" "$INSTALL" <<'PY' && ok "installer and tree agree on every app hook (both directions)" || bad "installer and tree agree on every app hook (both directions)"
+import json,re,sys
+t=json.load(open(sys.argv[1])); src=open(sys.argv[2]).read()
+pinned=set(t.get("pinned_hooks",[])); ho=t.get("hook_owner",{})
+
+truth={}
+for m in re.finditer(r'^picked (\S+)\s+&& install_app_hooks (.+)$', src, re.M):
+    truth.setdefault(m.group(1), set()).update(h[:-3] for h in m.group(2).split() if h.endswith(".sh"))
+if not truth:
+    print("no `picked X && install_app_hooks` lines found - the invariant cannot be derived, "
+          "so this test proves NOTHING. install.sh changed shape; fix this test.", file=sys.stderr)
+    sys.exit(1)
+
+tree={}
+for h,o in ho.items():
+    if h not in pinned: tree.setdefault(o,set()).add(h)
+
+bad=[]
+for owner,inst in truth.items():
+    have=tree.get(owner,set())
+    for h in sorted(inst-have):
+        bad.append(f"{owner}: installs+wires {h} but the tree does not list it under {owner} (no toggle; counts lie)")
+    for h in sorted(have-inst):
+        bad.append(f"{owner}: tree offers a toggle for {h} but install_app_hooks never deploys it")
+for b in bad: print("  "+b, file=sys.stderr)
+sys.exit(0 if not bad else 1)
+PY
+
+# A COUNT WRITTEN INTO PROSE MUST MATCH THE NODE. Twice in one build a hardcoded number
+# went stale the moment the data moved: cmux's desc still read "The 6 hooks cmux installs"
+# after the node grew to 8. The rendered count beside it was right, so the screen disagreed
+# with itself. This greps the descriptions for the generated "The N hooks <X> installs"
+# shape and checks N against reality - the only counts in prose that are DERIVED and so can
+# rot silently. Deliberately narrow: free prose like sidecoach's "26 flows" is a real fact
+# about the product, not a hook count, and must not be caught here.
+python3 - "$TREE" <<'PY' && ok "every 'The N hooks X installs' desc matches the real hook count" || bad "every 'The N hooks X installs' desc matches the real hook count"
+import json,re,sys
+t=json.load(open(sys.argv[1])); bad=[]
+def walk(n):
+    if n.get("members") is not None:
+        for c in n["members"]: walk(c)
+        return
+    h=n.get("hooks")
+    if h is None: return
+    m=re.search(r'The (\d+) hooks (\S+) installs', n.get("desc","") or "")
+    if m and int(m.group(1)) != len(h):
+        bad.append("%s: desc claims %s hooks, node has %d" % (n["key"], m.group(1), len(h)))
+for b in t["buckets"]: walk(b)
+for b in bad: print("  "+b, file=sys.stderr)
+sys.exit(0 if not bad else 1)
+PY
+
 # ---- staging + apply_plan (Task 4) ----
 # Same fake_probe/INSTALLED harness; stage_reset before each scenario.
 BR_STATE_PROBE='fake_probe'
@@ -153,6 +235,38 @@ out="$(apply_plan)"
 case "$out" in
   *"UNINSTALL_COMPONENT justify"*) ok "full uninstall plan";;
   *) bad "full uninstall plan";;
+esac
+
+# 4b. THE PARTIAL-OWNER DISABLE-ALL REGRESSION (the bug apply_plan rule 3 used to have).
+# A PARTIALLY-installed hooks-only owner + "Disable all" must ALSO collapse to a component
+# uninstall. The old rule asked "is every owned hook staged-uninstall?" - unsatisfiable
+# here, because stage_all only stages the hooks that are currently ON, so the 5 already-off
+# ones were never staged. It fell through to the install branch and emitted
+# `INSTALL cmux <all 6 off-listed>`: a disable-all that INSTALLS. The rule now asks the only
+# question that matters - is anything left ON - so both assertions below are load-bearing.
+INSTALLED="|Dev surface/cmux/resume-guard|"; stage_reset
+stage_all 'Dev surface/cmux' uninstall
+out="$(apply_plan)"
+case "$out" in
+  *"UNINSTALL_COMPONENT cmux"*) ok "partial owner + disable-all -> component uninstall";;
+  *) bad "partial owner + disable-all -> component uninstall (got '$out')";;
+esac
+# The NEGATIVE half, asserted separately: it must not merely CONTAIN the uninstall, it must
+# not emit an INSTALL at all. A plan doing both would satisfy the check above and still
+# install the very hooks the user asked to remove.
+case "$out" in
+  *"INSTALL cmux"*) bad "partial owner + disable-all must NOT emit an INSTALL (got '$out')";;
+  *) ok "partial owner + disable-all emits NO install";;
+esac
+
+# 4c. Same owner, FULLY installed + disable-all: unchanged behaviour, so the fix cannot be
+# passing 4b by having broken the ordinary path.
+INSTALLED="|Dev surface/cmux/resume-guard|Dev surface/cmux/agent-teams-guard|Dev surface/cmux/node-shim-heal|Dev surface/cmux/cmux-close-guard|Dev surface/cmux/cmux-teammate-shim-heal|Dev surface/cmux/team-reaper|"
+stage_reset; stage_all 'Dev surface/cmux' uninstall
+out="$(apply_plan)"
+case "$out" in
+  *"UNINSTALL_COMPONENT cmux"*) ok "fully-installed owner + disable-all -> component uninstall";;
+  *) bad "fully-installed owner + disable-all -> component uninstall (got '$out')";;
 esac
 
 # 5. partial preserve: an already-on hook stays on; only the untouched-off hook is off-listed.

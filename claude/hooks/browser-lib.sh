@@ -541,7 +541,7 @@ apply_plan() {
     done < <(_set_lines "$set")
   done
 
-  local lp H h hp h_count unins_count off_list on leaf_install
+  local lp H h hp h_count off_list on on_count leaf_install
   while IFS= read -r owner; do
     [ -n "$owner" ] || continue
 
@@ -570,33 +570,24 @@ EOF
       continue
     fi
 
-    # (3) hooks-only owner (no component leaf) with every owned hook staged-uninstall ->
-    # the whole hooks component comes out. A dual-nature owner (has a leaf) NEVER hits this;
-    # its leaf is the only thing that can trigger a full uninstall (step 1).
-    if [ -z "$lp" ]; then
-      unins_count=0
-      while IFS= read -r h; do
-        [ -n "$h" ] || continue
-        hp="$(_br_hook_path "$h")"
-        if _pend_has "$PENDING_UNINSTALL" "$hp"; then
-          unins_count=$((unins_count + 1))
-        fi
-      done <<EOF
-$H
-EOF
-      if [ "$unins_count" -eq "$h_count" ]; then
-        printf 'UNINSTALL_COMPONENT %s\n' "$owner"
-        continue
-      fi
-    fi
-
-    # (4) partial / target-state: install the owner, off-listing every hook NOT on after
-    # the pending sets. A staged-install of the component leaf forces all its hooks on.
+    # (3)+(4) TARGET STATE FIRST. Compute, for every owned hook, whether it is ON after
+    # the pending sets are applied. This single pass drives BOTH the full-uninstall
+    # decision and the off-list, because they are the same question asked twice.
+    #
+    # WHY THIS IS COMPUTED BEFORE THE UNINSTALL TEST (the bug this shape fixes):
+    # rule 3 used to ask "is EVERY owned hook staged-uninstall?". That is UNSATISFIABLE on
+    # a PARTIALLY-installed owner, because stage_all only stages the hooks that are
+    # currently ON - the already-off ones are never staged, so the count could never reach
+    # h_count. A partial owner therefore fell through to the install branch, where target_on
+    # was empty, off_list became ALL hooks, and it emitted `INSTALL <owner> <everything
+    # off-listed>`. Net: "Disable all hooks" on a partially-installed component ran an
+    # INSTALL. The right question was never "what did the user stage" but "what is left ON".
     leaf_install=0
     if [ -n "$lp" ] && _pend_has "$PENDING_INSTALL" "$lp"; then
       leaf_install=1
     fi
     off_list=""
+    on_count=0
     while IFS= read -r h; do
       [ -n "$h" ] || continue
       hp="$(_br_hook_path "$h")"
@@ -612,10 +603,24 @@ EOF
       fi
       if [ "$on" = "0" ]; then
         off_list="$off_list $h"
+      else
+        on_count=$((on_count + 1))
       fi
     done <<EOF
 $H
 EOF
+
+    # (3) hooks-only owner (no component leaf) whose TARGET_ON is EMPTY -> the whole hooks
+    # component comes out. `[ -z "$lp" ]` is load-bearing and preserves the engine-leaf
+    # master-switch ruling: a DUAL-NATURE owner (memory, reflect - has a component leaf)
+    # with no hooks left on must still emit INSTALL + a full off-list, so the engine/skill
+    # survives with its hooks unwired. Only step 1 (the leaf staged off) removes those.
+    if [ -z "$lp" ] && [ "$on_count" -eq 0 ]; then
+      printf 'UNINSTALL_COMPONENT %s\n' "$owner"
+      continue
+    fi
+
+    # (4) partial / target-state: install the owner, off-listing every hook NOT on.
     printf 'INSTALL %s%s\n' "$owner" "$off_list"
   done <<EOF
 $owners

@@ -6,11 +6,31 @@
       "tag": "rules, settings, shell",
       "desc": "The base install - team rules, settings core, statusline, and shell shortcuts. Everything else builds on this.",
       "members": [
-        {"key": "brain", "kind": "leaf", "tag": "CLAUDE.md team rules"},
-        {"key": "config", "kind": "leaf", "tag": "settings.json core (core-only)"},
-        {"key": "statusline", "kind": "leaf", "tag": "custom status line"},
-        {"key": "ampersand", "kind": "leaf", "tag": "re-run installer shortcut"},
-        {"key": "nvm", "kind": "leaf", "tag": "node version auto-activate"}
+        {
+          "key": "brain",
+          "kind": "leaf",
+          "tag": "CLAUDE.md team rules"
+        },
+        {
+          "key": "config",
+          "kind": "leaf",
+          "tag": "settings.json core (core-only)"
+        },
+        {
+          "key": "statusline",
+          "kind": "leaf",
+          "tag": "custom status line"
+        },
+        {
+          "key": "ampersand",
+          "kind": "leaf",
+          "tag": "re-run installer shortcut"
+        },
+        {
+          "key": "nvm",
+          "kind": "leaf",
+          "tag": "node version auto-activate"
+        }
       ]
     },
     {
@@ -19,9 +39,33 @@
       "tag": "the beats memory system",
       "desc": "Beats is your cross-session memory - the engine, the reflection tool, and the hooks that keep it fresh.",
       "members": [
-        {"key": "memory", "kind": "leaf", "tag": "the beats memory engine", "desc": "The beats memory engine - stores and retrieves your context across sessions and machines."},
-        {"key": "reflect", "kind": "leaf", "tag": "reflection over your beats", "desc": "Reflect runs multi-agent analysis across your accumulated beats to surface patterns and gaps."},
-        {"key": "Hooks", "kind": "hooks", "tag": "the hooks Beats depends on", "desc": "The hooks the beats subsystem installs to keep your memory guarded, compiled, and fresh.", "hooks": ["memory-approve", "memory-nudge", "memory-compact", "consolidate-nudge", "beats-rebuild", "beats-staleness-guard", "reflect-nudge"]}
+        {
+          "key": "memory",
+          "kind": "leaf",
+          "tag": "the beats memory engine",
+          "desc": "The beats memory engine - stores and retrieves your context across sessions and machines."
+        },
+        {
+          "key": "reflect",
+          "kind": "leaf",
+          "tag": "reflection over your beats",
+          "desc": "Reflect runs multi-agent analysis across your accumulated beats to surface patterns and gaps."
+        },
+        {
+          "key": "Hooks",
+          "kind": "hooks",
+          "tag": "the hooks Beats depends on",
+          "desc": "The hooks the beats subsystem installs to keep your memory guarded, compiled, and fresh.",
+          "hooks": [
+            "memory-approve",
+            "memory-nudge",
+            "memory-compact",
+            "consolidate-nudge",
+            "beats-rebuild",
+            "beats-staleness-guard",
+            "reflect-nudge"
+          ]
+        }
       ]
     },
     {
@@ -31,7 +75,14 @@
       "kind": "hooks",
       "tag": "design orchestration",
       "desc": "Sidecoach is the design orchestration system - 26 flows covering every design and QA task. These are the hooks it installs.",
-      "hooks": ["sidecoach-keyword", "sidecoach-sessionstart"]
+      "hooks": [
+        "sidecoach-sessionstart",
+        "sidecoach-preamble",
+        "sidecoach-postuserp",
+        "sidecoach-keyword",
+        "sidecoach-taste-gate",
+        "sidecoach-postresponse"
+      ]
     },
     {
       "key": "justify",
@@ -40,7 +91,11 @@
       "kind": "hooks",
       "tag": "in-browser visual tweaks",
       "desc": "Justify is the in-browser micro-adjustment tool. These are the hooks it installs.",
-      "hooks": ["justify-source-guard", "justify-watch-guard", "justify-watch-standing-by"]
+      "hooks": [
+        "justify-source-guard",
+        "justify-watch-guard",
+        "justify-watch-standing-by"
+      ]
     },
     {
       "key": "tilt-lab",
@@ -64,20 +119,67 @@
       "tag": "design skills + Figma",
       "desc": "Supporting design tooling - the design-pipeline skills and the Figma fidelity guard.",
       "members": [
-        {"key": "Skills", "kind": "group", "tag": "11 design-pipeline skills", "desc": "The design skills that auto-trigger during UI work - type, motion, icons, references, components, and more.", "members": [
-          {"key": "tactical-polish", "kind": "leaf"},
-          {"key": "component-gallery", "kind": "leaf"},
-          {"key": "fontshare", "kind": "leaf"},
-          {"key": "motion", "kind": "leaf"},
-          {"key": "design-build", "kind": "leaf"},
-          {"key": "curate", "kind": "leaf"},
-          {"key": "design-references", "kind": "leaf"},
-          {"key": "social-media", "kind": "leaf"},
-          {"key": "design-team", "kind": "leaf"},
-          {"key": "visual-effects", "kind": "leaf"},
-          {"key": "icon-source", "kind": "leaf"}
-        ]},
-        {"key": "figma", "kind": "hooks", "tag": "Figma fidelity guard", "desc": "The 1 hooks figma installs. Toggle any on or off.", "hooks": ["figma-fidelity-stop"]}
+        {
+          "key": "Skills",
+          "kind": "group",
+          "tag": "11 design-pipeline skills",
+          "desc": "The design skills that auto-trigger during UI work - type, motion, icons, references, components, and more.",
+          "members": [
+            {
+              "key": "tactical-polish",
+              "kind": "leaf"
+            },
+            {
+              "key": "component-gallery",
+              "kind": "leaf"
+            },
+            {
+              "key": "fontshare",
+              "kind": "leaf"
+            },
+            {
+              "key": "motion",
+              "kind": "leaf"
+            },
+            {
+              "key": "design-build",
+              "kind": "leaf"
+            },
+            {
+              "key": "curate",
+              "kind": "leaf"
+            },
+            {
+              "key": "design-references",
+              "kind": "leaf"
+            },
+            {
+              "key": "social-media",
+              "kind": "leaf"
+            },
+            {
+              "key": "design-team",
+              "kind": "leaf"
+            },
+            {
+              "key": "visual-effects",
+              "kind": "leaf"
+            },
+            {
+              "key": "icon-source",
+              "kind": "leaf"
+            }
+          ]
+        },
+        {
+          "key": "figma",
+          "kind": "hooks",
+          "tag": "Figma fidelity guard",
+          "desc": "The 1 hooks figma installs. Toggle any on or off.",
+          "hooks": [
+            "figma-fidelity-stop"
+          ]
+        }
       ]
     },
     {
@@ -86,18 +188,136 @@
       "tag": "safety hooks & QA",
       "desc": "Hooks that catch mistakes before they ship - the QA clusters plus targeted guards.",
       "members": [
-        {"key": "safety", "kind": "hooks", "tag": "the 5 safety hooks", "desc": "The 5 hooks in the safety cluster.", "hooks": ["bash-guard", "content-guard", "content-guard-stop", "destructive-ops-guard", "destructive-confirm-detect"]},
-        {"key": "verification", "kind": "hooks", "tag": "the 8 verification hooks", "desc": "The 8 hooks in the verification cluster.", "hooks": ["verify-before-done", "verify-before-done-stop", "verify-clear", "verify-manual", "screenshot-open-mandate", "screenshot-open-clear", "second-fix-gate", "validation-guard"]},
-        {"key": "question-discipline", "kind": "hooks", "tag": "the 4 question-discipline hooks", "desc": "The 4 hooks in the question-discipline cluster.", "hooks": ["multiple-choice-detect-stop", "multiple-choice-inject-prompt", "multiple-choice-enforce", "question-enforcement"]},
-        {"key": "grounding", "kind": "hooks", "tag": "the 2 grounding hooks", "desc": "The 2 hooks in the grounding cluster.", "hooks": ["grounding-gate", "grounding-guard"]},
-        {"key": "api-drift", "kind": "hooks", "tag": "the 3 api-drift hooks", "desc": "The 3 hooks in the api-drift cluster.", "hooks": ["api-drift-detector", "api-drift-stop", "api-drift-ack"]},
-        {"key": "planning-git", "kind": "hooks", "tag": "the 2 planning-git hooks", "desc": "The 2 hooks in the planning-git cluster.", "hooks": ["plan-consistency-lint", "push-ahead-check"]},
-        {"key": "surface", "kind": "hooks", "tag": "the 2 surface hooks", "desc": "The 2 hooks in the surface cluster.", "hooks": ["claude-surface", "surface-visual-gate"]},
-        {"key": "model-routing", "kind": "hooks", "tag": "the 1 model-routing hooks", "desc": "The 1 hooks in the model-routing cluster.", "hooks": ["model-router-guard"]},
-        {"key": "fable", "kind": "hooks", "tag": "orchestrator-only guard", "desc": "The 1 hooks fable installs. Toggle any on or off.", "hooks": ["fable-orchestrator-guard"]},
-        {"key": "codex", "kind": "hooks", "tag": "codex integration guards", "desc": "The 2 hooks codex installs. Toggle any on or off.", "hooks": ["codex-failure-watcher", "codex-rescue-guard"]},
-        {"key": "chrome", "kind": "hooks", "tag": "browser tab-group hygiene", "desc": "The 3 hooks chrome installs. Toggle any on or off.", "hooks": ["chrome-tabgroup-track", "chrome-tabgroup-clear", "chrome-tabgroup-stop"]},
-        {"key": "visualizer", "kind": "hooks", "tag": "widget quality guard", "desc": "The 1 hooks visualizer installs. Toggle any on or off.", "hooks": ["visualizer-guard"]}
+        {
+          "key": "safety",
+          "kind": "hooks",
+          "tag": "the 5 safety hooks",
+          "desc": "The 5 hooks in the safety cluster.",
+          "hooks": [
+            "bash-guard",
+            "content-guard",
+            "content-guard-stop",
+            "destructive-ops-guard",
+            "destructive-confirm-detect"
+          ]
+        },
+        {
+          "key": "verification",
+          "kind": "hooks",
+          "tag": "the 8 verification hooks",
+          "desc": "The 8 hooks in the verification cluster.",
+          "hooks": [
+            "verify-before-done",
+            "verify-before-done-stop",
+            "verify-clear",
+            "verify-manual",
+            "screenshot-open-mandate",
+            "screenshot-open-clear",
+            "second-fix-gate",
+            "validation-guard"
+          ]
+        },
+        {
+          "key": "question-discipline",
+          "kind": "hooks",
+          "tag": "the 4 question-discipline hooks",
+          "desc": "The 4 hooks in the question-discipline cluster.",
+          "hooks": [
+            "multiple-choice-detect-stop",
+            "multiple-choice-inject-prompt",
+            "multiple-choice-enforce",
+            "question-enforcement"
+          ]
+        },
+        {
+          "key": "grounding",
+          "kind": "hooks",
+          "tag": "the 2 grounding hooks",
+          "desc": "The 2 hooks in the grounding cluster.",
+          "hooks": [
+            "grounding-gate",
+            "grounding-guard"
+          ]
+        },
+        {
+          "key": "api-drift",
+          "kind": "hooks",
+          "tag": "the 3 api-drift hooks",
+          "desc": "The 3 hooks in the api-drift cluster.",
+          "hooks": [
+            "api-drift-detector",
+            "api-drift-stop",
+            "api-drift-ack"
+          ]
+        },
+        {
+          "key": "planning-git",
+          "kind": "hooks",
+          "tag": "the 2 planning-git hooks",
+          "desc": "The 2 hooks in the planning-git cluster.",
+          "hooks": [
+            "plan-consistency-lint",
+            "push-ahead-check"
+          ]
+        },
+        {
+          "key": "surface",
+          "kind": "hooks",
+          "tag": "the 2 surface hooks",
+          "desc": "The 2 hooks in the surface cluster.",
+          "hooks": [
+            "claude-surface",
+            "surface-visual-gate"
+          ]
+        },
+        {
+          "key": "model-routing",
+          "kind": "hooks",
+          "tag": "the 1 model-routing hooks",
+          "desc": "The 1 hooks in the model-routing cluster.",
+          "hooks": [
+            "model-router-guard"
+          ]
+        },
+        {
+          "key": "fable",
+          "kind": "hooks",
+          "tag": "orchestrator-only guard",
+          "desc": "The 1 hooks fable installs. Toggle any on or off.",
+          "hooks": [
+            "fable-orchestrator-guard"
+          ]
+        },
+        {
+          "key": "codex",
+          "kind": "hooks",
+          "tag": "codex integration guards",
+          "desc": "The 2 hooks codex installs. Toggle any on or off.",
+          "hooks": [
+            "codex-failure-watcher",
+            "codex-rescue-guard"
+          ]
+        },
+        {
+          "key": "chrome",
+          "kind": "hooks",
+          "tag": "browser tab-group hygiene",
+          "desc": "The 3 hooks chrome installs. Toggle any on or off.",
+          "hooks": [
+            "chrome-tabgroup-track",
+            "chrome-tabgroup-clear",
+            "chrome-tabgroup-stop"
+          ]
+        },
+        {
+          "key": "visualizer",
+          "kind": "hooks",
+          "tag": "widget quality guard",
+          "desc": "The 1 hooks visualizer installs. Toggle any on or off.",
+          "hooks": [
+            "visualizer-guard"
+          ]
+        }
       ]
     },
     {
@@ -106,9 +326,25 @@
       "tag": "talk & Discord",
       "desc": "Speak to Claude and reply from Discord.",
       "members": [
-        {"key": "discord", "kind": "leaf", "tag": "Discord chat launcher"},
-        {"key": "voice-input", "kind": "leaf", "tag": "whisper transcription"},
-        {"key": "voice-output", "kind": "hooks", "tag": "spoken replies (TTS)", "desc": "The 1 hooks voice-output installs. Toggle any on or off.", "hooks": ["voice-gate"]}
+        {
+          "key": "discord",
+          "kind": "leaf",
+          "tag": "Discord chat launcher"
+        },
+        {
+          "key": "voice-input",
+          "kind": "leaf",
+          "tag": "whisper transcription"
+        },
+        {
+          "key": "voice-output",
+          "kind": "hooks",
+          "tag": "spoken replies (TTS)",
+          "desc": "The 1 hooks voice-output installs. Toggle any on or off.",
+          "hooks": [
+            "voice-gate"
+          ]
+        }
       ]
     },
     {
@@ -117,9 +353,36 @@
       "tag": "cmux, tasks, ClickUp",
       "desc": "Your working surface - the cmux browser pane, the task list, and the ClickUp integration.",
       "members": [
-        {"key": "cmux", "kind": "hooks", "tag": "browser pane + teams", "desc": "The 6 hooks cmux installs. Toggle any on or off.", "hooks": ["agent-teams-guard", "node-shim-heal", "cmux-close-guard", "cmux-teammate-shim-heal", "team-reaper", "resume-guard"]},
-        {"key": "task-list", "kind": "leaf", "tag": "/task-list + TASKS.md"},
-        {"key": "clickup", "kind": "hooks", "tag": "ClickUp write-guard", "desc": "The 1 hooks clickup installs. Toggle any on or off.", "hooks": ["block-clickup-writes"]}
+        {
+          "key": "cmux",
+          "kind": "hooks",
+          "tag": "browser pane + teams",
+          "desc": "The 8 hooks cmux installs. Toggle any on or off.",
+          "hooks": [
+            "agent-teams-guard",
+            "node-shim-heal",
+            "resume-guard",
+            "resume-toggle",
+            "team-reaper",
+            "cmux-close-guard",
+            "cmux-teammate-shim-heal",
+            "teammate-relay-stop"
+          ]
+        },
+        {
+          "key": "task-list",
+          "kind": "leaf",
+          "tag": "/task-list + TASKS.md"
+        },
+        {
+          "key": "clickup",
+          "kind": "hooks",
+          "tag": "ClickUp write-guard",
+          "desc": "The 1 hooks clickup installs. Toggle any on or off.",
+          "hooks": [
+            "block-clickup-writes"
+          ]
+        }
       ]
     },
     {
@@ -129,8 +392,16 @@
       "tag": "machine styling",
       "desc": "Personal machine styling (only shown with --personal).",
       "members": [
-        {"key": "ghostty", "kind": "leaf", "tag": "terminal look"},
-        {"key": "shaders", "kind": "leaf", "tag": "terminal shaders"}
+        {
+          "key": "ghostty",
+          "kind": "leaf",
+          "tag": "terminal look"
+        },
+        {
+          "key": "shaders",
+          "kind": "leaf",
+          "tag": "terminal shaders"
+        }
       ]
     }
   ],
@@ -189,7 +460,13 @@
     "push-ahead-check": "Guards against pushing ahead of review.",
     "claude-surface": "Detects the Claude Code surface (rich vs text).",
     "surface-visual-gate": "Nudges visual output on rich surfaces.",
-    "model-router-guard": "Routes behavior by the session model."
+    "model-router-guard": "Routes behavior by the session model.",
+    "resume-toggle": "Flips cmux auto-resume from a chat command.",
+    "teammate-relay-stop": "Stops a teammate idling with an unsent report.",
+    "sidecoach-preamble": "Injects PRODUCT.md + DESIGN.md into every session.",
+    "sidecoach-postuserp": "Sends your prompt to the sidecoach daemon.",
+    "sidecoach-taste-gate": "Reviews UI files the moment they are written.",
+    "sidecoach-postresponse": "Folds sidecoach daemon results into the reply."
   },
   "hook_owner": {
     "memory-approve": "memory",
@@ -246,7 +523,16 @@
     "cmux-teammate-shim-heal": "cmux",
     "team-reaper": "cmux",
     "resume-guard": "cmux",
-    "block-clickup-writes": "clickup"
+    "block-clickup-writes": "clickup",
+    "resume-toggle": "cmux",
+    "teammate-relay-stop": "cmux",
+    "sidecoach-preamble": "sidecoach",
+    "sidecoach-postuserp": "sidecoach",
+    "sidecoach-taste-gate": "sidecoach",
+    "sidecoach-postresponse": "sidecoach"
   },
-  "pinned_hooks": ["beats-rebuild", "beats-staleness-guard"]
+  "pinned_hooks": [
+    "beats-rebuild",
+    "beats-staleness-guard"
+  ]
 }

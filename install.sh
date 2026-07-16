@@ -3587,29 +3587,18 @@ if picked cmux; then
 
   make_symlink "$REPO_DIR/cmux/settings.json" "$CMUX_CONFIG_DIR/settings.json"
 
-  # Resume-guard: SessionEnd hook + UserPromptSubmit toggle + standalone script
-  chmod +x "$REPO_DIR/claude/hooks/resume-guard.sh"
-  make_symlink "$REPO_DIR/claude/hooks/resume-guard.sh" "$CLAUDE_DIR/hooks/resume-guard.sh"
-
-  chmod +x "$REPO_DIR/claude/hooks/resume-toggle.sh"
-  make_symlink "$REPO_DIR/claude/hooks/resume-toggle.sh" "$CLAUDE_DIR/hooks/resume-toggle.sh"
-
+  # toggle-resume.sh is the standalone user-facing SCRIPT (not a wired hook), so it stays
+  # a plain symlink here; resume-guard/resume-toggle deploy via install_app_hooks below.
   chmod +x "$REPO_DIR/claude/toggle-resume.sh"
   make_symlink "$REPO_DIR/claude/toggle-resume.sh" "$CLAUDE_DIR/toggle-resume.sh"
 
-  # Team-reaper: SessionStart + SessionEnd hook that removes orphaned team
-  # records (~/.claude/teams + ~/.claude/tasks) so finished/wedged teams do not
-  # linger as phantom workspaces. Never touches memory/beats.
-  chmod +x "$REPO_DIR/claude/hooks/team-reaper.sh"
-  make_symlink "$REPO_DIR/claude/hooks/team-reaper.sh" "$CLAUDE_DIR/hooks/team-reaper.sh"
-
-  # cmux-close-guard (PreToolUse/Bash), cmux-teammate-shim-heal (SessionStart),
-  # teammate-relay-stop (Stop): moved out of base settings.json into the cmux
-  # component so a non-cmux install never wires them (was exit-127 dangling refs).
-  for h in cmux-close-guard.sh cmux-teammate-shim-heal.sh teammate-relay-stop.sh; do
-    chmod +x "$REPO_DIR/claude/hooks/$h"
-    make_symlink "$REPO_DIR/claude/hooks/$h" "$CLAUDE_DIR/hooks/$h"
-  done
+  # cmux's 6 remaining hooks - team-reaper (SessionStart+SessionEnd), cmux-close-guard
+  # (PreToolUse/Bash), cmux-teammate-shim-heal (SessionStart), teammate-relay-stop (Stop),
+  # resume-guard (SessionEnd), resume-toggle (UserPromptSubmit) - deploy + wire through
+  # install_app_hooks, alongside agent-teams-guard/node-shim-heal which already did.
+  # See the off-list convergence note on install_app_hooks: the hand-rolled symlink loop
+  # and settings-merge that used to live here could not honor HOOK_OFF, so the browser's
+  # per-hook toggles were silently dropped for exactly these hooks.
 
   # Canonical fixed cmux agent-teams tmux shim (moved here from the config block).
   # cmux-teammate-shim-heal.sh re-plants this over cmux's stock shim so spawned
@@ -3619,63 +3608,10 @@ if picked cmux; then
     ok "cmux/ (teammate tmux-shim canonical)"
   fi
 
-  # JSON-merge resume hooks into settings.json
-  if command -v python3 >/dev/null 2>&1; then
-    python3 -c "
-import json
-p = '$SETTINGS_JSON'
-with open(p) as f: d = json.load(f)
-hooks = d.setdefault('hooks', {})
-
-# SessionEnd: resume-guard
-GUARD_CMD = '~/.claude/hooks/resume-guard.sh'
-GUARD_HOOK = {'type': 'command', 'command': GUARD_CMD, 'timeout': 5}
-entries = hooks.setdefault('SessionEnd', [{}])
-entry = entries[0]
-hook_list = entry.setdefault('hooks', [])
-if not any(h.get('command') == GUARD_CMD for h in hook_list):
-    hook_list.append(GUARD_HOOK)
-
-# UserPromptSubmit: resume-toggle
-TOGGLE_CMD = '~/.claude/hooks/resume-toggle.sh'
-TOGGLE_HOOK = {'type': 'command', 'command': TOGGLE_CMD, 'timeout': 5}
-entries = hooks.setdefault('UserPromptSubmit', [{}])
-entry = entries[0]
-hook_list = entry.setdefault('hooks', [])
-if not any(h.get('command') == TOGGLE_CMD for h in hook_list):
-    hook_list.append(TOGGLE_HOOK)
-
-# SessionStart + SessionEnd: team-reaper (mode passed as the first arg)
-REAP_START_CMD = '~/.claude/hooks/team-reaper.sh session-start'
-REAP_END_CMD = '~/.claude/hooks/team-reaper.sh session-end'
-for event, cmd in (('SessionStart', REAP_START_CMD), ('SessionEnd', REAP_END_CMD)):
-    entries = hooks.setdefault(event, [{}])
-    hook_list = entries[0].setdefault('hooks', [])
-    if not any(h.get('command') == cmd for h in hook_list):
-        hook_list.append({'type': 'command', 'command': cmd, 'timeout': 5})
-
-# PreToolUse (matcher Bash): cmux-close-guard
-CLOSE_CMD = '~/.claude/hooks/cmux-close-guard.sh'
-groups = hooks.setdefault('PreToolUse', [])
-grp = next((g for g in groups if g.get('matcher') == 'Bash'), None)
-if grp is None:
-    grp = {'matcher': 'Bash', 'hooks': []}; groups.append(grp)
-if not any(h.get('command') == CLOSE_CMD for h in grp.setdefault('hooks', [])):
-    grp['hooks'].append({'type': 'command', 'command': CLOSE_CMD, 'timeout': 12})
-
-# SessionStart: cmux-teammate-shim-heal.  Stop: teammate-relay-stop
-for event, cmd in (('SessionStart', '~/.claude/hooks/cmux-teammate-shim-heal.sh'),
-                   ('Stop', '~/.claude/hooks/teammate-relay-stop.sh')):
-    hook_list = hooks.setdefault(event, [{}])[0].setdefault('hooks', [])
-    if not any(h.get('command') == cmd for h in hook_list):
-        hook_list.append({'type': 'command', 'command': cmd, 'timeout': 5})
-
-with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-"
-    ok "cmux hooks merged into settings.json (close-guard, resume, team-reaper, shim-heal, relay-stop)"
-  else
-    warn "python3 not found - cannot merge resume hooks. Add manually to settings.json"
-  fi
+  # Hook deploy + wiring for all 8 cmux hooks happens via install_app_hooks (see the
+  # `picked cmux &&` line in the app-hook pass). The hand-rolled settings-merge that used
+  # to sit here wired 6 of them directly and therefore could not honor HOOK_OFF - which is
+  # why "Disable all cmux hooks" silently kept re-installing them.
 
   # Default: auto-resume OFF
   touch "$CLAUDE_DIR/.no-auto-resume" 2>/dev/null || true
@@ -4138,29 +4074,11 @@ if picked reflect; then
      "$CLAUDE_DIR/skills/reflect/SKILL.md"
   ok "reflect skill installed"
 
-  # Nudge hook
-  info "Installing reflect-nudge hook..."
-  mkdir -p "$CLAUDE_DIR/hooks"; [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
-  link_or_copy "$REPO_DIR/claude/hooks/reflect-nudge.sh" "$CLAUDE_DIR/hooks/reflect-nudge.sh"
-  ok "reflect-nudge hook installed"
-
-  # Wire reflect-nudge into settings.json (SessionStart) - moved out of base so a
-  # non-reflect install never wires it.
-  if command -v python3 >/dev/null 2>&1; then
-    python3 -c "
-import json
-p = '$SETTINGS_JSON'
-with open(p) as f: d = json.load(f)
-hooks = d.setdefault('hooks', {})
-CMD = 'SESSION_CWD=\"\$(pwd)\" ~/.claude/hooks/reflect-nudge.sh'
-groups = hooks.setdefault('SessionStart', [])
-if not groups: groups.append({})
-hl = groups[0].setdefault('hooks', [])
-if not any(h.get('command') == CMD for h in hl):
-    hl.append({'type': 'command', 'command': CMD, 'timeout': 5})
-with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-" && ok "reflect-nudge wired (SessionStart)" || warn "Could not wire reflect-nudge"
-  fi
+  # reflect-nudge deploys + wires via install_app_hooks (see the `picked reflect &&` line in
+  # the app-hook pass). Its SessionStart command keeps the SESSION_CWD="$(pwd)" prefix -
+  # transcribed verbatim into app-wirings.json, which already supports command prefixes
+  # (consolidate-nudge.sh uses the same shape). The hand-rolled deploy+wire that lived here
+  # could not honor HOOK_OFF, so staging reflect-nudge off was silently ignored.
 
   # Timestamp file (create if missing, don't overwrite)
   if [ ! -f "$CLAUDE_DIR/last-reflect-timestamp" ]; then
@@ -4281,10 +4199,11 @@ if picked sidecoach; then
   ln -sf "$REPO_DIR/claude/skills/sidecoach/SKILL.md" \
          "$HOME/.claude/skills/sidecoach/SKILL.md"
 
-  for hook in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh sidecoach-keyword.sh sidecoach-preamble.sh sidecoach-taste-gate.sh; do
-    ln -sf "$REPO_DIR/claude/hooks/$hook" "$HOME/.claude/hooks/$hook"
-    chmod +x "$HOME/.claude/hooks/$hook"
-  done
+  # Sidecoach's 6 hooks deploy + wire via install_app_hooks (see the `picked sidecoach &&`
+  # line in the app-hook pass). The ln -sf loop that used to live here, paired with the
+  # addHook block below it, wired them directly and so could not honor HOOK_OFF - the
+  # browser offered per-hook toggles for sidecoach that were silently discarded.
+  # The registries below are DATA, not hooks, and stay here.
 
   # Registries + classifier module consumed by sidecoach-keyword.sh.
   #   sidecoach-verbs.json  - verb tier (T-0008)
@@ -4311,47 +4230,26 @@ if picked sidecoach; then
     *) warn "~/.local/bin is not on PATH - add it to use the \`sidecoach\` CLI" ;;
   esac
 
-  # Wire all 6 sidecoach hooks into settings.json (moved out of base; this block
-  # is now the sole owner). Exact-command dedup so multiple hooks share an event.
+  # NORMALIZE ONLY - the ADD half of this block moved to install_app_hooks/app-wirings.json
+  # so the off-list reaches sidecoach's hooks. This strip stays and cannot move there:
+  # install_app_hooks adds by EXACT command, so it would leave a stale absolute-path wiring
+  # from a pre-refactor install sitting alongside the correct one. Stripping every sidecoach
+  # entry here and letting the app-hook pass (which runs LATER) re-add exactly the ones that
+  # survive HOOK_OFF keeps re-runs idempotent regardless of the old path form - and means an
+  # off-listed hook is stripped here and simply never re-added.
   if command -v python3 >/dev/null 2>&1; then
     python3 -c "
 import json
 p = '$SETTINGS_JSON'
 with open(p) as f: d = json.load(f)
 hooks = d.setdefault('hooks', {})
-H = '~/.claude/hooks'
-# Normalize first: strip ANY existing sidecoach entries (removes stale absolute-path
-# wirings from pre-refactor installs), then drop emptied groups/events. Makes re-runs
-# idempotent regardless of the old path form.
 for ev in list(hooks.keys()):
     for g in hooks.get(ev, []):
         g['hooks'] = [h for h in g.get('hooks', []) if 'sidecoach' not in h.get('command', '')]
     hooks[ev] = [g for g in hooks[ev] if g.get('hooks')]
     if not hooks[ev]: del hooks[ev]
-def add(event, cmd, matcher=None, timeout=None):
-    groups = hooks.setdefault(event, [])
-    if matcher is not None:
-        g = next((x for x in groups if x.get('matcher') == matcher), None)
-        if g is None:
-            g = {'matcher': matcher, 'hooks': []}; groups.append(g)
-    else:
-        if not groups: groups.append({})
-        g = groups[0]
-    hl = g.setdefault('hooks', [])
-    e = {'type': 'command', 'command': cmd}
-    if timeout is not None: e['timeout'] = timeout
-    if not any(h.get('command') == cmd for h in hl):
-        hl.append(e)
-add('SessionStart', H + '/sidecoach-sessionstart.sh')
-add('SessionStart', 'SESSION_CWD=\"\$(pwd)\" ' + H + '/sidecoach-preamble.sh', timeout=5)
-add('PostCompact', 'SESSION_CWD=\"\$(pwd)\" ' + H + '/sidecoach-preamble.sh', timeout=5)
-add('UserPromptSubmit', H + '/sidecoach-postuserp.sh')
-add('UserPromptSubmit', H + '/sidecoach-keyword.sh', timeout=5)
-add('PostToolUse', H + '/sidecoach-taste-gate.sh', matcher='Write|Edit|MultiEdit', timeout=30)
-add('Stop', H + '/sidecoach-postresponse.sh')
 with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-" && log "Sidecoach hooks wired in settings.json (6 hooks)" \
-      || warn "Could not wire Sidecoach hooks - check settings.json manually"
+" || warn "Could not normalize stale Sidecoach wirings - check settings.json manually"
   fi
 
   # Build + register the sidecoach MCP server (Jonah 2026-07-15: wire it up, do
@@ -4393,32 +4291,15 @@ if picked fable; then
   mkdir -p "$CLAUDE_DIR/hooks"
   [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
 
-  # The guard + its shared dependency (detect-session-model; config also deploys
-  # it for the model-router, but --only fable must be self-sufficient).
-  for h in fable-orchestrator-guard.sh detect-session-model.sh; do
-    chmod +x "$REPO_DIR/claude/hooks/$h"
-    make_symlink "$REPO_DIR/claude/hooks/$h" "$CLAUDE_DIR/hooks/$h"
-  done
+  # detect-session-model.sh is a shared DEPENDENCY, not a wired hook of its own (config
+  # also deploys it for the model-router, but `--only fable` must be self-sufficient).
+  # It has no settings.json entry, so it stays a plain symlink and is NOT off-list-able:
+  # switching fable-orchestrator-guard off must not strip the guard's own dependency.
+  chmod +x "$REPO_DIR/claude/hooks/detect-session-model.sh"
+  make_symlink "$REPO_DIR/claude/hooks/detect-session-model.sh" "$CLAUDE_DIR/hooks/detect-session-model.sh"
 
-  # Wire the PreToolUse guard (Write|Edit|MultiEdit|NotebookEdit|Bash).
-  if command -v python3 >/dev/null 2>&1; then
-    python3 -c "
-import json
-p = '$SETTINGS_JSON'
-with open(p) as f: d = json.load(f)
-hooks = d.setdefault('hooks', {})
-CMD = '~/.claude/hooks/fable-orchestrator-guard.sh'
-MATCHER = 'Write|Edit|MultiEdit|NotebookEdit|Bash'
-groups = hooks.setdefault('PreToolUse', [])
-g = next((x for x in groups if x.get('matcher') == MATCHER), None)
-if g is None:
-    g = {'matcher': MATCHER, 'hooks': []}; groups.append(g)
-hl = g.setdefault('hooks', [])
-if not any(h.get('command') == CMD for h in hl):
-    hl.append({'type': 'command', 'command': CMD, 'timeout': 10})
-with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-" && ok "fable-orchestrator-guard wired (PreToolUse)" || warn "Could not wire fable guard"
-  fi
+  # fable-orchestrator-guard deploys + wires via install_app_hooks (see the `picked fable &&`
+  # line in the app-hook pass), so the browser's per-hook toggle actually reaches it.
 
   ok "fable orchestrator-only guard installed"
 fi
@@ -4560,7 +4441,10 @@ picked memory       && install_app_hooks memory-approve.sh memory-nudge.sh memor
 # surface distinct from this global installer. Globalizing them would fire an
 # improv-only hook on every project. Ruled keep-project-scoped (Jonah 2026-07-15;
 # decision_beats_hooks_stay_project_scoped.md).
-picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh
+picked reflect      && install_app_hooks reflect-nudge.sh
+picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh resume-guard.sh resume-toggle.sh team-reaper.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh teammate-relay-stop.sh
+picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-postresponse.sh
+picked fable        && install_app_hooks fable-orchestrator-guard.sh
 picked voice-output && install_app_hooks voice-gate.sh
 picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh
 picked clickup      && install_app_hooks block-clickup-writes.sh

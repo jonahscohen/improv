@@ -232,5 +232,174 @@
         "timeout": 10
       }
     }
+  ],
+  "resume-guard.sh": [
+    {
+      "event": "SessionEnd",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/resume-guard.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "resume-toggle.sh": [
+    {
+      "event": "UserPromptSubmit",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/resume-toggle.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "team-reaper.sh": [
+    {
+      "event": "SessionStart",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/team-reaper.sh session-start",
+        "timeout": 5
+      }
+    },
+    {
+      "event": "SessionEnd",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/team-reaper.sh session-end",
+        "timeout": 5
+      }
+    }
+  ],
+  "cmux-close-guard.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/cmux-close-guard.sh",
+        "timeout": 12
+      }
+    }
+  ],
+  "cmux-teammate-shim-heal.sh": [
+    {
+      "event": "SessionStart",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/cmux-teammate-shim-heal.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "teammate-relay-stop.sh": [
+    {
+      "event": "Stop",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/teammate-relay-stop.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "fable-orchestrator-guard.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/fable-orchestrator-guard.sh",
+        "timeout": 10
+      }
+    }
+  ],
+  "reflect-nudge.sh": [
+    {
+      "event": "SessionStart",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/reflect-nudge.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "sidecoach-sessionstart.sh": [
+    {
+      "event": "SessionStart",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/sidecoach-sessionstart.sh"
+      }
+    }
+  ],
+  "sidecoach-preamble.sh": [
+    {
+      "event": "SessionStart",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/sidecoach-preamble.sh",
+        "timeout": 5
+      }
+    },
+    {
+      "event": "PostCompact",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/sidecoach-preamble.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "sidecoach-postuserp.sh": [
+    {
+      "event": "UserPromptSubmit",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/sidecoach-postuserp.sh"
+      }
+    }
+  ],
+  "sidecoach-keyword.sh": [
+    {
+      "event": "UserPromptSubmit",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/sidecoach-keyword.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "sidecoach-taste-gate.sh": [
+    {
+      "event": "PostToolUse",
+      "matcher": "Write|Edit|MultiEdit",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/sidecoach-taste-gate.sh",
+        "timeout": 30
+      }
+    }
+  ],
+  "sidecoach-postresponse.sh": [
+    {
+      "event": "Stop",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/sidecoach-postresponse.sh"
+      }
+    }
   ]
 }
