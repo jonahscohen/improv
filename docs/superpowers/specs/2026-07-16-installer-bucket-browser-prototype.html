@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ampersand - bucket browser prototype</title>
+<style>
+  :root{
+    --bg:#16161e; --chrome:#20212e; --line:#2a2b3a; --dim:#565f89;
+    --fg:#a9b1d6; --bright:#c0caf5; --sel:#283457; --selborder:#7aa2f7;
+    --green:#9ece6a; --amber:#e0af68; --cyan:#7dcfff; --red:#f7768e; --hookc:#bb9af7; --folder:#7dcfff;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{background:#0d0d12;color:var(--fg);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;}
+  .win{width:100%;max-width:900px;background:var(--bg);border:1px solid var(--line);
+    border-radius:12px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);}
+  .titlebar{background:var(--chrome);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);}
+  .dot{width:12px;height:12px;border-radius:50%;display:inline-block;}
+  .dot.r{background:#ff5f56;} .dot.y{background:#ffbd2e;} .dot.g{background:#27c93f;}
+  .titletext{margin-left:8px;color:var(--dim);font-size:12.5px;}
+  .titletext .path{color:var(--bright);}
+  .screen{padding:15px 18px 6px;min-height:392px;}
+  .crumb{color:var(--dim);font-size:12.5px;margin-bottom:5px;}
+  .crumb b{color:var(--cyan);font-weight:normal;}
+  .lead{color:var(--fg);font-size:13px;margin:0 0 12px;line-height:1.5;}
+  .lead .meta{color:var(--dim);}
+  .seclabel{color:var(--dim);font-size:10.5px;letter-spacing:.14em;margin:10px 2px 3px;}
+  .seclabel:first-child{margin-top:0;}
+  .rows{font-size:13.5px;line-height:1.55;}
+  .row{display:flex;align-items:center;padding:3px 10px;border-radius:6px;cursor:pointer;
+    white-space:pre;border:1px solid transparent;user-select:none;}
+  .row:hover{background:#1e2030;}
+  .row.sel{background:var(--sel);border-color:var(--selborder);}
+  .row .caret{flex:0 0 2ch;color:var(--dim);}
+  .row .glyph{flex:0 0 2ch;}
+  .row .name{flex:0 0 auto;min-width:22ch;padding-right:2ch;color:var(--fg);}
+  .row.feat .name{color:var(--cyan);}
+  .row.hook .name{color:var(--hookc);}
+  .row.folder .name{color:var(--folder);}
+  .row.sel .name{color:var(--bright);}
+  .row .tag{flex:1 1 auto;min-width:0;color:var(--dim);overflow:hidden;text-overflow:ellipsis;}
+  .row .stat{flex:0 0 14ch;color:var(--dim);}
+  .row .count{flex:0 0 6ch;text-align:right;color:var(--dim);}
+  .row .pend{flex:0 0 13ch;text-align:right;}
+  .g-active{color:var(--green);} .g-partial{color:var(--amber);} .g-none{color:var(--dim);}
+  .action .name{color:var(--cyan);min-width:0;}
+  .action.sel .name{color:#c2f0ff;}
+  .danger .name{color:var(--red);}
+  .upd .name{color:var(--green);}
+  .utd .name{color:var(--dim);}
+  .sep{border-top:1px solid var(--line);margin:7px 4px;}
+  .plus{color:var(--green);} .minus{color:var(--red);}
+  .detail{border-top:1px solid var(--line);padding:8px 18px;color:var(--dim);font-size:12px;min-height:34px;background:#191922;}
+  .detail b{color:var(--fg);font-weight:normal;}
+  .footer{border-top:1px solid var(--line);padding:8px 18px;color:var(--dim);font-size:12px;
+    background:var(--chrome);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .footer .keys span{color:var(--cyan);}
+</style>
+</head>
+<body>
+  <div class="win" role="application" aria-label="ampersand bucket browser prototype">
+    <div class="titlebar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <span class="titletext">ampersand &mdash; <span class="path" id="titlepath">setup</span></span>
+    </div>
+    <div class="screen">
+      <div class="crumb" id="crumb"></div>
+      <div class="lead" id="lead"></div>
+      <div class="rows" id="rows"></div>
+    </div>
+    <div class="detail" id="detail"></div>
+    <div class="footer">
+      <span class="keys"><span>&#8593;&#8595;</span> move &nbsp; <span>&#8594;/enter</span> open&middot;toggle &nbsp; <span>&#8592;/esc</span> back &nbsp; <span>a</span> apply &nbsp; <span>q</span> quit</span>
+      <span id="pendfoot"></span>
+    </div>
+  </div>
+
+<script>
+// ---- per-hook one-line descriptions (shown inline + on hover) ----
+const HOOK_DESC = {
+  'memory-approve':'Guards writes to your beats files.',
+  'memory-nudge':'Reminds you to write a beat after each change.',
+  'memory-compact':'Keeps the beats index under its load budget.',
+  'consolidate-nudge':'Flags beat clusters worth consolidating.',
+  'beats-rebuild':'Recompiles the beats search index in the background.',
+  'beats-staleness-guard':'Verifies the beats index at session start.',
+  'reflect-nudge':'Suggests a reflect pass when new beats pile up.',
+  'sidecoach-keyword':'Watches for design intent and nudges sidecoach.',
+  'sidecoach-sessionstart':'Loads sidecoach context at session start.',
+  'justify-source-guard':'Blocks edits to generated justify artifacts.',
+  'justify-watch-guard':'Keeps the justify watch loop alive.',
+  'justify-watch-standing-by':'Corrects the false "finished" line when the watch parks.',
+  'agent-teams-guard':'Gates the Agent tool inside cmux team sessions.',
+  'node-shim-heal':'Re-plants the cmux node preload shim.',
+  'cmux-close-guard':'Protects cmux panes from an accidental close.',
+  'cmux-teammate-shim-heal':'Restores the cmux teammate tmux shim.',
+  'team-reaper':'Cleans up dead agent-team state dirs.',
+  'resume-guard':'Blocks cmux auto-resume when you opt out.',
+  'voice-gate':'Gates the voice speak tool.',
+  'block-clickup-writes':'Blocks ClickUp writes unless confirmed.',
+  'visualizer-guard':'Gates the show_widget tool for quality + surface.',
+  'codex-failure-watcher':'Detects codex CLI failures and flags them.',
+  'codex-rescue-guard':'Governs codex-rescue agent spawns.',
+  'chrome-tabgroup-track':'Records the Chrome tab groups you open.',
+  'chrome-tabgroup-clear':'Clears the record when you close a group.',
+  'chrome-tabgroup-stop':'Nudges you to close tab groups before quitting.',
+  'figma-fidelity-stop':'Blocks "done" until Figma parity is proven.',
+  'fable-orchestrator-guard':'Makes Fable orchestrator-only (cost control).',
+  'bash-guard':'Blocks forbidden shell patterns and force-pushes.',
+  'content-guard':'Blocks banned content in writes (emojis, dashes, attribution).',
+  'content-guard-stop':'Re-checks written content at stop time.',
+  'destructive-ops-guard':'Warns before destructive file operations.',
+  'destructive-confirm-detect':'Detects unconfirmed destructive actions.',
+  'verify-before-done':'Blocks "done" until verification is shown.',
+  'verify-before-done-stop':'Enforces verification at stop time.',
+  'verify-clear':'Clears the verification flag once met.',
+  'verify-manual':'Lets you mark manual verification done.',
+  'screenshot-open-mandate':'Requires reading a screenshot after capture.',
+  'screenshot-open-clear':'Clears the screenshot-pending flag on read.',
+  'second-fix-gate':'Warns on a second fix before the first is verified.',
+  'validation-guard':'Blocks DOM-introspection shortcuts during validation.',
+  'multiple-choice-detect-stop':'Flags plain-text questions at stop time.',
+  'multiple-choice-inject-prompt':'Injects the ask-through-the-tool reminder.',
+  'multiple-choice-enforce':'Detects option lists that should use the picker.',
+  'question-enforcement':'Backs the question-through-the-tool mandate.',
+  'grounding-gate':'Requires grounding claims in real evidence.',
+  'grounding-guard':'Checks claims against real sources.',
+  'api-drift-detector':'Detects drifted or renamed API calls.',
+  'api-drift-stop':'Enforces the API-drift check at stop.',
+  'api-drift-ack':'Records your acknowledgement of a drift.',
+  'plan-consistency-lint':'Checks a plan against the current commit.',
+  'push-ahead-check':'Guards against pushing ahead of review.',
+  'claude-surface':'Detects the Claude Code surface (rich vs text).',
+  'surface-visual-gate':'Nudges visual output on rich surfaces.',
+  'model-router-guard':'Routes behavior by the session model.',
+};
+const CLUSTERS = {
+  'safety': ['bash-guard','content-guard','content-guard-stop','destructive-ops-guard','destructive-confirm-detect'],
+  'verification': ['verify-before-done','verify-before-done-stop','verify-clear','verify-manual','screenshot-open-mandate','screenshot-open-clear','second-fix-gate','validation-guard'],
+  'question-discipline': ['multiple-choice-detect-stop','multiple-choice-inject-prompt','multiple-choice-enforce','question-enforcement'],
+  'grounding': ['grounding-gate','grounding-guard'],
+  'api-drift': ['api-drift-detector','api-drift-stop','api-drift-ack'],
+  'planning-git': ['plan-consistency-lint','push-ahead-check'],
+  'surface': ['claude-surface','surface-visual-gate'],
+  'model-routing': ['model-router-guard'],
+};
+const HOOKS = {
+  sidecoach:['sidecoach-keyword','sidecoach-sessionstart'],
+  justify:['justify-source-guard','justify-watch-guard','justify-watch-standing-by'],
+  cmux:['agent-teams-guard','node-shim-heal','cmux-close-guard','cmux-teammate-shim-heal','team-reaper','resume-guard'],
+  'voice-output':['voice-gate'], clickup:['block-clickup-writes'], visualizer:['visualizer-guard'],
+  codex:['codex-failure-watcher','codex-rescue-guard'], chrome:['chrome-tabgroup-track','chrome-tabgroup-clear','chrome-tabgroup-stop'],
+  figma:['figma-fidelity-stop'], fable:['fable-orchestrator-guard'],
+};
+// a hook leaf carries its own one-line description (inline tag + hover detail)
+const hleaf = n => ({tag:HOOK_DESC[n]||'', desc:HOOK_DESC[n]||''});
+const hookFolder = (names,tag,desc) => ({folder:1, hooks:1, tag, desc, children:Object.fromEntries(names.map(n=>[n,hleaf(n)]))});
+const clusterNode = name => hookFolder(CLUSTERS[name], 'the '+CLUSTERS[name].length+' '+name+' hooks', 'The '+CLUSTERS[name].length+' hooks in the '+name+' cluster.');
+const compHooks = (comp,tag,extra={}) => Object.assign(hookFolder(HOOKS[comp], tag, 'The '+HOOKS[comp].length+' hooks '+comp+' installs. Toggle any on or off.'), extra);
+const skillLeaves = arr => Object.fromEntries(arr.map(n=>[n,{}]));
+
+const T = {
+  // ---- core components (featured) ----
+  'Foundation': {featured:1, tag:'rules, settings, shell', desc:'The base install - team rules, settings core, statusline, and shell shortcuts. Everything else builds on this.',
+    children:{ 'brain':{tag:'CLAUDE.md team rules'}, 'config':{tag:'settings.json core (core-only)'}, 'statusline':{tag:'custom status line'}, 'ampersand':{tag:'re-run installer shortcut'}, 'nvm':{tag:'node version auto-activate'} }},
+  'Beats': {featured:1, tag:'the beats memory system', desc:'Beats is your cross-session memory - the engine, the reflection tool, and the hooks that keep it fresh.',
+    children:{
+      'memory':{tag:'the beats memory engine', desc:'The beats memory engine - stores and retrieves your context across sessions and machines.'},
+      'reflect':{tag:'reflection over your beats', desc:'Reflect runs multi-agent analysis across your accumulated beats to surface patterns and gaps.'},
+      'Hooks': hookFolder(['memory-approve','memory-nudge','memory-compact','consolidate-nudge','beats-rebuild','beats-staleness-guard','reflect-nudge'],
+                          'the hooks Beats depends on', 'The hooks the beats subsystem installs to keep your memory guarded, compiled, and fresh.'),
+    }},
+  'Sidecoach': compHooks('sidecoach','design orchestration',{featured:1, desc:'Sidecoach is the design orchestration system - 26 flows covering every design and QA task. These are the hooks it installs.'}),
+  'Justify':   compHooks('justify','in-browser visual tweaks',{featured:1, desc:'Justify is the in-browser micro-adjustment tool. These are the hooks it installs.'}),
+  'Tilt-lab':  {featured:1, tag:'visual-effects playground', desc:'Tilt-lab is the shader and visual-effects workbench - audition, stack, and export animated backgrounds. (no hooks)'},
+  'Lotus':     {featured:1, tag:'Figma plugin + MCP bridge', desc:'Lotus is the AI Figma plugin and MCP bridge that lets Claude Code drive Figma directly. (no hooks)'},
+
+  // ---- supporting ----
+  'Design Tools': {tag:'design skills + Figma', desc:'Supporting design tooling - the design-pipeline skills and the Figma fidelity guard.',
+                   children:{ 'Skills':{folder:1, tag:'11 design-pipeline skills', desc:'The design skills that auto-trigger during UI work - type, motion, icons, references, components, and more.', children:skillLeaves(['tactical-polish','component-gallery','fontshare','motion','design-build','curate','design-references','social-media','design-team','visual-effects','icon-source'])}, 'figma':compHooks('figma','Figma fidelity guard') }},
+  'Guardrails':   {tag:'safety hooks & QA', desc:'Hooks that catch mistakes before they ship - the QA clusters plus targeted guards.',
+                   children:{ 'safety':clusterNode('safety'), 'verification':clusterNode('verification'), 'question-discipline':clusterNode('question-discipline'), 'grounding':clusterNode('grounding'), 'api-drift':clusterNode('api-drift'), 'planning-git':clusterNode('planning-git'), 'surface':clusterNode('surface'), 'model-routing':clusterNode('model-routing'), 'fable':compHooks('fable','orchestrator-only guard'), 'codex':compHooks('codex','codex integration guards'), 'chrome':compHooks('chrome','browser tab-group hygiene'), 'visualizer':compHooks('visualizer','widget quality guard') }},
+  'Voice & chat': {tag:'talk & Discord', desc:'Speak to Claude and reply from Discord.',
+                   children:{ 'discord':{tag:'Discord chat launcher'}, 'voice-input':{tag:'whisper transcription'}, 'voice-output':compHooks('voice-output','spoken replies (TTS)') }},
+  'Dev surface':  {tag:'cmux, tasks, ClickUp', desc:'Your working surface - the cmux browser pane, the task list, and the ClickUp integration.',
+                   children:{ 'cmux':compHooks('cmux','browser pane + teams'), 'task-list':{tag:'/task-list + TASKS.md'}, 'clickup':compHooks('clickup','ClickUp write-guard') }},
+  'Personal':     {personal:1, tag:'machine styling', desc:'Personal machine styling (only shown with --personal).',
+                   children:{ 'ghostty':{tag:'terminal look'}, 'shaders':{tag:'terminal shaders'} }},
+};
+
+// ---- tree helpers ----
+function nodeAt(path){ let n={children:T}; for(const s of path) n=n.children[s]; return n; }
+function isLeaf(n){ return !n.children; }
+function leafPaths(path){ const n=nodeAt(path); if(isLeaf(n)) return [path.join('/')];
+  return Object.keys(n.children).flatMap(k=>leafPaths(path.concat(k))); }
+const installed={}, pending={};
+const seed=(p,v)=>installed[p]=v;
+const seedList=(base,arr,on)=>arr.forEach((h,i)=>seed(base+'/'+h, i<on));
+// beats
+seed('Beats/memory',true); seed('Beats/reflect',false);
+seedList('Beats/Hooks',['memory-approve','memory-nudge','memory-compact','consolidate-nudge','beats-rebuild','beats-staleness-guard','reflect-nudge'],4);
+// featured components
+seedList('Sidecoach',HOOKS.sidecoach,2); seedList('Justify',HOOKS.justify,0); seed('Tilt-lab',true); seed('Lotus',false);
+// foundation
+['brain','config','statusline','ampersand','nvm'].forEach(k=>seed('Foundation/'+k,true));
+// design tools
+['tactical-polish','component-gallery','fontshare','motion','design-build','curate','design-references','social-media','design-team','visual-effects','icon-source']
+  .forEach(k=>seed('Design Tools/Skills/'+k, ['tactical-polish','motion','icon-source'].includes(k)));
+seedList('Design Tools/figma',HOOKS.figma,0);
+// guardrails
+for(const [c,hooks] of Object.entries(CLUSTERS)) hooks.forEach((h,i)=>{ let v=false; if(['safety','verification','api-drift','surface'].includes(c)) v=true; else if(c==='question-discipline') v=i<2; seed('Guardrails/'+c+'/'+h, v); });
+seedList('Guardrails/fable',HOOKS.fable,1); seedList('Guardrails/codex',HOOKS.codex,2); seedList('Guardrails/chrome',HOOKS.chrome,3); seedList('Guardrails/visualizer',HOOKS.visualizer,0);
+// voice, dev, personal
+seed('Voice & chat/discord',false); seed('Voice & chat/voice-input',false); seedList('Voice & chat/voice-output',HOOKS['voice-output'],0);
+seedList('Dev surface/cmux',HOOKS.cmux,3); seed('Dev surface/task-list',true); seedList('Dev surface/clickup',HOOKS.clickup,0);
+seed('Personal/ghostty',false); seed('Personal/shaders',false);
+
+// ---- state ----
+const GLYPH={active:'●',partial:'◐',none:'○'}, CLS={active:'g-active',partial:'g-partial',none:'g-none'};
+const LABEL={active:'active',partial:'partial',none:'not installed'};
+function counts(path){ const L=leafPaths(path); return {on:L.filter(p=>installed[p]).length,total:L.length}; }
+function stateOf(path){ const n=nodeAt(path); if(isLeaf(n)) return installed[path.join('/')]?'active':'none';
+  const c=counts(path); return c.on===0?'none':(c.on===c.total?'active':'partial'); }
+function leafPending(p){ return pending[p]||null; }
+function toggleLeaf(p){ const t=installed[p]?'uninstall':'install'; if(pending[p]===t) delete pending[p]; else pending[p]=t; }
+function stageAll(path,a){ leafPaths(path).forEach(p=>{ const want=a==='install'; if(installed[p]===want) delete pending[p]; else pending[p]=a; }); }
+function pendUnder(path){ const L=leafPaths(path); return {ins:L.filter(p=>pending[p]==='install').length, un:L.filter(p=>pending[p]==='uninstall').length}; }
+function pendingCount(){ return Object.keys(pending).length; }
+function applyPending(){ let ins=0,un=0; for(const[p,a]of Object.entries(pending)){ if(a==='install'){installed[p]=true;ins++;}else{installed[p]=false;un++;} } for(const k of Object.keys(pending))delete pending[k]; return {ins,un}; }
+
+// ---- dom ----
+function mk(tag,cls,text){ const e=document.createElement(tag); if(cls)e.className=cls; if(text!=null)e.textContent=text; return e; }
+function pendNodes(ins,un){ const a=[]; if(ins)a.push(mk('span','plus','+'+ins)); if(un){ if(a.length)a.push(document.createTextNode(' ')); a.push(mk('span','minus','−'+un)); } return a; }
+
+// ---- navigation ----
+let nav=[], sel=0, updateAvailable=true;
+function inHooks(){ return nav.length && nodeAt(nav).hooks; }
+function buildRows(){
+  const rows=[];
+  if(nav.length===0){
+    if(updateAvailable) rows.push({type:'update',name:'↻ Update available - sync your setup to the latest Improv',hint:'A fresher Improv is in your repo (rev 1ca3ef9 → a7e6729). Re-sync your installed components to it.'});
+    else rows.push({type:'uptodate',name:'✓ Up to date',hint:'Your installed setup matches the latest Improv in your repo - nothing to sync. Select to re-check.'});
+    rows.push({type:'label',name:'CORE COMPONENTS'});
+    for(const k of Object.keys(T)) if(T[k].featured) rows.push(itemRow([k]));
+    rows.push({type:'label',name:'MORE COMPONENTS'});
+    for(const k of Object.keys(T)) if(!T[k].featured) rows.push(itemRow([k]));
+    rows.push({type:'sep'});
+    const n=pendingCount();
+    rows.push({type:'apply',name:'Apply '+n+' change'+(n===1?'':'s'),disabled:n===0,hint:n?('Install and remove the '+n+' staged item'+(n===1?'':'s')+' now'):'Nothing staged yet - toggle items to stage changes'});
+    rows.push({type:'quit',name:'Quit',hint:'Leave the installer'});
+  } else {
+    const parent = nav.length===1 ? 'all groups' : nav[nav.length-2];
+    const here=nav[nav.length-1];
+    const hooksLabel = here==='Hooks' ? 'all hooks' : 'all '+here+' hooks';
+    rows.push({type:'back',name:'‹ Back to '+parent,hint:'Go up one level'});
+    rows.push({type:'installall',name:(inHooks()?'+ Enable '+hooksLabel+'…':'+ Install all of '+here+'…'),hint:'Stage every item here for install'});
+    rows.push({type:'uninstallall',name:(inHooks()?'− Disable '+hooksLabel+'…':'− Remove all of '+here+'…'),hint:'Stage every item here for removal'});
+    rows.push({type:'sep'});
+    for(const k of Object.keys(nodeAt(nav).children)) rows.push(itemRow(nav.concat(k)));
+  }
+  return rows;
+}
+function itemRow(path){
+  const key=path[path.length-1], node=nodeAt(path), st=stateOf(path);
+  const parentHooks = path.length>1 && nodeAt(path.slice(0,-1)).hooks;
+  const row={type:'item', path, name:key, tag:node.tag||'', st, feat:!!node.featured, hook:parentHooks && isLeaf(node), folder:!!node.folder, drill:!isLeaf(node)};
+  if(isLeaf(node)){ const p=leafPending(path.join('/')); row.pend = p?[p==='install'?mk('span','plus','+ install'):mk('span','minus','− uninstall')]:[]; }
+  else { const c=counts(path); row.count=c.on+'/'+c.total; const {ins,un}=pendUnder(path); row.pend=pendNodes(ins,un); }
+  row.hint = node.desc || node.tag || '';
+  return row;
+}
+
+// ---- render ----
+let rowsCache=[];
+function selectable(){ return rowsCache.map((r,i)=>(r.type!=='sep'&&r.type!=='label')?i:-1).filter(i=>i>=0); }
+function render(){
+  const crumb=document.getElementById('crumb'); crumb.textContent='';
+  crumb.appendChild(mk('span',null,'ampersand'));
+  nav.forEach((seg,i)=>{ crumb.appendChild(document.createTextNode('  ›  ')); crumb.appendChild(i===nav.length-1?mk('b',null,seg):mk('span',null,seg)); });
+  const lead=document.getElementById('lead'); lead.textContent='';
+  if(nav.length===0){ lead.appendChild(document.createTextNode('Choose what runs on this machine. Open a group, toggle items to stage changes, then apply.')); document.getElementById('titlepath').textContent='setup'; }
+  else { const n=nodeAt(nav), c=counts(nav);
+    lead.appendChild(document.createTextNode((n.desc||n.tag||'')+'  '));
+    lead.appendChild(mk('span','meta', c.on+' of '+c.total+(n.hooks?' hooks on':' installed')));
+    document.getElementById('titlepath').textContent=nav.join(' › '); }
+
+  rowsCache=buildRows();
+  const sels=selectable(); if(!sels.includes(sel)) sel=sels[0];
+  const host=document.getElementById('rows'); host.textContent='';
+  rowsCache.forEach((r,i)=>{
+    if(r.type==='sep'){ host.appendChild(mk('div','sep')); return; }
+    if(r.type==='label'){ host.appendChild(mk('div','seclabel',r.name)); return; }
+    const d=mk('div','row'+(i===sel?' sel':''));
+    if(['back','installall','uninstallall','apply','quit','update','uptodate'].includes(r.type)) d.classList.add('action');
+    if(r.type==='update') d.classList.add('upd');
+    if(r.type==='uptodate') d.classList.add('utd');
+    if(r.type==='quit') d.classList.add('danger');
+    if(r.feat) d.classList.add('feat');
+    if(r.hook) d.classList.add('hook');
+    if(r.folder) d.classList.add('folder');
+    if(r.disabled) d.style.opacity=.4;
+    if(r.type==='item'){
+      d.appendChild(mk('span','caret', r.folder?'▾':(r.drill?'▸':' ')));
+      d.appendChild(mk('span','glyph '+CLS[r.st], GLYPH[r.st]));
+      d.appendChild(mk('span','name', r.name));
+      d.appendChild(mk('span','tag', r.tag));
+      d.appendChild(mk('span','stat', LABEL[r.st]));
+      d.appendChild(mk('span','count', r.count!==undefined?r.count:''));
+      const pe=mk('span','pend'); (r.pend||[]).forEach(x=>pe.appendChild(x)); d.appendChild(pe);
+    } else { d.appendChild(mk('span','caret',' ')); d.appendChild(mk('span','glyph',' ')); d.appendChild(mk('span','name', r.name)); }
+    d.addEventListener('click',()=>{ sel=i; activate(); });
+    d.addEventListener('mousemove',()=>{ if(sel!==i){ sel=i; paintSel(); showDetail(); } });
+    host.appendChild(d);
+  });
+  const pf=document.getElementById('pendfoot'); pf.textContent='';
+  if(pendingCount()){ const L=Object.values(pending); pendNodes(L.filter(a=>a==='install').length,L.filter(a=>a==='uninstall').length).forEach(x=>pf.appendChild(x)); pf.appendChild(document.createTextNode(' staged')); }
+  showDetail();
+}
+function paintSel(){ [...document.getElementById('rows').children].forEach((d,i)=>{ if(d.classList.contains('sep')||d.classList.contains('seclabel'))return; d.classList.toggle('sel', i===sel); }); }
+function showDetail(){
+  const r=rowsCache[sel], det=document.getElementById('detail'); det.textContent='';
+  if(!r) return;
+  if(r.type==='item'){ det.appendChild(mk('b',null,r.name)); det.appendChild(document.createTextNode('  '+(r.hint||'')));
+    if(r.drill) det.appendChild(document.createTextNode('   (press → to open'+(r.folder?' the folder':'')+')'));
+    else det.appendChild(document.createTextNode('   (press enter to '+(installed[r.path.join('/')]?'turn off':'turn on')+')')); }
+  else det.appendChild(document.createTextNode(r.hint||''));
+}
+function toast(m){ const det=document.getElementById('detail'); det.textContent=''; det.appendChild(mk('b',null,m)); }
+
+// ---- actions ----
+function activate(){
+  const r=rowsCache[sel]; if(!r||r.type==='sep'||r.type==='label') return;
+  if(r.type==='item'){ if(r.drill){ nav=r.path.slice(); sel=0; } else toggleLeaf(r.path.join('/')); }
+  else if(r.type==='back'){ nav=nav.slice(0,-1); sel=0; }
+  else if(r.type==='installall'){ stageAll(nav,'install'); }
+  else if(r.type==='uninstallall'){ stageAll(nav,'uninstall'); }
+  else if(r.type==='update'){ updateAvailable=false; render(); toast('Synced your installed components to the latest Improv (a7e6729).'); return; }
+  else if(r.type==='uptodate'){ toast('Checked for updates - you are on the latest Improv.'); return; }
+  else if(r.type==='apply'){ if(pendingCount()===0){ render(); toast('Nothing staged to apply.'); return; } const {ins,un}=applyPending(); render(); toast('Applied - '+ins+' turned on, '+un+' turned off.'); return; }
+  else if(r.type==='quit'){ render(); toast(pendingCount()?pendingCount()+' change(s) still staged - apply (a) or discard first.':'Quit (prototype - nothing happens).'); return; }
+  render();
+}
+function move(d){ const s=selectable(); if(!s.length)return; let p=s.indexOf(sel); if(p<0)p=0; p=(p+d+s.length)%s.length; sel=s[p]; paintSel(); showDetail(); }
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowDown'){move(1);e.preventDefault();}
+  else if(e.key==='ArrowUp'){move(-1);e.preventDefault();}
+  else if(e.key==='Enter'||e.key==='ArrowRight'||e.key===' '){activate();e.preventDefault();}
+  else if(e.key==='ArrowLeft'||e.key==='Escape'||e.key==='Backspace'){ if(nav.length){ nav=nav.slice(0,-1); sel=0; render(); } e.preventDefault(); }
+  else if(e.key==='a'||e.key==='A'){ if(pendingCount()){ const {ins,un}=applyPending(); render(); toast('Applied - '+ins+' turned on, '+un+' turned off.'); } }
+  else if(e.key==='q'||e.key==='Q'){ toast(pendingCount()?pendingCount()+' change(s) still staged.':'Quit (prototype).'); }
+});
+render();
+</script>
+</body>
+</html>
