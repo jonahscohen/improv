@@ -117,8 +117,73 @@ def _run(cmd, diff_bytes, timeout):
         return None, "", "", time.time() - t0, True
 
 
+# --- codex launcher resolution ---------------------------------------------
+# codex ships as a Node script whose `#!/usr/bin/env node` shebang picks up
+# whatever `node` is first on PATH. In a non-interactive shell that can be an
+# ancient node (e.g. v12) which cannot parse codex's top-level await, so codex
+# dies with `SyntaxError: Unexpected reserved word` BEFORE it runs. Never lean on
+# the ambient node: resolve a node>=16 absolutely and invoke `<node> <codex.js>`.
+# See reference_codex_broken_node12_path.md.
+_CODEX_ARGV = None
+
+
+def _node_major(node_bin):
+    try:
+        out = subprocess.run([node_bin, "--version"], capture_output=True,
+                             text=True, timeout=10).stdout.strip()
+    except Exception:
+        return -1
+    m = re.match(r"v?(\d+)\.", out)
+    return int(m.group(1)) if m else -1
+
+
+def _nvm_nodes_newest_first():
+    root = os.path.expanduser("~/.nvm/versions/node")
+    if not os.path.isdir(root):
+        return []
+
+    def key(v):
+        nums = [int(n) for n in re.findall(r"\d+", v)[:3]]
+        return tuple(nums) + (0,) * (3 - len(nums))
+
+    return [os.path.join(root, v, "bin", "node")
+            for v in sorted(os.listdir(root), key=key, reverse=True)]
+
+
+def codex_argv():
+    """Command PREFIX to launch codex under a node>=16, independent of the ambient
+    `node`. Prefers, in order: $CODEX_NODE_BIN, the node co-located with the codex
+    symlink (normally >=16, since codex was installed under it), the ambient node
+    if it happens to be >=16, then the newest nvm node>=16. Every candidate is
+    still version-checked; falls back to ['codex'] if nothing compatible is found
+    (fails loudly, exactly as before). Memoized."""
+    global _CODEX_ARGV
+    if _CODEX_ARGV is not None:
+        return list(_CODEX_ARGV)
+    link = shutil.which("codex")
+    if not link:
+        _CODEX_ARGV = ["codex"]
+        return list(_CODEX_ARGV)
+    codex_js = os.path.realpath(link)
+    candidates = []
+    if os.environ.get("CODEX_NODE_BIN"):
+        candidates.append(os.environ["CODEX_NODE_BIN"])
+    candidates.append(os.path.join(os.path.dirname(link), "node"))  # co-located
+    amb = shutil.which("node")
+    if amb:
+        candidates.append(amb)
+    candidates += _nvm_nodes_newest_first()
+    for node_bin in candidates:
+        if node_bin and os.path.isfile(node_bin) and os.access(node_bin, os.X_OK) \
+                and _node_major(node_bin) >= 16:
+            _CODEX_ARGV = [node_bin, codex_js]
+            return list(_CODEX_ARGV)
+    _CODEX_ARGV = ["codex"]  # no compatible node found; let codex fail loudly
+    return list(_CODEX_ARGV)
+
+
 def build_cmd(prompt, repo, effort, model, skip_git):
-    cmd = ["codex", "exec", "-s", "read-only"]
+    cmd = codex_argv() + ["exec", "-s", "read-only"]
     if skip_git:
         cmd.append("--skip-git-repo-check")
     if repo:

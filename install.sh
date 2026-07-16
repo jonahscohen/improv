@@ -510,13 +510,13 @@ TITLES+=(
 DESCS+=(
   "ClickUp: blocks writes to ClickUp via the MCP unless confirmed. Opt-in; installs block-clickup-writes."
   "Visualizer: gates the mcp__visualize__show_widget tool (surface + quality checks). Opt-in; installs visualizer-guard."
-  "Codex: guards for the Codex integration - watches codex CLI failures and governs codex-rescue agent spawns. Opt-in; installs codex-failure-watcher + codex-rescue-guard."
+  "Codex: guards for the Codex integration - watches codex CLI failures and governs codex-rescue agent spawns, plus the codex-review.py cross-model review tool (self-resolves a node>=16). Opt-in; installs codex-failure-watcher + codex-rescue-guard + codex-review.py."
   "Justify: in-browser visual micro-adjustment tool (server + core + adapters + MCP + /justify skill) plus its source-guard and watch hooks. Was personal; now public."
 )
 FILES+=(
   "~/.claude/hooks/block-clickup-writes.sh\n~/.claude/settings.json (1 PreToolUse hook)"
   "~/.claude/hooks/visualizer-guard.sh\n~/.claude/settings.json (1 PreToolUse hook)"
-  "~/.claude/hooks/codex-failure-watcher.sh + codex-rescue-guard.sh\n~/.claude/settings.json (2 hooks)"
+  "~/.claude/hooks/codex-failure-watcher.sh + codex-rescue-guard.sh + codex-review.py\n~/.claude/settings.json (2 hooks)"
   "~/.claude/justify/ + ~/.claude/skills/justify/ + ~/.claude.json (MCP)\n~/.claude/hooks/justify-source-guard.sh + justify-watch-guard.sh + justify-watch-standing-by.sh"
 )
 DIRS+=("" "" "" "$REPO_DIR/justify")
@@ -756,7 +756,7 @@ with open(p,'w') as f: json.dump(d,f,indent=2); f.write('\n')
 # New hook-only app components (Stage 3): remove their hooks via the generic helper.
 deactivate_clickup()    { deactivate_app_hooks block-clickup-writes.sh; }
 deactivate_visualizer() { deactivate_app_hooks visualizer-guard.sh; }
-deactivate_codex()      { deactivate_app_hooks codex-failure-watcher.sh codex-rescue-guard.sh; }
+deactivate_codex()      { deactivate_app_hooks codex-failure-watcher.sh codex-rescue-guard.sh; rm_hook_if_ours codex-review.py; }
 deactivate_chrome()     { deactivate_app_hooks chrome-tabgroup-track.sh chrome-tabgroup-clear.sh chrome-tabgroup-stop.sh; }
 deactivate_figma()      { deactivate_app_hooks figma-fidelity-stop.sh; }
 
@@ -3639,6 +3639,11 @@ picked justify      && install_app_hooks justify-source-guard.sh justify-watch-g
 picked clickup      && install_app_hooks block-clickup-writes.sh
 picked visualizer   && install_app_hooks visualizer-guard.sh
 picked codex        && install_app_hooks codex-failure-watcher.sh codex-rescue-guard.sh
+# codex-review.py is the reliable real-Codex cross-model review tool (not a wired
+# hook - a CLI invoked on demand). Deploy it with the codex component so a fresh
+# install has it. It self-resolves a node>=16, so it works even when the shell's
+# ambient node is too old for codex (reference_codex_broken_node12_path.md).
+picked codex        && link_or_copy "$REPO_DIR/claude/hooks/codex-review.py" "$CLAUDE_DIR/hooks/codex-review.py"
 picked chrome       && install_app_hooks chrome-tabgroup-track.sh chrome-tabgroup-clear.sh chrome-tabgroup-stop.sh
 picked figma        && install_app_hooks figma-fidelity-stop.sh
 
