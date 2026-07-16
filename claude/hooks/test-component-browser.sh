@@ -42,5 +42,23 @@ print("missing hook desc:",sorted(missing),file=sys.stderr)
 sys.exit(0 if not missing else 1)
 PY
 
+# ---- accessor tests (Task 2) ----
+source "$REPO_DIR/claude/hooks/browser-lib.sh"
+browser_load "$TREE"
+[ "$(browser_buckets)" = "Foundation Beats sidecoach justify tilt-lab lotus Design Tools Guardrails Voice & chat Dev surface Personal" ] \
+  && ok "bucket order (keys)" || bad "bucket order (keys)"
+[ "$(node_kind 'Beats')" = "group" ] && ok "Beats is group" || bad "Beats is group"
+[ "$(node_kind 'sidecoach')" = "hooks" ] && ok "sidecoach is hooks" || bad "sidecoach is hooks"
+[ "$(node_kind 'tilt-lab')" = "leaf" ] && ok "tilt-lab is leaf" || bad "tilt-lab is leaf"
+[ "$(node_kind 'Beats/Hooks')" = "hooks" ] && ok "Beats/Hooks is hooks" || bad "Beats/Hooks is hooks"
+[ "$(node_children 'Beats')" = "memory reflect Hooks" ] && ok "Beats children" || bad "Beats children"
+[ "$(node_children 'sidecoach')" = "sidecoach-keyword sidecoach-sessionstart" ] && ok "sidecoach hook children" || bad "sidecoach hook children"
+[ "$(node_label 'sidecoach')" = "Sidecoach" ] && ok "sidecoach label" || bad "sidecoach label"
+[ "$(node_label 'Beats')" = "Beats" ] && ok "Beats label falls back to key" || bad "Beats label falls back to key"
+[ -n "$(node_tag 'Beats')" ] && ok "node tag present" || bad "node tag present"
+[ -n "$(hook_desc 'beats-rebuild')" ] && ok "hook desc" || bad "hook desc"
+[ "$(bucket_section 'Foundation')" = "core" ] && ok "Foundation section core" || bad "Foundation section core"
+[ "$(bucket_section 'Guardrails')" = "more" ] && ok "Guardrails section more" || bad "Guardrails section more"
+
 echo "== $pass passed, $fail failed =="
 [ "$fail" = 0 ]

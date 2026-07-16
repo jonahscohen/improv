@@ -49,6 +49,15 @@ warn()  { printf "${YELLOW}[warn]${NC}  %s\n" "$1"; }
 err()   { printf "${RED}[error]${NC} %s\n" "$1"; }
 log()   { printf "${CYAN}[info]${NC}  %s\n" "$1"; }  # alias for info (used by sidecoach block)
 
+# Bucket-browser accessor library (pure functions over claude/hooks/browser-tree.json).
+# Sourcing only defines functions - browser_load is invoked later, inside the browser
+# flow, never at top level. Guarded so a missing file never aborts the installer.
+if [ -f "$REPO_DIR/claude/hooks/browser-lib.sh" ]; then
+  source "$REPO_DIR/claude/hooks/browser-lib.sh"
+else
+  warn "browser-lib.sh not found - bucket browser accessors unavailable"
+fi
+
 # Copy from repo to ~/.claude, clearing any pre-existing destination first.
 # Without this, an old install that symlinked the destination back to the same
 # source file would cause `cp` to bail with "are identical (not copied)" under
