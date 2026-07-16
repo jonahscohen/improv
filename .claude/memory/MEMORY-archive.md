@@ -1084,3 +1084,6 @@
 <!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
 - [Sidecoach SIDE-STRIPE LEAD RULING - no-build accepted; saturation-gate precision lever DEFERRED (margin huge); side-stripe recall folds into the accepted motion honest-frame (no new Jonah re-surface) - DECISION (2026-06-25)](session_2026-06-25_sidestripe-lead-ruling.md)
 - [Sidecoach STAGE 6 one-engine audit + LOW-CONTRAST HOLE - audit CONFIRMED one engine (live+eval same detector fns, shims real, simpler) but found low-contrast (40 TP = biggest objective class) is EVAL-ONLY/unwired to live NL path; lead verified + closing it (Task #5) detection-preservingly (eval calls scanner directly, frozen-90 unchanged) - DECISION (2026-06-25)](session_2026-06-25_stage6-oneengine-audit-and-lowcontrast-hole.md)
+
+<!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
+- [Sidecoach STAGE 6 milestone mechanics - frozen-90 re-measure needs `scorecard-collect --force` (cache keys on collectorVersion+page-SHA not detector code) + `scorecard-mapping` regen (marketing-buzzword exact-maps) + score; objective must stay 0.936; low-contrast wiring doesn't touch eval - REFERENCE (2026-06-25)](session_2026-06-25_stage6-milestone-mechanics.md)
