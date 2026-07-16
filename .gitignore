@@ -8,6 +8,8 @@ public/justify-core.js.map
 # transient / dependency dirs (added during tilt-lab work)
 node_modules/
 .claude/scheduled_tasks.lock
+# git worktrees created for isolated feature builds
+.claude/worktrees/
 
 # justify daemon's self-signed TLS cert + PRIVATE KEY - generated per-machine on
 # first run (ws-server ensureCert); never commit the key.
