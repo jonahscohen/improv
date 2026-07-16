@@ -52,7 +52,8 @@ browser_load() {
   # safe under `set -u` even when nothing matches (expands to nothing).
   for v in ${!BR_KIND_@} ${!BR_TAG_@} ${!BR_DESC_@} ${!BR_LABEL_@} \
            ${!BR_CHILDREN_@} ${!BR_HOOKDESC_@} ${!BR_SECTION_@} \
-           ${!BR_HOOKOWNER_@} ${!BR_PINNED_@} ${!BR_HOOKPATH_@}; do
+           ${!BR_HOOKOWNER_@} ${!BR_PINNED_@} ${!BR_HOOKPATH_@} \
+           ${!BR_OWNERLEAF_@}; do
     unset "$v"
   done
   BR_BUCKETS=""
@@ -104,12 +105,17 @@ def walk(node, path):
     elif k == "hooks":
         emit("CHILDREN", path, "\t".join(node["hooks"]))
         for h in node["hooks"]:
-            emit("HOOKPATH", h, path + "/" + h)
+            # Dedup HOOKPATH to the FIRST occurrence so it stays in lockstep with
+            # BR_ALLHOOKS order even if a hook name ever appears in two hooks nodes.
             if h not in seen_hooks:
                 seen_hooks.add(h)
                 all_hooks.append(h)
+                emit("HOOKPATH", h, path + "/" + h)
     else:
         emit("CHILDREN", path, "")
+        # Owner-key -> component-leaf path. Leaf keys are globally unique, so this maps
+        # an install-owner (e.g. memory, reflect, tilt-lab) to its master-switch leaf.
+        emit("OWNERLEAF", node.get("key", path.rsplit("/", 1)[-1]), path)
 
 buckets = tree["buckets"]
 for b in buckets:
@@ -334,6 +340,13 @@ _br_all_hooks() {
 # Beats/Hooks/memory-approve). Empty if unknown.
 _br_hook_path() { _br_get HOOKPATH "$1"; }
 
+# _owner_leaf_path <owner> - the component-leaf path whose key is <owner> (e.g. memory ->
+# Beats/memory, reflect -> Beats/reflect, tilt-lab -> tilt-lab). Empty for a hooks-only
+# owner (justify, sidecoach, the clusters) that has NO leaf node. This leaf is the owner
+# master switch: staging it uninstall removes the whole component, install brings it in
+# WITH its hooks.
+_owner_leaf_path() { _br_get OWNERLEAF "$1"; }
+
 # hooks_owned_by <owner> - every NON-pinned hook whose hook_owner is <owner>, in tree
 # (walk) order, ONE PER LINE. Pure bash over _br_all_hooks (no per-call python).
 hooks_owned_by() {
@@ -498,12 +511,17 @@ _owner_of() {
 #   UNINSTALL_COMPONENT <O>            - the whole component/cluster comes out
 #   INSTALL <O>                        - install with no hook off-list
 #   INSTALL <O> h1 h2 ...              - install, but leave h1 h2 ... OFF (tree order)
-# An owner is fully uninstalled iff its component leaf is staged-uninstall OR it owns
-# hooks and every one of them is staged-uninstall. Otherwise, for an owner that owns
-# hooks, the off-list is its hooks that are NOT on after applying the pending sets:
-#   on iff (currently_on OR staged-install) AND NOT staged-uninstall.
-# Owner order is first-seen across PENDING_INSTALL then PENDING_UNINSTALL (tests grep
-# for specific lines, so this order is not asserted, only kept stable).
+# Dual-nature owners (memory, reflect) have BOTH a component LEAF and separately-toggleable
+# non-pinned hooks; for them the LEAF is the master switch and the hooks are sub-toggles.
+# Hooks-only owners (justify, sidecoach, the clusters) have no leaf node, so all-hooks-off
+# DOES mean a full uninstall. Per-owner order (whichever fires first wins):
+#   1. leaf staged-uninstall        -> UNINSTALL_COMPONENT (master switch off)
+#   2. no owned hooks (pure leaf)   -> INSTALL if leaf staged-install, else nothing
+#   3. hooks-only + every hook off  -> UNINSTALL_COMPONENT (whole hooks component out)
+#   4. otherwise (partial / target) -> INSTALL <O> + off-list of hooks NOT on after pending,
+#      where on iff (currently_on OR staged-install OR leaf-staged-install) AND NOT staged-uninstall.
+# Owner order is first-seen across PENDING_INSTALL then PENDING_UNINSTALL (tests grep for
+# specific lines, so this order is not asserted, only kept stable).
 apply_plan() {
   local probe owners set leaf owner
   : "${PENDING_INSTALL:=}" "${PENDING_UNINSTALL:=}"
@@ -523,62 +541,61 @@ apply_plan() {
     done < <(_set_lines "$set")
   done
 
-  local cl_staged L H h hp h_count unins_count full_unins off_list on
+  local lp H h hp h_count unins_count off_list on leaf_install
   while IFS= read -r owner; do
     [ -n "$owner" ] || continue
 
-    # Is this owner's COMPONENT leaf staged, and in which direction? Scan the pending
-    # leaves for a component leaf (parent not a hooks node) whose key == owner.
-    cl_staged=""
-    while IFS= read -r L; do
-      [ -n "$L" ] || continue
-      if [ "$(node_kind "${L%/*}")" != "hooks" ] && [ "${L##*/}" = "$owner" ]; then
-        cl_staged="install"; break
-      fi
-    done < <(_set_lines "$PENDING_INSTALL")
-    if [ -z "$cl_staged" ]; then
-      while IFS= read -r L; do
-        [ -n "$L" ] || continue
-        if [ "$(node_kind "${L%/*}")" != "hooks" ] && [ "${L##*/}" = "$owner" ]; then
-          cl_staged="uninstall"; break
-        fi
-      done < <(_set_lines "$PENDING_UNINSTALL")
-    fi
+    lp="$(_owner_leaf_path "$owner")"   # component-leaf path, or "" for hooks-only owners
+    H="$(hooks_owned_by "$owner")"      # non-pinned hooks, tree order
 
-    # H = the owner's non-pinned hooks (tree order). Count them and how many are staged off.
-    H="$(hooks_owned_by "$owner")"
-    h_count=0; unins_count=0
-    while IFS= read -r h; do
-      [ -n "$h" ] || continue
-      h_count=$((h_count + 1))
-      hp="$(_br_hook_path "$h")"
-      if _pend_has "$PENDING_UNINSTALL" "$hp"; then
-        unins_count=$((unins_count + 1))
-      fi
-    done <<EOF
-$H
-EOF
-
-    full_unins=0
-    [ "$cl_staged" = "uninstall" ] && full_unins=1
-    if [ "$h_count" -gt 0 ] && [ "$unins_count" -eq "$h_count" ]; then
-      full_unins=1
-    fi
-    if [ "$full_unins" = "1" ]; then
+    # (1) master-switch uninstall: the component leaf itself is staged off.
+    if [ -n "$lp" ] && _pend_has "$PENDING_UNINSTALL" "$lp"; then
       printf 'UNINSTALL_COMPONENT %s\n' "$owner"
       continue
     fi
 
+    h_count=0
+    while IFS= read -r h; do
+      [ -n "$h" ] || continue
+      h_count=$((h_count + 1))
+    done <<EOF
+$H
+EOF
+
+    # (2) pure leaf (no owned hooks): install only if the leaf is staged-install.
     if [ "$h_count" -eq 0 ]; then
-      # Pure component leaf, no hooks. (A staged-uninstall pure leaf was already caught
-      # by full_unins above; only the install case reaches here.)
-      if [ "$cl_staged" = "install" ]; then
+      if [ -n "$lp" ] && _pend_has "$PENDING_INSTALL" "$lp"; then
         printf 'INSTALL %s\n' "$owner"
       fi
       continue
     fi
 
-    # Partial: install the owner, off-listing every hook NOT on after the pending sets.
+    # (3) hooks-only owner (no component leaf) with every owned hook staged-uninstall ->
+    # the whole hooks component comes out. A dual-nature owner (has a leaf) NEVER hits this;
+    # its leaf is the only thing that can trigger a full uninstall (step 1).
+    if [ -z "$lp" ]; then
+      unins_count=0
+      while IFS= read -r h; do
+        [ -n "$h" ] || continue
+        hp="$(_br_hook_path "$h")"
+        if _pend_has "$PENDING_UNINSTALL" "$hp"; then
+          unins_count=$((unins_count + 1))
+        fi
+      done <<EOF
+$H
+EOF
+      if [ "$unins_count" -eq "$h_count" ]; then
+        printf 'UNINSTALL_COMPONENT %s\n' "$owner"
+        continue
+      fi
+    fi
+
+    # (4) partial / target-state: install the owner, off-listing every hook NOT on after
+    # the pending sets. A staged-install of the component leaf forces all its hooks on.
+    leaf_install=0
+    if [ -n "$lp" ] && _pend_has "$PENDING_INSTALL" "$lp"; then
+      leaf_install=1
+    fi
     off_list=""
     while IFS= read -r h; do
       [ -n "$h" ] || continue
@@ -587,6 +604,8 @@ EOF
       if _pend_has "$PENDING_UNINSTALL" "$hp"; then
         on=0
       elif _pend_has "$PENDING_INSTALL" "$hp"; then
+        on=1
+      elif [ "$leaf_install" = "1" ]; then
         on=1
       elif "$probe" "$hp"; then
         on=1

@@ -190,6 +190,39 @@ stage_toggle 'justify/justify-source-guard'   # currently off -> stages INSTALL
 stage_all 'justify' uninstall                  # "uninstall all" must clear that
 [ "$(pending_under 'justify')" = "0" ] && ok "stage_all uninstall clears opposite pending" || bad "stage_all uninstall clears opposite pending"
 
+# 10. dual-nature reflect: toggling reflect-nudge OFF keeps the reflect skill (leaf = master switch).
+INSTALLED="|Beats/reflect|Beats/Hooks/reflect-nudge|"; stage_reset
+stage_toggle 'Beats/Hooks/reflect-nudge'
+out="$(apply_plan)"
+case "$out" in *"INSTALL reflect reflect-nudge"*) ok "reflect nudge off-listed";; *) bad "reflect nudge off-listed";; esac
+case "$out" in *"UNINSTALL_COMPONENT reflect"*) bad "reflect skill preserved (no full uninstall)";; *) ok "reflect skill preserved (no full uninstall)";; esac
+
+# 11. dual-nature memory: all 4 engine hooks OFF keeps the memory engine (leaf = master switch).
+INSTALLED="|Beats/memory|Beats/Hooks/memory-approve|Beats/Hooks/memory-nudge|Beats/Hooks/memory-compact|Beats/Hooks/consolidate-nudge|"; stage_reset
+stage_toggle 'Beats/Hooks/memory-approve'
+stage_toggle 'Beats/Hooks/memory-nudge'
+stage_toggle 'Beats/Hooks/memory-compact'
+stage_toggle 'Beats/Hooks/consolidate-nudge'
+out="$(apply_plan)"
+case "$out" in *"INSTALL memory memory-approve memory-nudge memory-compact consolidate-nudge"*) ok "memory engine kept, hooks off-listed";; *) bad "memory engine kept, hooks off-listed";; esac
+case "$out" in *"UNINSTALL_COMPONENT memory"*) bad "memory engine preserved (no full uninstall)";; *) ok "memory engine preserved (no full uninstall)";; esac
+
+# 12. memory engine master switch: toggling the engine LEAF off uninstalls the whole component.
+INSTALLED="|Beats/memory|Beats/Hooks/memory-approve|Beats/Hooks/memory-nudge|Beats/Hooks/memory-compact|Beats/Hooks/consolidate-nudge|"; stage_reset
+stage_toggle 'Beats/memory'
+out="$(apply_plan)"
+case "$out" in *"UNINSTALL_COMPONENT memory"*) ok "memory engine master-switch uninstall";; *) bad "memory engine master-switch uninstall";; esac
+
+# 13. memory engine install brings its hooks: a bare INSTALL line, no off-list.
+INSTALLED="||"; stage_reset
+stage_toggle 'Beats/memory'
+out="$(apply_plan)"
+[ "$out" = "INSTALL memory" ] && ok "memory engine install brings hooks (no off-list)" || bad "memory engine install brings hooks (no off-list)"
+
+# 14. set -e smoke: the staging layer must not trip under set -e (install.sh runs set -euo pipefail).
+( set -e; stage_reset; stage_toggle 'justify/justify-source-guard'; apply_plan >/dev/null )
+[ "$?" = "0" ] && ok "staging layer clean under set -e" || bad "staging layer clean under set -e"
+
 unset BR_STATE_PROBE
 
 echo "== $pass passed, $fail failed =="
