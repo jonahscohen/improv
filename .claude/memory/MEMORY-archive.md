@@ -1102,3 +1102,6 @@
 
 <!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
 - [Bucket-browser Task 3.5 DONE (branch feat/installer-bucket-browser) - hook install-OWNERS + PINNED flag: browser-tree.json gains `hook_owner` (55 hooks -> --only key; Beats/Hooks folder split memory/reflect) + `pinned_hooks` (beats-rebuild, beats-staleness-guard); browser-lib.sh gains hook_owner/hook_pinned accessors; item_state reads a pinned hook leaf as always-active without the probe. 34/34 green under bash 3.2.57; independent-Claude review (Codex down) - PROJECT (2026-07-16)](session_2026-07-16_bucket-browser-task3.5-owners.md)
+
+<!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
+- [Bucket browser Task 4 DONE - staging (PENDING_INSTALL/UNINSTALL sets) + apply_plan plan-string COMPUTATION in browser-lib.sh (no installs run) + counts() pinned-rollup fix; new BR_ALLHOOKS/BR_HOOKPATH loader maps power hooks_owned_by/apply_plan; 44/44 tests green under bash 3.2, bash -n install.sh clean; caught a bash-3.2 $(...)/heredoc apostrophe-parity quirk + folded a set-u safety finding - PROJECT (2026-07-16)](session_2026-07-16_bucket-browser-task4-staging.md)

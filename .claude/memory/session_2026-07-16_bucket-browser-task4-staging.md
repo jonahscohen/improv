@@ -1,0 +1,40 @@
+---
+name: Bucket browser Task 4 - staging + apply-plan computation
+description: Added staging (pending sets) + apply_plan plan-string computation to browser-lib.sh, plus a counts() pinned-rollup fix; 44/44 tests green under bash 3.2
+type: project
+relates_to: [decision_installer_bucket_browser.md]
+author_human: Jonah Cohen
+author_model: claude-opus-4.8
+source: session
+verified: tests
+confidence: high
+---
+
+Task 4 of the installer bucket-browser build: staging + apply-plan COMPUTATION (no installs run). All in `claude/hooks/browser-lib.sh` + tests in `claude/hooks/test-component-browser.sh`. Target runtime is macOS system bash 3.2.57; ran the suite under `/bin/bash` (3.2) throughout.
+
+Changes:
+- Part A: `counts()` now treats a PINNED hook leaf (parent is a hooks node) as always-on WITHOUT the probe, keeping it in `total`. A pinned-only folder reads `partial`, never `none`. Updated Task-3 expectations: `counts 'Beats/Hooks'` 2/7 -> 4/7, `counts 'Beats'` 3/9 -> 5/9; the old "hooks folder none" (INSTALLED=||) is now `partial`; added a genuinely-`none` assertion on `sidecoach` (pinned-free, 2 hooks).
+- Loader: python emitter (inside the `<<'PY'` heredoc) now collects every hook name in depth-first walk order -> `BR_ALLHOOKS` (tab-joined), and emits a per-hook `BR_HOOKPATH_<hex(name)>` name->leaf-path map. Both added to the browser_load reset loop.
+- New accessors: `_br_all_hooks` (TAB->newline), `_br_hook_path`, `hooks_owned_by <owner>` (non-pinned hooks for an owner, tree order, pure-bash over `_br_all_hooks`).
+- Staging: `PENDING_INSTALL`/`PENDING_UNINSTALL` as bookended-`|` leaf-path sets; helpers `_pend_has`/`_set_add`/`_set_remove`/`_set_lines` (space-safe, `|`-delimited, no glob chars in keys). `stage_reset`, `stage_toggle` (pinned = no-op; toggle-twice clears), `stage_all <path> install|uninstall`, `pending_under <path>`, `_owner_of`, `apply_plan`.
+- `apply_plan` emits one line per touched owner: `UNINSTALL_COMPONENT O` (full uninstall), `INSTALL O` (pure leaf / no off-list), or `INSTALL O h1 h2 ...` (partial: off-list = owner's non-pinned hooks NOT on after pending, tree order). Verified live: monolithic `memory` (hooks under Beats/Hooks, owner memory, leaf Beats/memory) and nested cluster `safety` (Guardrails/safety/bash-guard) both resolve correctly via the independent HOOKPATH + hook_owner maps.
+
+Why the BR_HOOKPATH map (beyond the spec's BR_ALLHOOKS): apply_plan must probe/stage each hook by its LEAF PATH, and the owner key does not encode where a hook lives (memory hooks live under Beats/Hooks; safety hooks under Guardrails/safety). Owner+name is wrong for both nested clusters and the monolithic memory component, so a name->path map is required. Emitted in the loader (pure-bash accessors, no per-call python), inside browser-lib.sh only.
+
+Bugs found and fixed mid-task:
+- bash 3.2 `$(...)` quote-counting quirk: the command-substitution parser counts single quotes EVEN inside a quoted `<<'PY'` heredoc when scanning for its closing paren. My new comment "hook's" added one apostrophe, making the body's single-quote count odd -> "unexpected EOF looking for matching `'`". Root-caused by bisecting the file (loader region failed standalone; original passed) and counting apostrophes (9, odd). Fixed by rewording to drop the apostrophe and adding a NOTE comment in the heredoc warning future editors. How I found it: Debugging Protocol - the original passed `bash -n`, my version failed, so the delta was my added lines; balanced-quote diff pinpointed it.
+- set -u safety (from the independent review, folded in): the pending globals were read unguarded; under install.sh's `set -euo pipefail` any staging accessor called before `stage_reset` would abort with "PENDING_INSTALL: unbound variable". Fixed by self-initializing (`: "${PENDING_INSTALL:=}" "${PENDING_UNINSTALL:=}"`) at the top of stage_toggle/stage_all/pending_under/apply_plan (non-destructive, matches the file's per-call defensive pattern). Added a regression test; proved load-bearing (removing the guard reproduces the abort).
+
+Tree hook-order corrections: none. The spec's expected off-list strings matched the actual browser-tree.json order verbatim - `INSTALL justify justify-watch-guard justify-watch-standing-by`, `INSTALL justify justify-watch-standing-by`, and `INSTALL memory memory-nudge memory-compact consolidate-nudge` (Beats/Hooks order: memory-approve, memory-nudge, memory-compact, consolidate-nudge, beats-rebuild[pinned], beats-staleness-guard[pinned], reflect-nudge[owner reflect]).
+
+Two spec-literal behaviors flagged for the orchestrator (NOT changed - the spec is explicit and this is design, not spec-fidelity):
+- full_uninstall fires (per the spec's OR formula) even when the owner's component leaf is staged-INSTALL while every one of its hooks is staged-uninstall (a contradictory input) -> emits UNINSTALL_COMPONENT, discarding the leaf install.
+- stage_all install only acts on currently-OFF leaves (per spec), so a currently-ON leaf individually staged-uninstall is NOT cleared by a subsequent "install all".
+
+Verification: `/bin/bash claude/hooks/test-component-browser.sh` = 44 passed, 0 failed (34 prior + 8 Task-4 + 1 Part-A sidecoach-none + 1 set-u regression). `bash -n install.sh` clean (exit 0). `bash -n browser-lib.sh` clean. Independent-reviewer gate: Codex unavailable on this box (`command -v codex` empty), so a fresh independent Claude reviewer (feature-dev:code-reviewer, not the producer) reviewed the diff; folded the set-u finding, flagged the two spec-literal behaviors above.
+
+Files touched:
+- claude/hooks/browser-lib.sh
+- claude/hooks/test-component-browser.sh
+- .claude/memory/session_2026-07-16_bucket-browser-task4-staging.md
+- .claude/memory/MEMORY.md

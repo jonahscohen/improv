@@ -68,15 +68,20 @@ INSTALLED="|Beats/memory|Beats/Hooks/memory-approve|Beats/Hooks/memory-nudge|"
 [ "$(item_state 'Beats/Hooks/memory-approve')" = "active" ] && ok "leaf active" || bad "leaf active"
 [ "$(item_state 'Beats/Hooks/reflect-nudge')" = "none" ] && ok "leaf none" || bad "leaf none"
 [ "$(item_state 'Beats/Hooks')" = "partial" ] && ok "hooks folder partial" || bad "hooks folder partial"
-[ "$(counts 'Beats/Hooks')" = "2/7" ] && ok "hooks folder counts" || bad "hooks folder counts"
+# pinned hooks count as always-on (beats-rebuild + beats-staleness-guard), so on = 2 probe + 2 pinned.
+[ "$(counts 'Beats/Hooks')" = "4/7" ] && ok "hooks folder counts" || bad "hooks folder counts"
 [ "$(item_state 'Beats')" = "partial" ] && ok "group partial" || bad "group partial"
-[ "$(counts 'Beats')" = "3/9" ] && ok "group counts" || bad "group counts"
+# on = memory leaf + memory-approve + memory-nudge (probe) + 2 pinned = 5 of 9.
+[ "$(counts 'Beats')" = "5/9" ] && ok "group counts" || bad "group counts"
 INSTALLED_ALL=""
 while IFS= read -r p; do INSTALLED_ALL="$INSTALLED_ALL|$p|"; done < <(leaf_paths 'Beats/Hooks')
 INSTALLED="$INSTALLED_ALL"
 [ "$(item_state 'Beats/Hooks')" = "active" ] && ok "hooks folder all active" || bad "hooks folder all active"
+# with nothing installed, the 2 pinned hooks force Beats/Hooks to read partial, never none.
 INSTALLED="||"
-[ "$(item_state 'Beats/Hooks')" = "none" ] && ok "hooks folder none" || bad "hooks folder none"
+[ "$(item_state 'Beats/Hooks')" = "partial" ] && ok "hooks folder pinned-partial" || bad "hooks folder pinned-partial"
+# a genuinely none rollup needs a pinned-free folder: sidecoach (2 hooks, no pinned).
+[ "$(item_state 'sidecoach')" = "none" ] && ok "pinned-free folder none" || bad "pinned-free folder none"
 unset BR_STATE_PROBE
 
 # ---- owner + pinned tests (Task 3.5) ----
@@ -105,6 +110,75 @@ missing=[h for h in hooks if h not in ho]
 print("missing owner:",missing,file=sys.stderr)
 sys.exit(0 if not missing else 1)
 PY
+
+# ---- staging + apply_plan (Task 4) ----
+# Same fake_probe/INSTALLED harness; stage_reset before each scenario.
+BR_STATE_PROBE='fake_probe'
+
+# 0. set -u safety: the pending accessors self-initialize, so calling one before any
+# stage_reset (install.sh runs `set -euo pipefail`) must not abort on an unbound global.
+unset PENDING_INSTALL PENDING_UNINSTALL
+INSTALLED="||"
+[ -z "$(apply_plan 2>&1)" ] && ok "apply_plan safe before stage_reset" || bad "apply_plan safe before stage_reset"
+
+# 1. toggle clears: staging a leaf then toggling it again nets to no pending.
+INSTALLED="||"; stage_reset
+stage_toggle 'tilt-lab'
+[ "$(pending_under 'tilt-lab')" = "1" ] && ok "toggle stages one" || bad "toggle stages one"
+stage_toggle 'tilt-lab'
+[ "$(pending_under 'tilt-lab')" = "0" ] && ok "toggle twice clears" || bad "toggle twice clears"
+
+# 2. justify partial install: one hook staged on, the other two land in the off-list.
+INSTALLED="||"; stage_reset
+stage_toggle 'justify/justify-source-guard'
+out="$(apply_plan)"
+case "$out" in
+  *"INSTALL justify justify-watch-guard justify-watch-standing-by"*) ok "justify partial install plan";;
+  *) bad "justify partial install plan";;
+esac
+
+# 3. pure-leaf install: a component leaf with no hooks emits a bare INSTALL line.
+INSTALLED="||"; stage_reset
+stage_toggle 'tilt-lab'
+out="$(apply_plan)"
+case "$out" in
+  *"INSTALL tilt-lab"*) ok "pure-leaf install plan";;
+  *) bad "pure-leaf install plan";;
+esac
+
+# 4. full uninstall via stage_all: every justify hook staged off collapses to a component uninstall.
+INSTALLED="|justify/justify-source-guard|justify/justify-watch-guard|justify/justify-watch-standing-by|"; stage_reset
+stage_all 'justify' uninstall
+out="$(apply_plan)"
+case "$out" in
+  *"UNINSTALL_COMPONENT justify"*) ok "full uninstall plan";;
+  *) bad "full uninstall plan";;
+esac
+
+# 5. partial preserve: an already-on hook stays on; only the untouched-off hook is off-listed.
+INSTALLED="|justify/justify-watch-guard|"; stage_reset
+stage_toggle 'justify/justify-source-guard'
+out="$(apply_plan)"
+case "$out" in
+  *"INSTALL justify justify-watch-standing-by"*) ok "partial preserve plan";;
+  *) bad "partial preserve plan";;
+esac
+
+# 6. pinned hook is not stageable: toggling a pinned hook is a no-op.
+INSTALLED="||"; stage_reset
+stage_toggle 'Beats/Hooks/beats-rebuild'
+[ "$(pending_under 'Beats/Hooks')" = "0" ] && ok "pinned not stageable" || bad "pinned not stageable"
+
+# 7. memory partial install (monolithic): off-list is memory's other non-pinned hooks in tree order.
+INSTALLED="||"; stage_reset
+stage_toggle 'Beats/Hooks/memory-approve'
+out="$(apply_plan)"
+case "$out" in
+  *"INSTALL memory memory-nudge memory-compact consolidate-nudge"*) ok "memory partial install plan";;
+  *) bad "memory partial install plan";;
+esac
+
+unset BR_STATE_PROBE
 
 echo "== $pass passed, $fail failed =="
 [ "$fail" = 0 ]
