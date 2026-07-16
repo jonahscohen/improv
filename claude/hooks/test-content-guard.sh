@@ -86,17 +86,26 @@ cgs_allows "prose check mark U+2713"      "'taste '+chr(0x2713)+' pass'"
 p=$(mk_transcript "chr(0x2705)+' x'"); out=$(run_cgs "$p" 1); rm -f "$p"
 if echo "$out" | grep -q '"decision": *"block"'; then echo "FAIL [cgs]: loop-guard (blocked while active)"; FAILS+=("cgs:loop-guard"); ((FAIL++)); else echo "PASS [cgs]: loop-guard honors stop_hook_active"; ((PASS++)); fi
 
-# ---------- settings.json registration + validity ----------
-for f in "$HOME/.claude/settings.json" "/Users/spare3/Documents/Github/improv/claude/settings.json"; do
-  if python3 -c "import json,sys
-d=json.load(open(sys.argv[1]))
-cmds=[h.get('command','') for e in d['hooks']['Stop'] for h in e.get('hooks',[])]
-sys.exit(0 if any('content-guard-stop.sh' in c for c in cmds) else 1)" "$f" 2>/dev/null; then
-    echo "PASS [settings]: $(basename "$(dirname "$f")")/settings.json valid + registered"; ((PASS++))
+# ---------- registration + validity ----------
+# Stage 2: content-guard-stop moved to the safety cluster. Its wiring is now
+# declared in cluster-wirings.json (repo source of truth) and deployed into the
+# user's settings.json Stop when the safety cluster is installed.
+CW="$HOOK_DIR/cluster-wirings.json"
+if python3 -c "import json,sys
+w=json.load(open(sys.argv[1]))
+sys.exit(0 if any(e.get('event')=='Stop' for e in w.get('content-guard-stop.sh',[])) else 1)" "$CW" 2>/dev/null; then
+  echo "PASS [registration]: content-guard-stop declared in cluster-wirings.json (safety cluster, Stop)"; ((PASS++))
+else
+  echo "FAIL [registration]: content-guard-stop missing from cluster-wirings.json"; FAILS+=("cluster-wirings"); ((FAIL++))
+fi
+# live settings.json validity (if present) - informational
+if [ -f "$HOME/.claude/settings.json" ]; then
+  if python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$HOME/.claude/settings.json" 2>/dev/null; then
+    echo "PASS [settings]: live ~/.claude/settings.json is valid JSON"; ((PASS++))
   else
-    echo "FAIL [settings]: $f invalid or missing content-guard-stop.sh"; FAILS+=("settings:$f"); ((FAIL++))
+    echo "FAIL [settings]: live ~/.claude/settings.json invalid JSON"; FAILS+=("live-settings"); ((FAIL++))
   fi
-done
+fi
 
 echo; echo "RESULTS: $PASS passed, $FAIL failed"
 if [ "$FAIL" -ne 0 ]; then printf 'FAILED: %s\n' "${FAILS[@]}"; exit 1; fi

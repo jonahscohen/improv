@@ -21,7 +21,10 @@ set -u
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INSTALL="$REPO_DIR/install.sh"
 
-SELECTIONS=(config "config,cmux" "config,fable" "config,reflect" "config,voice-output")
+SELECTIONS=(config "config,cmux" "config,fable" "config,reflect" "config,voice-output"
+  "config,safety" "config,verification" "config,question-discipline" "config,grounding"
+  "config,api-drift" "config,planning-git" "config,surface" "config,model-routing"
+  safety bash-guard)
 [ "${PARITY_FULL:-0}" = 1 ] && SELECTIONS+=("config,sidecoach")
 
 fail=0

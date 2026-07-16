@@ -1,0 +1,313 @@
+{
+  "bash-guard.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/bash-guard.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "content-guard.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Write|Edit|MultiEdit",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/content-guard.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "content-guard-stop.sh": [
+    {
+      "event": "Stop",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/content-guard-stop.sh",
+        "timeout": 10
+      }
+    }
+  ],
+  "destructive-ops-guard.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/destructive-ops-guard.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "destructive-confirm-detect.sh": [
+    {
+      "event": "UserPromptSubmit",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/destructive-confirm-detect.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "verify-before-done.sh": [
+    {
+      "event": "PostToolUse",
+      "matcher": "Write|Edit|MultiEdit|Bash",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/verify-before-done.sh",
+        "timeout": 5
+      }
+    },
+    {
+      "event": "PostToolUse",
+      "matcher": "Read",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/verify-before-done.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "verify-before-done-stop.sh": [
+    {
+      "event": "Stop",
+      "matcher": "",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/verify-before-done-stop.sh"
+      }
+    }
+  ],
+  "verify-clear.sh": [
+    {
+      "event": "PostToolUse",
+      "matcher": "mcp__claude-in-chrome__javascript_tool|mcp__claude-in-chrome__read_page|mcp__claude-in-chrome__get_page_text|mcp__claude-in-chrome__navigate|mcp__claude-in-chrome__get_screenshot|mcp__claude-in-chrome__computer",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/verify-clear.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "verify-manual.sh": [
+    {
+      "event": "UserPromptSubmit",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/verify-manual.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "screenshot-open-mandate.sh": [
+    {
+      "event": "PostToolUse",
+      "matcher": "Bash|mcp__claude-in-chrome__computer",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/screenshot-open-mandate.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "screenshot-open-clear.sh": [
+    {
+      "event": "PostToolUse",
+      "matcher": "Read",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/screenshot-open-clear.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "second-fix-gate.sh": [
+    {
+      "event": "PostToolUse",
+      "matcher": "Write|Edit|MultiEdit|Bash",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/second-fix-gate.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "validation-guard.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "mcp__claude-in-chrome__javascript_tool",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/validation-guard.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "multiple-choice-detect-stop.sh": [
+    {
+      "event": "Stop",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/multiple-choice-detect-stop.sh",
+        "timeout": 10
+      }
+    }
+  ],
+  "multiple-choice-inject-prompt.sh": [
+    {
+      "event": "UserPromptSubmit",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/multiple-choice-inject-prompt.sh",
+        "timeout": 5,
+        "statusMessage": "Checking for multiple-choice violations..."
+      }
+    }
+  ],
+  "grounding-gate.sh": [
+    {
+      "event": "UserPromptSubmit",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/grounding-gate.sh",
+        "timeout": 5,
+        "statusMessage": "Grounding check (read code+beats before probing)..."
+      }
+    }
+  ],
+  "grounding-guard.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/grounding-guard.sh",
+        "timeout": 5
+      }
+    },
+    {
+      "event": "PreToolUse",
+      "matcher": "mcp__claude-in-chrome__|mcp__computer-use__",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/grounding-guard.sh",
+        "timeout": 5
+      }
+    }
+  ],
+  "api-drift-detector.sh": [
+    {
+      "event": "PostToolUse",
+      "matcher": "",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/api-drift-detector.sh"
+      }
+    }
+  ],
+  "api-drift-stop.sh": [
+    {
+      "event": "Stop",
+      "matcher": "",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/api-drift-stop.sh"
+      }
+    }
+  ],
+  "api-drift-ack.sh": [
+    {
+      "event": "UserPromptSubmit",
+      "matcher": "",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/api-drift-ack.sh"
+      }
+    }
+  ],
+  "plan-consistency-lint.sh": [
+    {
+      "event": "Stop",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/plan-consistency-lint.sh",
+        "timeout": 10
+      }
+    }
+  ],
+  "push-ahead-check.sh": [
+    {
+      "event": "SessionStart",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/push-ahead-check.sh",
+        "timeout": 5,
+        "statusMessage": "Checking for unpushed commits..."
+      }
+    }
+  ],
+  "claude-surface.sh": [
+    {
+      "event": "SessionStart",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/claude-surface.sh",
+        "timeout": 5,
+        "statusMessage": "Detecting surface..."
+      }
+    },
+    {
+      "event": "UserPromptSubmit",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/claude-surface.sh turn",
+        "timeout": 5
+      }
+    }
+  ],
+  "surface-visual-gate.sh": [
+    {
+      "event": "Stop",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/surface-visual-gate.sh",
+        "timeout": 8
+      }
+    }
+  ],
+  "model-router-guard.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/model-router-guard.sh",
+        "timeout": 5
+      }
+    },
+    {
+      "event": "PreToolUse",
+      "matcher": "Agent|Workflow",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/model-router-guard.sh",
+        "timeout": 5
+      }
+    }
+  ]
+}

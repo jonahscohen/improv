@@ -55,27 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/bash-guard.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/destructive-ops-guard.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/grounding-guard.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
             "command": "~/.claude/hooks/justify-source-guard.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/model-router-guard.sh",
             "timeout": 5
           }
         ]
@@ -91,36 +71,11 @@
         ]
       },
       {
-        "matcher": "mcp__claude-in-chrome__javascript_tool",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/validation-guard.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "mcp__claude-in-chrome__|mcp__computer-use__",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/grounding-guard.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
         "matcher": "Agent|Workflow",
         "hooks": [
           {
             "type": "command",
             "command": "~/.claude/hooks/agent-teams-guard.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/model-router-guard.sh",
             "timeout": 5
           }
         ]
@@ -141,11 +96,6 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/memory-approve.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/content-guard.sh",
             "timeout": 5
           },
           {
@@ -177,12 +127,6 @@
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/claude-surface.sh",
-            "timeout": 5,
-            "statusMessage": "Detecting surface..."
-          },
-          {
-            "type": "command",
             "command": "~/.claude/hooks/node-shim-heal.sh",
             "timeout": 10
           }
@@ -201,12 +145,6 @@
             "command": "~/.claude/hooks/memory-compact.sh",
             "timeout": 5,
             "statusMessage": "Keeping the beats index under load budget..."
-          },
-          {
-            "type": "command",
-            "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/push-ahead-check.sh",
-            "timeout": 5,
-            "statusMessage": "Checking for unpushed commits..."
           }
         ]
       },
@@ -245,48 +183,6 @@
         ]
       }
     ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/claude-surface.sh turn",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/destructive-confirm-detect.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/verify-manual.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/multiple-choice-inject-prompt.sh",
-            "timeout": 5,
-            "statusMessage": "Checking for multiple-choice violations..."
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/grounding-gate.sh",
-            "timeout": 5,
-            "statusMessage": "Grounding check (read code+beats before probing)..."
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/api-drift-ack.sh"
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit|Bash",
@@ -294,16 +190,6 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/memory-nudge.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/verify-before-done.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/second-fix-gate.sh",
             "timeout": 5
           }
         ]
@@ -327,60 +213,11 @@
             "timeout": 5
           }
         ]
-      },
-      {
-        "matcher": "mcp__claude-in-chrome__javascript_tool|mcp__claude-in-chrome__read_page|mcp__claude-in-chrome__get_page_text|mcp__claude-in-chrome__navigate|mcp__claude-in-chrome__get_screenshot|mcp__claude-in-chrome__computer",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/verify-clear.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Bash|mcp__claude-in-chrome__computer",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/screenshot-open-mandate.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/screenshot-open-clear.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/verify-before-done.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/api-drift-detector.sh"
-          }
-        ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/surface-visual-gate.sh",
-            "timeout": 8
-          },
           {
             "type": "command",
             "command": "~/.claude/hooks/node-shim-heal.sh",
@@ -392,53 +229,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/multiple-choice-detect-stop.sh",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/content-guard-stop.sh",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/plan-consistency-lint.sh",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "~/.claude/hooks/justify-watch-guard.sh",
             "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/verify-before-done-stop.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/api-drift-stop.sh"
           }
         ]
       }

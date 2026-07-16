@@ -146,6 +146,11 @@ link_or_copy() {
     ln -s "$src" "$dst"
   else
     mkdir -p "$(dirname "$dst")"
+    # Back up a DIFFERENT real file before overwriting (e.g. a user's same-named
+    # hook) - but do not churn our own byte-identical re-install.
+    if [ -e "$dst" ] && ! cmp -s "$dst" "$src" 2>/dev/null && declare -f backup_if_exists >/dev/null 2>&1; then
+      backup_if_exists "$dst"
+    fi
     rm -f "$dst"                     # clears a stale symlink, so nothing dangles
     cp "$src" "$dst"
     chmod +x "$dst" 2>/dev/null || true
@@ -453,6 +458,46 @@ FILES+=("~/.claude/hooks/fable-orchestrator-guard.sh\n~/.claude/hooks/detect-ses
 DIRS+=("")
 PICKS+=(0)
 
+# ============================================================
+# QA-hook clusters (Stage 2) - the standalone guard/QA suite, now selectable.
+# Each cluster is a KEY (TUI row + --only). Individual member hooks are NOT keys;
+# they live in HOOK_ON / HOOK_OFF and install via the standalone-hooks pass.
+# cluster_hooks() is the membership source of truth. Default-on but removable.
+# ============================================================
+KEYS+=(safety verification question-discipline grounding api-drift planning-git surface model-routing)
+TITLES+=(
+  "Safety guards (bash/content/destructive)"
+  "Verification discipline (verify-before-done)"
+  "Question discipline (AskUserQuestion)"
+  "Grounding (anti-hallucination)"
+  "API-drift detection"
+  "Planning + git hygiene"
+  "Surface presentation (rich vs text)"
+  "Model routing (cost control)"
+)
+DESCS+=(
+  "Safety guards: block forbidden bash commands, forbidden file content (emojis, emdashes, AI-attribution), and destructive infra ops. The core guardrails - default on, removable."
+  "Verification discipline: enforce verify-before-you-claim-done - visual/screenshot checks, real-input validation, the second-fix debugging gate. Blocks ending a turn on unverified UI work."
+  "Question discipline: route every user-facing question through AskUserQuestion instead of plain-text option lists."
+  "Grounding: anti-hallucination gates that require citing a source before asserting."
+  "API-drift detection: catch breaking API / tool-contract drift in tool outputs and block ending a turn while it is unresolved."
+  "Planning + git hygiene: plan-doc consistency lint (dispatch ownership + sequencing) plus a surfacing of committed-but-unpushed work at session start."
+  "Surface presentation: detect the Claude Code surface (rich vs text-only) and enforce presenting data visually on rich surfaces."
+  "Model routing: govern which model runs which tool (cost control). Installs detect-session-model alongside."
+)
+FILES+=(
+  "~/.claude/hooks/ (5 safety hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (8 verification hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (4 question-discipline hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (2 grounding hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (3 api-drift hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (2 planning-git hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (2 surface hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/model-router-guard.sh + detect-session-model.sh\n~/.claude/settings.json (wiring)"
+)
+DIRS+=("" "" "" "" "" "" "" "")
+PICKS+=(1 1 1 1 1 1 1 1)
+
 # Personal components - hidden from public TUI and --help. Surfaced only when
 # the maintainer passes --personal (undocumented, undocumented-on-purpose).
 # Lets one human keep cross-machine sync for ghostty and shaders without exposing
@@ -504,6 +549,99 @@ set_all() {
   for i in "${!PICKS[@]}"; do PICKS[$i]="$v"; done
 }
 
+# --- Stage 2: QA-hook cluster membership + per-hook selection state ---
+CLUSTER_KEYS=(safety verification question-discipline grounding api-drift planning-git surface model-routing)
+HOOK_ON=""   # scripts explicitly requested via --only <hook>
+HOOK_OFF=""  # scripts deselected in the TUI drill-in
+
+cluster_hooks() {
+  case "$1" in
+    safety)              echo "bash-guard.sh content-guard.sh content-guard-stop.sh destructive-ops-guard.sh destructive-confirm-detect.sh" ;;
+    verification)        echo "verify-before-done.sh verify-before-done-stop.sh verify-clear.sh verify-manual.sh screenshot-open-mandate.sh screenshot-open-clear.sh second-fix-gate.sh validation-guard.sh" ;;
+    question-discipline) echo "multiple-choice-detect-stop.sh multiple-choice-inject-prompt.sh multiple-choice-enforce.sh question-enforcement.sh" ;;
+    grounding)           echo "grounding-gate.sh grounding-guard.sh" ;;
+    api-drift)           echo "api-drift-detector.sh api-drift-stop.sh api-drift-ack.sh" ;;
+    planning-git)        echo "plan-consistency-lint.sh push-ahead-check.sh" ;;
+    surface)             echo "claude-surface.sh surface-visual-gate.sh" ;;
+    model-routing)       echo "model-router-guard.sh" ;;
+    *)                   echo "" ;;
+  esac
+}
+
+# True if the token (with or without .sh) names a hook in any cluster.
+is_cluster_hook() {
+  local want="$1" c
+  [[ "$want" != *.sh ]] && want="${want}.sh"
+  for c in "${CLUSTER_KEYS[@]}"; do
+    case " $(cluster_hooks "$c") " in *" $want "*) return 0 ;; esac
+  done
+  return 1
+}
+
+# True if the deployed hook is OURS: a repo symlink, or a copy byte-identical to the
+# repo source. A user's different same-named file returns false.
+is_our_hook() {
+  local h="$CLAUDE_DIR/hooks/$1" src="$REPO_DIR/claude/hooks/$1"
+  { [ -L "$h" ] && [[ "$(readlink "$h")" == "$REPO_DIR/"* ]]; } && return 0
+  [ -f "$h" ] && [ -f "$src" ] && cmp -s "$h" "$src" && return 0
+  return 1
+}
+
+# A cluster is "installed" iff ANY member hook is OURS on disk (ownership-aware: a
+# user's different same-named hook does not keep the cluster showing active).
+cluster_detect() {
+  local h
+  for h in $(cluster_hooks "$1"); do
+    is_our_hook "$h" && { echo active; return; }
+  done
+  echo not-installed
+}
+
+# Remove a repo-owned hook symlink / Improv-marked file only - never a user's
+# same-named hook.
+rm_hook_if_ours() {
+  # Remove only OUR deployment; a user's different same-named file is left intact.
+  is_our_hook "$1" && rm -f "$CLAUDE_DIR/hooks/$1"
+}
+
+# If settings.json is a legacy symlink into the repo, convert to a real file before
+# mutating it (else edits would hit the repo's source settings).
+ensure_real_settings() {
+  if [ -L "$SETTINGS_JSON" ] && [[ "$(readlink "$SETTINGS_JSON")" == "$REPO_DIR/"* ]]; then
+    cp -L "$SETTINGS_JSON" "$SETTINGS_JSON.mig" && rm -f "$SETTINGS_JSON" && mv "$SETTINGS_JSON.mig" "$SETTINGS_JSON"
+  fi
+}
+
+# Remove a cluster's member hooks: symlinks + their settings.json entries (all
+# events, empty-group cleanup). detect-session-model is shared with fable - left.
+deactivate_cluster() {
+  local name="$1" h
+  for h in $(cluster_hooks "$name"); do
+    rm_hook_if_ours "$h"
+  done
+  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
+    ensure_real_settings
+    NAMES="$(cluster_hooks "$name")" python3 -c "
+import json, os
+p = '$SETTINGS_JSON'
+wp = '$REPO_DIR/claude/hooks/cluster-wirings.json'
+names = set(os.environ['NAMES'].split())
+wir = json.load(open(wp)) if os.path.exists(wp) else {}
+cmds = set(e['hook'].get('command') for s in names for e in wir.get(s, []))
+with open(p) as f: d = json.load(f)
+hooks = d.get('hooks', {})
+for ev in list(hooks.keys()):
+    ng = []
+    for g in hooks[ev]:
+        g['hooks'] = [h for h in g.get('hooks', []) if h.get('command') not in cmds]
+        if g.get('hooks'): ng.append(g)
+    if ng: hooks[ev] = ng
+    else: del hooks[ev]
+with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
+"
+  fi
+}
+
 apply_only() {
   local csv="$1"
   set_all 0
@@ -523,6 +661,11 @@ apply_only() {
       k="voice-input"
     fi
     if [[ "$(key_index "$k")" == "-1" ]]; then
+      if is_cluster_hook "$k"; then
+        local hk="$k"; [[ "$hk" != *.sh ]] && hk="${hk}.sh"
+        HOOK_ON="$HOOK_ON $hk"
+        continue
+      fi
       err "Unknown component in --only: $k"
       err "Valid keys: ${KEYS[*]}"
       exit 2
@@ -566,13 +709,17 @@ Components (for --only KEYS):
   Core:     brain, config, memory, statusline, nvm, ampersand
   Channels: discord, voice-input, voice-output
   Tools:    cmux, fable, sidecoach, reflect, task-list, tilt-lab, lotus
+  Clusters: safety, verification, question-discipline, grounding, api-drift,
+            planning-git, surface, model-routing (each a QA-hook bundle; every
+            member hook is also --only-able, e.g. --only bash-guard)
   Skills:   skills (bundle), tactical-polish, component-gallery, fontshare,
             motion, design-build, curate, design-references, social-media,
             design-team, visual-effects, icon-source
 
   'skills' installs the whole design pipeline + peer skills as a bundle; the
   individual skill keys let you take just one (e.g. --only icon-source).
-  'config' installs the full guard/QA hook suite that settings.json wires.
+  'config' installs core (permissions/plugins/statusline) + app-owned hooks;
+  the QA-hook suite is now the 8 selectable clusters above (default-on, removable).
 EOF
 }
 
@@ -794,6 +941,28 @@ run_tui_gum() {
     set_pick "$k" 1
   done <<< "$chosen"
 
+  # Phase 2 (nested drill-in): for each picked cluster, optionally edit which of
+  # its hooks install. Default is all; deselecting a hook adds it to HOOK_OFF.
+  HOOK_OFF=""
+  local _c _members _keepcsv _keep _m
+  for _c in "${CLUSTER_KEYS[@]}"; do
+    picked "$_c" || continue
+    _members="$(cluster_hooks "$_c")"
+    if gum confirm "Customize the hooks in '$_c'? (default: install all)" --default=false \
+         --selected.background "#0e7490" --selected.foreground "#ffffff" 2>/dev/null; then
+      _keepcsv="$(printf '%s\n' $_members | paste -sd, -)"
+      _keep="$(printf '%s\n' $_members \
+        | gum choose --no-limit --selected "$_keepcsv" \
+            --header "'$_c' hooks - space to toggle off, enter to confirm" \
+            --cursor.foreground "#67e8f9" --selected.foreground "#67e8f9" \
+            --item.foreground "#ffffff" \
+            --cursor-prefix "[ ] " --selected-prefix "[✓] " --unselected-prefix "[ ] ")" || _keep="$_members"
+      for _m in $_members; do
+        case $'\n'"$_keep"$'\n' in *$'\n'"$_m"$'\n'*) ;; *) HOOK_OFF="$HOOK_OFF $_m" ;; esac
+      done
+    fi
+  done
+
   clear
   show_picks_summary
   gum confirm "Proceed with these components?" \
@@ -902,7 +1071,7 @@ detect_component() {
   local key="$1"
   case "$key" in
     brain)      grep -Fq "<!-- improv:brain:begin -->" "$CLAUDE_DIR/CLAUDE.md" 2>/dev/null && echo active || echo not-installed ;;
-    config)     [ -f "$CLAUDE_DIR/hooks/bash-guard.sh" ] && echo active || echo not-installed ;;
+    config)     [ -e "$CLAUDE_DIR/hud.sh" ] && echo active || echo not-installed ;;
     memory)     grep -Fq "<!-- improv:memory-discipline:begin -->" "$CLAUDE_DIR/CLAUDE.md" 2>/dev/null && echo active || echo not-installed ;;
     skills)     { [ -d "$CLAUDE_DIR/skills/tactical-polish" ] || [ -d "$CLAUDE_DIR/skills/component-gallery-reference" ]; } && echo active || echo not-installed ;;
     statusline) [ -L "$CLAUDE_DIR/statusline-command.sh" ] && echo active || echo not-installed ;;
@@ -931,6 +1100,7 @@ detect_component() {
     design-team)       [ -d "$CLAUDE_DIR/skills/design-team" ] && echo active || echo not-installed ;;
     visual-effects)    [ -d "$CLAUDE_DIR/skills/visual-effects" ] && echo active || echo not-installed ;;
     icon-source)       [ -d "$CLAUDE_DIR/skills/icon-source" ] && echo active || echo not-installed ;;
+    safety|verification|question-discipline|grounding|api-drift|planning-git|surface|model-routing) cluster_detect "$key" ;;
     *)          echo not-installed ;;
   esac
 }
@@ -991,22 +1161,24 @@ deactivate_brain() {
 
 deactivate_config() {
   local f
-  for f in bash-guard.sh content-guard.sh memory-approve.sh destructive-ops-guard.sh destructive-confirm-detect.sh \
-           agent-teams-guard.sh memory-nudge.sh multiple-choice-detect-stop.sh multiple-choice-inject-prompt.sh \
-           multiple-choice-enforce.sh question-enforcement.sh screenshot-open-mandate.sh screenshot-open-clear.sh \
-           second-fix-gate.sh validation-guard.sh verify-before-done.sh verify-before-done-stop.sh verify-clear.sh verify-manual.sh \
-           api-drift-detector.sh api-drift-stop.sh api-drift-ack.sh voice-gate.sh; do
+  # Stage 2: config owns only the app-owned residue now. The QA-suite hooks moved
+  # to their clusters and are removed by deactivate_cluster, NOT here.
+  for f in memory-approve.sh agent-teams-guard.sh memory-nudge.sh memory-compact.sh \
+           consolidate-nudge.sh voice-gate.sh block-clickup-writes.sh \
+           justify-source-guard.sh justify-watch-guard.sh \
+           node-shim-heal.sh visualizer-guard.sh \
+           codex-failure-watcher.sh codex-rescue-guard.sh; do
     if [ -L "$CLAUDE_DIR/hooks/$f" ] && [[ "$(readlink "$CLAUDE_DIR/hooks/$f")" == "$REPO_DIR/"* ]]; then
       rm -f "$CLAUDE_DIR/hooks/$f"
     elif [ -f "$CLAUDE_DIR/hooks/$f" ] && grep -Fq "Improv" "$CLAUDE_DIR/hooks/$f" 2>/dev/null; then
       rm -f "$CLAUDE_DIR/hooks/$f"
     fi
   done
-  if [ -L "$CLAUDE_DIR/startup-check.sh" ] && [[ "$(readlink "$CLAUDE_DIR/startup-check.sh")" == "$REPO_DIR/"* ]]; then
-    rm -f "$CLAUDE_DIR/startup-check.sh"
-  elif [ -f "$CLAUDE_DIR/startup-check.sh" ] && grep -Fq "Improv" "$CLAUDE_DIR/startup-check.sh" 2>/dev/null; then
-    rm -f "$CLAUDE_DIR/startup-check.sh"
-  fi
+  # startup-check.sh is shared with - and owned by - the memory component (memory
+  # symlinks + wires it too). Do NOT remove it on config deactivate, or an active
+  # memory install would be left wiring a missing loader.
+  # hud.sh is config-unique (the config-core marker + read-only viewer)
+  [ -L "$CLAUDE_DIR/hud.sh" ] && [[ "$(readlink "$CLAUDE_DIR/hud.sh")" == "$REPO_DIR/"* ]] && rm -f "$CLAUDE_DIR/hud.sh"
   if [ -L "$CLAUDE_DIR/settings.json" ] && [[ "$(readlink "$CLAUDE_DIR/settings.json")" == "$REPO_DIR/"* ]]; then
     rm -f "$CLAUDE_DIR/settings.json"
   fi
@@ -1019,14 +1191,21 @@ try:
         d = json.load(f)
 except Exception:
     sys.exit(0)
-OUR_HOOK_MARKERS = ["bash-guard.sh", "content-guard.sh", "memory-approve.sh", "destructive-ops-guard.sh"]
+# Stage 2: config owns only the app-owned residue (cluster hooks are cluster-owned).
+RESIDUE = ["memory-approve.sh", "agent-teams-guard.sh", "memory-nudge.sh", "memory-compact.sh",
+           "consolidate-nudge.sh", "voice-gate.sh", "block-clickup-writes.sh",
+           "justify-source-guard.sh", "justify-watch-guard.sh", "node-shim-heal.sh",
+           "visualizer-guard.sh", "codex-failure-watcher.sh", "codex-rescue-guard.sh"]
 hooks = d.get("hooks", {})
-for hook_type in ["PreToolUse"]:
-    entries = hooks.get(hook_type, [])
-    filtered = [e for e in entries if not any(m in json.dumps(e) for m in OUR_HOOK_MARKERS)]
-    if filtered:
-        hooks[hook_type] = filtered
-    elif hook_type in hooks:
+for hook_type in list(hooks.keys()):
+    ng = []
+    for g in hooks[hook_type]:
+        g["hooks"] = [h for h in g.get("hooks", []) if not any(m in h.get("command", "") for m in RESIDUE)]
+        if g.get("hooks"):
+            ng.append(g)
+    if ng:
+        hooks[hook_type] = ng
+    else:
         del hooks[hook_type]
 OUR_ALLOW = [
     "Bash(npx create-next-app@latest:*)", "Bash(claude mcp:*)", "mcp__pencil",
@@ -1423,6 +1602,7 @@ deactivate_component() {
     statusline) deactivate_statusline ;;
     cmux)       deactivate_cmux ;;
     fable)      deactivate_fable ;;
+    safety|verification|question-discipline|grounding|api-drift|planning-git|surface|model-routing) deactivate_cluster "$1" ;;
     nvm)        deactivate_nvm ;;
     ampersand)  deactivate_ampersand ;;
     discord)    deactivate_discord ;;
@@ -1900,24 +2080,16 @@ if picked config; then
   # voice-mandate/voice-toggle, reflect-nudge, sidecoach-*) are wired AND deployed
   # by their own components and are intentionally excluded here. detect-session-model
   # is a shared library (model-router-guard + fable-orchestrator-guard exec it).
+  # Stage 2 dissolved the QA suite into selectable clusters (safety, verification,
+  # question-discipline, grounding, api-drift, planning-git, surface, model-routing)
+  # - those hooks + detect-session-model now deploy+wire via the cluster pass, NOT
+  # here. What remains is the app-owned residue that Stage 3 will move to its apps
+  # (memory / cmux / voice / clickup / justify / visualizer / codex).
   CONFIG_HOOKS=(
-    bash-guard.sh content-guard.sh memory-approve.sh
-    destructive-ops-guard.sh destructive-confirm-detect.sh
-    agent-teams-guard.sh memory-nudge.sh
-    multiple-choice-detect-stop.sh multiple-choice-inject-prompt.sh
-    multiple-choice-enforce.sh question-enforcement.sh
-    screenshot-open-mandate.sh screenshot-open-clear.sh
-    second-fix-gate.sh validation-guard.sh
-    verify-before-done.sh verify-before-done-stop.sh verify-clear.sh verify-manual.sh
-    voice-gate.sh
-    block-clickup-writes.sh consolidate-nudge.sh content-guard-stop.sh
-    grounding-gate.sh grounding-guard.sh justify-source-guard.sh
-    justify-watch-guard.sh memory-compact.sh model-router-guard.sh
-    node-shim-heal.sh
-    api-drift-detector.sh api-drift-stop.sh api-drift-ack.sh
-    detect-session-model.sh
-    claude-surface.sh visualizer-guard.sh surface-visual-gate.sh
-    plan-consistency-lint.sh push-ahead-check.sh
+    memory-approve.sh agent-teams-guard.sh memory-nudge.sh memory-compact.sh
+    consolidate-nudge.sh voice-gate.sh block-clickup-writes.sh
+    justify-source-guard.sh justify-watch-guard.sh
+    node-shim-heal.sh visualizer-guard.sh
     codex-failure-watcher.sh codex-rescue-guard.sh
   )
   # link_or_copy, not safe_cp: on a dev checkout these become SYMLINKS so a git pull
@@ -3194,6 +3366,128 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
   fi
 
   ok "fable orchestrator-only guard installed"
+fi
+
+# ============================================================
+# 16d. QA-hook clusters (Stage 2) - install the effective standalone-hook set
+# ============================================================
+# Effective set = (picked clusters' members - HOOK_OFF) + HOOK_ON. Each hook is
+# symlinked + wired from claude/hooks/cluster-wirings.json (exact entry objects).
+# Clusters have no install block of their own - this pass is the install unit.
+
+_cluster_any=0
+for _c in "${CLUSTER_KEYS[@]}"; do picked "$_c" && _cluster_any=1; done
+if [ "$_cluster_any" = 1 ] || [ -n "${HOOK_ON// /}" ]; then
+  echo ""
+  info "--- QA-hook clusters ---"
+  # Standalone-safe: reachable via `--only <cluster>` / `--only <hook>` without config.
+  mkdir -p "$CLAUDE_DIR/hooks"
+  # Legacy migration: if settings.json is a symlink into the repo, convert to a real
+  # file first (else we would write through the symlink into the repo's settings).
+  if [ -L "$SETTINGS_JSON" ] && [[ "$(readlink "$SETTINGS_JSON")" == "$REPO_DIR/"* ]]; then
+    cp -L "$SETTINGS_JSON" "$SETTINGS_JSON.mig" && rm -f "$SETTINGS_JSON" && mv "$SETTINGS_JSON.mig" "$SETTINGS_JSON"
+  fi
+  [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
+
+  # Build the effective hook set (space-delimited, deduped).
+  _eff=""
+  for _c in "${CLUSTER_KEYS[@]}"; do
+    picked "$_c" || continue
+    for _h in $(cluster_hooks "$_c"); do
+      case " $HOOK_OFF " in *" $_h "*) continue ;; esac   # deselected in drill-in
+      case " $_eff " in *" $_h "*) ;; *) _eff="$_eff $_h" ;; esac
+    done
+  done
+  for _h in $HOOK_ON; do
+    case " $_eff " in *" $_h "*) ;; *) _eff="$_eff $_h" ;; esac
+  done
+
+  # Symlink each effective hook (+ detect-session-model.sh when model-router is in).
+  for _h in $_eff; do
+    [ -f "$REPO_DIR/claude/hooks/$_h" ] || { warn "cluster hook missing in repo: $_h"; continue; }
+    chmod +x "$REPO_DIR/claude/hooks/$_h"
+    link_or_copy "$REPO_DIR/claude/hooks/$_h" "$CLAUDE_DIR/hooks/$_h"
+    if [ "$_h" = "model-router-guard.sh" ]; then
+      chmod +x "$REPO_DIR/claude/hooks/detect-session-model.sh"
+      link_or_copy "$REPO_DIR/claude/hooks/detect-session-model.sh" "$CLAUDE_DIR/hooks/detect-session-model.sh"
+    fi
+  done
+
+  # Only wire hooks that actually landed on disk; track any that did NOT so their
+  # stale settings entries (from a prior run) get cleaned in the reconcile below.
+  _eff_ok=""; _eff_missing=""
+  for _h in $_eff; do
+    if [ -e "$CLAUDE_DIR/hooks/$_h" ]; then _eff_ok="$_eff_ok $_h"; else _eff_missing="$_eff_missing $_h"; fi
+  done
+  _eff="$_eff_ok"
+
+  # Wire each effective hook's entries verbatim from cluster-wirings.json.
+  if command -v python3 >/dev/null 2>&1; then
+    EFF="$_eff" python3 -c "
+import json, os
+p = '$SETTINGS_JSON'
+wp = '$REPO_DIR/claude/hooks/cluster-wirings.json'
+eff = set(os.environ['EFF'].split())
+with open(p) as f: d = json.load(f)
+hooks = d.setdefault('hooks', {})
+with open(wp) as f: wir = json.load(f)
+def add(event, matcher, hookobj):
+    groups = hooks.setdefault(event, [])
+    if matcher is not None:
+        g = next((x for x in groups if x.get('matcher') == matcher), None)
+        if g is None:
+            g = {'matcher': matcher, 'hooks': []}; groups.append(g)
+    else:
+        g = next((x for x in groups if 'matcher' not in x), None)
+        if g is None:
+            g = {}; groups.append(g)
+    hl = g.setdefault('hooks', [])
+    if not any(h.get('command') == hookobj.get('command') for h in hl):
+        hl.append(hookobj)
+for script, entries in wir.items():
+    if script in eff:
+        for e in entries:
+            add(e['event'], e.get('matcher'), e['hook'])
+with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
+" && ok "QA-hook clusters wired (from cluster-wirings.json)" || warn "Could not wire cluster hooks"
+  fi
+
+  # Reconcile: remove (a) any picked-cluster member now in HOOK_OFF (so re-running
+  # with a hook toggled off REMOVES it), and (b) any effective hook whose repo file
+  # went missing (clean its stale settings entry from a prior run).
+  _remove="$_eff_missing"
+  for _c in "${CLUSTER_KEYS[@]}"; do
+    picked "$_c" || continue
+    for _h in $(cluster_hooks "$_c"); do
+      case " $HOOK_OFF " in *" $_h "*)
+        case " $_remove " in *" $_h "*) ;; *) _remove="$_remove $_h" ;; esac ;;
+      esac
+    done
+  done
+  if [ -n "${_remove// /}" ]; then
+    for _h in $_remove; do rm_hook_if_ours "$_h"; done
+    if command -v python3 >/dev/null 2>&1; then
+      RM="$_remove" python3 -c "
+import json, os
+p = '$SETTINGS_JSON'
+wp = '$REPO_DIR/claude/hooks/cluster-wirings.json'
+rm = set(os.environ['RM'].split())
+wir = json.load(open(wp)) if os.path.exists(wp) else {}
+cmds = set(e['hook'].get('command') for s in rm for e in wir.get(s, []))
+with open(p) as f: d = json.load(f)
+hooks = d.get('hooks', {})
+for ev in list(hooks.keys()):
+    ng = []
+    for g in hooks[ev]:
+        g['hooks'] = [h for h in g.get('hooks', []) if h.get('command') not in cmds]
+        if g.get('hooks'): ng.append(g)
+    if ng: hooks[ev] = ng
+    else: del hooks[ev]
+with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
+"
+    fi
+  fi
+  ok "QA-hook clusters installed"
 fi
 
 # ============================================================
