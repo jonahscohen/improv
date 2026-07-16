@@ -785,3 +785,134 @@ EOF
   stage_reset
   return 0
 }
+
+# ============================================================
+# Update flow - the root screen's two-state update row
+# ============================================================
+# install.sh owns the raw git primitives (check_updates / apply_update); these two
+# own the browser's UX logic on top of them, which is what makes them unit-testable
+# by sourcing this lib and stubbing the primitives (same seam as apply_pending).
+
+# update_status - classify the repo against origin/main for the update row.
+#
+# Output (stdout):
+#   line 1  : exactly one of  available | up-to-date | unknown
+#   lines 2+: when "available", the incoming commit subjects VERBATIM from check_updates
+#
+# Mapping from check_updates' contract (install.sh ~1276):
+#   exit non-zero      -> unknown     (cd or git fetch failed; offline, no remote, ...)
+#   exit 0 + output    -> available   (+ the subject lines)
+#   exit 0 + no output -> up-to-date
+# The exit-0-means-known half of that contract only became true when check_updates got
+# its explicit `return 0`; before that, up-to-date and offline were both exit 1.
+#
+# SET -E NOTE (load-bearing): check_updates returning 1 is an EXPECTED, handled case,
+# not an error. The call is wrapped in `if` so errexit cannot abort the caller on the
+# offline path - see the same note on apply_pending.
+update_status() {
+  local out rc
+  if out="$(check_updates 2>/dev/null)"; then
+    rc=0
+  else
+    rc=$?
+  fi
+
+  if [ "$rc" -ne 0 ]; then
+    printf 'unknown\n'
+    return 0
+  fi
+  if [ -z "$out" ]; then
+    printf 'up-to-date\n'
+    return 0
+  fi
+  printf 'available\n'
+  printf '%s\n' "$out"
+  return 0
+}
+
+# update_apply - pull, then re-run the installer for the components that are ON.
+#
+# Exit codes (fail-loud - the caller must be able to tell these two apart):
+#   0  pulled clean and the re-run landed (or there was nothing active to re-run)
+#   2  the pull FAILED - the repo needs a human. No re-run is attempted: re-installing
+#      from a repo in an unknown/conflicted state is how you get a half-updated setup.
+#      DELIBERATELY COARSE: `git pull --ff-only` also fails on a bad REPO_DIR, a
+#      network/auth error, a missing remote ref, or a dirty tree - this code does not
+#      claim to distinguish those from a genuine non-fast-forward, and its message
+#      must not either. The actionable fact they share is "the pull did not happen,
+#      go look at the repo", which is exactly what 2 means.
+#   3  the pull SUCCEEDED but the re-install failed. The repo IS updated; the
+#      deployment is not. Distinct from 2 so the caller does not tell the user to
+#      resolve a repo that is already clean.
+#
+# SET -E NOTE: as with apply_pending, every failure is checked EXPLICITLY. Both calls
+# are guarded by `if` so neither errexit nor a status-tested caller (which silently
+# disables errexit for this whole body) can change the control flow.
+update_apply() {
+  local rc self k st active_csv logfile
+
+  # Resolve the installer to an ABSOLUTE path BEFORE apply_update runs. apply_update
+  # (and check_updates) `cd "$REPO_DIR"` WITHOUT a subshell, so they mutate the
+  # CALLER's cwd - a pre-existing side effect that is out of scope to fix here, but a
+  # relative "$0" would silently resolve against the wrong directory afterwards.
+  self="$0"
+  case "$self" in
+    /*) ;;
+    *)  self="$(pwd)/$self" ;;
+  esac
+
+  # (1) The pull. On failure the repo needs a human; stop here.
+  if apply_update; then
+    rc=0
+  else
+    rc=$?
+    printf 'update_apply: git pull --ff-only FAILED (exit %s) in %s\n' "$rc" "${REPO_DIR:-?}" >&2
+    printf 'update_apply: the pull did not happen - the repo may need a fast-forward resolved by hand, or the remote may be unreachable. Check it (git status / git pull --rebase), then run the update again. Nothing was re-installed.\n' >&2
+    return 2
+  fi
+
+  # (2) Build the re-install list: the components that are currently ON, in KEYS order.
+  # detect_component probes DISK, so this is the real deployed set, not staged intent.
+  # ${KEYS[@]+...} is the bash-3.2 empty-array guard - a bare "${KEYS[@]}" is an
+  # unbound-variable error under `set -u` when the array is empty.
+  active_csv=""
+  for k in ${KEYS[@]+"${KEYS[@]}"}; do
+    [ -n "$k" ] || continue
+    # Guarded, not a bare assignment: an unguarded `st="$(detect_component ...)"` would
+    # abort a caller running under errexit if the probe ever exited non-zero. A probe
+    # that cannot answer is treated as NOT active - the conservative read, since the
+    # only cost is skipping a component in the re-run, whereas guessing "active" would
+    # re-install something that may not be there.
+    if ! st="$(detect_component "$k" 2>/dev/null)"; then
+      st=""
+    fi
+    if [ "$st" = "active" ]; then
+      if [ -n "$active_csv" ]; then active_csv="$active_csv,$k"; else active_csv="$k"; fi
+    fi
+  done
+
+  # Nothing deployed means nothing to refresh. The pull still counts as success.
+  if [ -z "$active_csv" ]; then
+    return 0
+  fi
+
+  # (3) Re-run the installer for exactly those components. Mirrors the returning flow's
+  # recursive-install idiom (install.sh ~2021).
+  #
+  # DELIBERATE: the pull may have just rewritten install.sh itself, so `bash "$self"`
+  # runs the NEW installer code, not the copy this process was started from. That is
+  # the point of the whole flow - the user's setup should match the fresher repo.
+  logfile="$(mktemp)"
+  # The `else` branch is where the failure code lives: after a plain `fi` with no else,
+  # $? is the IF STATEMENT's status (0), not the failed condition's.
+  if _AMPERSAND_NO_SUMMARY=1 bash "$self" --only "$active_csv" --yes >"$logfile" 2>&1; then
+    rm -f "$logfile"
+  else
+    rc=$?
+    printf 'update_apply: pull SUCCEEDED but the re-install FAILED (exit %s) for --only %s\n' "$rc" "$active_csv" >&2
+    printf 'update_apply: the repo is updated; the deployment is NOT. Last 20 lines of %s:\n' "$logfile" >&2
+    tail -20 "$logfile" >&2
+    return 3
+  fi
+  return 0
+}

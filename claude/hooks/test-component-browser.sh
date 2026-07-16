@@ -402,5 +402,153 @@ unset -f apply_pending_plan deactivate_component state_set
 stage_reset
 unset BR_STATE_PROBE
 
+# ---- update flow (Task 7): update_status / update_apply ----
+# The install.sh primitives (check_updates/apply_update/detect_component/KEYS) are stubbed;
+# these tests cover the browser's logic on top of them, not git itself.
+#
+# Every re-run assertion uses a MARKER FILE, never stderr: update_apply redirects the
+# re-install with `>"$logfile" 2>&1`, so a stderr marker would be swallowed by that
+# redirect and a trap meant to catch an unwanted re-run would silently never fire.
+# (Task 6 hit exactly this trap.)
+
+# 26. commits available -> "available" + every subject line, verbatim.
+check_updates() { printf 'fix the widget\nbump the dep\n'; return 0; }
+_us_out="$(update_status)"
+[ "$(printf '%s\n' "$_us_out" | sed -n 1p)" = "available" ] \
+  && ok "update_status line 1 is available" || bad "update_status line 1 is available (got $(printf '%s\n' "$_us_out" | sed -n 1p))"
+printf '%s\n' "$_us_out" | grep -Fqx "fix the widget" \
+  && ok "update_status carries first commit subject" || bad "update_status carries first commit subject"
+printf '%s\n' "$_us_out" | grep -Fqx "bump the dep" \
+  && ok "update_status carries second commit subject" || bad "update_status carries second commit subject"
+# The EXACT whole output, not just "line 1 + the subjects appear somewhere": the contract is
+# "line 1 exactly, lines 2+ verbatim IN ORDER". Greps alone would pass an implementation
+# that duplicated, reordered, or padded the subject lines.
+[ "$_us_out" = "$(printf 'available\nfix the widget\nbump the dep')" ] \
+  && ok "update_status emits exactly available + subjects in order" \
+  || bad "update_status emits exactly available + subjects in order (got '$_us_out')"
+
+# 27. no commits, exit 0 -> "up-to-date". This is the case the missing `return 0` in
+# check_updates used to render indistinguishable from "unknown".
+check_updates() { return 0; }
+[ "$(update_status)" = "up-to-date" ] && ok "update_status up-to-date" || bad "update_status up-to-date (got $(update_status))"
+
+# 28. cd/fetch failed -> "unknown".
+check_updates() { return 1; }
+[ "$(update_status)" = "unknown" ] && ok "update_status unknown on fetch failure" || bad "update_status unknown on fetch failure (got $(update_status))"
+
+# 29. errexit smoke: check_updates returning 1 is an EXPECTED case and must not abort a
+# caller running under `set -e`. Run in a subshell so a failure cannot kill this suite.
+check_updates() { return 1; }
+( set -e; update_status >/dev/null ) >/dev/null 2>&1
+[ "$?" = "0" ] && ok "update_status survives set -e on unknown path" || bad "update_status survives set -e on unknown path"
+
+# 30. pull fails (non-ff) -> exit 2 and NOT ONE re-run attempted. The exit code alone
+# cannot prove the second half, so the `bash` stub marks a file: a shell function shadows
+# the external command, so the env-prefixed `_AMPERSAND_NO_SUMMARY=1 bash "$self" ...`
+# inside update_apply hits the stub and never runs the real installer.
+_ua_run="$(mktemp)"; : > "$_ua_run"
+apply_update() { return 1; }
+detect_component() { echo active; }
+KEYS=(brain codex)
+bash() { echo RAN > "$_ua_run"; return 0; }
+update_apply >/dev/null 2>&1; rc=$?
+unset -f bash
+[ "$rc" = "2" ] && ok "update_apply returns 2 when pull is not fast-forwardable" || bad "update_apply returns 2 when pull is not fast-forwardable (got $rc)"
+[ -s "$_ua_run" ] && bad "update_apply attempts no re-run after a failed pull" || ok "update_apply attempts no re-run after a failed pull"
+
+# 31. pull OK + some components active -> exit 0, re-run invoked with the exact argument
+# string. The stub drops $1 (the installer path, which varies by checkout) and records the
+# remaining args, so the assertion is on the EXACT argument string.
+_ua_args="$(mktemp)"; : > "$_ua_args"
+_ua_self="$(mktemp)"; : > "$_ua_self"
+apply_update() { return 0; }
+detect_component() { case "$1" in codex|chrome) echo active ;; *) echo not-installed ;; esac; }
+KEYS=(brain codex memory chrome)
+# One arg per LINE, delimited: "$*" would collapse argv into a single string, so
+# `bash "$self" "--only codex,chrome" --yes` (one arg) would pass identically to the
+# intended `bash "$self" --only codex,chrome --yes` (three args). The <> delimiters
+# also make an empty or space-padded arg visible.
+bash() { printf '%s\n' "$1" > "$_ua_self"; shift; printf '<%s>\n' "$@" > "$_ua_args"; return 0; }
+update_apply >/dev/null 2>&1; rc=$?
+unset -f bash
+[ "$rc" = "0" ] && ok "update_apply returns 0 on pull + re-run success" || bad "update_apply returns 0 on pull + re-run success (got $rc)"
+[ "$(cat "$_ua_args")" = "$(printf '<--only>\n<codex,chrome>\n<--yes>')" ] \
+  && ok "update_apply re-runs with exactly --only codex,chrome --yes" \
+  || bad "update_apply re-runs with exactly --only codex,chrome --yes (got '$(cat "$_ua_args")')"
+# The installer path is never asserted by the argv check above (it varies per checkout, so
+# the stub drops it) - but it MUST be absolute, because apply_update cd's the caller to
+# $REPO_DIR and a relative "$0" would then resolve against the wrong directory.
+case "$(cat "$_ua_self")" in
+  /*) ok "update_apply re-runs an absolute installer path" ;;
+  *)  bad "update_apply re-runs an absolute installer path (got '$(cat "$_ua_self")')" ;;
+esac
+
+# 32. pull OK but NOTHING active -> exit 0 and no re-run (an --only with an empty list
+# would be a meaningless installer invocation).
+_ua_none="$(mktemp)"; : > "$_ua_none"
+apply_update() { return 0; }
+detect_component() { echo not-installed; }
+KEYS=(brain codex memory)
+bash() { echo RAN > "$_ua_none"; return 0; }
+update_apply >/dev/null 2>&1; rc=$?
+unset -f bash
+[ "$rc" = "0" ] && ok "update_apply returns 0 when nothing is active" || bad "update_apply returns 0 when nothing is active (got $rc)"
+[ -s "$_ua_none" ] && bad "update_apply skips the re-run when nothing is active" || ok "update_apply skips the re-run when nothing is active"
+
+# 33. pull OK but the re-install fails -> exit 3, NOT 2. The repo is already updated, so
+# telling the user to go resolve it (the 2 message) would send them after a clean repo.
+apply_update() { return 0; }
+detect_component() { case "$1" in codex) echo active ;; *) echo not-installed ;; esac; }
+KEYS=(brain codex)
+bash() { return 7; }
+update_apply >/dev/null 2>&1; rc=$?
+unset -f bash
+[ "$rc" = "3" ] && ok "update_apply returns 3 when the re-install fails after a good pull" || bad "update_apply returns 3 when the re-install fails after a good pull (got $rc)"
+
+# 34. STRICT-MODE CALLER SHAPE. The tests above run under `set -u` only and use the
+# `update_apply; rc=$?` shape, which install.sh (set -euo pipefail) could never use: a
+# plain failing command exits immediately there, so those tests would pass even if the
+# function only worked outside errexit. These re-drive both failure codes through the
+# shape a real caller must use - `if update_apply; then ... else rc=$?; fi` inside
+# `set -euo pipefail` - which is ALSO the shape that silently disables errexit for the
+# whole function body, the exact condition under which an unchecked internal failure
+# would slip through as success.
+_strict_rc() { # $1 = stub script driving update_apply; echoes the observed exit code
+  ( set -euo pipefail
+    eval "$1"
+    if update_apply >/dev/null 2>&1; then rc=0; else rc=$?; fi
+    exit "$rc"
+  ) >/dev/null 2>&1
+  echo $?
+}
+_sr="$(_strict_rc 'apply_update() { return 1; }; detect_component() { echo active; }; KEYS=(brain codex)')"
+[ "$_sr" = "2" ] && ok "update_apply returns 2 under set -euo pipefail (real caller shape)" \
+  || bad "update_apply returns 2 under set -euo pipefail (real caller shape) (got $_sr)"
+_sr="$(_strict_rc 'apply_update() { return 0; }; detect_component() { case "$1" in codex) echo active ;; *) echo not-installed ;; esac; }; KEYS=(brain codex); bash() { return 7; }')"
+[ "$_sr" = "3" ] && ok "update_apply returns 3 under set -euo pipefail (real caller shape)" \
+  || bad "update_apply returns 3 under set -euo pipefail (real caller shape) (got $_sr)"
+# 35. A detect_component probe that exits non-zero is a HANDLED case (treated as
+# not-active), not grounds for aborting the caller.
+#
+# NOTE THE SHAPE, it is the whole point: this runs update_apply as a PLAIN COMMAND under
+# errexit, NOT via `if update_apply`. The `if` shape DISABLES errexit inside the function
+# body, so an unguarded internal failure would sail through it and the test would pass
+# against a broken implementation - verified: written the `if` way first, this assertion
+# stayed green with the guard deleted. As a plain command, errexit is live INSIDE the
+# body, so an unguarded `st="$(detect_component ...)"` aborts before the marker prints.
+_sr_out="$( ( set -euo pipefail
+    apply_update() { return 0; }
+    detect_component() { return 1; }
+    KEYS=(brain codex)
+    update_apply >/dev/null 2>&1
+    echo REACHED
+  ) 2>/dev/null )"
+[ "$_sr_out" = "REACHED" ] && ok "update_apply survives a failing detect_component probe under live errexit" \
+  || bad "update_apply survives a failing detect_component probe under live errexit (got '$_sr_out')"
+
+rm -f "$_ua_run" "$_ua_args" "$_ua_none" "$_ua_self"
+unset -f check_updates apply_update detect_component _strict_rc
+unset KEYS
+
 echo "== $pass passed, $fail failed =="
 [ "$fail" = 0 ]

@@ -1279,6 +1279,13 @@ check_updates() {
   local commits
   commits=$(git log HEAD..origin/main --pretty=format:'%s' 2>/dev/null | head -10)
   [ -n "$commits" ] && printf '%s\n' "$commits"
+  # Explicit: without this the `[ -n ... ] &&` above is the last command, so the
+  # up-to-date case (no commits) returns 1 - indistinguishable from a failed
+  # cd/fetch. The contract callers rely on is:
+  #   exit 1            -> cd or fetch failed; update state is UNKNOWN
+  #   exit 0 + output   -> commits available (one subject per line)
+  #   exit 0 + no output -> up to date
+  return 0
 }
 
 apply_update() {
