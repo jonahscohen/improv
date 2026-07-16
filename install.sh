@@ -2057,6 +2057,23 @@ returning_flow() {
 # Entry point: dispatch to fresh, returning, or non-interactive flag path
 # ============================================================
 
+# --- TEST-ONLY seam: drive apply_pending non-interactively -------------------
+# apply_pending (browser-lib.sh) only runs at install.sh runtime - it needs "$0" to be the
+# installer and deactivate_component to be in scope - so test-apply-pending.sh cannot call
+# it directly. This seam is its entrypoint: seed the two pending sets from env, run
+# apply_pending, exit with its code. Sits here because every function and all state are
+# defined by now, and nothing below it has run yet.
+# Guarded STRICTLY on _AMPERSAND_APPLY_TEST=1, so no normal path (--only/--yes/--preset/
+# --dry-run/--help/TUI) is affected. The three vars are unset before apply_pending runs so
+# its recursive `bash "$0" --only ...` install pass does NOT re-enter this seam.
+if [ "${_AMPERSAND_APPLY_TEST:-}" = "1" ]; then
+  browser_load "$REPO_DIR/claude/hooks/browser-tree.json"
+  PENDING_INSTALL="${_AMPERSAND_TEST_PI:-}"
+  PENDING_UNINSTALL="${_AMPERSAND_TEST_PU:-}"
+  unset _AMPERSAND_APPLY_TEST _AMPERSAND_TEST_PI _AMPERSAND_TEST_PU
+  if apply_pending; then exit 0; else exit $?; fi
+fi
+
 if [[ "$NONINTERACTIVE" == "0" ]]; then
   ensure_gum >/dev/null 2>&1 || true
 

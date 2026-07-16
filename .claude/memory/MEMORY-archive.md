@@ -1111,3 +1111,6 @@
 
 <!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
 - [bucket-browser Task 5 - install_app_hooks now honors per-hook off-list (HOOK_OFF): KEEP deploy+wire / DROP reconcile-remove via deactivate_app_hooks, matching the QA-hook cluster pass; new test-app-hook-offlist.sh (36/36), parity green, Codex clean - PROJECT (2026-07-16)](session_2026-07-16_bucket-browser-task5-app-offlist.md)
+
+<!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
+- [Bucket-browser Task 6 DONE - apply_pending_plan (pure: collapses apply_plan into ONE install pass + a deactivate list, adds the .sh suffix HOOK_OFF needs) + apply_pending (executor: one `--only csv --yes` pass, then deactivate_component, then stage_reset; fail-loud exit codes, pending preserved on failure); 17-line env-gated `_AMPERSAND_APPLY_TEST` seam in install.sh; canonical contract `INSTALL chrome,codex|codex-rescue-guard.sh` + empty DEACTIVATE; 73/73 unit + 30/30 integration + parity + offlist green; Codex R1 caught a REAL silent-success bug (errexit is OFF inside a function tested by `if`), R2 clean; STATE_FILE ownership deferred to Task 9 - PROJECT (2026-07-16)](session_2026-07-16_bucket-browser-task6-apply-pending.md)

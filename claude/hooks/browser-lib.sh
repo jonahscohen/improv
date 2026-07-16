@@ -622,3 +622,147 @@ $owners
 EOF
   return 0
 }
+
+# --- apply layer (Task 6) ---------------------------------------------------
+#
+# apply_plan COMPUTES a per-owner plan; this layer TRANSLATES that plan into the two
+# concrete actions the installer can run (apply_pending_plan, PURE), then EXECUTES them
+# (apply_pending, a thin executor).
+#
+# The translation collapses apply_plan's N INSTALL lines into ONE install pass: the
+# install owners become a single comma-separated `--only` list and every per-owner
+# off-hook merges into ONE off-list. Merging is safe because an off-list entry is
+# COMPONENT-SCOPED - install.sh's install_app_hooks only matches HOOK_OFF against the
+# hooks that call passes in, so another component's entry is inert. That is what makes
+# "staged apply = one install pass" (the approved design) correct rather than a shortcut.
+#
+# The `.sh` suffix is added HERE, and only here: apply_plan emits bare hook names (tree
+# keys), while install.sh's HOOK_OFF / _AMPERSAND_HOOK_OFF contract expects hook
+# FILENAMES with .sh.
+
+# apply_pending_plan - PURE translation of apply_plan into exactly TWO lines. Both lines
+# are ALWAYS emitted, so the shape is fixed and apply_pending can parse it back by
+# stripping the literal prefixes:
+#   1. INSTALL <owners-csv>|<off-list>
+#        owners-csv - install owners, comma-joined, in apply_plan first-seen order.
+#        off-list   - EVERY off-hook across ALL INSTALL lines, each .sh-suffixed,
+#                     space-joined, in per-owner tree order.
+#        Either field may be empty; no install owners at all yields exactly "INSTALL |".
+#   2. DEACTIVATE <owners>
+#        UNINSTALL_COMPONENT owners, space-joined, first-seen order. Empty yields
+#        "DEACTIVATE " - the trailing space is part of the contract (the prefix that
+#        apply_pending strips is "DEACTIVATE " with its space).
+# Owner keys carry no space, comma or "|", so both joins are unambiguous. Pure bash 3.2;
+# always returns 0.
+apply_pending_plan() {
+  local IFS=$' \t\n'   # pin word-splitting for the off-hook split, whatever the caller had
+  local plan line rest owner hooks tok owners_csv off_list deact
+  plan="$(apply_plan)"
+  owners_csv=""; off_list=""; deact=""
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    case "$line" in
+      "INSTALL "*)
+        rest="${line#INSTALL }"
+        owner="${rest%% *}"                 # first token is the owner key
+        if [ -z "$owners_csv" ]; then owners_csv="$owner"; else owners_csv="$owners_csv,$owner"; fi
+        # Any tokens after the owner are that owner's off-hooks (bare names, tree order).
+        if [ "$rest" != "$owner" ]; then
+          hooks="${rest#* }"
+          for tok in $hooks; do
+            [ -n "$tok" ] || continue
+            off_list="$off_list $tok.sh"
+          done
+        fi
+        ;;
+      "UNINSTALL_COMPONENT "*)
+        owner="${line#UNINSTALL_COMPONENT }"
+        if [ -z "$deact" ]; then deact="$owner"; else deact="$deact $owner"; fi
+        ;;
+    esac
+  done <<EOF
+$plan
+EOF
+  printf 'INSTALL %s|%s\n' "$owners_csv" "${off_list# }"
+  printf 'DEACTIVATE %s\n' "$deact"
+  return 0
+}
+
+# apply_pending - EXECUTE the staged changes, then clear the pending sets.
+#
+# RUNTIME CONTRACT: apply_pending only ever runs at install.sh runtime. browser-lib.sh is
+# SOURCED into install.sh, so "$0" is install.sh (the recursive-install idiom the
+# returning flow already uses), and deactivate_component / stage_reset are in scope.
+#
+# Order is installs THEN deactivates. The two lists are disjoint by construction (apply_plan
+# emits exactly ONE line per owner); step (0) VERIFIES that before touching anything, so a
+# planner defect can never install a component and then immediately deactivate it.
+#
+# Exit codes (fail-loud - pending is cleared ONLY when the whole plan landed):
+#   0             every staged change applied
+#   3             apply_plan invariant violation (an owner in BOTH lists); nothing executed
+#   <installer>   the install pass failed; its exit code is propagated, deactivates skipped
+#   <deactivate>  a deactivate_component failed; its exit code is propagated
+# On any non-zero return the pending sets are PRESERVED, so the user can retry.
+#
+# SET -E NOTE (load-bearing): callers test this function's status (`if apply_pending`),
+# and bash DISABLES errexit for the entire body of a function whose status is being tested.
+# Nothing here may rely on `set -e` to abort. Every failure is therefore checked
+# EXPLICITLY - an unchecked command would silently continue and return 0, reporting
+# partial work as success.
+apply_pending() {
+  local IFS=$' \t\n'
+  local plan install_line deact_line rest owners_csv off_list deact owner rc logfile
+  plan="$(apply_pending_plan)"
+  install_line=""; deact_line=""
+  { IFS= read -r install_line; IFS= read -r deact_line; } <<EOF
+$plan
+EOF
+  rest="${install_line#INSTALL }"
+  owners_csv="${rest%%|*}"
+  off_list="${rest#*|}"
+  deact="${deact_line#DEACTIVATE }"
+
+  # (0) Refuse a self-contradicting plan BEFORE executing any of it.
+  for owner in $deact; do
+    [ -n "$owner" ] || continue
+    case ",$owners_csv," in
+      *",$owner,"*)
+        printf 'apply_pending: INVARIANT VIOLATION - apply_plan put owner %s in BOTH the install and deactivate lists; refusing the plan (nothing applied, pending preserved)\n' "$owner" >&2
+        return 3
+        ;;
+    esac
+  done
+
+  # (1) ONE install pass for every install owner, carrying the merged off-list. Mirrors
+  # the returning flow's recursive-install idiom (install.sh ~line 2021).
+  if [ -n "$owners_csv" ]; then
+    logfile="$(mktemp)"
+    if _AMPERSAND_HOOK_OFF="$off_list" _AMPERSAND_NO_SUMMARY=1 bash "$0" --only "$owners_csv" --yes >"$logfile" 2>&1; then
+      rm -f "$logfile"
+    else
+      rc=$?
+      printf 'apply_pending: install pass FAILED (exit %s) for --only %s\n' "$rc" "$owners_csv" >&2
+      printf 'apply_pending: last 20 lines of %s:\n' "$logfile" >&2
+      tail -20 "$logfile" >&2
+      return "$rc"
+    fi
+  fi
+
+  # (2) Whole-component removals. Status checked explicitly (see SET -E NOTE above).
+  for owner in $deact; do
+    [ -n "$owner" ] || continue
+    if deactivate_component "$owner"; then
+      :
+    else
+      rc=$?
+      printf 'apply_pending: deactivate FAILED (exit %s) for component %s (pending preserved)\n' "$rc" "$owner" >&2
+      return "$rc"
+    fi
+  done
+
+  # (3) Every staged change landed. Pending is spent. Status needs no cache refresh:
+  # item_state/counts re-probe disk live through _real_probe on the next call.
+  stage_reset
+  return 0
+}

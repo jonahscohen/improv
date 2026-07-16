@@ -223,6 +223,169 @@ out="$(apply_plan)"
 ( set -e; stage_reset; stage_toggle 'justify/justify-source-guard'; apply_plan >/dev/null )
 [ "$?" = "0" ] && ok "staging layer clean under set -e" || bad "staging layer clean under set -e"
 
+# ---- apply_pending_plan translation (Task 6) --------------------------------
+# apply_pending_plan is the PURE half of the apply layer: it collapses apply_plan's
+# per-owner lines into the ONE install pass + the deactivate list that apply_pending runs.
+# Contract asserted here (exact strings, both lines always emitted):
+#   line 1  INSTALL <owners-csv>|<off-list>   off-list hooks carry .sh; empty is "INSTALL |"
+#   line 2  DEACTIVATE <owners>               empty is "DEACTIVATE " (trailing space)
+# Command substitution strips trailing NEWLINES only, so the line-2 trailing space
+# survives $(apl_line 2) and is asserted verbatim.
+
+# apl_line <n> - print line <n> of apply_pending_plan verbatim.
+apl_line() {
+  local want="$1" n=0 l
+  while IFS= read -r l; do
+    n=$((n+1))
+    if [ "$n" = "$want" ]; then printf '%s' "$l"; return 0; fi
+  done < <(apply_pending_plan)
+  return 0
+}
+
+# 15. CANONICAL scenario: justify + codex installed; stage "uninstall ONE codex hook"
+# (codex-rescue-guard) + "install chrome". Turning off a single codex hook is an OFF-LIST
+# install, NOT a component uninstall - so codex rides the install pass and DEACTIVATE is
+# empty. Owner order is apply_plan first-seen: PENDING_INSTALL is scanned before
+# PENDING_UNINSTALL, so chrome (staged install) precedes codex (staged uninstall).
+INSTALLED="|Guardrails/codex/codex-failure-watcher|Guardrails/codex/codex-rescue-guard|justify/justify-source-guard|justify/justify-watch-guard|justify/justify-watch-standing-by|"
+stage_reset
+stage_toggle 'Guardrails/codex/codex-rescue-guard'   # currently ON -> stages uninstall
+stage_all 'Guardrails/chrome' install                # currently OFF -> stages all 3 on
+[ "$(apl_line 1)" = "INSTALL chrome,codex|codex-rescue-guard.sh" ] \
+  && ok "apply_pending_plan canonical INSTALL line" || bad "apply_pending_plan canonical INSTALL line"
+[ "$(apl_line 2)" = "DEACTIVATE " ] \
+  && ok "apply_pending_plan canonical DEACTIVATE empty" || bad "apply_pending_plan canonical DEACTIVATE empty"
+
+# 16. whole-component uninstall: every justify hook off -> DEACTIVATE justify, and justify
+# must NOT also appear on the install line (the two lists are disjoint by construction).
+INSTALLED="|justify/justify-source-guard|justify/justify-watch-guard|justify/justify-watch-standing-by|"
+stage_reset; stage_all 'justify' uninstall
+[ "$(apl_line 2)" = "DEACTIVATE justify" ] && ok "apply_pending_plan DEACTIVATE owner" || bad "apply_pending_plan DEACTIVATE owner"
+[ "$(apl_line 1)" = "INSTALL |" ] && ok "apply_pending_plan deactivated owner absent from INSTALL" || bad "apply_pending_plan deactivated owner absent from INSTALL"
+
+# 17. pure install, no off-list: a leaf component yields an empty off-list field.
+INSTALLED="||"; stage_reset; stage_toggle 'tilt-lab'
+[ "$(apl_line 1)" = "INSTALL tilt-lab|" ] && ok "apply_pending_plan pure install empty off-list" || bad "apply_pending_plan pure install empty off-list"
+
+# 18. .sh suffix on a MULTI-hook off-list: apply_plan emits bare tree names, the off-list
+# must carry .sh on EVERY entry (install.sh's HOOK_OFF contract is filenames).
+INSTALLED="||"; stage_reset; stage_toggle 'justify/justify-source-guard'
+[ "$(apl_line 1)" = "INSTALL justify|justify-watch-guard.sh justify-watch-standing-by.sh" ] \
+  && ok "apply_pending_plan multi-hook off-list .sh suffix" || bad "apply_pending_plan multi-hook off-list .sh suffix"
+
+# 19. nothing staged -> both lines still emitted, both empty (fixed 2-line shape).
+stage_reset
+[ "$(apl_line 1)" = "INSTALL |" ] && ok "apply_pending_plan empty INSTALL line" || bad "apply_pending_plan empty INSTALL line"
+[ "$(apl_line 2)" = "DEACTIVATE " ] && ok "apply_pending_plan empty DEACTIVATE line" || bad "apply_pending_plan empty DEACTIVATE line"
+
+# 20. combined: an off-list install AND a full uninstall in the same staged set land on
+# their own lines - proves the two passes are independent, not either/or.
+INSTALLED="|Guardrails/codex/codex-failure-watcher|Guardrails/codex/codex-rescue-guard|tilt-lab|"
+stage_reset
+stage_toggle 'Guardrails/codex/codex-rescue-guard'   # ON -> off-list install of codex
+stage_toggle 'tilt-lab'                              # ON -> full uninstall (pure leaf)
+[ "$(apl_line 1)" = "INSTALL codex|codex-rescue-guard.sh" ] && ok "apply_pending_plan mixed INSTALL line" || bad "apply_pending_plan mixed INSTALL line"
+[ "$(apl_line 2)" = "DEACTIVATE tilt-lab" ] && ok "apply_pending_plan mixed DEACTIVATE line" || bad "apply_pending_plan mixed DEACTIVATE line"
+
+# 21. set -e smoke for the pure translator (install.sh runs set -euo pipefail).
+( set -e; stage_reset; stage_toggle 'justify/justify-source-guard'; apply_pending_plan >/dev/null )
+[ "$?" = "0" ] && ok "apply_pending_plan clean under set -e" || bad "apply_pending_plan clean under set -e"
+
+unset BR_STATE_PROBE
+
+# 22. INVARIANT GUARD for the merged off-list: apply_pending merges EVERY owner's off-list
+# into ONE _AMPERSAND_HOOK_OFF and runs ONE install pass. install.sh matches HOOK_OFF
+# entries by hook FILENAME against the hooks each install_app_hooks call passes in, so that
+# merge is only safe while a hook filename belongs to exactly ONE owner. If two owners ever
+# shipped the same filename, off-listing it for owner A would silently drop it from owner B
+# in the same pass. Parses install.sh's REAL call sites (app components + the cluster table)
+# rather than the tree, because those calls are the ground truth the off-list is matched on.
+python3 - "$REPO_DIR" <<'PY' && ok "hook filenames are owner-unique (merged off-list safe)" || bad "hook filenames are owner-unique (merged off-list safe)"
+import os, re, sys
+src = open(os.path.join(sys.argv[1], "install.sh")).read()
+owner_hooks = {}
+# (a) app components: `picked <comp> && install_app_hooks a.sh b.sh ...`
+for m in re.finditer(r'picked\s+(\S+)\s+&&\s+install_app_hooks\s+([^\n]*)', src):
+    hooks = [w for w in m.group(2).split() if w.endswith('.sh')]
+    owner_hooks.setdefault(m.group(1), set()).update(hooks)
+# (b) QA clusters: the cluster_hooks() case arms
+body = re.search(r'cluster_hooks\(\)\s*\{(.*?)\n\}', src, re.S)
+if body:
+    for line in body.group(1).splitlines():
+        arm = re.match(r'\s*([a-z-]+)\)\s*echo\s+"([^"]*)"', line)
+        if arm:
+            owner_hooks.setdefault(arm.group(1), set()).update(arm.group(2).split())
+# Anti-drift floor: if the regexes ever stop matching install.sh, this test would happily
+# "pass" while checking a subset (or nothing). Demand a known set of owners up front so
+# drift fails LOUDLY instead of quietly narrowing the invariant's coverage.
+REQUIRED = {"codex", "chrome", "justify", "memory", "safety", "verification"}
+missing = REQUIRED - set(owner_hooks)
+if missing:
+    print("regex drift - expected owners not parsed from install.sh:", sorted(missing), file=sys.stderr)
+    sys.exit(1)
+seen, dupes = {}, []
+for owner, hooks in sorted(owner_hooks.items()):
+    for h in sorted(hooks):
+        if h in seen and seen[h] != owner:
+            dupes.append("%s owned by BOTH %s and %s" % (h, seen[h], owner))
+        seen[h] = owner
+print("owners: %d, hook filenames: %d" % (len(owner_hooks), len(seen)), file=sys.stderr)
+if dupes:
+    print("SHARED HOOK FILENAMES:", dupes, file=sys.stderr)
+sys.exit(0 if not dupes else 1)
+PY
+
+# ---- apply_pending failure paths (Task 6) ----------------------------------
+# apply_pending is normally driven through install.sh's test seam, but its DEACTIVATE-only
+# and refusal paths run no install pass ($0 is never invoked), so they are unit-testable
+# here with a stubbed deactivate_component.
+#
+# These paths are load-bearing: callers test apply_pending's status (`if apply_pending`),
+# which DISABLES errexit for its whole body. Every failure inside it must therefore be
+# checked explicitly or it silently returns 0. That is exactly what these tests pin.
+BR_STATE_PROBE='fake_probe'
+
+# 23. a failing deactivate must PROPAGATE its code and PRESERVE pending (never a silent 0).
+INSTALLED="|tilt-lab|"; stage_reset
+stage_toggle 'tilt-lab'                       # ON -> plan is "INSTALL |" + "DEACTIVATE tilt-lab"
+deactivate_component() { return 7; }          # stub a failing deactivator
+rc=0; if apply_pending >/dev/null 2>&1; then rc=0; else rc=$?; fi
+[ "$rc" = "7" ] && ok "apply_pending propagates deactivate failure" || bad "apply_pending propagates deactivate failure (got $rc)"
+[ -n "$PENDING_UNINSTALL" ] && ok "apply_pending preserves pending on deactivate failure" || bad "apply_pending preserves pending on deactivate failure"
+
+# 24. the success path still clears pending and returns 0.
+INSTALLED="|tilt-lab|"; stage_reset
+stage_toggle 'tilt-lab'
+deactivate_component() { return 0; }
+rc=0; if apply_pending >/dev/null 2>&1; then rc=0; else rc=$?; fi
+[ "$rc" = "0" ] && ok "apply_pending returns 0 on a clean deactivate" || bad "apply_pending returns 0 on a clean deactivate (got $rc)"
+[ -z "$PENDING_UNINSTALL" ] && ok "apply_pending clears pending on success" || bad "apply_pending clears pending on success"
+
+# 25. a self-contradicting plan is REFUSED with exit 3 before ANY work runs. Unreachable via
+# the real apply_plan (one line per owner), so the plan is stubbed to force the path.
+# BOTH side-effecting legs are trapped, not just the deactivate: the stubbed owner is on the
+# INSTALL line too, so if the guard were ever moved after the install pass, the `bash` stub
+# fires. A shell function shadows the external command, so the env-prefixed
+# `_AMPERSAND_HOOK_OFF=... bash "$0" --only ...` inside apply_pending hits the stub and never
+# runs the real installer (prefix assignments do not suppress function lookup).
+# Both stubs mark a FILE, not stderr: apply_pending redirects the install pass with
+# `>"$logfile" 2>&1`, so a stderr marker would be swallowed by that redirect and the trap
+# would silently never fire. Exit code alone cannot catch this (a guard moved after the
+# install pass still returns 3), so the sentinel files are the only real evidence.
+_apl_i="$(mktemp)"; _apl_d="$(mktemp)"
+apply_pending_plan() { printf 'INSTALL codex|\nDEACTIVATE codex\n'; }
+deactivate_component() { echo RAN > "$_apl_d"; return 0; }
+bash() { echo RAN > "$_apl_i"; return 0; }
+stage_reset; PENDING_UNINSTALL="|sentinel|"
+apply_pending >/dev/null 2>&1; rc=$?
+unset -f bash
+[ "$rc" = "3" ] && ok "apply_pending refuses contradicting plan with exit 3" || bad "apply_pending refuses contradicting plan with exit 3 (got $rc)"
+[ -s "$_apl_d" ] && bad "apply_pending ran no deactivate on refusal" || ok "apply_pending ran no deactivate on refusal"
+[ -s "$_apl_i" ] && bad "apply_pending ran no install pass on refusal" || ok "apply_pending ran no install pass on refusal"
+[ "$PENDING_UNINSTALL" = "|sentinel|" ] && ok "apply_pending preserves pending on refusal" || bad "apply_pending preserves pending on refusal"
+rm -f "$_apl_i" "$_apl_d"
+unset -f apply_pending_plan deactivate_component
+stage_reset
 unset BR_STATE_PROBE
 
 echo "== $pass passed, $fail failed =="
