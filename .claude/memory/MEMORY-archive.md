@@ -1087,3 +1087,6 @@
 
 <!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
 - [Sidecoach STAGE 6 milestone mechanics - frozen-90 re-measure needs `scorecard-collect --force` (cache keys on collectorVersion+page-SHA not detector code) + `scorecard-mapping` regen (marketing-buzzword exact-maps) + score; objective must stay 0.936; low-contrast wiring doesn't touch eval - REFERENCE (2026-06-25)](session_2026-06-25_stage6-milestone-mechanics.md)
+
+<!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
+- [Codex broken-from-Bash-tool FIXED - shell node was v12 but codex 0.142.5 needs >=16; codex-review.py now resolves a node>=16 absolutely (co-located-with-codex node + fallbacks) and invokes node+codex.js directly; codex component now DEPLOYS codex-review.py; cross-model gate restored (smoke HEALTHY, real Codex review exit 0) - PROJECT (2026-07-15)](session_2026-07-15_codex-node12-fix.md)
