@@ -430,9 +430,13 @@ stage_toggle() {
   return 0
 }
 
-# stage_all <path> <install|uninstall> - stage every non-pinned leaf under <path> in one
-# direction, but only where it changes the current state (install a currently-off leaf,
-# uninstall a currently-on leaf). Space-safe over leaf_paths.
+# stage_all <path> <install|uninstall> - drive every non-pinned leaf under <path> so the
+# whole subtree ends up all-on (install) or all-off (uninstall). This is TOTAL: for each
+# leaf it ALWAYS clears any opposite-direction pending first, then stages the requested
+# direction only where it changes the leaf's current (probed) state. Net guarantee: after
+# stage_all(path, install) no leaf under path is staged-uninstall; after
+# stage_all(path, uninstall) none is staged-install. Pinned leaves are skipped.
+# Space-safe over leaf_paths.
 stage_all() {
   local path="$1" dir="$2" leaf key parent probe
   : "${PENDING_INSTALL:=}" "${PENDING_UNINSTALL:=}"
@@ -445,18 +449,16 @@ stage_all() {
       continue
     fi
     if [ "$dir" = "install" ]; then
+      # Totality: never leave a staged-uninstall behind, then stage install if OFF.
+      _set_remove PENDING_UNINSTALL "$leaf"
       if ! "$probe" "$leaf"; then
-        if ! _pend_has "$PENDING_INSTALL" "$leaf"; then
-          _set_add PENDING_INSTALL "$leaf"
-          _set_remove PENDING_UNINSTALL "$leaf"
-        fi
+        _set_add PENDING_INSTALL "$leaf"
       fi
     else
+      # Totality: never leave a staged-install behind, then stage uninstall if ON.
+      _set_remove PENDING_INSTALL "$leaf"
       if "$probe" "$leaf"; then
-        if ! _pend_has "$PENDING_UNINSTALL" "$leaf"; then
-          _set_add PENDING_UNINSTALL "$leaf"
-          _set_remove PENDING_INSTALL "$leaf"
-        fi
+        _set_add PENDING_UNINSTALL "$leaf"
       fi
     fi
   done < <(leaf_paths "$path")

@@ -178,6 +178,18 @@ case "$out" in
   *) bad "memory partial install plan";;
 esac
 
+# 8. stage_all install is TOTAL: it clears an opposite-direction staged-uninstall.
+INSTALLED="|justify/justify-source-guard|justify/justify-watch-guard|justify/justify-watch-standing-by|"; stage_reset
+stage_toggle 'justify/justify-source-guard'   # currently on -> stages UNINSTALL
+stage_all 'justify' install                    # "install all" must clear that
+[ "$(pending_under 'justify')" = "0" ] && ok "stage_all install clears opposite pending" || bad "stage_all install clears opposite pending"
+
+# 9. stage_all uninstall is TOTAL: it clears an opposite-direction staged-install.
+INSTALLED="||"; stage_reset
+stage_toggle 'justify/justify-source-guard'   # currently off -> stages INSTALL
+stage_all 'justify' uninstall                  # "uninstall all" must clear that
+[ "$(pending_under 'justify')" = "0" ] && ok "stage_all uninstall clears opposite pending" || bad "stage_all uninstall clears opposite pending"
+
 unset BR_STATE_PROBE
 
 echo "== $pass passed, $fail failed =="
