@@ -1093,3 +1093,8 @@
 
 <!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
 - [settings.json Write()/MultiEdit() allow rules warn - consolidated to Edit() (Claude Code now honors only Edit(path) for all file-editing tools); removed 18 redundant entries, kept 9 Edit() twins, lossless; also flagged that ~/.claude/settings.json is a real file, not a symlink - PROJECT (2026-07-16)](session_2026-07-16_settings-write-multiedit-allow-fix.md)
+
+<!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
+- [Lead SELF-ANALYSIS concurrent-edit sequencing miss - dispatched two teammate units that both edit the central registry/codegen/golden in a shared tree (isolation is a no-op); rule = sequence registry-touching units or have one regen from the combined tree; no damage (changes composed) - FEEDBACK (2026-06-25)](session_2026-06-25_concurrent-edit-sequencing-miss.md)
+- [Codex CAPACITY flake #3 - review #1 cross-checked the batch (cleared the test-gaming risk: retargeted tests legitimate) but errored "model at capacity" on final synthesis = no verdict; re-running tighter; lead-gate is the documented fallback - REFERENCE (2026-06-25)](session_2026-06-25_codex-capacity-retry.md)
+- [Doctor hooks LIVE-wired - codex-rescue-guard + codex-failure-watcher built/verified/wired into the drifted live ~/.claude/settings.json (backup+validate); restart activates - REFERENCE (2026-06-25)](session_2026-06-25_doctor-live-settings-activation.md)
