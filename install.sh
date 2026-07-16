@@ -517,10 +517,29 @@ FILES+=(
   "~/.claude/hooks/block-clickup-writes.sh\n~/.claude/settings.json (1 PreToolUse hook)"
   "~/.claude/hooks/visualizer-guard.sh\n~/.claude/settings.json (1 PreToolUse hook)"
   "~/.claude/hooks/codex-failure-watcher.sh + codex-rescue-guard.sh\n~/.claude/settings.json (2 hooks)"
-  "~/.claude/justify/ + ~/.claude/skills/justify/ + ~/.claude.json (MCP)\n~/.claude/hooks/justify-source-guard.sh + justify-watch-guard.sh"
+  "~/.claude/justify/ + ~/.claude/skills/justify/ + ~/.claude.json (MCP)\n~/.claude/hooks/justify-source-guard.sh + justify-watch-guard.sh + justify-watch-standing-by.sh"
 )
 DIRS+=("" "" "" "$REPO_DIR/justify")
 PICKS+=(0 0 0 0)
+
+# App components (Stage 3b) - browser/design hooks that were hand-added to the
+# live settings.json but never installer-managed. Now packaged as opt-in
+# components on the same app-wirings.json pattern. Default-off.
+KEYS+=(chrome figma)
+TITLES+=(
+  "Chrome tab-group hygiene"
+  "Figma fidelity guard"
+)
+DESCS+=(
+  "Chrome: tracks the Claude-in-Chrome MCP tab groups you open and, once the browser is idle and the work is plainly done, blocks the Stop once to remind you to close the group before the session ends (a shell hook cannot close a tab itself). Opt-in; installs chrome-tabgroup-track + chrome-tabgroup-clear + chrome-tabgroup-stop."
+  "Figma: a Stop hook that blocks 'done' on UI built from a Figma source until MEASURED property parity is proven (Figma value == implementation value == verbatim browser reading). Inert unless armed by .figma-fidelity.pending at the repo root. Opt-in; installs figma-fidelity-stop."
+)
+FILES+=(
+  "~/.claude/hooks/chrome-tabgroup-track.sh + chrome-tabgroup-clear.sh + chrome-tabgroup-stop.sh\n~/.claude/settings.json (2 PostToolUse + 1 Stop hook)"
+  "~/.claude/hooks/figma-fidelity-stop.sh\n~/.claude/settings.json (1 Stop hook)"
+)
+DIRS+=("" "")
+PICKS+=(0 0)
 
 # Personal components - hidden from public TUI and --help. Surfaced only when
 # the maintainer passes --personal (undocumented, undocumented-on-purpose).
@@ -572,7 +591,11 @@ set_all() {
 # --- Stage 2: QA-hook cluster membership + per-hook selection state ---
 CLUSTER_KEYS=(safety verification question-discipline grounding api-drift planning-git surface model-routing)
 HOOK_ON=""   # scripts explicitly requested via --only <hook>
-HOOK_OFF=""  # scripts deselected in the TUI drill-in
+# Seed from a DEDICATED sentinel (not the bare HOOK_OFF env) so the returning-flow
+# cluster drill-in can pass deselections into a recursive --only, WITHOUT a user's
+# stray exported HOOK_OFF leaking into an install. Same _AMPERSAND_ namespace as
+# _AMPERSAND_NO_SUMMARY.
+HOOK_OFF="${_AMPERSAND_HOOK_OFF:-}"  # scripts deselected in the TUI drill-in
 
 cluster_hooks() {
   case "$1" in
@@ -621,7 +644,11 @@ cluster_detect() {
 # same-named hook.
 rm_hook_if_ours() {
   # Remove only OUR deployment; a user's different same-named file is left intact.
+  # Best-effort: ALWAYS returns 0 (nothing-to-remove is not an error), so callers
+  # in `set -e` for-loops (deactivate_cluster, deactivate_app_hooks, the cluster
+  # HOOK_OFF reconcile) don't abort when a target hook is already absent.
   is_our_hook "$1" && rm -f "$CLAUDE_DIR/hooks/$1"
+  return 0
 }
 
 # If settings.json is a legacy symlink into the repo, convert to a real file before
@@ -730,6 +757,8 @@ with open(p,'w') as f: json.dump(d,f,indent=2); f.write('\n')
 deactivate_clickup()    { deactivate_app_hooks block-clickup-writes.sh; }
 deactivate_visualizer() { deactivate_app_hooks visualizer-guard.sh; }
 deactivate_codex()      { deactivate_app_hooks codex-failure-watcher.sh codex-rescue-guard.sh; }
+deactivate_chrome()     { deactivate_app_hooks chrome-tabgroup-track.sh chrome-tabgroup-clear.sh chrome-tabgroup-stop.sh; }
+deactivate_figma()      { deactivate_app_hooks figma-fidelity-stop.sh; }
 
 apply_only() {
   local csv="$1"
@@ -798,6 +827,8 @@ Components (for --only KEYS):
   Core:     brain, config, memory, statusline, nvm, ampersand
   Channels: discord, voice-input, voice-output
   Tools:    cmux, fable, sidecoach, reflect, task-list, tilt-lab, lotus
+  Apps:     clickup, visualizer, codex, justify, chrome, figma (opt-in
+            hook-owning components; each wires only its own hooks into settings.json)
   Clusters: safety, verification, question-discipline, grounding, api-drift,
             planning-git, surface, model-routing (each a QA-hook bundle; every
             member hook is also --only-able, e.g. --only bash-guard)
@@ -1193,6 +1224,8 @@ detect_component() {
     clickup)    is_our_hook block-clickup-writes.sh && echo active || echo not-installed ;;
     visualizer) is_our_hook visualizer-guard.sh && echo active || echo not-installed ;;
     codex)      { is_our_hook codex-failure-watcher.sh || is_our_hook codex-rescue-guard.sh; } && echo active || echo not-installed ;;
+    chrome)     { is_our_hook chrome-tabgroup-track.sh || is_our_hook chrome-tabgroup-clear.sh || is_our_hook chrome-tabgroup-stop.sh; } && echo active || echo not-installed ;;
+    figma)      is_our_hook figma-fidelity-stop.sh && echo active || echo not-installed ;;
     *)          echo not-installed ;;
   esac
 }
@@ -1451,7 +1484,7 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 }
 
 deactivate_justify() {
-  deactivate_app_hooks justify-source-guard.sh justify-watch-guard.sh
+  deactivate_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh
   rm -rf "$CLAUDE_DIR/justify"
   rm -rf "$CLAUDE_DIR/skills/justify"
   # Remove MCP server from ~/.claude.json
@@ -1676,6 +1709,8 @@ deactivate_component() {
     clickup)    deactivate_clickup ;;
     visualizer) deactivate_visualizer ;;
     codex)      deactivate_codex ;;
+    chrome)     deactivate_chrome ;;
+    figma)      deactivate_figma ;;
     nvm)        deactivate_nvm ;;
     ampersand)  deactivate_ampersand ;;
     discord)    deactivate_discord ;;
@@ -1931,8 +1966,31 @@ returning_flow() {
           ;;
         install|activate)
           local logfile; logfile=$(mktemp)
+          # Cluster picks get the same phase-2 member drill-in the fresh install
+          # offers: optionally deselect member hooks. Deselected members ride to the
+          # recursive install as HOOK_OFF via env (the child's HOOK_OFF init respects
+          # an inherited value; apply_only leaves it intact; the install pass subtracts
+          # it). Non-cluster picks leave _hook_off empty, so behavior is unchanged.
+          local _hook_off=""
+          if [[ " ${CLUSTER_KEYS[*]} " == *" $pick "* ]] && command -v gum >/dev/null 2>&1; then
+            local _members _keepcsv _keep _m
+            _members="$(cluster_hooks "$pick")"
+            if gum confirm "Customize the hooks in '$pick'? (default: install all)" --default=false \
+                 --selected.background "#0e7490" --selected.foreground "#ffffff" 2>/dev/null; then
+              _keepcsv="$(printf '%s\n' $_members | paste -sd, -)"
+              _keep="$(printf '%s\n' $_members \
+                | gum choose --no-limit --selected "$_keepcsv" \
+                    --header "'$pick' hooks - space to toggle off, enter to confirm" \
+                    --cursor.foreground "#67e8f9" --selected.foreground "#67e8f9" \
+                    --item.foreground "#ffffff" \
+                    --cursor-prefix "[ ] " --selected-prefix "[✓] " --unselected-prefix "[ ] ")" || _keep="$_members"
+              for _m in $_members; do
+                case $'\n'"$_keep"$'\n' in *$'\n'"$_m"$'\n'*) ;; *) _hook_off="$_hook_off $_m" ;; esac
+              done
+            fi
+          fi
           printf "\nInstalling %s...\n" "$pick"
-          if _AMPERSAND_NO_SUMMARY=1 bash "$0" --only "$pick" --yes >"$logfile" 2>&1; then
+          if _AMPERSAND_HOOK_OFF="$_hook_off" _AMPERSAND_NO_SUMMARY=1 bash "$0" --only "$pick" --yes >"$logfile" 2>&1; then
             ok "$pick installed."
             current="active"
           else
@@ -3561,17 +3619,28 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 fi
 
 # ============================================================
-# 16e. App-owned hooks (Stage 3) - each picked component owns its hooks, wired
-# from app-wirings.json. This moves the last config residue to its apps so config
-# becomes core-only.
+# 16e. App-owned hooks (Stage 3/3b) - each picked component owns its hooks, wired
+# from app-wirings.json. Stage 3 moved the last config residue to its apps so
+# config became core-only; Stage 3b brought the remaining hand-added live hooks
+# (chrome/figma) and justify-watch-standing-by under the same management.
 # ============================================================
 picked memory       && install_app_hooks memory-approve.sh memory-nudge.sh memory-compact.sh consolidate-nudge.sh
+# NOTE: beats-rebuild.sh + beats-staleness-guard.sh (the beats retrieval-index
+# hooks) are intentionally NOT installed here. They are improv-repo-specific -
+# they resolve REPO_ROOT from their own location and only ever rebuild THIS repo's
+# beats index - and are wired PROJECT-scoped in the repo's checked-in
+# .claude/settings.json via $CLAUDE_PROJECT_DIR, a version-controlled ownership
+# surface distinct from this global installer. Globalizing them would fire an
+# improv-only hook on every project. Ruled keep-project-scoped (Jonah 2026-07-15;
+# decision_beats_hooks_stay_project_scoped.md).
 picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh
 picked voice-output && install_app_hooks voice-gate.sh
-picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh
+picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh
 picked clickup      && install_app_hooks block-clickup-writes.sh
 picked visualizer   && install_app_hooks visualizer-guard.sh
 picked codex        && install_app_hooks codex-failure-watcher.sh codex-rescue-guard.sh
+picked chrome       && install_app_hooks chrome-tabgroup-track.sh chrome-tabgroup-clear.sh chrome-tabgroup-stop.sh
+picked figma        && install_app_hooks figma-fidelity-stop.sh
 
 # ============================================================
 # 17. tilt-lab (visual-effects playground dev app)
@@ -3632,10 +3701,17 @@ fi
 
 echo "What was installed:"
 picked brain      && echo "  - Brain: team rules + workflow appended to CLAUDE.md (marker-guarded, additive)"
-picked config     && echo "  - Config: hooks, plugins, permissions merged into settings.json (additive)"
-picked memory     && echo "  - Memory subsystem: startup-check.sh + Memory Discipline section appended to CLAUDE.md + 3 hooks merged into settings.json (additive, marker-guarded)"
+picked config     && echo "  - Config: core settings (permissions, plugins, statusline) merged into settings.json (additive; QA-hook clusters and app hooks install as their own components, not config)"
+picked memory     && echo "  - Memory subsystem: startup-check.sh + Memory Discipline section appended to CLAUDE.md + its memory hooks merged into settings.json (additive, marker-guarded)"
 picked skills     && echo "  - Anthropic Skills: tactical-polish (tactical UI polish; auto-triggers on UI work)"
 picked statusline && echo "  - Custom statusline: statusline-command.sh symlinked (Claude Code falls back to default if unticked)"
+picked clickup    && echo "  - ClickUp guard: block-clickup-writes hook wired into settings.json"
+picked visualizer && echo "  - Visualizer guard: visualizer-guard hook wired into settings.json"
+picked codex      && echo "  - Codex guards: codex-failure-watcher + codex-rescue-guard hooks wired into settings.json"
+picked chrome     && echo "  - Chrome tab-group hygiene: chrome-tabgroup track/clear/stop hooks wired into settings.json"
+picked figma      && echo "  - Figma fidelity guard: figma-fidelity-stop hook wired into settings.json"
+picked fable      && echo "  - Fable orchestrator guard: fable-orchestrator-guard hook wired into settings.json"
+picked justify    && echo "  - Justify: server + core + /justify skill + MCP registration + source/watch/standing-by hooks"
 picked ghostty  && echo "  - Ghostty: config.ghostty (copied from repo - re-run install.sh to sync edits)"
 picked shaders  && echo "  - Ghostty shaders: in-repo chain at $REPO_DIR/shaders, plus library at ~/Documents/Github/ghostty-shaders"
 picked cmux     && echo "  - cmux: settings.json"

@@ -25,7 +25,8 @@ SELECTIONS=(config "config,cmux" "config,fable" "config,reflect" "config,voice-o
   "config,safety" "config,verification" "config,question-discipline" "config,grounding"
   "config,api-drift" "config,planning-git" "config,surface" "config,model-routing"
   safety bash-guard
-  "config,memory" "config,clickup" "config,visualizer" "config,codex")
+  "config,memory" "config,clickup" "config,visualizer" "config,codex"
+  "config,chrome" "config,figma")
 [ "${PARITY_FULL:-0}" = 1 ] && SELECTIONS+=("config,sidecoach" "config,justify")
 
 fail=0

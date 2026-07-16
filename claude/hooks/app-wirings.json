@@ -180,5 +180,57 @@
         "timeout": 5
       }
     }
+  ],
+  "justify-watch-standing-by.sh": [
+    {
+      "event": "Stop",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/justify-watch-standing-by.sh",
+        "timeout": 10
+      }
+    }
+  ],
+  "chrome-tabgroup-track.sh": [
+    {
+      "event": "PostToolUse",
+      "matcher": "mcp__claude-in-chrome__",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/chrome-tabgroup-track.sh"
+      }
+    }
+  ],
+  "chrome-tabgroup-clear.sh": [
+    {
+      "event": "PostToolUse",
+      "matcher": "mcp__claude-in-chrome__tabs_close_mcp",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/chrome-tabgroup-clear.sh"
+      }
+    }
+  ],
+  "chrome-tabgroup-stop.sh": [
+    {
+      "event": "Stop",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/chrome-tabgroup-stop.sh"
+      }
+    }
+  ],
+  "figma-fidelity-stop.sh": [
+    {
+      "event": "Stop",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/figma-fidelity-stop.sh",
+        "timeout": 10
+      }
+    }
   ]
 }
