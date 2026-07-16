@@ -1,14 +1,27 @@
 ---
-name: Codex CLI fails (SyntaxError) because the Bash-tool shell's node is v12
-description: codex / codex --version / codex-review.py all die with "SyntaxError: Unexpected reserved word" at @openai/codex codex.js:188. Root cause is NOT codex - the non-interactive Bash-tool shell resolves `node` to v12.22.12, but codex 0.142.5 uses top-level await and needs node >=16. Durable fix = make codex resolve a node>=16 absolutely (codex-review.py or a PATH shim), independent of the shell's default node.
+name: Codex CLI fails (SyntaxError) because the Bash-tool shell's node is v12 - FIXED
+description: codex / codex --version / codex-review.py all died with "SyntaxError: Unexpected reserved word" at @openai/codex codex.js:188. Root cause was NOT codex - the non-interactive Bash-tool shell resolves `node` to v12.22.12, but codex 0.142.5 uses top-level await and needs node >=16. FIXED 2026-07-15: codex-review.py now resolves a node>=16 absolutely (co-located-with-codex node, env/nvm fallbacks) and invokes `<node> <codex.js>` directly, so the reliable cross-model path works regardless of the shell's default node. Smoke HEALTHY.
 type: reference
-relates_to: [reference_codex_review_tool.md, session_2026-07-15_stage3b-execution.md]
+relates_to: [reference_codex_review_tool.md, session_2026-07-15_stage3b-execution.md, session_2026-07-15_codex-node12-fix.md]
 author_human: Jonah Cohen
 author_model: claude-opus-4.8
 source: session
-verified: reproduced (node --version = v12.22.12; codex engines >=16; codex.js:188 is a top-level await)
+verified: reproduced (node v12.22.12; codex engines >=16; codex.js:188 top-level await); FIXED + codex-review.py --smoke HEALTHY + real cross-model review exit 0
 confidence: high
 ---
+
+## RESOLVED 2026-07-15 (Jonah Cohen) - see session_2026-07-15_codex-node12-fix.md
+Fixed via option 1: `claude/hooks/codex-review.py` now resolves a node>=16 absolutely
+(`codex_argv()`: prefers `$CODEX_NODE_BIN`, then the node co-located with the codex
+symlink - `dirname(which codex)/node`, guaranteed the version codex was installed under -
+then the ambient node if >=16, then the newest nvm node>=16; every candidate version-checked;
+falls back to `['codex']` if none). `build_cmd` uses that prefix, invoking `<node> <codex.js> exec ...`
+which the Codex reviewer confirmed is equivalent to `codex exec ...` (codex.js forwards argv.slice(2)).
+The codex install.sh component now also DEPLOYS codex-review.py (was only manually symlinked),
+so fresh installs get the self-resolving tool. Bare `codex` from the Bash tool is still broken
+(a dotfiles shim can't shadow it - the real codex sits at PATH position 8, before any dotfiles bin
+dir at 9+), but codex-review.py is the sanctioned cross-model path (codex-rescue-guard redirects to it),
+so the gate is restored.
 
 ## SYMPTOM
 Every Codex invocation from the Claude Code Bash tool fails immediately:
