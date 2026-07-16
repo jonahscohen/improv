@@ -51,7 +51,8 @@ browser_load() {
   # Reset so a re-load never leaves stale entries behind. Prefix-name expansion is
   # safe under `set -u` even when nothing matches (expands to nothing).
   for v in ${!BR_KIND_@} ${!BR_TAG_@} ${!BR_DESC_@} ${!BR_LABEL_@} \
-           ${!BR_CHILDREN_@} ${!BR_HOOKDESC_@} ${!BR_SECTION_@}; do
+           ${!BR_CHILDREN_@} ${!BR_HOOKDESC_@} ${!BR_SECTION_@} \
+           ${!BR_HOOKOWNER_@} ${!BR_PINNED_@}; do
     unset "$v"
   done
   BR_BUCKETS=""
@@ -103,6 +104,12 @@ for b in buckets:
 for h, d in tree.get("hook_desc", {}).items():
     emit("HOOKDESC", h, d)
 
+for h, o in tree.get("hook_owner", {}).items():
+    emit("HOOKOWNER", h, o)
+
+for h in tree.get("pinned_hooks", []):
+    emit("PINNED", h, "1")
+
 print("BR_BUCKETS=" + esc("\t".join(b["key"] for b in buckets)))
 PY
 )" || return 1
@@ -139,6 +146,19 @@ node_label() { _br_untab "$(_br_get LABEL "$1")"; }
 
 # hook_desc <hook> -> its description (empty if unknown).
 hook_desc() { _br_untab "$(_br_get HOOKDESC "$1")"; }
+
+# hook_owner <hook> -> its install-owner key: the `--only` key that installs it
+# (a cluster key like "safety", an app-component key like "justify", or "memory"/
+# "reflect" for the Beats hooks). Empty if unknown.
+hook_owner() { _br_untab "$(_br_get HOOKOWNER "$1")"; }
+
+# hook_pinned <hook> -> 0 if the hook is PINNED (project-scoped, always-on, and NOT
+# installer-toggleable), 1 otherwise. Reads the encoded BR_PINNED_<hex> flag
+# directly; safe under `set -u` via the `-` default.
+hook_pinned() {
+  local n="BR_PINNED_$(_br_enc "$1")"
+  [ "${!n-}" = "1" ]
+}
 
 # bucket_section <bucketKey> -> core|more (empty if unknown).
 bucket_section() { _br_untab "$(_br_get SECTION "$1")"; }
@@ -216,7 +236,7 @@ counts() {
 #   leaf:        probe -> active if installed else none.
 #   group/hooks: derived from counts (on==0 none, on==total active, else partial).
 item_state() {
-  local path="$1" kind probe c on total
+  local path="$1" kind probe c on total key parent
   kind="$(node_kind "$path")"
   if [ "$kind" = "group" ] || [ "$kind" = "hooks" ]; then
     c="$(counts "$path")"
@@ -229,6 +249,14 @@ item_state() {
       printf '%s\n' "partial"
     fi
   else
+    # A PINNED hook leaf (parent node is a hooks node) is always-on and not
+    # installer-toggleable, so it reads active WITHOUT consulting the probe.
+    key="${path##*/}"
+    parent="${path%/*}"
+    if [ "$(node_kind "$parent")" = "hooks" ] && hook_pinned "$key"; then
+      printf '%s\n' "active"
+      return 0
+    fi
     probe="${BR_STATE_PROBE:-_real_probe}"
     if "$probe" "$path"; then
       printf '%s\n' "active"

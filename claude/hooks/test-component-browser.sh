@@ -79,5 +79,32 @@ INSTALLED="||"
 [ "$(item_state 'Beats/Hooks')" = "none" ] && ok "hooks folder none" || bad "hooks folder none"
 unset BR_STATE_PROBE
 
+# ---- owner + pinned tests (Task 3.5) ----
+[ "$(hook_owner 'bash-guard')" = "safety" ] && ok "cluster hook owner" || bad "cluster hook owner"
+[ "$(hook_owner 'justify-source-guard')" = "justify" ] && ok "app hook owner" || bad "app hook owner"
+[ "$(hook_owner 'memory-approve')" = "memory" ] && ok "beats memory-hook owner" || bad "beats memory-hook owner"
+[ "$(hook_owner 'reflect-nudge')" = "reflect" ] && ok "beats reflect-hook owner" || bad "beats reflect-hook owner"
+hook_pinned 'beats-rebuild' && ok "beats-rebuild pinned" || bad "beats-rebuild pinned"
+hook_pinned 'beats-staleness-guard' && ok "beats-staleness pinned" || bad "beats-staleness pinned"
+hook_pinned 'memory-approve' && bad "memory-approve NOT pinned" || ok "memory-approve NOT pinned"
+# a pinned hook reads as always active regardless of the probe
+BR_STATE_PROBE='fake_probe'; INSTALLED="||"   # nothing installed
+[ "$(item_state 'Beats/Hooks/beats-rebuild')" = "active" ] && ok "pinned hook always active" || bad "pinned hook always active"
+[ "$(item_state 'Beats/Hooks/memory-approve')" = "none" ] && ok "unpinned hook follows probe" || bad "unpinned hook follows probe"
+unset BR_STATE_PROBE
+# every non-pinned hook in the tree has an owner that is a real install/cluster key
+python3 - "$TREE" <<'PY' && ok "every hook has owner" || bad "every hook has owner"
+import json,sys
+t=json.load(open(sys.argv[1])); ho=t.get("hook_owner",{}); pinned=set(t.get("pinned_hooks",[]))
+hooks=set()
+def walk(m):
+    for h in m.get("hooks",[]): hooks.add(h)
+    for c in m.get("members",[]): walk(c)
+for b in t["buckets"]: walk(b)
+missing=[h for h in hooks if h not in ho]
+print("missing owner:",missing,file=sys.stderr)
+sys.exit(0 if not missing else 1)
+PY
+
 echo "== $pass passed, $fail failed =="
 [ "$fail" = 0 ]
