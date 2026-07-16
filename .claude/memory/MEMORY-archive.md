@@ -1090,3 +1090,15 @@
 
 <!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
 - [Codex broken-from-Bash-tool FIXED - shell node was v12 but codex 0.142.5 needs >=16; codex-review.py now resolves a node>=16 absolutely (co-located-with-codex node + fallbacks) and invokes node+codex.js directly; codex component now DEPLOYS codex-review.py; cross-model gate restored (smoke HEALTHY, real Codex review exit 0) - PROJECT (2026-07-15)](session_2026-07-15_codex-node12-fix.md)
+
+<!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
+- [Bucket-browser Task 1 DONE (branch feat/installer-bucket-browser) - browser-tree.json single-source-of-truth (11 buckets prototype-order, 55 verbatim hook_desc) + test-component-browser.sh (valid-json / every-KEY-bucketed / every-hook-described), all 3 pass; ported verbatim from the clickable prototype. Case-fix: 4 install-component buckets (sidecoach/justify/tilt-lab/lotus) keyed by lowercase install key + `label` for display - PROJECT (2026-07-16)](session_2026-07-16_bucket-browser-task1-data.md)
+
+<!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
+- [Bucket-browser Task 2 DONE - `claude/hooks/browser-lib.sh` pure accessor layer over browser-tree.json (browser_load + node_kind/children/hooks/tag/desc/label + hook_desc + bucket_section + browser_buckets), sourced by install.sh (guarded, no top-level load); built TDD, 16/16 green. KEY: bash-3.2 target has NO associative arrays, so storage uses encoded plain-scalar vars (`BR_<FIELD>_<hex(path)>`) not `declare -gA`; multi-word bucket keys ("Voice & chat" etc.) round-trip via tab-delimited internal storage - PROJECT (2026-07-16)](session_2026-07-16_bucket-browser-task2-lib.md)
+
+<!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
+- [Bucket-browser Task 3 - status + rollup layer in browser-lib.sh (leaf_paths / counts / item_state / _real_probe) with injectable BR_STATE_PROBE seam; hook-vs-component keyed off parent kind; 24/24 tests pass under bash 3.2 - PROJECT (2026-07-16)](session_2026-07-16_bucket-browser-task3-status.md)
+
+<!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
+- [Bucket-browser Task 3.5 DONE (branch feat/installer-bucket-browser) - hook install-OWNERS + PINNED flag: browser-tree.json gains `hook_owner` (55 hooks -> --only key; Beats/Hooks folder split memory/reflect) + `pinned_hooks` (beats-rebuild, beats-staleness-guard); browser-lib.sh gains hook_owner/hook_pinned accessors; item_state reads a pinned hook leaf as always-active without the probe. 34/34 green under bash 3.2.57; independent-Claude review (Codex down) - PROJECT (2026-07-16)](session_2026-07-16_bucket-browser-task3.5-owners.md)
