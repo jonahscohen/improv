@@ -1080,3 +1080,7 @@
 
 <!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
 - [PROJECT beat: change plan authored for cmux/fable component-scoping + sidecoach-mcp wire-up (docs/plans/2026-07-15-...); self-review + plan-consistency-lint CLEAN, but Codex NO-GO'd v1 - being revised. Jonah ruled fix-both + wire-up, execute without an approval gate - PROJECT (2026-07-15)](session_2026-07-15_cmux-fable-sidecoach-change-plan.md)
+
+<!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
+- [Sidecoach SIDE-STRIPE LEAD RULING - no-build accepted; saturation-gate precision lever DEFERRED (margin huge); side-stripe recall folds into the accepted motion honest-frame (no new Jonah re-surface) - DECISION (2026-06-25)](session_2026-06-25_sidestripe-lead-ruling.md)
+- [Sidecoach STAGE 6 one-engine audit + LOW-CONTRAST HOLE - audit CONFIRMED one engine (live+eval same detector fns, shims real, simpler) but found low-contrast (40 TP = biggest objective class) is EVAL-ONLY/unwired to live NL path; lead verified + closing it (Task #5) detection-preservingly (eval calls scanner directly, frozen-90 unchanged) - DECISION (2026-06-25)](session_2026-06-25_stage6-oneengine-audit-and-lowcontrast-hole.md)

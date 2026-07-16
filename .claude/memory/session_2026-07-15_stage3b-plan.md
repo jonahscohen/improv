@@ -2,7 +2,7 @@
 name: Stage-3b plan (MANDATORY) - package the 7 unmanaged hooks + cosmetic fixes + memory-formatter root-cause
 description: Jonah ruled 3b mandatory (not deferred) - every hook must be owned. Audit found 7 unmanaged hooks. Plus fix 2 cosmetic items and root-cause the beats-rebuild MEMORY.md revert. All confirmed 2026-07-15.
 type: project
-relates_to: [session_2026-07-15_stage3-plan.md, session_2026-07-15_stage2-execution-progress.md]
+relates_to: [session_2026-07-15_stage3-plan.md, session_2026-07-15_stage2-execution-progress.md, decision_beats_hooks_stay_project_scoped.md]
 author_human: Jonah Cohen
 author_model: claude-opus-4.8
 source: session
@@ -40,4 +40,4 @@ WHY MY EDIT VANISHED WITH AN EMPTY DIFF: committed MEMORY.md is **22766 / 23000 
 
 CONCLUSION: MEMORY.md is still MANUALLY maintained (Jonah's "keep manual" ruling STANDS - the compactor does not GENERATE the index, only keeps it under budget). CORRECT FIX: add WELL-FORMED `- [title](file)` lines, and PIN load-bearing/active pointers with a `** ACTIVE **` title so the compactor can never archive them. Because the index sits at its ceiling, every add near budget evicts an oldest non-pinned pointer to the archive - that is BY DESIGN, not a bug. Does NOT change 3b execution (memory-compact is already memory-owned as of Stage 3; 3b only adds beats-rebuild + beats-staleness to the memory component). See reference_memory_index_over_budget.md.
 
-**3b EXECUTION STATUS:** plan complete above; all decisions confirmed. Execution (chrome/figma components, justify-standing-by, memory beats-hooks, cosmetic x2) is a fresh Stage-2-sized build - carried by THIS beat for continuation. Next actionable: extract chrome/figma entries from LIVE ~/.claude/settings.json into app-wirings.json (safe foundation, like the Stage-3 app-wirings gen); author standing-by + beats-rebuild + beats-staleness wiring from their hook headers; then components + 16e extension + strip + verify(unmanaged audit=0) + Codex + commit.
+**3b EXECUTION STATUS: COMPLETE + COMMITTED (1c8f6569, direct-to-main).** See session_2026-07-15_stage3b-execution.md for the full execution record. One decision folded during execution (decision_beats_hooks_stay_project_scoped.md): beats-rebuild/staleness stay PROJECT-scoped, NOT globalized - only chrome/figma/justify-watch-standing-by became global app-component hooks. A latent Stage-2 bug was fixed along the way (rm_hook_if_ours aborting set -e for-loops in the cluster HOOK_OFF reconcile). Both cosmetics done. Unmanaged-hook audit == 0. Cross-model gate ran via the independent-Claude-reviewer fallback (Codex broken on this machine - flagged separately).
