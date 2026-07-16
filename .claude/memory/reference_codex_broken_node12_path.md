@@ -2,13 +2,24 @@
 name: Codex CLI fails (SyntaxError) because the Bash-tool shell's node is v12 - FIXED
 description: codex / codex --version / codex-review.py all died with "SyntaxError: Unexpected reserved word" at @openai/codex codex.js:188. Root cause was NOT codex - the non-interactive Bash-tool shell resolves `node` to v12.22.12, but codex 0.142.5 uses top-level await and needs node >=16. FIXED 2026-07-15: codex-review.py now resolves a node>=16 absolutely (co-located-with-codex node, env/nvm fallbacks) and invokes `<node> <codex.js>` directly, so the reliable cross-model path works regardless of the shell's default node. Smoke HEALTHY.
 type: reference
-relates_to: [reference_codex_review_tool.md, session_2026-07-15_stage3b-execution.md, session_2026-07-15_codex-node12-fix.md]
+relates_to: [reference_codex_review_tool.md, session_2026-07-15_stage3b-execution.md, session_2026-07-15_codex-node12-fix.md, session_2026-07-16_node-path-default-hook.md]
 author_human: Jonah Cohen
 author_model: claude-opus-4.8
 source: session
 verified: reproduced (node v12.22.12; codex engines >=16; codex.js:188 top-level await); FIXED + codex-review.py --smoke HEALTHY + real cross-model review exit 0
 confidence: high
 ---
+
+## FULLY RESOLVED 2026-07-16 (Jonah Cohen) - see session_2026-07-16_node-path-default-hook.md
+The "KNOWN REMAINING" note below (bare `codex` still broken, "not fixable from dotfiles") is
+now OBSOLETE. It was right that a PATH SHIM cannot win - the real codex sits at PATH position 8
+and no dotfiles dir precedes it - but wrong that the harness PATH is beyond reach. A SessionStart
+hook can write `export PATH=...` to `$CLAUDE_ENV_FILE`, which Claude Code applies to every
+subsequent Bash tool call. `claude/hooks/node-path-default.sh` uses that to make the nvm default
+(`nvm alias default` = 20, already set, just never applied because the Bash tool's non-interactive
+zsh never sources ~/.zshrc) the only nvm dir on PATH. Bare `codex --version` now returns
+`codex-cli 0.142.5`, and `node` is v20.19.6 instead of v12.22.12 - which fixes npm/npx and every
+other global node CLI too, not just codex. Requires a session restart to take effect.
 
 ## RESOLVED 2026-07-15 (Jonah Cohen) - see session_2026-07-15_codex-node12-fix.md
 Fixed via option 1: `claude/hooks/codex-review.py` now resolves a node>=16 absolutely

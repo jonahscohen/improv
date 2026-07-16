@@ -29,6 +29,11 @@
             "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/startup-check.sh",
             "timeout": 10,
             "statusMessage": "Loading memory..."
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/node-path-default.sh",
+            "timeout": 10
           }
         ]
       }

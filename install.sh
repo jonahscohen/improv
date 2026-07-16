@@ -1285,8 +1285,20 @@ deactivate_brain() {
 }
 
 deactivate_config() {
-  # Stage 3: config is core-only. Every hook moved to its app component and is
+  # Stage 3: config is core-only. Every APP hook moved to its app component and is
   # removed by that component's deactivate, NOT here.
+  # node-path-default.sh is config-owned (core, base-wired) - remove it here, and only if it
+  # is OURS, so a user's own same-named hook is never deleted. The settings.json strip below
+  # must follow the SAME ownership decision: removing the wiring while leaving a user's own
+  # file would silently disable THEIR hook. NP_STRIP carries that decision into the python
+  # block. The one case where we strip wiring without owning a file is a DANGLING entry (no
+  # file at all) - there is nothing to protect and the ref would exit 127 on every session.
+  NP_STRIP=""
+  if is_our_hook node-path-default.sh; then
+    rm -f "$CLAUDE_DIR/hooks/node-path-default.sh"; NP_STRIP=1
+  elif [ ! -e "$CLAUDE_DIR/hooks/node-path-default.sh" ]; then
+    NP_STRIP=1
+  fi
   # startup-check.sh is shared with - and owned by - the memory component (memory
   # symlinks + wires it too). Do NOT remove it on config deactivate, or an active
   # memory install would be left wiring a missing loader.
@@ -1296,16 +1308,33 @@ deactivate_config() {
     rm -f "$CLAUDE_DIR/settings.json"
   fi
   if [ -f "$CLAUDE_DIR/settings.json" ] && [ ! -L "$CLAUDE_DIR/settings.json" ]; then
-    python3 - "$CLAUDE_DIR/settings.json" <<'PYCONFIG'
-import json, sys
+    NP_STRIP="$NP_STRIP" python3 - "$CLAUDE_DIR/settings.json" <<'PYCONFIG'
+import json, os, sys
 path = sys.argv[1]
 try:
     with open(path) as f:
         d = json.load(f)
 except Exception:
     sys.exit(0)
-# Stage 3: config is core-only - it owns NO hooks now, so nothing to strip from
-# hooks here. App hooks are removed by their own components' deactivate.
+# Stage 3: app hooks are removed by their own components' deactivate, not here.
+# node-path-default.sh IS config-owned (core, base-wired in claude/settings.json), so its
+# SessionStart entry must come out with it. Removing the file while leaving the wiring would
+# dangle a missing hook -> exit 127 on every SessionStart, which is precisely the invariant
+# claude/hooks/test-settings-deploy-parity.sh exists to protect, in the teardown direction.
+CONFIG_HOOK_CMDS = ["~/.claude/hooks/node-path-default.sh"]
+# Only when the shell decided we own it (or it dangles) - see NP_STRIP above.
+if os.environ.get("NP_STRIP"):
+    hooks = d.get("hooks", {})
+    for ev in list(hooks.keys()):
+        kept_groups = []
+        for g in hooks[ev]:
+            g["hooks"] = [x for x in g.get("hooks", []) if x.get("command") not in CONFIG_HOOK_CMDS]
+            if g.get("hooks"):
+                kept_groups.append(g)
+        if kept_groups:
+            hooks[ev] = kept_groups
+        else:
+            del hooks[ev]
 OUR_ALLOW = [
     "Bash(npx create-next-app@latest:*)", "Bash(claude mcp:*)", "mcp__pencil",
 ]
@@ -2216,10 +2245,14 @@ if picked config; then
   # - those hooks + detect-session-model now deploy+wire via the cluster pass, NOT
   # here. What remains is the app-owned residue that Stage 3 will move to its apps
   # (memory / cmux / voice / clickup / justify / visualizer / codex).
-  # Stage 3: config is now CORE-ONLY. Every app hook moved to its component (section
-  # 16e wires each from app-wirings.json). CONFIG_HOOKS is empty; config deploys only
-  # startup-check + hud + the permissions/plugins/statusLine merge.
-  CONFIG_HOOKS=()
+  # Stage 3: config is now CORE-ONLY. Every APP hook moved to its component (section
+  # 16e wires each from app-wirings.json); config deploys startup-check + hud + the
+  # permissions/plugins/statusLine merge.
+  # node-path-default.sh is core, not an app hook, so it belongs here: it is base-wired
+  # in claude/settings.json (same tier as startup-check.sh) because a Bash tool whose
+  # `node` is a decade old breaks every global npm CLI, not one app's. It is a silent
+  # no-op wherever node is already >=16.
+  CONFIG_HOOKS=(node-path-default.sh)
   # link_or_copy, not safe_cp: on a dev checkout these become SYMLINKS so a git pull
   # reaches the hook that actually runs. safe_cp would delete an existing correct
   # symlink and freeze a copy over it on every re-run.
