@@ -168,3 +168,146 @@ real one - see the Codex section.
 - install.sh (check_updates return 0 only)
 - claude/hooks/browser-lib.sh (update_status, update_apply)
 - claude/hooks/test-component-browser.sh (+13 assertions)
+
+## Files touched (follow-up commit)
+
+- install.sh (check_updates: `--max-count=10` + `|| return 1`, coupled)
+- claude/hooks/test-check-updates.sh (NEW - 26 real-repo assertions, permanent controls)
+
+---
+
+# FOLLOW-UP (same day): coordinator RULING on Codex #1 + #2 - fix BOTH, coupled
+
+Jonah's ruling: `check_updates` is UNFROZEN for exactly these two changes. Correctness of
+the specified contract beats the freeze (the freeze had already been broken once, for the
+sanctioned `return 0`).
+
+**Why they MUST land together (the part I had wrong).** In the first pass I reported #2
+(the SIGPIPE-fragile `| head -10`) as a Medium worth deferring, reasoning that `return 0`
+masked it. That reasoning was correct ONLY for the code as it stood, and it would have
+become a trap the moment #1 was fixed:
+
+- `|| return 1` bolted onto the OLD pipe is a REGRESSION, not a fix. install.sh runs
+  `set -euo pipefail`; `git log ... | head -10` can return **141** (head exits at 10 lines,
+  git log takes SIGPIPE on its next write), and `|| return 1` turns that into `unknown` -
+  the row saying "cannot tell" exactly when updates ARE available.
+- `--max-count=10` removes the pipe entirely. No pipe -> no SIGPIPE -> no 141. THAT is
+  what makes `|| return 1` mean "git log genuinely failed".
+
+**MEASURED CORRECTION to the ruling's premise (the trigger is BYTES, not commits).** The
+ruling stated 141 fires "whenever there are MORE than 10 incoming commits". That is WRONG,
+and I had already copied it into the install.sh comment and this beat as fact before the
+harness contradicted it. SIGPIPE requires git log to still be WRITING when head exits; if
+the whole output fits in the pipe buffer (~64KB), git log finishes and exits 0 first.
+Measured on real repos:
+
+  | commits behind | subject len | total output | old-pipe rc |
+  |----------------|-------------|--------------|-------------|
+  | 15             | 10          | 215 B        | **0**       |
+  | 65             | 200         | 10 KB        | **0**       |
+  | 165            | 800         | 91 KB        | **141**     |
+  | 465            | 800         | 333 KB       | **141**     |
+
+The DECISION survives unchanged - if anything it hardens. A size-dependent failure is
+WORSE than the count-dependent one described: it is invisible in every small-backlog test
+and fires only for far-behind repos, i.e. exactly the installs that most need the update
+row to work. But the reasoning had to be corrected in the code comment, in this beat, and
+in the harness, because a wrong premise recorded as fact is how the next person "cleans
+up" the fix.
+
+**How the error was caught, and why it nearly wasn't:** the permanent negative control
+caught it on its FIRST run - the `| head -10` mutant returned 0 against 15 commits, so the
+control was passing vacuously. Had I written the control as a one-off at authoring time
+(or trusted the ruling's number and asserted `!= 0`), it would have "passed" and I would
+have shipped a control that proves nothing plus a comment stating a falsehood. The rule
+that saved it: a negative control must be OBSERVED failing for the RIGHT reason, not just
+observed failing.
+
+So #2 is a PRECONDITION of #1. Landed as one change:
+
+    commits=$(git log HEAD..origin/main --max-count=10 --pretty=format:'%s' 2>/dev/null) || return 1
+
+**Failure mode to remember:** I triaged #2 by asking "does this hurt today?" (no, `return 0`
+swallows it) instead of "does this hurt under the fix we already know is coming?" (yes,
+catastrophically). Severity of a latent bug is not a property of the current code alone -
+it depends on the changes already queued against it. Two findings that look independent in
+a review list can be a precondition pair.
+
+Final contract - THREE failure modes, none reachable by the stubbed unit tests:
+- exit 1 -> cd failed, fetch failed, OR git log failed  -> `unknown`
+- exit 0 + output -> commits available (newest first, max 10) -> `available`
+- exit 0 + empty  -> up to date -> `up-to-date`
+
+## New permanent harness: claude/hooks/test-check-updates.sh
+
+The unit tests STUB check_updates, so none of this contract has unit coverage - the bugs
+live in the real git interaction. New harness extracts the REAL function verbatim from
+install.sh (so it tracks the source, and a rewrite that breaks the contract fails loudly)
+and drives it against throwaway git repos under `set -euo pipefail`, the real strict mode.
+
+It also bakes the NEGATIVE CONTROLS in permanently, as mutation tests: it derives the two
+broken variants from the real source and asserts they MISBEHAVE. A control that only ran
+once during authoring is a control nobody has; these re-run on every invocation and will
+catch a future "cleanup" that reintroduces either bug.
+
+26 assertions, ~5s. Coverage:
+- up-to-date -> 0 + empty -> `up-to-date`
+- 3 incoming -> 0 + 3 subjects, newest first -> `available`
+- 15 incoming -> 0 + exactly 10 subjects (the CAP; explicitly NOT the SIGPIPE case, and
+  the harness now says so - it asserts the old pipe STILL returns 0 here, documenting the
+  real trigger instead of leaving a vacuous control lying around)
+- large backlog (60 x ~4000-char subjects = 241,106 bytes, asserted >128KB so the scenario
+  cannot silently stop proving anything) -> real code 0 + 10 subjects -> `available`
+  - NEG-CONTROL: the half-fixed pipe variant returns **1** here, and end-to-end
+    `update_status` says **unknown** while updates ARE available. The regression the
+    coupling argument predicted, demonstrated rather than asserted.
+- fetch OK + git log FAILS (unborn HEAD: fetch succeeds, `HEAD..origin/main` cannot
+  resolve) -> 1 -> `unknown`
+  - NEG-CONTROL: without `|| return 1`, exit 0 + empty -> misread as `up-to-date`
+- bad REPO_DIR -> 1 -> `unknown`; dead remote (cd OK, fetch fails) -> 1 -> `unknown`
+- parity: `--max-count=10` output byte-identical to the old `| head -10` output
+
+Harness trap worth remembering: `git init --bare` defaults HEAD to `refs/heads/master`, so
+pushing `main` yields a clone with an UNBORN HEAD and `git log HEAD..origin/main` fails
+with 128 for reasons having nothing to do with the code under test. My first probe run hit
+exactly this and produced a completely bogus reading (rc=128 everywhere). Every repo the
+harness builds now passes `-c init.defaultBranch=main`, and it asserts the clone really
+has `origin/main` before testing anything.
+
+## Codex cross-model review R2 (real verdict, 268s) on the check_updates change
+
+FOLDED (2, both in the harness):
+- The parity assertion compared two standalone `git log` commands and never invoked
+  check_updates - it proved only that git agrees with itself, and would have stayed green
+  against a check_updates that mangled or reordered subjects on the way out. Now compares
+  the REAL function's output, every line.
+- Softened the ">128KB exceeds any pipe buffer" claim. Codex sharpened the mechanism and is
+  right: `>10 lines` is NECESSARY (so head exits early at all) AND the bytes remaining after
+  head exits determine whether SIGPIPE fires. My "size, not count" was half the story - it
+  is BOTH conditions. The harness now asserts both, and 240KB is documented as a wide
+  margin rather than universal determinism. Flakiness would turn the file RED (the control
+  asserts rc=1), never silently green.
+
+REPORTED, NOT FIXED - each needs a THIRD change to check_updates, which the ruling scoped
+to exactly two, and each carries a rendering decision that is Task 8's:
+
+- **CONFIRMED BY PROOF - empty commit subjects break the contract.** `git commit
+  --allow-empty-message` is legal. If the first <=10 incoming commits ALL have empty
+  subjects, `--pretty=format:'%s'` yields only newlines, `$( )` strips them, `commits` is
+  empty -> exit 0 + empty -> the row says **up-to-date while updates exist**. Reproduced
+  on a real repo: 3 incoming empty-subject commits, `rev-list` confirms them, and
+  `update_status` printed `up-to-date`. Codex's fix: detect availability from a guaranteed
+  non-empty value (`git rev-list --max-count=1 HEAD..origin/main`), then render subjects
+  separately. That also raises a Task-8 question: what does the row show for "available"
+  when there are no subjects to list? Real-world likelihood in THIS repo is very low
+  (nobody commits empty messages here), which is why it is a report and not a stop-work.
+- **Nonstandard fetch refspec.** `git fetch origin main` updating `refs/remotes/origin/main`
+  is true for a normal clone but not guaranteed if `remote.origin.fetch` is customized;
+  fetch then succeeds against a STALE origin/main -> false up-to-date. Fix: log against
+  `FETCH_HEAD`, or fetch `main:refs/remotes/origin/main` explicitly.
+
+Codex confirmed the rest: the SIGPIPE analysis is correct, `--max-count=10` preserves cap
+and ordering, both mutation controls are real controls for their intended bugs, the
+unborn-HEAD scenario is a legitimate fetch-OK/log-fails case, and the bash is 3.2-portable
+with correct errexit semantics (`local commits` split from the assignment, `|| return 1`
+safe, final `return 0` correctly protecting the empty-output case).

@@ -1277,13 +1277,32 @@ check_updates() {
   cd "$REPO_DIR" || return 1
   git fetch origin main >/dev/null 2>&1 || return 1
   local commits
-  commits=$(git log HEAD..origin/main --pretty=format:'%s' 2>/dev/null | head -10)
+  # `--max-count=10` REPLACES a `| head -10` pipe, and the two changes on this line are
+  # COUPLED - neither is safe alone:
+  #   - `|| return 1` alone (over the old pipe) would be a REGRESSION. Under `pipefail`,
+  #     `git log ... | head -10` can yield status 141: head exits once it has 10 lines,
+  #     and git log takes SIGPIPE on its next write. `|| return 1` would then turn a repo
+  #     WITH updates into "unknown" - the row claiming it cannot tell, precisely when it
+  #     can. (The old code only got away with the pipe because nothing read its status.)
+  #   - `--max-count=10` alone would leave git log failures silently indistinguishable
+  #     from up-to-date.
+  # The SIGPIPE trigger is OUTPUT SIZE crossing the pipe buffer (~64KB), NOT the commit
+  # count: git log must still be WRITING when head exits, so a small backlog whose subjects
+  # fit in the buffer completes and exits 0. MEASURED (test-check-updates.sh): 15 commits
+  # (215B) -> 0, 65 commits (10KB) -> 0, 165 commits (91KB) -> 141. That size-dependence is
+  # what makes it nasty - it fires only for far-behind repos, i.e. exactly the installs that
+  # most need the update row to work.
+  # No pipe means no SIGPIPE means no 141, which is what lets `|| return 1` mean what it
+  # says: git log GENUINELY failed. `2>/dev/null` stays - the exit code carries the signal
+  # now. Real-repo coverage (the stubbed unit tests cannot reach any of this):
+  # claude/hooks/test-check-updates.sh.
+  commits=$(git log HEAD..origin/main --max-count=10 --pretty=format:'%s' 2>/dev/null) || return 1
   [ -n "$commits" ] && printf '%s\n' "$commits"
   # Explicit: without this the `[ -n ... ] &&` above is the last command, so the
   # up-to-date case (no commits) returns 1 - indistinguishable from a failed
   # cd/fetch. The contract callers rely on is:
-  #   exit 1            -> cd or fetch failed; update state is UNKNOWN
-  #   exit 0 + output   -> commits available (one subject per line)
+  #   exit 1            -> cd, fetch, or log failed; update state is UNKNOWN
+  #   exit 0 + output   -> commits available (one subject per line, newest first, max 10)
   #   exit 0 + no output -> up to date
   return 0
 }
