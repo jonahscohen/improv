@@ -1105,3 +1105,6 @@
 
 <!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
 - [Bucket browser Task 4 DONE - staging (PENDING_INSTALL/UNINSTALL sets) + apply_plan plan-string COMPUTATION in browser-lib.sh (no installs run) + counts() pinned-rollup fix; new BR_ALLHOOKS/BR_HOOKPATH loader maps power hooks_owned_by/apply_plan; 44/44 tests green under bash 3.2, bash -n install.sh clean; caught a bash-3.2 $(...)/heredoc apostrophe-parity quirk + folded a set-u safety finding - PROJECT (2026-07-16)](session_2026-07-16_bucket-browser-task4-staging.md)
+
+<!-- archived 2026-07-16 (moved from MEMORY.md to stay under load budget) -->
+- [Lead SELF-ANALYSIS concurrent-edit sequencing miss - dispatched two teammate units that both edit the central registry/codegen/golden in a shared tree (isolation is a no-op); rule = sequence registry-touching units or have one regen from the combined tree; no damage (changes composed) - FEEDBACK (2026-06-25)](session_2026-06-25_concurrent-edit-sequencing-miss.md)
