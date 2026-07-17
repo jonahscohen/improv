@@ -341,10 +341,11 @@ _br_all_hooks() {
 _br_hook_path() { _br_get HOOKPATH "$1"; }
 
 # _owner_leaf_path <owner> - the component-leaf path whose key is <owner> (e.g. memory ->
-# Beats/memory, reflect -> Beats/reflect, tilt-lab -> tilt-lab). Empty for a hooks-only
-# owner (justify, sidecoach, the clusters) that has NO leaf node. This leaf is the owner
-# master switch: staging it uninstall removes the whole component, install brings it in
-# WITH its hooks.
+# Beats/memory, sidecoach -> sidecoach/sidecoach, tilt-lab -> tilt-lab). Empty for a
+# hooks-only owner that has NO leaf node: the 8 QA clusters and the pure-hook components
+# (codex, chrome, figma, visualizer, clickup, fable), which have no non-hook payload to
+# put a leaf on. This leaf is the owner master switch: staging it uninstall removes the
+# whole component, install brings it in WITH its hooks.
 _owner_leaf_path() { _br_get OWNERLEAF "$1"; }
 
 # hooks_owned_by <owner> - every NON-pinned hook whose hook_owner is <owner>, in tree
@@ -511,10 +512,14 @@ _owner_of() {
 #   UNINSTALL_COMPONENT <O>            - the whole component/cluster comes out
 #   INSTALL <O>                        - install with no hook off-list
 #   INSTALL <O> h1 h2 ...              - install, but leave h1 h2 ... OFF (tree order)
-# Dual-nature owners (memory, reflect) have BOTH a component LEAF and separately-toggleable
-# non-pinned hooks; for them the LEAF is the master switch and the hooks are sub-toggles.
-# Hooks-only owners (justify, sidecoach, the clusters) have no leaf node, so all-hooks-off
-# DOES mean a full uninstall. Per-owner order (whichever fires first wins):
+# Dual-nature owners (memory, reflect, and since 2026-07-17 sidecoach, justify,
+# voice-output, cmux) have BOTH a component LEAF and separately-toggleable non-pinned
+# hooks; for them the LEAF is the master switch and the hooks are sub-toggles.
+# Hooks-only owners - the 8 QA clusters and the pure-hook components (codex, chrome,
+# figma, visualizer, clickup, fable) - have no leaf node, so all-hooks-off DOES mean a
+# full uninstall. Do NOT extend rule 3 to a component that has a leaf: that is what made
+# "Disable all Sidecoach hooks" silently remove the whole component.
+# Per-owner order (whichever fires first wins):
 #   1. leaf staged-uninstall        -> UNINSTALL_COMPONENT (master switch off)
 #   2. no owned hooks (pure leaf)   -> INSTALL if leaf staged-install, else nothing
 #   3. hooks-only + every hook off  -> UNINSTALL_COMPONENT (whole hooks component out)

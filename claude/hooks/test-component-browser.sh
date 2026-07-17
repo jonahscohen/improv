@@ -46,21 +46,120 @@ print("missing hook desc:",sorted(missing),file=sys.stderr)
 sys.exit(0 if not missing else 1)
 PY
 
+# 3b. NO TEST IN THIS FILE MAY NAME A PATH THAT DOES NOT EXIST IN THE TREE.
+#
+# This guards the suite against ITSELF, and it is not hypothetical - it caught four live
+# cases the moment it was written (2026-07-17). When sidecoach/justify/voice-output/cmux
+# gained component leaves, their hooks moved from `justify/<hook>` down to
+# `justify/Hooks/<hook>`. Four tests kept staging the OLD path and KEPT PASSING, because
+# every consumer of a bogus path degrades quietly rather than erroring:
+#   - stage_toggle/stage_all happily stage a path nothing will ever look up;
+#   - pending_under counts via leaf_paths, which never yields the bogus path, so the
+#     "stage_all clears opposite pending" assertion read 0 and passed while proving nothing;
+#   - _owner_of on `justify/justify-source-guard` returns the HOOK NAME as the owner
+#     (its parent is a group, not a hooks node), so apply_plan emits nothing at all.
+# A green suite asserting against paths that do not exist is worse than a red one. This is
+# the same failure family as the tree that LIED about sidecoach's hook count: a check that
+# only ever compares the suite to its own assumptions can never see the data move.
+#
+# Deliberately literal-only: paths built from variables ("$_p/$_k") are skipped, since the
+# accessor assertions around them already prove those resolve.
+python3 - "$TREE" "${BASH_SOURCE[0]}" <<'PY' && ok "every path literal in this suite exists in the tree" || bad "every path literal in this suite exists in the tree"
+import json,re,sys
+tree,testfile=sys.argv[1],sys.argv[2]
+t=json.load(open(tree))
+
+valid=set()
+def walk(n,path):
+    valid.add(path)
+    if n.get("members") is not None:
+        for c in n["members"]: walk(c,path+"/"+c["key"])
+    for h in n.get("hooks",[]) or []:
+        valid.add(path+"/"+h)
+for b in t["buckets"]: walk(b,b["key"])
+
+# Comment lines are stripped FIRST. Without this the scanner reads the prose above -
+# including this block's own `INSTALLED="|a|b|"` example - and reports 'a' and 'b' as
+# missing tree paths. Both shell and python comments start with #, and the whole file
+# (heredocs included) is one flat read here, so one filter covers both. Inline trailing
+# comments are NOT stripped, which is deliberate: a quoted path inside one would have to
+# be a real path anyway, and a blunter strip would eat `'#'` inside legitimate strings.
+src="\n".join(l for l in open(testfile).read().splitlines() if not l.lstrip().startswith("#"))
+
+# TWO CLASSES, CHECKED SEPARATELY - a single merged set with a "bare keys are fine"
+# escape hatch is NOT sound (caught in cross-model review 2026-07-17). PATH_FNS take a
+# full node/leaf path; KEY_FNS take an install-owner KEY. Merging them forced a blanket
+# exemption for any literal without a "/", which silently accepted
+# `stage_toggle 'justify-source-guard'` - a bogus PATH whose final segment happens to be
+# a real leaf key. That is exactly the stale-path bug this guard exists to catch, so the
+# exemption had a hole shaped like the bug.
+PATH_FNS=("stage_toggle","stage_all","item_state","pending_under","counts","leaf_paths",
+          "node_kind","node_children","node_label","node_tag","node_desc")
+KEY_FNS=("_owner_leaf_path","hook_owner","hooks_owned_by","hook_pinned")
+
+bad=[]
+cited_paths=set()
+for fn in PATH_FNS:
+    for m in re.finditer(r"\b%s\s+'([^'$]+)'" % fn, src):
+        cited_paths.add(m.group(1))
+# Every entry of a literal INSTALLED="|a|b|" fixture is a leaf PATH.
+for m in re.finditer(r'INSTALLED="\|([^"$]*)\|"', src):
+    for p in m.group(1).split("|"):
+        if p: cited_paths.add(p)
+for p in sorted(cited_paths):
+    if p not in valid:
+        bad.append("cites a path absent from the tree: %r" % p)
+
+# Owner keys: every leaf key plus every hooks-node owner (clusters and pure-hook apps have
+# no leaf, so their key never appears in `valid` as a leaf path).
+validkeys={p.rsplit("/",1)[-1] for p in valid} | set(t.get("hook_owner",{}).values())
+for fn in KEY_FNS:
+    for m in re.finditer(r"\b%s\s+'([^'$]+)'" % fn, src):
+        k=m.group(1)
+        if k not in validkeys:
+            bad.append("cites an owner key absent from the tree: %r (via %s)" % (k,fn))
+
+for b in bad: print("  "+b, file=sys.stderr)
+sys.exit(0 if not bad else 1)
+PY
+
 # ---- accessor tests (Task 2) ----
 source "$REPO_DIR/claude/hooks/browser-lib.sh"
 browser_load "$TREE"
 [ "$(browser_buckets)" = "Foundation Beats sidecoach justify tilt-lab lotus Design Tools Guardrails Voice & chat Dev surface Personal" ] \
   && ok "bucket order (keys)" || bad "bucket order (keys)"
 [ "$(node_kind 'Beats')" = "group" ] && ok "Beats is group" || bad "Beats is group"
-[ "$(node_kind 'sidecoach')" = "hooks" ] && ok "sidecoach is hooks" || bad "sidecoach is hooks"
+[ "$(node_kind 'sidecoach')" = "group" ] && ok "sidecoach is group" || bad "sidecoach is group"
 [ "$(node_kind 'tilt-lab')" = "leaf" ] && ok "tilt-lab is leaf" || bad "tilt-lab is leaf"
 [ "$(node_kind 'Beats/Hooks')" = "hooks" ] && ok "Beats/Hooks is hooks" || bad "Beats/Hooks is hooks"
 [ "$(node_children 'Beats')" = "memory reflect Hooks" ] && ok "Beats children" || bad "Beats children"
+# THE FOUR PAYLOAD COMPONENTS ARE GROUPS, NOT BARE HOOK FOLDERS (2026-07-17).
+# sidecoach/justify/voice-output/cmux each own a real non-hook payload (detect_component
+# checks a skill file / installed dir / settings symlink), so each renders as a group:
+# its component LEAF is the master switch, its hooks live in a Hooks folder underneath.
+# Before this, the bucket WAS the hook folder: it offered only "Enable/Disable all X
+# hooks..." and no install/uninstall affordance for the component at all, while
+# "Disable all X hooks" silently emitted a full UNINSTALL_COMPONENT via apply_plan
+# rule 3. The leaf is what makes rule 3's `[ -z "$lp" ]` false and the labels true.
+# The doubled path segment (sidecoach/sidecoach) is REQUIRED, not cosmetic: _real_probe
+# calls detect_component "${path##*/}" and _owner_leaf_path is keyed by leaf key, so the
+# leaf key must equal the installer's --only key.
+[ "$(node_children 'sidecoach')" = "sidecoach Hooks" ] \
+  && ok "sidecoach children (leaf + Hooks)" || bad "sidecoach children (got '$(node_children 'sidecoach')')"
+[ "$(node_kind 'sidecoach/sidecoach')" = "leaf" ] && ok "sidecoach component leaf" || bad "sidecoach component leaf"
 # All SIX sidecoach hooks, in the order install_app_hooks deploys them. The tree used to
 # list only 2 of the 6 the installer actually deploys and wires, so the browser rendered
 # "2/2 active" for a component with 6 managed hooks and gave no toggle for the other 4.
-[ "$(node_children 'sidecoach')" = "sidecoach-sessionstart sidecoach-preamble sidecoach-postuserp sidecoach-keyword sidecoach-taste-gate sidecoach-postresponse" ] \
-  && ok "sidecoach hook children" || bad "sidecoach hook children (got '$(node_children 'sidecoach')')"
+[ "$(node_children 'sidecoach/Hooks')" = "sidecoach-sessionstart sidecoach-preamble sidecoach-postuserp sidecoach-keyword sidecoach-taste-gate sidecoach-postresponse" ] \
+  && ok "sidecoach hook children" || bad "sidecoach hook children (got '$(node_children 'sidecoach/Hooks')')"
+# Every payload component has the same shape, and each leaf resolves as its owner's
+# master switch. A regression here is what re-hides the install affordance.
+for _c in "sidecoach:sidecoach" "justify:justify" "Voice & chat/voice-output:voice-output" "Dev surface/cmux:cmux"; do
+  _p="${_c%:*}"; _k="${_c##*:}"
+  [ "$(node_kind "$_p")" = "group" ] && ok "$_k bucket is a group" || bad "$_k bucket is a group"
+  [ "$(node_children "$_p")" = "$_k Hooks" ] && ok "$_k children (leaf + Hooks)" || bad "$_k children (got '$(node_children "$_p")')"
+  [ "$(_owner_leaf_path "$_k")" = "$_p/$_k" ] && ok "$_k owner leaf path" || bad "$_k owner leaf path (got '$(_owner_leaf_path "$_k")')"
+done
 [ "$(node_label 'sidecoach')" = "Sidecoach" ] && ok "sidecoach label" || bad "sidecoach label"
 [ "$(node_label 'Beats')" = "Beats" ] && ok "Beats label falls back to key" || bad "Beats label falls back to key"
 [ -n "$(node_tag 'Beats')" ] && ok "node tag present" || bad "node tag present"
@@ -212,7 +311,7 @@ stage_toggle 'tilt-lab'
 
 # 2. justify partial install: one hook staged on, the other two land in the off-list.
 INSTALLED="||"; stage_reset
-stage_toggle 'justify/justify-source-guard'
+stage_toggle 'justify/Hooks/justify-source-guard'
 out="$(apply_plan)"
 case "$out" in
   *"INSTALL justify justify-watch-guard justify-watch-standing-by"*) ok "justify partial install plan";;
@@ -228,50 +327,107 @@ case "$out" in
   *) bad "pure-leaf install plan";;
 esac
 
-# 4. full uninstall via stage_all: every justify hook staged off collapses to a component uninstall.
-INSTALLED="|justify/justify-source-guard|justify/justify-watch-guard|justify/justify-watch-standing-by|"; stage_reset
+# 4. full uninstall via stage_all from the BUCKET screen ("Remove all of Justify..."):
+# stage_all reaches the component leaf as well as the hooks, the leaf is staged off, and
+# rule 1 fires. This is now the ONLY path to a full uninstall for a payload component -
+# which is the point: it is reachable from a row that says "Remove all of Justify".
+INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|"; stage_reset
 stage_all 'justify' uninstall
 out="$(apply_plan)"
 case "$out" in
   *"UNINSTALL_COMPONENT justify"*) ok "full uninstall plan";;
-  *) bad "full uninstall plan";;
+  *) bad "full uninstall plan (got '$out')";;
+esac
+
+# 4a. THE AFFORDANCE REGRESSION (2026-07-17, Jonah). Disabling every HOOK of a payload
+# component must NOT uninstall the component - it unwires the hooks and leaves the skill,
+# server and CLI in place. Before the leaf existed, this exact action emitted
+# `UNINSTALL_COMPONENT justify` from a row labelled "Disable all Justify hooks...", i.e.
+# the label understated the blast radius by the entire package. Both halves are
+# load-bearing: the plan must install, and must not uninstall.
+INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|"; stage_reset
+stage_all 'justify/Hooks' uninstall
+out="$(apply_plan)"
+case "$out" in
+  *"INSTALL justify justify-source-guard justify-watch-guard justify-watch-standing-by"*)
+    ok "disable-all-hooks keeps the component (all 3 off-listed)";;
+  *) bad "disable-all-hooks keeps the component (got '$out')";;
+esac
+case "$out" in
+  *"UNINSTALL_COMPONENT"*) bad "disable-all-hooks must NOT uninstall the component (got '$out')";;
+  *) ok "disable-all-hooks emits NO component uninstall";;
+esac
+
+# 4a-ii. The component leaf is the master switch: toggling it off uninstalls the whole
+# component even with every hook left untouched-on. This is the affordance that did not
+# exist at all before - there was no row to select.
+stage_reset; stage_toggle 'justify/justify'
+out="$(apply_plan)"
+case "$out" in
+  *"UNINSTALL_COMPONENT justify"*) ok "component leaf is the master switch";;
+  *) bad "component leaf is the master switch (got '$out')";;
 esac
 
 # 4b. THE PARTIAL-OWNER DISABLE-ALL REGRESSION (the bug apply_plan rule 3 used to have).
 # A PARTIALLY-installed hooks-only owner + "Disable all" must ALSO collapse to a component
 # uninstall. The old rule asked "is every owned hook staged-uninstall?" - unsatisfiable
-# here, because stage_all only stages the hooks that are currently ON, so the 5 already-off
+# here, because stage_all only stages the hooks that are currently ON, so the already-off
 # ones were never staged. It fell through to the install branch and emitted
-# `INSTALL cmux <all 6 off-listed>`: a disable-all that INSTALLS. The rule now asks the only
+# `INSTALL <owner> <all off-listed>`: a disable-all that INSTALLS. The rule now asks the only
 # question that matters - is anything left ON - so both assertions below are load-bearing.
-INSTALLED="|Dev surface/cmux/resume-guard|"; stage_reset
-stage_all 'Dev surface/cmux' uninstall
+#
+# TARGETED AT `safety`, NOT cmux (retargeted 2026-07-17): cmux gained a component leaf and
+# is no longer a hooks-only owner, so it can no longer exercise rule 3 at all. `safety` is a
+# genuine hooks-only owner (a cluster - 5 unpinned hooks, no non-hook payload, so nothing to
+# put a leaf on). Rule 3 still governs the 6 pure-hook components and the 8 clusters, and
+# would otherwise have lost its multi-hook coverage silently.
+INSTALLED="|Guardrails/safety/bash-guard|"; stage_reset
+stage_all 'Guardrails/safety' uninstall
 out="$(apply_plan)"
 case "$out" in
-  *"UNINSTALL_COMPONENT cmux"*) ok "partial owner + disable-all -> component uninstall";;
+  *"UNINSTALL_COMPONENT safety"*) ok "partial owner + disable-all -> component uninstall";;
   *) bad "partial owner + disable-all -> component uninstall (got '$out')";;
 esac
 # The NEGATIVE half, asserted separately: it must not merely CONTAIN the uninstall, it must
 # not emit an INSTALL at all. A plan doing both would satisfy the check above and still
 # install the very hooks the user asked to remove.
 case "$out" in
-  *"INSTALL cmux"*) bad "partial owner + disable-all must NOT emit an INSTALL (got '$out')";;
+  *"INSTALL safety"*) bad "partial owner + disable-all must NOT emit an INSTALL (got '$out')";;
   *) ok "partial owner + disable-all emits NO install";;
 esac
 
 # 4c. Same owner, FULLY installed + disable-all: unchanged behaviour, so the fix cannot be
 # passing 4b by having broken the ordinary path.
-INSTALLED="|Dev surface/cmux/resume-guard|Dev surface/cmux/agent-teams-guard|Dev surface/cmux/node-shim-heal|Dev surface/cmux/cmux-close-guard|Dev surface/cmux/cmux-teammate-shim-heal|Dev surface/cmux/team-reaper|"
-stage_reset; stage_all 'Dev surface/cmux' uninstall
+INSTALLED="|Guardrails/safety/bash-guard|Guardrails/safety/content-guard|Guardrails/safety/content-guard-stop|Guardrails/safety/destructive-ops-guard|Guardrails/safety/destructive-confirm-detect|"
+stage_reset; stage_all 'Guardrails/safety' uninstall
 out="$(apply_plan)"
 case "$out" in
-  *"UNINSTALL_COMPONENT cmux"*) ok "fully-installed owner + disable-all -> component uninstall";;
+  *"UNINSTALL_COMPONENT safety"*) ok "fully-installed owner + disable-all -> component uninstall";;
   *) bad "fully-installed owner + disable-all -> component uninstall (got '$out')";;
 esac
 
+# 4d. Rule 3 for a pure-hook APP owner, not a cluster (added 2026-07-17 from cross-model
+# review). 4b/4c use `safety`, which is a CLUSTER - deactivate_component routes clusters to
+# deactivate_cluster (install.sh:1763) but routes pure-hook apps to their own arms
+# (deactivate_codex, deactivate_chrome, ...). Those apps are the class the four payload
+# components just LEFT, so without this the browser has no all-off assertion for any
+# pure-hook app at all. codex: 2 hooks, no leaf, no non-hook payload.
+[ -z "$(_owner_leaf_path 'codex')" ] && ok "codex is genuinely leafless (rule 3 applies)" || bad "codex is genuinely leafless (rule 3 applies)"
+INSTALLED="|Guardrails/codex/codex-failure-watcher|Guardrails/codex/codex-rescue-guard|"
+stage_reset; stage_all 'Guardrails/codex' uninstall
+out="$(apply_plan)"
+case "$out" in
+  *"UNINSTALL_COMPONENT codex"*) ok "pure-hook app + disable-all -> component uninstall";;
+  *) bad "pure-hook app + disable-all -> component uninstall (got '$out')";;
+esac
+case "$out" in
+  *"INSTALL codex"*) bad "pure-hook app + disable-all must NOT emit an INSTALL (got '$out')";;
+  *) ok "pure-hook app + disable-all emits NO install";;
+esac
+
 # 5. partial preserve: an already-on hook stays on; only the untouched-off hook is off-listed.
-INSTALLED="|justify/justify-watch-guard|"; stage_reset
-stage_toggle 'justify/justify-source-guard'
+INSTALLED="|justify/Hooks/justify-watch-guard|"; stage_reset
+stage_toggle 'justify/Hooks/justify-source-guard'
 out="$(apply_plan)"
 case "$out" in
   *"INSTALL justify justify-watch-standing-by"*) ok "partial preserve plan";;
@@ -293,15 +449,15 @@ case "$out" in
 esac
 
 # 8. stage_all install is TOTAL: it clears an opposite-direction staged-uninstall.
-INSTALLED="|justify/justify-source-guard|justify/justify-watch-guard|justify/justify-watch-standing-by|"; stage_reset
-stage_toggle 'justify/justify-source-guard'   # currently on -> stages UNINSTALL
-stage_all 'justify' install                    # "install all" must clear that
+INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|"; stage_reset
+stage_toggle 'justify/Hooks/justify-source-guard'   # currently on -> stages UNINSTALL
+stage_all 'justify' install                          # "install all" must clear that
 [ "$(pending_under 'justify')" = "0" ] && ok "stage_all install clears opposite pending" || bad "stage_all install clears opposite pending"
 
 # 9. stage_all uninstall is TOTAL: it clears an opposite-direction staged-install.
 INSTALLED="||"; stage_reset
-stage_toggle 'justify/justify-source-guard'   # currently off -> stages INSTALL
-stage_all 'justify' uninstall                  # "uninstall all" must clear that
+stage_toggle 'justify/Hooks/justify-source-guard'   # currently off -> stages INSTALL
+stage_all 'justify' uninstall                        # "uninstall all" must clear that
 [ "$(pending_under 'justify')" = "0" ] && ok "stage_all uninstall clears opposite pending" || bad "stage_all uninstall clears opposite pending"
 
 # 10. dual-nature reflect: toggling reflect-nudge OFF keeps the reflect skill (leaf = master switch).
@@ -334,7 +490,7 @@ out="$(apply_plan)"
 [ "$out" = "INSTALL memory" ] && ok "memory engine install brings hooks (no off-list)" || bad "memory engine install brings hooks (no off-list)"
 
 # 14. set -e smoke: the staging layer must not trip under set -e (install.sh runs set -euo pipefail).
-( set -e; stage_reset; stage_toggle 'justify/justify-source-guard'; apply_plan >/dev/null )
+( set -e; stage_reset; stage_toggle 'justify/Hooks/justify-source-guard'; apply_plan >/dev/null )
 [ "$?" = "0" ] && ok "staging layer clean under set -e" || bad "staging layer clean under set -e"
 
 # ---- apply_pending_plan translation (Task 6) --------------------------------
@@ -361,7 +517,7 @@ apl_line() {
 # install, NOT a component uninstall - so codex rides the install pass and DEACTIVATE is
 # empty. Owner order is apply_plan first-seen: PENDING_INSTALL is scanned before
 # PENDING_UNINSTALL, so chrome (staged install) precedes codex (staged uninstall).
-INSTALLED="|Guardrails/codex/codex-failure-watcher|Guardrails/codex/codex-rescue-guard|justify/justify-source-guard|justify/justify-watch-guard|justify/justify-watch-standing-by|"
+INSTALLED="|Guardrails/codex/codex-failure-watcher|Guardrails/codex/codex-rescue-guard|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|"
 stage_reset
 stage_toggle 'Guardrails/codex/codex-rescue-guard'   # currently ON -> stages uninstall
 stage_all 'Guardrails/chrome' install                # currently OFF -> stages all 3 on
@@ -370,9 +526,11 @@ stage_all 'Guardrails/chrome' install                # currently OFF -> stages a
 [ "$(apl_line 2)" = "DEACTIVATE " ] \
   && ok "apply_pending_plan canonical DEACTIVATE empty" || bad "apply_pending_plan canonical DEACTIVATE empty"
 
-# 16. whole-component uninstall: every justify hook off -> DEACTIVATE justify, and justify
-# must NOT also appear on the install line (the two lists are disjoint by construction).
-INSTALLED="|justify/justify-source-guard|justify/justify-watch-guard|justify/justify-watch-standing-by|"
+# 16. whole-component uninstall: "Remove all of Justify" (leaf included) -> DEACTIVATE
+# justify, and justify must NOT also appear on the install line (the two lists are
+# disjoint by construction). The leaf is in INSTALLED because that is what stage_all has
+# to reach to trigger rule 1; hooks alone no longer collapse to a deactivate.
+INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|"
 stage_reset; stage_all 'justify' uninstall
 [ "$(apl_line 2)" = "DEACTIVATE justify" ] && ok "apply_pending_plan DEACTIVATE owner" || bad "apply_pending_plan DEACTIVATE owner"
 [ "$(apl_line 1)" = "INSTALL |" ] && ok "apply_pending_plan deactivated owner absent from INSTALL" || bad "apply_pending_plan deactivated owner absent from INSTALL"
@@ -383,7 +541,7 @@ INSTALLED="||"; stage_reset; stage_toggle 'tilt-lab'
 
 # 18. .sh suffix on a MULTI-hook off-list: apply_plan emits bare tree names, the off-list
 # must carry .sh on EVERY entry (install.sh's HOOK_OFF contract is filenames).
-INSTALLED="||"; stage_reset; stage_toggle 'justify/justify-source-guard'
+INSTALLED="||"; stage_reset; stage_toggle 'justify/Hooks/justify-source-guard'
 [ "$(apl_line 1)" = "INSTALL justify|justify-watch-guard.sh justify-watch-standing-by.sh" ] \
   && ok "apply_pending_plan multi-hook off-list .sh suffix" || bad "apply_pending_plan multi-hook off-list .sh suffix"
 
@@ -402,7 +560,7 @@ stage_toggle 'tilt-lab'                              # ON -> full uninstall (pur
 [ "$(apl_line 2)" = "DEACTIVATE tilt-lab" ] && ok "apply_pending_plan mixed DEACTIVATE line" || bad "apply_pending_plan mixed DEACTIVATE line"
 
 # 21. set -e smoke for the pure translator (install.sh runs set -euo pipefail).
-( set -e; stage_reset; stage_toggle 'justify/justify-source-guard'; apply_pending_plan >/dev/null )
+( set -e; stage_reset; stage_toggle 'justify/Hooks/justify-source-guard'; apply_pending_plan >/dev/null )
 [ "$?" = "0" ] && ok "apply_pending_plan clean under set -e" || bad "apply_pending_plan clean under set -e"
 
 unset BR_STATE_PROBE

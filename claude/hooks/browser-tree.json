@@ -72,29 +72,57 @@
       "key": "sidecoach",
       "label": "Sidecoach",
       "section": "core",
-      "kind": "hooks",
       "tag": "design orchestration",
-      "desc": "Sidecoach is the design orchestration system - 26 flows covering every design and QA task. These are the hooks it installs.",
-      "hooks": [
-        "sidecoach-sessionstart",
-        "sidecoach-preamble",
-        "sidecoach-postuserp",
-        "sidecoach-keyword",
-        "sidecoach-taste-gate",
-        "sidecoach-postresponse"
+      "desc": "Sidecoach is the design orchestration system - 26 flows covering every design and QA task.",
+      "members": [
+        {
+          "key": "sidecoach",
+          "kind": "leaf",
+          "tag": "the design orchestration skill",
+          "desc": "The Sidecoach skill and the verb and lane registries its hooks read.",
+          "label": "Sidecoach"
+        },
+        {
+          "key": "Hooks",
+          "kind": "hooks",
+          "tag": "the hooks Sidecoach depends on",
+          "desc": "The hooks Sidecoach installs to spot design intent, inject your product and design docs, and gate taste.",
+          "hooks": [
+            "sidecoach-sessionstart",
+            "sidecoach-preamble",
+            "sidecoach-postuserp",
+            "sidecoach-keyword",
+            "sidecoach-taste-gate",
+            "sidecoach-postresponse"
+          ]
+        }
       ]
     },
     {
       "key": "justify",
       "label": "Justify",
       "section": "core",
-      "kind": "hooks",
       "tag": "in-browser visual tweaks",
-      "desc": "Justify is the in-browser micro-adjustment tool. These are the hooks it installs.",
-      "hooks": [
-        "justify-source-guard",
-        "justify-watch-guard",
-        "justify-watch-standing-by"
+      "desc": "Justify is the in-browser micro-adjustment tool.",
+      "members": [
+        {
+          "key": "justify",
+          "kind": "leaf",
+          "tag": "the Justify server + skill",
+          "desc": "The Justify server, its in-browser core, the /justify skill, and the justify-* command line tools.",
+          "label": "Justify"
+        },
+        {
+          "key": "Hooks",
+          "kind": "hooks",
+          "tag": "the hooks Justify depends on",
+          "desc": "The hooks Justify installs to guard its source, manage the watch loop, and report standing-by state.",
+          "hooks": [
+            "justify-source-guard",
+            "justify-watch-guard",
+            "justify-watch-standing-by"
+          ]
+        }
       ]
     },
     {
@@ -338,13 +366,26 @@
         },
         {
           "key": "voice-output",
-          "kind": "hooks",
           "tag": "spoken replies (TTS)",
-          "desc": "The 3 hooks voice-output installs. Toggle any on or off.",
-          "hooks": [
-            "voice-gate",
-            "voice-mandate",
-            "voice-toggle"
+          "desc": "Voice-output speaks Claude's replies aloud.",
+          "members": [
+            {
+              "key": "voice-output",
+              "kind": "leaf",
+              "tag": "the voice-output engine",
+              "desc": "The voice-output engine - the TTS pipeline that speaks Claude's replies aloud."
+            },
+            {
+              "key": "Hooks",
+              "kind": "hooks",
+              "tag": "the hooks voice-output depends on",
+              "desc": "The hooks voice-output installs to gate speech, carry the mandate into context, and handle mute toggles.",
+              "hooks": [
+                "voice-gate",
+                "voice-mandate",
+                "voice-toggle"
+              ]
+            }
           ]
         }
       ]
@@ -357,18 +398,31 @@
       "members": [
         {
           "key": "cmux",
-          "kind": "hooks",
           "tag": "browser pane + teams",
-          "desc": "The 8 hooks cmux installs. Toggle any on or off.",
-          "hooks": [
-            "agent-teams-guard",
-            "node-shim-heal",
-            "resume-guard",
-            "resume-toggle",
-            "team-reaper",
-            "cmux-close-guard",
-            "cmux-teammate-shim-heal",
-            "teammate-relay-stop"
+          "desc": "cmux is the browser pane and multi-agent surface.",
+          "members": [
+            {
+              "key": "cmux",
+              "kind": "leaf",
+              "tag": "the cmux settings link",
+              "desc": "The cmux settings file this installer symlinks into place. The cmux binary itself is external and is not installed here."
+            },
+            {
+              "key": "Hooks",
+              "kind": "hooks",
+              "tag": "the hooks cmux depends on",
+              "desc": "The hooks cmux installs to guard panes, heal shims, reap idle teammates, and relay their results.",
+              "hooks": [
+                "agent-teams-guard",
+                "node-shim-heal",
+                "resume-guard",
+                "resume-toggle",
+                "team-reaper",
+                "cmux-close-guard",
+                "cmux-teammate-shim-heal",
+                "teammate-relay-stop"
+              ]
+            }
           ]
         },
         {
