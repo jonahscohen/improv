@@ -1,16 +1,51 @@
 #!/bin/bash
 # PostToolUse hook for Write|Edit|MultiEdit|Bash.
 # Two jobs:
-#   1. If a PROJECT file changed: touch ~/.claude/.memory-dirty (enables commit gate)
-#   2. If a MEMORY file changed: remove ~/.claude/.memory-dirty (clears the gate)
+#   1. If a PROJECT file changed: touch ~/.claude/.memory-dirty.<session> (enables commit gate)
+#   2. If a MEMORY file changed: remove ~/.claude/.memory-dirty.<session> (clears the gate)
 # Also nudges the assistant to write memory before responding.
-# For Bash calls: always sets dirty (we can't reliably detect what files changed).
-
-DIRTY_FLAG="$HOME/.claude/.memory-dirty"
+#
+# For Bash calls the command is CLASSIFIED, not blanket-dirtied. A read-only
+# command (`git status`, `grep`, `ls`, ...) leaves the flag untouched; only a
+# recognized WRITE token (`sed -i`, `> file`, `rm `, `cp `, the `install` verb,
+# ...) sets it. See the read_only / writes / is_pure_git lists below for the
+# actual classification. (The header used to claim "always sets dirty (we can't
+# reliably detect what files changed)". That has been false for a long time and
+# it cost an agent a false diagnosis on 2026-07-16: it read the comment, believed
+# it over the code, and wrote the claim into a beat as fact. Measured behaviour:
+# git status / grep / ls / composer install all leave the flag CLEAR;
+# `sed -i s/a/b/ file.php` ARMS it.)
+#
+# The flag is keyed by SESSION. It used to be one global file,
+# $HOME/.claude/.memory-dirty, shared by every concurrent Claude process. With
+# several sessions live, ANY one of them editing a project file armed the gate
+# for ALL of them, and a beat written by ANY of them cleared it for ALL of them.
+# So a session that owed nothing got blocked, and a session that did owe a beat
+# had its debt silently discharged by a stranger. That is misattribution, not
+# just noise - the same defect already fixed twice, for the multiple-choice
+# violation flag and the screenshot pending slot.
+# See reference_2026-07-10_multiple-choice-hook-cross-session.md,
+#     reference_2026-07-10_screenshot-pending-is-global-and-arms-on-fiction.md,
+#     session_2026-07-10_two-approved-hook-fixes.md.
+#
+# Key derivation is duplicated verbatim in bash-guard.sh (the READER). If you
+# change it, change both - a writer and a reader that disagree on the path make
+# the gate FAIL OPEN, which looks exactly like a gate with nothing to catch.
 
 INPUT=$(cat)
+
+# NO REAPER HERE, DELIBERATELY. screenshot-open-mandate.sh reaps its per-session
+# pending files after 24h, and mirroring that here was the obvious symmetry - but
+# it is wrong for THIS flag, and an independent Codex review flagged the attempt
+# as a fail-open. A screenshot obligation is a within-turn thing; a beat debt
+# legitimately persists for as long as the session does. Any reaper deletes a LIVE
+# session's genuine debt once it crosses the window (a long-lived or resumed
+# session), and the next `git commit` sails through beat-less. That is the exact
+# failure this gate exists to prevent, so the gate does not get a timer.
+# Per-session flags are 0 bytes and are removed on the session's next beat write;
+# an abandoned one is harmless clutter. Clutter is the cheaper problem.
 printf '%s' "$INPUT" | python3 -c '
-import json, sys, os, time
+import json, re, sys, os, time
 
 # Debounce window: skip nudge text if a memory write happened within this many seconds.
 # Flag-setting is unaffected; only the additionalContext string is suppressed.
@@ -23,7 +58,37 @@ except Exception:
 
 tool = data.get("tool_name", "")
 transcript_path = data.get("transcript_path", "")
-dirty_flag = os.path.expanduser("~/.claude/.memory-dirty")
+
+# Session key. Sanitised to [A-Za-z0-9._-] so a hostile or odd id cannot escape
+# the directory, with "global" as the fallback for a missing/empty id.
+#
+# The fallback deliberately fails CLOSED, not open. An id-less writer arms
+# .memory-dirty.global and an id-less reader blocks on .memory-dirty.global, so
+# the gate still fires; id-less sessions simply share one bucket, which is the
+# pre-fix behaviour and no worse than it. Choosing "no id -> no flag" instead
+# would mean any payload that dropped the field walked through the gate. The
+# field is supplied by the harness, not by the model, so this is not a lever the
+# assistant can pull - but a fail-open default would make it one.
+#
+# Duplicated verbatim in bash-guard.sh. Change both or the gate fails open.
+#
+# ACCEPTED RESIDUE (independent Codex review, 2026-07-17), inherited from the
+# screenshot key this mirrors and true of that gate too:
+#   - the sanitisation is LOSSY, so two ids differing only in disallowed
+#     characters collide ("a/b" and "a_b" both key to "a_b"), letting either one
+#     clear the debt owed by the other;
+#   - the key is UNBOUNDED, so a ~300-char id yields a filename over NAME_MAX;
+#     open() raises ENAMETOOLONG, the except-swallow below drops it, and nothing
+#     arms -> a beat-less commit.
+# Both are UNREACHABLE on real input: the harness emits UUIDs, and on a UUID this
+# regex is the IDENTITY function (36 chars, no character replaced) - verified
+# against the two live session ids on this machine. Hashing the raw id would fix
+# both, but bash-guard.sh derives ONE key for this gate AND the screenshot gate,
+# whose writers (screenshot-open-{mandate,clear}.sh) would then disagree with it
+# and silently fail open. That trade - a theoretical bug for a live one - is not
+# worth taking here; a fix must change all four files together, deliberately.
+session_key = re.sub(r"[^A-Za-z0-9._-]", "_", str(data.get("session_id", ""))) or "global"
+dirty_flag = os.path.expanduser("~/.claude/.memory-dirty." + session_key)
 last_memory_write = os.path.expanduser("~/.claude/.last-memory-write")
 
 def is_subagent_context(path):

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Regression tests for bash-guard.sh's three GIT COMMIT gates:
-#   1. beats-dirty        (~/.claude/.memory-dirty)
+#   1. beats-dirty        (~/.claude/.memory-dirty.<session>)
 #   2. browser-verify     (~/.claude/.needs-verification + staged front-end file)
 #   3. unread-screenshot  (~/.claude/.screenshot-pending.<session>)
 #
@@ -83,8 +83,11 @@ assert_allows() {
   fi
 }
 
-set_dirty()   { : > "$FAKE_HOME/.claude/.memory-dirty"; }
-clear_dirty() { rm -f "$FAKE_HOME/.claude/.memory-dirty"; }
+# The beats-dirty flag is PER-SESSION (.memory-dirty.<session>) as of 2026-07-17.
+# run_hook feeds no session_id, so the guard derives the "global" fallback key -
+# these fixtures must arm that same bucket or gate 1 tests silently stop firing.
+set_dirty()   { : > "$FAKE_HOME/.claude/.memory-dirty.global"; }
+clear_dirty() { rm -f "$FAKE_HOME/.claude/.memory-dirty.global"; }
 
 # ---------------------------------------------------------------------------
 echo "===== gate 1: beats-dirty - REAL commit must STILL BLOCK ====="

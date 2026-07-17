@@ -23,11 +23,19 @@ NUDGE="$HOOK_DIR/memory-nudge.sh"
 GUARD="$HOOK_DIR/bash-guard.sh"
 PASS=0; FAIL=0; FAIL_LABELS=()
 
-# Fully isolated HOME so the real ~/.claude/.memory-dirty is never touched.
+# Fully isolated HOME so the real ~/.claude/.memory-dirty.* is never touched.
 IHOME="$(mktemp -d)"
 mkdir -p "$IHOME/.claude"
 trap 'rm -rf "$IHOME"' EXIT
-DIRTY="$IHOME/.claude/.memory-dirty"
+
+# The flag is PER-SESSION as of 2026-07-17. Writer (memory-nudge) and reader
+# (bash-guard) must derive the SAME key or the gate fails open, so this suite
+# drives both with one explicit session id. Before the fix this file fed the
+# nudge no session_id at all while handing the guard "u7b-invariant" - which is
+# exactly the writer/reader path disagreement that fails open, and invariant 4
+# below is what catches it.
+SID="u7b-invariant"
+DIRTY="$IHOME/.claude/.memory-dirty.$SID"
 
 # Assemble "git commit" so this test file does not itself read as a commit invocation
 # when it is staged/committed.
@@ -37,19 +45,20 @@ set_dirty()   { : > "$DIRTY"; }
 clear_dirty() { rm -f "$DIRTY"; }
 flag_state()  { [ -f "$DIRTY" ] && echo DIRTY || echo clean; }
 
-# Feed memory-nudge a Bash command (PostToolUse), isolated HOME.
+# Feed memory-nudge a Bash command (PostToolUse), isolated HOME. $2 overrides the session.
 nudge_bash() {
-  python3 -c 'import json,sys; print(json.dumps({"tool_name":"Bash","tool_input":{"command":sys.argv[1]}}))' "$1" \
+  python3 -c 'import json,sys; print(json.dumps({"tool_name":"Bash","tool_input":{"command":sys.argv[1]},"session_id":sys.argv[2]}))' "$1" "${2:-$SID}" \
     | HOME="$IHOME" bash "$NUDGE" >/dev/null 2>&1
 }
-# Feed memory-nudge a Write file_path (PostToolUse), isolated HOME.
+# Feed memory-nudge a Write file_path (PostToolUse), isolated HOME. $2 overrides the session.
 nudge_write() {
-  python3 -c 'import json,sys; print(json.dumps({"tool_name":"Write","tool_input":{"file_path":sys.argv[1]}}))' "$1" \
+  python3 -c 'import json,sys; print(json.dumps({"tool_name":"Write","tool_input":{"file_path":sys.argv[1]},"session_id":sys.argv[2]}))' "$1" "${2:-$SID}" \
     | HOME="$IHOME" bash "$NUDGE" >/dev/null 2>&1
 }
 # Feed bash-guard a Bash command (PreToolUse), isolated HOME; echo its decision JSON.
+# $2 overrides the session.
 guard() {
-  python3 -c 'import json,sys; print(json.dumps({"tool_input":{"command":sys.argv[1]},"session_id":"u7b-invariant"}))' "$1" \
+  python3 -c 'import json,sys; print(json.dumps({"tool_input":{"command":sys.argv[1]},"session_id":sys.argv[2]}))' "$1" "${2:-$SID}" \
     | HOME="$IHOME" bash "$GUARD" 2>/dev/null
 }
 
@@ -131,6 +140,66 @@ nudge_bash "bash claude/hooks/test-install-hook-deploy.sh"
 s3="$(flag_state)"; [ "$s3" = clean ] && ok "step3: install-named test run does not re-dirty" || bad "step3: install-named test run does not re-dirty" "got $s3"
 # 4) the commit proceeds (flag is clean)
 expect_commit_allowed "step4: commit proceeds after the beat" "$CMT -m done"
+
+echo ""
+echo "===== Invariant 5: the flag is PER-SESSION, with no cross-session bleed ====="
+# The flag was one $HOME-global file until 2026-07-17. Every concurrent Claude
+# process shared it: any one session's project edit armed the gate for ALL of
+# them, and any one session's beat cleared it for ALL of them. A session that
+# owed nothing got blocked; a session that DID owe a beat had its debt discharged
+# by a stranger. Third instance of this exact bug - see the multiple-choice
+# violation flag and the screenshot pending slot.
+#
+# Every case below is paired: the isolation assertion (B is unaffected) is
+# worthless on its own, because it also passes when the gate can no longer fire
+# at all. Each is pinned against the A-side assertion that the gate DID fire.
+A="sess-aaaa1111"; B="sess-bbbb2222"
+a_flag="$IHOME/.claude/.memory-dirty.$A"; b_flag="$IHOME/.claude/.memory-dirty.$B"
+reset_ab() { rm -f "$a_flag" "$b_flag"; }
+
+# Case 1+2: A's edit arms A and ONLY A.
+reset_ab
+nudge_bash "sed -i 's/a/b/' src/app.ts" "$A"
+[ -f "$a_flag" ] && ok "case1: A's edit arms A (gate still works)" || bad "case1: A's edit arms A" "A's flag missing"
+if guard "$CMT -m wip" "$A" | grep -q 'beats are dirty'; then ok "case1: A's commit is BLOCKED after A's edit"; else bad "case1: A's commit is BLOCKED after A's edit" "not blocked"; fi
+[ -f "$b_flag" ] && bad "case2: B's flag untouched by A's edit" "B's flag was armed" || ok "case2: B's flag untouched by A's edit"
+if guard "$CMT -m wip" "$B" | grep -q 'beats are dirty'; then bad "case2: B's commit NOT blocked by A's edit" "B was blocked by A's debt"; else ok "case2: B's commit NOT blocked by A's edit"; fi
+
+# Case 3+4: A's beat clears A and ONLY A. B's pre-existing debt survives.
+reset_ab
+nudge_bash "sed -i 's/a/b/' src/app.ts" "$A"      # A owes
+nudge_bash "sed -i 's/c/d/' src/other.ts" "$B"    # B owes too
+[ -f "$a_flag" ] && [ -f "$b_flag" ] && ok "case3: both A and B armed (precondition)" || bad "case3: both A and B armed (precondition)" "setup failed"
+nudge_bash "cp /tmp/beat.md .claude/memory/session_a.md" "$A"   # A writes its beat
+[ -f "$a_flag" ] && bad "case3: A's beat clears A" "A still armed" || ok "case3: A's beat clears A (clear path works)"
+if guard "$CMT -m done" "$A" | grep -q 'beats are dirty'; then bad "case3: A's commit ALLOWED after A's beat" "still blocked"; else ok "case3: A's commit ALLOWED after A's beat"; fi
+[ -f "$b_flag" ] && ok "case4: B's debt SURVIVES A's beat (no cross-session absolution)" || bad "case4: B's debt SURVIVES A's beat" "B was absolved by A's beat"
+if guard "$CMT -m sneak" "$B" | grep -q 'beats are dirty'; then ok "case4: B's commit STILL BLOCKED after A's beat"; else bad "case4: B's commit STILL BLOCKED after A's beat" "A's beat let B through"; fi
+
+# Case 5: missing/empty session_id -> "global" bucket, fails CLOSED.
+# The writer and reader agree on the fallback, so an id-less session still arms
+# and still blocks. It must NOT become a free pass, and it must not leak into a
+# real session's key either.
+reset_ab
+g_flag="$IHOME/.claude/.memory-dirty.global"
+rm -f "$g_flag"
+python3 -c 'import json; print(json.dumps({"tool_name":"Bash","tool_input":{"command":"sed -i s/a/b/ src/app.ts"}}))' \
+  | HOME="$IHOME" bash "$NUDGE" >/dev/null 2>&1
+[ -f "$g_flag" ] && ok "case5: id-less writer arms the global bucket" || bad "case5: id-less writer arms the global bucket" "nothing armed"
+if python3 -c 'import json; print(json.dumps({"tool_input":{"command":"git ""commit -m x"}}))' \
+  | HOME="$IHOME" bash "$GUARD" 2>/dev/null | grep -q 'beats are dirty'; then
+  ok "case5: id-less commit is BLOCKED (fails closed, not open)"
+else
+  bad "case5: id-less commit is BLOCKED" "a payload with no session_id walked through the gate"
+fi
+# An EMPTY-string id must land in the same bucket, not a bucket named "".
+rm -f "$g_flag"
+python3 -c 'import json; print(json.dumps({"tool_name":"Bash","tool_input":{"command":"sed -i s/a/b/ src/app.ts"},"session_id":""}))' \
+  | HOME="$IHOME" bash "$NUDGE" >/dev/null 2>&1
+[ -f "$g_flag" ] && ok "case5: empty-string id maps to the global bucket too" || bad "case5: empty-string id maps to the global bucket" "not armed"
+# ...and the id-less bucket must not block a REAL session that owes nothing.
+if guard "$CMT -m wip" "$B" | grep -q 'beats are dirty'; then bad "case5: global bucket does not bleed into a real session" "B blocked by the global flag"; else ok "case5: global bucket does not bleed into a real session"; fi
+reset_ab; rm -f "$g_flag"
 
 echo ""
 echo "============================================================"

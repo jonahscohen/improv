@@ -16,7 +16,14 @@ HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MEMORY_NUDGE="$HOOK_DIR/memory-nudge.sh"
 VERIFY_HOOK="$HOOK_DIR/verify-before-done.sh"
 
-DIRTY_FLAG="$HOME/.claude/.memory-dirty"
+# The beats-dirty flag is PER-SESSION (.memory-dirty.<session>) as of 2026-07-17.
+# The payloads below carry no session_id, so the hook derives the "global" fallback
+# key. This suite runs against the REAL $HOME (it backs up and restores), and the
+# keying is what now makes that safe: `.memory-dirty.global` is a bucket no real
+# session reads, since live sessions key on their UUID. Before the fix this suite
+# armed and cleared the one flag EVERY concurrent session shared, so running it
+# could block or silently absolve a live agent mid-commit.
+DIRTY_FLAG="$HOME/.claude/.memory-dirty.global"
 VERIFY_FLAG="$HOME/.claude/.needs-verification"
 LAST_MEM="$HOME/.claude/.last-memory-write"
 LAST_SCR="$HOME/.claude/.last-screenshot-read"

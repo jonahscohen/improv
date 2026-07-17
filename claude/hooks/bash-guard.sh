@@ -540,10 +540,37 @@ if [ -z "$REASON" ] && printf '%s' "$_MODELSCAN" | grep -qE 'gpt-4o|gpt-4\.1|gpt
   REASON="BLOCKED: legacy model ID detected. CLAUDE.md mandates latest model versions only."
 fi
 
+# Session key, shared by the memory-dirty gate and the screenshot gate below.
+#
+# Derivation is duplicated VERBATIM in memory-nudge.sh, screenshot-open-mandate.sh
+# and screenshot-open-clear.sh (the WRITERS). If you change it, change all of them:
+# a writer and a reader that disagree on the path do not error, they make the gate
+# FAIL OPEN - it silently stops blocking and nobody notices, because a gate that
+# never fires is indistinguishable from a gate with nothing to catch.
+#
+# Empty/missing session_id falls back to "global": the writers do the same, so an
+# id-less session still arms and still blocks. Failing open here would turn any
+# payload missing the field into a free pass through both gates.
+_SESSION_KEY=$(printf '%s' "$INPUT" | python3 -c '
+import json, re, sys
+try:
+    s = str(json.load(sys.stdin).get("session_id", ""))
+except Exception:
+    s = ""
+s = re.sub(r"[^A-Za-z0-9._-]", "_", s)
+print(s or "global")
+' 2>/dev/null)
+[ -z "$_SESSION_KEY" ] && _SESSION_KEY=global
+
 # Memory-before-commit gate: block git commit if memory is dirty.
 # Matches CMD_CODE (see is_real_git_commit) so prose quoting the command passes.
+#
+# The flag is PER-SESSION (.memory-dirty.<session>). It was one global file until
+# 2026-07-17, so with several sessions live one session's edit blocked every other
+# session's commit, and one session's beat discharged every other session's debt.
+# memory-nudge.sh is the writer. See its header for the full account.
 if [ -z "$REASON" ] && is_real_git_commit; then
-  if [ -f "$HOME/.claude/.memory-dirty" ]; then
+  if [ -f "$HOME/.claude/.memory-dirty.$_SESSION_KEY" ]; then
     REASON="BLOCKED: beats are dirty. A project file was edited but the session beat has not been written. Write a beat to .claude/memory/ FIRST, then commit."
   fi
 fi
@@ -594,17 +621,9 @@ fi
 # cmux sessions discharged every other session's obligation, and a second capture
 # erased the first's. Key derivation is duplicated verbatim in
 # screenshot-open-mandate.sh and screenshot-open-clear.sh; change all three.
-_SHOT_KEY=$(printf '%s' "$INPUT" | python3 -c '
-import json, re, sys
-try:
-    s = str(json.load(sys.stdin).get("session_id", ""))
-except Exception:
-    s = ""
-s = re.sub(r"[^A-Za-z0-9._-]", "_", s)
-print(s or "global")
-' 2>/dev/null)
-[ -z "$_SHOT_KEY" ] && _SHOT_KEY=global
-_SHOT_PENDING="$HOME/.claude/.screenshot-pending.$_SHOT_KEY"
+# Reuses _SESSION_KEY (derived once above, identical logic) rather than shelling
+# out to python3 a second time on every Bash call.
+_SHOT_PENDING="$HOME/.claude/.screenshot-pending.$_SESSION_KEY"
 
 if [ -z "$REASON" ] && [ -s "$_SHOT_PENDING" ]; then
   PENDING_SHOT=$(head -1 "$_SHOT_PENDING" 2>/dev/null)

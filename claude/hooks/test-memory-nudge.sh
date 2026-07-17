@@ -14,13 +14,18 @@ set -u
 HOOK="$(cd "$(dirname "$0")" && pwd)/memory-nudge.sh"
 PASS=0; FAIL=0
 
-# Fully isolated HOME so the real ~/.claude/.memory-dirty is never touched. Every hook
+# Fully isolated HOME so the real ~/.claude/.memory-dirty.* is never touched. Every hook
 # invocation below runs with HOME="$TMPHOME", and FLAG points inside it, so this suite
 # is hermetic even when a live session has its own dirty flag set (Codex review, U7b).
 TMPHOME="$(mktemp -d)"
 mkdir -p "$TMPHOME/.claude"
 trap 'rm -rf "$TMPHOME"' EXIT
-FLAG="$TMPHOME/.claude/.memory-dirty"
+# The flag is PER-SESSION (.memory-dirty.<session>) as of 2026-07-17. The payloads
+# below carry no session_id, so the hook derives the "global" fallback key; FLAG
+# must track that same bucket. Per-session isolation itself is covered by
+# test-memory-dirty-invariant.sh invariant 5 - this suite is about write-token
+# classification, and stays deliberately single-session.
+FLAG="$TMPHOME/.claude/.memory-dirty.global"
 
 state() { [ -f "$FLAG" ] && echo "DIRTY" || echo "clean"; }
 
