@@ -589,12 +589,16 @@ IMPROV_DIR=~/code/dots IMPROV_REPO=https://github.com/your-fork/improv.git \
 **Installer flags:**
 
 ```bash
-./install.sh                    # interactive TUI
+./install.sh                    # interactive bucket browser (terminal)
+./install.sh --gui              # browser-based GUI installer (localhost only)
 ./install.sh --yes              # install everything non-interactively
 ./install.sh --preset NAME      # all | minimal | none
 ./install.sh --only KEYS        # comma-separated subset
 ./install.sh --dry-run          # show resolved picks, touch no files
+./install.sh --manifest         # print the component manifest as JSON, then exit
 ```
+
+**GUI installer (`--gui`)** - a visual alternative to the terminal picker for teams that would rather not drive a TUI. `./install.sh --gui` (or `ampersand --gui`) starts a small server bound to `127.0.0.1` only, opens your browser to it, and renders the same component tree as clickable rows with a live install log. It is a front-end over the same idempotent installer: nothing runs until you click Apply, the exact plan is validated against the component allowlist before anything is touched, and every request is gated by a one-time token in the URL. Leave the terminal open while you use it; Ctrl-C stops the server.
 
 Valid component keys: `brain`, `config`, `memory`, `skills`, `statusline`, `cmux`, `nvm`, `ampersand`, `discord`, `voice-input`, `voice-output`, `reflect`.
 

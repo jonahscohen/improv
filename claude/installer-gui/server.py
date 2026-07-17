@@ -125,6 +125,11 @@ class H(BaseHTTPRequestHandler):
     def _sanitize(self, body):
         if not isinstance(body, dict):
             return None
+        # Match install.sh --apply-plan's strict contract: the plan must be exactly
+        # {"install": [...], "uninstall": [...]} - no missing keys, no extras. This keeps
+        # the server seam from accepting a shape the installer itself would reject.
+        if set(body.keys()) != {"install", "uninstall"}:
+            return None
         out = {"install": [], "uninstall": []}
         for k in ("install", "uninstall"):
             vals = body.get(k, [])

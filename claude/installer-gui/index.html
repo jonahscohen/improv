@@ -173,15 +173,28 @@ async function runApply() {
   const plan = stagedPlan();                                // snapshot the exact plan we post
   const log = document.getElementById('log');
   log.style.display = 'block'; log.textContent = 'Applying...\n';
+  let out = '';                                             // capture the stream to read its exit code
   try {
     const res = await api('/apply', { method:'POST', body: JSON.stringify(plan) });
     const reader = res.body.getReader(); const dec = new TextDecoder();
-    for (;;) { const { value, done } = await reader.read(); if (done) break; log.textContent += dec.decode(value, { stream:true }); log.scrollTop = log.scrollHeight; }
-    log.textContent += dec.decode(); log.scrollTop = log.scrollHeight;   // flush any trailing multibyte bytes
-    const m = await api('/manifest').then(r => r.json());    // refresh REAL state
+    for (;;) { const { value, done } = await reader.read(); if (done) break; const c = dec.decode(value, { stream:true }); out += c; log.textContent += c; log.scrollTop = log.scrollHeight; }
+    const tail = dec.decode(); out += tail; log.textContent += tail; log.scrollTop = log.scrollHeight;   // flush trailing multibyte bytes
+    const m = await api('/manifest').then(r => r.json());    // refresh REAL state either way
     buildTreeFromManifest(m);
-    for (const p of plan.install.concat(plan.uninstall)) delete pending[p];   // clear only what we applied
+    // Only treat the apply as done - and clear the staged plan - if the installer
+    // exited 0. apply_pending is fail-loud (a rejected/pinned/failed plan ends non-zero),
+    // and clearing pending regardless would silently drop the user's staged changes.
+    const ok = res.ok && /\[exit 0\]\s*$/.test(out);
     render();
+    if (ok) {
+      for (const p of plan.install.concat(plan.uninstall)) delete pending[p];   // clear only a clean apply
+      render();
+    } else {
+      toast('Apply did not complete - your staged changes were kept. See the log above.');
+    }
+  } catch (e) {
+    log.textContent += '\n[error] ' + e + '\n';
+    toast('Apply failed - your staged changes were kept.');
   } finally {
     applying = false;
   }
