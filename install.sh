@@ -2556,7 +2556,19 @@ _br_render_header() {
 _br_sep_line() {
   local w i out=""
   w="$(_br_term_width)"
-  w=$(( w - 2 ))
+  # In the gum renderer the item prefix is two visible columns (`> ` or `  `). A
+  # separator of terminal_width-2 therefore lands exactly in the last column once gum
+  # adds the prefix. Terminal.app keeps an autowrap-pending state after a printable
+  # character reaches that column, and gum's cursor-up repaint can leave stale divider
+  # rows behind when the frame is redrawn or paged. Leave one spare column in the gum
+  # path; the text path prints separators without gum's prefix and can keep the old
+  # near-full-width rule.
+  if [ "${BR_PREFIX_W:-0}" = "2" ]; then
+    w=$(( w - 3 ))
+  else
+    w=$(( w - 2 ))
+  fi
+  [ "$w" -lt 1 ] && w=1
   [ "$w" -gt 118 ] && w=118
   for (( i=0; i<w; i++ )); do out="$out-"; done
   printf '%s' "$out"
@@ -2732,7 +2744,14 @@ render_screen() {
 
   # A NON-ZERO exit is the user ABORTING (esc / ctrl-c) - that is the back/quit signal.
   # It is the only thing that may be read as "back".
-  chosen="$(printf '%s\n' "${ROW_DISP[@]}" | gum choose "${gargs[@]}")" || return 1
+  #
+  # Pass choices as argv, not through stdin. gum supports both, but a stdin pipe forces
+  # gum to run an interactive raw-mode TUI while fd 0 is not the terminal. In Terminal.app
+  # that first launch was visually fragile (stale rows and pagination artifacts); under
+  # /usr/bin/script it can fail raw mode outright. `--` protects rows such as the dashed
+  # separator from being parsed as flags, and with only tens of rows this stays far below
+  # argv length limits.
+  chosen="$(gum choose "${gargs[@]}" -- "${ROW_DISP[@]}")" || return 1
   [ -n "$chosen" ] || return 1
 
   # Map the chosen row back by exact string match - gum hands back the item TEXT and
