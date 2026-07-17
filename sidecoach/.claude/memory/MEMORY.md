@@ -1,3 +1,4 @@
+- [Sidecoach Session](session_2026-07-17_sidecoach.md) - design decisions, rules applied, metrics
 - [Sidecoach Session](session_2026-06-17_sidecoach.md) - design decisions, rules applied, metrics
 - [Lane P4b-2 Browser Evidence Collector](session_2026-06-14_lane-p4b2-browser-evidence.md) - Playwright headless-Chromium collector promotes four parked browser rules to real verdicts; genericity st…
 - [Sidecoach Session](session_2026-05-25_sidecoach.md) - design decisions, rules applied, metrics

@@ -1,0 +1,7 @@
+TRAP CONTROL - fvanish experiment, 2026-07-17. DO NOT COMMIT. DO NOT `git add`.
+Cell: name does NOT match "poller", location = improv working tree, UNTRACKED, created via BASH.
+Isolates "untracked in a git repo" from "named like the poller".
+  If this dies WITH justify-watch-poller-untracked-trap.py -> H2 (untracked reaped; name irrelevant).
+  If this SURVIVES while that one dies                     -> H1 (the name is the trigger).
+The tracked justify-watch-poller.py next door is the built-in control.
+Detector: ~/.claude/fvanish/fv-detect.py   Log: ~/.claude/fvanish/fv-log.jsonl
