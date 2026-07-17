@@ -21,7 +21,17 @@ const SIDECOACH = path.resolve(__dirname, '..');
 //
 // Forward-declared lane suites (created in later plan tasks) are SKIPPED-with-
 // warning until they exist; REQUIRED suites hard-fail (exit nonzero) if missing.
-interface Suite { rel: string; cwd?: string; required?: boolean; }
+//
+// `runner: 'node'` suites are the eval/migration-harness golden snapshots, which
+// are plain .mjs taking a `verify` arg (see `args`). They are the ONLY coverage for
+// absolute-ban-detector and reference-loader - neither has a unit test - so without
+// them here a regression in either ships through a green suite.
+// The harnesses import from dist/, not src/, so they verify the LAST BUILD - a stale
+// dist would let a src regression pass this gate green, voiding the guarantee above.
+// `npm test` therefore builds first (see package.json: `npm run build && ...`, ~5s).
+// Invoking this file directly bypasses that - build first, or these suites check
+// stale output. The ts-node suites above test src/ directly and are unaffected.
+interface Suite { rel: string; cwd?: string; required?: boolean; runner?: 'ts-node' | 'node'; args?: string[]; }
 const SUITES: Suite[] = [
   { rel: 'src/intent-detector.test.ts', required: true },                                 // legacy; outside __tests__/ - must not be dropped
   { rel: 'src/__tests__/classifier-parity.test.ts', required: true },                     // engine classifier copy guard (Task 7/8)
@@ -89,6 +99,11 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/page-quality-checks.test.ts', required: true },               // Stage 2 convergence: cherry-picked DOM-evidence Tier-2 keepers (img/text/dark/chart/button)
   { rel: 'src/__tests__/validator-integration.test.ts', required: true },             // Stage 2 convergence: registry-facade migration contract tripwire (Extended===22, Polish+Extended===46, honest Flow J display)
   { rel: 'src/__tests__/audit-rendered.test.ts', required: true },                    // /sidecoach audit <url> rendered read path: url detect, severity mapping, FAIL-CLOSED inconclusive-not-clean
+  { rel: 'eval/migration-harness/scanner-snapshot.mjs', runner: 'node', args: ['verify'], required: true },      // absolute-ban detector goldens (5 inputs) - the ONLY coverage that module has
+  { rel: 'eval/migration-harness/reference-snapshot.mjs', runner: 'node', args: ['verify'], required: true },    // reference-loader bundle golden - the ONLY coverage that module has
+  { rel: 'eval/migration-harness/routing-snapshot.mjs', runner: 'node', args: ['verify'], required: true },      // flow routing goldens
+  { rel: 'eval/migration-harness/convergence-snapshot.mjs', runner: 'node', args: ['verify'], required: true },  // convergence goldens
+  { rel: 'eval/migration-harness/buildreport-snapshot.mjs', runner: 'node', args: ['verify'], required: true },  // BuildReport golden (deterministic fields)
 ];
 
 // Pin Playwright to the SHARED real-home browser cache BEFORE we isolate HOME below.
@@ -134,9 +149,14 @@ for (const s of SUITES) {
   }
   ran++;
   const cwd = s.cwd ? path.join(SIDECOACH, s.cwd) : SIDECOACH;
-  process.stdout.write(`-> ${s.rel}${s.cwd ? ` (cwd ${s.cwd})` : ''}\n`);
+  const argSuffix = s.args?.length ? ` ${s.args.join(' ')}` : '';
+  process.stdout.write(`-> ${s.rel}${argSuffix}${s.cwd ? ` (cwd ${s.cwd})` : ''}\n`);
   try {
-    execFileSync('npx', ['ts-node', full], { stdio: 'inherit', cwd });
+    if (s.runner === 'node') {
+      execFileSync('node', [full, ...(s.args ?? [])], { stdio: 'inherit', cwd });
+    } else {
+      execFileSync('npx', ['ts-node', full], { stdio: 'inherit', cwd });
+    }
   } catch {
     failed++;
   }

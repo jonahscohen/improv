@@ -10,7 +10,7 @@
   "scripts": {
     "build": "ts-node scripts/generate-lanes.ts && ts-node scripts/generate-validators.ts && ts-node scripts/generate-validators.ts --check && tsc",
     "generate-lanes": "ts-node scripts/generate-lanes.ts",
-    "test": "ts-node scripts/run-tests.ts",
+    "test": "npm run build && ts-node scripts/run-tests.ts",
     "test:compiled": "node dist/intent-detector.test.js",
     "bench": "ts-node --project benchmarks/tsconfig.bench.json benchmarks/runner/run-all.ts --save",
     "bench:compare": "ts-node --project benchmarks/tsconfig.bench.json benchmarks/runner/run-all.ts --compare",
