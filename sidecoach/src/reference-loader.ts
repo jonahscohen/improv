@@ -248,37 +248,34 @@ export function loadBannedEasings(): { regex: RegExp; reason: string }[] {
   ];
 }
 
-/**
- * The font reflex-reject list. Typefaces that have become AI-generated
- * defaults and should be refused as primary type choices on greenfield work.
- * Sourced from the absorbed legacy-design-skill brand.md and fontshare-reference
- * skill integration.
+/*
+ * DELETED 2026-07-16: loadFontReflexReject().
+ *
+ * It returned 16 curated typefaces and had ZERO consumers - no scanner
+ * anywhere reads font-family, so it presented as engine coverage while
+ * enforcing nothing. Per the Stage-2 theater purge, a rule that does not
+ * measure gets deleted rather than kept as decoration.
+ *
+ * The vocabulary is NOT lost. The live, broader (21-face) list is the one the
+ * model actually reads:
+ *   - claude/skills/fontshare-reference/SKILL.md ("List your reflex picks, then reject them")
+ *   - sidecoach/reference/_extracted/local-skills/fontshare/INTEGRATION.md
+ *
+ * If a real font-family detector is built later, source its list from those,
+ * and wire it into the rendered scanner - do not resurrect an unread constant.
  */
-export function loadFontReflexReject(): { name: string; reason: string }[] {
-  return [
-    { name: 'Inter', reason: 'The single most-defaulted sans on AI-generated UI. Indistinguishable presence.' },
-    { name: 'Fraunces', reason: 'The serif equivalent of Inter - reflex pick for editorial-looking pages.' },
-    { name: 'Outfit', reason: 'Generic geometric sans, ubiquitous in template-marketplace output.' },
-    { name: 'Instrument Serif', reason: 'Over-saturated tech-startup serif since 2024.' },
-    { name: 'Newsreader', reason: 'Google Fonts editorial default, over-served by generative tools.' },
-    { name: 'Plus Jakarta Sans', reason: 'Default "modern startup" sans - signals AI-template origin.' },
-    { name: 'DM Sans', reason: 'Default geometric sans from the Vercel-aesthetic template family.' },
-    { name: 'DM Serif Display', reason: 'Companion to DM Sans - same reflex-pick problem.' },
-    { name: 'IBM Plex Sans', reason: 'Reflex pick for tech-credibility framing.' },
-    { name: 'Space Grotesk', reason: 'Over-saturated technical-monospace-vibe sans.' },
-    { name: 'Manrope', reason: 'Generic friendly sans - over-defaulted by AI generators.' },
-    { name: 'Cabinet Grotesk', reason: 'Fontshare emerging default - over-served by generative tools.' },
-    { name: 'General Sans', reason: 'Fontshare emerging default - same trajectory as Inter.' },
-    { name: 'Satoshi', reason: 'Fontshare emerging default - too widespread to read as distinctive.' },
-    { name: 'Switzer', reason: 'Fontshare emerging default - watch list.' },
-    { name: 'Clash Display', reason: 'Fontshare emerging default for display - over-saturated 2024+.' },
-  ];
-}
 
 /**
- * The six absolute bans from the absorbed legacy-design-skill content.
+ * The five absolute bans from the absorbed legacy-design-skill content.
  * Match-and-refuse. If generated code matches one of these patterns, the
  * element should be rewritten with different structure.
+ *
+ * Every ban listed here MUST have a live scanner in absolute-ban-detector.ts.
+ * A ban with no scanner can never appear in failedRules, so the adapter would
+ * report it as passed on every project forever. identical-card-grids was
+ * removed 2026-07-16 for exactly that reason: its scanner was deleted in
+ * Stage-2 (ReDoS) and the registry dropped the rule, but this list kept
+ * shipping the ban and silently certified it clean.
  */
 export interface AbsoluteBan {
   name: string;
@@ -312,12 +309,6 @@ export function loadAbsoluteBans(): AbsoluteBan[] {
       description: 'Big number + small label + supporting stats + gradient accent. SaaS cliché.',
       detectionHint: 'A grid of 3-4 stat blocks each containing a large number, small label, and optional gradient. Search for /font-size:\\s*(?:[5-9]|[1-9][0-9])rem/ on numeric content followed by smaller label text.',
       rewriteOptions: ['Replace with a chart, illustration, or single anchor metric', 'Customer logos with specific named outcomes', 'Editorial paragraph with embedded metrics'],
-    },
-    {
-      name: 'identical-card-grids',
-      description: 'Same-sized cards with icon + heading + text, repeated endlessly.',
-      detectionHint: 'Grid templates with /repeat\\(\\s*(?:3|4|5|6)\\s*,\\s*1fr\\)/ containing children with identical structure (icon + h3 + p) and no visual differentiation.',
-      rewriteOptions: ['Asymmetric grid with one anchor card and supporting cards', 'List-style layout', 'Editorial mosaic with varied card sizes'],
     },
     {
       name: 'modal-as-first-thought',

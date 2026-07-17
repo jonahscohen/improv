@@ -257,10 +257,10 @@ class FlowJTacticalPolishHandler extends flow_handler_1.BaseFlowHandler {
             const linguisticScan = scanProjectCopy(context.projectPath || process.cwd());
             const linguisticP0 = linguisticScan.totalFindings.filter((f) => f.severity === 'P0').length;
             const linguisticP1 = linguisticScan.totalFindings.filter((f) => f.severity === 'P1').length;
-            // Round 2 wiring (C2): scan project for the 6 named absolute bans.
+            // Round 2 wiring (C2): scan project for the named absolute bans (count derived from BAN_SCANNERS).
             // CSS scans for side-stripe borders, gradient text, glassmorphism
-            // default. HTML scans for identical card grids, hero-metric template,
-            // modal-as-first-thought. The detection-hint regexes from
+            // default. HTML scans for hero-metric template and modal-as-first-thought.
+            // The detection-hint regexes from
             // reference-loader.loadAbsoluteBans() are inlined into the detector.
             const absoluteBanScan = (0, absolute_ban_detector_1.scanForAbsoluteBans)(context.projectPath || process.cwd());
             const banP0 = absoluteBanScan.findings.filter((f) => f.severity === 'P0').length;
@@ -294,7 +294,10 @@ class FlowJTacticalPolishHandler extends flow_handler_1.BaseFlowHandler {
             // Build absolute-ban guidance lines
             const absoluteBanGuidance = [];
             if (absoluteBanScan.findings.length === 0) {
-                absoluteBanGuidance.push('ABSOLUTE BAN SCAN: 0 findings. The 6 named bans (side-stripe borders, gradient text, glassmorphism default, identical card grids, hero-metric template, modal-as-first-thought) are clean.');
+                // Derived from the scanner table, never hand-typed - this line previously
+                // named 6 bans including identical-card-grids, whose scanner was deleted in
+                // Stage-2, so it certified a ban we never ran (fixed 2026-07-16).
+                absoluteBanGuidance.push(`ABSOLUTE BAN SCAN: 0 findings. The ${(0, absolute_ban_detector_1.scannedBanLabel)()} are clean.`);
             }
             else {
                 for (const line of (0, absolute_ban_detector_1.banFindingsToGuidance)(absoluteBanScan))
@@ -320,7 +323,7 @@ class FlowJTacticalPolishHandler extends flow_handler_1.BaseFlowHandler {
                 `= ${polishReport.totalRules}-point Polish Standard`,
                 `+ ${extendedReport.totalRules}-rule registry-backed Domain Validator (forms a11y + page quality)`,
                 '+ Linguistic Ban Scan (slop words + rhetorical templates)',
-                '+ Absolute Ban Detector (6 named anti-patterns)',
+                `+ Absolute Ban Detector (${(0, absolute_ban_detector_1.scannedBanCount)()} named anti-patterns)`,
                 '',
                 ...absoluteBanGuidance,
                 '',

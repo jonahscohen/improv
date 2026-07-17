@@ -5,8 +5,8 @@ import { CHECKS, missingCheck } from './validators/checks';
 import { stampResult } from './validators/check-context';
 import type { ProductCheckContext } from './validators/check-context';
 
-// The shared HTML-structural-detector override reason (absolute-ban-detector.ts:19-21).
-// Both heuristic markup bans (identical-card-grids, hero-metric-template) cite it.
+// The shared HTML-structural-detector override reason (absolute-ban-detector.ts).
+// The heuristic markup ban (hero-metric-template) cites it.
 const STRUCTURAL_OVERRIDE_REASON =
   'HTML-structural detector flags pattern shapes, not certainties; false positives are possible (absolute-ban-detector.ts:19-21). Demoted from the table default major to non-blocking minor.';
 
@@ -669,7 +669,7 @@ const RAW_RULES: ProductRuleDefinition[] = [
     applicability: 'not_applicable',
   },
 
-  // ====================== owner anti-pattern (6) ======================
+  // ====================== owner anti-pattern (5) ======================
   {
     // SEED: gradient-text, P1 -> major (precise CSS detector, blocking).
     ruleId: 'anti-pattern.gradient-text',

@@ -66,7 +66,6 @@ exports.loadSlopWordList = loadSlopWordList;
 exports.loadRhetoricalPatterns = loadRhetoricalPatterns;
 exports.loadPrescribedEasings = loadPrescribedEasings;
 exports.loadBannedEasings = loadBannedEasings;
-exports.loadFontReflexReject = loadFontReflexReject;
 exports.loadAbsoluteBans = loadAbsoluteBans;
 exports.loadSaturatedAestheticLanes = loadSaturatedAestheticLanes;
 exports.loadLineHeightTiers = loadLineHeightTiers;
@@ -263,32 +262,6 @@ function loadBannedEasings() {
         },
     ];
 }
-/**
- * The font reflex-reject list. Typefaces that have become AI-generated
- * defaults and should be refused as primary type choices on greenfield work.
- * Sourced from the absorbed legacy-design-skill brand.md and fontshare-reference
- * skill integration.
- */
-function loadFontReflexReject() {
-    return [
-        { name: 'Inter', reason: 'The single most-defaulted sans on AI-generated UI. Indistinguishable presence.' },
-        { name: 'Fraunces', reason: 'The serif equivalent of Inter - reflex pick for editorial-looking pages.' },
-        { name: 'Outfit', reason: 'Generic geometric sans, ubiquitous in template-marketplace output.' },
-        { name: 'Instrument Serif', reason: 'Over-saturated tech-startup serif since 2024.' },
-        { name: 'Newsreader', reason: 'Google Fonts editorial default, over-served by generative tools.' },
-        { name: 'Plus Jakarta Sans', reason: 'Default "modern startup" sans - signals AI-template origin.' },
-        { name: 'DM Sans', reason: 'Default geometric sans from the Vercel-aesthetic template family.' },
-        { name: 'DM Serif Display', reason: 'Companion to DM Sans - same reflex-pick problem.' },
-        { name: 'IBM Plex Sans', reason: 'Reflex pick for tech-credibility framing.' },
-        { name: 'Space Grotesk', reason: 'Over-saturated technical-monospace-vibe sans.' },
-        { name: 'Manrope', reason: 'Generic friendly sans - over-defaulted by AI generators.' },
-        { name: 'Cabinet Grotesk', reason: 'Fontshare emerging default - over-served by generative tools.' },
-        { name: 'General Sans', reason: 'Fontshare emerging default - same trajectory as Inter.' },
-        { name: 'Satoshi', reason: 'Fontshare emerging default - too widespread to read as distinctive.' },
-        { name: 'Switzer', reason: 'Fontshare emerging default - watch list.' },
-        { name: 'Clash Display', reason: 'Fontshare emerging default for display - over-saturated 2024+.' },
-    ];
-}
 function loadAbsoluteBans() {
     return [
         {
@@ -314,12 +287,6 @@ function loadAbsoluteBans() {
             description: 'Big number + small label + supporting stats + gradient accent. SaaS cliché.',
             detectionHint: 'A grid of 3-4 stat blocks each containing a large number, small label, and optional gradient. Search for /font-size:\\s*(?:[5-9]|[1-9][0-9])rem/ on numeric content followed by smaller label text.',
             rewriteOptions: ['Replace with a chart, illustration, or single anchor metric', 'Customer logos with specific named outcomes', 'Editorial paragraph with embedded metrics'],
-        },
-        {
-            name: 'identical-card-grids',
-            description: 'Same-sized cards with icon + heading + text, repeated endlessly.',
-            detectionHint: 'Grid templates with /repeat\\(\\s*(?:3|4|5|6)\\s*,\\s*1fr\\)/ containing children with identical structure (icon + h3 + p) and no visual differentiation.',
-            rewriteOptions: ['Asymmetric grid with one anchor card and supporting cards', 'List-style layout', 'Editorial mosaic with varied card sizes'],
         },
         {
             name: 'modal-as-first-thought',

@@ -7,8 +7,8 @@ exports.resolveSourceAlias = resolveSourceAlias;
 const source_support_matrix_1 = require("./validators/source-support-matrix");
 const checks_1 = require("./validators/checks");
 const check_context_1 = require("./validators/check-context");
-// The shared HTML-structural-detector override reason (absolute-ban-detector.ts:19-21).
-// Both heuristic markup bans (identical-card-grids, hero-metric-template) cite it.
+// The shared HTML-structural-detector override reason (absolute-ban-detector.ts).
+// The heuristic markup ban (hero-metric-template) cites it.
 const STRUCTURAL_OVERRIDE_REASON = 'HTML-structural detector flags pattern shapes, not certainties; false positives are possible (absolute-ban-detector.ts:19-21). Demoted from the table default major to non-blocking minor.';
 // 36 canonical rules across four owners. supportedSourceKinds is sourced from the ONE shared matrix
 // (supportedKindsFor) so registry generation and project collection cannot drift. Browser-evidence rules
@@ -664,7 +664,7 @@ const RAW_RULES = [
         narrowTargetBehavior: 'evaluate_expanded_context',
         applicability: 'not_applicable',
     },
-    // ====================== owner anti-pattern (6) ======================
+    // ====================== owner anti-pattern (5) ======================
     {
         // SEED: gradient-text, P1 -> major (precise CSS detector, blocking).
         ruleId: 'anti-pattern.gradient-text',

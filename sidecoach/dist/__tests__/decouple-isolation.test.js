@@ -8,7 +8,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // PER-FIX PROOF for the OBJECTIVE/SUBJECTIVE DECOUPLE (lead ruling 2026-06-24).
 //
 // Background: the eval collect previously ran Sidecoach's subjective family (validateTaste + absolute-ban,
-// which includes the ReDoS-prone synchronous scanIdenticalCardGrids) and the async objective rendered scan in
+// which at the time included the ReDoS-prone synchronous scanIdenticalCardGrids, since deleted) and the async objective rendered scan in
 // ONE subprocess. A subjective ReDoS hang blocked the event loop so the objective scan never started, and the
 // outer group-kill timed out the whole process -> real objective detections became false negatives (observed
 // on db_worldbank_data + mk_kubernetes_live, depressing recall purely as a harness artifact).
@@ -30,7 +30,7 @@ const SCAN = path_1.default.join(__dirname, '..', '..', 'eval', 'sidecoach-scan.
 function buildPage() {
     // (a) objective defect: #999 on #fff = ~2.85:1 (< 4.5) normal body text -> low-contrast.
     const lowContrast = `<p style="color:#999999;background:#ffffff;font-size:16px">This is a paragraph of perfectly readable body copy that a sighted user can see, with insufficient contrast.</p>`;
-    // (b) subjective-stress: a large grid of identical cards (the scanIdenticalCardGrids input class).
+    // (b) subjective-stress: a large grid of identical cards (the input class that hung the deleted scanIdenticalCardGrids).
     const card = `<div class="card" style="border:1px solid #ccc;padding:16px;border-radius:8px"><h3>Card</h3><p>Identical card body text repeated across the grid.</p></div>`;
     const grid = `<section class="grid" style="display:grid;grid-template-columns:repeat(4,1fr)">${card.repeat(400)}</section>`;
     return `<!doctype html><html><head><meta charset="utf-8"></head><body><main>${lowContrast}${grid}</main></body></html>`;

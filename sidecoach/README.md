@@ -45,10 +45,6 @@ You can still describe what you're building in natural language and the intent d
    - Keyed by projectPath (cross-session tracking)
    - Surfaced at session start
 
-5. **SidecoachDetectBridge** - CLI integration with `npx sidecoach detect`
-   - Runs 28-rule static analyzer during FlowK (Multi-Lens Audit)
-   - Includes real findings in guidance + checklist
-
 ### 36 Total Flows (22 new tiers + 14 legacy)
 
 **TIER 1 - STRATEGY & RESEARCH (Flows A-E)**

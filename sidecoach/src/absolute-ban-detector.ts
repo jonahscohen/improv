@@ -1,7 +1,7 @@
 /**
  * Absolute Ban Detector
  *
- * Operationalizes the 6 absolute bans from the absorbed legacy-design-skill
+ * Operationalizes the absolute bans from the absorbed legacy-design-skill
  * reference (now exposed by reference-loader as loadAbsoluteBans). Pre-wiring
  * these bans existed as descriptive strings in design-laws.ts but no validator
  * actually scanned project files for the patterns. This module scans CSS +
@@ -12,7 +12,6 @@
  * - side-stripe-borders: CSS scan for `border-left|border-right > 1px solid <colored>` on cards/lists/callouts/alerts
  * - gradient-text: CSS scan for `background-clip: text` combined with `linear-gradient` or `radial-gradient`
  * - glassmorphism-default: CSS scan for `backdrop-filter: blur(...)` combined with low-alpha rgba/hsla background
- * - identical-card-grids: HTML scan for grid container with >=3 children of the same class containing the same structural triplet (icon/svg + heading + paragraph)
  * - hero-metric-template: HTML scan for a parent with >=3 children each containing a large-numeric child + small-label child
  * - modal-as-first-thought: HTML scan for <dialog> or [role="dialog"] containing forms/menus that could be inline
  *
@@ -43,11 +42,62 @@ export interface AbsoluteBanReport {
   summary: string;
 }
 
+type BanScanner = (content: string, file: string) => AbsoluteBanFinding[];
+
+/**
+ * The single source of truth coupling a ban NAME to the scanner that proves it.
+ *
+ * This is the fail-closed spine. A ban with no scanner produces no findings, and
+ * the adapter below marks any finding-less ban as PASSED - so an unscanned ban is
+ * certified clean on every project forever. That was the identical-card-grids bug
+ * (its scanner was deleted in Stage-2 for ReDoS, the ban kept shipping, and we
+ * silently passed it for weeks). Fixed 2026-07-16.
+ *
+ * Both the scan loops and the pass/fail adapter are DERIVED from this table, so a
+ * name cannot exist without an invoked scanner - listing one without wiring it is
+ * not expressible. `kind` selects which files it runs against: css-style scanners
+ * also run over inline <style> blocks in HTML.
+ */
+interface BanScannerEntry {
+  name: string;
+  kind: 'css' | 'html';
+  scan: BanScanner;
+}
+
+const BAN_SCANNERS: readonly BanScannerEntry[] = [
+  { name: 'side-stripe-borders', kind: 'css', scan: scanSideStripeBorders },
+  { name: 'gradient-text', kind: 'css', scan: scanGradientText },
+  { name: 'glassmorphism-default', kind: 'css', scan: scanGlassmorphism },
+  { name: 'hero-metric-template', kind: 'html', scan: scanHeroMetricTemplate },
+  { name: 'modal-as-first-thought', kind: 'html', scan: scanModalAsFirstThought },
+];
+
+const SCANNED_BAN_NAMES: readonly string[] = BAN_SCANNERS.map((s) => s.name);
+
 const BAN_LOOKUP_BY_NAME: Map<string, AbsoluteBan> = (() => {
   const map = new Map<string, AbsoluteBan>();
   for (const ban of loadAbsoluteBans()) map.set(ban.name, ban);
+  const shipped = [...map.keys()].sort();
+  const scanned = [...SCANNED_BAN_NAMES].sort();
+  if (shipped.join('|') !== scanned.join('|')) {
+    throw new Error(
+      `absolute-ban-detector: ban list drift. reference-loader ships [${shipped.join(', ')}] but ` +
+        `scanners exist for [${scanned.join(', ')}]. Every shipped ban MUST have a scanner - ` +
+        `an unscanned ban is reported as passed forever. Add the scanner or drop the ban.`
+    );
+  }
   return map;
 })();
+
+/** The human-readable ban list used in the clean-scan summary. Derived, never hand-typed. */
+export function scannedBanLabel(): string {
+  return `${BAN_SCANNERS.length} named bans (${SCANNED_BAN_NAMES.join(', ')})`;
+}
+
+/** How many bans actually have a scanner. Derived - never hand-type this count. */
+export function scannedBanCount(): number {
+  return BAN_SCANNERS.length;
+}
 
 function getBan(name: string): AbsoluteBan | undefined {
   return BAN_LOOKUP_BY_NAME.get(name);
@@ -215,9 +265,9 @@ export function scanForAbsoluteBans(projectPath: string): AbsoluteBanReport {
       if (stat.size > 2 * 1024 * 1024) continue;
       const content = fs.readFileSync(file, 'utf-8');
       const rel = path.relative(projectPath, file);
-      findings.push(...scanSideStripeBorders(content, rel));
-      findings.push(...scanGradientText(content, rel));
-      findings.push(...scanGlassmorphism(content, rel));
+      for (const s of BAN_SCANNERS) {
+        if (s.kind === 'css') findings.push(...s.scan(content, rel));
+      }
     } catch { /* skip unreadable */ }
   }
 
@@ -227,13 +277,8 @@ export function scanForAbsoluteBans(projectPath: string): AbsoluteBanReport {
       if (stat.size > 2 * 1024 * 1024) continue;
       const content = fs.readFileSync(file, 'utf-8');
       const rel = path.relative(projectPath, file);
-      // CSS-style scans on inline <style> blocks
-      findings.push(...scanSideStripeBorders(content, rel));
-      findings.push(...scanGradientText(content, rel));
-      findings.push(...scanGlassmorphism(content, rel));
-      // HTML-structural scans (scanIdenticalCardGrids deleted Stage-2 - ReDoS + low-precision)
-      findings.push(...scanHeroMetricTemplate(content, rel));
-      findings.push(...scanModalAsFirstThought(content, rel));
+      // css-kind scanners also run here, against inline <style> blocks.
+      for (const s of BAN_SCANNERS) findings.push(...s.scan(content, rel));
     } catch { /* skip unreadable */ }
   }
 
@@ -242,7 +287,7 @@ export function scanForAbsoluteBans(projectPath: string): AbsoluteBanReport {
   const p2 = findings.filter((f) => f.severity === 'P2').length;
   const summary =
     findings.length === 0
-      ? `Absolute ban scan: 0 findings across ${scannedFiles} files. The 6 named bans (side-stripe borders, gradient text, glassmorphism default, identical card grids, hero-metric template, modal-as-first-thought) are clean.`
+      ? `Absolute ban scan: 0 findings across ${scannedFiles} files. The ${scannedBanLabel()} are clean.`
       : `Absolute ban scan: ${findings.length} findings across ${scannedFiles} files (P0 ${p0}, P1 ${p1}, P2 ${p2}). Each finding is a named anti-pattern with prescribed rewrites.`;
   return { scannedFiles, findings, summary };
 }

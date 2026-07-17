@@ -76,19 +76,16 @@ export declare function loadBannedEasings(): {
     reason: string;
 }[];
 /**
- * The font reflex-reject list. Typefaces that have become AI-generated
- * defaults and should be refused as primary type choices on greenfield work.
- * Sourced from the absorbed legacy-design-skill brand.md and fontshare-reference
- * skill integration.
- */
-export declare function loadFontReflexReject(): {
-    name: string;
-    reason: string;
-}[];
-/**
- * The six absolute bans from the absorbed legacy-design-skill content.
+ * The five absolute bans from the absorbed legacy-design-skill content.
  * Match-and-refuse. If generated code matches one of these patterns, the
  * element should be rewritten with different structure.
+ *
+ * Every ban listed here MUST have a live scanner in absolute-ban-detector.ts.
+ * A ban with no scanner can never appear in failedRules, so the adapter would
+ * report it as passed on every project forever. identical-card-grids was
+ * removed 2026-07-16 for exactly that reason: its scanner was deleted in
+ * Stage-2 (ReDoS) and the registry dropped the rule, but this list kept
+ * shipping the ban and silently certified it clean.
  */
 export interface AbsoluteBan {
     name: string;

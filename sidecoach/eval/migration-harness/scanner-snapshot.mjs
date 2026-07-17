@@ -36,7 +36,10 @@ async function loadCurrentScanner() {
     for (const v of taste.validateTaste(html)) {
       findings.push({ source: 'taste-validator', rule: v.ruleId, severity: v.severity, category: v.category ?? null, message: v.message ?? null, excerpt: v.excerpt ?? null, lineNumbers: v.lineNumbers ?? null });
     }
-    const banScans = [ban.scanSideStripeBorders, ban.scanGradientText, ban.scanGlassmorphism, ban.scanIdenticalCardGrids, ban.scanHeroMetricTemplate, ban.scanModalAsFirstThought];
+    // scanIdenticalCardGrids was deleted in Stage-2 (ReDoS). This list kept calling it
+    // and only survived by reading a stale dist/; it throws once dist is rebuilt.
+    // Removed 2026-07-16 with the ban itself.
+    const banScans = [ban.scanSideStripeBorders, ban.scanGradientText, ban.scanGlassmorphism, ban.scanHeroMetricTemplate, ban.scanModalAsFirstThought];
     for (const scan of banScans) {
       for (const b of scan(html, file)) findings.push({ source: 'absolute-ban', rule: b.banName, severity: b.severity, file: b.file ?? null, line: b.line ?? null, matchedText: b.matchedText ?? null, reason: b.reason ?? null, rewriteOptions: b.rewriteOptions ?? [] });
     }

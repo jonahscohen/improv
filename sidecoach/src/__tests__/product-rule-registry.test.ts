@@ -161,7 +161,7 @@ run();
     { ruleId: 'theming.border-radius-consistency', sourceRuleAliases: ['taste/border-radius-inconsistency'], canonicalRuleKey: 'theming/border-radius-consistency', ownerValidatorId: 'theming', sourceVocabulary: 'taste', sourceSeverity: 'error', severity: 'blocker', findingClass: 'theming', registryScope: 'token-consistency', evidenceRequirements: ['css-rule'], supportedSourceKinds: supportedKindsFor('css-rule'), scope: 'file', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
   ];
 
-  // owner anti-pattern (6)
+  // owner anti-pattern (5)
   const ap = (id: string, key: string, ban: string, srcSev: string, sev: string, scope_: string, evidence: EvidenceKind, override?: string): Row => ({
     ruleId: id, sourceRuleAliases: [ban], canonicalRuleKey: key, ownerValidatorId: 'anti-pattern', sourceVocabulary: 'p012',
     sourceSeverity: srcSev, severity: sev, ...(override ? { severityOverrideReason: override } : {}), findingClass: 'anti-pattern',

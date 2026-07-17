@@ -2,7 +2,7 @@
 /**
  * Absolute Ban Detector
  *
- * Operationalizes the 6 absolute bans from the absorbed legacy-design-skill
+ * Operationalizes the absolute bans from the absorbed legacy-design-skill
  * reference (now exposed by reference-loader as loadAbsoluteBans). Pre-wiring
  * these bans existed as descriptive strings in design-laws.ts but no validator
  * actually scanned project files for the patterns. This module scans CSS +
@@ -13,7 +13,6 @@
  * - side-stripe-borders: CSS scan for `border-left|border-right > 1px solid <colored>` on cards/lists/callouts/alerts
  * - gradient-text: CSS scan for `background-clip: text` combined with `linear-gradient` or `radial-gradient`
  * - glassmorphism-default: CSS scan for `backdrop-filter: blur(...)` combined with low-alpha rgba/hsla background
- * - identical-card-grids: HTML scan for grid container with >=3 children of the same class containing the same structural triplet (icon/svg + heading + paragraph)
  * - hero-metric-template: HTML scan for a parent with >=3 children each containing a large-numeric child + small-label child
  * - modal-as-first-thought: HTML scan for <dialog> or [role="dialog"] containing forms/menus that could be inline
  *
@@ -55,6 +54,8 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.scannedBanLabel = scannedBanLabel;
+exports.scannedBanCount = scannedBanCount;
 exports.scanSideStripeBorders = scanSideStripeBorders;
 exports.scanGradientText = scanGradientText;
 exports.scanGlassmorphism = scanGlassmorphism;
@@ -66,12 +67,35 @@ exports.banFindingsToGuidance = banFindingsToGuidance;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const reference_loader_1 = require("./reference-loader");
+const BAN_SCANNERS = [
+    { name: 'side-stripe-borders', kind: 'css', scan: scanSideStripeBorders },
+    { name: 'gradient-text', kind: 'css', scan: scanGradientText },
+    { name: 'glassmorphism-default', kind: 'css', scan: scanGlassmorphism },
+    { name: 'hero-metric-template', kind: 'html', scan: scanHeroMetricTemplate },
+    { name: 'modal-as-first-thought', kind: 'html', scan: scanModalAsFirstThought },
+];
+const SCANNED_BAN_NAMES = BAN_SCANNERS.map((s) => s.name);
 const BAN_LOOKUP_BY_NAME = (() => {
     const map = new Map();
     for (const ban of (0, reference_loader_1.loadAbsoluteBans)())
         map.set(ban.name, ban);
+    const shipped = [...map.keys()].sort();
+    const scanned = [...SCANNED_BAN_NAMES].sort();
+    if (shipped.join('|') !== scanned.join('|')) {
+        throw new Error(`absolute-ban-detector: ban list drift. reference-loader ships [${shipped.join(', ')}] but ` +
+            `scanners exist for [${scanned.join(', ')}]. Every shipped ban MUST have a scanner - ` +
+            `an unscanned ban is reported as passed forever. Add the scanner or drop the ban.`);
+    }
     return map;
 })();
+/** The human-readable ban list used in the clean-scan summary. Derived, never hand-typed. */
+function scannedBanLabel() {
+    return `${BAN_SCANNERS.length} named bans (${SCANNED_BAN_NAMES.join(', ')})`;
+}
+/** How many bans actually have a scanner. Derived - never hand-type this count. */
+function scannedBanCount() {
+    return BAN_SCANNERS.length;
+}
 function getBan(name) {
     return BAN_LOOKUP_BY_NAME.get(name);
 }
@@ -245,9 +269,10 @@ function scanForAbsoluteBans(projectPath) {
                 continue;
             const content = fs.readFileSync(file, 'utf-8');
             const rel = path.relative(projectPath, file);
-            findings.push(...scanSideStripeBorders(content, rel));
-            findings.push(...scanGradientText(content, rel));
-            findings.push(...scanGlassmorphism(content, rel));
+            for (const s of BAN_SCANNERS) {
+                if (s.kind === 'css')
+                    findings.push(...s.scan(content, rel));
+            }
         }
         catch { /* skip unreadable */ }
     }
@@ -258,13 +283,9 @@ function scanForAbsoluteBans(projectPath) {
                 continue;
             const content = fs.readFileSync(file, 'utf-8');
             const rel = path.relative(projectPath, file);
-            // CSS-style scans on inline <style> blocks
-            findings.push(...scanSideStripeBorders(content, rel));
-            findings.push(...scanGradientText(content, rel));
-            findings.push(...scanGlassmorphism(content, rel));
-            // HTML-structural scans (scanIdenticalCardGrids deleted Stage-2 - ReDoS + low-precision)
-            findings.push(...scanHeroMetricTemplate(content, rel));
-            findings.push(...scanModalAsFirstThought(content, rel));
+            // css-kind scanners also run here, against inline <style> blocks.
+            for (const s of BAN_SCANNERS)
+                findings.push(...s.scan(content, rel));
         }
         catch { /* skip unreadable */ }
     }
@@ -272,7 +293,7 @@ function scanForAbsoluteBans(projectPath) {
     const p1 = findings.filter((f) => f.severity === 'P1').length;
     const p2 = findings.filter((f) => f.severity === 'P2').length;
     const summary = findings.length === 0
-        ? `Absolute ban scan: 0 findings across ${scannedFiles} files. The 6 named bans (side-stripe borders, gradient text, glassmorphism default, identical card grids, hero-metric template, modal-as-first-thought) are clean.`
+        ? `Absolute ban scan: 0 findings across ${scannedFiles} files. The ${scannedBanLabel()} are clean.`
         : `Absolute ban scan: ${findings.length} findings across ${scannedFiles} files (P0 ${p0}, P1 ${p1}, P2 ${p2}). Each finding is a named anti-pattern with prescribed rewrites.`;
     return { scannedFiles, findings, summary };
 }

@@ -1,8 +1,7 @@
 // sidecoach/src/validators/checks/anti-pattern-checks.ts
 //
-// Thin adapter over the SIX exported absolute-ban-detector scanners. The regexes
-// (including scanIdenticalCardGrids' repeat(N,1fr) N>=3 precondition) are NOT
-// re-derived here. The three precise CSS detectors scan collected CSS; the three
+// Thin adapter over the exported absolute-ban-detector scanners (see BAN_SCANNERS). The regexes
+// are NOT re-derived here. The three precise CSS detectors scan collected CSS; the two
 // HTML-structural heuristics (declared minor) scan assembled markup. Findings keep
 // the REAL originating file path/line and ALL rewrite options (Codex P2#4).
 import type { ProductCheckContext, RuleVerdict } from '../check-context';
