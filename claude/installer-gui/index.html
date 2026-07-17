@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ampersand - bucket browser prototype</title>
+<style>
+  :root{
+    --bg:#16161e; --chrome:#20212e; --line:#2a2b3a; --dim:#565f89;
+    --fg:#a9b1d6; --bright:#c0caf5; --sel:#283457; --selborder:#7aa2f7;
+    --green:#9ece6a; --amber:#e0af68; --cyan:#7dcfff; --red:#f7768e; --hookc:#bb9af7; --folder:#7dcfff;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{background:#0d0d12;color:var(--fg);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;}
+  .win{width:100%;max-width:900px;background:var(--bg);border:1px solid var(--line);
+    border-radius:12px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);}
+  .titlebar{background:var(--chrome);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);}
+  .dot{width:12px;height:12px;border-radius:50%;display:inline-block;}
+  .dot.r{background:#ff5f56;} .dot.y{background:#ffbd2e;} .dot.g{background:#27c93f;}
+  .titletext{margin-left:8px;color:var(--dim);font-size:12.5px;}
+  .titletext .path{color:var(--bright);}
+  .screen{padding:15px 18px 6px;min-height:392px;}
+  .crumb{color:var(--dim);font-size:12.5px;margin-bottom:5px;}
+  .crumb b{color:var(--cyan);font-weight:normal;}
+  .lead{color:var(--fg);font-size:13px;margin:0 0 12px;line-height:1.5;}
+  .lead .meta{color:var(--dim);}
+  .seclabel{color:var(--dim);font-size:10.5px;letter-spacing:.14em;margin:10px 2px 3px;}
+  .seclabel:first-child{margin-top:0;}
+  .rows{font-size:13.5px;line-height:1.55;}
+  .row{display:flex;align-items:center;padding:3px 10px;border-radius:6px;cursor:pointer;
+    white-space:pre;border:1px solid transparent;user-select:none;}
+  .row:hover{background:#1e2030;}
+  .row.sel{background:var(--sel);border-color:var(--selborder);}
+  .row .caret{flex:0 0 2ch;color:var(--dim);}
+  .row .glyph{flex:0 0 2ch;}
+  .row .name{flex:0 0 auto;min-width:22ch;padding-right:2ch;color:var(--fg);}
+  .row.feat .name{color:var(--cyan);}
+  .row.hook .name{color:var(--hookc);}
+  .row.folder .name{color:var(--folder);}
+  .row.sel .name{color:var(--bright);}
+  .row .tag{flex:1 1 auto;min-width:0;color:var(--dim);overflow:hidden;text-overflow:ellipsis;}
+  .row .stat{flex:0 0 14ch;color:var(--dim);}
+  .row .count{flex:0 0 6ch;text-align:right;color:var(--dim);}
+  .row .pend{flex:0 0 13ch;text-align:right;}
+  .g-active{color:var(--green);} .g-partial{color:var(--amber);} .g-none{color:var(--dim);}
+  .action .name{color:var(--cyan);min-width:0;}
+  .action.sel .name{color:#c2f0ff;}
+  .danger .name{color:var(--red);}
+  .upd .name{color:var(--green);}
+  .utd .name{color:var(--dim);}
+  .sep{border-top:1px solid var(--line);margin:7px 4px;}
+  .plus{color:var(--green);} .minus{color:var(--red);}
+  .detail{border-top:1px solid var(--line);padding:8px 18px;color:var(--dim);font-size:12px;min-height:34px;background:#191922;}
+  .detail b{color:var(--fg);font-weight:normal;}
+  #log{margin:0;padding:10px 18px;max-height:180px;overflow:auto;background:#0b0b10;color:var(--fg);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;
+    white-space:pre-wrap;border-top:1px solid var(--line);}
+  .footer{border-top:1px solid var(--line);padding:8px 18px;color:var(--dim);font-size:12px;
+    background:var(--chrome);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .footer .keys span{color:var(--cyan);}
+</style>
+</head>
+<body>
+  <div class="win" role="application" aria-label="ampersand bucket browser prototype">
+    <div class="titlebar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <span class="titletext">ampersand &mdash; <span class="path" id="titlepath">setup</span></span>
+    </div>
+    <div class="screen">
+      <div class="crumb" id="crumb"></div>
+      <div class="lead" id="lead"></div>
+      <div class="rows" id="rows"></div>
+    </div>
+    <pre id="log" style="display:none"></pre>
+    <div class="detail" id="detail"></div>
+    <div class="footer">
+      <span class="keys"><span>&#8593;&#8595;</span> move &nbsp; <span>&#8594;/enter</span> open&middot;toggle &nbsp; <span>&#8592;/esc</span> back &nbsp; <span>a</span> apply &nbsp; <span>q</span> quit</span>
+      <span id="pendfoot"></span>
+    </div>
+  </div>
+
+<script>
+// ---- server API (token-scoped; every request carries the page nonce) ----
+const TOKEN = new URLSearchParams(location.search).get('token') || '';
+function api(path, opts) {
+  const u = path + (path.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(TOKEN);
+  return fetch(u, opts || {});
+}
+
+// ---- tree + install state, populated from the live manifest ----
+let T = {};
+const installed = {}, pending = {};
+
+// Walk a bucket's members into the node shape the nav/render code consumes:
+//  - leaf   -> {tag,desc}                       (no children => isLeaf)
+//  - hooks  -> {folder,hooks,tag,desc,children} (each hook name is a leaf)
+//  - nested -> {tag,desc,children}              (recurse into its members)
+function walkMembers(members, out) {
+  for (const mem of members) {
+    if (mem.kind === 'leaf') {
+      out[mem.key] = { tag: mem.tag || '', desc: mem.desc || '' };
+    } else if (mem.kind === 'hooks') {
+      const kids = {};
+      for (const h of (mem.hooks || [])) kids[h] = { tag: '', desc: '' };
+      out[mem.key] = { folder: 1, hooks: 1, tag: mem.tag || '', desc: mem.desc || '', children: kids };
+    } else if (mem.members) {
+      const kids = {};
+      walkMembers(mem.members, kids);
+      out[mem.key] = { tag: mem.tag || '', desc: mem.desc || '', children: kids };
+    }
+  }
+}
+function buildTreeFromManifest(m) {
+  const tree = {};
+  for (const b of m.buckets) {
+    // A bucket with no members is itself a leaf (e.g. tilt-lab, lotus) so its
+    // single state key stays reachable via leafPaths - do NOT give it children.
+    const node = { tag: b.tag || '', desc: b.desc || '', featured: (b.section === 'core') };
+    if (b.members && b.members.length) {
+      node.children = {};
+      walkMembers(b.members, node.children);
+    }
+    tree[b.key] = node;
+  }
+  T = tree;
+  // Install state comes straight from the manifest, keyed by leaf path.
+  for (const k of Object.keys(installed)) delete installed[k];
+  for (const [path, st] of Object.entries(m.state)) installed[path] = (st === 'active');
+}
+
+async function boot() {
+  try {
+    const m = await api('/manifest').then(r => r.json());
+    buildTreeFromManifest(m);
+    render();
+  } catch (e) {
+    document.getElementById('lead').textContent = 'Could not load the installer manifest: ' + e;
+  }
+}
+
+// ---- tree helpers ----
+function nodeAt(path){ let n={children:T}; for(const s of path) n=n.children[s]; return n; }
+function isLeaf(n){ return !n.children; }
+function leafPaths(path){ const n=nodeAt(path); if(isLeaf(n)) return [path.join('/')];
+  return Object.keys(n.children).flatMap(k=>leafPaths(path.concat(k))); }
+
+// ---- state ----
+const GLYPH={active:'●',partial:'◐',none:'○'}, CLS={active:'g-active',partial:'g-partial',none:'g-none'};
+const LABEL={active:'active',partial:'partial',none:'not installed'};
+function counts(path){ const L=leafPaths(path); return {on:L.filter(p=>installed[p]).length,total:L.length}; }
+function stateOf(path){ const n=nodeAt(path); if(isLeaf(n)) return installed[path.join('/')]?'active':'none';
+  const c=counts(path); return c.on===0?'none':(c.on===c.total?'active':'partial'); }
+function leafPending(p){ return pending[p]||null; }
+function toggleLeaf(p){ const t=installed[p]?'uninstall':'install'; if(pending[p]===t) delete pending[p]; else pending[p]=t; }
+function stageAll(path,a){ leafPaths(path).forEach(p=>{ const want=a==='install'; if(installed[p]===want) delete pending[p]; else pending[p]=a; }); }
+function pendUnder(path){ const L=leafPaths(path); return {ins:L.filter(p=>pending[p]==='install').length, un:L.filter(p=>pending[p]==='uninstall').length}; }
+function pendingCount(){ return Object.keys(pending).length; }
+
+// ---- apply: stream the real install log, then refresh state from the server ----
+function stagedPlan() {
+  const install = [], uninstall = [];
+  for (const [p, a] of Object.entries(pending)) (a === 'install' ? install : uninstall).push(p);
+  return { install, uninstall };
+}
+let applying = false;
+async function runApply() {
+  if (applying) return;                                     // guard: never fire /apply twice concurrently
+  if (pendingCount() === 0) { toast('Nothing staged to apply.'); return; }
+  applying = true;
+  const plan = stagedPlan();                                // snapshot the exact plan we post
+  const log = document.getElementById('log');
+  log.style.display = 'block'; log.textContent = 'Applying...\n';
+  try {
+    const res = await api('/apply', { method:'POST', body: JSON.stringify(plan) });
+    const reader = res.body.getReader(); const dec = new TextDecoder();
+    for (;;) { const { value, done } = await reader.read(); if (done) break; log.textContent += dec.decode(value, { stream:true }); log.scrollTop = log.scrollHeight; }
+    log.textContent += dec.decode(); log.scrollTop = log.scrollHeight;   // flush any trailing multibyte bytes
+    const m = await api('/manifest').then(r => r.json());    // refresh REAL state
+    buildTreeFromManifest(m);
+    for (const p of plan.install.concat(plan.uninstall)) delete pending[p];   // clear only what we applied
+    render();
+  } finally {
+    applying = false;
+  }
+}
+function doQuit() {
+  api('/shutdown', { method:'POST', body:'{}' }).catch(()=>{});
+  render(); toast('Installer stopped. You can close this tab.');
+}
+
+// ---- dom ----
+function mk(tag,cls,text){ const e=document.createElement(tag); if(cls)e.className=cls; if(text!=null)e.textContent=text; return e; }
+function pendNodes(ins,un){ const a=[]; if(ins)a.push(mk('span','plus','+'+ins)); if(un){ if(a.length)a.push(document.createTextNode(' ')); a.push(mk('span','minus','−'+un)); } return a; }
+
+// ---- navigation ----
+let nav=[], sel=0, updateAvailable=true;
+function inHooks(){ return nav.length && nodeAt(nav).hooks; }
+function buildRows(){
+  const rows=[];
+  if(nav.length===0){
+    if(updateAvailable) rows.push({type:'update',name:'↻ Update available - sync your setup to the latest Improv',hint:'A fresher Improv is in your repo (rev 1ca3ef9 → a7e6729). Re-sync your installed components to it.'});
+    else rows.push({type:'uptodate',name:'✓ Up to date',hint:'Your installed setup matches the latest Improv in your repo - nothing to sync. Select to re-check.'});
+    rows.push({type:'label',name:'CORE COMPONENTS'});
+    for(const k of Object.keys(T)) if(T[k].featured) rows.push(itemRow([k]));
+    rows.push({type:'label',name:'MORE COMPONENTS'});
+    for(const k of Object.keys(T)) if(!T[k].featured) rows.push(itemRow([k]));
+    rows.push({type:'sep'});
+    const n=pendingCount();
+    rows.push({type:'apply',name:'Apply '+n+' change'+(n===1?'':'s'),disabled:n===0,hint:n?('Install and remove the '+n+' staged item'+(n===1?'':'s')+' now'):'Nothing staged yet - toggle items to stage changes'});
+    rows.push({type:'quit',name:'Quit',hint:'Leave the installer'});
+  } else {
+    const parent = nav.length===1 ? 'all groups' : nav[nav.length-2];
+    const here=nav[nav.length-1];
+    const hooksLabel = here==='Hooks' ? 'all hooks' : 'all '+here+' hooks';
+    rows.push({type:'back',name:'‹ Back to '+parent,hint:'Go up one level'});
+    rows.push({type:'installall',name:(inHooks()?'+ Enable '+hooksLabel+'…':'+ Install all of '+here+'…'),hint:'Stage every item here for install'});
+    rows.push({type:'uninstallall',name:(inHooks()?'− Disable '+hooksLabel+'…':'− Remove all of '+here+'…'),hint:'Stage every item here for removal'});
+    rows.push({type:'sep'});
+    for(const k of Object.keys(nodeAt(nav).children)) rows.push(itemRow(nav.concat(k)));
+  }
+  return rows;
+}
+function itemRow(path){
+  const key=path[path.length-1], node=nodeAt(path), st=stateOf(path);
+  const parentHooks = path.length>1 && nodeAt(path.slice(0,-1)).hooks;
+  const row={type:'item', path, name:key, tag:node.tag||'', st, feat:!!node.featured, hook:parentHooks && isLeaf(node), folder:!!node.folder, drill:!isLeaf(node)};
+  if(isLeaf(node)){ const p=leafPending(path.join('/')); row.pend = p?[p==='install'?mk('span','plus','+ install'):mk('span','minus','− uninstall')]:[]; }
+  else { const c=counts(path); row.count=c.on+'/'+c.total; const {ins,un}=pendUnder(path); row.pend=pendNodes(ins,un); }
+  row.hint = node.desc || node.tag || '';
+  return row;
+}
+
+// ---- render ----
+let rowsCache=[];
+function selectable(){ return rowsCache.map((r,i)=>(r.type!=='sep'&&r.type!=='label')?i:-1).filter(i=>i>=0); }
+function render(){
+  const crumb=document.getElementById('crumb'); crumb.textContent='';
+  crumb.appendChild(mk('span',null,'ampersand'));
+  nav.forEach((seg,i)=>{ crumb.appendChild(document.createTextNode('  ›  ')); crumb.appendChild(i===nav.length-1?mk('b',null,seg):mk('span',null,seg)); });
+  const lead=document.getElementById('lead'); lead.textContent='';
+  if(nav.length===0){ lead.appendChild(document.createTextNode('Choose what runs on this machine. Open a group, toggle items to stage changes, then apply.')); document.getElementById('titlepath').textContent='setup'; }
+  else { const n=nodeAt(nav), c=counts(nav);
+    lead.appendChild(document.createTextNode((n.desc||n.tag||'')+'  '));
+    lead.appendChild(mk('span','meta', c.on+' of '+c.total+(n.hooks?' hooks on':' installed')));
+    document.getElementById('titlepath').textContent=nav.join(' › '); }
+
+  rowsCache=buildRows();
+  const sels=selectable(); if(!sels.includes(sel)) sel=sels[0];
+  const host=document.getElementById('rows'); host.textContent='';
+  rowsCache.forEach((r,i)=>{
+    if(r.type==='sep'){ host.appendChild(mk('div','sep')); return; }
+    if(r.type==='label'){ host.appendChild(mk('div','seclabel',r.name)); return; }
+    const d=mk('div','row'+(i===sel?' sel':''));
+    if(['back','installall','uninstallall','apply','quit','update','uptodate'].includes(r.type)) d.classList.add('action');
+    if(r.type==='update') d.classList.add('upd');
+    if(r.type==='uptodate') d.classList.add('utd');
+    if(r.type==='quit') d.classList.add('danger');
+    if(r.feat) d.classList.add('feat');
+    if(r.hook) d.classList.add('hook');
+    if(r.folder) d.classList.add('folder');
+    if(r.disabled) d.style.opacity=.4;
+    if(r.type==='item'){
+      d.appendChild(mk('span','caret', r.folder?'▾':(r.drill?'▸':' ')));
+      d.appendChild(mk('span','glyph '+CLS[r.st], GLYPH[r.st]));
+      d.appendChild(mk('span','name', r.name));
+      d.appendChild(mk('span','tag', r.tag));
+      d.appendChild(mk('span','stat', LABEL[r.st]));
+      d.appendChild(mk('span','count', r.count!==undefined?r.count:''));
+      const pe=mk('span','pend'); (r.pend||[]).forEach(x=>pe.appendChild(x)); d.appendChild(pe);
+    } else { d.appendChild(mk('span','caret',' ')); d.appendChild(mk('span','glyph',' ')); d.appendChild(mk('span','name', r.name)); }
+    d.addEventListener('click',()=>{ sel=i; activate(); });
+    d.addEventListener('mousemove',()=>{ if(sel!==i){ sel=i; paintSel(); showDetail(); } });
+    host.appendChild(d);
+  });
+  const pf=document.getElementById('pendfoot'); pf.textContent='';
+  if(pendingCount()){ const L=Object.values(pending); pendNodes(L.filter(a=>a==='install').length,L.filter(a=>a==='uninstall').length).forEach(x=>pf.appendChild(x)); pf.appendChild(document.createTextNode(' staged')); }
+  showDetail();
+}
+function paintSel(){ [...document.getElementById('rows').children].forEach((d,i)=>{ if(d.classList.contains('sep')||d.classList.contains('seclabel'))return; d.classList.toggle('sel', i===sel); }); }
+function showDetail(){
+  const r=rowsCache[sel], det=document.getElementById('detail'); det.textContent='';
+  if(!r) return;
+  if(r.type==='item'){ det.appendChild(mk('b',null,r.name)); det.appendChild(document.createTextNode('  '+(r.hint||'')));
+    if(r.drill) det.appendChild(document.createTextNode('   (press → to open'+(r.folder?' the folder':'')+')'));
+    else det.appendChild(document.createTextNode('   (press enter to '+(installed[r.path.join('/')]?'turn off':'turn on')+')')); }
+  else det.appendChild(document.createTextNode(r.hint||''));
+}
+function toast(m){ const det=document.getElementById('detail'); det.textContent=''; det.appendChild(mk('b',null,m)); }
+
+// ---- actions ----
+function activate(){
+  const r=rowsCache[sel]; if(!r||r.type==='sep'||r.type==='label') return;
+  if(r.type==='item'){ if(r.drill){ nav=r.path.slice(); sel=0; } else toggleLeaf(r.path.join('/')); }
+  else if(r.type==='back'){ nav=nav.slice(0,-1); sel=0; }
+  else if(r.type==='installall'){ stageAll(nav,'install'); }
+  else if(r.type==='uninstallall'){ stageAll(nav,'uninstall'); }
+  else if(r.type==='update'){ updateAvailable=false; render(); toast('Synced your installed components to the latest Improv (a7e6729).'); return; }
+  else if(r.type==='uptodate'){ toast('Checked for updates - you are on the latest Improv.'); return; }
+  else if(r.type==='apply'){ runApply(); return; }
+  else if(r.type==='quit'){ doQuit(); return; }
+  render();
+}
+function move(d){ const s=selectable(); if(!s.length)return; let p=s.indexOf(sel); if(p<0)p=0; p=(p+d+s.length)%s.length; sel=s[p]; paintSel(); showDetail(); }
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowDown'){move(1);e.preventDefault();}
+  else if(e.key==='ArrowUp'){move(-1);e.preventDefault();}
+  else if(e.key==='Enter'||e.key==='ArrowRight'||e.key===' '){activate();e.preventDefault();}
+  else if(e.key==='ArrowLeft'||e.key==='Escape'||e.key==='Backspace'){ if(nav.length){ nav=nav.slice(0,-1); sel=0; render(); } e.preventDefault(); }
+  else if(e.key==='a'||e.key==='A'){ runApply(); }
+  else if(e.key==='q'||e.key==='Q'){ doQuit(); }
+});
+boot();
+</script>
+</body>
+</html>
