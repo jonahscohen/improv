@@ -836,6 +836,7 @@ apply_preset() {
 
 NONINTERACTIVE=0
 DRY_RUN=0
+RUN_MANIFEST=0
 
 # _help_components - the body of the "Components (for --only KEYS)" block, GENERATED
 # from claude/hooks/browser-tree.json.
@@ -942,6 +943,7 @@ Usage:
   ./install.sh --only KEYS      Non-interactive, comma-separated keys
   ./install.sh --browser        Same as no flags (the browser is the default entry)
   ./install.sh --dry-run        Print resolved picks and exit
+  ./install.sh --manifest       Print the GUI manifest as JSON and exit
   ./install.sh --prune-skills   List dead repo skill symlinks (dry run), then exit
   ./install.sh --prune-skills-apply
                                 Remove those dead skill symlinks (explicit approval)
@@ -991,6 +993,7 @@ while [[ $# -gt 0 ]]; do
     --only)         NONINTERACTIVE=1; HAS_ONLY=1; apply_only "${2:-}"; shift 2 ;;
     --preset)       NONINTERACTIVE=1; HAS_PRESET=1; apply_preset "${2:-}"; shift 2 ;;
     --dry-run|-n)   DRY_RUN=1; shift ;;
+    --manifest)     RUN_MANIFEST=1; shift ;;
     # --browser: ACCEPTED AND INERT, on purpose. It used to select the browser back when
     # the browser was an additive seam beside the old TUI; the browser is now the default
     # interactive entry, so the flag is a synonym for passing nothing. It is kept because
@@ -3158,6 +3161,62 @@ component_browser() {
 # ============================================================
 # Entry point: dispatch to fresh, returning, or non-interactive flag path
 # ============================================================
+
+# --manifest: emit the GUI manifest as JSON and exit. Read-only, no TTY. The state
+# map is computed here (item_state needs the runtime probe); component metadata is
+# dumped from the KEYS/TITLES/DESCS/FILES arrays; manifest.py merges + escapes.
+# Buckets are iterated via BR_BUCKETS (TAB -> newline), NOT browser_buckets: bucket
+# keys contain spaces ("Voice & chat", "Design Tools"), so the space-joined display
+# form would misparse them. This mirrors the browser's own space-safe iteration.
+if [ "${RUN_MANIFEST:-0}" = "1" ]; then
+  browser_load "$REPO_DIR/claude/hooks/browser-tree.json" || { err "manifest: could not load tree"; exit 1; }
+  # Personal buckets are invisible unless --personal (install.sh's standing invariant:
+  # not in TUI, --help, or --only). Load the personal-bucket keys so the state map below
+  # can skip them, keeping state consistent with the buckets/components manifest.py emits.
+  _br_personal_load
+  state_json="$(
+    printf '{'
+    first=1
+    while IFS= read -r bkt; do
+      [ -n "$bkt" ] || continue
+      if [ "${PERSONAL:-0}" != "1" ] && _br_is_personal "$bkt"; then continue; fi
+      while IFS= read -r leaf; do
+        [ -n "$leaf" ] || continue
+        st="$(item_state "$leaf")"
+        [ "$first" = 1 ] && first=0 || printf ','
+        printf '"%s":"%s"' "$leaf" "$st"
+      done < <(leaf_paths "$bkt")
+    done < <(printf '%s\n' "${BR_BUCKETS//$'\t'/$'\n'}")
+    printf '}'
+  )"
+  comp_dump="$(
+    i=0
+    for k in "${KEYS[@]}"; do
+      printf '%s\t%s\t%s\t%s\n' "$k" "${TITLES[$i]}" "${DESCS[$i]}" "${FILES[$i]}"
+      i=$((i+1))
+    done
+  )"
+  COMP_DUMP="$comp_dump" python3 - "$REPO_DIR/claude/hooks/browser-tree.json" "$state_json" "${PERSONAL:-0}" <<'PY'
+import json, sys, subprocess, os
+tree_path, state_json, personal = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
+state = json.loads(state_json)
+components = {}
+for line in os.environ.get("COMP_DUMP", "").splitlines():
+    if not line.strip():
+        continue
+    parts = line.split("\t")
+    key = parts[0]
+    components[key] = {
+        "title": parts[1] if len(parts) > 1 else "",
+        "desc": parts[2] if len(parts) > 2 else "",
+        "files": (parts[3].split("\\n") if len(parts) > 3 and parts[3] else []),
+    }
+payload = json.dumps({"state": state, "components": components, "personal": personal})
+gui = os.path.normpath(os.path.join(os.path.dirname(tree_path), "..", "installer-gui", "manifest.py"))
+subprocess.run([sys.executable, gui, tree_path], input=payload, text=True, check=True)
+PY
+  exit $?
+fi
 
 # --- TEST-ONLY seam: drive apply_pending non-interactively -------------------
 # apply_pending (browser-lib.sh) only runs at install.sh runtime - it needs "$0" to be the
