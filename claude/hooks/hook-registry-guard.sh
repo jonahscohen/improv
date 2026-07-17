@@ -43,11 +43,23 @@ _is_excluded() {
   case "$1" in
     test-*|*-lib) return 0 ;;
   esac
-  # Shared DEPENDENCIES: deployed by install.sh and exec'd by another hook, never wired
-  # standalone, so they have no owner to toggle. detect-session-model is exec'd by
-  # model-router-guard.sh and fable-orchestrator-guard.sh.
+  # NOT EVENT HOOKS. Each lives in claude/hooks/ and ends in .sh, but none is wired to a
+  # Claude Code event, so none has a toggle to own. Each entry states WHY, because an
+  # exemption with no reason is just a place to hide an unmanaged hook.
   case "$1" in
+    # Shared DEPENDENCY: deployed by install.sh, exec'd BY model-router-guard.sh and
+    # fable-orchestrator-guard.sh. Never wired standalone; off-listing the guard must not
+    # strip the guard's own dependency.
     detect-session-model) return 0 ;;
+    # LAUNCHD-SCHEDULED, not event-driven: reflect-owned, run from
+    # ~/Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist. Appears in no
+    # settings.json event, so there is nothing to wire or toggle. Verified 2026-07-16.
+    beats-reflect-weekly) return 0 ;;
+    # CORE, BASE-WIRED: config-owned and shipped in the base claude/settings.json
+    # (install.sh's deactivate_config calls it "config-owned (core, base-wired)"). It is
+    # what makes the Bash tool honor the nvm default, so it is not individually
+    # toggleable - switching it off breaks every global node CLI, codex included.
+    node-path-default) return 0 ;;
   esac
   return 1
 }
@@ -119,7 +131,13 @@ case "${1:-}" in
     ;;
   --check)
     n="${2:-}"; [ -n "$n" ] || { echo "usage: --check <name>" >&2; exit 2; }
-    _is_managed "${n%.sh}"; exit $?
+    n="${n%.sh}"
+    # Exclusions FIRST, so --check agrees with the live path and --audit. Without this,
+    # --check called an exempt hook unmanaged while the guard itself stayed silent on it -
+    # three answers to the same question, and the Stop gate consults --check, so it would
+    # have blocked forever on a hook the guard had already decided to exempt.
+    _is_excluded "$n" && exit 0
+    _is_managed "$n"; exit $?
     ;;
 esac
 

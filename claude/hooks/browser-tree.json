@@ -340,9 +340,11 @@
           "key": "voice-output",
           "kind": "hooks",
           "tag": "spoken replies (TTS)",
-          "desc": "The 1 hooks voice-output installs. Toggle any on or off.",
+          "desc": "The 3 hooks voice-output installs. Toggle any on or off.",
           "hooks": [
-            "voice-gate"
+            "voice-gate",
+            "voice-mandate",
+            "voice-toggle"
           ]
         }
       ]
@@ -466,7 +468,9 @@
     "sidecoach-preamble": "Injects PRODUCT.md + DESIGN.md into every session.",
     "sidecoach-postuserp": "Sends your prompt to the sidecoach daemon.",
     "sidecoach-taste-gate": "Reviews UI files the moment they are written.",
-    "sidecoach-postresponse": "Folds sidecoach daemon results into the reply."
+    "sidecoach-postresponse": "Folds sidecoach daemon results into the reply.",
+    "voice-mandate": "Decides each session whether the speak tool is allowed, based on install and mute state.",
+    "voice-toggle": "Turns voice on or off when you say so mid-session."
   },
   "hook_owner": {
     "memory-approve": "memory",
@@ -529,7 +533,9 @@
     "sidecoach-preamble": "sidecoach",
     "sidecoach-postuserp": "sidecoach",
     "sidecoach-taste-gate": "sidecoach",
-    "sidecoach-postresponse": "sidecoach"
+    "sidecoach-postresponse": "sidecoach",
+    "voice-mandate": "voice-output",
+    "voice-toggle": "voice-output"
   },
   "pinned_hooks": [
     "beats-rebuild",

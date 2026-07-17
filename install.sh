@@ -4267,48 +4267,21 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
     warn "python3 not found - cannot merge MCP config. Add manually to ~/.claude.json"
   fi
 
-  # Symlink voice-mandate hook (SessionStart enforcement)
-  chmod +x "$REPO_DIR/claude/hooks/voice-mandate.sh"
-  make_symlink "$REPO_DIR/claude/hooks/voice-mandate.sh" "$CLAUDE_DIR/hooks/voice-mandate.sh"
-
-  # Voice-toggle: UserPromptSubmit hook + standalone script
-  chmod +x "$REPO_DIR/claude/hooks/voice-toggle.sh"
-  make_symlink "$REPO_DIR/claude/hooks/voice-toggle.sh" "$CLAUDE_DIR/hooks/voice-toggle.sh"
-
+  # voice-mandate.sh and voice-toggle.sh are NOT deployed or wired here. They go through
+  # the generic app-hook path in section 16e:
+  #   picked voice-output && install_app_hooks voice-gate.sh voice-mandate.sh voice-toggle.sh
+  # with their entries transcribed verbatim into claude/hooks/app-wirings.json.
+  #
+  # WHY: install_app_hooks is the ONLY installer path that honors the per-hook off-list
+  # (_AMPERSAND_HOOK_OFF), which is what the component browser's per-hook toggles ride on.
+  # A bespoke symlink + JSON-merge here would silently re-add a hook the user had just
+  # toggled OFF, so the toggle would appear to work and then do nothing. This block used
+  # to do exactly that. Same defect class as the cmux/fable/reflect/sidecoach convergence
+  # (see session_2026-07-15_cmux-fable-alacarte-leak.md).
+  #
+  # toggle-voice.sh is a standalone user-facing SCRIPT, not a wired hook, so it stays here.
   chmod +x "$REPO_DIR/claude/toggle-voice.sh"
   make_symlink "$REPO_DIR/claude/toggle-voice.sh" "$CLAUDE_DIR/toggle-voice.sh"
-
-  # JSON-merge voice-mandate hook into SessionStart + PostCompact in settings.json
-  if command -v python3 >/dev/null 2>&1; then
-    python3 -c "
-import json
-p = '$SETTINGS_JSON'
-with open(p) as f: d = json.load(f)
-hooks = d.setdefault('hooks', {})
-VOICE_CMD = '~/.claude/hooks/voice-mandate.sh'
-VOICE_HOOK = {'type': 'command', 'command': VOICE_CMD, 'timeout': 5, 'statusMessage': 'Checking voice output...'}
-for event in ['SessionStart', 'PostCompact']:
-    entries = hooks.setdefault(event, [{}])
-    entry = entries[0]
-    hook_list = entry.setdefault('hooks', [])
-    if not any(h.get('command') == VOICE_CMD for h in hook_list):
-        hook_list.append(VOICE_HOOK)
-
-# UserPromptSubmit: voice-toggle
-VTOGGLE_CMD = '~/.claude/hooks/voice-toggle.sh'
-VTOGGLE_HOOK = {'type': 'command', 'command': VTOGGLE_CMD, 'timeout': 5}
-entries = hooks.setdefault('UserPromptSubmit', [{}])
-entry = entries[0]
-hook_list = entry.setdefault('hooks', [])
-if not any(h.get('command') == VTOGGLE_CMD for h in hook_list):
-    hook_list.append(VTOGGLE_HOOK)
-
-with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-"
-    ok "Voice hooks merged into settings.json (mandate + toggle)"
-  else
-    warn "python3 not found - cannot merge voice-mandate hook. Add manually to settings.json"
-  fi
 
   # Reminder about API key
   if ! security find-generic-password -a 'claude-voice' -s 'openai-tts-api-key' -w >/dev/null 2>&1; then
@@ -4711,7 +4684,7 @@ picked reflect      && install_app_hooks reflect-nudge.sh
 picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh resume-guard.sh resume-toggle.sh team-reaper.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh teammate-relay-stop.sh
 picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-postresponse.sh
 picked fable        && install_app_hooks fable-orchestrator-guard.sh
-picked voice-output && install_app_hooks voice-gate.sh
+picked voice-output && install_app_hooks voice-gate.sh voice-mandate.sh voice-toggle.sh
 picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh
 picked clickup      && install_app_hooks block-clickup-writes.sh
 picked visualizer   && install_app_hooks visualizer-guard.sh

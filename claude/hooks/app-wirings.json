@@ -401,5 +401,38 @@
         "command": "~/.claude/hooks/sidecoach-postresponse.sh"
       }
     }
+  ],
+  "voice-mandate.sh": [
+    {
+      "event": "SessionStart",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/voice-mandate.sh",
+        "timeout": 5,
+        "statusMessage": "Checking voice output..."
+      }
+    },
+    {
+      "event": "PostCompact",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/voice-mandate.sh",
+        "timeout": 5,
+        "statusMessage": "Checking voice output..."
+      }
+    }
+  ],
+  "voice-toggle.sh": [
+    {
+      "event": "UserPromptSubmit",
+      "matcher": null,
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/voice-toggle.sh",
+        "timeout": 5
+      }
+    }
   ]
 }

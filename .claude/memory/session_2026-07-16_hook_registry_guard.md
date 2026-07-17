@@ -33,6 +33,23 @@ Jonah: "write a hook that recognizes when a hook is being written, categorizes i
 
 **Skipped deliberately:** the Codex cross-model gate. Jonah explicitly instructed lower cost and faster turnaround after a very expensive day; his instruction outranks the standing gate. Available on request.
 
-**Known-live backlog it surfaces:** `--audit` currently reports 4 real unmanaged hooks (beats-reflect-weekly, node-path-default, voice-mandate, voice-toggle). They are pre-existing and NOT retroactively blocked - the guard only fires when a hook file is written. Packaging them is its own task.
+**THE FOUR ARE FIXED. `--audit` now reports ZERO unmanaged hooks.**
+
+**FEEDBACK (Jonah): "You know what each of those four belong to. Are you flagging this as a problem?"** He was right and this is the lesson. I had listed the 4 unmanaged hooks as "backlog" in a completion report - using the surface-open-backlog rule as COVER for work I could do and simply had not. install.sh states every owner outright; I had already read the lines. Flagging a defect you can fix, in the same breath as shipping the tool whose entire purpose is to say that defect matters, is not diligence - it is deferral wearing diligence's clothes. The rule exists to surface what I CANNOT close, not to launder what I did not.
+
+Resolved from install.sh itself, not memory:
+- **voice-mandate, voice-toggle -> voice-output.** GENUINELY MISPACKAGED. Deployed by a bespoke `make_symlink` + JSON-merge inside the voice block, so `_AMPERSAND_HOOK_OFF` never reached them: a browser toggle would have appeared to work and silently done nothing (the exact defect Codex found in cmux/fable/reflect/sidecoach). CONVERGED: entries transcribed verbatim into app-wirings.json (statusMessage preserved), added to `picked voice-output && install_app_hooks voice-gate.sh voice-mandate.sh voice-toggle.sh`, bespoke symlink+merge DELETED (it would have re-added an off-listed hook), added to the tree with real descriptions. **Sandbox-proven both directions:** baseline installs all 3; `_AMPERSAND_HOOK_OFF="voice-mandate.sh"` leaves voice-mandate's file absent AND its wiring stripped while voice-gate + voice-toggle stay.
+- **beats-reflect-weekly -> reflect, EXEMPT.** Not an event hook: launchd-scheduled via `~/Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist`, in no settings.json event. Nothing to wire, nothing to toggle.
+- **node-path-default -> config, EXEMPT.** Core and base-wired (present in the base `claude/settings.json`; install.sh's deactivate_config calls it "config-owned (core, base-wired)"). It is what makes the Bash tool honor the nvm default, so it is not individually toggleable - switching it off breaks every global node CLI, codex included.
+
+Every exemption states WHY in the code. An exemption with no reason is just a place to hide an unmanaged hook.
+
+**TWO DEFECTS THE FIX EXPOSED IN MY OWN WORK:**
+1. **`--check` bypassed the exclusion list** while the live path and `--audit` honored it - three answers to one question. The Stop gate consults `--check`, so it would have blocked FOREVER on a hook the guard had already exempted. Fixed: exclusions run first in `--check`.
+2. **My tests were pinned to real unmanaged hooks** (asserting voice-mandate was unmanaged, asserting the audit was dirty). Packaging them turned my own suite RED - an assertion that fails when the repo gets HEALTHIER is backwards: it punishes the fix and pressures the next person to weaken the test. Rebound to a synthetic fixture that is unmanaged by construction, plus an explicit assertion that a clean repo audits to zero. Negative-controlled: a fresh `zz-probe.sh` is still caught.
+
+Also corrected: voice-output's tree desc hardcoded "The 1 hooks voice-output installs" and was caught by the stale-count guard added earlier the same day (built after cmux's desc claimed 6 at 8). That guard paid for itself within hours.
+
+Final: registry 29/29, component-browser 104/104, off-list ALL PASSED, parity ALL PASSED, bash -n clean, audit ZERO.
 
 Files: claude/hooks/hook-registry-guard.sh, claude/hooks/hook-registry-stop.sh, claude/hooks/test-hook-registry.sh, .claude/settings.json, claude/hooks/browser-tree.json (pinned_hooks).
