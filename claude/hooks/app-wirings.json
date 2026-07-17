@@ -233,6 +233,17 @@
       }
     }
   ],
+  "figma-fidelity-arm.sh": [
+    {
+      "event": "PreToolUse",
+      "matcher": "mcp__plugin_figma_figma__get_design_context|mcp__plugin_figma_figma__download_assets",
+      "hook": {
+        "type": "command",
+        "command": "~/.claude/hooks/figma-fidelity-arm.sh",
+        "timeout": 5
+      }
+    }
+  ],
   "resume-guard.sh": [
     {
       "event": "SessionEnd",
