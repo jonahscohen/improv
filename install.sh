@@ -1889,7 +1889,17 @@ BR_BANNER_COLS=64
 # stty reads STDIN instead, so pointing it at /dev/tty gets the truth even from inside
 # a command substitution. tput remains the fallback for the no-tty case (its 80 is a
 # fine default when there is genuinely no terminal to measure).
-_br_term_width() {
+# _br_term_width_raw - the MEASURED width, with no floor: what the terminal actually is.
+# _br_term_width below floors it to 60 because the LAYOUT is designed for 60+, and that
+# floor is right for laying rows out (worst case a line soft-wraps) but WRONG for
+# counting rows. Counting has to be done against reality:
+#
+#   at a real 50 columns the lead is wrapped by _br_print_prose to the 60-col floor, the
+#   terminal then soft-wraps those 60-char lines again, and the header occupies 6 rows
+#   while a count taken at 60 reports 5. That one-row undercount inflates the budget and
+#   overflows the frame - the very bug this file is fixing, just below 60 columns.
+#   (MEASURED: _br_display_rows of the real header block is 5 at w=60, 6 at w=50.)
+_br_term_width_raw() {
   local w="" sz
   if [ -r /dev/tty ]; then
     sz="$(stty size </dev/tty 2>/dev/null || true)"
@@ -1901,8 +1911,62 @@ _br_term_width() {
   case "$w" in
     ''|*[!0-9]*) w=80 ;;
   esac
+  printf '%s\n' "$w"
+}
+
+_br_term_width() {
+  local w
+  w="$(_br_term_width_raw)"
   [ "$w" -lt 60 ] && w=60
   printf '%s\n' "$w"
+}
+
+# _br_term_rows - the real terminal HEIGHT. Same stty-not-tput reasoning as
+# _br_term_width above: tput reads its STDOUT, which is a pipe inside a command
+# substitution, so `$(tput lines)` always says 24 no matter the window.
+#
+# Deliberately NOT floored the way width is. A width floor is safe (worst case the
+# line is wider than the window and soft-wraps); a rows floor is NOT, because the
+# whole point of this number is to stop the frame from claiming rows that do not
+# exist. Claiming 24 rows on a 12-row window is the exact bug this exists to prevent.
+# A tiny terminal is handled by the height FLOOR in render_screen instead.
+_br_term_rows() {
+  local r="" sz
+  if [ -r /dev/tty ]; then
+    sz="$(stty size </dev/tty 2>/dev/null || true)"
+    r="${sz%% *}"
+  fi
+  case "$r" in
+    ''|*[!0-9]*) r="$(tput lines 2>/dev/null || true)" ;;
+  esac
+  case "$r" in
+    ''|*[!0-9]*) r=24 ;;
+  esac
+  printf '%s\n' "$r"
+}
+
+# _br_display_rows <text> <width> - how many terminal ROWS <text> occupies at <width>.
+#
+# NOT `wc -l`. Two reasons it has to be this and not a line count:
+#   - ANSI escapes have zero display width but plenty of bytes, so the palette vars
+#     would inflate every colored line's length.
+#   - A line longer than the terminal SOFT-WRAPS into several rows. The browser's lead
+#     line is 90 characters and wraps to 2 rows at 80 columns, which is precisely the
+#     row the old height math lost track of.
+#
+# n == w is ONE row, not two: terminals defer the wrap until the NEXT character, so a
+# line exactly filling the width leaves the cursor parked on that same row.
+_br_display_rows() {
+  local text="$1" w="$2"
+  # The width is CHECKED, not assumed. _br_term_width floors at 60 today, so this cannot
+  # fire from the browser - but this helper is generic arithmetic and a zero/garbage
+  # width would divide by zero inside awk rather than fail cleanly.
+  case "$w" in
+    ''|*[!0-9]*|0) w=80 ;;
+  esac
+  printf '%s' "$text" | sed $'s/\033\[[0-9;?]*[a-zA-Z]//g' | awk -v w="$w" '
+    { n = length($0); rows += (n < 1 ? 1 : int((n + w - 1) / w)) }
+    END { print rows+0 }'
 }
 
 # _br_rtrim <str> - drop trailing spaces. Load-bearing, not cosmetic: gum returns the
@@ -2394,7 +2458,36 @@ _br_print_prose() {
   return 0
 }
 
+# _br_print_header <gum|text> - print the header AND record how tall it was.
+#
+# The height of this header is an INPUT to render_screen's viewport math: gum has to be
+# told how many rows are left after the header, and "after the header" is not a constant
+# (the lead wraps, so it is width-dependent, and the toast line is conditional).
+#
+# It is measured by BUFFERING the real output and counting it, rather than by a second
+# function that predicts it. A predictor is a copy of this layout that silently goes
+# stale the first time someone edits a printf here - and the failure mode is a torn
+# screen, which is exactly the bug this is fixing. Buffer-and-count cannot drift: it
+# counts the bytes that are about to be printed.
+#
+# BR_HDR_LINES is the output. It is a global because command substitution runs the
+# renderer in a SUBSHELL, so the renderer itself cannot export anything back.
 _br_print_header() {
+  local mode="${1:-text}" out
+  # The trailing 'X' sentinel: `$(...)` strips ALL trailing newlines, and this header
+  # ENDS in a blank line that is load-bearing spacing. Without the sentinel the blank
+  # would be eaten here and the frame would be measured one row short of what it draws.
+  out="$(_br_render_header "$mode"; printf 'X')"
+  out="${out%X}"
+  # _br_term_width_RAW, not _br_term_width: the floored width is what the header was laid
+  # out FOR, but the rows it occupies are decided by the width the terminal actually has.
+  # Counting at the floor undercounts by a row below 60 columns (see _br_term_width_raw).
+  BR_HDR_LINES="$(_br_display_rows "$out" "$(_br_term_width_raw)")"
+  printf '%s' "$out"
+  return 0
+}
+
+_br_render_header() {
   local seg acc first=1 desc c on total noun meta w
   printf '\n'
   printf "${DIM}ampersand${NC}"
@@ -2567,19 +2660,69 @@ _br_pend_split_all() {
 # inherited from the retired run_tui_gum / returning_flow, which is why the browser
 # looks like the installer it replaced rather than like a new app.
 render_screen() {
-  local i chosen height rows hdr
+  local i chosen height rows hdr term_rows budget gum_hdr
   local -a gargs
   clear
   _br_print_header gum
-
-  rows=${#ROW_DISP[@]}
-  height=$(( rows + 1 ))
-  [ "$height" -gt 22 ] && height=22
 
   # --header is passed ALWAYS, even empty. OMITTING it makes gum fall back to its own
   # default header ("Choose:"), which is noise directly under our lead line; an EXPLICIT
   # empty header renders nothing at all. (Measured both ways in real captures.)
   hdr="$(_br_footer_text gum)"
+
+  # --- viewport budget -------------------------------------------------------
+  # THE HEIGHT MUST FIT THE TERMINAL, NOT THE ROW COUNT.
+  #
+  # This used to be `height = rows + 1, capped at 22`, derived from the row count alone.
+  # That number is unrelated to the space actually left on screen, and it shipped a torn
+  # root screen: it ignored the header printed two lines above, gum's own chrome, and
+  # the terminal's real height. On an 80x24 window a Guardrails-sized screen (34 hooks,
+  # clamped to 22) drew 5 + 1 + 22 + 1 = 29 rows into 24. The terminal SCROLLED, which
+  # desynced gum's screen model from the screen: gum repainted rows as the cursor passed
+  # over them but never repaired the line scrolled off the top, so the header's marker
+  # and "Quit" appeared twice and a stale cursor sat on a row the cursor was not on.
+  #
+  # gum 0.17.0's frame, MEASURED at 80x40 (a window tall enough that nothing scrolls,
+  # so the capture is the truth rather than a scrolled artifact):
+  #   [header row, ONLY if non-empty - an empty --header draws nothing]
+  #   [min(rows, height) item rows]
+  #   [blank]
+  #   [pagination dots, ONLY when rows > height]
+  #   [blank]
+  #   [navigate / enter submit footer]
+  # so the fixed cost below the list is 3 rows, plus 1 more once it paginates. A long
+  # --header TRUNCATES rather than wrapping (measured at 100 chars in an 80-col window),
+  # so it is worth exactly 0 or 1 rows and never more.
+  term_rows="$(_br_term_rows)"
+  rows=${#ROW_DISP[@]}
+  gum_hdr=0
+  [ -n "$hdr" ] && gum_hdr=1
+  budget=$(( term_rows - BR_HDR_LINES - gum_hdr - 3 ))
+
+  # Paginating costs one extra row for the dots, so the budget has to pay for it BEFORE
+  # the clamp. Checked against the un-decremented budget: if the list fits without dots
+  # there are no dots to pay for.
+  [ "$rows" -gt "$budget" ] && budget=$(( budget - 1 ))
+
+  height="$rows"
+  [ "$height" -gt "$budget" ] && height="$budget"
+
+  # The floor. Below this the screen is unusable anyway, and a zero or negative --height
+  # makes gum draw nothing at all. A cramped terminal should show a few scrollable rows,
+  # not an empty frame. Overflowing a window this small is unavoidable and preferable to
+  # rendering blank.
+  [ "$height" -lt 3 ] && height=3
+
+  # A test seam, off unless BR_FRAME_LOG names a file. The frame's height is invisible in
+  # a pty BYTE capture - the bytes are individually correct and the tear only exists once
+  # a real terminal reflows them - so the render harness reads the arithmetic here rather
+  # than trying to see a scroll it structurally cannot observe.
+  if [ -n "${BR_FRAME_LOG:-}" ]; then
+    printf 'nav=%s rows=%s hdr_lines=%s gum_hdr=%s height=%s term_rows=%s total=%s\n' \
+      "${BR_NAV:-/}" "$rows" "$BR_HDR_LINES" "$gum_hdr" "$height" "$term_rows" \
+      "$(( BR_HDR_LINES + gum_hdr + height + 3 + $( [ "$rows" -gt "$height" ] && echo 1 || echo 0 ) ))" \
+      >> "$BR_FRAME_LOG"
+  fi
   gargs=(--height "$height"
          --header "$hdr"
          --header.foreground "#0e7490"

@@ -278,10 +278,45 @@ _keys_text() {
 
 # gum path: raw keys. The leading sleep waits for gum to enter raw mode - keys sent
 # before that are echoed by the line discipline and LOST (measured).
+#
+# WHY THE LEAD IS 9s AND NOT 3.5s. It has to outlast everything before the first gum:
+# the banner AND the browser's REAL update check (_browser_update_refresh runs an actual
+# `git fetch`). BR_LAUNCH_DWELL=0 removes the banner's dwell but nothing removes the
+# fetch, and its duration is not ours to predict - it is a network call, and on a loaded
+# machine the whole startup regularly ran past 3.5s.
+#
+# The failure it caused was SILENT and total, not a nudge: the escape landed while
+# "Checking for updates..." was still on screen, sat in the pty buffer, and the instant
+# gum started it consumed the buffered escape and aborted - so the browser quit having
+# never drawn a single row, and all 13 gum-root assertions failed with "missing:
+# Foundation / CORE COMPONENTS / navigate". Read as a real regression, that is a
+# spectacular false alarm; it was reproduced identically on UNMODIFIED code (git stash),
+# which is what proved it environmental.
+#
+# 9s is measured headroom (startup was ~2-4s at idle, past 3.5s at load ~11), not a
+# guess, and it costs 5.5s on each of two gum runs. A readiness GATE - polling the
+# capture for gum's footer before sending - would be strictly better than any constant;
+# left alone here because it means threading the capture path into the key script, and
+# this file's job today was the frame-height hole.
+# The per-key gap: a key that CHANGES SCREEN needs a wider one after it, because every
+# screen change starts a BRAND NEW gum and the next key needs the same grace the first
+# key does or it lands during startup and is lost.
+#
+# Both enter AND escape change screen - escape navigates UP a level, which re-renders
+# exactly like entering does. Widening only enter was not enough: gum-nav's second escape
+# still arrived while the root's fresh gum was starting, was swallowed, and left the
+# browser parked with nothing to quit it (90s watchdog, reported as a hang). An arrow
+# only moves gum's cursor within a live process, so it keeps the short gap.
 _keys_gum() {
-  local k
-  printf 'sleep 3.5; '
-  for k in "$@"; do printf "printf '%%b' '%s'; sleep 0.55; " "$k"; done
+  local k gap
+  printf 'sleep 9; '
+  for k in "$@"; do
+    case "$k" in
+      '\r'|'\033') gap=1.6 ;;
+      *)           gap=0.55 ;;
+    esac
+    printf "printf '%%b' '%s'; sleep %s; " "$k" "$gap"
+  done
   printf 'sleep 1.5'
 }
 
@@ -550,6 +585,347 @@ PYX
     fail "text-w$width: the driven run did not produce a fresh capture (see harness error above)"
   fi
 done
+
+# ============================================================
+# Frame height - THE WHOLE FRAME MUST FIT THE TERMINAL
+# ============================================================
+# WHY THIS SECTION EXISTS, AND WHY THE 110 CHECKS ABOVE MISSED THE BUG IT COVERS.
+#
+# A shipped tear (root screen: "Up to date" twice, "Quit" twice, a stale cursor on a row
+# the cursor was not on) went straight through this harness. Two independent blind spots
+# let it, and BOTH had to be fixed or this section would be theatre:
+#
+#   1. BYTE-STREAM BLINDNESS. Every assertion above matches text in a pty CAPTURE. When
+#      a frame is taller than the window, the emitted bytes are still individually
+#      CORRECT - the tear is created by the TERMINAL reflowing them, and a capture file
+#      has no screen, no cursor and no scrollback. There is no string to grep for. The
+#      duplicate "Up to date" the user sees does not exist anywhere in the byte stream.
+#   2. GEOMETRY. This harness drives at 130x60 (COLS/ROWS above). A 60-row window
+#      absorbs a 28-row frame without scrolling, so even a screen model would have seen
+#      nothing. The bug only exists at ~24 rows, which is the DEFAULT Terminal size.
+#
+# So the check cannot look at the pixels and cannot use the default geometry. It reads
+# the renderer's own viewport ARITHMETIC (via BR_FRAME_LOG) at REAL terminal heights and
+# asserts the frame fits. Height is the property that was wrong; height is what we test.
+#
+# NEGATIVE-CONTROLLED: restoring the old `height=$((rows+1)); cap 22` makes the fit
+# assertions below go RED at 24 rows (Guardrails/verification 28 > 24, Beats/Hooks
+# 28 > 24, Guardrails 26 > 24). An assertion that cannot fail proves nothing, so that
+# was verified by hand rather than assumed.
+
+# _drive_frames <name> <cols> <rows> <dwell> <keyscript> - like _drive, but at an
+# ARBITRARY terminal height, with the renderer's frame arithmetic logged to a file, and
+# ENDED BY A KILL rather than by quitting.
+#
+# The kill is deliberate. These runs need one thing - the frame log - and it is complete
+# the moment the last screen renders. Quitting cleanly would mean steering the browser
+# all the way back out to the root, and that is exactly what made an earlier cut of this
+# flaky: keys are sent on a fixed schedule, gum LOSES anything typed before it enters raw
+# mode, and every screen change restarts gum. Under load a single swallowed key left the
+# browser parked one level from where it belonged, with nothing left to quit it - so the
+# run sat until the 90s watchdog and reported a hang instead of a measurement. Six runs
+# doing that is a ten-minute suite that proves nothing.
+#
+# So: drive, let it render, kill it. Reaching the screen IS the proof the run worked, and
+# that is asserted directly (_frames_saw) rather than inferred from an exit code. A
+# non-zero exit here carries no information and is not read as one.
+
+# _frames_no_browser - leave NO browser process running, and PROVE it before returning.
+#
+# This is not hygiene, it is correctness. `script` and the browser are different
+# processes: killing the pty leaves the browser ALIVE, still rendering, still appending
+# to whatever BR_FRAME_LOG it was started with. A single `pkill` is fire-and-forget - it
+# returns before the signal is delivered - so the next run could start while the last
+# one's browser was still writing.
+#
+# That is not hypothetical. MEASURED: frames-beats-24's log contained Guardrails (a
+# screen its OWN keystrokes cannot reach - the beats descent sends 9 downs and Guardrails
+# is row 10) and its log was written SEVEN SECONDS after its own capture stopped. A log
+# inconsistent with its own raw capture is an orphan writing into it, and the assertion
+# was then reading another run's navigation.
+_frames_no_browser() {
+  local i
+  for (( i = 0; i < 25; i++ )); do
+    pkill -9 -f 'install.sh --browser' 2>/dev/null
+    pgrep -f 'install.sh --browser' >/dev/null 2>&1 || return 0
+    sleep 0.2
+  done
+  printf '%sharness: a browser process survived SIGKILL - refusing to run, its output would contaminate the next frame log%s\n' \
+    "$RED" "$NC"
+  return 1
+}
+
+_drive_frames() {
+  local name="$1" cols="$2" rows="$3" dwell="$4" keyscript="$5"
+  local raw="$OUT_PREFIX-$name.raw" log="$OUT_PREFIX-$name.frames"
+  local spid
+
+  # A clean slate is part of the freshness contract: an orphan from a previous run holds
+  # an open handle to ITS log, but it also competes for the machine and it must not be
+  # mistaken for this run's process later.
+  _frames_no_browser || { HARNESS_ERR=1; return 2; }
+
+  rm -f "$raw" "$log"
+  # Do not trust rm's silence - asserting against a previous run's log is the same trap
+  # _drive's nonce exists to close.
+  if [ -e "$log" ]; then
+    printf '%sharness: could not clear a previous frame log (%s) - refusing to run %s against a possibly stale file%s\n' \
+      "$RED" "$log" "$name" "$NC"
+    HARNESS_ERR=1
+    return 2
+  fi
+
+  eval "$keyscript" | /usr/bin/script -q "$raw" /bin/bash -c "
+    stty cols $cols rows $rows 2>/dev/null
+    export TERM=xterm-256color
+    export PATH='$GUM_DIR:$TEXT_PATH'
+    export GIT_TERMINAL_PROMPT=0
+    export GIT_SSH_COMMAND='ssh -o BatchMode=yes'
+    export BR_LAUNCH_DWELL=0
+    export BR_FRAME_LOG='$log'
+    cd '$REPO_DIR'
+    /bin/bash '$INSTALLER' --browser
+  " >/dev/null 2>&1 &
+  spid=$!
+
+  sleep "$dwell"
+  # The BROWSER first, and confirmed dead, THEN the pty. Reversing these is what let an
+  # orphan outlive its own capture and keep writing frames (see _frames_no_browser).
+  _frames_no_browser || { HARNESS_ERR=1; return 2; }
+  # Braces + 2>/dev/null: bash announces a SIGKILLed background pipeline on ITS OWN
+  # stderr ("Killed: 9 <the whole command>"), which dumps the pty invocation into the
+  # middle of the results. The redirect is on the shell's report, not on the job.
+  { kill -9 "$spid"; wait "$spid"; } 2>/dev/null
+
+  # The log is its own freshness proof: nothing but THIS run's render_screen writes it.
+  if [ ! -s "$log" ]; then
+    printf '%sharness: frame run %s wrote no frame log - the gum renderer never ran, so nothing was measured%s\n' \
+      "$RED" "$name" "$NC"
+    HARNESS_ERR=1
+    return 2
+  fi
+  return 0
+}
+
+# _frames_fit <log> <rows> <label> - no frame may be taller than the window.
+_frames_fit() {
+  local log="$1" rows="$2" label="$3" over
+  over="$(awk -v r="$rows" '
+    { t = -1
+      for (i = 1; i <= NF; i++) { split($i, a, "="); if (a[1] == "total") t = a[2] + 0 }
+      if (t > r) print "        " $0 }' "$log")"
+  if [ -z "$over" ]; then
+    pass "$label: every frame fits $rows rows"
+  else
+    fail "$label: frame(s) TALLER than the $rows-row window - the terminal scrolls, gum's screen model desyncs, and the top line orphans (the shipped tear):"
+    printf '%s%s%s\n' "$RED" "$over" "$NC"
+  fi
+}
+
+# _frames_run <name> <cols> <rows> <dwell> <keyscript> <nav>... - drive, and RETRY ONCE if
+# the descent did not reach every screen it was aimed at.
+#
+# The retry is for the DRIVER, not the assertion. Steering gum is timing-based (keys are
+# paced with sleeps because gum drops anything typed before it enters raw mode), and a
+# loaded machine widens that window - measured on this box at load ~11, where a descent
+# that passes at idle drops a keystroke and lands one screen short. What is under test is
+# the frame HEIGHT; "did the keystroke arrive" is the harness's own plumbing, and
+# retrying plumbing is legitimate where retrying an assertion would not be.
+#
+# It never converts a red into a green: if the second attempt also misses, the log still
+# lacks the nav and _frames_saw still fails. Only the flake is absorbed.
+_frames_run() {
+  local name="$1" cols="$2" rows="$3" dwell="$4" keys="$5"
+  shift 5
+  local attempt nav ok
+  for attempt in 1 2; do
+    _drive_frames "$name" "$cols" "$rows" "$dwell" "$keys" || return 1
+    ok=1
+    for nav in "$@"; do
+      grep -q "nav=$nav " "$OUT_PREFIX-$name.frames" || ok=0
+    done
+    if [ "$ok" = "1" ]; then return 0; fi
+    if [ "$attempt" = "1" ]; then
+      note "retry $name: the descent missed a screen (a keystroke was lost before gum entered raw mode)"
+    fi
+  done
+  # Deliberately 0: the assertions below report exactly WHICH screen is missing, which is
+  # a better message than a bare non-zero here.
+  return 0
+}
+
+# _frames_saw <log> <nav> <label> - prove the screen was actually reached. Without this
+# a broken key sequence would leave a log holding only the root screen, every fit check
+# would pass, and the deep screens - the ones that actually overflowed - would go
+# untested while the suite went green.
+_frames_saw() {
+  local log="$1" nav="$2" label="$3"
+  if grep -q "nav=$nav " "$log"; then
+    pass "$label: reached $nav (its height was measured)"
+  else
+    fail "$label: never reached $nav - that screen's height was NOT exercised, so the fit checks prove nothing for it"
+  fi
+}
+
+printf '\n%sFrame height (the frame must fit the terminal, not just the row count)%s\n' "$YELLOW" "$NC"
+
+# --- independent oracle for the header count ------------------------------------
+# The fit checks below read `total`, which the renderer computes from BR_HDR_LINES -
+# so renderer and oracle SHARE that term. A header measurement that undercounts would
+# make both agree while the real terminal scrolled, and every check would pass. (Raised
+# by the cross-model review of this change, and it is a fair hit.)
+#
+# So the shared term is pinned HERE, against hand-computed expectations, independently
+# of any render: _br_display_rows is evaluated directly on known inputs. The real
+# function is extracted from install.sh rather than copied - a copy would be a second
+# implementation that can agree with itself while both are wrong.
+#
+# The trailing-blank case is the one that matters. The header ENDS in a blank line, and
+# `$(...)` strips trailing newlines - so without _br_print_header's X sentinel this
+# returns 1 where it must return 2, BR_HDR_LINES lands one short, and the frame silently
+# overflows by a row. That is a real measured failure, not a hypothetical.
+eval "$(sed -n '/^_br_display_rows() {/,/^}/p' "$INSTALLER")"
+if ! type _br_display_rows >/dev/null 2>&1; then
+  printf '%sharness: could not extract _br_display_rows from install.sh - the header oracle is unproven%s\n' "$RED" "$NC"
+  HARNESS_ERR=1
+else
+  _rows_is() {
+    local label="$1" text="$2" want="$3" got
+    got="$(_br_display_rows "$text" 80)"
+    if [ "$got" = "$want" ]; then
+      pass "display_rows: $label -> $want"
+    else
+      fail "display_rows: $label -> got $got, want $want (BR_HDR_LINES is derived from this, so the frame budget would be off by $((want - got)) rows)"
+    fi
+  }
+  _rows_is "single line, no trailing newline" $'a' 1
+  _rows_is "single line" $'a\n' 1
+  _rows_is "line + trailing BLANK line" $'a\n\n' 2
+  _rows_is "one blank line" $'\n' 1
+  _rows_is "two blank lines" $'\n\n' 2
+  _rows_is "the header's shape (blank/text/text/blank)" $'\nampersand\nlead one\nlead two\n\n' 5
+  # Width-dependence is the whole reason this is measured instead of hardcoded: the real
+  # lead is 90 characters and wraps at 80.
+  _rows_is "90 chars wraps to 2 rows at 80 cols" "$(python3 -c 'print("A"*90)')" 2
+  _rows_is "exactly 80 chars stays 1 row (deferred wrap)" "$(python3 -c 'print("A"*80)')" 1
+  _rows_is "81 chars is 2 rows" "$(python3 -c 'print("A"*81)')" 2
+  # ANSI has bytes but no width; the header is colored throughout.
+  _rows_is "ANSI escapes have zero display width" $'\033[2mampersand\033[0m\n' 1
+fi
+
+if [ -z "$GUM_BIN" ]; then
+  printf '%sharness: gum not found - the gum viewport math cannot be measured, so the frame-height checks are unproven%s\n' "$RED" "$NC"
+  HARNESS_ERR=1
+else
+  # Two direct descents rather than one Esc-heavy tour: feeding ESC immediately before an
+  # arrow key is ambiguous (an arrow IS an ESC-prefixed sequence), so gum intermittently
+  # swallowed the pair and the run silently ended up on the wrong screen. Descending and
+  # letting stdin close is deterministic.
+  _dn='\033[B'
+
+  # A DESCENT ONLY - no keys to walk back out, because _drive_frames ends these runs with
+  # a kill (see there for why).
+  #
+  # The gaps are measured, not padded. A key sent while gum is still starting is LOST
+  # (the _drive note above says so for the launch dwell; it applies to EVERY screen
+  # change, since each render spawns a fresh gum). An ENTER is always a screen
+  # transition, and the screen it opens may be heavy - Guardrails recomputes counts for
+  # 12 members - so an enter gets a wider gap than an arrow. At _keys_gum's uniform 0.55s
+  # the enters were being swallowed and the runs landed on the wrong screen.
+  _keys_frames() {
+    local k gap
+    printf 'sleep 3.5; '
+    for k in "$@"; do
+      if [ "$k" = '\r' ]; then gap=1.6; else gap=0.7; fi
+      printf "printf '%%b' '%s'; sleep %s; " "$k" "$gap"
+    done
+    printf 'sleep 2.0'
+  }
+
+  # root -> Guardrails (row 10) -> verification (row 5). The deepest gum screens: 16 and
+  # 20 rows against a 24-row window.
+  _keys_deep="$(_keys_frames "$_dn" "$_dn" "$_dn" "$_dn" "$_dn" "$_dn" "$_dn" "$_dn" "$_dn" "$_dn" '\r' \
+                             "$_dn" "$_dn" "$_dn" "$_dn" "$_dn" '\r')"
+  # root -> Beats (row 3) -> Hooks (row 6). 18 rows.
+  _keys_beats="$(_keys_frames "$_dn" "$_dn" "$_dn" '\r' \
+                              "$_dn" "$_dn" "$_dn" "$_dn" "$_dn" "$_dn" '\r')"
+
+  # 24 is the default macOS Terminal, and the size the bug shipped at. 20 is tighter than
+  # anything the old cap could have coped with. 30 confirms the budget GROWS with the
+  # window instead of staying pinned to a hardcoded 22.
+  # A run that hits the watchdog returns EARLY and LEAVES ITS LOG ON DISK - partially
+  # written, from a browser that was killed mid-navigation. The cross-run checks below
+  # must not read those: doing so is the same stale-capture trap _drive's nonce exists to
+  # close, and it was live here for real (a hung sweep still "passed" the pagination
+  # check off a dead run's leftovers). So track which runs actually succeeded and refuse
+  # to conclude anything from the rest.
+  # Dwells: the descent's own length plus a margin for the last screen to paint. The
+  # deep descent is 16 keys (3.5 + 10*0.7 + 1.6 + 5*0.7 + 1.6 + 2.0 ~= 19s); the beats
+  # descent is 10 (~13s).
+  _DWELL_DEEP=24
+  _DWELL_BEATS=18
+
+  _deep_ok_24=0; _deep_ok_20=0; _deep_ok_30=0
+  for _fh in 24 20 30; do
+    if _frames_run "frames-deep-$_fh" 80 "$_fh" "$_DWELL_DEEP" "$_keys_deep" \
+                   "Guardrails" "Guardrails/verification"; then
+      _flog="$OUT_PREFIX-frames-deep-$_fh.frames"
+      _frames_fit "$_flog" "$_fh" "h$_fh deep"
+      _frames_saw "$_flog" "Guardrails" "h$_fh deep"
+      _frames_saw "$_flog" "Guardrails/verification" "h$_fh deep"
+      eval "_deep_ok_$_fh=1"
+    else
+      fail "h$_fh deep: the driven run produced no trustworthy frame log (see harness error above)"
+    fi
+
+    if _frames_run "frames-beats-$_fh" 80 "$_fh" "$_DWELL_BEATS" "$_keys_beats" \
+                   "Beats/Hooks"; then
+      _flog="$OUT_PREFIX-frames-beats-$_fh.frames"
+      _frames_fit "$_flog" "$_fh" "h$_fh beats"
+      _frames_saw "$_flog" "Beats/Hooks" "h$_fh beats"
+    else
+      fail "h$_fh beats: the driven run produced no trustworthy frame log (see harness error above)"
+    fi
+  done
+
+  # The height must actually TRACK the window rather than being a constant that happens
+  # to fit. A 30-row window must give the 20-row verification screen more list than a
+  # 20-row window does, otherwise the "budget" is just a differently-spelled hardcode.
+  _h20=""; _h30=""
+  [ "$_deep_ok_20" = "1" ] && _h20="$(awk '/nav=Guardrails\/verification /{ for(i=1;i<=NF;i++){split($i,a,"="); if(a[1]=="height") print a[2]} }' "$OUT_PREFIX-frames-deep-20.frames" 2>/dev/null | head -1)"
+  [ "$_deep_ok_30" = "1" ] && _h30="$(awk '/nav=Guardrails\/verification /{ for(i=1;i<=NF;i++){split($i,a,"="); if(a[1]=="height") print a[2]} }' "$OUT_PREFIX-frames-deep-30.frames" 2>/dev/null | head -1)"
+  # Numeric, not merely non-empty: `[ x -gt y ]` on a non-numeric operand exits 2 with a
+  # bash error, which reads as a harness crash rather than a clean fail.
+  case "$_h20" in ''|*[!0-9]*) _h20="" ;; esac
+  case "$_h30" in ''|*[!0-9]*) _h30="" ;; esac
+  if [ -n "$_h20" ] && [ -n "$_h30" ]; then
+    if [ "$_h30" -gt "$_h20" ]; then
+      pass "viewport grows with the window (verification: height $_h20 at 20 rows -> $_h30 at 30 rows)"
+    else
+      fail "viewport does NOT grow with the window (verification: height $_h20 at 20 rows, $_h30 at 30 rows) - the height is ignoring the terminal"
+    fi
+  else
+    fail "could not read the verification screen's height at both 20 and 30 rows - the growth check proved nothing"
+  fi
+
+  # rows > height is gum SCROLLING inside its viewport. That is the intended outcome of a
+  # too-tall screen; if height ever equalled rows here, the screen would be overflowing
+  # the window instead of paginating.
+  _r=""; _h=""
+  if [ "$_deep_ok_24" = "1" ]; then
+    _r="$(awk '/nav=Guardrails\/verification /{ for(i=1;i<=NF;i++){split($i,a,"="); if(a[1]=="rows") print a[2]} }' "$OUT_PREFIX-frames-deep-24.frames" 2>/dev/null | head -1)"
+    _h="$(awk '/nav=Guardrails\/verification /{ for(i=1;i<=NF;i++){split($i,a,"="); if(a[1]=="height") print a[2]} }' "$OUT_PREFIX-frames-deep-24.frames" 2>/dev/null | head -1)"
+  fi
+  case "$_r" in ''|*[!0-9]*) _r="" ;; esac
+  case "$_h" in ''|*[!0-9]*) _h="" ;; esac
+  if [ -z "$_r" ] || [ -z "$_h" ]; then
+    fail "no trustworthy 24-row measurement of the verification screen - the pagination check proved nothing"
+  elif [ "$_r" -gt "$_h" ]; then
+    pass "deep screen scrolls INSIDE gum's viewport at 24 rows ($_r rows shown $_h at a time)"
+  else
+    fail "deep screen is not paginating at 24 rows (rows=$_r height=$_h) - a screen taller than the budget must scroll, not overflow"
+  fi
+fi
 
 # ============================================================
 # Summary
