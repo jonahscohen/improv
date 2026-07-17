@@ -49,8 +49,6 @@
   .action .name{color:var(--cyan);min-width:0;}
   .action.sel .name{color:#c2f0ff;}
   .danger .name{color:var(--red);}
-  .upd .name{color:var(--green);}
-  .utd .name{color:var(--dim);}
   .sep{border-top:1px solid var(--line);margin:7px 4px;}
   .plus{color:var(--green);} .minus{color:var(--red);}
   .detail{border-top:1px solid var(--line);padding:8px 18px;color:var(--dim);font-size:12px;min-height:34px;background:#191922;}
@@ -209,13 +207,11 @@ function mk(tag,cls,text){ const e=document.createElement(tag); if(cls)e.classNa
 function pendNodes(ins,un){ const a=[]; if(ins)a.push(mk('span','plus','+'+ins)); if(un){ if(a.length)a.push(document.createTextNode(' ')); a.push(mk('span','minus','−'+un)); } return a; }
 
 // ---- navigation ----
-let nav=[], sel=0, updateAvailable=true;
+let nav=[], sel=0;
 function inHooks(){ return nav.length && nodeAt(nav).hooks; }
 function buildRows(){
   const rows=[];
   if(nav.length===0){
-    if(updateAvailable) rows.push({type:'update',name:'↻ Update available - sync your setup to the latest Improv',hint:'A fresher Improv is in your repo (rev 1ca3ef9 → a7e6729). Re-sync your installed components to it.'});
-    else rows.push({type:'uptodate',name:'✓ Up to date',hint:'Your installed setup matches the latest Improv in your repo - nothing to sync. Select to re-check.'});
     rows.push({type:'label',name:'CORE COMPONENTS'});
     for(const k of Object.keys(T)) if(T[k].featured) rows.push(itemRow([k]));
     rows.push({type:'label',name:'MORE COMPONENTS'});
@@ -267,9 +263,7 @@ function render(){
     if(r.type==='sep'){ host.appendChild(mk('div','sep')); return; }
     if(r.type==='label'){ host.appendChild(mk('div','seclabel',r.name)); return; }
     const d=mk('div','row'+(i===sel?' sel':''));
-    if(['back','installall','uninstallall','apply','quit','update','uptodate'].includes(r.type)) d.classList.add('action');
-    if(r.type==='update') d.classList.add('upd');
-    if(r.type==='uptodate') d.classList.add('utd');
+    if(['back','installall','uninstallall','apply','quit'].includes(r.type)) d.classList.add('action');
     if(r.type==='quit') d.classList.add('danger');
     if(r.feat) d.classList.add('feat');
     if(r.hook) d.classList.add('hook');
@@ -310,8 +304,6 @@ function activate(){
   else if(r.type==='back'){ nav=nav.slice(0,-1); sel=0; }
   else if(r.type==='installall'){ stageAll(nav,'install'); }
   else if(r.type==='uninstallall'){ stageAll(nav,'uninstall'); }
-  else if(r.type==='update'){ updateAvailable=false; render(); toast('Synced your installed components to the latest Improv (a7e6729).'); return; }
-  else if(r.type==='uptodate'){ toast('Checked for updates - you are on the latest Improv.'); return; }
   else if(r.type==='apply'){ runApply(); return; }
   else if(r.type==='quit'){ doQuit(); return; }
   render();
