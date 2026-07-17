@@ -36,6 +36,7 @@ except Exception:
 
 tool = data.get("tool_name", "")
 transcript_path = data.get("transcript_path", "")
+cwd = data.get("cwd", "")
 verify_flag = os.path.expanduser("~/.claude/.needs-verification")
 last_screenshot_read = os.path.expanduser("~/.claude/.last-screenshot-read")
 
@@ -170,6 +171,102 @@ def set_flag(kind):
             fh.write(kind)
     except Exception:
         pass
+
+def verify_message(prefix):
+    """Pick the demand that MATCHES the pending flag.
+
+    The hook already knows whether the change is visual (.css/.tsx/.html -> a real
+    rendered surface) or non-visual (.ts/.py/.go/.sh -> server, CLI, hook, test-runner
+    code). Until 2026-07-17 BOTH messages ordered a screenshot regardless, so editing a
+    test runner or building a CLI library demanded a screenshot of something that has no
+    UI. That is screenshot theatre: it cannot be satisfied honestly, so it trained readers
+    to ignore the hook - the boy-who-cried-wolf threshold in
+    feedback_hooks_prefer_false_positives. (Jonah 2026-07-17: bothering everyone.)
+
+    ARMING IS UNCHANGED - set_flag() still fires on exactly what it fired on before, and
+    bash-guard still blocks git commit. Only the wording changes, so recall on real
+    true-positive cases is preserved exactly, per that same beat.
+
+    Reads flag_content() AFTER set_flag, so a sticky "visual" flag (set_flag never
+    downgrades visual -> code) correctly keeps demanding a screenshot on a later
+    non-visual edit or build. Edit a .css then run the build and you still owe a
+    screenshot - which is the 2026-06-22 hole this gate exists to close.
+    """
+    if flag_content() == "visual":
+        return (prefix + " You MUST verify before reporting. Take a screenshot, EXAMINE it "
+                "critically, and DESCRIBE what you see. Ask: does this match what was requested? "
+                "Is anything overlapping, clipped, misaligned, or wrong? Element existence is not "
+                "validation - visual correctness is. Do NOT claim completion without describing "
+                "verified proof.")
+    return (prefix + " You MUST verify before reporting. This is NON-VISUAL code: there is no "
+            "rendered surface, so do NOT screenshot to satisfy this - a screenshot would prove "
+            "nothing. Exercise the change instead: run its tests, a probe script, or curl its "
+            "endpoint, and report the REAL output. If the change has no runnable surface at all, "
+            "say so explicitly rather than claiming completion without proof.")
+
+# --- UI-project detection for build/deploy commands (Jonah 2026-07-17) --------------
+# A build command alone cannot reveal whether it emits UI: `npm run build` is byte-identical
+# in a Next.js app and in a CLI library. Arming EVERY build visual restores the screenshot
+# theatre this fix removed; arming every build code loses visual recall on real UI builds
+# (Codex finding 3). So ask the PROJECT instead of the command.
+#
+# The discriminator is the nearest package.json deps/scripts, deliberately NOT a filesystem
+# scan for .css/.html: sidecoach ships eval fixtures and a pages/ dir of HTML it never
+# renders as its own UI, so a file scan reports "UI" for a CLI library and reintroduces the
+# noise. Declared dependencies do not lie - a package that renders UI depends on a UI
+# framework or exposes a dev/start/serve script.
+#
+# No package.json found, or an unreadable one -> assume UI and demand the screenshot. That
+# is the deliberate false positive per feedback_hooks_prefer_false_positives: when we cannot
+# tell, over-fire.
+UI_DEP_MARKERS = ("react", "next", "vue", "svelte", "@angular", "solid-js", "preact",
+                  "astro", "remix", "gatsby", "vite", "tailwind", "styled-components",
+                  "@emotion", "lit-element", "lit-html", "nuxt", "webpack-dev-server")
+UI_SCRIPT_KEYS = ("dev", "start", "serve", "storybook", "preview")
+
+def effective_dir(cmd, cwd):
+    """Honor a LEADING `cd X` so `cd sidecoach && npm run build` is judged against
+    sidecoach/package.json rather than the session root.
+
+    Anchored with re.match - only a cd at the very START counts. A trailing cd does not
+    describe where the build ran: `npm run build && cd ../cli` from a UI project would
+    otherwise be judged against ../cli and downgrade a real UI build to a logic-only
+    demand (Codex review 2026-07-17, finding 1 - a false NEGATIVE, the dangerous direction).
+    """
+    m = re.match(r"\s*cd\s+([^\s;&|]+)", cmd or "")
+    if m:
+        d = m.group(1).strip().strip(chr(34) + chr(39))
+        if not os.path.isabs(d):
+            d = os.path.join(cwd or "", d)
+        if os.path.isdir(d):
+            return d
+    return cwd or ""
+
+def project_has_ui(start):
+    cur = os.path.abspath(start) if start else ""
+    for _ in range(6):
+        if not cur or cur == os.path.dirname(cur):
+            break
+        pj = os.path.join(cur, "package.json")
+        if os.path.exists(pj):
+            try:
+                with open(pj) as fh:
+                    pkg = json.load(fh)
+            except Exception:
+                return True
+            # peerDependencies matters: a React/Vue COMPONENT LIBRARY declares its
+            # framework as a peer, not a dep, and often ships no dev/start script - so
+            # omitting peers gave a real UI package a false non-UI verdict (Codex review
+            # 2026-07-17, finding 2). optionalDependencies included for the same reason.
+            names = " ".join(list((pkg.get("dependencies") or {}).keys()) +
+                             list((pkg.get("devDependencies") or {}).keys()) +
+                             list((pkg.get("peerDependencies") or {}).keys()) +
+                             list((pkg.get("optionalDependencies") or {}).keys())).lower()
+            if any(mk in names for mk in UI_DEP_MARKERS):
+                return True
+            return any(k in (pkg.get("scripts") or {}) for k in UI_SCRIPT_KEYS)
+        cur = os.path.dirname(cur)
+    return True
 
 def is_visual_verification_command(cmd):
     """Real VISUAL verification from the terminal: a cmux browser screenshot or
@@ -434,20 +531,41 @@ if tool == "Bash":
     deploy_indicators = ["node build", "npm run build", "npx ", "make "]
     file_write_indicators = ["cp ", "mv ", "> ", ">> ", "tee ", "sed -i"]
 
-    def arm_and_report():
-        set_flag("code")
+    def arm_and_report(kind="code"):
+        # kind MUST be "visual" when the touched file(s) render UI. A Bash write to a
+        # visual file (sed -i src/app.css, tee src/App.tsx, cp theme.css ...) is still a
+        # VISUAL change and still owes a real screenshot - routing it through the plain
+        # "code" flag would silently downgrade it to a logic-only demand and lose visual
+        # recall. (Codex review 2026-07-17: latent since the flag was introduced, but
+        # harmless while BOTH messages hardcoded a screenshot demand; making the flag
+        # load-bearing in verify_message() is what exposed it. set_flag never downgrades
+        # an existing visual flag, so passing "code" here can never clear real visual debt.)
+        set_flag(kind)
         if recently_verified() or IS_SUBAGENT:
             print("{}"); sys.exit(0)
         print(json.dumps({
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
-                "additionalContext": "CODE DEPLOYED/BUILT. You MUST verify before reporting. Take a screenshot, EXAMINE it critically, and DESCRIBE what you see. Ask: does this match what was requested? Is anything overlapping, clipped, misaligned, or wrong? Do NOT claim completion without describing verified proof."
+                "additionalContext": verify_message("CODE DEPLOYED/BUILT.")
             }
         }))
         sys.exit(0)
 
+    # Extract file-ish operands ONCE, before the deploy check. A chained command like
+    # `sed -i s/a/b/ src/app.css && npm run build` matches deploy_indicators FIRST, so
+    # arming plain "code" there would let a named VISUAL file off with a logic-only demand
+    # (Codex review 2026-07-17, finding 1). If any operand anywhere in the command renders
+    # UI, the whole command owes a screenshot regardless of which branch claims it.
+    _sep_re_pre = "[" + _vre.escape(chr(39) + chr(34) + "<>|;&()") + "]"
+    _all_tokens = _vre.sub(_sep_re_pre, " ", cmd).split()
+    _all_files = [t for t in _all_tokens if _vre.search(r"\.[A-Za-z0-9]{1,8}$", t)]
+    _names_visual = any(is_visual_file(t) for t in _all_files)
+
     if any(w in cmd for w in deploy_indicators):
-        arm_and_report()
+        # Visual iff the command NAMES a visual file, or the project it builds actually
+        # renders UI. A CLI/library build (sidecoach) stays on the logic demand.
+        arm_and_report("visual" if (_names_visual or project_has_ui(effective_dir(cmd, cwd)))
+                       else "code")
 
     if any(w in cmd for w in file_write_indicators):
         # Extract tokens that look like a filename (end in a short dot-extension) and
@@ -470,7 +588,8 @@ if tool == "Bash":
         if not file_tokens:
             arm_and_report()
         if any(is_code_file(t) for t in file_tokens):
-            arm_and_report()
+            # A visual operand anywhere -> visual flag -> real screenshot demanded.
+            arm_and_report("visual" if any(is_visual_file(t) for t in file_tokens) else "code")
         # else: only non-code files touched -> do NOT arm
         print("{}"); sys.exit(0)
 
@@ -480,14 +599,16 @@ if tool == "Bash":
 file_path = data.get("tool_input", {}).get("file_path", "")
 
 if is_code_file(file_path):
-    set_flag("visual" if is_visual_file(file_path) else "code")
+    _visual = is_visual_file(file_path)
+    set_flag("visual" if _visual else "code")
     if recently_verified() or IS_SUBAGENT:
         print("{}")
     else:
         print(json.dumps({
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
-                "additionalContext": "CODE FILE CHANGED. You MUST verify before reporting. Take a screenshot, EXAMINE it critically, and DESCRIBE what you see. Ask: does this match what was requested? Is anything overlapping, clipped, misaligned, or wrong? Element existence is not validation - visual correctness is. Do NOT claim completion without describing verified proof."
+                "additionalContext": verify_message(
+                    "VISUAL FILE CHANGED." if _visual else "CODE FILE CHANGED (non-visual).")
             }
         }))
 else:
