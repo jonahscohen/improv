@@ -1208,7 +1208,7 @@ detect_component() {
     visualizer) is_our_hook visualizer-guard.sh && echo active || echo not-installed ;;
     codex)      { is_our_hook codex-failure-watcher.sh || is_our_hook codex-rescue-guard.sh; } && echo active || echo not-installed ;;
     chrome)     { is_our_hook chrome-tabgroup-track.sh || is_our_hook chrome-tabgroup-clear.sh || is_our_hook chrome-tabgroup-stop.sh; } && echo active || echo not-installed ;;
-    figma)      is_our_hook figma-fidelity-stop.sh && echo active || echo not-installed ;;
+    figma)      { is_our_hook figma-fidelity-stop.sh || is_our_hook figma-fidelity-arm.sh; } && echo active || echo not-installed ;;
     *)          echo not-installed ;;
   esac
 }

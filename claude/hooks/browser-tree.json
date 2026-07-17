@@ -203,9 +203,10 @@
           "key": "figma",
           "kind": "hooks",
           "tag": "Figma fidelity guard",
-          "desc": "The 1 hooks figma installs. Toggle any on or off.",
+          "desc": "The 2 hooks figma installs. Toggle any on or off.",
           "hooks": [
-            "figma-fidelity-stop"
+            "figma-fidelity-stop",
+            "figma-fidelity-arm"
           ]
         }
       ]
@@ -489,6 +490,7 @@
     "chrome-tabgroup-clear": "Clears the record when you close a group.",
     "chrome-tabgroup-stop": "Nudges you to close tab groups before quitting.",
     "figma-fidelity-stop": "Blocks \"done\" until Figma parity is proven.",
+    "figma-fidelity-arm": "Arms the Figma parity gate on a Figma pull.",
     "fable-orchestrator-guard": "Makes Fable orchestrator-only (cost control).",
     "bash-guard": "Blocks forbidden shell patterns and force-pushes.",
     "content-guard": "Blocks banned content in writes (emojis, dashes, attribution).",
@@ -540,6 +542,7 @@
     "justify-watch-guard": "justify",
     "justify-watch-standing-by": "justify",
     "figma-fidelity-stop": "figma",
+    "figma-fidelity-arm": "figma",
     "bash-guard": "safety",
     "content-guard": "safety",
     "content-guard-stop": "safety",

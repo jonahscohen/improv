@@ -253,17 +253,139 @@ if not truth:
           "so this test proves NOTHING. install.sh changed shape; fix this test.", file=sys.stderr)
     sys.exit(1)
 
-tree={}
-for h,o in ho.items():
-    if h not in pinned: tree.setdefault(o,set()).add(h)
+# A hook is only genuinely "registered" for owner O when the user can SEE and CONTROL it on
+# O's own screen, which takes all THREE tree surfaces - and they are independent, so any one
+# can rot alone:
+#   hook_owner   -> apply_plan routing (which owner a toggle belongs to)
+#   `hooks` list -> the toggle rendered on O'S OWN screen (PLACEMENT matters, see below)
+#   hook_desc    -> the label printed beside that toggle
+# The old check compared install.sh to hook_owner ALONE and called a miss "no toggle" - a
+# proxy, not the truth. figma-fidelity-arm was missing from all three AND install.sh installs
+# it (2026-07-17, GUI-installer final review) - the exact drift this now names per-surface.
+#
+# The toggle check is PLACEMENT-AWARE, not a global "is it in SOME list anywhere": a hook
+# listed under the wrong owner's node still routes via hook_owner yet renders in the wrong
+# bucket and skews that bucket's rollups and "disable all" scope (folded from the cross-model
+# review of this change, 2026-07-17). `placed[h]` is the set of owner-contexts of the nodes h
+# is listed under: a named-key hooks node (figma, safety, codex, ...) owns ITSELF; a shared
+# "Hooks" child owns the installable leaves beside it - which is why Beats' single "Hooks"
+# node legitimately serves BOTH memory and reflect and must not be flagged.
+# `placed[h]` collects the owner-contexts of the node(s) h is listed under, for the OMISSION
+# check below (an installed hook that renders on no owner's screen). `misplaced` is the
+# complementary PER-OCCURRENCE guard: because placed[h] is a union, `owner in placed[h]` alone
+# would still pass if h were listed correctly under its owner AND duplicated under a wrong one,
+# leaving a stray toggle on the wrong screen. So every listed occurrence is validated where it
+# sits - hook_owner[h] must belong to that exact node's valid-owner set (both folded from the
+# cross-model review of this change, 2026-07-17).
+hd=t.get("hook_desc",{})
+placed={}; misplaced=[]
+def _place(n, parent):
+    hooks=n.get("hooks")
+    if hooks:
+        valid={n["key"]} if n["key"]!="Hooks" else {c["key"] for c in (parent or {}).get("members",[]) or [] if c.get("kind")=="leaf"}
+        loc=n["key"] if n["key"]!="Hooks" else f"{(parent or {}).get('key')}/Hooks"
+        for h in hooks:
+            placed.setdefault(h,set()).update(valid)
+            o=ho.get(h)
+            if o is not None and o not in valid:
+                misplaced.append(f"{h}: listed under {loc} (owned by {sorted(valid)}) but hook_owner routes it to {o} - a toggle on the wrong screen")
+    for c in n.get("members",[]) or []: _place(c, n)
+for b in t["buckets"]: _place(b, None)
 
-bad=[]
+routed={}
+for h,o in ho.items():
+    if h not in pinned: routed.setdefault(o,set()).add(h)
+
+bad=list(misplaced)
 for owner,inst in truth.items():
-    have=tree.get(owner,set())
-    for h in sorted(inst-have):
-        bad.append(f"{owner}: installs+wires {h} but the tree does not list it under {owner} (no toggle; counts lie)")
+    have=routed.get(owner,set())
+    for h in sorted(inst):
+        miss=[]
+        if h not in have:                    miss.append(f"no hook_owner->{owner} entry")
+        if owner not in placed.get(h,set()): miss.append(f"no toggle on {owner}'s screen (not in a `hooks` node owned by {owner})")
+        if h not in hd:                      miss.append("no hook_desc label")
+        if miss:
+            bad.append(f"{owner}: install_app_hooks deploys {h} but the tree gives it " + "; ".join(miss))
     for h in sorted(have-inst):
-        bad.append(f"{owner}: tree offers a toggle for {h} but install_app_hooks never deploys it")
+        bad.append(f"{owner}: tree routes {h} to {owner} but install_app_hooks never deploys it")
+for b in bad: print("  "+b, file=sys.stderr)
+sys.exit(0 if not bad else 1)
+PY
+
+# INSTALL AND DEACTIVATE MUST NAME THE SAME HOOKS. install.sh both installs (`picked X &&
+# install_app_hooks ...`) and removes (`deactivate_X() { deactivate_app_hooks ...; }`) a
+# component's hooks; if the two lists drift, a hook either leaks (installed, never removed)
+# or is dead copy (removed, never installed). This is the SIBLING of the tree drift above and
+# the reason the figma miss was easy to make: the two install.sh sites were kept in sync with
+# each other (both list stop + arm) while the tree - a third site - was not. Scope: the
+# single-line `deactivate_X()` functions, which are exactly the pure-hook components
+# (clickup/visualizer/codex/chrome/figma). The multi-line deactivate arms (memory/voice/
+# justify/cmux) are deliberately out of scope - they interleave non-hook teardown and voice
+# removes only a subset on purpose - so this check reads them line-by-line and matches only
+# the complete one-liners, never a fragment of a multi-line body.
+python3 - "$INSTALL" <<'PY' && ok "install and deactivate name the same hooks (one-liner app components)" || bad "install and deactivate name the same hooks (one-liner app components)"
+import re,sys
+src=open(sys.argv[1]).read()
+inst={}
+for m in re.finditer(r'^picked (\S+)\s+&& install_app_hooks (.+)$', src, re.M):
+    inst.setdefault(m.group(1), set()).update(h[:-3] for h in m.group(2).split() if h.endswith(".sh"))
+# Per-LINE match (not a multiline regex, whose `[^;]+` would swallow a whole multi-line body
+# up to some far-off semicolon). Capture the hook args with `[^;]+` so it stops at the FIRST
+# semicolon - deactivate_app_hooks's own terminator - and never past it: deactivate_codex has
+# a second statement (`; rm_hook_if_ours codex-review.py`), and any capture that ran past that
+# `;` would glue it onto the last hook token (`codex-rescue-guard.sh;`), silently dropping it
+# from the .sh-filtered set. The trailing `\}\s*$` still requires a genuine one-liner, so a
+# fragment of a multi-line function (no closing brace on the line) never matches.
+deact={}
+for line in src.splitlines():
+    m=re.match(r'\s*deactivate_(\w+)\(\)\s*\{\s*deactivate_app_hooks\s+([^;]+);.*\}\s*$', line)
+    if m:
+        deact[m.group(1)]=set(h[:-3] for h in m.group(2).split() if h.endswith(".sh"))
+if not deact:
+    print("no one-liner `deactivate_X() { deactivate_app_hooks ...; }` found - install.sh "
+          "changed shape; this test now proves NOTHING. fix it.", file=sys.stderr)
+    sys.exit(1)
+bad=[]
+for owner,drop in deact.items():
+    add=inst.get(owner,set())
+    for h in sorted(add-drop): bad.append(f"{owner}: install_app_hooks deploys {h} but deactivate_{owner} never removes it (leak)")
+    for h in sorted(drop-add): bad.append(f"{owner}: deactivate_{owner} removes {h} but install_app_hooks never deploys it (dead)")
+for b in bad: print("  "+b, file=sys.stderr)
+sys.exit(0 if not bad else 1)
+PY
+
+# DETECT AND INSTALL MUST NAME THE SAME HOOKS. `detect_component` decides active/not-installed;
+# for a pure-hook app component it does so by probing its hooks with is_our_hook. If that probe
+# lists fewer hooks than install_app_hooks deploys, a component with only its OTHER hooks still
+# on reads not-installed and the status/update logic skips it. This is the THIRD site of the
+# same figma drift (the tree and this detect case both trailed install_app_hooks when arm was
+# added): detect figma checked only figma-fidelity-stop, so toggling stop off while arm stayed
+# on read not-installed. codex/chrome already OR over their full set; this holds every such
+# case to it. Scope: only case arms that actually call is_our_hook (dir-probe and cluster arms
+# have no hook list to compare and are correctly skipped).
+python3 - "$INSTALL" <<'PY' && ok "detect_component and install name the same hooks (is_our_hook app components)" || bad "detect_component and install name the same hooks (is_our_hook app components)"
+import re,sys
+src=open(sys.argv[1]).read()
+inst={}
+for m in re.finditer(r'^picked (\S+)\s+&& install_app_hooks (.+)$', src, re.M):
+    inst.setdefault(m.group(1), set()).update(h[:-3] for h in m.group(2).split() if h.endswith(".sh"))
+# Case arms that probe hooks: `<key>) ...is_our_hook A.sh... is_our_hook B.sh... ;;`. is_our_hook
+# appears only inside detect_component's switch, so a line-level match is unambiguous.
+det={}
+for line in src.splitlines():
+    m=re.match(r'\s*([a-z0-9-]+)\)\s.*\bis_our_hook\b', line)
+    if m:
+        hs=re.findall(r'is_our_hook\s+(\S+\.sh)', line)
+        if hs: det[m.group(1)]=set(h[:-3] for h in hs)
+if not det:
+    print("no `<key>) ... is_our_hook ...` detect arms found - install.sh changed shape; fix this test.", file=sys.stderr)
+    sys.exit(1)
+bad=[]
+for key,probe in det.items():
+    want=inst.get(key,set())
+    if not want: continue  # a detect arm for something install_app_hooks does not deploy - other checks own that
+    for h in sorted(want-probe): bad.append(f"{key}: install_app_hooks deploys {h} but detect_component never probes it (partial state reads not-installed)")
+    for h in sorted(probe-want): bad.append(f"{key}: detect_component probes {h} but install_app_hooks never deploys it")
 for b in bad: print("  "+b, file=sys.stderr)
 sys.exit(0 if not bad else 1)
 PY
