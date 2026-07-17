@@ -838,6 +838,7 @@ NONINTERACTIVE=0
 DRY_RUN=0
 RUN_MANIFEST=0
 RUN_APPLY_PLAN=0
+RUN_GUI=0
 
 # _help_components - the body of the "Components (for --only KEYS)" block, GENERATED
 # from claude/hooks/browser-tree.json.
@@ -946,6 +947,7 @@ Usage:
   ./install.sh --dry-run        Print resolved picks and exit
   ./install.sh --manifest       Print the GUI manifest as JSON and exit
   ./install.sh --apply-plan     Apply a GUI plan JSON from stdin, then exit
+  ./install.sh --gui            Open the browser-based GUI installer (localhost only)
   ./install.sh --prune-skills   List dead repo skill symlinks (dry run), then exit
   ./install.sh --prune-skills-apply
                                 Remove those dead skill symlinks (explicit approval)
@@ -997,6 +999,7 @@ while [[ $# -gt 0 ]]; do
     --dry-run|-n)   DRY_RUN=1; shift ;;
     --manifest)     RUN_MANIFEST=1; shift ;;
     --apply-plan)   RUN_APPLY_PLAN=1; shift ;;
+    --gui)          RUN_GUI=1; shift ;;
     # --browser: ACCEPTED AND INERT, on purpose. It used to select the browser back when
     # the browser was an additive seam beside the old TUI; the browser is now the default
     # interactive entry, so the flag is a synonym for passing nothing. It is kept because
@@ -3337,6 +3340,41 @@ EOF
     exit 0
   fi
   if apply_pending; then exit 0; else exit $?; fi
+fi
+
+# --gui: start the localhost GUI server and open the browser. Foreground; Ctrl-C stops.
+# The server (claude/installer-gui/server.py) binds 127.0.0.1 on an ephemeral port, writes
+# its URL (with the one-time nonce) to a temp file, and blocks serving. This handler starts
+# it, waits for the URL, opens the browser, and blocks on the server until interrupted. It
+# owns its own lifecycle and exits - it does NOT fall through to the interactive browser.
+# AMPERSAND_GUI_NO_OPEN=1 skips the browser launch (used by the launch test / CI).
+if [ "${RUN_GUI:-0}" = "1" ]; then
+  # --dry-run must not launch the GUI. The server is a MUTATING surface: its /apply route
+  # runs `install.sh --apply-plan` for real, so hosting it under --dry-run would let a
+  # documented no-op invocation modify files. Report and exit 0 without starting anything,
+  # matching how the --apply-plan block and the interactive browser both gate on DRY_RUN.
+  if [ "${DRY_RUN:-0}" = "1" ]; then
+    info "--dry-run --gui: the GUI installer applies changes; it is not started under --dry-run."
+    exit 0
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then err "--gui needs python3"; exit 1; fi
+  url_file="$(mktemp)"
+  python3 "$REPO_DIR/claude/installer-gui/server.py" --repo "$REPO_DIR" --print-url "$url_file" &
+  gui_pid=$!
+  trap 'kill $gui_pid 2>/dev/null' INT TERM
+  # Wait up to ~5s for the server to bind and write its URL.
+  for _ in $(seq 1 50); do [ -s "$url_file" ] && break; sleep 0.1; done
+  url="$(cat "$url_file" 2>/dev/null)"; rm -f "$url_file"
+  if [ -z "$url" ]; then err "--gui: server did not start"; kill $gui_pid 2>/dev/null; exit 1; fi
+  info "GUI installer running at $url"
+  info "Leave this terminal open; press Ctrl-C to stop the installer."
+  if [ "${AMPERSAND_GUI_NO_OPEN:-0}" != "1" ] && command -v open >/dev/null 2>&1; then
+    open "$url" 2>/dev/null || info "Open the URL above in your browser."
+  else
+    info "Open the URL above in your browser."
+  fi
+  wait $gui_pid
+  exit 0
 fi
 
 # --- TEST-ONLY seam: drive apply_pending non-interactively -------------------
