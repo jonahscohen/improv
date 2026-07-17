@@ -542,11 +542,11 @@ TITLES+=(
 )
 DESCS+=(
   "Chrome: tracks the Claude-in-Chrome MCP tab groups you open and, once the browser is idle and the work is plainly done, blocks the Stop once to remind you to close the group before the session ends (a shell hook cannot close a tab itself). Opt-in; installs chrome-tabgroup-track + chrome-tabgroup-clear + chrome-tabgroup-stop."
-  "Figma: a Stop hook that blocks 'done' on UI built from a Figma source until MEASURED property parity is proven (Figma value == implementation value == verbatim browser reading). Inert unless armed by .figma-fidelity.pending at the repo root. Opt-in; installs figma-fidelity-stop."
+  "Figma: a Stop hook that blocks 'done' on UI built from a Figma source until MEASURED property parity is proven (Figma value == implementation value == verbatim browser reading), plus a PreToolUse hook that AUTO-ARMS that gate the moment you pull a node (get_design_context / download_assets) so the enforcement can no longer be silently skipped. Inert unless a node is pulled or .figma-fidelity.pending exists at the repo root. Opt-in; installs figma-fidelity-stop + figma-fidelity-arm."
 )
 FILES+=(
   "~/.claude/hooks/chrome-tabgroup-track.sh + chrome-tabgroup-clear.sh + chrome-tabgroup-stop.sh\n~/.claude/settings.json (2 PostToolUse + 1 Stop hook)"
-  "~/.claude/hooks/figma-fidelity-stop.sh\n~/.claude/settings.json (1 Stop hook)"
+  "~/.claude/hooks/figma-fidelity-stop.sh + figma-fidelity-arm.sh\n~/.claude/settings.json (1 Stop hook + 1 PreToolUse hook)"
 )
 DIRS+=("" "")
 PICKS+=(0 0)
@@ -787,7 +787,7 @@ deactivate_clickup()    { deactivate_app_hooks block-clickup-writes.sh; }
 deactivate_visualizer() { deactivate_app_hooks visualizer-guard.sh; }
 deactivate_codex()      { deactivate_app_hooks codex-failure-watcher.sh codex-rescue-guard.sh; rm_hook_if_ours codex-review.py; }
 deactivate_chrome()     { deactivate_app_hooks chrome-tabgroup-track.sh chrome-tabgroup-clear.sh chrome-tabgroup-stop.sh; }
-deactivate_figma()      { deactivate_app_hooks figma-fidelity-stop.sh; }
+deactivate_figma()      { deactivate_app_hooks figma-fidelity-stop.sh figma-fidelity-arm.sh; }
 
 apply_only() {
   local csv="$1"
@@ -837,6 +837,7 @@ apply_preset() {
 NONINTERACTIVE=0
 DRY_RUN=0
 RUN_MANIFEST=0
+RUN_APPLY_PLAN=0
 
 # _help_components - the body of the "Components (for --only KEYS)" block, GENERATED
 # from claude/hooks/browser-tree.json.
@@ -944,6 +945,7 @@ Usage:
   ./install.sh --browser        Same as no flags (the browser is the default entry)
   ./install.sh --dry-run        Print resolved picks and exit
   ./install.sh --manifest       Print the GUI manifest as JSON and exit
+  ./install.sh --apply-plan     Apply a GUI plan JSON from stdin, then exit
   ./install.sh --prune-skills   List dead repo skill symlinks (dry run), then exit
   ./install.sh --prune-skills-apply
                                 Remove those dead skill symlinks (explicit approval)
@@ -994,6 +996,7 @@ while [[ $# -gt 0 ]]; do
     --preset)       NONINTERACTIVE=1; HAS_PRESET=1; apply_preset "${2:-}"; shift 2 ;;
     --dry-run|-n)   DRY_RUN=1; shift ;;
     --manifest)     RUN_MANIFEST=1; shift ;;
+    --apply-plan)   RUN_APPLY_PLAN=1; shift ;;
     # --browser: ACCEPTED AND INERT, on purpose. It used to select the browser back when
     # the browser was an additive seam beside the old TUI; the browser is now the default
     # interactive entry, so the flag is a synonym for passing nothing. It is kept because
@@ -3218,6 +3221,124 @@ PY
   exit $?
 fi
 
+# --apply-plan: production headless apply. Reads {"install":[leafpaths],
+# "uninstall":[leafpaths]} on stdin, validates every leaf against the loaded tree
+# (allowlist - a leaf not in leaf_paths is rejected), seeds the pending sets, runs
+# apply_pending (which streams its own log to stdout/stderr and is fail-loud), exits
+# with its code. Reuses the executor test-apply-pending.sh already proves end-to-end.
+#
+# The allowlist is the toggleable subset the apply_pending executor can faithfully apply:
+# buckets are iterated space-safe (BR_BUCKETS, TAB->newline, NOT browser_buckets - keys
+# contain spaces), PERSONAL buckets and PINNED hook leaves are excluded (see the inline
+# notes), and the leaf lines are BOOKENDED with newlines so membership is an exact-line
+# test (no suffix false-accepts).
+#
+# The plan is parsed ONCE by python with a strict schema: the top level must be an object
+# with EXACTLY the keys install and uninstall (an unknown key is rejected, not ignored);
+# each must be an array of non-empty strings with no control chars (so an embedded newline
+# cannot smuggle a second leaf past validation); and no leaf may appear in both lists (a
+# contradiction is rejected, never silently resolved). An empty pass is the explicit
+# {"install":[],"uninstall":[]}. Any schema or JSON violation exits 2. python emits
+# validated leaves as "<I|U>\t<leaf>"; the
+# raw leaf is only ever COMPARED against the allowlist (a quoted case), never evaluated,
+# so an injection string like "; rm -rf x" is inert and simply fails membership.
+if [ "${RUN_APPLY_PLAN:-0}" = "1" ]; then
+  browser_load "$REPO_DIR/claude/hooks/browser-tree.json" || { err "apply-plan: could not load tree"; exit 1; }
+  _br_personal_load
+  # Valid-leaf allowlist, newline-BOOKENDED so membership is an exact-line test. The
+  # bucket stream is newline-TERMINATED (printf '%s\n') so `while read` also processes the
+  # final bucket - a bare '%s' would silently drop the last bucket's leaves.
+  #
+  # Personal buckets are excluded UNCONDITIONALLY (even under --personal), because the
+  # apply_pending executor cannot faithfully apply them: its recursive install pass runs
+  # `bash "$0" --only <owners> --yes` WITHOUT forwarding --personal (browser-lib.sh), so a
+  # personal owner fails child --only validation; and deactivate_component has no case for
+  # ghostty/shaders, so an uninstall would silently no-op. Since apply-plan is built on
+  # apply_pending, the allowlist must contain only what that executor can actually apply -
+  # so personal leaves are rejected fail-closed here rather than half-applied downstream.
+  # (Full personal support would require forwarding --personal + deactivate cases in
+  # browser-lib.sh/install.sh, which is out of scope for this entry.)
+  valid=$'\n'
+  while IFS= read -r _b; do
+    [ -n "$_b" ] || continue
+    if _br_is_personal "$_b"; then continue; fi
+    while IFS= read -r _lf; do
+      [ -n "$_lf" ] || continue
+      # Exclude PINNED hook leaves. They are always-on and NOT installer-toggleable - the
+      # browser's stage_toggle no-ops them and apply_plan's hooks_owned_by omits them. If
+      # one were allowlisted, seeding it would not apply the pinned hook (there is nothing
+      # to toggle) and would instead trigger an unfaithful whole-owner install. Dropping
+      # them here rejects such a plan fail-closed, matching the browser's semantics. Same
+      # pinned test counts/item_state/stage_toggle use: parent is a hooks node AND pinned.
+      _lkey="${_lf##*/}"; _lpar="${_lf%/*}"
+      if [ "$(node_kind "$_lpar")" = "hooks" ] && hook_pinned "$_lkey"; then continue; fi
+      valid="${valid}${_lf}"$'\n'
+    done < <(leaf_paths "$_b")
+  done < <(printf '%s\n' "${BR_BUCKETS//$'\t'/$'\n'}")
+  # Read the whole stdin plan first (drains stdin before apply_pending's child pass).
+  _plan_json="$(cat)"
+  _parsed="$(printf '%s' "$_plan_json" | python3 -c '
+import sys, json
+def die(m):
+    sys.stderr.write("apply-plan: " + m + "\n"); sys.exit(7)
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    die("invalid JSON on stdin")
+if not isinstance(d, dict):
+    die("plan must be a JSON object")
+if set(d) != {"install", "uninstall"}:
+    die("plan must have exactly the keys install and uninstall")
+picked = {}
+for key in ("install", "uninstall"):
+    v = d[key]
+    if not isinstance(v, list):
+        die(key + " must be an array")
+    seen = []
+    for x in v:
+        if not isinstance(x, str) or not x:
+            die(key + " entries must be non-empty strings")
+        if any(ord(c) < 32 for c in x):
+            die(key + " entry contains control characters")
+        seen.append(x)
+    picked[key] = seen
+both = sorted(set(picked["install"]) & set(picked["uninstall"]))
+if both:
+    die("leaf(s) staged both install and uninstall: " + ", ".join(both))
+out = ["I\t" + x for x in picked["install"]] + ["U\t" + x for x in picked["uninstall"]]
+sys.stdout.write("\n".join(out))
+')" || { err "apply-plan: rejected malformed plan (see message above)"; exit 2; }
+  PENDING_INSTALL="|"; PENDING_UNINSTALL="|"
+  while IFS=$'\t' read -r _tag _leaf; do
+    [ -n "$_leaf" ] || continue
+    case "$valid" in
+      *$'\n'"$_leaf"$'\n'*) : ;;
+      *) err "apply-plan: unknown leaf rejected: $_leaf"; exit 2 ;;
+    esac
+    if [ "$_tag" = "I" ]; then
+      PENDING_INSTALL="${PENDING_INSTALL}${_leaf}|"
+    else
+      PENDING_UNINSTALL="${PENDING_UNINSTALL}${_leaf}|"
+    fi
+  done <<EOF
+$_parsed
+EOF
+  [ "$PENDING_INSTALL" = "|" ] && PENDING_INSTALL=""
+  [ "$PENDING_UNINSTALL" = "|" ] && PENDING_UNINSTALL=""
+  # --dry-run must not apply. All validation above (browser_load, personal load, JSON parse,
+  # allowlist membership) is READ-ONLY; only apply_pending writes. So under --dry-run report
+  # the validated plan and exit 0 without touching files, honoring the global dry-run
+  # invariant exactly as the interactive browser block gates itself on DRY_RUN. An invalid
+  # plan has already exited 2 during validation above, so dry-run doubles as plan validation.
+  if [ "${DRY_RUN:-0}" = "1" ]; then
+    info "apply-plan --dry-run: plan is valid; no files were touched."
+    info "  would install:   ${PENDING_INSTALL:-<none>}"
+    info "  would uninstall: ${PENDING_UNINSTALL:-<none>}"
+    exit 0
+  fi
+  if apply_pending; then exit 0; else exit $?; fi
+fi
+
 # --- TEST-ONLY seam: drive apply_pending non-interactively -------------------
 # apply_pending (browser-lib.sh) only runs at install.sh runtime - it needs "$0" to be the
 # installer and deactivate_component to be in scope - so test-apply-pending.sh cannot call
@@ -4754,7 +4875,7 @@ picked codex        && install_app_hooks codex-failure-watcher.sh codex-rescue-g
 # ambient node is too old for codex (reference_codex_broken_node12_path.md).
 picked codex        && link_or_copy "$REPO_DIR/claude/hooks/codex-review.py" "$CLAUDE_DIR/hooks/codex-review.py"
 picked chrome       && install_app_hooks chrome-tabgroup-track.sh chrome-tabgroup-clear.sh chrome-tabgroup-stop.sh
-picked figma        && install_app_hooks figma-fidelity-stop.sh
+picked figma        && install_app_hooks figma-fidelity-stop.sh figma-fidelity-arm.sh
 
 # ============================================================
 # 17. tilt-lab (visual-effects playground dev app)
@@ -4823,7 +4944,7 @@ picked clickup    && echo "  - ClickUp guard: block-clickup-writes hook wired in
 picked visualizer && echo "  - Visualizer guard: visualizer-guard hook wired into settings.json"
 picked codex      && echo "  - Codex guards: codex-failure-watcher + codex-rescue-guard hooks wired into settings.json"
 picked chrome     && echo "  - Chrome tab-group hygiene: chrome-tabgroup track/clear/stop hooks wired into settings.json"
-picked figma      && echo "  - Figma fidelity guard: figma-fidelity-stop hook wired into settings.json"
+picked figma      && echo "  - Figma fidelity guard: figma-fidelity-stop (Stop) + figma-fidelity-arm (PreToolUse, auto-arms on Figma pulls) wired into settings.json"
 picked fable      && echo "  - Fable orchestrator guard: fable-orchestrator-guard hook wired into settings.json"
 picked justify    && echo "  - Justify: server + core + /justify skill + MCP registration + source/watch/standing-by hooks"
 picked ghostty  && echo "  - Ghostty: config.ghostty (copied from repo - re-run install.sh to sync edits)"
