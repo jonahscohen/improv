@@ -1886,9 +1886,10 @@ BR_BANNER_COLS=64
 # terminal no matter how wide, which is where the hook DESCRIPTIONS render. (MEASURED
 # under a 140-column pty: `stty size` -> "60 140" while `$(tput cols)` -> "80".)
 #
-# stty reads STDIN instead, so pointing it at /dev/tty gets the truth even from inside
-# a command substitution. tput remains the fallback for the no-tty case (its 80 is a
-# fine default when there is genuinely no terminal to measure).
+# stty reads STDIN instead, so pointing it at /dev/tty usually gets the truth even from
+# inside a command substitution. macOS /usr/bin/script is the exception: /dev/tty can be
+# readable but reject the ioctl, while stdin is still the pty and `stty size` works. Try
+# both before falling back to tput (whose stdout-pipe behavior can report terminfo's 80).
 # _br_term_width_raw - the MEASURED width, with no floor: what the terminal actually is.
 # _br_term_width below floors it to 60 because the LAYOUT is designed for 60+, and that
 # floor is right for laying rows out (worst case a line soft-wraps) but WRONG for
@@ -1905,6 +1906,12 @@ _br_term_width_raw() {
     sz="$(stty size </dev/tty 2>/dev/null || true)"
     w="${sz##* }"
   fi
+  case "$w" in
+    ''|*[!0-9]*)
+      sz="$(stty size 2>/dev/null || true)"
+      w="${sz##* }"
+      ;;
+  esac
   case "$w" in
     ''|*[!0-9]*) w="$(tput cols 2>/dev/null || true)" ;;
   esac
@@ -1936,6 +1943,12 @@ _br_term_rows() {
     sz="$(stty size </dev/tty 2>/dev/null || true)"
     r="${sz%% *}"
   fi
+  case "$r" in
+    ''|*[!0-9]*)
+      sz="$(stty size 2>/dev/null || true)"
+      r="${sz%% *}"
+      ;;
+  esac
   case "$r" in
     ''|*[!0-9]*) r="$(tput lines 2>/dev/null || true)" ;;
   esac
@@ -2345,7 +2358,7 @@ build_rows() {
         _br_rows_add "✓ Up to date" "uptodate" "" ;;
       *)
         # design.md: no remote or offline -> say so rather than failing silently.
-        _br_rows_add "? Update check unavailable - could not reach the remote" "updunknown" "" ;;
+        _br_rows_add "? Update check unavailable - remote unreachable" "updunknown" "" ;;
     esac
 
     _br_rows_add "CORE COMPONENTS" "label" ""
@@ -2852,6 +2865,47 @@ _br_pause() {
   return 0
 }
 
+_br_save_tty_state() {
+  BR_STTY_SAVED=""
+  if [ -r /dev/tty ]; then
+    BR_STTY_SAVED="$(stty -g </dev/tty 2>/dev/null || true)"
+  fi
+  if [ -z "$BR_STTY_SAVED" ]; then
+    BR_STTY_SAVED="$(stty -g 2>/dev/null || true)"
+  fi
+  return 0
+}
+
+_br_restore_tty_state() {
+  local restored=1
+  if [ -n "${BR_STTY_SAVED:-}" ]; then
+    if [ -r /dev/tty ] && stty "$BR_STTY_SAVED" </dev/tty 2>/dev/null; then
+      restored=0
+    elif stty "$BR_STTY_SAVED" 2>/dev/null; then
+      restored=0
+    fi
+  fi
+  if [ "$restored" != "0" ]; then
+    if [ -r /dev/tty ] && stty sane </dev/tty 2>/dev/null; then
+      :
+    else
+      stty sane 2>/dev/null || true
+    fi
+  fi
+  # Make the prompt usable even if a child TUI exited while hidden-cursor/raw-mode state
+  # was still visible to the terminal.
+  printf '\033[0m\033[?25h'
+  return 0
+}
+
+_br_quit_epilogue() {
+  _br_restore_tty_state
+  clear
+  printf 'Quit activated.\n'
+  printf 'Session closed.\n'
+  return 0
+}
+
 # --- activate (the prototype's activate) -------------------------------------
 #
 # SET -E NOTE (load-bearing, same hazard as apply_pending in browser-lib.sh): callers
@@ -2962,12 +3016,12 @@ _br_quit_with_pending() {
   local n="$1" pick rc reply
   printf "\n${YELLOW}%s staged change(s) have not been applied.${NC}\n\n" "$n"
   if command -v gum >/dev/null 2>&1; then
-    pick="$(printf '%s\n' "Apply them now" "Discard them and quit" "Keep browsing" \
-      | gum choose --header "Unapplied changes" \
+    pick="$(gum choose --header "Unapplied changes" \
           --header.foreground "#0e7490" \
           --cursor.foreground "#67e8f9" \
           --selected.foreground "#67e8f9" \
-          --item.foreground "#ffffff")" || pick="Keep browsing"
+          --item.foreground "#ffffff" \
+          -- "Apply them now" "Discard them and quit" "Keep browsing")" || pick="Keep browsing"
   else
     printf "  1) Apply them now\n  2) Discard them and quit\n  3) Keep browsing\n\nPick: "
     reply=""
@@ -3013,6 +3067,7 @@ component_browser() {
     err "Could not load the component tree (claude/hooks/browser-tree.json)."
     return 1
   fi
+  _br_save_tty_state
   _br_personal_load
   stage_reset
   # gum draws a 2-column cursor prefix; the text menu prints "  NN) " (6). build_rows
@@ -3096,10 +3151,7 @@ component_browser() {
     if activate "$BR_CHOSEN"; then continue; else break; fi
   done
 
-  clear
-  printf '\n'
-  ok "Done."
-  printf '\n'
+  _br_quit_epilogue
   return 0
 }
 
@@ -3974,6 +4026,8 @@ if picked ampersand; then
 
   SHORTCUT_BEGIN="# === improv:shortcuts:begin ==="
   SHORTCUT_END="# === improv:shortcuts:end ==="
+  LEGACY_SHORTCUT_BEGIN="# === claude-dotfiles:shortcuts:begin ==="
+  LEGACY_SHORTCUT_END="# === claude-dotfiles:shortcuts:end ==="
   LEGACY_VANITY_MARKER="# Improv vanity command: pull latest and re-launch installer"
 
   append_shortcuts() {
@@ -3983,6 +4037,7 @@ $SHORTCUT_BEGIN
 # 'ampersand' re-launches the installer. 'ampersand --pull' pulls latest first.
 function ampersand() {
   local pull=0
+  local rc=0
   local args=()
   for arg in "\$@"; do
     case "\$arg" in
@@ -3991,20 +4046,28 @@ function ampersand() {
     esac
   done
   if [[ "\$pull" == "1" ]]; then
-    ( cd "$REPO_DIR" && git pull --ff-only && ./install.sh "\${args[@]}" )
+    ( cd "$REPO_DIR" && git pull --ff-only && /bin/bash ./install.sh "\${args[@]}" )
+    rc=\$?
   else
-    ( cd "$REPO_DIR" && ./install.sh "\${args[@]}" )
+    ( cd "$REPO_DIR" && /bin/bash ./install.sh "\${args[@]}" )
+    rc=\$?
   fi
+  return "\$rc"
 }
 $SHORTCUT_END
 EOF
   }
 
   # Block is current iff it has the SHORTCUT_BEGIN marker, has --pull in the
-  # function body, AND does NOT carry the deprecated yesplease alias.
+  # function body, runs the installer through bash, AND does NOT carry the deprecated
+  # yesplease alias.
   is_current_format() {
-    awk "/$SHORTCUT_BEGIN/,/$SHORTCUT_END/" "$ZSHRC" 2>/dev/null | grep -Fq -- "--pull" \
-      && ! awk "/$SHORTCUT_BEGIN/,/$SHORTCUT_END/" "$ZSHRC" 2>/dev/null | grep -Fq "alias yesplease="
+    local block
+    block="$(awk "/$SHORTCUT_BEGIN/,/$SHORTCUT_END/" "$ZSHRC" 2>/dev/null || true)"
+    printf '%s' "$block" | grep -Fq -- "--pull" || return 1
+    printf '%s' "$block" | grep -Fq "/bin/bash ./install.sh" || return 1
+    printf '%s' "$block" | grep -Fq "alias yesplease=" && return 1
+    return 0
   }
 
   if [ -f "$ZSHRC" ]; then
@@ -4028,6 +4091,14 @@ EOF
       append_shortcuts
       SHORTCUTS_NEW=1
       ok "Refreshed 'ampersand' in $ZSHRC (cleaned up legacy block)"
+    elif grep -Fq "$LEGACY_SHORTCUT_BEGIN" "$ZSHRC"; then
+      # Legacy marker from the old claude-dotfiles name. It is ours, so migrate it instead
+      # of treating it as a user-defined ampersand and leaving a stale launcher behind.
+      sed -i.bak "/$LEGACY_SHORTCUT_BEGIN/,/$LEGACY_SHORTCUT_END/d" "$ZSHRC"
+      rm -f "$ZSHRC.bak"
+      append_shortcuts
+      SHORTCUTS_NEW=1
+      ok "Migrated $ZSHRC to current 'ampersand' format"
     elif grep -Fq "$LEGACY_VANITY_MARKER" "$ZSHRC"; then
       # Pre-marker format. Sed-replace through to the next standalone closing brace.
       sed -i.bak "/$LEGACY_VANITY_MARKER/,/^}$/d" "$ZSHRC"

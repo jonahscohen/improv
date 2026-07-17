@@ -82,6 +82,7 @@ _clean() {
   python3 - "$1" "$2" <<'PY'
 import re, sys
 raw = open(sys.argv[1], "rb").read().decode("utf-8", "replace")
+raw = re.sub(r"^.*: printf: write error: Interrupted system call\r?\n", "", raw, flags=re.M)
 raw = re.sub(r"\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)", "", raw)   # OSC
 raw = re.sub(r"\x1b\[[0-9;?]*[ -/]*[@-~]", "", raw)           # CSI
 raw = re.sub(r"\x1b[=>]", "", raw)
@@ -279,7 +280,7 @@ _keys_text() {
 # gum path: raw keys. The leading sleep waits for gum to enter raw mode - keys sent
 # before that are echoed by the line discipline and LOST (measured).
 #
-# WHY THE LEAD IS 9s AND NOT 3.5s. It has to outlast everything before the first gum:
+# WHY THE LEAD IS 12s AND NOT 3.5s. It has to outlast everything before the first gum:
 # the banner AND the browser's REAL update check (_browser_update_refresh runs an actual
 # `git fetch`). BR_LAUNCH_DWELL=0 removes the banner's dwell but nothing removes the
 # fetch, and its duration is not ours to predict - it is a network call, and on a loaded
@@ -293,8 +294,8 @@ _keys_text() {
 # spectacular false alarm; it was reproduced identically on UNMODIFIED code (git stash),
 # which is what proved it environmental.
 #
-# 9s is measured headroom (startup was ~2-4s at idle, past 3.5s at load ~11), not a
-# guess, and it costs 5.5s on each of two gum runs. A readiness GATE - polling the
+# 12s is measured headroom (startup was ~2-4s at idle, past 9s at load), not a
+# guess, and it costs 8.5s on each of two gum runs. A readiness GATE - polling the
 # capture for gum's footer before sending - would be strictly better than any constant;
 # left alone here because it means threading the capture path into the key script, and
 # this file's job today was the frame-height hole.
@@ -309,7 +310,7 @@ _keys_text() {
 # only moves gum's cursor within a live process, so it keeps the short gap.
 _keys_gum() {
   local k gap
-  printf 'sleep 9; '
+  printf 'sleep 12; '
   for k in "$@"; do
     case "$k" in
       '\r'|'\033') gap=1.6 ;;
@@ -361,6 +362,9 @@ F="$OUT_PREFIX-text-root.txt"
   assert_in "$F" "Quit" "Quit row"
   assert_in "$F" "Open a group to drill in" "footer / detail bar"
   assert_in "$F" "Enter a number" "numbered-menu prompt"
+  assert_in "$F" "Quit activated." "quit confirms activation"
+  assert_in "$F" "Session closed." "quit prints one formal sign-off line"
+  assert_not_in "$F" "[ok]    Done." "quit does not print the old Done summary"
   # Personal is gated behind --personal and must not leak into a normal run.
   assert_not_in "$F" "ghostty" "Personal bucket hidden without --personal"
 else
@@ -385,7 +389,7 @@ F="$OUT_PREFIX-text-beats-hooks.txt"
   assert_in "$F" "+ Enable all hooks..." "Enable all hooks action (folder named Hooks)"
   assert_in "$F" "- Disable all hooks..." "Disable all hooks action"
 
-  # All 7 Beats hooks, each WITH its description on the same row.
+  # All 7 Beats hooks, each WITH its description on the same row at the harness width.
   assert_row_has "$F" "memory-approve"        "Guards writes to your beats files."             "hook+desc: memory-approve"
   assert_row_has "$F" "memory-nudge"          "Reminds you to write a beat after each change." "hook+desc: memory-nudge"
   assert_row_has "$F" "memory-compact"        "Keeps the beats index under its load budget."   "hook+desc: memory-compact"
@@ -427,6 +431,9 @@ F="$OUT_PREFIX-text-toggle.txt"
   assert_in "$F" "Discard them and quit" "quit warn offers discard"
   assert_in "$F" "Apply them now" "quit warn offers apply"
   assert_in "$F" "Keep browsing" "quit warn offers cancel"
+  assert_in "$F" "Quit activated." "discard-and-quit confirms activation"
+  assert_in "$F" "Session closed." "discard-and-quit prints one formal sign-off line"
+  assert_not_in "$F" "[ok]    Done." "discard-and-quit does not print the old Done summary"
 else
   fail "text-toggle: the driven run did not produce a fresh capture (see harness error above)"
 fi
@@ -490,6 +497,9 @@ if [ -n "$GUM_BIN" ] && [ -x "$GUM_BIN" ]; then
     assert_re "$F" '(active|partial|not installed)' "status per row"
     assert_not_in "$F" "Apply 0 changes" "root hides the Apply row at zero pending"
     assert_in "$F" "Quit" "Quit row"
+    assert_in "$F" "Quit activated." "gum quit confirms activation"
+    assert_in "$F" "Session closed." "gum quit prints one formal sign-off line"
+    assert_not_in "$F" "[ok]    Done." "gum quit does not print the old Done summary"
     # Defect 2 regression: the lead and the orientation line were adjacent above the
     # rows saying the same thing twice. gum now gets only non-redundant text.
     assert_not_in "$F" "Open a group to drill in" "gum path does not restate the lead as a second instruction line"
