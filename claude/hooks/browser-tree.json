@@ -533,6 +533,8 @@
   },
   "pinned_hooks": [
     "beats-rebuild",
-    "beats-staleness-guard"
+    "beats-staleness-guard",
+    "hook-registry-guard",
+    "hook-registry-stop"
   ]
 }

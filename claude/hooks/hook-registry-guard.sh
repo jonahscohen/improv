@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+# hook-registry-guard.sh - catch a hook the moment it is written and refuse to let it
+# stay UNMANAGED (invisible to install.sh and to the component browser).
+#
+# WHY THIS EXISTS
+# Every hook in this repo is supposed to be owned by a component: listed in
+# claude/hooks/browser-tree.json (so the browser can show and toggle it, with a
+# description a human wrote) and deployed by install.sh (so a fresh machine gets it).
+# Hooks that skip that are invisible: they never install anywhere else, and the browser
+# silently under-reports. Measured 2026-07-16: 100 hook files on disk, 61 in the tree.
+# Five were genuinely unmanaged, including node-path-default.sh, written that same day
+# and never packaged. The tree ALSO lied the other way (it claimed sidecoach owned 2
+# hooks while the installer wired 6), because the only test checked the tree against
+# ITSELF. This guard closes the write-time end of that hole.
+#
+# WHAT IT DOES NOT DO
+# It does not edit install.sh or the tree. A shell hook cannot pick the right owning
+# component or write a description worth reading - it would guess from the filename and
+# ship a wrong owner plus a placeholder into a browser humans read. So it DETECTS,
+# INSTRUCTS precisely, and arms a flag that hook-registry-stop.sh gates on. The model
+# does the categorising; the hook makes forgetting impossible.
+#
+# MODES
+#   (stdin JSON)  PostToolUse Write|Edit|MultiEdit - the live guard.
+#   --audit       list every unmanaged hook on disk and exit 1 if any. For tests/CI.
+#   --check NAME  check one hook name; exit 0 managed, 1 unmanaged.
+#
+# Project-scoped by design (wired in this repo's .claude/settings.json, like
+# beats-rebuild), because it reads THIS repo's browser-tree.json and install.sh. It is
+# meaningless on a machine that merely installed the dotfiles. Same reasoning as
+# decision_beats_hooks_stay_project_scoped.md.
+
+set -uo pipefail
+
+FLAG="$HOME/.claude/.unmanaged-hook"
+REPO_DIR="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+TREE="$REPO_DIR/claude/hooks/browser-tree.json"
+INSTALL_SH="$REPO_DIR/install.sh"
+
+# Not hooks. Test suites and sourced libraries are never wired into settings.json, so
+# demanding an owner for them would be noise that trains you to ignore the guard.
+_is_excluded() {
+  case "$1" in
+    test-*|*-lib) return 0 ;;
+  esac
+  # Shared DEPENDENCIES: deployed by install.sh and exec'd by another hook, never wired
+  # standalone, so they have no owner to toggle. detect-session-model is exec'd by
+  # model-router-guard.sh and fable-orchestrator-guard.sh.
+  case "$1" in
+    detect-session-model) return 0 ;;
+  esac
+  return 1
+}
+
+# managed = pinned (project-scoped, always on, deliberately not installer-managed)
+#           OR (present in the tree AND deployed by install.sh)
+# Both halves matter. Tree-only means the browser offers a toggle for something no
+# machine ever installs. Installer-only means the browser under-reports - the exact
+# sidecoach 2-vs-6 lie.
+_is_managed() {
+  local name="$1"
+  [ -f "$TREE" ] || return 0        # no tree: not our repo, stay quiet
+  [ -f "$INSTALL_SH" ] || return 0
+  NAME="$name" TREE="$TREE" INSTALL_SH="$INSTALL_SH" python3 - <<'PY'
+import json, os, re, sys
+name = os.environ["NAME"]
+try:
+    t = json.load(open(os.environ["TREE"]))
+except Exception:
+    sys.exit(0)   # unreadable tree is not this hook's problem to report
+if name in set(t.get("pinned_hooks", [])):
+    sys.exit(0)
+in_tree = name in set(t.get("hook_owner", {}))
+src = open(os.environ["INSTALL_SH"]).read()
+# Deployed if install.sh names the FILE in a hook-deploying position: an
+# install_app_hooks argument list, a cluster_hooks member list, or a direct
+# link_or_copy. Plain word-match on the filename is enough - install.sh never
+# mentions a hook file it does not deploy.
+in_installer = re.search(r'(?<![\w-])' + re.escape(name) + r'\.sh(?![\w-])', src) is not None
+sys.exit(0 if (in_tree and in_installer) else 1)
+PY
+}
+
+_instructions() {
+  local name="$1"
+  cat <<EOF
+UNMANAGED HOOK: ${name}.sh is not packaged. It will not install on any other machine,
+and the component browser cannot show or toggle it. Wire it before you finish:
+
+1. PICK ITS OWNING COMPONENT. If it only makes sense inside this repo (it reads this
+   repo's files), it is PROJECT-SCOPED instead: wire it in .claude/settings.json and add
+   it to "pinned_hooks" in claude/hooks/browser-tree.json. See
+   decision_beats_hooks_stay_project_scoped.md.
+2. claude/hooks/browser-tree.json:
+   - add "${name}" to the owning component's "hooks" list
+   - add "hook_desc": {"${name}": "<one plain sentence a user can act on>"}
+   - add "hook_owner": {"${name}": "<install key>"}
+3. install.sh: add it to that component's deploy line, e.g.
+   picked <owner> && install_app_hooks ... ${name}.sh
+4. claude/hooks/app-wirings.json: add its event/matcher/command/timeout entry, so the
+   per-hook off-list can wire and unwire it (only install_app_hooks honors the off-list).
+5. Run: /bin/bash claude/hooks/test-component-browser.sh  (the structural test checks the
+   tree against install.sh's own picked/install_app_hooks lines, in BOTH directions)
+
+Write the description yourself. Do not ship a placeholder into a browser humans read.
+EOF
+}
+
+case "${1:-}" in
+  --audit)
+    rc=0
+    for f in "$REPO_DIR"/claude/hooks/*.sh; do
+      [ -e "$f" ] || continue
+      n="$(basename "$f" .sh)"
+      _is_excluded "$n" && continue
+      if ! _is_managed "$n"; then echo "UNMANAGED: $n"; rc=1; fi
+    done
+    exit "$rc"
+    ;;
+  --check)
+    n="${2:-}"; [ -n "$n" ] || { echo "usage: --check <name>" >&2; exit 2; }
+    _is_managed "${n%.sh}"; exit $?
+    ;;
+esac
+
+# --- live PostToolUse path -------------------------------------------------------
+input="$(cat 2>/dev/null || true)"
+[ -n "$input" ] || exit 0
+
+path="$(printf '%s' "$input" | python3 -c "
+import json,sys
+try: d=json.load(sys.stdin)
+except Exception: print(''); raise SystemExit
+ti=d.get('tool_input') or {}
+print(ti.get('file_path') or ti.get('notebook_path') or '')
+" 2>/dev/null)"
+
+case "$path" in
+  */claude/hooks/*.sh) ;;
+  *) exit 0 ;;
+esac
+
+name="$(basename "$path" .sh)"
+_is_excluded "$name" && exit 0
+_is_managed "$name" && {
+  # Managed now. If it was the reason the flag was armed, clear it.
+  if [ -f "$FLAG" ] && grep -Fxq "$name" "$FLAG" 2>/dev/null; then
+    remaining="$(grep -Fxv "$name" "$FLAG" 2>/dev/null || true)"
+    if [ -n "$remaining" ]; then printf '%s\n' "$remaining" > "$FLAG"; else rm -f "$FLAG"; fi
+  fi
+  exit 0
+}
+
+mkdir -p "$(dirname "$FLAG")"
+grep -Fxq "$name" "$FLAG" 2>/dev/null || echo "$name" >> "$FLAG"
+_instructions "$name"
+exit 0
