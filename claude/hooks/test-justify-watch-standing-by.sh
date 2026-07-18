@@ -93,6 +93,15 @@ frame_line "justify-watch" "" "2026-07-12T10:05:00.000Z" > "$T"
 OUT=$(run "$FH" "$T")
 says_standing_by "$OUT" && ok "no idleReason (still renders finished) -> standing by" || bad "no idleReason -> standing by"
 
+# An EXPLICIT Stop event (hook_event_name:"Stop") must still do the legacy cosmetic
+# - the dual-event split must not have regressed the original path. (Codex asked
+# for this lock, 2026-07-17.)
+FH=$(newhome); T="$FH/t.jsonl"
+frame_line "justify-watch" "available" "2026-07-12T10:06:00.000Z" > "$T"
+OUT=$(printf '{"hook_event_name":"Stop","session_id":"%s","transcript_path":"%s","stop_hook_active":false}' "$SID" "$T" | HOME="$FH" bash "$HOOK" 2>/dev/null)
+says_standing_by "$OUT" && ok "explicit Stop event -> legacy standing-by correction intact" \
+                        || bad "explicit Stop event -> standing-by (REGRESSED: $OUT)"
+
 echo
 echo "=== DIRECTION 2 (THE CRUX): a normal agent completing still reports finished ==="
 
@@ -364,6 +373,215 @@ printf '%s' "$J" | HOME="$FH" bash "$MUT" >/dev/null 2>&1
 OUT=$(printf '%s' "$J" | HOME="$FH" bash "$MUT" 2>/dev/null)
 says_standing_by "$OUT" && ok "mutant (no dedupe) repeats on every stop -> suite catches it" \
                         || bad "mutant (no dedupe) NOT caught - dedupe is untested"
+
+echo
+echo "=== JOB 1 (UserPromptSubmit): a justify-watch heartbeat is SUPPRESSED, not replied to ==="
+
+# The reply-suppressor. On UserPromptSubmit the hook must BLOCK an incoming
+# justify-watch idle heartbeat so the lead never burns a turn answering it
+# (Jonah: "Idle heartbeats are NOT prompts - do not reply to them."). The crux
+# mirrors Job 2: a NORMAL prompt / normal agent must pass through untouched, or
+# the hook has eaten real work.
+
+# Build a UserPromptSubmit payload whose prompt carries the raw envelope.
+# $1 agent, $2 idleReason, $3 stamp, $4 transcript_path(optional), $5 "empty" to blank the prompt
+ups_input() {
+  AGENT="$1" REASON="$2" STAMP="$3" TP="${4:-}" MODE="${5:-}" python3 -c '
+import json, os
+agent=os.environ["AGENT"]; reason=os.environ["REASON"]; stamp=os.environ["STAMP"]
+tp=os.environ["TP"]; mode=os.environ["MODE"]
+frame={"type":"idle_notification","from":agent,"timestamp":stamp}
+if reason: frame["idleReason"]=reason
+env=("Another Claude session sent a message:\n"
+     "<teammate-message teammate_id=\""+agent+"\" color=\"blue\">\n"
+     +json.dumps(frame)+"\n</teammate-message>\n")
+out={"hook_event_name":"UserPromptSubmit","session_id":"s"}
+out["prompt"]="" if mode=="empty" else env
+if tp: out["transcript_path"]=tp
+print(json.dumps(out))'
+}
+
+# $1 input json, $2 fake home -> stdout of hook
+run_ups() { printf '%s' "$1" | HOME="$2" bash "$HOOK" 2>/dev/null; }
+# $1 input json, $2 fake home -> exit code
+rc_ups()  { printf '%s' "$1" | HOME="$2" bash "$HOOK" >/dev/null 2>&1; echo $?; }
+
+blocks() { printf '%s' "$1" | python3 -c 'import json,sys
+try:
+    d=json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+sys.exit(0 if isinstance(d,dict) and d.get("decision")=="block" else 1)'; }
+
+FH=$(newhome)
+IN=$(ups_input "justify-watch" "available" "2026-07-17T09:00:00.000Z")
+OUT=$(run_ups "$IN" "$FH")
+blocks "$OUT" && ok "justify-watch heartbeat prompt -> blocked (no reply, no burned turn)" \
+              || bad "justify-watch heartbeat prompt -> blocked (LEAKED: $OUT)"
+
+# Output must be valid JSON with decision==block, or the harness ignores it.
+printf '%s' "$OUT" | python3 -c 'import json,sys
+d=json.load(sys.stdin)
+sys.exit(0 if d.get("decision")=="block" and isinstance(d.get("reason"),str) else 1)' 2>/dev/null \
+  && ok "block output is valid JSON with a decision+reason" \
+  || bad "block output is valid JSON with a decision+reason (got: $OUT)"
+
+# TERSENESS applies here too: the reason fires on every heartbeat; keep it one line.
+printf '%s' "$OUT" | python3 -c 'import json,sys
+r=json.load(sys.stdin).get("reason","")
+sys.exit(0 if ("\n" not in r and len(r) <= 90) else 1)' 2>/dev/null \
+  && ok "block reason stays terse: one short line" \
+  || bad "block reason re-expanded (got: $OUT)"
+
+# The harness omits idleReason on some idle paths; that is still a routine ping.
+FH=$(newhome)
+IN=$(ups_input "justify-watch" "" "2026-07-17T09:05:00.000Z")
+OUT=$(run_ups "$IN" "$FH")
+blocks "$OUT" && ok "no idleReason (still a routine ping) -> blocked" || bad "no idleReason -> blocked"
+
+echo
+echo "=== JOB 1 CRUX: a real prompt / normal agent PASSES THROUGH (never suppressed) ==="
+
+for agent in codex-arch-review researcher builder reviewer justifier; do
+  FH=$(newhome)
+  IN=$(ups_input "$agent" "available" "2026-07-17T09:10:00.000Z")
+  OUT=$(run_ups "$IN" "$FH")
+  is_silent "$OUT" && ok "normal agent '$agent' heartbeat -> pass-through (not blocked)" \
+                   || bad "normal agent '$agent' -> pass-through (SUPPRESSED REAL PROMPT: $OUT)"
+done
+
+for agent in justify justify-send justifywatch justify-watchdog justify-watch-review justify-watch-2; do
+  FH=$(newhome)
+  IN=$(ups_input "$agent" "available" "2026-07-17T09:12:00.000Z")
+  OUT=$(run_ups "$IN" "$FH")
+  is_silent "$OUT" && ok "non-exact name '$agent' -> pass-through" || bad "non-exact name '$agent' -> pass-through (SUPPRESSED: $OUT)"
+done
+
+# An ordinary human prompt must never be blocked.
+FH=$(newhome)
+OUT=$(printf '{"hook_event_name":"UserPromptSubmit","session_id":"s","prompt":"fix the nav hover please"}' | HOME="$FH" bash "$HOOK" 2>/dev/null)
+is_silent "$OUT" && ok "ordinary human prompt -> pass-through" || bad "ordinary human prompt -> pass-through (BLOCKED A REAL PROMPT: $OUT)"
+
+# A quoted frame (no real envelope) is someone debugging this bug - do not block.
+FH=$(newhome)
+OUT=$(printf '%s' '{"hook_event_name":"UserPromptSubmit","session_id":"s","prompt":"why does {\"type\":\"idle_notification\",\"from\":\"justify-watch\",\"timestamp\":\"x\"} print finished?"}' | HOME="$FH" bash "$HOOK" 2>/dev/null)
+is_silent "$OUT" && ok "quoted frame in a plain prompt (no envelope) -> pass-through" \
+                 || bad "quoted frame -> pass-through (BLOCKED SPURIOUSLY: $OUT)"
+
+# A REAL envelope pasted INSIDE a human's prose (e.g. debugging this bug) is still
+# a real prompt - blocking it would erase the user's input. (Codex Medium, 2026-07-17.)
+FH=$(newhome)
+OUT=$(python3 -c '
+import json
+env=("Can you explain why this happened?\n"
+     "<teammate-message teammate_id=\"justify-watch\" color=\"blue\">\n"
+     "{\"type\":\"idle_notification\",\"from\":\"justify-watch\",\"timestamp\":\"x\",\"idleReason\":\"available\"}\n"
+     "</teammate-message>")
+print(json.dumps({"hook_event_name":"UserPromptSubmit","session_id":"s","prompt":env}))' | HOME="$FH" bash "$HOOK" 2>/dev/null)
+is_silent "$OUT" && ok "real envelope embedded in human prose -> pass-through (prompt not eaten)" \
+                 || bad "envelope-in-prose -> pass-through (ATE A REAL PROMPT: $OUT)"
+
+# Envelope teammate_id disagrees with the frame's "from" -> not a real notification.
+FH=$(newhome)
+OUT=$(python3 -c '
+import json
+env=("<teammate-message teammate_id=\"researcher\" color=\"blue\">\n"
+     "{\"type\":\"idle_notification\",\"from\":\"justify-watch\",\"timestamp\":\"z\"}\n"
+     "</teammate-message>")
+print(json.dumps({"hook_event_name":"UserPromptSubmit","session_id":"s","prompt":env}))' | HOME="$FH" bash "$HOOK" 2>/dev/null)
+is_silent "$OUT" && ok "envelope teammate_id disagrees with frame 'from' -> pass-through" \
+                 || bad "envelope/frame mismatch -> pass-through (SUPPRESSED: $OUT)"
+
+echo
+echo "=== JOB 1: a REAL failure is NOT suppressed (the lead must see it) ==="
+
+for reason in failed interrupted; do
+  FH=$(newhome)
+  IN=$(ups_input "justify-watch" "$reason" "2026-07-17T09:20:00.000Z")
+  OUT=$(run_ups "$IN" "$FH")
+  is_silent "$OUT" && ok "justify-watch $reason -> pass-through (real failure reaches the lead)" \
+                   || bad "justify-watch $reason -> pass-through (SUPPRESSED A FAILURE: $OUT)"
+done
+
+echo
+echo "=== JOB 1: acts ONLY on the submitted prompt, never on transcript history ==="
+
+# THE CODEX HIGH REGRESSION: a real prompt that merely FOLLOWS an earlier park in
+# the transcript must pass through. The hook acts on the submitted prompt alone -
+# it does not scan history, so an old heartbeat can never eat a later real prompt.
+FH=$(newhome); T="$FH/t.jsonl"
+frame_line "justify-watch" "available" "2026-07-17T09:25:00.000Z" > "$T"
+OUT=$(printf '{"hook_event_name":"UserPromptSubmit","session_id":"s","prompt":"fix the nav hover please","transcript_path":"%s"}' "$T" | HOME="$FH" bash "$HOOK" 2>/dev/null)
+is_silent "$OUT" && ok "real prompt after an older heartbeat in transcript -> pass-through" \
+                 || bad "real prompt after older heartbeat -> pass-through (BLOCKED A REAL PROMPT: $OUT)"
+
+# An empty prompt is nothing to suppress, even if a heartbeat sits in history.
+FH=$(newhome); T="$FH/t.jsonl"
+frame_line "justify-watch" "available" "2026-07-17T09:30:00.000Z" > "$T"
+IN=$(ups_input "justify-watch" "available" "2026-07-17T09:30:00.000Z" "$T" "empty")
+OUT=$(run_ups "$IN" "$FH")
+is_silent "$OUT" && ok "empty prompt (heartbeat only in history) -> pass-through (no transcript scan)" \
+                 || bad "empty prompt -> pass-through (BLOCKED off transcript: $OUT)"
+
+echo
+echo "=== JOB 1: safety ==="
+
+FH=$(newhome)
+IN=$(ups_input "justify-watch" "available" "2026-07-17T09:40:00.000Z")
+[ "$(rc_ups "$IN" "$FH")" = "0" ] && ok "exit 0 on suppress (non-blocking hook)" || bad "exit 0 on suppress"
+
+FH=$(newhome)
+IN=$(ups_input "researcher" "available" "2026-07-17T09:41:00.000Z")
+[ "$(rc_ups "$IN" "$FH")" = "0" ] && ok "exit 0 on pass-through" || bad "exit 0 on pass-through"
+
+# Garbage UserPromptSubmit payload must not wedge and must not block.
+FH=$(newhome)
+OUT=$(printf 'not json at all' | HOME="$FH" bash "$HOOK" 2>/dev/null)
+{ is_silent "$OUT"; } && ok "garbage UPS payload -> pass-through, no block" || bad "garbage UPS payload -> pass-through (got: $OUT)"
+
+# The owner list is tunable here too (exact names only).
+FH=$(newhome)
+IN=$(ups_input "my-watcher" "available" "2026-07-17T09:50:00.000Z")
+OUT=$(printf '%s' "$IN" | HOME="$FH" JUSTIFY_WATCH_AGENT_NAMES="justify-watch,my-watcher" bash "$HOOK" 2>/dev/null)
+blocks "$OUT" && ok "JUSTIFY_WATCH_AGENT_NAMES adds a suppressed owner" || bad "JUSTIFY_WATCH_AGENT_NAMES adds a suppressed owner"
+
+FH=$(newhome)
+IN=$(ups_input "researcher" "available" "2026-07-17T09:51:00.000Z")
+OUT=$(printf '%s' "$IN" | HOME="$FH" JUSTIFY_WATCH_AGENT_NAMES="justify-watch,my-watcher" bash "$HOOK" 2>/dev/null)
+is_silent "$OUT" && ok "override does not widen suppression to unrelated agents" || bad "override widened suppression (LEAKED: $OUT)"
+
+echo
+echo "=== JOB 1 MUTANTS: prove each UserPromptSubmit guard is load-bearing (must go RED) ==="
+
+# M-UPS-1: drop the owner filter. Every agent's heartbeat would be blocked - the
+# crux failure: a real prompt from a normal agent is suppressed.
+sed 's|if name not in owners:|if False:|' "$HOOK" > "$MUT"
+FH=$(newhome)
+IN=$(ups_input "researcher" "available" "2026-07-17T10:00:00.000Z")
+OUT=$(printf '%s' "$IN" | HOME="$FH" bash "$MUT" 2>/dev/null)
+blocks "$OUT" && ok "mutant (no owner filter) blocks a normal agent -> suite catches it" \
+              || bad "mutant (no owner filter) NOT caught - the UPS owner filter is untested"
+
+# M-UPS-2: drop the failure guard. A dead watch would be suppressed instead of
+# reaching the lead's eyes.
+sed 's|if str(f.get("idleReason") or "") in ("failed", "interrupted"):|if False:|' "$HOOK" > "$MUT"
+FH=$(newhome)
+IN=$(ups_input "justify-watch" "failed" "2026-07-17T10:01:00.000Z")
+OUT=$(printf '%s' "$IN" | HOME="$FH" bash "$MUT" 2>/dev/null)
+blocks "$OUT" && ok "mutant (no failure guard) suppresses a failure -> suite catches it" \
+              || bad "mutant (no failure guard) NOT caught - the UPS failure guard is untested"
+
+# M-UPS-3: drop the envelope/frame agreement. A mismatched (or quoted) frame fires.
+sed 's|if name != tid:|if False:|' "$HOOK" > "$MUT"
+FH=$(newhome)
+OUT=$(python3 -c '
+import json
+env=("<teammate-message teammate_id=\"researcher\" color=\"blue\">\n"
+     "{\"type\":\"idle_notification\",\"from\":\"justify-watch\",\"timestamp\":\"z\"}\n"
+     "</teammate-message>")
+print(json.dumps({"hook_event_name":"UserPromptSubmit","session_id":"s","prompt":env}))' | HOME="$FH" bash "$MUT" 2>/dev/null)
+blocks "$OUT" && ok "mutant (no envelope check) blocks a mismatched frame -> suite catches it" \
+              || bad "mutant (no envelope check) NOT caught - the UPS envelope check is untested"
 
 echo
 printf 'passed %d, failed %d\n' "$pass" "$fail"

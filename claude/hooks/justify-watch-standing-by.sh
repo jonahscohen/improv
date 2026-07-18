@@ -1,74 +1,192 @@
 #!/usr/bin/env bash
 #
-# justify-watch-standing-by.sh - Stop hook, LEAD session. Non-blocking.
+# justify-watch-standing-by.sh - DUAL-EVENT hook for the persistent watch owner.
+# Non-blocking on Stop; reply-suppressing on UserPromptSubmit. Branches on
+# hook_event_name so ONE file owns both jobs.
 #
-# THE FALSE FLAG
-# --------------
-# When a teammate goes idle it sends the lead a mailbox frame:
+# WHY THIS HOOK EXISTS AT ALL
+# ---------------------------
+# justify-watch is a persistent watch owner: parked and idle IS its job. It waits
+# for Justify Send-All batches to claim and apply. It NEVER finishes. When it
+# parks it sends the lead a mailbox frame:
 #
 #   <teammate-message teammate_id="justify-watch" color="blue">
 #   {"type":"idle_notification","from":"justify-watch","timestamp":"...","idleReason":"available"}
 #   </teammate-message>
 #
-# The lead's terminal renders that frame through an Ink component compiled into
-# the claude binary. The verb is a hardcoded three-way ternary over idleReason:
+# That routine "available" ping needs no answer. Two separate problems flow from
+# it, and this file addresses both.
 #
+# ===========================================================================
+# JOB 1 (UserPromptSubmit) - THE REPLY-SUPPRESSOR  [primary; added 2026-07-17]
+# ===========================================================================
+# Left alone, the incoming heartbeat wakes the lead, which burns a whole turn
+# replying "standing by" / "nothing to act on" to a ping that needs no reply.
+# In a real ppai session the lead answered ~8 consecutive heartbeats this way and
+# made no progress (Jonah, verbatim: "Idle heartbeats are NOT prompts - do not
+# reply to them."). The ONLY way to stop that is to intercept BEFORE the reply is
+# composed. A Stop hook cannot: Stop fires AFTER the turn, and a Stop
+# {"decision":"block"} CONTINUES the turn, the opposite of suppression.
+#
+# So on UserPromptSubmit, if the INCOMING prompt (or, as a fallback, the newest
+# user message in the transcript) carries a REAL justify-watch idle heartbeat,
+# this hook returns {"decision":"block", ...} - the prompt is dropped, the lead
+# never composes a reply, and the turn is never burned. Detection reuses the exact
+# same envelope / from==teammate_id / exact-name / not-failed-or-interrupted guards
+# as Job 2, so a quoted, mismatched, or non-watch frame never trips it and a REAL
+# watch failure is never swallowed (a failed/interrupted watch DESERVES the lead's
+# eyes and is passed through untouched).
+#
+# ===========================================================================
+# JOB 2 (Stop) - THE DISPLAY CORRECTOR  [legacy; unchanged behavior]
+# ===========================================================================
+# THE FALSE FLAG: the lead's terminal renders that idle frame through an Ink
+# component compiled into the claude binary. The verb is a hardcoded three-way
+# ternary over idleReason:
 #   idleReason === "failed"      -> "failed"
 #   idleReason === "interrupted" -> "was interrupted"
 #   anything else (incl. "available", undefined) -> "finished"
-#
-# So an idle justify-watch prints "Teammate @justify-watch finished". That is a
-# LIE. justify-watch is a persistent watch owner: parked and idle IS its job. It
-# waits for Justify Send-All batches to claim and apply. It never finishes.
-#
-# WHY THIS HOOK CANNOT SIMPLY REWRITE THE WORD
-# --------------------------------------------
-# There is no interception point for that string. Verified against the shipped
-# binary (2026-07-12, claude 2.1.x):
-#   - The verb lives in the compiled Ink renderer. Not a setting, not an env var.
-#   - TeammateIdle fires in the TEAMMATE's own process, inside its Stop pipeline.
-#     Its outputs are blockingError (fed back to the teammate as "TeammateIdle
-#     hook feedback: ...") and preventContinuation. Neither reaches the lead's UI.
-#   - MessageDisplay is display-only for STREAMING ASSISTANT TEXT. The idle
-#     notification is an attachment component, not assistant text.
-#   - The renderer has no per-agent branch: every teammate shares that one code
-#     path. So even patching the binary would make EVERY teammate say "standing
-#     by", destroying the true completion signal the lead relies on to stand a
-#     normal teammate down.
-# Terminal output is append-only, so the honest fix is to APPEND the truth right
-# after the false line, scoped to the one agent for which it is false.
-#
-# WHAT THIS DOES
-# --------------
-# On the lead's Stop, read the transcript, find the most recent teammate idle
-# notification, and if it came from a persistent watch owner (justify-watch)
-# print, via systemMessage, exactly one line:
+# So an idle justify-watch prints "Teammate @justify-watch finished" - a LIE. The
+# verb lives in the compiled renderer (no setting, no env var, no per-agent branch
+# - every teammate shares that one path), so the honest fix is to APPEND the truth
+# right after the false line, scoped to the one agent for which it is false. On the
+# lead's Stop this branch prints, via systemMessage, exactly one line:
 #
 #   Teammate justify-watch standing by.
 #
-# ONE LINE. Never a paragraph. This fires on every park, and Jonah explicitly
-# banned narrating the watch ("Don't need you wasting vertical space in the
-# terminal blabbing about the justify-watch. We get it."). Explaining the verb
-# here would make the vertical-space problem worse while fixing the word. The
-# reasoning belongs in this header and in the beat, not on his screen every idle.
-#
-# Narrow by construction, so the true signal survives:
+# ONE LINE. Never a paragraph. This fires on every park and Jonah explicitly banned
+# narrating the watch ("Don't need you wasting vertical space in the terminal
+# blabbing about the justify-watch. We get it."). If Job 1's block is honored the
+# heartbeat is dropped from context and this branch simply finds nothing to annotate;
+# if the block is NOT honored (or Job 1 is not wired) this legacy correction still
+# stands as the fallback. Narrow by construction so the true signal survives:
 #   - Any other agent name        -> silent. "finished" stands. That is correct.
-#   - justify-watch idleReason failed/interrupted -> silent. The harness already
-#     renders "failed" / "was interrupted", which is true and must not be masked.
-#   - Only the "finished" rendering for justify-watch is corrected.
-#
+#   - justify-watch failed/interrupted -> silent. The harness already renders the
+#     true "failed" / "was interrupted"; it must not be masked.
 # Fires once per idle event (deduped on the frame's own timestamp), never blocks,
-# and exits 0 on every path. A watch owner parking must never wedge the lead.
+# exits 0 on every path.
 #
-# Agent names treated as persistent watch owners: JUSTIFY_WATCH_AGENT_NAMES, a
-# comma-separated list of EXACT names (default "justify-watch"). Exact, not
-# prefix: see the note in the parser below.
+# Watch owners: JUSTIFY_WATCH_AGENT_NAMES, a comma-separated list of EXACT names
+# (default "justify-watch"). EXACT, never a prefix - a prefix match would sweep up
+# an ordinary agent named justify-watchdog / justify-watch-review and either
+# suppress its prompt or annotate it "standing by", destroying the true completion
+# signal the lead depends on. The risk is asymmetric: over-matching breaks a
+# load-bearing signal, under-matching merely leaves the status quo. So this errs
+# narrow, and the env var widens it by hand.
+#
+# WIRING: bind this file to UserPromptSubmit (Job 1 - the suppressor) and,
+# optionally, Stop (Job 2 - the legacy display correction). See app-wirings.json.
 # Tests: test-justify-watch-standing-by.sh
 
 set -uo pipefail
 
 INPUT=$(cat 2>/dev/null)
+
+EVENT=$(printf '%s' "$INPUT" | python3 -c 'import json,sys
+try:
+    print(str(json.load(sys.stdin).get("hook_event_name","") or ""))
+except Exception:
+    print("")' 2>/dev/null)
+
+# ===========================================================================
+# JOB 1 - UserPromptSubmit: suppress the reply to a justify-watch heartbeat.
+# ===========================================================================
+if [ "$EVENT" = "UserPromptSubmit" ]; then
+  HEARTBEAT=$(HOOK_INPUT="$INPUT" \
+              WATCH_NAMES="${JUSTIFY_WATCH_AGENT_NAMES:-justify-watch}" \
+              python3 <<'PYEOF' 2>/dev/null
+import json, os, re
+
+# EXACT names, never prefixes (see header). The env var widens by hand.
+owners = {p.strip() for p in os.environ.get("WATCH_NAMES", "").split(",") if p.strip()}
+if not owners:
+    owners = {"justify-watch"}
+
+# A frame only counts inside a real <teammate-message> envelope whose teammate_id
+# matches the frame's own "from". Scanning loose text for the JSON would fire on a
+# QUOTED frame - a pasted prompt, a DM discussing this bug - and suppress a prompt
+# that never was a heartbeat.
+ENVELOPE = re.compile(r'<teammate-message\b([^>]*)>(.*?)</teammate-message>', re.DOTALL)
+TEAMMATE_ID = re.compile(r'teammate_id\s*=\s*"([^"]*)"')
+FRAME = re.compile(r'\{[^{}]*"type"\s*:\s*"idle_notification"[^{}]*\}')
+
+def _try(s):
+    try:
+        return json.loads(s)
+    except Exception:
+        return None
+
+def is_watch_heartbeat(text):
+    """True iff text is a BARE delivery of a REAL idle_notification from a watch
+    owner whose idleReason is the routine 'available'/finished kind (NOT
+    failed/interrupted - a real failure deserves the lead's eyes and must not be
+    suppressed)."""
+    if not text or "idle_notification" not in text:
+        return False
+    envs = list(ENVELOPE.finditer(text))
+    if not envs:
+        return False
+    # The frame must be essentially the WHOLE delivery. A human pasting an envelope
+    # inside their own prose (a question, a sentence, or debugging this very bug)
+    # must NOT have that prompt silently eaten. For a suppression hook a false
+    # negative is merely the status quo (the lead answers as before); a false
+    # positive ERASES real user input. So err strict: only a bare machine delivery
+    # - nothing outside the envelope, or a short single-line preamble with no
+    # question mark - is eligible. (Codex Medium, 2026-07-17.)
+    residual = ENVELOPE.sub("\n", text).strip()
+    if residual and (len(residual) > 60 or "\n" in residual or "?" in residual):
+        return False
+    for m in envs:
+        attrs, body = m.group(1), m.group(2)
+        tid_m = TEAMMATE_ID.search(attrs)
+        if not tid_m:
+            continue
+        tid = tid_m.group(1)
+        stripped = body.strip()
+        j = _try(stripped)
+        if j is not None:
+            candidates = [j]
+        else:
+            candidates = [f for f in (_try(fm.group(0)) for fm in FRAME.finditer(body)) if f is not None]
+        for f in candidates:
+            if not isinstance(f, dict) or f.get("type") != "idle_notification":
+                continue
+            name = str(f.get("from") or "")
+            # The envelope and the frame must agree, or it is not a real
+            # notification from that agent.
+            if name != tid:
+                continue
+            if name not in owners:
+                continue
+            if str(f.get("idleReason") or "") in ("failed", "interrupted"):
+                continue
+            return True
+    return False
+
+try:
+    data = json.loads(os.environ.get("HOOK_INPUT", "") or "{}")
+except Exception:
+    data = {}
+
+# UserPromptSubmit delivers the submitted text in "prompt" - that is the single
+# authoritative source for what the lead is about to answer. We deliberately do
+# NOT scan the transcript for older heartbeats: a real prompt that merely follows
+# an earlier park would then be blocked (Codex High, 2026-07-17).
+print("1" if is_watch_heartbeat(str(data.get("prompt") or "")) else "")
+PYEOF
+)
+  if [ "$HEARTBEAT" = "1" ]; then
+    # Drop the turn entirely: the lead never composes a reply, never burns a turn.
+    # ONE terse reason - Jonah's vertical-space rule applies here too. Do not
+    # "helpfully" re-expand this string.
+    printf '%s' '{"decision":"block","reason":"justify-watch idle heartbeat - not a prompt, no reply needed."}'
+  fi
+  exit 0
+fi
+
+# ===========================================================================
+# JOB 2 - Stop: correct the false "finished" verb for an idle watch owner.
+# ===========================================================================
 
 # A stop that is itself a hook continuation has already been annotated this cycle.
 ACTIVE=$(printf '%s' "$INPUT" | python3 -c 'import json,sys

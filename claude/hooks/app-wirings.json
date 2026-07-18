@@ -1,449 +1,458 @@
 {
-  "memory-approve.sh": [
-    {
-      "event": "PreToolUse",
-      "matcher": "Write|Edit|MultiEdit",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/memory-approve.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "memory-nudge.sh": [
-    {
-      "event": "PostToolUse",
-      "matcher": "Write|Edit|MultiEdit|Bash",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/memory-nudge.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "memory-compact.sh": [
-    {
-      "event": "SessionStart",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/memory-compact.sh",
-        "timeout": 5,
-        "statusMessage": "Keeping the beats index under load budget..."
-      }
-    },
-    {
-      "event": "PostToolUse",
-      "matcher": "Write|Edit|MultiEdit",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/memory-compact.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "consolidate-nudge.sh": [
-    {
-      "event": "SessionStart",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/consolidate-nudge.sh",
-        "timeout": 5,
-        "statusMessage": "Checking for consolidatable beat clusters..."
-      }
-    }
-  ],
-  "agent-teams-guard.sh": [
-    {
-      "event": "PreToolUse",
-      "matcher": "Agent|Workflow",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/agent-teams-guard.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "node-shim-heal.sh": [
-    {
-      "event": "SessionStart",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/node-shim-heal.sh",
-        "timeout": 10
-      }
-    },
-    {
-      "event": "Stop",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/node-shim-heal.sh",
-        "timeout": 10
-      }
-    }
-  ],
-  "voice-gate.sh": [
-    {
-      "event": "PreToolUse",
-      "matcher": "mcp__voice-output__speak",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/voice-gate.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "block-clickup-writes.sh": [
-    {
-      "event": "PreToolUse",
-      "matcher": "mcp__claude_ai_ClickUp__clickup_",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/block-clickup-writes.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "justify-source-guard.sh": [
-    {
-      "event": "PreToolUse",
-      "matcher": "Bash",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/justify-source-guard.sh",
-        "timeout": 5
-      }
-    },
-    {
-      "event": "PreToolUse",
-      "matcher": "Write|Edit|MultiEdit",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/justify-source-guard.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "justify-watch-guard.sh": [
-    {
-      "event": "SessionStart",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/justify-watch-guard.sh",
-        "timeout": 10,
-        "statusMessage": "Checking justify watch..."
-      }
-    },
-    {
-      "event": "Stop",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/justify-watch-guard.sh",
-        "timeout": 10
-      }
-    }
-  ],
-  "visualizer-guard.sh": [
-    {
-      "event": "PreToolUse",
-      "matcher": "mcp__visualize__show_widget",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/visualizer-guard.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "codex-failure-watcher.sh": [
-    {
-      "event": "PostToolUse",
-      "matcher": "Bash",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/codex-failure-watcher.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "codex-rescue-guard.sh": [
-    {
-      "event": "PreToolUse",
-      "matcher": "Agent",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/codex-rescue-guard.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "justify-watch-standing-by.sh": [
-    {
-      "event": "Stop",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/justify-watch-standing-by.sh",
-        "timeout": 10
-      }
-    }
-  ],
-  "chrome-tabgroup-track.sh": [
-    {
-      "event": "PostToolUse",
-      "matcher": "mcp__claude-in-chrome__",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/chrome-tabgroup-track.sh"
-      }
-    }
-  ],
-  "chrome-tabgroup-clear.sh": [
-    {
-      "event": "PostToolUse",
-      "matcher": "mcp__claude-in-chrome__tabs_close_mcp",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/chrome-tabgroup-clear.sh"
-      }
-    }
-  ],
-  "chrome-tabgroup-stop.sh": [
-    {
-      "event": "Stop",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/chrome-tabgroup-stop.sh"
-      }
-    }
-  ],
-  "figma-fidelity-stop.sh": [
-    {
-      "event": "Stop",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/figma-fidelity-stop.sh",
-        "timeout": 10
-      }
-    }
-  ],
-  "figma-fidelity-arm.sh": [
-    {
-      "event": "PreToolUse",
-      "matcher": "mcp__plugin_figma_figma__get_design_context|mcp__plugin_figma_figma__download_assets",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/figma-fidelity-arm.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "resume-guard.sh": [
-    {
-      "event": "SessionEnd",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/resume-guard.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "resume-toggle.sh": [
-    {
-      "event": "UserPromptSubmit",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/resume-toggle.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "team-reaper.sh": [
-    {
-      "event": "SessionStart",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/team-reaper.sh session-start",
-        "timeout": 5
-      }
-    },
-    {
-      "event": "SessionEnd",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/team-reaper.sh session-end",
-        "timeout": 5
-      }
-    }
-  ],
-  "cmux-close-guard.sh": [
-    {
-      "event": "PreToolUse",
-      "matcher": "Bash",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/cmux-close-guard.sh",
-        "timeout": 12
-      }
-    }
-  ],
-  "cmux-teammate-shim-heal.sh": [
-    {
-      "event": "SessionStart",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/cmux-teammate-shim-heal.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "teammate-relay-stop.sh": [
-    {
-      "event": "Stop",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/teammate-relay-stop.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "fable-orchestrator-guard.sh": [
-    {
-      "event": "PreToolUse",
-      "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/fable-orchestrator-guard.sh",
-        "timeout": 10
-      }
-    }
-  ],
-  "reflect-nudge.sh": [
-    {
-      "event": "SessionStart",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/reflect-nudge.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "sidecoach-sessionstart.sh": [
-    {
-      "event": "SessionStart",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/sidecoach-sessionstart.sh"
-      }
-    }
-  ],
-  "sidecoach-preamble.sh": [
-    {
-      "event": "SessionStart",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/sidecoach-preamble.sh",
-        "timeout": 5
-      }
-    },
-    {
-      "event": "PostCompact",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/sidecoach-preamble.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "sidecoach-postuserp.sh": [
-    {
-      "event": "UserPromptSubmit",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/sidecoach-postuserp.sh"
-      }
-    }
-  ],
-  "sidecoach-keyword.sh": [
-    {
-      "event": "UserPromptSubmit",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/sidecoach-keyword.sh",
-        "timeout": 5
-      }
-    }
-  ],
-  "sidecoach-taste-gate.sh": [
-    {
-      "event": "PostToolUse",
-      "matcher": "Write|Edit|MultiEdit",
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/sidecoach-taste-gate.sh",
-        "timeout": 30
-      }
-    }
-  ],
-  "sidecoach-postresponse.sh": [
-    {
-      "event": "Stop",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/sidecoach-postresponse.sh"
-      }
-    }
-  ],
-  "voice-mandate.sh": [
-    {
-      "event": "SessionStart",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/voice-mandate.sh",
-        "timeout": 5,
-        "statusMessage": "Checking voice output..."
-      }
-    },
-    {
-      "event": "PostCompact",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/voice-mandate.sh",
-        "timeout": 5,
-        "statusMessage": "Checking voice output..."
-      }
-    }
-  ],
-  "voice-toggle.sh": [
-    {
-      "event": "UserPromptSubmit",
-      "matcher": null,
-      "hook": {
-        "type": "command",
-        "command": "~/.claude/hooks/voice-toggle.sh",
-        "timeout": 5
-      }
-    }
-  ]
+ "memory-approve.sh": [
+  {
+   "event": "PreToolUse",
+   "matcher": "Write|Edit|MultiEdit",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/memory-approve.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "memory-nudge.sh": [
+  {
+   "event": "PostToolUse",
+   "matcher": "Write|Edit|MultiEdit|Bash",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/memory-nudge.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "memory-compact.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/memory-compact.sh",
+    "timeout": 5,
+    "statusMessage": "Keeping the beats index under load budget..."
+   }
+  },
+  {
+   "event": "PostToolUse",
+   "matcher": "Write|Edit|MultiEdit",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/memory-compact.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "consolidate-nudge.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/consolidate-nudge.sh",
+    "timeout": 5,
+    "statusMessage": "Checking for consolidatable beat clusters..."
+   }
+  }
+ ],
+ "agent-teams-guard.sh": [
+  {
+   "event": "PreToolUse",
+   "matcher": "Agent|Workflow",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/agent-teams-guard.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "node-shim-heal.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/node-shim-heal.sh",
+    "timeout": 10
+   }
+  },
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/node-shim-heal.sh",
+    "timeout": 10
+   }
+  }
+ ],
+ "voice-gate.sh": [
+  {
+   "event": "PreToolUse",
+   "matcher": "mcp__voice-output__speak",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/voice-gate.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "block-clickup-writes.sh": [
+  {
+   "event": "PreToolUse",
+   "matcher": "mcp__claude_ai_ClickUp__clickup_",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/block-clickup-writes.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "justify-source-guard.sh": [
+  {
+   "event": "PreToolUse",
+   "matcher": "Bash",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/justify-source-guard.sh",
+    "timeout": 5
+   }
+  },
+  {
+   "event": "PreToolUse",
+   "matcher": "Write|Edit|MultiEdit",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/justify-source-guard.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "justify-watch-guard.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/justify-watch-guard.sh",
+    "timeout": 10,
+    "statusMessage": "Checking justify watch..."
+   }
+  },
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/justify-watch-guard.sh",
+    "timeout": 10
+   }
+  }
+ ],
+ "visualizer-guard.sh": [
+  {
+   "event": "PreToolUse",
+   "matcher": "mcp__visualize__show_widget",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/visualizer-guard.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "codex-failure-watcher.sh": [
+  {
+   "event": "PostToolUse",
+   "matcher": "Bash",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/codex-failure-watcher.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "codex-rescue-guard.sh": [
+  {
+   "event": "PreToolUse",
+   "matcher": "Agent",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/codex-rescue-guard.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "justify-watch-standing-by.sh": [
+  {
+   "event": "UserPromptSubmit",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/justify-watch-standing-by.sh",
+    "timeout": 10
+   }
+  },
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/justify-watch-standing-by.sh",
+    "timeout": 10
+   }
+  }
+ ],
+ "chrome-tabgroup-track.sh": [
+  {
+   "event": "PostToolUse",
+   "matcher": "mcp__claude-in-chrome__",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/chrome-tabgroup-track.sh"
+   }
+  }
+ ],
+ "chrome-tabgroup-clear.sh": [
+  {
+   "event": "PostToolUse",
+   "matcher": "mcp__claude-in-chrome__tabs_close_mcp",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/chrome-tabgroup-clear.sh"
+   }
+  }
+ ],
+ "chrome-tabgroup-stop.sh": [
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/chrome-tabgroup-stop.sh"
+   }
+  }
+ ],
+ "figma-fidelity-stop.sh": [
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/figma-fidelity-stop.sh",
+    "timeout": 10
+   }
+  }
+ ],
+ "figma-fidelity-arm.sh": [
+  {
+   "event": "PreToolUse",
+   "matcher": "mcp__plugin_figma_figma__get_design_context|mcp__plugin_figma_figma__download_assets",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/figma-fidelity-arm.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "resume-guard.sh": [
+  {
+   "event": "SessionEnd",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/resume-guard.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "resume-toggle.sh": [
+  {
+   "event": "UserPromptSubmit",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/resume-toggle.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "team-reaper.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/team-reaper.sh session-start",
+    "timeout": 5
+   }
+  },
+  {
+   "event": "SessionEnd",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/team-reaper.sh session-end",
+    "timeout": 5
+   }
+  }
+ ],
+ "cmux-close-guard.sh": [
+  {
+   "event": "PreToolUse",
+   "matcher": "Bash",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/cmux-close-guard.sh",
+    "timeout": 12
+   }
+  }
+ ],
+ "cmux-teammate-shim-heal.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/cmux-teammate-shim-heal.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "teammate-relay-stop.sh": [
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/teammate-relay-stop.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "fable-orchestrator-guard.sh": [
+  {
+   "event": "PreToolUse",
+   "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/fable-orchestrator-guard.sh",
+    "timeout": 10
+   }
+  }
+ ],
+ "reflect-nudge.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/reflect-nudge.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "sidecoach-sessionstart.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/sidecoach-sessionstart.sh"
+   }
+  }
+ ],
+ "sidecoach-preamble.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/sidecoach-preamble.sh",
+    "timeout": 5
+   }
+  },
+  {
+   "event": "PostCompact",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "SESSION_CWD=\"$(pwd)\" ~/.claude/hooks/sidecoach-preamble.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "sidecoach-postuserp.sh": [
+  {
+   "event": "UserPromptSubmit",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/sidecoach-postuserp.sh"
+   }
+  }
+ ],
+ "sidecoach-keyword.sh": [
+  {
+   "event": "UserPromptSubmit",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/sidecoach-keyword.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "sidecoach-taste-gate.sh": [
+  {
+   "event": "PostToolUse",
+   "matcher": "Write|Edit|MultiEdit",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/sidecoach-taste-gate.sh",
+    "timeout": 30
+   }
+  }
+ ],
+ "sidecoach-postresponse.sh": [
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/sidecoach-postresponse.sh"
+   }
+  }
+ ],
+ "voice-mandate.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/voice-mandate.sh",
+    "timeout": 5,
+    "statusMessage": "Checking voice output..."
+   }
+  },
+  {
+   "event": "PostCompact",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/voice-mandate.sh",
+    "timeout": 5,
+    "statusMessage": "Checking voice output..."
+   }
+  }
+ ],
+ "voice-toggle.sh": [
+  {
+   "event": "UserPromptSubmit",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/voice-toggle.sh",
+    "timeout": 5
+   }
+  }
+ ]
 }

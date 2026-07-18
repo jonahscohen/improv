@@ -60,6 +60,21 @@ The heartbeat-suppression hook justify-watch-standing-by.sh EXISTS but failed to
 me replying to ~8 heartbeats. A teammate (heartbeat-fix) is diagnosing why (prime
 suspect: unregistered / wrong event) and will report the wiring to add.
 
+RESOLVED + WIRING APPLIED - see session_2026-07-17_justify-watch-standing-by-diagnosis.md.
+Both suspects confirmed: (1) orphan in live settings, (2) wrong mechanism (a Stop hook +
+display-only systemMessage cannot suppress a reply). Fix: made the hook DUAL-EVENT - a new
+UserPromptSubmit branch BLOCKS the incoming heartbeat so no turn is burned; Stop cosmetic
+kept. Codex-reviewed, 77/77 tests green.
+
+Wiring I applied (lead): added the UserPromptSubmit binding to app-wirings.json (keeping
+Stop -> [UPS, Stop]) AND hand-merged BOTH bindings into live ~/.claude/settings.json (it
+was unregistered; backup kept). Chose the hand-merge over `install.sh --only justify` to
+avoid any cluster-reconcile risk to other components - same method used for the two
+mandate hooks. Verified live via the deployed path: a real justify-watch heartbeat on
+UserPromptSubmit -> decision:block (no reply), a normal user prompt -> passes through
+untouched, UserPromptSubmit 13->14 and Stop 13->14 with all other hooks intact. Committed
+separately (heartbeat-fix commit).
+
 ## Files
 - claude/hooks/task-loop-mandate.sh, justify-queue-mandate.sh, test-task-loop-justify-mandates.sh (new)
 - claude/hooks/cluster-wirings.json, browser-tree.json, install.sh (wiring)
