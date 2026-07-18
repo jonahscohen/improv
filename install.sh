@@ -489,7 +489,7 @@ DESCS+=(
   "Safety guards: block forbidden bash commands, forbidden file content (emojis, emdashes, AI-attribution), and destructive infra ops. The core guardrails - default on, removable."
   "Verification discipline: enforce verify-before-you-claim-done - visual/screenshot checks, real-input validation, the second-fix debugging gate. Blocks ending a turn on unverified UI work."
   "Question discipline: route every user-facing question through AskUserQuestion instead of plain-text option lists."
-  "Grounding: anti-hallucination gates that require citing a source before asserting."
+  "Grounding + completion discipline: anti-hallucination gates that require citing a source before asserting, plus the task-loop and justify-queue mandates - loop the tasks the user gave you (and the justify queue), spawn parallel teammates until each is done AND validated, never stall/half-step/dogfood."
   "API-drift detection: catch breaking API / tool-contract drift in tool outputs and block ending a turn while it is unresolved."
   "Planning + git hygiene: plan-doc consistency lint (dispatch ownership + sequencing) plus a surfacing of committed-but-unpushed work at session start."
   "Surface presentation: detect the Claude Code surface (rich vs text-only) and enforce presenting data visually on rich surfaces."
@@ -499,7 +499,7 @@ FILES+=(
   "~/.claude/hooks/ (5 safety hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (8 verification hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (4 question-discipline hooks)\n~/.claude/settings.json (wiring)"
-  "~/.claude/hooks/ (2 grounding hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (4 grounding hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (3 api-drift hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 planning-git hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 surface hooks)\n~/.claude/settings.json (wiring)"
@@ -612,7 +612,7 @@ cluster_hooks() {
     safety)              echo "bash-guard.sh content-guard.sh content-guard-stop.sh destructive-ops-guard.sh destructive-confirm-detect.sh" ;;
     verification)        echo "verify-before-done.sh verify-before-done-stop.sh verify-clear.sh verify-manual.sh screenshot-open-mandate.sh screenshot-open-clear.sh second-fix-gate.sh validation-guard.sh" ;;
     question-discipline) echo "multiple-choice-detect-stop.sh multiple-choice-inject-prompt.sh multiple-choice-enforce.sh question-enforcement.sh" ;;
-    grounding)           echo "grounding-gate.sh grounding-guard.sh" ;;
+    grounding)           echo "grounding-gate.sh grounding-guard.sh task-loop-mandate.sh justify-queue-mandate.sh" ;;
     api-drift)           echo "api-drift-detector.sh api-drift-stop.sh api-drift-ack.sh" ;;
     planning-git)        echo "plan-consistency-lint.sh push-ahead-check.sh" ;;
     surface)             echo "claude-surface.sh surface-visual-gate.sh" ;;
