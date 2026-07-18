@@ -10,7 +10,7 @@ verified: tests (component-browser 124/1 -> 127/0; browser-render 146/146; insta
 confidence: high
 ---
 
-The High finding from the 2026-07-17 GUI-installer final Codex holistic review (follow-up task_25735f54). NOT committed - left in the working tree for Jonah.
+The High finding from the 2026-07-17 GUI-installer final Codex holistic review (follow-up task_25735f54). COMMITTED to main (Jonah chose commit-now): 6ef0c8d1, local only (main 69 ahead of origin/main, not pushed). Coordinate note: browser-tree.json is actively co-edited by the figma workstream.
 
 **The drift (one hook, three code sites).** install.sh installs, deactivates, AND detects figma via two hooks - `figma-fidelity-stop.sh` + `figma-fidelity-arm.sh`. arm was added by the concurrent figma workstream (09af2d8f, 7fe3e249) but the sites that ENUMERATE figma's hook set were not all updated with it:
 1. `browser-tree.json` knew only stop (hooks list, hook_owner, hook_desc all at 63, arm in none) -> arm invisible/uncontrollable in BOTH the terminal bucket browser and the GUI installer.

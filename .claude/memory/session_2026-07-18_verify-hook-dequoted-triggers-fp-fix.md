@@ -82,6 +82,17 @@ shipping recall regressions.
    an FN is worse than an FP. The review caught it; the lesson is to reach for the minimal
    surgical change first and let prefer-FP bias the design.
 
+## Follow-up found: memory-nudge.sh has the SAME false-positive class
+
+While committing, the `.memory-dirty.<session>` gate false-blocked a beats-only commit. Root
+cause: my PROBE commands (`armed 'sed -i s/a/b/ src/app.css'`, `... 'cp x.tsx src/App.tsx'`)
+carry write-command strings as ARGS, and `memory-nudge.sh` uses the same naive substring
+matching this fix just removed from verify-before-done - so it flagged a project-file "write"
+that never happened and set memory-dirty after my last real beat write. All real work WAS
+beated; the flag was a false set. Logged as a separate follow-up: memory-nudge.sh wants the
+same dash-guarded-redirect / command-position treatment (or at least to ignore its own probe-
+string args). Not fixed here to keep this unit scoped to the verify hook.
+
 ## Files touched
 
 - claude/hooks/verify-before-done.sh (dash-guarded `_has_redirect`; write verbs stay substrings)

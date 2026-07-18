@@ -32,14 +32,25 @@ were already written, because intervening Bash calls (git add, git log) re-arm t
 flag via memory-nudge. Writing this beat is the correct way through - the gate wanted the
 commit itself recorded, which is exactly what this is. Do not reach for a bypass here.
 
-**Known false positive worth watching:** `.needs-verification` was left at "visual" by a
-probe command that merely CONTAINED the string "npm run build" while running from the
-improv root, which has no package.json, so project_has_ui() correctly assumed UI and
-over-fired. deploy_indicators still uses bare substring matching (`"npm run build" in cmd`)
-rather than the token anchoring is_verification_only already uses, so any command that
-merely mentions a build string arms the flag. Left alone deliberately: narrowing it would
-reduce recall, and [[feedback_hooks_prefer_false_positives]] says over-fire is the
-preferred direction. Worth revisiting only if it crosses the cried-wolf threshold.
+**Known false positive - escalated, then deliberately kept (Jonah decision):**
+`.needs-verification` was left at "visual" by a probe command that merely CONTAINED the
+string "npm run build" while running from the improv root, which has no package.json, so
+project_has_ui() assumed UI and over-fired. `deploy_indicators` still uses bare substring
+matching (`"npm run build" in cmd`) rather than the token anchoring `is_verification_only`
+already uses, so ANY command that merely mentions a build string arms the flag.
+
+This then escalated: the Stop hook BLOCKED on "a visual file changed and was never visually
+verified" when zero visual files existed in either commit (all .sh/.ts/.json/.md). So the
+FP moved from "one sentence of wave-off" to "blocked real work" - arguably the cried-wolf
+threshold that [[feedback_hooks_prefer_false_positives]] names as the one condition for
+fixing an over-fire.
+
+Offered Jonah the token-anchor fix; he chose OVERRIDE AND LEAVE IT. The honest tradeoff
+that informed it: token-anchoring would stop arming on `bash -c "npm run build"` - a real
+build nested in quotes - so it buys FP elimination with a slice of real recall, and recall
+is the thing the standing rule protects. Correct handling when this recurs: state plainly
+that no visual file changed, ask for the override (Hook Override Protocol - never clear
+the flag unilaterally), and move on. Do not "fix" it by narrowing without asking.
 
 ## Files touched
 
