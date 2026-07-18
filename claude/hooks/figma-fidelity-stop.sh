@@ -69,22 +69,33 @@
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 MARKER="$ROOT/.figma-fidelity.pending"
 MANIFEST="$ROOT/.figma-fidelity.json"
+LEDGER="$ROOT/.figma-fidelity.ledger"
 
-# Not a Figma build in progress -> do nothing.
-[ -f "$MARKER" ] || exit 0
+# Not a Figma build in progress -> do nothing. The tamper-evident ledger keeps the
+# gate armed even when the mutable .pending marker has been removed: a signed,
+# still-unresolved arm in the ledger independently demands coverage. So the gate
+# runs whenever EITHER the marker or the ledger is present.
+[ -f "$MARKER" ] || [ -f "$LEDGER" ] || exit 0
 
 command -v python3 >/dev/null 2>&1 || {
   printf 'BLOCKED (figma-fidelity-gate): python3 not found; cannot verify the fidelity manifest.\n' >&2
   exit 2
 }
 
-python3 - "$ROOT" "$MARKER" "$MANIFEST" <<'PYEOF'
+python3 - "$ROOT" "$MARKER" "$MANIFEST" "$LEDGER" <<'PYEOF'
 import json
 import os
 import re
 import sys
+import time
+import fcntl
+import hashlib
+import hmac
 
-ROOT, MARKER, MANIFEST = sys.argv[1], sys.argv[2], sys.argv[3]
+ROOT, MARKER, MANIFEST, LEDGER = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+LEDGER_LOCK = os.path.join(ROOT, ".figma-fidelity.ledger.lock")
+LEDGER_HEAD = os.path.join(ROOT, ".figma-fidelity.ledger.head")
+SECRET_PATH = os.path.expanduser(os.path.join("~", ".claude", ".fidelity-secret"))
 STRICT = os.environ.get("FIGMA_FIDELITY_STRICT", "") not in ("", "0")
 
 # Blink quantises layout to 1/64px. The largest honest disagreement observed
@@ -205,25 +216,299 @@ def dom_matches(figma, dom):
     return None
 
 
-# --- read the marker and the manifest exactly once -------------------------
-try:
-    with open(MARKER, "r", encoding="utf-8") as fh:
-        marker_raw = fh.read()
-except OSError as exc:
-    unreadable("cannot read the pending marker: %s" % exc)
+# --- Level 2: tamper-evident signed arm ledger -----------------------------
+# The mutable .figma-fidelity.pending marker can be edited to drop an armed node
+# and skip its pixel validation. The arm hook ALSO appends every arm to a per-repo
+# hash-chained, HMAC-signed ledger. Here the gate verifies that chain and treats
+# every UNRESOLVED arm as a coverage requirement, independent of the marker. So:
+#   - deleting the marker line changes nothing (the ledger still demands coverage);
+#   - editing/forging a ledger line breaks its HMAC or the chain -> BLOCK;
+#   - only THIS gate holds the secret, so only it can sign the `resolve` that
+#     clears a covered node - the agent cannot forge one.
+# Threat model = a lazy self-opt-out, not a determined forger (which the behavioral
+# rules + Level-1 guards already forbid). Full rationale in
+# decision_2026-07-17_fidelity-gate-level2-tamper-evident-ledger.md.
+def ledger_secret_read():
+    try:
+        with open(SECRET_PATH, "rb") as fh:
+            s = fh.read().strip()
+        return s or None
+    except OSError:
+        return None
 
+
+def ledger_mac(secret, typ, node, ts, prev):
+    msg = ("%s|%s|%s|%s" % (typ, node, ts, prev)).encode("utf-8")
+    return hmac.new(secret, msg, hashlib.sha256).hexdigest()
+
+
+def head_mac(secret, count, tip):
+    # Signs the ledger's LENGTH and TIP so that TRUNCATION - deleting the last
+    # line, which leaves a still-valid chain prefix the per-line HMACs cannot flag -
+    # is caught: the gate recomputes count+tip and compares to this anchor.
+    return hmac.new(
+        secret, ("%d|%s" % (count, tip)).encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+
+
+def head_write(head, secret, count, tip):
+    tmp = head + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.write("%d|%s|%s\n" % (count, tip, head_mac(secret, count, tip)))
+        os.replace(tmp, head)
+    except OSError:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
+def ledger_snapshot(ledger, head, lock):
+    """Read the ledger lines and the head anchor UNDER the append lock, so a
+    concurrent append is never observed half-applied (ledger grown, head not yet
+    re-signed). Returns (lines_or_None, head_raw_or_None); None means absent."""
+    lines = None
+    head_raw = None
+    lockf = None
+    try:
+        lockf = open(lock, "a+", encoding="utf-8")
+    except OSError:
+        lockf = None
+    try:
+        if lockf is not None:
+            fcntl.flock(lockf, fcntl.LOCK_EX)
+        try:
+            with open(ledger, "r", encoding="utf-8") as fh:
+                lines = [ln.rstrip("\n") for ln in fh]
+        except FileNotFoundError:
+            lines = None
+        try:
+            with open(head, "r", encoding="utf-8") as fh:
+                head_raw = fh.read().strip()
+        except FileNotFoundError:
+            head_raw = None
+    finally:
+        if lockf is not None:
+            try:
+                fcntl.flock(lockf, fcntl.LOCK_UN)
+            except OSError:
+                pass
+            lockf.close()
+    return lines, head_raw
+
+
+def ledger_scan(lines, secret):
+    """Verify the HMAC chain of an already-read ledger and return
+    (unresolved_set, tip_mac, count, error). On ANY integrity failure returns
+    (None, None, None, reason); the caller BLOCKS (fail closed)."""
+    prev = "genesis"
+    count = 0
+    latest = {}  # node -> latest event type, in file order
+    for i, ln in enumerate(lines, 1):
+        if not ln.strip():
+            continue
+        count += 1
+        parts = ln.split("|")
+        if len(parts) != 5:
+            return (None, None, None, "line %d is malformed (expected 5 |-fields)" % i)
+        typ, node, ts, lprev, mac = parts
+        if typ not in ("arm", "resolve"):
+            return (None, None, None, "line %d has an unknown event type %r" % (i, typ))
+        if lprev != prev:
+            return (
+                None, None, None,
+                "line %d breaks the hash chain (its prev-link does not match the "
+                "previous entry: a ledger line was deleted, reordered, or inserted)"
+                % i,
+            )
+        if not hmac.compare_digest(ledger_mac(secret, typ, node, ts, lprev), mac):
+            return (
+                None, None, None,
+                "line %d has an invalid HMAC (the entry was altered, or forged "
+                "without the secret)" % i,
+            )
+        prev = mac
+        latest[node] = typ
+    unresolved = {n for n, t in latest.items() if t == "arm"}
+    return (unresolved, prev, count, None)
+
+
+def head_verify(head_raw, secret, count, tip):
+    """Confirm the signed head anchor matches the ledger's length+tip. Returns None
+    when consistent, else a reason to BLOCK. This is what closes TRUNCATION: the
+    per-line chain still verifies after the tail is cut, but count/tip no longer
+    match the signed anchor. Also catches head deletion and head forgery."""
+    if head_raw is None:
+        return (
+            "the ledger's signed head anchor (.figma-fidelity.ledger.head) is "
+            "missing. It anchors the ledger's length so that deleting the LAST arm "
+            "line cannot go unnoticed; removing it is itself tampering"
+        )
+    parts = head_raw.split("|")
+    if len(parts) != 3 or not parts[0].isdigit():
+        return "the head anchor is malformed (expected count|tip|hmac)"
+    hcount, htip, hmac_val = int(parts[0]), parts[1], parts[2]
+    if not hmac.compare_digest(head_mac(secret, hcount, htip), hmac_val):
+        return (
+            "the head anchor's HMAC is invalid (it was edited or forged without the "
+            "secret)"
+        )
+    if hcount != count or htip != tip:
+        return (
+            "the head anchor does not match the ledger: it is signed for %d entries "
+            "(tip %s...) but the ledger now has %d (tip %s...). A line was removed "
+            "from - or added to - the END of the ledger."
+            % (hcount, htip[:12], count, tip[:12])
+        )
+    return None
+
+
+def head_read(head, secret):
+    """Return (count, tip) from a VALID signed head anchor, else None (absent,
+    malformed, or HMAC-forged)."""
+    try:
+        with open(head, "r", encoding="utf-8") as fh:
+            raw = fh.read().strip()
+    except OSError:
+        return None
+    parts = raw.split("|")
+    if len(parts) != 3 or not parts[0].isdigit():
+        return None
+    count, tip, mac = int(parts[0]), parts[1], parts[2]
+    if not hmac.compare_digest(head_mac(secret, count, tip), mac):
+        return None
+    return (count, tip)
+
+
+def ledger_append(ledger, lock, head, secret, typ, node):
+    """Append one signed, chain-linked event under an exclusive lock, then sign the
+    head anchor to the NEW length+tip. Idempotent per node+type. Tip is re-read
+    under the lock so a concurrent append never forks the chain.
+
+    CONSISTENCY GUARD: refuse to touch a ledger that does not match its signed head
+    (a mismatch means it was truncated/edited since the last signing). Re-signing
+    from a tampered base would LAUNDER the truncation, so on a mismatch we touch
+    nothing and leave it for the gate's head_verify to block. The gate only reaches
+    this (resolve) path AFTER it has already confirmed chain+head consistency, so in
+    normal flow the guard is always satisfied here."""
+    ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    try:
+        lockf = open(lock, "a+", encoding="utf-8")
+    except OSError:
+        return
+    try:
+        fcntl.flock(lockf, fcntl.LOCK_EX)
+        cur_count = 0
+        cur_tip = "genesis"
+        latest = None
+        try:
+            with open(ledger, "r", encoding="utf-8") as fh:
+                for ln in fh:
+                    ln = ln.strip()
+                    if not ln:
+                        continue
+                    cur_count += 1
+                    p = ln.split("|")
+                    cur_tip = p[-1]
+                    if len(p) >= 2 and p[1] == node:
+                        latest = p[0]
+        except OSError:
+            cur_count, cur_tip, latest = 0, "genesis", None
+
+        hv = head_read(head, secret)
+        if hv is not None:
+            consistent = (hv[0] == cur_count and hv[1] == cur_tip)
+        else:
+            consistent = (cur_count == 0)
+        if not consistent:
+            return
+        if latest == typ:
+            return
+
+        mac = ledger_mac(secret, typ, node, ts, cur_tip)
+        try:
+            with open(ledger, "a", encoding="utf-8") as fh:
+                fh.write("%s|%s|%s|%s|%s\n" % (typ, node, ts, cur_tip, mac))
+        except OSError:
+            return
+        head_write(head, secret, cur_count + 1, mac)
+    finally:
+        try:
+            fcntl.flock(lockf, fcntl.LOCK_UN)
+        except OSError:
+            pass
+        lockf.close()
+
+
+# --- read the marker (if any), the ledger, and the manifest ----------------
+# The marker may be ABSENT when the gate ran on the strength of the ledger alone
+# (a signed unresolved arm outlives a removed marker), so its read is guarded.
 covers = []
-for line in marker_raw.splitlines():
-    line = line.split("#", 1)[0].strip()
-    if line:
-        covers.append(line)
+if os.path.exists(MARKER):
+    try:
+        with open(MARKER, "r", encoding="utf-8") as fh:
+            marker_raw = fh.read()
+    except OSError as exc:
+        unreadable("cannot read the pending marker: %s" % exc)
+    for line in marker_raw.splitlines():
+        line = line.split("#", 1)[0].strip()
+        if line:
+            covers.append(line)
 
-if not covers:
-    block(
-        "the pending marker is empty. Write the component token(s) this build "
-        "covers into .figma-fidelity.pending (one per line, e.g. site-footer) "
-        "so the gate can confirm the manifest actually covers what changed."
-    )
+# Level 2: fold the tamper-evident ledger's unresolved arms into the coverage set.
+ledger_unresolved = set()
+if os.path.exists(LEDGER):
+    secret = ledger_secret_read()
+    if secret is None:
+        block(
+            "a Figma-fidelity ledger (.figma-fidelity.ledger) exists but the signing "
+            "secret ~/.claude/.fidelity-secret is missing, so its integrity cannot "
+            "be verified. The secret is generated on the first arm and must persist; "
+            "restore it. If you are deliberately resetting the gate, remove "
+            ".figma-fidelity.ledger as well."
+        )
+    lines, head_raw = ledger_snapshot(LEDGER, LEDGER_HEAD, LEDGER_LOCK)
+    if lines is None:
+        # Existed at the exists() check but vanished before the locked read (a
+        # concurrent clear). Treat as nothing armed rather than crash.
+        lines = []
+    unresolved, tip, count, err = ledger_scan(lines, secret)
+    if err is not None:
+        block(
+            "ledger integrity check failed: %s.\nThe signed arm ledger is the "
+            "tamper-evident record of what must be validated; a broken chain or a bad "
+            "HMAC means an armed node was edited away to skip its pixel check. Restore "
+            "the ledger (git checkout .figma-fidelity.ledger) or genuinely cover the "
+            "node - you cannot edit past this gate." % err
+        )
+    head_err = head_verify(head_raw, secret, count, tip)
+    if head_err is not None:
+        block(
+            "ledger end-anchor check failed: %s.\nThe head anchor exists so that "
+            "deleting the LAST arm line - which leaves an otherwise-valid chain the "
+            "per-line HMACs cannot flag - is still caught. Restore the ledger and its "
+            ".head (git checkout .figma-fidelity.ledger .figma-fidelity.ledger.head) "
+            "or genuinely cover the node; you cannot truncate past this gate." % head_err
+        )
+    ledger_unresolved = unresolved
+
+# The coverage requirement is the UNION of both sources: anything EITHER the marker
+# or the signed ledger says is armed. Deleting a marker line therefore cannot drop
+# a node - the ledger still demands it. Order-stable, de-duplicated.
+required = list(dict.fromkeys(covers + sorted(ledger_unresolved)))
+
+if not required:
+    # Nothing is armed anywhere. Keep the original nudge only when a marker file is
+    # present but empty and the ledger adds nothing; otherwise there is simply
+    # nothing to prove (e.g. the gate ran because a fully-resolved ledger exists).
+    if os.path.exists(MARKER):
+        block(
+            "the pending marker is empty. Write the component token(s) this build "
+            "covers into .figma-fidelity.pending (one per line, e.g. site-footer) "
+            "so the gate can confirm the manifest actually covers what changed."
+        )
+    sys.exit(0)
 
 if not os.path.exists(MANIFEST):
     block(
@@ -290,7 +575,7 @@ def covered(tok, checks):
     )
 
 
-uncovered = [tok for tok in covers if not covered(tok, checks)]
+uncovered = [tok for tok in required if not covered(tok, checks)]
 if uncovered:
     block(
         "the manifest does not cover this build.%s\nMeasure that component "
@@ -522,6 +807,16 @@ if equivalences:
     )
     for e in equivalences:
         out.write("    - %s\n" % e)
+
+# Level 2: the build passed, so every unresolved arm is now genuinely covered.
+# Sign a `resolve` for each (idempotent) so a later run does not re-demand it once
+# the mutable marker is cleared. Only this gate holds the secret, so the agent can
+# never forge these - a covered node is the ONLY thing that produces a resolve.
+if ledger_unresolved:
+    _secret = ledger_secret_read()
+    if _secret:
+        for _node in sorted(ledger_unresolved):
+            ledger_append(LEDGER, LEDGER_LOCK, LEDGER_HEAD, _secret, "resolve", _node)
 
 sys.exit(0)
 PYEOF

@@ -1508,6 +1508,21 @@ if [ -z "$REASON" ]; then
   fi
 fi
 
+# Level 2 (tamper-evident ledger): the Figma-fidelity ledger's signing key
+# ~/.claude/.fidelity-secret is off-limits to the Bash tool. Reading it would let
+# the agent forge signed `resolve` entries and opt out of pixel validation; there
+# is never a legitimate reason for a build to touch it (the arm hook and Stop gate,
+# both HOOK processes, are the only readers). This is DEFENSE IN DEPTH behind the
+# HMAC - tampering is already DETECTED and blocked by the Stop gate - so a plain,
+# quote-surviving basename-substring match is proportionate to the threat model (a
+# lazy self-opt-out, not a determined forger). Jonah, working in his own shell,
+# is not gated by hooks and keeps his manual override.
+if [ -z "$REASON" ]; then
+  if printf '%s' "$CMD" | grep -qF '.fidelity-secret'; then
+    REASON="BLOCKED: ~/.claude/.fidelity-secret is the Figma-fidelity ledger's signing key and is off-limits to the Bash tool. Reading it would let you forge signed ledger entries to opt out of pixel validation, and you never need to touch it. Cover the node with a check in .figma-fidelity.json and the Stop gate signs the ledger itself."
+  fi
+fi
+
 # Legacy model IDs in any command.
 #
 # This used `grep -qP` with a PCRE negative lookahead. BSD grep - which is what

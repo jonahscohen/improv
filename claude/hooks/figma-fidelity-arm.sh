@@ -80,6 +80,8 @@ import re
 import sys
 import time
 import fcntl
+import hashlib
+import hmac
 import tempfile
 
 
@@ -87,6 +89,163 @@ def allow():
     # Arming is a side effect; the Figma tool is ALWAYS allowed. bash prints the
     # allow decision after this process exits, so even a crash here fails open.
     sys.exit(0)
+
+
+# --- Level 2: tamper-evident signed arm ledger -----------------------------
+# The .figma-fidelity.pending marker is mutable; a lazy opt-out deletes a line to
+# skip a node's pixel validation. In ADDITION to the marker, arming appends a
+# signed line to a per-repo hash-chained ledger. The Stop gate verifies the chain
+# and requires coverage of every unresolved `arm` - so deleting the marker line
+# changes nothing (the ledger still demands the check), editing/forging a ledger
+# line breaks its HMAC, and only the gate (which holds the secret) can sign the
+# `resolve` that clears a node. Genuine coverage is the only exit. Full rationale:
+# decision_2026-07-17_fidelity-gate-level2-tamper-evident-ledger.md.
+#
+# Same FAIL-OPEN posture as the marker write: any ledger failure just skips the
+# ledger step and still allows the Figma tool. The secret lives OUTSIDE any repo.
+SECRET_PATH = os.path.expanduser(os.path.join("~", ".claude", ".fidelity-secret"))
+
+
+def ledger_secret_read():
+    """Return the raw secret bytes, or None if absent/empty/unreadable."""
+    try:
+        with open(SECRET_PATH, "rb") as fh:
+            s = fh.read().strip()
+        return s or None
+    except OSError:
+        return None
+
+
+def ledger_secret_ensure():
+    """Generate the secret once (0600, O_EXCL so concurrent arms cannot clobber
+    or double-generate). Returns the secret, or None on failure (fail-open)."""
+    existing = ledger_secret_read()
+    if existing:
+        return existing
+    import secrets as _secrets
+
+    try:
+        os.makedirs(os.path.dirname(SECRET_PATH), exist_ok=True)
+        fd = os.open(SECRET_PATH, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        try:
+            os.write(fd, _secrets.token_hex(32).encode("ascii"))
+        finally:
+            os.close(fd)
+    except FileExistsError:
+        pass  # a concurrent arm created it between our read and our create
+    except OSError:
+        return None
+    return ledger_secret_read()
+
+
+def ledger_mac(secret, typ, node, ts, prev):
+    msg = ("%s|%s|%s|%s" % (typ, node, ts, prev)).encode("utf-8")
+    return hmac.new(secret, msg, hashlib.sha256).hexdigest()
+
+
+def head_mac(secret, count, tip):
+    # Anchors the ledger's LENGTH and TIP so that truncating the end (deleting the
+    # last line, which leaves a still-valid chain prefix) is detectable: the Stop
+    # gate recomputes count+tip and compares to this signed anchor. Unforgeable
+    # without the secret.
+    return hmac.new(
+        secret, ("%d|%s" % (count, tip)).encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+
+
+def head_write(head, secret, count, tip):
+    """Atomically (re)write the signed head anchor. Best effort."""
+    tmp = head + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.write("%d|%s|%s\n" % (count, tip, head_mac(secret, count, tip)))
+        os.replace(tmp, head)
+    except OSError:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
+def head_read(head, secret):
+    """Return (count, tip) from a VALID signed head anchor, else None (absent,
+    malformed, or HMAC-forged). Verifying needs the secret, which the hook holds."""
+    try:
+        with open(head, "r", encoding="utf-8") as fh:
+            raw = fh.read().strip()
+    except OSError:
+        return None
+    parts = raw.split("|")
+    if len(parts) != 3 or not parts[0].isdigit():
+        return None
+    count, tip, mac = int(parts[0]), parts[1], parts[2]
+    if not hmac.compare_digest(head_mac(secret, count, tip), mac):
+        return None
+    return (count, tip)
+
+
+def ledger_append(ledger, lock, head, secret, typ, node):
+    """Append one signed, chain-linked event under an exclusive lock, then sign the
+    head anchor to the NEW length+tip. Idempotent per node+type (a duplicate is a
+    no-op). The tip is re-read under the lock so a concurrent append never forks the
+    chain. Best effort - any OSError is swallowed, and the Figma tool is allowed
+    regardless.
+
+    CONSISTENCY GUARD (this is what makes truncation non-launderable): before doing
+    anything, confirm the current ledger matches its signed head. A mismatch means
+    the ledger was truncated or edited since the last signing - re-signing here would
+    LAUNDER that tamper (an attacker could delete the last line, then trigger any arm
+    to get this hook to re-anchor the head to the shortened ledger). So on a mismatch
+    we touch NOTHING and leave the discrepancy for the fail-closed Stop gate to catch.
+    The head is written ONLY on a genuine append, and only from a consistent base."""
+    ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    try:
+        lockf = open(lock, "a+", encoding="utf-8")
+    except OSError:
+        return
+    try:
+        fcntl.flock(lockf, fcntl.LOCK_EX)
+        cur_count = 0
+        cur_tip = "genesis"
+        latest = None
+        try:
+            with open(ledger, "r", encoding="utf-8") as fh:
+                for ln in fh:
+                    ln = ln.strip()
+                    if not ln:
+                        continue
+                    cur_count += 1
+                    parts = ln.split("|")
+                    cur_tip = parts[-1]
+                    if len(parts) >= 2 and parts[1] == node:
+                        latest = parts[0]
+        except OSError:
+            cur_count, cur_tip, latest = 0, "genesis", None
+
+        hv = head_read(head, secret)
+        if hv is not None:
+            consistent = (hv[0] == cur_count and hv[1] == cur_tip)
+        else:
+            # No valid head is only legitimate for a brand-new (empty) ledger.
+            consistent = (cur_count == 0)
+        if not consistent:
+            return  # tampered (or a rare mid-write crash) - do not launder it
+        if latest == typ:
+            return  # duplicate; the head already matches, nothing to do
+
+        mac = ledger_mac(secret, typ, node, ts, cur_tip)
+        try:
+            with open(ledger, "a", encoding="utf-8") as fh:
+                fh.write("%s|%s|%s|%s|%s\n" % (typ, node, ts, cur_tip, mac))
+        except OSError:
+            return
+        head_write(head, secret, cur_count + 1, mac)
+    finally:
+        try:
+            fcntl.flock(lockf, fcntl.LOCK_UN)
+        except OSError:
+            pass
+        lockf.close()
 
 
 ROOT = sys.argv[1]
@@ -128,6 +287,9 @@ MARKER = os.path.join(ROOT, ".figma-fidelity.pending")
 MANIFEST = os.path.join(ROOT, ".figma-fidelity.json")
 MEASURING = os.path.join(ROOT, ".figma-fidelity.measuring")
 LOCK = os.path.join(ROOT, ".figma-fidelity.pending.lock")
+LEDGER = os.path.join(ROOT, ".figma-fidelity.ledger")
+LEDGER_LOCK = os.path.join(ROOT, ".figma-fidelity.ledger.lock")
+LEDGER_HEAD = os.path.join(ROOT, ".figma-fidelity.ledger.head")
 
 # Scope: only arm where the fidelity gate is already in use in this repo. Checked
 # BEFORE the lock file is created, so an unrelated repo gets nothing at all.
@@ -189,6 +351,18 @@ finally:
     except OSError:
         pass
     lockf.close()
+
+# Level 2: record the same arm in the tamper-evident signed ledger. Runs after the
+# marker write (its own lock, released above) so the two never nest. Best effort:
+# any failure here is swallowed and the Figma tool is still allowed. The marker
+# already carries the arm; the ledger is the tamper-evident cross-check the Stop
+# gate verifies.
+try:
+    _secret = ledger_secret_ensure()
+    if _secret:
+        ledger_append(LEDGER, LEDGER_LOCK, LEDGER_HEAD, _secret, "arm", token)
+except Exception:
+    pass
 
 allow()
 PYEOF
