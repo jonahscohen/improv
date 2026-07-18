@@ -45,3 +45,20 @@ the atomic-write pattern the arm hook already uses for the marker.
 Made sure my Level-2 commit stages ONLY my four files (figma-fidelity-arm.sh,
 figma-fidelity-stop.sh, bash-guard.sh, test-figma-ledger.sh) and NOT the concurrently
 edited verify-before-done.sh, so I don't clobber the other session's in-progress edit.
+(Level 2 committed clean as ac844f59; bash-guard split so only my secret-block hunk landed,
+their session-scoping hunk left unstaged.)
+
+## Self-analysis: I re-fought MEMORY.md and committed a torn state (my error)
+The code commit was clean. But I then tried to index my two Level-2 beats in the SHARED
+MEMORY.md, which the concurrent session was actively rewriting (a beats archival: moving old
+index lines into MEMORY-archive.md). It clobbered my edit ONCE; I re-tried anyway (assuming it
+had "settled" from a single observation), and the second time my `git add` captured THEIR
+in-flight churn - my commit 1ba104b3 has their session-keyed line + 5 archival removals under my
+message, and my 2 lines are absent. NO DATA LOSS (all 5 removed lines are in the working-tree
+MEMORY-archive.md; all beat files exist; the archive half lands when they commit), but the
+history is muddied and my beats are unindexed.
+**Failure mode:** treating a shared file under active concurrent modification like a private
+one, and inferring "settled" from one signal. **Rule:** never edit+commit a contended shared
+file (MEMORY.md, an index) while another session is rewriting it - the durable record is the
+uniquely-named beat FILE; the index reconciles when the contender finishes. I should have
+stopped after the first clobber (I had decided to, then reversed - that reversal was the mistake).
