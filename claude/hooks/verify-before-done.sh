@@ -539,7 +539,19 @@ if tool == "Bash":
     #     (.claude/memory/, MEMORY.md, hooks, eval fixtures) and CODE_EXTS.
     import re as _vre
     deploy_indicators = ["node build", "npm run build", "npx ", "make "]
-    file_write_indicators = ["cp ", "mv ", "> ", ">> ", "tee ", "sed -i"]
+    # Write VERBS stay SUBSTRING matches on the raw command - recall is never worth losing
+    # (feedback_hooks_prefer_false_positives): `bash -lc "cp ..."`, `\cp`, `gsed -i` all still
+    # arm. The ONE indicator refined is the REDIRECT. The old "> " / ">> " substrings also
+    # matched the "-> " ARROW, so any command echoing an arrow that is not caught by the
+    # read-only prefix list (a for/while/printf compound) falsely armed the gate (Jonah
+    # 2026-07-18: the hook fired "take a screenshot" on plain grep/for/echo diagnostics). A
+    # real redirect operator is NEVER preceded by a dash, so require a "> "/">> " that is not
+    # part of "->". This keeps every real redirect the old code caught (> file, 2> file,
+    # >> file) and still ignores fd-dup like 2>&1 (no trailing space), dropping only the arrow.
+    write_verb_indicators = ["cp ", "mv ", "tee ", "sed -i"]
+
+    def _has_redirect(s):
+        return bool(_vre.search(r"(?<!-)>>? ", s))
 
     def arm_and_report(kind="code"):
         # kind MUST be "visual" when the touched file(s) render UI. A Bash write to a
@@ -583,7 +595,7 @@ if tool == "Bash":
         arm_and_report("visual" if (_names_visual or project_has_ui(effective_dir(cmd, cwd)))
                        else "code")
 
-    if any(w in cmd for w in file_write_indicators):
+    if _has_redirect(cmd) or any(w in cmd for w in write_verb_indicators):
         # Extract tokens that look like a filename (end in a short dot-extension) and
         # arm iff ANY is a CODE file. A command referencing only non-code files (a .md
         # beat/notes/doc, a .txt) does NOT arm - that is the re-arm bug being fixed.

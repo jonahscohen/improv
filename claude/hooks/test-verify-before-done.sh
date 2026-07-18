@@ -217,6 +217,27 @@ assert_arms     "npm run build still arms"          "npm run build"
 # spurious prompt when the actual write target is markdown (feedback_hooks_prefer_false_positives).
 assert_arms     "code file as a read source still arms (preferred FP)" "cp src/foo.ts README.md"
 
+echo ""
+echo "===== ARM-SIDE: the -> ARROW must not read as a redirect (2026-07-18) ====="
+# The old "> " / ">> " substrings also matched the "-> " ARROW, so a for/while/printf compound
+# (not in the read-only prefix list) that echoed an arrow falsely armed the gate (Jonah
+# 2026-07-18). The redirect indicator now requires a "> "/">> " NOT preceded by a dash. Write
+# VERBS stay substring matches, so recall on bash -c / \cp / gsed is untouched - a Codex review
+# (2026-07-18) caught an over-engineered de-quote + command-position attempt that had broken
+# exactly those, and the minimal dash-guarded redirect is the fold. Negative control: rows 1-3
+# armed under the old "> " substring; dropping the (?<!-) guard would re-break them.
+assert_no_rearm "for-loop echoing a -> arrow does not arm"           'for h in a.sh b.sh; do echo "$h -> x"; done'
+assert_no_rearm "while-loop echoing a -> .css in prose does not arm" 'while read l; do echo "$l -> done.css"; done'
+assert_no_rearm "printf of an arrow between .tsx names does not arm" 'printf "%s -> %s" a.tsx b.tsx'
+assert_no_rearm "fd-dup 2>&1 (no space) is not a file redirect"      'node script.js 2>&1'
+# Recall guards - write verbs stay SUBSTRING matches, so all of these must STILL arm. The
+# de-quote attempt Codex rejected broke the bash -c / gsed rows; keep them red-on-regression.
+assert_arms     "tee to a QUOTED visual filename still arms"         'tee "src/App.tsx" < input'
+assert_arms     "cp of QUOTED css files still arms"                  "cp 'a.css' 'b.css'"
+assert_arms     "cp wrapped in bash -lc still arms"                  'bash -lc "cp src/a.ts dst/App.tsx"'
+assert_arms     "gsed -i on a css still arms"                        'gsed -i s/a/b/ src/app.css'
+assert_arms     "a real > redirect to a code file still arms"        'node gen.js > src/out.css'
+
 # Headline: browser verification clears the flag, a subsequent .md-only write
 # must NOT re-arm it (the exact bug).
 rm -f "$VFLAG"
