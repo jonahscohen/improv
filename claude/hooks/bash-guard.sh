@@ -482,6 +482,968 @@ command_slices() { _slice_scan "$1" "${2:-}" slices; }
 # Every file the shell itself opens for writing via > or >>, quotes peeled.
 redirect_targets() { _slice_scan '' '' redirects; }
 
+# ---------------------------------------------------------------------------
+# Figma-fidelity opt-out protection (Level 1 hardening, 2026-07-17 Jonah).
+#
+# _figma_marker_verdict prints "BLOCK" when a command would delete, move,
+# truncate, edit, ALIAS (symlink/hardlink), or redirect-over the arming record
+# .figma-fidelity.pending. The ONLY sanctioned way past the gate is a covering
+# check in .figma-fidelity.json (the Stop gate then rm's the marker itself).
+#
+# It replaces a literal-substring grep that a real Codex review (2026-07-17)
+# showed was BYPASSABLE and simultaneously OVER-BLOCKING:
+#   - bypass: variable/quote/backslash indirection (`p=marker; rm "$p"`,
+#     `rm .figma-fidelity'.pending'`, `rm .figma-fidelity\.pending`), symlink /
+#     hardlink aliasing (`ln -s marker p; > p`), redirect forms the CMD_CODE
+#     regex missed (`>|`, quoted, `$PWD/`, heredoc `cat <<EOF > marker`), and
+#     unlisted mutators (unlink, install, find -delete, ed, ex, tee, dd, cp).
+#   - over-block: read-only `sed -n '1,5p' marker`, and different files
+#     (foo.figma-fidelity.pending, .figma-fidelity.pending.bak).
+#
+# How it closes them (see the beat session_2026-07-17_gate-hardening-*):
+#   - a self-contained, quote/escape/heredoc-aware walk (its OWN parser, so the
+#     shared command_slices/redirect_targets other gates rely on are untouched);
+#   - resolves inline VAR=value assignments and $PWD/$HOME before matching;
+#   - a target matches by BASENAME == .figma-fidelity.pending OR by
+#     realpath/os.path.samefile against the real marker - the single highest-
+#     value fix, killing symlink, hardlink, path-prefix and basename-robustness
+#     at once (a raw substring never matches, so the near-miss files above pass);
+#   - `sed` is a mutator ONLY with an in-place flag (-i/-i.bak/--in-place), so a
+#     read-only sed passes; redirect writes are handled by the redirect walk;
+#   - for a MUTATING/redirect target that still holds an unresolvable $, `, or
+#     $( , DENY conservatively but ONLY while a build is actually armed (marker
+#     file present) - so an unrelated `rm "$TMP"` in an unarmed repo is allowed.
+# Reads (cat/grep/head/tail, sed without -i) name no mutating target and stay
+# allowed; .figma-fidelity.json and .figma-fidelity.measuring are never the
+# protected marker and stay allowed. Arbitrary python/perl inline writes remain
+# unparseable from command text - an ACCEPTED residual closed separately by a
+# Level-2 architectural change; do not try to fully parse python here.
+_figma_marker_verdict() {
+  FIGMA_CMD="$CMD" FIGMA_MARKER="$_FIGMA_MARKER" python3 <<'PYEOF' 2>/dev/null
+import os, re, glob as _glob, fnmatch
+
+cmd    = os.environ.get("FIGMA_CMD", "")
+marker = os.environ.get("FIGMA_MARKER", "")
+MARKER_BASE = ".figma-fidelity.pending"
+marker_exists = bool(marker) and os.path.exists(marker)
+
+
+def _abs(p):
+    """Absolute, symlink-resolved path of an operand, relative to cwd. realpath
+    (not normpath) is REQUIRED: macOS /var is a symlink to /private/var, and bash
+    pwd / git rev-parse hand us the /var form while Python getcwd() returns the
+    resolved form - a plain normpath would make the two disagree and the marker
+    would never match. realpath also resolves a symlinked repo path, and works on
+    a not-yet-existing marker (the existing prefix is resolved, the tail kept)."""
+    p = os.path.expanduser(p)
+    if not os.path.isabs(p):
+        p = os.path.join(os.getcwd(), p)
+    return os.path.realpath(p)
+
+
+# OUR marker is a specific path (git-root/.figma-fidelity.pending), not any file
+# that merely shares the basename - so `rm /other-repo/.figma-fidelity.pending`
+# is NOT us and stays allowed. Matching is path-equality (works whether or not
+# the file exists yet) OR samefile (catches a symlink/hardlink alias when armed).
+marker_abs = _abs(marker) if marker else ""
+marker_dir_abs = os.path.dirname(marker_abs) if marker_abs else ""
+
+SEPS = ";&|\n(){}"
+# Words that can precede the real command without changing what it is. Includes
+# the zsh precommand modifiers noglob / nocorrect / builtin (this machine is zsh),
+# without which `noglob rm marker` read its head as `noglob` and sailed through.
+PREFIX = {"sudo", "env", "command", "exec", "time", "nice", "nohup", "xargs",
+          "then", "do", "else", "elif", "if", "while", "until",
+          "timeout", "setsid", "stdbuf", "noglob", "nocorrect", "builtin"}
+NUMARG = re.compile(r"^\d+(\.\d+)?[smhd]?$")
+WRAPPER_VALUE_FLAGS = {
+    "timeout": {"-s", "--signal", "-k", "--kill-after"},
+    "nice":    {"-n", "--adjustment"},
+    "env":     {"-u", "--unset", "-C", "--chdir"},
+    "xargs":   {"-n", "-P", "-I", "-L", "-d", "-E", "-s", "-a"},
+    "sudo":    {"-u", "-g", "-C", "-p", "-U", "-t", "-r"},
+    "stdbuf":  {"-i", "-o", "-e"},
+}
+VAR_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+ASSIGN_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)=(.*)$", re.S)
+ASSIGN_HEADS = {"export", "declare", "local", "typeset", "readonly"}
+# Delete / edit-in-place: every non-flag operand is the thing acted on. Includes
+# editors that open a NAMED file for writing (vim/vi/nano/emacs/ed/ex) and
+# sqlite3 (opens its db arg read-write) - reading the marker still goes through
+# cat/grep/head/tail/sed-n, which are NOT here.
+MUT_EDIT = {"rm", "unlink", "shred", "truncate", "ed", "ex", "tee", "sponge", "patch",
+            "vim", "vi", "view", "nano", "pico", "emacs", "sqlite3"}
+# Rename / link: every operand matters (a source is renamed-away or aliased).
+MUT_RENAME_LINK = {"mv", "ln", "link", "rename", "mmv"}
+# Copy: only the DESTINATION (last operand) is written; sources are reads. A
+# link-flag (cp -l / -s, rsync --link-dest) also aliases the source.
+MUT_COPY = {"cp", "install", "rsync"}
+# A short flag bundle carrying r/R, i.e. a recursive delete: -r, -R, -rf, -fr.
+RECURSIVE_RE = re.compile(r"^-[a-zA-Z]*[rR]")
+# In-place edit flag for sed/perl/ruby: -i, -i.bak, -pi, -ni, --in-place, and
+# numeric bundles like perl -0777pi (digits allowed inside the bundle).
+INPLACE_RE = re.compile(r"^-[0-9A-Za-z]*i")
+
+cmd = re.sub(r"\\\n", " ", cmd)
+
+# Strip heredoc BODIES but KEEP the introducer line - a redirect can live there
+# (`cat <<EOF > marker`), and eating the whole block would hide it. group(3) is
+# the rest of the introducer line, group(4) the body - captured because a heredoc
+# can feed a destructive xargs its stdin (`xargs rm <<EOF\nmarker\nEOF`).
+heredoc_bodies = []
+def _hd(m):
+    heredoc_bodies.append(m.group(4))
+    return m.group(3)
+cmd = re.sub(r"<<-?\s*(['\"]?)(\w+)\1([^\n]*)\n(.*?)^\2[ \t]*$", _hd, cmd,
+             flags=re.S | re.M)
+
+
+def _dollar(w, i, out, varmap):
+    """w[i] == '$'. Expand $VAR / ${VAR} from known assignments. Returns
+    (next_index, unresolved_bool); appends the resolved text (or the literal
+    token, when unknown) to out."""
+    n = len(w)
+    if i + 1 < n and w[i + 1] == "{":
+        close = w.find("}", i + 2)
+        if close != -1:
+            nm = w[i + 2:close]
+            if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", nm) and nm in varmap:
+                out.append(varmap[nm]); return close + 1, False
+            out.append(w[i:close + 1]); return close + 1, True
+        out.append("$"); return i + 1, True
+    m = VAR_RE.match(w, i + 1)
+    if m and m.group(0) in varmap:
+        out.append(varmap[m.group(0)]); return m.end(), False
+    out.append("$"); return i + 1, True
+
+
+def normalize_word(w, varmap):
+    """Peel quotes + backslash escapes and expand known vars, returning
+    (literal, unresolved, has_glob, has_brace). unresolved is True when a $,
+    $(...) or backtick could not be resolved. has_glob/has_brace are True only
+    when a glob (*?[) / brace ({}) metachar appears UNQUOTED and UNESCAPED - so a
+    quoted or escaped `*`/`{` is a literal filename, not an expansion, and the
+    guard will not glob/brace-expand it (that was a near-miss false block)."""
+    out = []
+    i, n = 0, len(w)
+    sq = dq = False
+    unresolved = has_glob = has_brace = False
+    while i < n:
+        c = w[i]
+        if sq:
+            if c == "'":
+                sq = False
+            else:
+                out.append(c)
+            i += 1; continue
+        if dq:
+            if c == '"':
+                dq = False; i += 1; continue
+            if c == "\\" and i + 1 < n and w[i + 1] in '"\\$`':
+                out.append(w[i + 1]); i += 2; continue
+            if c == "`":
+                unresolved = True; out.append(c); i += 1; continue
+            if c == "$":
+                ni, ur = _dollar(w, i, out, varmap)
+                unresolved = unresolved or ur; i = ni; continue
+            out.append(c); i += 1; continue
+        if c == "'":
+            sq = True; i += 1; continue
+        if c == '"':
+            dq = True; i += 1; continue
+        if c == "\\" and i + 1 < n:
+            out.append(w[i + 1]); i += 2; continue
+        if c == "`":
+            unresolved = True; out.append(c); i += 1; continue
+        if c == "$":
+            ni, ur = _dollar(w, i, out, varmap)
+            unresolved = unresolved or ur; i = ni; continue
+        if c in "*?[":
+            has_glob = True
+        elif c in "{}":
+            has_brace = True
+        out.append(c); i += 1
+    return "".join(out), unresolved, has_glob, has_brace
+
+
+def _words(seg):
+    """Split a segment into words at UNQUOTED whitespace, keeping quotes and
+    backslash escapes in the word (normalize_word peels them later)."""
+    out, cur, i, n = [], "", 0, len(seg)
+    sq = dq = False
+    while i < n:
+        c = seg[i]
+        if sq:
+            cur += c
+            if c == "'":
+                sq = False
+        elif dq:
+            if c == "\\" and i + 1 < n:
+                cur += seg[i:i + 2]; i += 2; continue
+            cur += c
+            if c == '"':
+                dq = False
+        elif c == "'":
+            sq = True; cur += c
+        elif c == '"':
+            dq = True; cur += c
+        elif c == "\\" and i + 1 < n:
+            cur += seg[i:i + 2]; i += 2; continue
+        elif c in " \t\n":
+            if cur:
+                out.append(cur); cur = ""
+        else:
+            cur += c
+        i += 1
+    if cur:
+        out.append(cur)
+    return out
+
+
+def _subst(t, open_idx):
+    """t[open_idx] == '('. Return (index_after_close, inner), quote-aware."""
+    depth, i, n = 0, open_idx, len(t)
+    sq = dq = False
+    while i < n:
+        c = t[i]
+        if sq:
+            if c == "'":
+                sq = False
+        elif dq:
+            if c == "\\" and i + 1 < n:
+                i += 2; continue
+            if c == '"':
+                dq = False
+        elif c == "'":
+            sq = True
+        elif c == '"':
+            dq = True
+        elif c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth == 0:
+                return i + 1, t[open_idx + 1:i]
+        i += 1
+    return n, t[open_idx + 1:]
+
+
+def _redirect_target(t, i, n):
+    """t[i] == '>'. Return (index_after_target, raw_target). raw_target keeps its
+    quotes / backslashes / $ so normalize_word resolves it the same way as a
+    command operand. Covers >>, and the clobber-override forms >| (bash) and
+    >! / >>! (zsh - this machine's shell is zsh)."""
+    j = i + 1
+    if j < n and t[j] == ">":
+        j += 1
+    if j < n and t[j] in "|!":
+        j += 1
+    # `>&`: `>&1` / `>&-` dupe or close an fd (no file); `>& file` / `>&file`
+    # redirect BOTH stdout+stderr to a FILE. Peek past the & to tell them apart.
+    if j < n and t[j] == "&":
+        nxt = t[j + 1] if j + 1 < n else ""
+        if nxt.isdigit() or nxt == "-":
+            k = j + 1
+            while k < n and (t[k].isdigit() or t[k] == "-"):
+                k += 1
+            return k, ""                 # fd dupe / close - not a file open
+        j += 1                           # `>& file` - read the filename after &
+    k = j
+    while k < n and t[k] in " \t":
+        k += 1
+    raw = ""
+    sq = dq = False
+    while k < n:
+        ch = t[k]
+        if sq:
+            raw += ch
+            if ch == "'":
+                sq = False
+            k += 1; continue
+        if dq:
+            raw += ch
+            if ch == "\\" and k + 1 < n:
+                raw += t[k + 1]; k += 2; continue
+            if ch == '"':
+                dq = False
+            k += 1; continue
+        if ch == "'":
+            sq = True; raw += ch; k += 1; continue
+        if ch == '"':
+            dq = True; raw += ch; k += 1; continue
+        if ch == "\\" and k + 1 < n:
+            raw += t[k:k + 2]; k += 2; continue
+        if ch in " \t" or ch in SEPS or ch in "<>":
+            break
+        raw += ch; k += 1
+    if not raw or raw.startswith("&"):
+        return (k if raw else j), ""
+    return k, raw
+
+
+def split_segments(t):
+    """Split at UNQUOTED separators. Returns (segments, nested_substitutions,
+    redirect_targets). Redirects are recorded during the same quote-aware walk."""
+    segs, nested, reds, cur = [], [], [], ""
+    i, n = 0, len(t)
+    sq = dq = False
+    test_depth = 0
+    while i < n:
+        c = t[i]
+        if sq:
+            cur += c
+            if c == "'":
+                sq = False
+            i += 1; continue
+        if c == "$" and i + 1 < n and t[i + 1] == "(":
+            j, inner = _subst(t, i + 1)
+            cur += t[i:j]; nested.append(inner); i = j; continue
+        if c == "`":
+            j = t.find("`", i + 1)
+            if j < 0:
+                j = n
+            nested.append(t[i + 1:j]); cur += t[i:j + 1]; i = j + 1; continue
+        if dq:
+            if c == "\\" and i + 1 < n:
+                cur += t[i:i + 2]; i += 2; continue
+            cur += c
+            if c == '"':
+                dq = False
+            i += 1; continue
+        if c == "'":
+            sq = True; cur += c; i += 1; continue
+        if c == '"':
+            dq = True; cur += c; i += 1; continue
+        if c == "\\" and i + 1 < n:
+            cur += t[i:i + 2]; i += 2; continue
+        if c == "[" and i + 1 < n and t[i + 1] == "[":
+            test_depth += 1; cur += t[i:i + 2]; i += 2; continue
+        if c == "]" and i + 1 < n and t[i + 1] == "]" and test_depth:
+            test_depth -= 1; cur += t[i:i + 2]; i += 2; continue
+        if c == ">" and not test_depth:
+            k, tgt = _redirect_target(t, i, n)
+            if tgt:
+                reds.append(tgt)
+            i = k; continue
+        # `{` / `}` separate a GROUP COMMAND (`{ rm marker; }`) only when standalone
+        # (space/tab around them). Attached to a word they are brace EXPANSION
+        # (`marker{,.bak}`, `.figma-fidelity.{pending,json}`) and must stay in the
+        # word so brace_expand can enumerate it - splitting there was a real bypass.
+        if c == "{" and not test_depth:
+            if (i + 1 >= n or t[i + 1] in " \t\n") and (not cur or cur[-1] in " \t"):
+                segs.append(cur); cur = ""; i += 1; continue
+            cur += c; i += 1; continue
+        if c == "}" and not test_depth:
+            if not cur or cur[-1] in " \t":
+                segs.append(cur); cur = ""; i += 1; continue
+            cur += c; i += 1; continue
+        if c in SEPS:
+            segs.append(cur); cur = ""; i += 1; continue
+        cur += c; i += 1
+    segs.append(cur)
+    return [s for s in segs if s.strip()], nested, reds
+
+
+def head_and_args(words, varmap):
+    """The command a segment runs (past wrappers, VAR= prefixes and wrapper
+    value-flags), and the words after it. Resolves a $-obfuscated head via the
+    known assignments (`C=rm; $C marker`)."""
+    seen_prefix = False
+    cur_prefix = ""
+    skip_next = False
+    idx, n = 0, len(words)
+    while idx < n:
+        w = words[idx]
+        if skip_next:
+            skip_next = False; idx += 1; continue
+        if ASSIGN_RE.match(w):
+            idx += 1; continue
+        if w.startswith("-"):
+            if seen_prefix and "=" not in w and w in WRAPPER_VALUE_FLAGS.get(cur_prefix, ()):
+                skip_next = True
+            idx += 1; continue
+        if seen_prefix and NUMARG.match(w):
+            idx += 1; continue
+        lit, _, _, _ = normalize_word(w, varmap)
+        base = os.path.basename(lit)
+        if base in PREFIX:
+            seen_prefix = True; cur_prefix = base; idx += 1; continue
+        return base, words[idx + 1:]
+    return "", []
+
+
+def record_assignments(words, varmap):
+    """Record standalone VAR=value (and export/declare/... VAR=value) so a later
+    `$VAR` target resolves by name."""
+    if not words:
+        return
+    start = 0
+    lit0, _, _, _ = normalize_word(words[0], varmap)
+    if os.path.basename(lit0) in ASSIGN_HEADS:
+        start = 1
+    for w in words[start:]:
+        m = ASSIGN_RE.match(w)
+        if not m:
+            break
+        nm, rawval = m.group(1), m.group(2)
+        val, ur, _, _ = normalize_word(rawval, varmap)
+        if not ur:
+            varmap[nm] = val
+
+
+def _value_of(args, names):
+    """Value of a `--opt VALUE` / `-o VALUE` / `--opt=VALUE` / `-oVALUE` flag."""
+    for idx, a in enumerate(args):
+        for nm in names:
+            if a == nm:
+                return args[idx + 1] if idx + 1 < len(args) else None
+            if nm.startswith("--") and a.startswith(nm + "="):
+                return a[len(nm) + 1:]
+            if not nm.startswith("--") and len(nm) == 2 and a.startswith(nm) and len(a) > 2:
+                return a[2:]
+    return None
+
+
+def classify(base, args):
+    """Return (write_targets, tree_targets, mutating). write_targets are operands
+    written / edited / aliased. tree_targets are directories or search-roots a
+    recursive delete would take the marker down with. mutating is False when the
+    command does not write at all (so a $-obfuscated NON-mutator is not blocked)."""
+    flags = [a for a in args if a.startswith("-")]
+    ops   = [a for a in args if not a.startswith("-")]
+
+    def has(*names):
+        return any(a in names for a in args)
+
+    if base in MUT_EDIT:
+        recursive = base == "rm" and any(
+            RECURSIVE_RE.match(f) or f == "--recursive" for f in flags)
+        return ops, (ops if recursive else []), True
+    if base in MUT_RENAME_LINK:                       # mv / ln / link - all operands
+        return ops, [], True
+    if base in MUT_COPY:                              # cp / install / rsync
+        # Recompute operands skipping VALUE-flags, so a flag argument that names a
+        # path (`--exclude .figma-fidelity.pending`, `-m 644`) is not misread as a
+        # source/dest operand.
+        VALFLAGS = {
+            "cp":      {"-t", "--target-directory", "-S", "--suffix"},
+            "install": {"-t", "--target-directory", "-m", "--mode", "-o", "--owner",
+                        "-g", "--group", "-S", "--suffix"},
+            "rsync":   {"--exclude", "--include", "--exclude-from", "--include-from",
+                        "--files-from", "--filter", "-f", "--compare-dest", "--copy-dest",
+                        "--link-dest", "--backup-dir", "--suffix", "--chmod", "--chown",
+                        "--rsync-path", "-e", "--rsh", "--out-format", "--log-file",
+                        "--bwlimit", "--partial-dir", "--temp-dir", "-T",
+                        "--max-size", "--min-size", "--block-size", "-B"},
+        }.get(base, set())
+        ops, _skip = [], False
+        for a in args:
+            if _skip:
+                _skip = False; continue
+            if a.startswith("-"):
+                if a in VALFLAGS:
+                    _skip = True
+                continue
+            ops.append(a)
+        tdir = _value_of(args, ("-t", "--target-directory"))
+        if tdir is not None:
+            dest, srcs = tdir, ops
+        else:
+            dest = ops[-1] if ops else None
+            srcs = ops[:-1] if len(ops) > 1 else []
+        writes = []
+        if dest is not None:
+            writes.append(dest)
+            # copying a file INTO a directory dest overwrites dest/basename(src) -
+            # `cp /other/.figma-fidelity.pending .` writes ./.figma-fidelity.pending.
+            dlit, dur, _, _ = normalize_word(dest, varmap)
+            if not dur and dlit:
+                for s in srcs:
+                    slit, sur, _, _ = normalize_word(s, varmap)
+                    if not sur and slit:
+                        writes.append(os.path.join(dlit, os.path.basename(slit.rstrip("/"))))
+        aliased = has("--link", "--symbolic-link") \
+            or _value_of(args, ("--link-dest",)) is not None
+        if base == "cp":                              # cp -l/-s, incl. bundled -al/-as
+            aliased = aliased or any(
+                not f.startswith("--") and ("l" in f[1:] or "s" in f[1:]) for f in flags)
+        if aliased:                                   # aliases the SOURCE
+            writes += srcs
+        trees = []
+        if base == "rsync":
+            if has("--remove-source-files"):          # rsync deletes each source
+                writes += srcs
+            if any(a.startswith("--delete") for a in flags) and dest is not None:
+                # ...unless the marker is explicitly --exclude'd from the delete.
+                excl = []
+                for k, a in enumerate(args):
+                    m = re.match(r"^--exclude=(.*)$", a, re.S)
+                    if m:
+                        excl.append(m.group(1))
+                    elif a == "--exclude" and k + 1 < len(args):
+                        excl.append(args[k + 1])
+                mb = os.path.basename(marker_abs) if marker_abs else MARKER_BASE
+                excluded = any(fnmatch.fnmatch(mb, os.path.basename(normalize_word(e, varmap)[0]))
+                               for e in excl)
+                # --delete-excluded INVERTS the exclude: excluded files (the marker)
+                # are the ones deleted on the receiver, so an exclude no longer protects.
+                if not excluded or has("--delete-excluded"):
+                    trees.append(dest)                # rsync prunes extraneous dest files
+        return writes, trees, True
+    if base == "sed":
+        if any(INPLACE_RE.match(f) or f.startswith("--in-place") for f in flags):
+            return ops, [], True
+        return [], [], False                          # read-only sed
+    if base in ("perl", "ruby"):
+        if any(INPLACE_RE.match(f) for f in flags):   # -pi / -i in-place edit
+            return ops, [], True
+        return [], [], False                          # arbitrary inline = residual
+    if base in ("awk", "gawk", "mawk"):
+        if "inplace" in ops or _value_of(args, ("-i", "--include")) == "inplace":
+            return ops, [], True
+        return [], [], False
+    if base == "sort":
+        out = _value_of(args, ("-o", "--output"))
+        return ([out] if out else []), [], True
+    if base in ("tar", "bsdtar", "gtar"):
+        # --remove-files DELETES each named source file after archiving it. (Plain
+        # extraction that overwrites from archive CONTENTS is the accepted residual.)
+        return (ops if has("--remove-files") else []), [], has("--remove-files")
+    if base == "zip":
+        # `zip -m`/--move deletes the named FILESYSTEM files after adding them. (`zip
+        # -d` deletes an archive ENTRY, not the filesystem marker - not a mutation
+        # of the marker file, so it is NOT blocked.)
+        moving = has("-m", "--move") or any(
+            not f.startswith("--") and "m" in f[1:] for f in flags)
+        return (ops if moving else []), [], moving
+    if base == "dd":
+        return [m.group(1) for a in ops
+                for m in (re.match(r"^of=(.*)$", a, re.S),) if m], [], True
+    if base == "find":
+        has_delete = has("-delete")
+        # inspect the -exec/-ok payload head + whether it uses the {} placeholder.
+        exec_head, exec_has_ph, execing = None, False, False
+        for a in args:
+            if a in ("-exec", "-execdir", "-ok", "-okdir"):
+                execing, exec_head = True, None
+                continue
+            if execing:
+                if a.strip("'\"\\") in (";", "+"):
+                    execing = False
+                    continue
+                if exec_head is None:
+                    exec_head = os.path.basename(normalize_word(a, varmap)[0])
+                if "{}" in a:
+                    exec_has_ph = True
+        if not has_delete and exec_head is None:
+            return [], [], False
+        # The action mutates MATCHED files iff -delete, or -exec runs a destructive
+        # command on the {} placeholder - including cp/install/ln (`-exec cp /dev/null
+        # {}` overwrites, `-exec ln ... {}` aliases). A read exec (`-exec cat {}`) is
+        # NOT that; a literal marker inside ANY -exec is caught by payloads().
+        EXEC_DEL = {"rm", "unlink", "shred", "truncate", "mv", "ed", "ex", "tee",
+                    "sponge", "cp", "install", "ln", "link"}
+        if not (has_delete or (exec_head in EXEC_DEL and exec_has_ph)):
+            return [], [], True
+        # A find predicate that SELECTS the marker (positive -name/-path match,
+        # negated pattern that does NOT exclude it, or no filter under a root that
+        # contains it) means the destructive action hits the marker.
+        return ([marker] if _find_matches_marker(args) else []), [], True
+    if base == "git":
+        sub, rest = None, []
+        for k, a in enumerate(args):
+            if a.startswith("-"):
+                continue
+            sub, rest = a, args[k + 1:]
+            break
+        if sub in ("rm", "mv"):
+            return [a for a in rest if not a.startswith("-")], [], True
+        if sub == "clean":
+            forced = has("-f", "--force") or any(
+                not f.startswith("--") and "f" in f[1:] for f in flags)
+            # -n/--dry-run only PRINTS what would go, even alongside -f: not a delete.
+            dry = has("-n", "--dry-run") or any(
+                not f.startswith("--") and "n" in f[1:] for f in flags)
+            if forced and not dry:                    # removes UNTRACKED files (the marker is one)
+                paths = [a for a in rest if not a.startswith("-")]
+                return paths, (paths if paths else [marker_dir_abs or "."]), True
+        return [], [], False
+    return [], [], False
+
+
+def payloads(seg, head):
+    """Args a segment EXECUTES as shell code (eval / bash -c / env -S / find -exec)."""
+    # `env -S 'rm marker'` / `env --split-string=...` splits the string and runs it.
+    # env is a PREFIX word, so head resolves past it - detect the -S form directly.
+    ws = _words(seg)
+    saw_env = False
+    for idx, w in enumerate(ws):
+        b = os.path.basename(normalize_word(w, varmap)[0])
+        if not saw_env:
+            if b == "env":
+                saw_env = True
+            elif b in PREFIX or w.startswith("-") or ASSIGN_RE.match(w):
+                continue
+            else:
+                break
+        else:
+            m = re.match(r"^(?:-S|--split-string)=?(.*)$", w, re.S)
+            if m:
+                if m.group(1):
+                    return [normalize_word(m.group(1), varmap)[0]]
+                if idx + 1 < len(ws):
+                    return [normalize_word(ws[idx + 1], varmap)[0]]
+                return []
+            if not w.startswith("-"):
+                break
+    if head == "eval":
+        # eval CONCATENATES all its args (quotes stripped) and runs the result, so
+        # `eval 'rm' marker` and `eval "rm marker"` both run `rm marker`. Analyze
+        # the whole dequoted remainder - not only the quoted spans (which dropped
+        # the unquoted companion operand).
+        rest = re.sub(r"^.*?\beval\b\s*", "", seg, count=1, flags=re.S)
+        if not rest.strip() or rest == seg:
+            return []
+        return [re.sub(r"['\"]", "", rest)]
+    if head in ("bash", "sh", "zsh", "dash") \
+            and re.search(r"(^|\s)-[a-zA-Z]*c[a-zA-Z]*(\s|$)", seg):
+        # ONLY the single word after -c is the executed command string; any further
+        # args are positional params ($0, $1, ...) and are NOT executed, so they must
+        # not be analyzed (`bash -c 'true' ignored 'rm marker'` was false-blocked).
+        ws = _words(seg)
+        for i, w in enumerate(ws):
+            if re.match(r"^-[a-zA-Z]*c[a-zA-Z]*$", w) and i + 1 < len(ws):
+                return [normalize_word(ws[i + 1], varmap)[0]]
+        return []
+    if head == "find":
+        # Each `-exec CMD ... ;|+` runs CMD as its own command; recurse so a
+        # literal marker operand (`-exec rm .figma-fidelity.pending \;`) is caught.
+        out, cur, execing = [], [], False
+        for w in _words(seg):
+            if w in ("-exec", "-execdir", "-ok", "-okdir"):
+                execing, cur = True, []
+                continue
+            if execing:
+                if w.strip("'\"\\") in (";", "+"):
+                    if cur:
+                        out.append(" ".join(cur))
+                    cur, execing = [], False
+                else:
+                    cur.append(w)
+        if cur:
+            out.append(" ".join(cur))
+        return out
+    return []
+
+
+# Seed from the hook's own environment so a real env var in a write target ($PWD,
+# $HOME, $TMPDIR, ...) resolves to its value - only a TRULY unknowable var (set in
+# a prior tool call, $RANDOM, a command substitution) stays unresolved and trips
+# the armed conservative-deny, so `rm "$TMPDIR/scratch"` is no longer collateral.
+# No bypass: an env var whose value IS the marker still matches. PWD is forced to
+# the live cwd because the inherited PWD can be stale.
+varmap = dict(os.environ)
+varmap["PWD"] = os.getcwd()
+varmap.setdefault("HOME", os.path.expanduser("~"))
+BLOCK = [False]
+
+
+def _same_target(word):
+    """True if `word` refers to OUR marker: path-equal to it, or (when armed) a
+    symlink/hardlink alias that samefile-resolves to it."""
+    if not word:
+        return False
+    a = _abs(word)
+    if marker_abs and a == marker_abs:
+        return True
+    if marker_exists:
+        try:
+            if os.path.exists(a) and os.path.samefile(a, marker):
+                return True
+        except OSError:
+            pass
+    return False
+
+
+def _glob_hits(word):
+    """A glob pattern that expands (against the real FS) onto the marker. Only
+    meaningful while armed - an absent marker cannot be a glob match."""
+    w = os.path.expanduser(word)
+    pats = [w]
+    if not os.path.isabs(w) and marker_dir_abs:
+        pats.append(os.path.join(marker_dir_abs, w))
+    for pat in pats:
+        try:
+            for g in _glob.glob(pat):
+                try:
+                    if os.path.samefile(g, marker):
+                        return True
+                except OSError:
+                    pass
+        except (OSError, re.error):
+            pass
+    return False
+
+
+def _split_top_commas(s):
+    parts, depth, cur = [], 0, ""
+    for c in s:
+        if c == "{":
+            depth += 1; cur += c
+        elif c == "}":
+            depth -= 1; cur += c
+        elif c == "," and depth == 0:
+            parts.append(cur); cur = ""
+        else:
+            cur += c
+    parts.append(cur)
+    return parts
+
+
+def brace_expand(s, depth=0):
+    """Expand `{a,b}` brace lists so `mv marker{,.bak}` yields the marker itself.
+    Only the comma form (no numeric ranges); comma-less braces stay literal."""
+    if depth > 8 or "{" not in s:
+        return [s]
+    d, start = 0, -1
+    for i, c in enumerate(s):
+        if c == "{":
+            if d == 0:
+                start = i
+            d += 1
+        elif c == "}" and d > 0:
+            d -= 1
+            if d == 0:
+                parts = _split_top_commas(s[start + 1:i])
+                if len(parts) < 2:
+                    return [s]
+                pre, post = s[:start], s[i + 1:]
+                out = []
+                for p in parts:
+                    for tail in brace_expand(post, depth + 1):
+                        out.append(pre + p + tail)
+                return out
+    return [s]
+
+
+def _write_hit(raw):
+    """True if a write/edit/alias operand names the marker. Brace-expanded, and
+    glob-expanded against the FS while armed. An unresolvable $/backtick/$( in a
+    write target is denied conservatively ONLY while armed."""
+    lit, unresolved, has_glob, has_brace = normalize_word(raw, varmap)
+    if unresolved:
+        return marker_exists
+    if not lit:
+        return False
+    for word in (brace_expand(lit) if has_brace else [lit]):
+        if _same_target(word):
+            return True
+        if has_glob and marker_exists and any(ch in word for ch in "*?[") \
+                and _glob_hits(word):
+            return True
+    return False
+
+
+def _tree_hit(raw):
+    """True if OUR marker lives inside (or is) a recursive-delete root - `rm -rf .`,
+    `find . -delete`, `git clean -f`. Only meaningful while armed."""
+    if not marker_exists:
+        return False
+    lit, unresolved, has_glob, has_brace = normalize_word(raw, varmap)
+    if unresolved:
+        return True            # an unresolvable recursive-delete root while armed
+    if not lit:
+        return False
+    try:
+        m_real = os.path.realpath(marker)
+    except OSError:
+        return False
+    for word in (brace_expand(lit) if has_brace else [lit]):
+        try:
+            root = os.path.realpath(_abs(word))
+        except OSError:
+            continue
+        if m_real == root or m_real.startswith(root.rstrip(os.sep) + os.sep):
+            return True
+    return False
+
+
+def _find_matches_marker(args):
+    """Does a find's predicate SELECT the marker (so a -delete / destructive -exec
+    would hit it, or a plain find would print it to a downstream xargs)? Handles
+    `!`/`-not` negation on -name/-path and a no-filter search under a root that
+    contains the marker. A find pattern is a FIND glob, matched regardless of
+    shell-quoting."""
+    NAME_F = ("-name", "-iname")
+    PATH_F = ("-path", "-ipath", "-wholename")
+    mb = os.path.basename(marker_abs) if marker_abs else MARKER_BASE
+    positives, negatives, roots = [], [], []
+    pred_started = False
+    skip_val = False
+    # find GLOBAL options (-H -L -P, -Olevel, -D debugopts) precede the paths and do
+    # NOT start the predicate - `find -H /other-repo -name X` must still see the root.
+    GLOBAL_OPT = re.compile(r"^-(H|L|P|O\d*|D)$")
+    for i, a in enumerate(args):
+        if skip_val:                                  # value of a leading -D
+            skip_val = False
+            continue
+        if not pred_started and GLOBAL_OPT.match(a):
+            if a == "-D":
+                skip_val = True
+            continue
+        if a in NAME_F + PATH_F and i + 1 < len(args):
+            neg = i >= 1 and args[i - 1] in ("!", "-not")
+            (negatives if neg else positives).append((a, args[i + 1]))
+            pred_started = True
+        elif a.startswith("-") or a in ("!", "(", ")"):
+            pred_started = True
+        elif not pred_started:
+            roots.append(a)
+
+    def hits(flag, raw):
+        p = normalize_word(raw, varmap)[0]
+        if not p:
+            return False
+        if flag in NAME_F:
+            return fnmatch.fnmatch(mb, os.path.basename(p))
+        if fnmatch.fnmatch(marker_abs, p) or fnmatch.fnmatch(mb, os.path.basename(p)):
+            return True
+        if marker_exists:
+            for g in _glob.glob(p) + _glob.glob(os.path.join(marker_dir_abs or ".", p)):
+                try:
+                    if os.path.samefile(g, marker):
+                        return True
+                except OSError:
+                    pass
+        return False
+
+    # A find can only touch OUR marker if a search ROOT contains it. `find
+    # /other-repo -name .figma-fidelity.pending -delete` cannot reach ours.
+    try:
+        mp = os.path.realpath(marker) if marker_exists else marker_abs
+    except OSError:
+        mp = marker_abs
+
+    def root_has_marker(r):
+        rp = _abs(r)
+        return bool(mp) and (mp == rp or mp.startswith(rp.rstrip(os.sep) + os.sep))
+
+    if not ((not roots) or any(root_has_marker(r) for r in roots)):
+        return False                                  # no root reaches OUR marker
+
+    has_or = any(a in ("-o", "-or") for a in args)
+    if positives:
+        return any(hits(f, r) for f, r in positives)
+    if negatives:                                     # `! -name X` deletes all BUT X
+        # ...but an -o (OR) re-orders find's Boolean so the negated term no longer
+        # cleanly excludes the marker (`! -name X -o -delete` DELETES X). Full find
+        # expression evaluation is out of scope for a command-text guard, so block
+        # conservatively when -o is present with a negated marker term.
+        if has_or:
+            return True
+        return not any(hits(f, r) for f, r in negatives)
+    # no name/path filter -> the whole search tree, so the marker goes if a root
+    # (default cwd) contains it.
+    return marker_exists and (any(_tree_hit(r) for r in roots) if roots else True)
+
+
+def analyze(text, depth=0):
+    if BLOCK[0] or depth > 4:
+        return
+    segs, nested, reds = split_segments(text)
+    seg_words = [_words(seg) for seg in segs]
+    for words in seg_words:
+        record_assignments(words, varmap)
+    for tg in reds:
+        if _write_hit(tg):
+            BLOCK[0] = True; return
+    # `PRODUCER | xargs MUTATOR` feeds the mutator its operands from stdin, so the
+    # marker named in a producer segment (`echo .figma-fidelity.pending | xargs rm`,
+    # `find . -name .figma-fidelity.pending | xargs rm`) never reaches the mutator
+    # as its own operand. When a destructive xargs is present, check the OUTPUT of
+    # producer segments only - NOT a grep pattern or an xargs `-a` input file, which
+    # merely READ the marker text (those were false-blocked before).
+    xargs_destructive = False
+    for words in seg_words:
+        if any(os.path.basename(normalize_word(x, varmap)[0]) == "xargs" for x in words):
+            xb, xa = head_and_args(words, varmap)
+            if classify(xb, xa)[2]:
+                xargs_destructive = True
+                break
+    if xargs_destructive:
+        PRODUCERS = {"echo", "printf", "ls", "dirname", "basename", "realpath", "readlink"}
+        for words in seg_words:
+            hb, ha = head_and_args(words, varmap)
+            if hb == "find":
+                if _find_matches_marker(ha):
+                    BLOCK[0] = True; return
+            elif hb in PRODUCERS:
+                for w in ha:
+                    if w.startswith("-"):
+                        continue
+                    # echo/printf emit each arg; printf interprets \n \t \0 etc., so
+                    # `printf '.figma-fidelity.pending\n'` outputs the bare filename.
+                    # Split on those escapes (and whitespace) and check each token.
+                    lit = normalize_word(w, varmap)[0]
+                    for piece in re.split(r"\\[nrt0]|\s+|\n", lit):
+                        piece = piece.strip()
+                        if piece and _write_hit(piece):
+                            BLOCK[0] = True; return
+        # a heredoc can BE the xargs stdin (`xargs rm <<EOF\nmarker\nEOF`); each
+        # body line is then an operand.
+        for body in heredoc_bodies:
+            for ln in body.split("\n"):
+                if ln.strip() and _write_hit(ln.strip()):
+                    BLOCK[0] = True; return
+    for words in seg_words:
+        # `S='rm marker'; $S` - an UNQUOTED $VAR that holds a command word-splits and
+        # runs as that command. normalize_word would fold it into one head string, so
+        # re-expand a bare unquoted $VAR/${VAR} to its value and re-analyze it.
+        exp, changed = [], False
+        for w in words:
+            m = re.match(r"^\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?$", w)
+            if m and m.group(1) in varmap:
+                exp.append(varmap[m.group(1)]); changed = True
+            else:
+                exp.append(w)
+        if changed:
+            analyze(" ".join(exp), depth + 1)
+            if BLOCK[0]:
+                return
+
+    for seg in segs:
+        words = _words(seg)
+        base, args = head_and_args(words, varmap)
+        writes, trees, mut = classify(base, args)
+        if not mut and marker_exists and ("$" in base or "`" in base):
+            # command name obfuscated behind an unresolved expansion; while armed,
+            # treat any operand resolving to the marker as a write.
+            writes = [a for a in args if not a.startswith("-")]
+        for tg in writes:
+            if _write_hit(tg):
+                BLOCK[0] = True; return
+        for tg in trees:
+            if _tree_hit(tg):
+                BLOCK[0] = True; return
+        for p in payloads(seg, base):
+            analyze(p, depth + 1)
+            if BLOCK[0]:
+                return
+    for nt in nested:
+        analyze(nt, depth + 1)
+        if BLOCK[0]:
+            return
+
+
+try:
+    analyze(cmd)
+    print("BLOCK" if BLOCK[0] else "")
+except Exception:
+    # A parser crash must not silently open the gate during an armed build.
+    print("BLOCK" if marker_exists else "")
+PYEOF
+}
+
 # Attribution forbidden by CLAUDE.md
 if echo "$CMD" | grep -qE 'Co-Authored-By|Generated with Claude|Co-Authored by Claude'; then
   REASON="BLOCKED: command contains forbidden attribution. CLAUDE.md mandates no Co-Authored-By or Claude attribution in commits."
@@ -520,28 +1482,30 @@ if [ -z "$REASON" ] && printf '%s' "$_RM_SLICES" | grep -qE '\.claude/memory'; t
   REASON="BLOCKED: rm against .claude/memory destroys session beats. Move to trash or rename instead."
 fi
 
-# Opting out of the Figma-fidelity gate is FORBIDDEN (hardened 2026-07-18, Jonah).
-# The arming record .figma-fidelity.pending is written by the arm hook and cleared by
-# the Stop gate - both HOOK processes, not Bash tool calls, so they are unaffected by
-# this guard. The ONLY way to clear an armed node is a covering check in
-# .figma-fidelity.json (the Stop gate verifies it, then rm's the marker itself).
-# Deleting/moving/editing .figma-fidelity.pending to drop an armed line - the agent's
-# old "delete the line to opt out" shortcut - is blocked here. Reading it (cat/grep)
-# is fine; MODIFYING it is not. Slice-based (rm/mv/sed/truncate args) so a beat that
-# merely names the file is never false-blocked. Note: .figma-fidelity.measuring and
-# .figma-fidelity.json are NOT protected - measuring is a scratch marker and the
-# manifest is the thing you are supposed to write.
-_FID_SLICES=$(printf '%s\n%s\n%s\n%s\n%s' \
-  "$(command_slices 'rm')" "$(command_slices 'git' 'rm')" \
-  "$(command_slices 'sed')" "$(command_slices 'mv')" "$(command_slices 'truncate')")
-if [ -z "$REASON" ] && printf '%s' "$_FID_SLICES" | grep -qE '\.figma-fidelity\.pending'; then
-  REASON="BLOCKED: you may not delete, move, or edit .figma-fidelity.pending. Opting out of the Figma-fidelity gate is forbidden - cover the node with a check in .figma-fidelity.json and the Stop gate clears the marker on a pass. For a reference-only look that must not arm the gate, use get_screenshot (it does not fire the arm hook)."
-fi
-# Also catch a redirect that overwrites/appends the arming record (grep -v ... > it,
-# or > it). Matched on CMD_CODE (quoted prose stripped) so it does not false-block a
-# beat or Codex prompt that names the file.
-if [ -z "$REASON" ] && printf '%s' "$CMD_CODE" | grep -qE '>>?[[:space:]]*[^|;&<>]*\.figma-fidelity\.pending'; then
-  REASON="BLOCKED: redirecting into .figma-fidelity.pending is forbidden (opting out of the Figma-fidelity gate). Cover the node in .figma-fidelity.json; the Stop gate manages the marker."
+# Opting out of the Figma-fidelity gate is FORBIDDEN (hardened 2026-07-18; re-
+# hardened 2026-07-17, Jonah, folding the Codex bypass review). The arming record
+# .figma-fidelity.pending is written by the arm hook and cleared by the Stop gate -
+# both HOOK processes, not Bash tool calls, so they are unaffected by this guard.
+# The ONLY way to clear an armed node is a covering check in .figma-fidelity.json
+# (the Stop gate verifies it, then rm's the marker itself). Deleting / moving /
+# truncating / editing / ALIASING / redirecting-over the marker to drop an armed
+# line is blocked by _figma_marker_verdict (its header explains the full parser).
+# Reading it (cat/grep/head/tail, sed WITHOUT -i) stays allowed; .measuring and
+# .json writes stay allowed. ROOT derived exactly as the arm/stop hooks derive it,
+# so the marker path matches the file they manage. The verdict scan is skipped
+# entirely unless a build is armed (marker present) OR the command mentions the
+# `figma-fidelity` substring - which survives quote/backslash obfuscation and the
+# split-printf form, unlike the exact filename - keeping the common Bash call
+# cheap. The only way to reach the marker WITHOUT that substring is an alias,
+# which cannot exist unless the marker exists (so the armed branch covers it).
+if [ -z "$REASON" ]; then
+  _FIGMA_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  _FIGMA_MARKER="$_FIGMA_ROOT/.figma-fidelity.pending"
+  if [ -f "$_FIGMA_MARKER" ] || printf '%s' "$CMD" | grep -qF 'figma-fidelity'; then
+    if [ "$(_figma_marker_verdict)" = "BLOCK" ]; then
+      REASON="BLOCKED: you may not delete, move, truncate, edit, alias (symlink/hardlink), or redirect over .figma-fidelity.pending. Opting out of the Figma-fidelity gate is forbidden - cover the node with a check in .figma-fidelity.json and the Stop gate clears the marker on a pass. For a reference-only look that must not arm the gate, use get_screenshot (it does not fire the arm hook)."
+    fi
+  fi
 fi
 
 # Legacy model IDs in any command.

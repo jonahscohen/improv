@@ -4,8 +4,14 @@
 # Reads hook input JSON from stdin, emits permissionDecision JSON to stdout.
 
 INPUT=$(cat)
+
+# Repo root, derived EXACTLY as figma-fidelity-arm.sh / -stop.sh derive it, so the
+# marker path this guard resolves against is the same file those hooks manage.
+_FIGMA_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+export FIGMA_MARKER="$_FIGMA_ROOT/.figma-fidelity.pending"
+
 printf '%s' "$INPUT" | python3 -c '
-import json, sys, re
+import json, os, sys, re
 
 try:
     data = json.load(sys.stdin)
@@ -22,9 +28,35 @@ inp  = data.get("tool_input", {})
 # Checked BEFORE the content/empty-content exits below so an edit that removes a line
 # (new_string empty) is caught too. Cover the node in .figma-fidelity.json instead.
 # Hardened 2026-07-18 (Jonah). NO APOSTROPHES in this block (see the note below).
-_fp = str(inp.get("file_path") or "").replace("\\", "/")
-if _fp.split("/")[-1] == ".figma-fidelity.pending":
-    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "BLOCKED: editing .figma-fidelity.pending is forbidden - opting out of the Figma-fidelity gate is not permitted. Cover the node with a check in .figma-fidelity.json and the Stop gate clears the marker on a pass. For a reference-only look, use get_screenshot."}}))
+# The match is PATH-equality to OUR marker OR resolved-samefile, never a bare
+# basename: a substring/basename check wrongly caught foo.figma-fidelity.pending,
+# .figma-fidelity.pending.bak, and a DIFFERENT repo path that merely shares the
+# name (/other-repo/.figma-fidelity.pending). Path-equality (normalized, resolved
+# against cwd - works whether or not the file exists yet) pins it to the real
+# marker; samefile follows symlinks and compares device+inode, so an Edit whose
+# file_path is a symlink or hardlink ALIAS of the marker is caught too. Marker
+# path comes from the env, derived in bash exactly as the arm/stop hooks derive it.
+_marker = os.environ.get("FIGMA_MARKER", "")
+_fp = str(inp.get("file_path") or "")
+_is_marker = False
+if _marker and _fp:
+    try:
+        _cand = os.path.expanduser(_fp)
+        if not os.path.isabs(_cand):
+            _cand = os.path.join(os.getcwd(), _cand)
+        # realpath (not normpath): macOS /var is a symlink to /private/var, so the
+        # bash-derived marker and the cwd-resolved file_path must both be resolved
+        # or an equal path compares unequal. Also resolves a symlink alias here.
+        _cand = os.path.realpath(_cand)
+        _mk = os.path.realpath(os.path.expanduser(_marker))
+        if _cand == _mk:
+            _is_marker = True
+        elif os.path.exists(_cand) and os.path.exists(_marker) and os.path.samefile(_cand, _marker):
+            _is_marker = True
+    except OSError:
+        _is_marker = False
+if _is_marker:
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "BLOCKED: editing .figma-fidelity.pending (or a symlink/hardlink alias of it) is forbidden - opting out of the Figma-fidelity gate is not permitted. Cover the node with a check in .figma-fidelity.json and the Stop gate clears the marker on a pass. For a reference-only look, use get_screenshot."}}))
     sys.exit(0)
 
 if tool == "Write":
