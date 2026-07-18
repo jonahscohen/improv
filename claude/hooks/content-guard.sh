@@ -15,6 +15,18 @@ except Exception:
 tool = data.get("tool_name", "")
 inp  = data.get("tool_input", {})
 
+# Opting out of the Figma-fidelity gate is forbidden: its arming record
+# .figma-fidelity.pending may not be created, overwritten, or edited through
+# Write/Edit/MultiEdit (bash-guard blocks the shell vectors; this blocks the tool
+# vectors). The arm hook and Stop gate write it as hook processes, never these tools.
+# Checked BEFORE the content/empty-content exits below so an edit that removes a line
+# (new_string empty) is caught too. Cover the node in .figma-fidelity.json instead.
+# Hardened 2026-07-18 (Jonah). NO APOSTROPHES in this block (see the note below).
+_fp = str(inp.get("file_path") or "").replace("\\", "/")
+if _fp.split("/")[-1] == ".figma-fidelity.pending":
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "BLOCKED: editing .figma-fidelity.pending is forbidden - opting out of the Figma-fidelity gate is not permitted. Cover the node with a check in .figma-fidelity.json and the Stop gate clears the marker on a pass. For a reference-only look, use get_screenshot."}}))
+    sys.exit(0)
+
 if tool == "Write":
     content = inp.get("content", "")
 elif tool == "Edit":

@@ -115,11 +115,14 @@ report "12:34 present exactly once" 1 "$(tokens "$r" | grep -xc '12:34')"
 report "total tokens still 1"        1 "$(tokcount "$r")"
 
 echo
-echo "=== the opt-out is written on the line, and strips to just the token ==="
+echo "=== the armed line carries the NO-opt-out guidance, and strips to just the token ==="
 r=$(mkrepo json); run_arm "$r" "$DGC" "12:34"
+grep -q 'ONLY way to clear this' "$r/.figma-fidelity.pending" \
+  && report "no-opt-out guidance present on the armed line" yes yes \
+  || report "no-opt-out guidance present on the armed line" yes no
 grep -q 'delete this line to opt out' "$r/.figma-fidelity.pending" \
-  && report "opt-out guidance present on the armed line" yes yes \
-  || report "opt-out guidance present on the armed line" yes no
+  && report "old opt-out affordance is GONE" no yes \
+  || report "old opt-out affordance is GONE" no no
 grep -q 'armed by figma get_design_context' "$r/.figma-fidelity.pending" \
   && report "provenance comment names the tool" yes yes \
   || report "provenance comment names the tool" yes no

@@ -520,6 +520,30 @@ if [ -z "$REASON" ] && printf '%s' "$_RM_SLICES" | grep -qE '\.claude/memory'; t
   REASON="BLOCKED: rm against .claude/memory destroys session beats. Move to trash or rename instead."
 fi
 
+# Opting out of the Figma-fidelity gate is FORBIDDEN (hardened 2026-07-18, Jonah).
+# The arming record .figma-fidelity.pending is written by the arm hook and cleared by
+# the Stop gate - both HOOK processes, not Bash tool calls, so they are unaffected by
+# this guard. The ONLY way to clear an armed node is a covering check in
+# .figma-fidelity.json (the Stop gate verifies it, then rm's the marker itself).
+# Deleting/moving/editing .figma-fidelity.pending to drop an armed line - the agent's
+# old "delete the line to opt out" shortcut - is blocked here. Reading it (cat/grep)
+# is fine; MODIFYING it is not. Slice-based (rm/mv/sed/truncate args) so a beat that
+# merely names the file is never false-blocked. Note: .figma-fidelity.measuring and
+# .figma-fidelity.json are NOT protected - measuring is a scratch marker and the
+# manifest is the thing you are supposed to write.
+_FID_SLICES=$(printf '%s\n%s\n%s\n%s\n%s' \
+  "$(command_slices 'rm')" "$(command_slices 'git' 'rm')" \
+  "$(command_slices 'sed')" "$(command_slices 'mv')" "$(command_slices 'truncate')")
+if [ -z "$REASON" ] && printf '%s' "$_FID_SLICES" | grep -qE '\.figma-fidelity\.pending'; then
+  REASON="BLOCKED: you may not delete, move, or edit .figma-fidelity.pending. Opting out of the Figma-fidelity gate is forbidden - cover the node with a check in .figma-fidelity.json and the Stop gate clears the marker on a pass. For a reference-only look that must not arm the gate, use get_screenshot (it does not fire the arm hook)."
+fi
+# Also catch a redirect that overwrites/appends the arming record (grep -v ... > it,
+# or > it). Matched on CMD_CODE (quoted prose stripped) so it does not false-block a
+# beat or Codex prompt that names the file.
+if [ -z "$REASON" ] && printf '%s' "$CMD_CODE" | grep -qE '>>?[[:space:]]*[^|;&<>]*\.figma-fidelity\.pending'; then
+  REASON="BLOCKED: redirecting into .figma-fidelity.pending is forbidden (opting out of the Figma-fidelity gate). Cover the node in .figma-fidelity.json; the Stop gate manages the marker."
+fi
+
 # Legacy model IDs in any command.
 #
 # This used `grep -qP` with a PCRE negative lookahead. BSD grep - which is what

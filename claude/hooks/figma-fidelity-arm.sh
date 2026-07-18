@@ -26,12 +26,16 @@
 #      recording `node: "858:11438"` for the node you pulled satisfies coverage.
 #      Tying the proof to the node pulled is the whole point.
 #
-#   2. Over-arming opt-out. A reference-only pull also arms the gate. That is
-#      intended (if you pulled it, prove it or deliberately clear it), so the
-#      opt-out is VISIBLE and DELIBERATE: each armed line carries a
-#      self-documenting comment, and the gate strips everything after '#'. To opt
-#      a node OUT you delete (or '#'-comment) its line in .figma-fidelity.pending
-#      - a per-node, on-the-record act, never a silent default.
+#   2. NO OPT-OUT (hardened 2026-07-18, Jonah). Pulling a node's design context IS
+#      a commitment to validate it: if you pulled it, you prove it. There is no
+#      "delete the line to opt out" - the agent abused exactly that to skip fidelity
+#      testing on a node it had built against. The ONLY way to clear an armed node
+#      is a covering check in .figma-fidelity.json; the Stop gate then clears the
+#      marker itself. The agent is ALSO blocked at the tool level (bash-guard +
+#      content-guard) from rm-ing or editing .figma-fidelity.pending, so it cannot
+#      remove an armed line. For a REFERENCE-only look that must not arm the gate,
+#      use get_screenshot (which does not fire this hook), not get_design_context.
+#      (Jonah retains a manual override via direct file edit - he is not gated.)
 #
 #   3. Corruption-safe, and survives a concurrent Stop clear. The Stop gate reads
 #      the marker WITHOUT a lock and `rm -f`s it on a pass. A plain O_APPEND would
@@ -132,7 +136,9 @@ if not (os.path.exists(MANIFEST) or os.path.exists(MARKER) or os.path.exists(MEA
 
 stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 line = ("%s  # armed by figma %s @ %s; cover this node in "
-        ".figma-fidelity.json or delete this line to opt out\n"
+        ".figma-fidelity.json - a covering check is the ONLY way to clear this. "
+        "Opting out (deleting this line) is NOT permitted and is blocked at the "
+        "tool level. For a reference-only look, use get_screenshot instead.\n"
         % (token, base, stamp))
 
 try:
