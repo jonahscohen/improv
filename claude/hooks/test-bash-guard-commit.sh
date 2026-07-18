@@ -190,10 +190,38 @@ assert_allows "real commit allowed when beats are clean" 'git commit -m "fix: th
 
 echo ""
 echo "===== gate 2: browser-verification (.needs-verification + staged .scss) ====="
-: > "$FAKE_HOME/.claude/.needs-verification"
+: > "$FAKE_HOME/.claude/.needs-verification.global"
 assert_blocks "real commit with unverified staged .scss" 'git commit -m "style: tweak"' "$REPO"
 assert_allows "prose quoting the command, same state"    "echo 'now git commit -m x'"  "$REPO"
-rm -f "$FAKE_HOME/.claude/.needs-verification"
+rm -f "$FAKE_HOME/.claude/.needs-verification.global"
+
+echo ""
+echo "===== gate 2 CROSS-SESSION ISOLATION (the 2026-07-18 all-projects leak) ====="
+# Before keying, .needs-verification was ONE global file: session A arming it (a .css edit in
+# project A) blocked commits in session B / project B. Now the flag is session-keyed, so the
+# debt of session A is invisible to session B. Feed session_id explicitly to prove isolation.
+run_hook_sid() {
+  local cmd="$1" sid="$2" cwd="${3:-$PWD}"
+  local input
+  input=$(python3 -c 'import json,sys; print(json.dumps({"session_id":sys.argv[2],"tool_input":{"command":sys.argv[1]}}))' "$cmd" "$sid")
+  (cd "$cwd" && printf '%s' "$input" | HOME="$FAKE_HOME" bash "$BASH_HOOK" 2>/dev/null)
+}
+: > "$FAKE_HOME/.claude/.needs-verification.AAA"   # session A armed a visual change
+# Session B commits an unrelated staged .scss - the debt of session A must NOT block it.
+OUT=$(run_hook_sid 'git commit -m "b"' BBB "$REPO")
+if echo "$OUT" | grep -qE '"permissionDecision":[[:space:]]*"deny"'; then
+  echo "FAIL: cross-session leak - session B blocked by the session-A verify flag  ($OUT)"; FAIL_LABELS+=("cross-session leak"); ((FAIL++))
+else
+  echo "PASS: session B commit NOT blocked by the session-A verify flag"; ((PASS++))
+fi
+# Session A committing its OWN unverified staged .scss MUST still block (gate intact, not neutered).
+OUT=$(run_hook_sid 'git commit -m "a"' AAA "$REPO")
+if echo "$OUT" | grep -qE '"permissionDecision":[[:space:]]*"deny"'; then
+  echo "PASS: session A still blocked on its OWN unverified change (gate intact)"; ((PASS++))
+else
+  echo "FAIL: session A NOT blocked on its own unverified change - gate failed open  ($OUT)"; FAIL_LABELS+=("gate A open"); ((FAIL++))
+fi
+rm -f "$FAKE_HOME/.claude/.needs-verification.AAA"
 
 echo ""
 echo "===== gate 3: unread-screenshot (.screenshot-pending) ====="

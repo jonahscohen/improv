@@ -47,6 +47,11 @@ assert_fires() {
   local label="$1"
   local cmd="$2"
   local out
+  # Once-per-episode arming (2026-07-18 reign-in): the nudge fires only when the flag STATE
+  # changes, so each fire-case starts from a CLEARED flag to prove THIS command arms from cold.
+  # The session-less payload makes the hook write the "global" bucket - clear that, never a
+  # live session key, so running this suite cannot disturb a concurrent agent.
+  rm -f "$HOME/.claude/.needs-verification.global"
   out=$(run_hook "$cmd")
   if echo "$out" | grep -q 'CODE DEPLOYED'; then
     echo "PASS: $label"
@@ -180,7 +185,7 @@ echo "===== ARM-SIDE FILE-TYPE FILTER (bug a): a .md-only Bash write must not re
 # right after a browser verification cleared it. These cases assert the arm flag
 # directly (the stdout mandate is debounce-suppressible, so it is not a reliable
 # signal for the arm side). Save + restore the real flag so a live session is safe.
-VFLAG="$HOME/.claude/.needs-verification"
+VFLAG="$HOME/.claude/.needs-verification.global"
 __VFLAG_EXISTED=no; __VFLAG_SAVED=""
 if [ -f "$VFLAG" ]; then __VFLAG_EXISTED=yes; __VFLAG_SAVED="$(cat "$VFLAG" 2>/dev/null)"; fi
 restore_vflag() { if [ "$__VFLAG_EXISTED" = yes ]; then printf '%s' "$__VFLAG_SAVED" > "$VFLAG"; else rm -f "$VFLAG"; fi; }
@@ -230,7 +235,7 @@ echo "===== REPO-SOURCE HOOK DIR EXEMPTION (U7b issue 3): editing claude/hooks/*
 # armed the visual-verify flag. Editing a shell hook is not a rendered-UI change; it has
 # nothing to screenshot. Assert the arm flag directly through the Write-tool (file_path)
 # branch AND the Bash (sed -i) branch. Own save/restore so a live session is safe.
-VF2="$HOME/.claude/.needs-verification"
+VF2="$HOME/.claude/.needs-verification.global"
 __VF2_EXISTED=no; __VF2_SAVED=""
 if [ -f "$VF2" ]; then __VF2_EXISTED=yes; __VF2_SAVED="$(cat "$VF2" 2>/dev/null)"; fi
 restore_vf2() { if [ "$__VF2_EXISTED" = yes ]; then printf '%s' "$__VF2_SAVED" > "$VF2"; else rm -f "$VF2"; fi; }
@@ -273,6 +278,9 @@ assert_path_arms   "vendor/claude/hooks/theme.css arms (real segment but VISUAL)
 assert_path_no_arm ".sh under a nested claude/hooks/ stays exempt (a hook script)" "/Users/x/proj/tools/claude/hooks/helper.sh"
 
 restore_vf2
+
+# Do not leave the global test bucket armed for the next suite / a stray reader.
+rm -f "$HOME/.claude/.needs-verification.global"
 
 echo ""
 echo "============================================================"

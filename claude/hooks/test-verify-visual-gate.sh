@@ -16,7 +16,8 @@ VSTOP="$HOOK_DIR/verify-before-done-stop.sh"
 TMP=$(mktemp -d)
 export HOME="$TMP"
 mkdir -p "$HOME/.claude"
-FLAG="$HOME/.claude/.needs-verification"
+# Payloads below carry no session_id, so every hook derives the "global" fallback key.
+FLAG="$HOME/.claude/.needs-verification.global"
 
 PASS=0; FAIL=0; FAILED=()
 chk() { if [ "$2" = "$3" ]; then echo "PASS: $1"; PASS=$((PASS+1)); else echo "FAIL: $1 (want=[$2] got=[$3])"; FAIL=$((FAIL+1)); FAILED+=("$1"); fi; }

@@ -61,7 +61,11 @@ WINDOW_SECONDS = 600      # 10 min "stacked edits" window
 OVERRIDE_TTL = 1800       # 30 min manual-override TTL
 HOME = os.path.expanduser("~")
 last_fix_path = os.path.join(HOME, ".claude", ".last-fix-file")
-verify_flag = os.path.join(HOME, ".claude", ".needs-verification")
+# Session-scoped (2026-07-18): keyed identically to bash-guard / verify-before-done so
+# this gate reads the SAME flag the current session armed, not a global one another
+# concurrent session or project left set. Sanitizer + global fallback match everywhere.
+_sfg_sk = re.sub(r"[^A-Za-z0-9._-]", "_", str(data.get("session_id", "") or "")) or "global"
+verify_flag = os.path.join(HOME, ".claude", ".needs-verification." + _sfg_sk)
 override_flag = os.path.join(HOME, ".claude", ".suppress-fix-gate")
 
 # 1. Manual override - silence gate entirely if user has set the flag.

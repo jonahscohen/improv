@@ -14,7 +14,7 @@
 
 INPUT=$(cat)
 printf '%s' "$INPUT" | python3 -c '
-import json, sys, os
+import json, sys, os, re
 
 try:
     d = json.load(sys.stdin)
@@ -23,7 +23,10 @@ except Exception:
 
 tool = d.get("tool_name", "")
 action = (d.get("tool_input", {}) or {}).get("action", "")
-flag = os.path.expanduser("~/.claude/.needs-verification")
+# Session-scoped (2026-07-18): clear the SAME session-keyed flag verify-before-done armed,
+# not a global one. Key derivation is identical across every reader/writer of the flag.
+_sk = re.sub(r"[^A-Za-z0-9._-]", "_", str(d.get("session_id", "") or "")) or "global"
+flag = os.path.expanduser("~/.claude/.needs-verification." + _sk)
 
 is_screenshot = tool.endswith("get_screenshot") or (
     tool.endswith("computer") and action == "screenshot"

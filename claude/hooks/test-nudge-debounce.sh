@@ -24,7 +24,12 @@ VERIFY_HOOK="$HOOK_DIR/verify-before-done.sh"
 # armed and cleared the one flag EVERY concurrent session shared, so running it
 # could block or silently absolve a live agent mid-commit.
 DIRTY_FLAG="$HOME/.claude/.memory-dirty.global"
-VERIFY_FLAG="$HOME/.claude/.needs-verification"
+# The verify flag is now PER-SESSION too (.needs-verification.<session>) as of 2026-07-18,
+# for the same cross-session/cross-project leak that keyed .memory-dirty on 2026-07-17.
+# These payloads carry no session_id, so the hook derives the "global" fallback bucket -
+# a bucket no live session reads, which is what makes running this suite against the real
+# $HOME safe (a live agent keys on its UUID and is untouched).
+VERIFY_FLAG="$HOME/.claude/.needs-verification.global"
 LAST_MEM="$HOME/.claude/.last-memory-write"
 LAST_SCR="$HOME/.claude/.last-screenshot-read"
 
@@ -274,14 +279,56 @@ edit .md beat|{"tool_name":"Edit","tool_input":{"file_path":"/x/notes.md"}}|sile
 ROWS
 
 # Sticky-visual: a visual debt must survive a later non-visual build. This is the
-# 2026-06-22 hole (a CSS change reported done off a curl) and must never regress.
+# 2026-06-22 hole (a CSS change reported done off a curl) and must never regress. The
+# INVARIANT is the FLAG staying "visual" - that is what keeps the Stop hook + commit gate
+# armed. The per-edit nudge is deliberately once-per-episode (2026-07-18 reign-in) and does
+# NOT re-fire on the second edit, so assert the flag, not the repeated nag.
 reset_all
 run_hook "$VERIFY_HOOK" '{"tool_name":"Edit","tool_input":{"file_path":"/x/a.css"}}' > /dev/null
-OUT=$(run_hook "$VERIFY_HOOK" '{"tool_name":"Bash","tool_input":{"command":"make all"}}')
-if has_nudge "$OUT" "$SCR_NEEDLE"; then
-    pass "verify-hook Case D: visual debt survives a later build (still screenshot)"
+run_hook "$VERIFY_HOOK" '{"tool_name":"Bash","tool_input":{"command":"make all"}}' > /dev/null
+if [ "$(cat "$VERIFY_FLAG" 2>/dev/null)" = "visual" ]; then
+    pass "verify-hook Case D: visual debt survives a later build (flag stays visual)"
 else
-    fail "verify-hook Case D: visual debt LOST - build downgraded it to logic"
+    fail "verify-hook Case D: visual debt LOST - flag no longer visual after build"
+fi
+
+# =============================================================================
+# Reign-in (Jonah 2026-07-18): the per-edit nudge is ONCE-PER-EPISODE. The edit that
+# ARMS the flag nudges; a later edit while already armed is SILENT (only the nag stops -
+# the flag still arms, so the Stop hook + commit gate are untouched). A code->visual
+# UPGRADE re-nudges because the demand genuinely changed (logic -> screenshot).
+# =============================================================================
+reset_all
+OUT1=$(run_hook "$VERIFY_HOOK" '{"tool_name":"Edit","tool_input":{"file_path":"/x/first.css"}}')
+OUT2=$(run_hook "$VERIFY_HOOK" '{"tool_name":"Edit","tool_input":{"file_path":"/x/second.css"}}')
+if has_nudge "$OUT1" "$SCR_NEEDLE"; then
+    pass "reign-in: first arming edit emits the nudge"
+else
+    fail "reign-in: first arming edit should nudge, got: $OUT1"
+fi
+if has_nudge "$OUT2" "$SCR_NEEDLE"; then
+    fail "reign-in: second edit re-nagged (should be SILENT), got: $OUT2"
+else
+    pass "reign-in: second edit while already armed is SILENT"
+fi
+if [ "$(cat "$VERIFY_FLAG" 2>/dev/null)" = "visual" ]; then
+    pass "reign-in: flag STILL armed after the silent second edit (teeth intact)"
+else
+    fail "reign-in: flag lost after second edit"
+fi
+
+reset_all
+OUT1=$(run_hook "$VERIFY_HOOK" '{"tool_name":"Edit","tool_input":{"file_path":"/x/logic.ts"}}')
+OUT2=$(run_hook "$VERIFY_HOOK" '{"tool_name":"Edit","tool_input":{"file_path":"/x/view.css"}}')
+if has_nudge "$OUT1" "$LOGIC_NEEDLE"; then
+    pass "reign-in: first code edit emits the logic demand"
+else
+    fail "reign-in: first code edit should emit logic demand, got: $OUT1"
+fi
+if has_nudge "$OUT2" "$SCR_NEEDLE"; then
+    pass "reign-in: code->visual upgrade RE-nudges with the screenshot demand"
+else
+    fail "reign-in: code->visual upgrade should nudge, got: $OUT2"
 fi
 
 # =============================================================================

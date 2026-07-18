@@ -1557,7 +1557,13 @@ fi
 _SESSION_KEY=$(printf '%s' "$INPUT" | python3 -c '
 import json, re, sys
 try:
-    s = str(json.load(sys.stdin).get("session_id", ""))
+    # `or ""` makes a JSON null / falsy session_id fall back to "global" exactly like a
+    # MISSING key does (and byte-identically to verify-before-done / -stop / verify-clear /
+    # verify-manual / second-fix-gate). Without it, {"session_id": null} read as
+    # ".needs-verification.None" here while the writers wrote ".global" - a writer/reader
+    # path split that fails the gate OPEN (Codex review 2026-07-18, High). Also matches the
+    # documented intent below: empty/missing session_id falls back to "global".
+    s = str(json.load(sys.stdin).get("session_id", "") or "")
 except Exception:
     s = ""
 s = re.sub(r"[^A-Za-z0-9._-]", "_", s)
@@ -1581,7 +1587,7 @@ fi
 # Verification gate: block git commit if deployed code not browser-verified
 # BUT: allow documentation/config-only commits (SKILL.md, *.md, JSON files, etc.)
 if [ -z "$REASON" ] && is_real_git_commit; then
-  if [ -f "$HOME/.claude/.needs-verification" ]; then
+  if [ -f "$HOME/.claude/.needs-verification.$_SESSION_KEY" ]; then
     # Check if staged files are documentation/config only
     STAGED_FILES=$(git diff --cached --name-only 2>/dev/null)
     HAS_SOURCE_CODE=false

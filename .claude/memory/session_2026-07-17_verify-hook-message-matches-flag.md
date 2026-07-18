@@ -2,7 +2,7 @@
 name: verify-before-done hook - the demand now matches the flag (no more screenshot theatre)
 description: The verify hook ordered a screenshot for every code change including non-visual ones; it now emits a logic-verification demand for non-visual code while preserving (and improving) visual recall
 type: project
-relates_to: [feedback_hooks_prefer_false_positives.md, session_2026-07-17_sidecoach-eval-harness-wired-into-gate.md]
+relates_to: [feedback_hooks_prefer_false_positives.md, session_2026-07-17_sidecoach-eval-harness-wired-into-gate.md, session_2026-07-18_verify-flag-session-keyed-reigned-in.md]
 author_human: Jonah
 author_model: claude-opus-4.8
 source: session

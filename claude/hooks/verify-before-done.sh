@@ -37,7 +37,17 @@ except Exception:
 tool = data.get("tool_name", "")
 transcript_path = data.get("transcript_path", "")
 cwd = data.get("cwd", "")
-verify_flag = os.path.expanduser("~/.claude/.needs-verification")
+# Session-scoped verify flag. A single global ~/.claude/.needs-verification leaked across
+# every concurrent session AND project: a .css edit in one repo armed "visual" globally and
+# then blocked commits in an unrelated repo (Jonah 2026-07-18: fucking up all projects).
+# Now keyed by session_id, exactly like .memory-dirty.<session> and .screenshot-pending.<session>.
+# The sanitizer + "global" fallback is byte-identical to the _SESSION_KEY derivation in
+# bash-guard.sh and to verify-manual / verify-clear / second-fix-gate / verify-before-done-stop,
+# so every writer and reader agree on the path. A disagreement would make the gate FAIL OPEN
+# (the writer-reader-path warning bash-guard documents). No literal apostrophes in this comment:
+# the whole block is a python3 -c single-quoted string, so one would close it and break the hook.
+_sk = re.sub(r"[^A-Za-z0-9._-]", "_", str(data.get("session_id", "") or "")) or "global"
+verify_flag = os.path.expanduser("~/.claude/.needs-verification." + _sk)
 last_screenshot_read = os.path.expanduser("~/.claude/.last-screenshot-read")
 
 def is_subagent_context(path):
@@ -540,8 +550,14 @@ if tool == "Bash":
         # harmless while BOTH messages hardcoded a screenshot demand; making the flag
         # load-bearing in verify_message() is what exposed it. set_flag never downgrades
         # an existing visual flag, so passing "code" here can never clear real visual debt.)
+        prev = flag_content()
         set_flag(kind)
-        if recently_verified() or IS_SUBAGENT:
+        # Reign-in (Jonah 2026-07-18): emit the per-edit nudge ONLY when the flag STATE
+        # changes (unset -> armed, or code -> visual upgrade), never on every subsequent
+        # edit/build while already armed. set_flag is unchanged, so the Stop hook + the
+        # commit gate (the real teeth) fire exactly as before - only the repeated nag text
+        # is dropped. This is what "stop the per-edit nag from firing everywhere" means.
+        if recently_verified() or IS_SUBAGENT or flag_content() == prev:
             print("{}"); sys.exit(0)
         print(json.dumps({
             "hookSpecificOutput": {
@@ -600,8 +616,11 @@ file_path = data.get("tool_input", {}).get("file_path", "")
 
 if is_code_file(file_path):
     _visual = is_visual_file(file_path)
+    prev = flag_content()
     set_flag("visual" if _visual else "code")
-    if recently_verified() or IS_SUBAGENT:
+    # Once-per-episode nudge (see arm_and_report): silent when the flag state is unchanged,
+    # so a run of edits to already-armed code stops re-nagging on every single one.
+    if recently_verified() or IS_SUBAGENT or flag_content() == prev:
         print("{}")
     else:
         print(json.dumps({

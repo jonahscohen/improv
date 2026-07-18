@@ -24,7 +24,7 @@ trial() {
 }
 
 reset_state() {
-  rm -f "$HOME/.claude/.last-fix-file" "$HOME/.claude/.needs-verification" \
+  rm -f "$HOME/.claude/.last-fix-file" "$HOME/.claude/.needs-verification.global" \
         "$HOME/.claude/.suppress-fix-gate" "$HOME/.claude/.fix-gate-warned-"*
 }
 
@@ -66,14 +66,14 @@ trial "2.two-edits-no-verify-flag" silent "$out"
 
 # --- Scenario 3: Two MODIFY edits same file, verify pending - SHOULD WARN ---
 reset_state
-touch "$HOME/.claude/.needs-verification"
+touch "$HOME/.claude/.needs-verification.global"
 modify_payload "$FILE" | bash "$HOOK" > /dev/null
 out=$(modify_payload "$FILE" | bash "$HOOK")
 trial "3.two-modify-with-verify-warns" warn "$out"
 
 # --- Scenario 4: Three edits in same window - third should NOT warn again ---
 reset_state
-touch "$HOME/.claude/.needs-verification"
+touch "$HOME/.claude/.needs-verification.global"
 modify_payload "$FILE" | bash "$HOOK" > /dev/null
 modify_payload "$FILE" | bash "$HOOK" > /dev/null
 out=$(modify_payload "$FILE" | bash "$HOOK")
@@ -81,7 +81,7 @@ trial "4.third-edit-silent-already-warned" silent "$out"
 
 # --- Scenario 5: Five additive edits, verify pending - SHOULD ALL BE SILENT ---
 reset_state
-touch "$HOME/.claude/.needs-verification"
+touch "$HOME/.claude/.needs-verification.global"
 additive_payload "$FILE" | bash "$HOOK" > /dev/null
 out_a=$(additive_payload "$FILE" | bash "$HOOK")
 out_b=$(additive_payload "$FILE" | bash "$HOOK")
@@ -92,7 +92,7 @@ trial "5c.additive-fourth-edit-silent" silent "$out_c"
 
 # --- Scenario 6: Override flag - all warnings suppressed ---
 reset_state
-touch "$HOME/.claude/.needs-verification"
+touch "$HOME/.claude/.needs-verification.global"
 touch "$HOME/.claude/.suppress-fix-gate"
 modify_payload "$FILE" | bash "$HOOK" > /dev/null
 out=$(modify_payload "$FILE" | bash "$HOOK")
@@ -100,7 +100,7 @@ trial "6.override-flag-suppresses-warn" silent "$out"
 
 # --- Scenario 7: Expired override (mtime > 30 min ago) - should warn again ---
 reset_state
-touch "$HOME/.claude/.needs-verification"
+touch "$HOME/.claude/.needs-verification.global"
 touch "$HOME/.claude/.suppress-fix-gate"
 # backdate the override flag by 31 minutes
 touch -t "$(date -j -v-31M +%Y%m%d%H%M.%S 2>/dev/null || date --date='31 minutes ago' +%Y%m%d%H%M.%S)" \
@@ -111,7 +111,7 @@ trial "7.expired-override-warns-again" warn "$out"
 
 # --- Scenario 8: Exempt path (.claude/memory/) - silent always ---
 reset_state
-touch "$HOME/.claude/.needs-verification"
+touch "$HOME/.claude/.needs-verification.global"
 MEMFILE="$TMP/.claude/memory/session.md"
 modify_payload "$MEMFILE" | bash "$HOOK" > /dev/null
 out=$(modify_payload "$MEMFILE" | bash "$HOOK")
@@ -119,7 +119,7 @@ trial "8.exempt-memory-path-silent" silent "$out"
 
 # --- Scenario 9: Same-directory (different file) MODIFY - SHOULD WARN ---
 reset_state
-touch "$HOME/.claude/.needs-verification"
+touch "$HOME/.claude/.needs-verification.global"
 modify_payload "$TMP/src/a.ts" | bash "$HOOK" > /dev/null
 out=$(modify_payload "$TMP/src/b.ts" | bash "$HOOK")
 trial "9.same-dir-different-file-warns" warn "$out"

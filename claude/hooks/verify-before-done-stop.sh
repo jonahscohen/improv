@@ -16,7 +16,7 @@
 
 INPUT=$(cat)
 printf '%s' "$INPUT" | python3 -c '
-import json, sys, os
+import json, sys, os, re
 
 try:
     d = json.load(sys.stdin)
@@ -27,7 +27,11 @@ except Exception:
 if d.get("stop_hook_active"):
     print("{}"); sys.exit(0)
 
-flag = os.path.expanduser("~/.claude/.needs-verification")
+# Session-scoped (2026-07-18): block THIS session on ITS own unverified visual debt, not on
+# a global flag another concurrent session/project left set. Key derivation matches every
+# other reader/writer of the flag so writer and reader always agree on the path.
+_sk = re.sub(r"[^A-Za-z0-9._-]", "_", str(d.get("session_id", "") or "")) or "global"
+flag = os.path.expanduser("~/.claude/.needs-verification." + _sk)
 try:
     content = open(flag).read().strip()
 except Exception:
