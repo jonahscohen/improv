@@ -1188,3 +1188,6 @@
 
 <!-- archived 2026-07-18 (moved from MEMORY.md to stay under load budget) -->
 - [Self-analysis: I used Codex as FIRST-line QA instead of self-reviewing first - the messy-first-drafts pattern Jonah called out (2026-07-14); root cause = inverted produce-verify order (Codex should verify ALREADY-self-reviewed work); the mistakes were bucket-2 self-catchable ones (u11/u12 state-collision vs my own disjoint-files model, u10 blocked-but-proceed, body-vs-prompt drift), not hard edge cases; fix = run+SHOW a self-review pass before handing to Codex/dispatch - FEEDBACK (2026-07-14)](feedback_self_review_before_codex.md)
+
+<!-- archived 2026-07-23 (moved from MEMORY.md to stay under load budget) -->
+- [api-drift-detector false-positived on successful Agent launches (it scans tool_response, which ECHOES the dispatch prompt; my "no longer exists" symlink-prune wording matched the SIG regex) - FIXED with an Agent success-skip (agentId/async_launched/isAsync) mirroring the SendMessage skip; genuine failed-call drift still fires; verified both directions - REFERENCE (2026-07-14)](reference_api_drift_agent_success_skip.md)

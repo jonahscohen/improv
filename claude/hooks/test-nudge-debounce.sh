@@ -170,6 +170,65 @@ else
     fail "memory-nudge Bash Case B: dirty flag should still be set"
 fi
 
+# --- Arrow FP (2026-07-23): an UNQUOTED -> arrow must NOT set dirty -----------
+# The old "> " write token also matched "-> "; de-quoting (cmd_bare) protected QUOTED arrows
+# but an UNQUOTED arrow in a for/while compound (not in the read_only prefix list) still
+# false-set .memory-dirty. Fixed with a dash-guarded redirect (mirrors verify-before-done).
+# Negative control: rows 1-2 set dirty under the old bare "> " token.
+reset_all
+OUT="$(run_hook "$MEMORY_NUDGE" '{"tool_name":"Bash","tool_input":{"command":"for h in a.sh b.sh; do echo $h -> x; done"}}')"
+if [ -e "$DIRTY_FLAG" ]; then
+    fail "memory-nudge arrow: unquoted -> in a for-loop must NOT dirty"
+else
+    pass "memory-nudge arrow: unquoted -> in a for-loop does not dirty"
+fi
+reset_all
+run_hook "$MEMORY_NUDGE" '{"tool_name":"Bash","tool_input":{"command":"while read l; do echo $l -> done; done"}}' >/dev/null
+if [ -e "$DIRTY_FLAG" ]; then
+    fail "memory-nudge arrow: unquoted -> in a while-loop must NOT dirty"
+else
+    pass "memory-nudge arrow: unquoted -> in a while-loop does not dirty"
+fi
+# Recall guards - a real redirect / write must STILL dirty:
+reset_all
+run_hook "$MEMORY_NUDGE" '{"tool_name":"Bash","tool_input":{"command":"node gen.js >> build.log"}}' >/dev/null
+if [ -e "$DIRTY_FLAG" ]; then
+    pass "memory-nudge arrow: a real >> redirect still dirties (recall)"
+else
+    fail "memory-nudge arrow: real >> redirect should dirty"
+fi
+reset_all
+run_hook "$MEMORY_NUDGE" '{"tool_name":"Bash","tool_input":{"command":"sed -i s/a/b/ src/app.css"}}' >/dev/null
+if [ -e "$DIRTY_FLAG" ]; then
+    pass "memory-nudge arrow: sed -i still dirties (recall)"
+else
+    fail "memory-nudge arrow: sed -i should dirty"
+fi
+# NO-SPACE append recall (Codex 2026-07-23 High): the old bare ">>" token caught these; the
+# dash-guard must keep them, so ">>" matches with space OPTIONAL (unlike the space-required "> ").
+reset_all
+run_hook "$MEMORY_NUDGE" '{"tool_name":"Bash","tool_input":{"command":"printf x >>src/generated.ts"}}' >/dev/null
+if [ -e "$DIRTY_FLAG" ]; then
+    pass "memory-nudge arrow: no-space >>append still dirties (recall)"
+else
+    fail "memory-nudge arrow: no-space >>append should dirty"
+fi
+reset_all
+run_hook "$MEMORY_NUDGE" '{"tool_name":"Bash","tool_input":{"command":"node gen.js 2>>build.log"}}' >/dev/null
+if [ -e "$DIRTY_FLAG" ]; then
+    pass "memory-nudge arrow: no-space 2>>append still dirties (recall)"
+else
+    fail "memory-nudge arrow: no-space 2>>append should dirty"
+fi
+# fd-dup 2>&1 must STILL NOT dirty (no new FP from the >> branch).
+reset_all
+run_hook "$MEMORY_NUDGE" '{"tool_name":"Bash","tool_input":{"command":"node script.js 2>&1"}}' >/dev/null
+if [ -e "$DIRTY_FLAG" ]; then
+    fail "memory-nudge arrow: fd-dup 2>&1 must NOT dirty"
+else
+    pass "memory-nudge arrow: fd-dup 2>&1 does not dirty"
+fi
+
 # =============================================================================
 # verify-before-done.sh tests
 # =============================================================================

@@ -192,9 +192,20 @@ if tool == "Bash":
     # token and dirties (out.txt is a real sink), and `tee /dev/null.log` / `/dev/nullx`
     # (a real named path, not the device) are not matched either.
     cmd_scan = _re.sub(r"\btee(?:\s+-\S+)*\s+/dev/null(?=\s*(?:$|[|&;)]|<|\d*>))", " ", cmd_scan)
-    # Commands that write files.
-    writes = ["cp ", "mv ", "python3 <<", "cat <<", "> ", ">>", "tee ",
+    # Commands that write files. Redirects are handled by _has_redirect below, NOT by bare
+    # "> " / ">>" substrings: those also matched the "-> " ARROW. De-quoting (cmd_bare) already
+    # neutralizes a QUOTED arrow, but an UNQUOTED arrow in a for/while/printf compound (not in
+    # the read_only prefix list) still false-set .memory-dirty (Jonah 2026-07-23). A real
+    # redirect operator is never preceded by a dash. Two dash-guarded branches:
+    #   "> "  - single redirect, SPACE-required so fd-dup 2>&1 does NOT match (as the old
+    #           "> " token behaved);
+    #   ">>"  - append, space OPTIONAL, restoring the old bare ">>" recall for no-space
+    #           appends like `printf x >>gen.ts` / `node x 2>>build.log` (Codex 2026-07-23 High:
+    #           requiring a space there was a recall regression in the dangerous direction).
+    # Neither branch matches "-> " / "->>" (dash) or ">(procsub)". Mirrors verify-before-done.sh.
+    writes = ["cp ", "mv ", "python3 <<", "cat <<", "tee ",
               "sed -i", "chmod", "ln -s", "mkdir", "touch ", "rm "]
+    _has_redirect = bool(_re.search(r"(?<!-)(?:> |>>)", cmd_scan))
     # The coreutils `install` file-writing verb, matched only in COMMAND POSITION -
     # the first real word of a segment (past VAR= assignments and sudo/env-style
     # wrappers), optionally path-qualified (/usr/bin/install, ./bin/install).
@@ -227,7 +238,7 @@ if tool == "Bash":
         r"(?:\s+-\S+)*(?:\s+[A-Za-z_][\w]*=\S*)*\s+)*"
         r"(?:\S*/)?install\s")
     is_install_verb = any(_install_cmd.search(seg) for seg in _segments)
-    is_write = (any(w in cmd_scan for w in writes) or is_install_verb) and not is_pure_git
+    is_write = (any(w in cmd_scan for w in writes) or _has_redirect or is_install_verb) and not is_pure_git
 
     # Clear the dirty flag only on a real WRITE into a memory path - a `cp`/`tee`/redirect
     # /`sed -i` whose path is under .claude/memory or MEMORY.md. A READ-ONLY command that
