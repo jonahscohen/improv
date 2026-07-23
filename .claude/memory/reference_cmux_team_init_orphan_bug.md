@@ -5,6 +5,8 @@ type: reference
 relates_to: [reference_codex_exec_hang_sigkill.md]
 ---
 
+## RECURRED + REPAIRED AGAIN 2026-07-23 (Jonah). Compaction-continued session: CLAUDE_CODE_SESSION_ID was 8554d33e... but the team system wanted session-1f1549bf (never init'd - the dir did not exist at all). Both named spawns ("team file ... not found") AND unnamed spawns ("must spawn as a NAMED teammate") were blocked - a hard deadlock. The 2026-06-29 repair below fixed it cleanly: mirrored the healthy session-7fba8147/config.json schema into ~/.claude/teams/session-1f1549bf/ (config.json + inboxes/team-lead.json="[]", cwd=the repo, leadSessionId placeholder). All 4 named teammates then spawned immediately. Durable harness fix (lazy re-init OR reaper handling config-less/absent orphans) still unshipped - flagged to Jonah again.
+
 ## CORRECTION 2026-06-29 (Jonah) - there IS a mid-session repair; restart is NOT required.
 The 2026-06-24 conclusion below ("you cannot fix it in-session, restart") was wrong - it only ever tested `rm`-ing the orphan, never CREATING a valid config. Today: every named spawn failed with `team file for "session-661f86a6" not found`. Key clue: `CLAUDE_CODE_SESSION_ID` was `e47ce907...` but the team system wanted `session-661f86a6` - a compaction-CONTINUED session gets a NEW teamId that startup never initialized, and there was NO team dir for it at all.
 REPAIR (no restart): create the team dir the harness expects, mirroring a healthy one:

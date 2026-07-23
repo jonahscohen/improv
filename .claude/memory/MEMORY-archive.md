@@ -1191,3 +1191,9 @@
 
 <!-- archived 2026-07-23 (moved from MEMORY.md to stay under load budget) -->
 - [api-drift-detector false-positived on successful Agent launches (it scans tool_response, which ECHOES the dispatch prompt; my "no longer exists" symlink-prune wording matched the SIG regex) - FIXED with an Agent success-skip (agentId/async_launched/isAsync) mirroring the SendMessage skip; genuine failed-call drift still fires; verified both directions - REFERENCE (2026-07-14)](reference_api_drift_agent_success_skip.md)
+
+<!-- archived 2026-07-23 (moved from MEMORY.md to stay under load budget) -->
+- [FEEDBACK: surface open backlog when reporting completion - Jonah caught T-0044/45/46 hidden behind a done report; completion reports must end with the workstream's remaining open items - FEEDBACK (2026-07-06)](feedback_surface_backlog_on_completion.md)
+- [EXECUTIVE REPORT output contract for Sidecoach + Justify - deliverable blocks + before/after tables + a sentence or two each; ASCII panels RETIRED (never print renderedPanel); visualizer on rich surfaces; wired into both SKILL.md files + CLAUDE.md; DEFINITIVE for those two surfaces ONLY, not a global format (Jonah scope correction) - FEEDBACK (2026-07-04)](feedback_executive_report_output_contract.md)
+- [RETIRED NAMES BANNED from docs+beats - canonical names ONLY (tactical-polish, sidecoach); old full name + shorthand + pre-rename name all blocked by content-guard in .md; "not mentioned at all" includes the full form - FEEDBACK (2026-07-03)](feedback_retired_names_banned.md)
+- [Hook calibration - Jonah prefers FALSE POSITIVES over false negatives in enforcement hooks; wave off FPs plainly, never loosen a gate to silence them - FEEDBACK (2026-07-02)](feedback_hooks_prefer_false_positives.md)
