@@ -231,6 +231,17 @@
    }
   }
  ],
+ "justify-queue-drain-stop.sh": [
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/justify-queue-drain-stop.sh",
+    "timeout": 10
+   }
+  }
+ ],
  "figma-fidelity-stop.sh": [
   {
    "event": "Stop",
