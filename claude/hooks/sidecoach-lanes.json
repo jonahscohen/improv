@@ -77,22 +77,6 @@
       ]
     },
     {
-      "lane": "lane_live", "label": "live in-browser iteration",
-      "description": "Loops the design inside the browser: live iteration, color refinement, polish, then a critique pass.",
-      "interviewLabel": "Iterate live in the browser", "executionKind": "sequence",
-      "verbChain": ["live", "colorize", "polish", "critique"],
-      "prereqWaivers": [
-        { "dependentFlowId": "flowJ_tactical_polish", "prerequisiteFlowId": "flowG_component_implementation", "reason": "existing UI satisfies the implementation-history assumption" }
-      ],
-      "lexicon": [
-        { "pattern": "in[- ]browser", "weight": 2, "group": "live" },
-        { "pattern": "live iterat(?:e|ion)", "weight": 3, "group": "live" },
-        { "pattern": "iterate in the browser", "weight": 3, "group": "live" },
-        { "pattern": "tweak (?:it )?live", "weight": 3, "group": "live" },
-        { "pattern": "hot[- ]swap", "weight": 2, "group": "live" }
-      ]
-    },
-    {
       "lane": "lane_calm", "label": "a tone-down pass - quiet it to essentials",
       "description": "Quiets visual noise, distills to essentials, clarifies copy and labels, then polishes.",
       "interviewLabel": "Quiet it down to essentials", "executionKind": "sequence",

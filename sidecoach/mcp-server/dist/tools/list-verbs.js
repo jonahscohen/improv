@@ -1,13 +1,13 @@
 "use strict";
-// Tool 1: sidecoach_list_verbs - return all 22 verbs from sidecoach-verbs.json.
+// Tool 1: sidecoach_list_verbs - return all 21 verbs from sidecoach-verbs.json.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.handler = exports.definition = void 0;
 const errors_1 = require("../errors");
 const schemas_1 = require("../schemas");
 exports.definition = {
     name: 'sidecoach_list_verbs',
-    description: 'Return all 22 sidecoach verbs from the canonical registry. Each verb includes its phase ' +
-        '(shape-strategy/build/review/tone/docs/tactical), description, and a one-line explanation. ' +
+    description: 'Return all 21 sidecoach verbs from the canonical registry. Each verb includes its phase ' +
+        '(shape-strategy/build/review/tone/docs), description, and a one-line explanation. ' +
         'Optionally filter by phase.',
     inputSchema: schemas_1.listVerbsShape,
     timeoutMs: 5000,

@@ -33,7 +33,7 @@ exports.listVerbsShape = {
         .min(1)
         .max(64)
         .optional()
-        .describe('Optional phase filter. Sidecoach phases include shape-strategy, build, review, tone, docs, tactical.'),
+        .describe('Optional phase filter. Sidecoach phases include shape-strategy, build, review, tone, docs.'),
 };
 exports.ListVerbsInput = zod_1.z.object(exports.listVerbsShape);
 // ---------------------------------------------------------------------------

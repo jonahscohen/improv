@@ -8,7 +8,7 @@ const schemas_1 = require("../schemas");
 exports.definition = {
     name: 'sidecoach_get_cheatsheet',
     description: 'Return the sidecoach CHEATSHEET.md content. Optionally filter to a single section: ' +
-        'lanes (6 lanes), verbs (22 verbs), flows (registry), or routing (how verbs route to flows). ' +
+        'lanes (5 lanes), verbs (21 verbs), flows (registry), or routing (how verbs route to flows). ' +
         'Default returns the full markdown document.',
     inputSchema: schemas_1.getCheatsheetShape,
     timeoutMs: 5000,

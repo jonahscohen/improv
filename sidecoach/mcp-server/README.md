@@ -111,7 +111,7 @@ state (the cost ledger is read-only from this surface).
 
 ### `sidecoach_list_verbs`
 
-Return all 22 sidecoach verbs from the canonical registry.
+Return all 21 sidecoach verbs from the canonical registry.
 
 - Input: `{ phase?: string }` (optional phase filter)
 - Output: `{ count, total, verbs: [{ verb, pattern, phase, description, oneLineExplanation }] }`
@@ -120,7 +120,7 @@ Return all 22 sidecoach verbs from the canonical registry.
 
 ### `sidecoach_list_lanes`
 
-Return all sidecoach lanes (lane_build / lane_ship / lane_delight / lane_live /
+Return all sidecoach lanes (lane_build / lane_ship / lane_delight /
 lane_calm / lane_converge). Lanes replace the legacy modes; the classifier
 routes natural prompts to a lane.
 

@@ -62,7 +62,7 @@ function probeRouting() {
   line(`verb craft     flowC=${has(craft, FLOW_C)} flowD=${has(craft, FLOW_D)}`);
   line(`verb typeset   flowC=${has(typeset, FLOW_C)}`);
   line(`verb colorize  flowD=${has(colorize, FLOW_D)}`);
-  for (const id of ['lane_build', 'lane_delight', 'lane_live']) {
+  for (const id of ['lane_build', 'lane_delight']) {
     const seq = LANES_BY_ID[id]?.flowSequence ?? [];
     line(`lane ${id.padEnd(12)} flowC=${has(seq, FLOW_C)} flowD=${has(seq, FLOW_D)}`);
   }

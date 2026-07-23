@@ -9,7 +9,7 @@ import sidecoach_lanes as sl
 REG = sl.load_registry(os.path.join(HERE, "sidecoach-lanes.json"))
 CORPUS = json.load(open(os.path.join(REPO, "sidecoach", "parity", "classifier-corpus.json")))
 VERBS = [{"verb": v} for v in ["shape","craft","polish","audit","critique","harden",
-  "adapt","colorize","delight","animate","live","quieter","distill","clarify",
+  "adapt","colorize","delight","animate","quieter","distill","clarify",
   "layout","bolder","overdrive","typeset","optimize","extract","onboard","document"]]
 
 

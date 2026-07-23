@@ -1,4 +1,4 @@
-// Tool 1: sidecoach_list_verbs - return all 22 verbs from sidecoach-verbs.json.
+// Tool 1: sidecoach_list_verbs - return all 21 verbs from sidecoach-verbs.json.
 
 import { SidecoachToolError } from '../errors';
 import { listVerbsShape, type ListVerbsInputT } from '../schemas';
@@ -7,8 +7,8 @@ import type { ToolDefinition, ToolHandler } from './types';
 export const definition: ToolDefinition<typeof listVerbsShape> = {
   name: 'sidecoach_list_verbs',
   description:
-    'Return all 22 sidecoach verbs from the canonical registry. Each verb includes its phase ' +
-    '(shape-strategy/build/review/tone/docs/tactical), description, and a one-line explanation. ' +
+    'Return all 21 sidecoach verbs from the canonical registry. Each verb includes its phase ' +
+    '(shape-strategy/build/review/tone/docs), description, and a one-line explanation. ' +
     'Optionally filter by phase.',
   inputSchema: listVerbsShape,
   timeoutMs: 5_000,

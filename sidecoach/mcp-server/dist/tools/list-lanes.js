@@ -7,7 +7,7 @@ const errors_1 = require("../errors");
 const schemas_1 = require("../schemas");
 exports.definition = {
     name: 'sidecoach_list_lanes',
-    description: 'Return all sidecoach lanes (lane_build / lane_ship / lane_delight / lane_live / lane_calm / lane_converge). ' +
+    description: 'Return all sidecoach lanes (lane_build / lane_ship / lane_delight / lane_calm / lane_converge). ' +
         'Each lane carries a human label, its interview label, a description, and its executionKind (sequence | loop). ' +
         'Lanes replace the legacy modes; the classifier routes natural prompts to a lane.',
     inputSchema: schemas_1.listLanesShape,

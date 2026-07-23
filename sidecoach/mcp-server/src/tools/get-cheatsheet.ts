@@ -9,7 +9,7 @@ export const definition: ToolDefinition<typeof getCheatsheetShape> = {
   name: 'sidecoach_get_cheatsheet',
   description:
     'Return the sidecoach CHEATSHEET.md content. Optionally filter to a single section: ' +
-    'lanes (6 lanes), verbs (22 verbs), flows (registry), or routing (how verbs route to flows). ' +
+    'lanes (5 lanes), verbs (21 verbs), flows (registry), or routing (how verbs route to flows). ' +
     'Default returns the full markdown document.',
   inputSchema: getCheatsheetShape,
   timeoutMs: 5_000,

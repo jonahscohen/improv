@@ -40,7 +40,7 @@ const REPO = path.resolve(__dirname, '..', '..', '..', '..');
 const LANES = path.join(REPO, 'claude', 'hooks', 'sidecoach-lanes.json');
 const CORPUS = path.join(REPO, 'sidecoach', 'parity', 'classifier-corpus.json');
 const VERBS = ['shape', 'craft', 'polish', 'audit', 'critique', 'harden', 'adapt', 'colorize',
-    'delight', 'animate', 'live', 'quieter', 'distill', 'clarify', 'layout', 'bolder',
+    'delight', 'animate', 'quieter', 'distill', 'clarify', 'layout', 'bolder',
     'overdrive', 'typeset', 'optimize', 'extract', 'onboard', 'document'].map(v => ({ verb: v }));
 const reg = (0, keyword_resolver_1.loadRegistry)(LANES);
 // eslint-disable-next-line @typescript-eslint/no-var-requires

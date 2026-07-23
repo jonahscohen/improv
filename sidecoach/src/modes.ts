@@ -5,7 +5,7 @@
 //
 // DEPRECATED - Sidecoach modes (originally T-0011), RETIRED 2026-06-12.
 //
-// The one-word mode keywords (forge / kiln / bloom / canvas / trim / ralph) are
+// The one-word mode keywords (forge / kiln / bloom / trim / ralph) are
 // gone. They were optimized for hook-detectability (distinctive single tokens),
 // not for how a person actually talks - "kiln this release" is not a sentence
 // anyone types - so Jonah cut the whole vocabulary in favor of NATURAL-LANGUAGE
@@ -113,29 +113,6 @@ const BLOOM: Mode = {
   ],
 };
 
-// canvas - live in-browser iteration on an existing surface.
-// Name rationale: when the work is "look at it in the browser and keep
-// tweaking until it feels right," the surface is the canvas. The mode
-// chains live (rapid iteration) + colorize + polish + critique into the
-// loop that visual designers run inside Chrome devtools. Picked over
-// "studio" (too workspace-coded, not action-coded), "prowl" (too
-// predator-coded), and "tinker" (implies small/aimless work, but this
-// mode produces real refinement).
-const CANVAS: Mode = {
-  name: 'canvas',
-  description: 'Live in-browser visual iteration.',
-  oneLineExplanation: 'Loop the design inside the browser: live iteration, color refinement, polish, then a critique pass.',
-  verbChain: ['live', 'colorize', 'polish', 'critique'],
-  chain: [
-    'flowN_rapid_iteration_refined',
-    'flowF_design_tokens',
-    'flowJ_tactical_polish',
-    'flowM_responsive_validation',
-    'flowL_design_critique',
-    'flowK_multi_lens_audit',
-  ],
-};
-
 // ralph - relentless cross-flow iteration to convergence (T-0020).
 // Name rationale: a direct callback to oh-my-claudecode's "Ralph" mode, which
 // is the recognizable industry term for "keep iterating until the validators
@@ -186,19 +163,18 @@ const TRIM: Mode = {
  * (rare but possible), the hook picks the first in declaration order. We
  * order by frequency of expected use: forge first (most common shape of
  * work in a fresh build), then kiln (ship-ready), then bloom (delight),
- * canvas (live), trim (simplify).
+ * trim (simplify).
  */
 export const MODES: Record<string, Mode> = {
   forge: FORGE,
   kiln: KILN,
   bloom: BLOOM,
-  canvas: CANVAS,
   trim: TRIM,
   ralph: RALPH,
 };
 
 /** Convenience: ordered list of modes (matches MODES declaration order). */
-export const MODE_LIST: Mode[] = [FORGE, KILN, BLOOM, CANVAS, TRIM, RALPH];
+export const MODE_LIST: Mode[] = [FORGE, KILN, BLOOM, TRIM, RALPH];
 
 /** Returns the mode for the given name (case-insensitive), or undefined. */
 export function getMode(name: string): Mode | undefined {

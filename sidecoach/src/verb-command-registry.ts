@@ -580,31 +580,6 @@ export const VERB_REGISTRY: Record<string, VerbCommandEntry> = {
     ],
   },
 
-  live: {
-    command: 'live',
-    description:
-      'Interactive live variant mode: select elements in the browser, pick a design action, and get AI-generated HTML+CSS variants hot-swapped via the dev server\'s HMR.',
-    skillRefPath: `${SKILL_REF}/live.md`,
-    phase: 'tactical',
-    flowIds: ['flowN_rapid_iteration_refined'],
-    guidanceAppend: [
-      'Identity lock extracted from DESIGN.md, CSS custom properties, computed styles, or sibling components before any planning.',
-      'Default mode (preserve identity, vary axes) used for ~90% of sessions; departure mode triggered only by explicit anti-references or freeform prompt.',
-      'Three variants committed to three DIFFERENT primary axes; squint test confirmed they read as the same brand at three angles.',
-    ],
-    parityChecklist: [
-      'identity lock',
-      'Default mode',
-      'Departure mode',
-      'Squint test',
-      'Signature params',
-    ],
-    parityPlus: [
-      'rapid-iteration flow integration',
-      'memory entry',
-    ],
-  },
-
   document: {
     command: 'document',
     description:

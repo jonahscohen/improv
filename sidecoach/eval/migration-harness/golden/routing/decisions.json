@@ -30,13 +30,6 @@
         "evidenceIds": []
       },
       {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
         "lane": "lane_calm",
         "label": "a tone-down pass - quiet it to essentials",
         "score": 0,
@@ -84,13 +77,6 @@
         "evidenceIds": []
       },
       {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
         "lane": "lane_calm",
         "label": "a tone-down pass - quiet it to essentials",
         "score": 0,
@@ -131,13 +117,6 @@
       {
         "lane": "lane_delight",
         "label": "a personality pass - color, motion, delight",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
         "score": 0,
         "scope": "SCOPE_UNKNOWN",
         "evidenceIds": []
@@ -190,13 +169,6 @@
         "evidenceIds": []
       },
       {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
         "lane": "lane_calm",
         "label": "a tone-down pass - quiet it to essentials",
         "score": 0,
@@ -239,13 +211,6 @@
       {
         "lane": "lane_delight",
         "label": "a personality pass - color, motion, delight",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
         "score": 0,
         "scope": "SCOPE_UNKNOWN",
         "evidenceIds": []
@@ -298,13 +263,6 @@
         ]
       },
       {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
         "lane": "lane_calm",
         "label": "a tone-down pass - quiet it to essentials",
         "score": 0,
@@ -345,13 +303,6 @@
       {
         "lane": "lane_delight",
         "label": "a personality pass - color, motion, delight",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
         "score": 0,
         "scope": "SCOPE_UNKNOWN",
         "evidenceIds": []
@@ -402,13 +353,6 @@
         "evidenceIds": []
       },
       {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
         "lane": "lane_calm",
         "label": "a tone-down pass - quiet it to essentials",
         "score": 0,
@@ -454,13 +398,6 @@
         "evidenceIds": []
       },
       {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
         "lane": "lane_calm",
         "label": "a tone-down pass - quiet it to essentials",
         "score": 0,
@@ -501,13 +438,6 @@
       {
         "lane": "lane_delight",
         "label": "a personality pass - color, motion, delight",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
         "score": 0,
         "scope": "SCOPE_UNKNOWN",
         "evidenceIds": []
@@ -560,13 +490,6 @@
         "evidenceIds": []
       },
       {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
         "lane": "lane_calm",
         "label": "a tone-down pass - quiet it to essentials",
         "score": 0,
@@ -610,13 +533,6 @@
       {
         "lane": "lane_delight",
         "label": "a personality pass - color, motion, delight",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
         "score": 0,
         "scope": "SCOPE_UNKNOWN",
         "evidenceIds": []
@@ -676,13 +592,6 @@
         "evidenceIds": []
       },
       {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
         "lane": "lane_calm",
         "label": "a tone-down pass - quiet it to essentials",
         "score": 0,
@@ -725,13 +634,6 @@
       {
         "lane": "lane_delight",
         "label": "a personality pass - color, motion, delight",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
         "score": 0,
         "scope": "SCOPE_UNKNOWN",
         "evidenceIds": []
@@ -784,13 +686,6 @@
         "evidenceIds": []
       },
       {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
         "lane": "lane_calm",
         "label": "a tone-down pass - quiet it to essentials",
         "score": 0,
@@ -834,13 +729,6 @@
       {
         "lane": "lane_delight",
         "label": "a personality pass - color, motion, delight",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
         "score": 0,
         "scope": "SCOPE_UNKNOWN",
         "evidenceIds": []
@@ -896,13 +784,6 @@
         "evidenceIds": []
       },
       {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
         "lane": "lane_calm",
         "label": "a tone-down pass - quiet it to essentials",
         "score": 0,
@@ -943,13 +824,6 @@
       {
         "lane": "lane_delight",
         "label": "a personality pass - color, motion, delight",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
         "score": 0,
         "scope": "SCOPE_UNKNOWN",
         "evidenceIds": []
@@ -1000,13 +874,6 @@
         "evidenceIds": []
       },
       {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
         "lane": "lane_calm",
         "label": "a tone-down pass - quiet it to essentials",
         "score": 0,
@@ -1047,13 +914,6 @@
       {
         "lane": "lane_delight",
         "label": "a personality pass - color, motion, delight",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
         "score": 0,
         "scope": "SCOPE_UNKNOWN",
         "evidenceIds": []
@@ -1104,13 +964,6 @@
         "evidenceIds": []
       },
       {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
         "lane": "lane_calm",
         "label": "a tone-down pass - quiet it to essentials",
         "score": 0,
@@ -1151,13 +1004,6 @@
       {
         "lane": "lane_delight",
         "label": "a personality pass - color, motion, delight",
-        "score": 0,
-        "scope": "SCOPE_UNKNOWN",
-        "evidenceIds": []
-      },
-      {
-        "lane": "lane_live",
-        "label": "live in-browser iteration",
         "score": 0,
         "scope": "SCOPE_UNKNOWN",
         "evidenceIds": []

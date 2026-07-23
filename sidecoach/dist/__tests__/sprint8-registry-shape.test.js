@@ -18,11 +18,11 @@ async function run() {
         checks.push([`T1.2: ${v} has non-empty parityPlus`, !!entry && Array.isArray(entry.parityPlus) && entry.parityPlus.length > 0]);
     }
     checks.push(['T1.3: unknown verb returns undefined', (0, verb_command_registry_1.getVerbEntry)('does_not_exist') === undefined]);
-    // T5: assert all 22 verbs are present (17 new + 5 prototype)
-    const all22 = ['craft', 'shape', 'onboard', 'animate', 'bolder', 'colorize', 'delight', 'layout', 'overdrive', 'quieter', 'typeset', 'clarify', 'audit', 'critique', 'polish', 'harden', 'adapt', 'distill', 'optimize', 'document', 'extract', 'live'];
-    checks.push([`T5: registry has all 22 verbs`, all22.every(v => verbs.includes(v)) && verbs.length === 22]);
+    // T5: assert all 21 verbs are present (16 new + 5 prototype)
+    const all21 = ['craft', 'shape', 'onboard', 'animate', 'bolder', 'colorize', 'delight', 'layout', 'overdrive', 'quieter', 'typeset', 'clarify', 'audit', 'critique', 'polish', 'harden', 'adapt', 'distill', 'optimize', 'document', 'extract'];
+    checks.push([`T5: registry has all 21 verbs`, all21.every(v => verbs.includes(v)) && verbs.length === 21]);
     // T5: assert shape for each new verb
-    const newVerbs = ['shape', 'onboard', 'animate', 'bolder', 'colorize', 'delight', 'layout', 'overdrive', 'quieter', 'typeset', 'clarify', 'harden', 'adapt', 'distill', 'optimize', 'extract', 'live'];
+    const newVerbs = ['shape', 'onboard', 'animate', 'bolder', 'colorize', 'delight', 'layout', 'overdrive', 'quieter', 'typeset', 'clarify', 'harden', 'adapt', 'distill', 'optimize', 'extract'];
     for (const v of newVerbs) {
         const entry = (0, verb_command_registry_1.getVerbEntry)(v);
         checks.push([`T5: ${v} has skillRefPath`, !!entry && typeof entry.skillRefPath === 'string' && entry.skillRefPath.endsWith(`${v}.md`)]);

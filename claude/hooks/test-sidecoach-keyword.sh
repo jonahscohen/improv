@@ -3,7 +3,7 @@
 # Run: bash ~/.claude/hooks/test-sidecoach-keyword.sh
 #
 # Exercises the hook against synthetic UserPromptSubmit payloads covering:
-#   - Each of the 22 sidecoach verbs fires in a real invocation context
+#   - Each of the 21 sidecoach verbs fires in a real invocation context
 #   - Code fences, inline backticks, URLs, XML tag bodies, and transcript
 #     markers all suppress firing
 #   - Informational framings ("what is X", "how to use X", "how do I X",
@@ -152,7 +152,6 @@ assert_fires "quieter fires"    "make this hero quieter"            "quieter"
 assert_fires "distill fires"    "distill this dashboard"            "distill"
 assert_fires "document fires"   "document the design system"        "document"
 assert_fires "extract fires"    "extract tokens from this CSS"      "extract"
-assert_fires "live fires"       "live iterate on the nav"           "live"
 
 echo ""
 echo "===== sidecoach-keyword: fenced code blocks suppress firing ====="
@@ -175,7 +174,6 @@ echo "===== sidecoach-keyword: inline backticks suppress firing ====="
 
 assert_silent "polish in inline ticks"   "the \`polish\` function returns void"
 assert_silent "audit in inline ticks"    "run \`audit\` from the npm scripts"
-assert_silent "live in inline ticks"     "see the \`live\` property on the object"
 assert_silent "craft in inline ticks"    "the \`craft\` helper is deprecated"
 
 echo ""
@@ -198,7 +196,6 @@ echo "===== sidecoach-keyword: transcript markers suppress firing ====="
 
 assert_silent "polish under MAGIC tag"   "[MAGIC KEYWORD: polish the button]"
 assert_silent "audit under TURN tag"     "[TURN 5: audit this page]"
-assert_silent "live under TURN N tag"    "[TURN N: live iterate]"
 
 echo ""
 echo "===== sidecoach-keyword: informational framings suppress firing ====="
@@ -212,7 +209,6 @@ assert_silent "tell me about layout"     "tell me about layout in sidecoach"
 assert_silent "polish is a tactical"     "polish is a tactical refinement pass"
 assert_silent "extract is an action"     "extract is an action that pulls tokens"
 assert_silent "explain audit"            "explain audit and what it does"
-assert_silent "define live"              "define live in the sidecoach context"
 assert_silent "what does harden do"      "what does harden do for me"
 
 echo ""
@@ -222,9 +218,6 @@ assert_silent "polished work"            "the polished work is done"
 assert_silent "polishing the floor"      "polishing the floor today"
 assert_silent "audit-trail"              "this audit-trail is messy"
 assert_silent "extraction job"           "extraction job finished"
-assert_silent "live-blog"                "the live-blog plugin failed"
-assert_silent "alive note"               "I am alive and well today"
-assert_silent "delivery service"         "the delivery service is slow"
 assert_silent "documentation"            "read the documentation first"
 assert_silent "adaptation report"        "adaptation report due Friday"
 assert_silent "shaper tool"              "the shaper tool is broken"
@@ -286,7 +279,7 @@ echo ""
 echo "===== sidecoach-keyword: retired mode words no longer route (v10) ====="
 
 # The MODE tier was removed in P1 (the lane classifier replaced it). The old
-# mode words (forge/kiln/bloom/canvas/trim/ralph) are not verbs and carry no
+# mode words (forge/kiln/bloom/trim/ralph) are not verbs and carry no
 # lane lexicon, so they no longer emit a <mode>/<chain>. Where a real verb
 # co-occurs, that verb still routes (the mode word is simply ignored now).
 assert_fires "forge+polish routes the polish verb" "forge and polish the homepage" "polish"

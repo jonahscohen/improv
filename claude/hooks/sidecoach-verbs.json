@@ -1,7 +1,7 @@
 {
   "_meta": {
     "purpose": "Canonical sidecoach verb registry. Consumed by sidecoach-keyword.sh (UserPromptSubmit hook) for verb-intent detection, and by the marketing-site cheatsheet generator (T-0010) for documentation rendering.",
-    "source": "claude/skills/sidecoach/SKILL.md (22 verbs)",
+    "source": "claude/skills/sidecoach/SKILL.md (21 verbs)",
     "matching_rules": "Each verb is matched with hyphen-aware word boundaries: (?<![\\w-])PATTERN(?![\\w-]), case-insensitive. Informational framings (what is X / how to use X / how do I X / X is a / tell me about X / explain X / define X) suppress all firing. Code fences, inline backticks, URLs, XML tag bodies, and transcript markers are stripped from the prompt before matching.",
     "tie_break": "On multiple matches, pick the first verb in this list order."
   },
@@ -152,13 +152,6 @@
       "phase": "docs",
       "description": "Extract design tokens from existing implementation into DESIGN.md",
       "oneLineExplanation": "Pulls reusable tokens and components out of implementation into DESIGN.md"
-    },
-    {
-      "verb": "live",
-      "pattern": "live",
-      "phase": "tactical",
-      "description": "Live browser iteration and real-time refinement",
-      "oneLineExplanation": "Iterates on a target live in the browser with real-time refinement"
     }
   ]
 }

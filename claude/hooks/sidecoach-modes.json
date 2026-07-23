@@ -29,13 +29,6 @@
       "chain": ["colorize", "delight", "animate", "polish"]
     },
     {
-      "mode": "canvas",
-      "pattern": "canvas",
-      "description": "Live in-browser visual iteration.",
-      "oneLineExplanation": "Loop the design inside the browser: live iteration, color refinement, polish, then a critique pass.",
-      "chain": ["live", "colorize", "polish", "critique"]
-    },
-    {
       "mode": "trim",
       "pattern": "trim",
       "description": "Strip a busy UI back to essentials.",

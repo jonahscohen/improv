@@ -1,18 +1,18 @@
 ---
 name: sidecoach-cheatsheet
-description: Single-page reference for all 22 sidecoach verbs and every flow in the registry. One-line triggers and example invocations for each.
+description: Single-page reference for all 21 sidecoach verbs and every flow in the registry. One-line triggers and example invocations for each.
 type: reference
 ---
 
 # Sidecoach Cheatsheet
 
-Single-page reference for the sidecoach surface. Section 1 covers the 22 verb commands (the user-facing slash commands). Section 2 covers the underlying flows (the internal handler IDs the orchestrator chains together). Section 3 explains how the two layers connect.
+Single-page reference for the sidecoach surface. Section 1 covers the 21 verb commands (the user-facing slash commands). Section 2 covers the underlying flows (the internal handler IDs the orchestrator chains together). Section 3 explains how the two layers connect.
 
 This file is generated from `claude/hooks/sidecoach-verbs.json`, `claude/hooks/sidecoach-modes.json`, and `sidecoach/src/flows.ts`. When any of those change, regenerate this file. See the footer for the regeneration note.
 
 ---
 
-## Section 0 - Modes (6 commands)
+## Section 0 - Modes (5 commands)
 
 Modes name the shape of work itself, not a single step. Each mode is a curated chain of verbs and takes precedence over verb matches in the same prompt. Type a mode word in any prompt to fire the chain.
 
@@ -21,13 +21,12 @@ Modes name the shape of work itself, not a single step. Each mode is a curated c
 | `forge` | Net-new build from raw to working | shape -> craft -> polish | `forge the homepage` |
 | `kiln` | Fire-harden a built thing for production | audit -> critique -> harden -> adapt -> polish | `kiln this release` |
 | `bloom` | Add joy, color, motion, personality | colorize -> delight -> animate -> polish | `bloom the empty state` |
-| `canvas` | Live in-browser visual iteration | live -> colorize -> polish -> critique | `canvas the hero` |
 | `trim` | Strip a busy UI back to essentials | quieter -> distill -> clarify -> polish | `trim the dashboard` |
 | `ralph` | Relentless cross-flow iteration to convergence | polish -> audit -> critique (loop) | `ralph the checkout flow` |
 
 ---
 
-## Section 1 - Verbs (22 commands)
+## Section 1 - Verbs (21 commands)
 
 Verbs are listed in registry order within each phase. The phase column groups verbs by where in a design workflow they belong. The "Related flow(s)" column lists the underlying flow chain the orchestrator runs when that verb fires.
 
@@ -77,12 +76,6 @@ Verbs are listed in registry order within each phase. The phase column groups ve
 | `document` | Generates a Google-spec DESIGN.md from a project's existing HTML and CSS | `/sidecoach document` | (dedicated handler, no flow chain) |
 | `extract` | Pulls reusable tokens and components out of implementation into DESIGN.md | `/sidecoach extract src/styles` | flowU |
 
-### Tactical
-
-| Verb | What it does | Example invocation | Related flow(s) |
-|---|---|---|---|
-| `live` | Iterates on a target live in the browser with real-time refinement | `/sidecoach live HeroSection` | flowN |
-
 ---
 
 ## Section 2 - Flows (registry)
@@ -116,7 +109,7 @@ Flows are the handlers the orchestrator chains. Verbs map to one or more flows. 
 | `flowK_multi_lens_audit` | Multi-Lens Audit (5 dimensions) | `audit`, `critique` | Runs a technical scan across accessibility, performance, theming, responsive, anti-patterns |
 | `flowL_design_critique` | Design Critique (Nielsen heuristics) | `critique` | Runs an independent design review across heuristics, cognitive load, emotional journey |
 | `flowM_responsive_validation` | Responsive Design Validation | `craft`, `polish`, `adapt` | Validates breakpoints, touch targets at 40x40 minimum, and viewport behavior |
-| `flowN_rapid_iteration_refined` | Rapid Iteration (Token-based) | `live` | Goal-driven token-based refinement with success criteria and decision framework |
+| `flowN_rapid_iteration_refined` | Rapid Iteration (Token-based) | (orchestrator-only) | Goal-driven token-based refinement with success criteria and decision framework |
 
 ### Tier 4 - Special workflows
 
@@ -171,7 +164,7 @@ The keyword hook is the keyword-detector layer (it ensures the right intent gets
 
 ### Setup commands (teach + document)
 
-Setup commands are NOT verbs - they're dedicated handlers in the orchestrator that write canonical project files (PRODUCT.md, DESIGN.md). They exist outside the 22-verb registry because they're invoked once at project setup, not per-task.
+Setup commands are NOT verbs - they're dedicated handlers in the orchestrator that write canonical project files (PRODUCT.md, DESIGN.md). They exist outside the 21-verb registry because they're invoked once at project setup, not per-task.
 
 | Command | What it does |
 |---|---|

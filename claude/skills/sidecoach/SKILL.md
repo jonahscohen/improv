@@ -1,6 +1,6 @@
 ---
 name: sidecoach
-description: The design orchestration system for Improv. 26 flows, two parallel command surfaces (phase commands + 22 verb commands), plus teach/document setup commands and a help command. Use for all design work: /sidecoach craft <feature>, /sidecoach shape <feature>, /sidecoach polish <target>, /sidecoach audit <target>, /sidecoach animate <target>, /sidecoach critique <target>, /sidecoach teach, /sidecoach document, /sidecoach list, /sidecoach help <verb>. Also triggers on: brand verification, component research, font pairing, motion patterns, design tokens, accessibility audit, responsive design, typography, clone/implement a design, colorize, delight, bolder, overdrive, quieter, distill, clarify, optimize, harden, adapt, live iteration, onboarding flows.
+description: The design orchestration system for Improv. 26 flows, two parallel command surfaces (phase commands + 21 verb commands), plus teach/document setup commands and a help command. Use for all design work: /sidecoach craft <feature>, /sidecoach shape <feature>, /sidecoach polish <target>, /sidecoach audit <target>, /sidecoach animate <target>, /sidecoach critique <target>, /sidecoach teach, /sidecoach document, /sidecoach list, /sidecoach help <verb>. Also triggers on: brand verification, component research, font pairing, motion patterns, design tokens, accessibility audit, responsive design, typography, clone/implement a design, colorize, delight, bolder, overdrive, quieter, distill, clarify, optimize, harden, adapt, onboarding flows.
 ---
 
 # Sidecoach - Design Intelligence Orchestration
@@ -11,7 +11,7 @@ Sidecoach is the design workflow layer built into this Claude Code installation.
 
 Three command surfaces share the same flow chains:
 - **Phase commands** - sidecoach native vocabulary grouped by phase (research / craft / review / special).
-- **Verb commands** - 22 verb commands that mirror the canonical design verb vocabulary 1:1 and route to the same underlying flows. The orchestrator appends per-verb guidance (canonical reference sections plus sidecoach extensions) so output speaks the verb language while keeping sidecoach's validators, BuildReport, taste validation, and memory.
+- **Verb commands** - 21 verb commands that mirror the canonical design verb vocabulary 1:1 and route to the same underlying flows. The orchestrator appends per-verb guidance (canonical reference sections plus sidecoach extensions) so output speaks the verb language while keeping sidecoach's validators, BuildReport, taste validation, and memory.
 - **Natural-language intent detection** - the primary surface, and the one to lead with. You describe a design task in plain English and the intent detector classifies it to the right flow (asking a single clarifying question when two are a close call), then runs it to convergence with checkpointing. Exposed to the model as the MCP tools `classify_intent` / `list_lanes` / `sidecoach_lane`, so the same plain-language request works in the CLI, desktop, or an IDE sidebar. This replaced the retired one-word mode keywords.
 
 ## Dependent capabilities
@@ -22,7 +22,7 @@ Sidecoach delegates specialized work to dependent tools. Treat these as part of 
 
 ## Natural-language intent detection (this replaced modes)
 
-The old one-word mode keywords (`forge`/`kiln`/`bloom`/`canvas`/`trim`/`ralph`) are RETIRED. Jonah's call (2026-06-12): they were optimized for hook-detectability, not for how a person actually talks - "kiln this release" is not a sentence anyone types. Do not reintroduce magic keywords that fail the say-it-out-loud test.
+The old one-word mode keywords (`forge`/`kiln`/`bloom`/`trim`/`ralph`) are RETIRED. Jonah's call (2026-06-12): they were optimized for hook-detectability, not for how a person actually talks - "kiln this release" is not a sentence anyone types. Do not reintroduce magic keywords that fail the say-it-out-loud test.
 
 The replacement is intent detection: you write what you want in plain language and sidecoach figures out which design task you mean.
 
@@ -87,7 +87,6 @@ echo "$RESULT" | node -e "
 | Production-ready sweep (errors, i18n, edge cases) | `/sidecoach harden` |
 | First-run flows, empty states, activation | `/sidecoach onboard` |
 | Pull reusable tokens and components into the design system | `/sidecoach extract` |
-| Iterate visually on elements in a live browser | `/sidecoach live` |
 
 When unsure, run `/sidecoach list` for the full menu. Once an entry command is loaded, let its reference file drive. Do not improvise around it.
 
@@ -98,7 +97,7 @@ When unsure, run `/sidecoach list` for the full menu. Once an entry command is l
 | `/sidecoach teach --deep [brief]` | Deep-interview mode (T-0023, closes OMC gap #5): extends the taxonomy from 5 to 9 fields (adds problem, success metrics, business model, technical constraints, brand voice), runs vague-answer detection that demotes low-effort answers ("developers", "modern", "professional") to low confidence and surfaces a sharper follow-up question, reports an ambiguity score across 4 weighted dimensions (goal/constraints/criteria/context) with weakest-dimension targeting, validates the written PRODUCT.md structurally before returning, and hands off to `/sidecoach document` when DESIGN.md is missing. Use for any new project where the brief is more than a sentence or two; standard teach is fine for established projects with a known shape. |
 | `/sidecoach document` | Generates Google-spec DESIGN.md from project HTML/CSS: YAML token frontmatter plus the six-section body in canonical order. |
 | `/sidecoach shape <feature>` | Plans design approach before building; runs exploration and rapid iteration |
-| `/sidecoach list` | Shows both phase commands and the 22 verb commands grouped by phase |
+| `/sidecoach list` | Shows both phase commands and the 21 verb commands grouped by phase |
 | `/sidecoach help <verb>` | Shows registry detail for a verb: description, phase, reference path, flow chain, parity checklist, sidecoach parity-plus additions |
 
 ### Implementation
@@ -134,10 +133,9 @@ When unsure, run `/sidecoach list` for the full menu. Once an entry command is l
 ### Special
 | Command | What it does |
 |---|---|
-| `/sidecoach live <target>` | Live browser iteration and real-time refinement |
 | `/sidecoach onboard <target>` | First-run flows and activation patterns |
 
-## Verb commands (22 commands)
+## Verb commands (21 commands)
 
 Every verb routes to a sidecoach flow chain and the orchestrator appends the verb's canonical guidance plus sidecoach's parity-plus extensions. Same flows underneath - different vocabulary on top.
 
@@ -146,9 +144,8 @@ Every verb routes to a sidecoach flow chain and the orchestrator appends the ver
 - Review: `audit`, `critique`, `polish`, `harden`, `adapt`, `optimize`
 - Tone: `quieter`, `distill`
 - Docs: `document`, `extract`
-- Tactical: `live`
 
-Type `/sidecoach list` to see all commands organized by phase (phase commands plus the 22 verbs). Type `/sidecoach help <verb>` for the registry detail on any specific verb.
+Type `/sidecoach list` to see all commands organized by phase (phase commands plus the 21 verbs). Type `/sidecoach help <verb>` for the registry detail on any specific verb.
 
 ## Mandatory Workflow Gates
 

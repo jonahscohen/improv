@@ -41,7 +41,7 @@ export declare class FlowExecutionEngine {
     /**
      * Sprint 8 T7: Build the verb-command guidance-append block.
      * Returns the array of strings to append to result.guidance for verbs that
-     * have a registry entry (the 22 verb commands). The returned
+     * have a registry entry (the 21 verb commands). The returned
      * array includes the parityChecklist and parityPlus tokens verbatim so the
      * sprint8 parity test sees them in the flattened output.
      */

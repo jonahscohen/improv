@@ -786,7 +786,7 @@ export class FlowExecutionEngine {
           }
         }
 
-        // Sprint 8 T8: append the 22 verb commands under a separate heading
+        // Sprint 8 T8: append the 21 verb commands under a separate heading
         groupedGuidance.push('');
         groupedGuidance.push('## Verb commands');
         for (const [verb, info] of Object.entries(verbCommands)) {
@@ -1058,7 +1058,7 @@ export class FlowExecutionEngine {
         }
       }
       // Sprint 8 T7: append verb-command guidance after the chain executes.
-      // Only fires for verbs that have a registry entry (the 22 verb command
+      // Only fires for verbs that have a registry entry (the 21 verb command
       // verbs); phase commands like 'research' or 'review' return null from
       // getVerbEntry and are unaffected.
       const chainGuidanceAppend = commandMatch.command
@@ -1558,7 +1558,7 @@ export class FlowExecutionEngine {
   /**
    * Sprint 8 T7: Build the verb-command guidance-append block.
    * Returns the array of strings to append to result.guidance for verbs that
-   * have a registry entry (the 22 verb commands). The returned
+   * have a registry entry (the 21 verb commands). The returned
    * array includes the parityChecklist and parityPlus tokens verbatim so the
    * sprint8 parity test sees them in the flattened output.
    */
@@ -1969,10 +1969,10 @@ export interface SidecoachResult {
 }
 
 // Build + refinement lanes that receive the lane-start reference preflight
-// (deliverable B). Every sidecoach lane is design build/refinement work, so all six
+// (deliverable B). Every sidecoach lane is design build/refinement work, so all five
 // qualify; listed explicitly so a future non-design lane is opted in deliberately.
 const REFERENCE_PREFLIGHT_LANES = new Set<string>([
-  'lane_build', 'lane_delight', 'lane_live', 'lane_calm', 'lane_ship', 'lane_converge',
+  'lane_build', 'lane_delight', 'lane_calm', 'lane_ship', 'lane_converge',
 ]);
 
 // module-level helper: deterministic start-request id from phrase + project so a

@@ -9,11 +9,11 @@ import sidecoach_lanes as sl
 REG = sl.load_registry(os.path.join(HERE, "sidecoach-lanes.json"))
 
 
-def test_six_lanes_with_required_fields():
+def test_five_lanes_with_required_fields():
     lanes = REG["lanes"]
     assert [l["lane"] for l in lanes] == [
         "lane_build", "lane_ship", "lane_delight",
-        "lane_live", "lane_calm", "lane_converge",
+        "lane_calm", "lane_converge",
     ]
     for l in lanes:
         for field in ("lane", "label", "description", "interviewLabel",
@@ -218,7 +218,7 @@ def test_negator_alone_discards_to_not_in_scope():
 
 VERBS = [{"verb": v} for v in [
     "shape","craft","polish","audit","critique","harden","adapt","colorize",
-    "delight","animate","live","quieter","distill","clarify","layout","bolder",
+    "delight","animate","quieter","distill","clarify","layout","bolder",
     "overdrive","typeset","optimize","extract","onboard","document"]]
 
 

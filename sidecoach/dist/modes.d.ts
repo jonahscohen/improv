@@ -27,7 +27,7 @@ export interface Mode {
  * (rare but possible), the hook picks the first in declaration order. We
  * order by frequency of expected use: forge first (most common shape of
  * work in a fresh build), then kiln (ship-ready), then bloom (delight),
- * canvas (live), trim (simplify).
+ * trim (simplify).
  */
 export declare const MODES: Record<string, Mode>;
 /** Convenience: ordered list of modes (matches MODES declaration order). */

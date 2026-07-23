@@ -5,7 +5,7 @@ Sidecoach is a design system orchestration engine that chains design and develop
 There are two parallel slash command surfaces:
 
 - **Phase commands** - sidecoach native vocabulary (`research`, `craft`, `review`, plus special verbs like `clone`, `migrate`, `refactor`, `type`, `motion`, `reference`, `comprehensive`, `rapid`).
-- **Verb command verbs** - 22 commands that mirror sidecoach's vocabulary 1:1 and route through the same flow chains. The orchestrator appends per-verb parity guidance (sidecoach's section names verbatim, plus sidecoach's parity-plus extensions: BuildReport, taste validation, polish-standard domain grades, category-reflex detector, memory entry).
+- **Verb command verbs** - 21 commands that mirror sidecoach's vocabulary 1:1 and route through the same flow chains. The orchestrator appends per-verb parity guidance (sidecoach's section names verbatim, plus sidecoach's parity-plus extensions: BuildReport, taste validation, polish-standard domain grades, category-reflex detector, memory entry).
 
 You can still describe what you're building in natural language and the intent detector will route, but the slash commands are the supported primary interface.
 
@@ -233,10 +233,10 @@ Current accuracy: 100% on test suite (8 diverse utterances)
 
 Sidecoach supports both interfaces because each fits a different moment:
 
-- **Slash commands** are the supported primary interface for direct, intentional invocation. Use `/sidecoach polish login-form` when you know what you want. Two parallel vocabularies (phase commands and the 22 verb command verbs) share the same underlying flows.
+- **Slash commands** are the supported primary interface for direct, intentional invocation. Use `/sidecoach polish login-form` when you know what you want. Two parallel vocabularies (phase commands and the 21 verb command verbs) share the same underlying flows.
 - **Natural language intent detection** still works for unscripted descriptions. The intent detector routes free-form utterances to the same flow chains, with confidence scoring and phase-gate prerequisites.
 - **No "what should I do next?" friction.** The orchestrator chains related flows, enforces prerequisites at phase boundaries, and writes a session memory entry so the next call starts with full context.
-- **`/sidecoach list` and `/sidecoach help <verb>`** make the surface discoverable: list shows phase commands and the 22 verbs grouped by phase; help dumps the registry detail for any specific verb.
+- **`/sidecoach list` and `/sidecoach help <verb>`** make the surface discoverable: list shows phase commands and the 21 verbs grouped by phase; help dumps the registry detail for any specific verb.
 
 ## Slash command surface
 
@@ -252,20 +252,19 @@ Sidecoach supports both interfaces because each fits a different moment:
 - `/sidecoach teach [brief]` - brief-driven hybrid; parses what's in the brief, asks targeted questions for gaps, writes PRODUCT.md
 - `/sidecoach document` - scans project HTML/CSS, writes Google-spec DESIGN.md (YAML token frontmatter + six-section body)
 
-### Verb command verbs (22 commands)
+### Verb command verbs (21 commands)
 - Shape and strategy: `shape`, `onboard`
 - Build: `craft`, `animate`, `bolder`, `colorize`, `delight`, `layout`, `overdrive`, `typeset`, `clarify`
 - Review: `audit`, `critique`, `polish`, `harden`, `adapt`, `optimize`
 - Tone: `quieter`, `distill`
 - Docs: `document`, `extract`
-- Tactical: `live`
 
 Each verb routes to a sidecoach flow chain through `VERB_REGISTRY` in `src/verb-command-registry.ts`. The orchestrator appends the registry entry's `guidanceAppend`, `parityChecklist` (sidecoach section names verbatim), and `parityPlus` (sidecoach additions) so the response matches sidecoach's voice without losing sidecoach's validators, BuildReport, taste validation, and memory.
 
 ## Status
 
 - 36 flows implemented (22 flows A-V + 14 legacy 1-14).
-- 22 verb command verbs wired (Sprint 8).
+- 21 verb command verbs wired (Sprint 8).
 - Daemon infrastructure complete; sessionstart / postuserprompt / postresponse hooks registered.
 - Slash command router + intent detector both route through the same FlowExecutionEngine.
 - `sprint8-verb-parity` 197/197 PASS; `sprint8-list-and-help` 13/13 PASS; tsc clean.

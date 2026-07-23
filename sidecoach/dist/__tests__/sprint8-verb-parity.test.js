@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Sprint 8 T6: Parameterized parity test across all 22 verbs.
+ * Sprint 8 T6: Parameterized parity test across all 21 verbs.
  *
  * For every entry in VERB_REGISTRY:
  *   - invoke FlowExecutionEngine.process('/sidecoach <verb>') inside a sandbox
