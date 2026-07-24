@@ -17,3 +17,7 @@ justify/server/certs/
 
 # transient fixtures from claude/hooks/test-install-hook-deploy.sh
 .test-fixtures-*
+
+# Python bytecode caches - never track these
+__pycache__/
+*.pyc
