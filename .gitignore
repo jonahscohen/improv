@@ -21,3 +21,6 @@ justify/server/certs/
 # Python bytecode caches - never track these
 __pycache__/
 *.pyc
+
+# Derived labeling screenshots - regenerated deterministically by the harness
+.shots/
