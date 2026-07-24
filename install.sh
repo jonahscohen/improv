@@ -521,13 +521,13 @@ DESCS+=(
   "ClickUp: blocks writes to ClickUp via the MCP unless confirmed. Opt-in; installs block-clickup-writes."
   "Visualizer: gates the mcp__visualize__show_widget tool (surface + quality checks). Opt-in; installs visualizer-guard."
   "Codex: guards for the Codex integration - watches codex CLI failures and governs codex-rescue agent spawns, plus the codex-review.py cross-model review tool (self-resolves a node>=16). Opt-in; installs codex-failure-watcher + codex-rescue-guard + codex-review.py."
-  "Justify: in-browser visual micro-adjustment tool (server + core + adapters + MCP + /justify skill) plus its source-guard and watch hooks. Was personal; now public."
+  "Justify: in-browser visual micro-adjustment tool (server + core + adapters + MCP + /justify skill) plus its source-guard, watch and queue-drain hooks. Was personal; now public."
 )
 FILES+=(
   "~/.claude/hooks/block-clickup-writes.sh\n~/.claude/settings.json (1 PreToolUse hook)"
   "~/.claude/hooks/visualizer-guard.sh\n~/.claude/settings.json (1 PreToolUse hook)"
   "~/.claude/hooks/codex-failure-watcher.sh + codex-rescue-guard.sh + codex-review.py\n~/.claude/settings.json (2 hooks)"
-  "~/.claude/justify/ + ~/.claude/skills/justify/ + ~/.claude.json (MCP)\n~/.claude/hooks/justify-source-guard.sh + justify-watch-guard.sh + justify-watch-standing-by.sh"
+  "~/.claude/justify/ + ~/.claude/skills/justify/ + ~/.claude.json (MCP)\n~/.claude/hooks/justify-source-guard.sh + justify-watch-guard.sh + justify-watch-standing-by.sh + justify-queue-drain-stop.sh"
 )
 DIRS+=("" "" "" "$REPO_DIR/justify")
 PICKS+=(0 0 0 0)
@@ -1548,7 +1548,7 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 }
 
 deactivate_justify() {
-  deactivate_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh
+  deactivate_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh
   rm -rf "$CLAUDE_DIR/justify"
   rm -rf "$CLAUDE_DIR/skills/justify"
   # Remove MCP server from ~/.claude.json
@@ -4903,7 +4903,7 @@ picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh 
 picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-postresponse.sh
 picked fable        && install_app_hooks fable-orchestrator-guard.sh
 picked voice-output && install_app_hooks voice-gate.sh voice-mandate.sh voice-toggle.sh
-picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh
+picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh
 picked clickup      && install_app_hooks block-clickup-writes.sh
 picked visualizer   && install_app_hooks visualizer-guard.sh
 picked codex        && install_app_hooks codex-failure-watcher.sh codex-rescue-guard.sh
@@ -4984,7 +4984,7 @@ picked codex      && echo "  - Codex guards: codex-failure-watcher + codex-rescu
 picked chrome     && echo "  - Chrome tab-group hygiene: chrome-tabgroup track/clear/stop hooks wired into settings.json"
 picked figma      && echo "  - Figma fidelity guard: figma-fidelity-stop (Stop) + figma-fidelity-arm (PreToolUse, auto-arms on Figma pulls) wired into settings.json"
 picked fable      && echo "  - Fable orchestrator guard: fable-orchestrator-guard hook wired into settings.json"
-picked justify    && echo "  - Justify: server + core + /justify skill + MCP registration + source/watch/standing-by hooks"
+picked justify    && echo "  - Justify: server + core + /justify skill + MCP registration + source/watch/standing-by/queue-drain hooks"
 picked ghostty  && echo "  - Ghostty: config.ghostty (copied from repo - re-run install.sh to sync edits)"
 picked shaders  && echo "  - Ghostty shaders: in-repo chain at $REPO_DIR/shaders, plus library at ~/Documents/Github/ghostty-shaders"
 picked cmux     && echo "  - cmux: settings.json"

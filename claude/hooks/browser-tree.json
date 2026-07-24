@@ -116,11 +116,12 @@
      "key": "Hooks",
      "kind": "hooks",
      "tag": "the hooks Justify depends on",
-     "desc": "The hooks Justify installs to guard its source, manage the watch loop, and report standing-by state.",
+     "desc": "The hooks Justify installs to guard its source, manage the watch loop, report standing-by state, and hold the session open until the prompt queue is drained.",
      "hooks": [
       "justify-source-guard",
       "justify-watch-guard",
-      "justify-watch-standing-by"
+      "justify-watch-standing-by",
+      "justify-queue-drain-stop"
      ]
     }
    ]
@@ -265,7 +266,9 @@
      "desc": "The 4 hooks in the grounding cluster: source-grounding (grounding-gate, grounding-guard) plus completion discipline (task-loop-mandate, justify-queue-mandate).",
      "hooks": [
       "grounding-gate",
-      "grounding-guard"
+      "grounding-guard",
+      "task-loop-mandate",
+      "justify-queue-mandate"
      ]
     },
     {
@@ -475,6 +478,7 @@
   "justify-source-guard": "Blocks edits to generated justify artifacts.",
   "justify-watch-guard": "Keeps the justify watch loop alive.",
   "justify-watch-standing-by": "Corrects the false \"finished\" line when the watch parks.",
+  "justify-queue-drain-stop": "Blocks ending the session while Justify prompts sit unanswered in the queue.",
   "agent-teams-guard": "Gates the Agent tool inside cmux team sessions.",
   "node-shim-heal": "Re-plants the cmux node preload shim.",
   "cmux-close-guard": "Protects cmux panes from an accidental close.",
@@ -511,6 +515,8 @@
   "question-enforcement": "Backs the question-through-the-tool mandate.",
   "grounding-gate": "Requires grounding claims in real evidence.",
   "grounding-guard": "Checks claims against real sources.",
+  "task-loop-mandate": "Re-injects the rule to finish the task list you were handed.",
+  "justify-queue-mandate": "Re-injects the rule to finish every prompt queued in Justify.",
   "api-drift-detector": "Detects drifted or renamed API calls.",
   "api-drift-stop": "Enforces the API-drift check at stop.",
   "api-drift-ack": "Records your acknowledgement of a drift.",
@@ -541,6 +547,7 @@
   "justify-source-guard": "justify",
   "justify-watch-guard": "justify",
   "justify-watch-standing-by": "justify",
+  "justify-queue-drain-stop": "justify",
   "figma-fidelity-stop": "figma",
   "figma-fidelity-arm": "figma",
   "bash-guard": "safety",
@@ -562,6 +569,8 @@
   "question-enforcement": "question-discipline",
   "grounding-gate": "grounding",
   "grounding-guard": "grounding",
+  "task-loop-mandate": "grounding",
+  "justify-queue-mandate": "grounding",
   "api-drift-detector": "api-drift",
   "api-drift-stop": "api-drift",
   "api-drift-ack": "api-drift",

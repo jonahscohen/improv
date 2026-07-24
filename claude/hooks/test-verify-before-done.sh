@@ -300,6 +300,143 @@ assert_path_no_arm ".sh under a nested claude/hooks/ stays exempt (a hook script
 
 restore_vf2
 
+echo ""
+echo "===== VISUAL vs CODE: a visual REFERENCE must not arm visual (2026-07-23) ====="
+# The Bash arm side used to upgrade to the "visual" flag whenever ANY token was a visual
+# file - so a command that merely REFERENCED a .tsx/.css (a codemod arg, a cp/mv read
+# source, a tee stdin source) falsely demanded a screenshot at the end of a research /
+# refactor session even though no UI changed (Jonah 2026-07-23). Now a visual file arms
+# "visual" ONLY when it is a genuine WRITE TARGET (redirect target / sed -i / tee /
+# cp-mv destination). These rows assert the flag CONTENT (visual vs code), the dimension
+# this fix narrows - the presence-only assert_arms rows above cannot see it. Negative
+# controls: every genuine visual WRITE and every real UI build must STILL be visual, or
+# we have lost recall (feedback_hooks_prefer_false_positives - never under-arm a real
+# visual write). Own save/restore so a live session is safe.
+VKIND="$HOME/.claude/.needs-verification.global"
+__VK_EXISTED=no; __VK_SAVED=""
+if [ -f "$VKIND" ]; then __VK_EXISTED=yes; __VK_SAVED="$(cat "$VKIND" 2>/dev/null)"; fi
+restore_vkind() { if [ "$__VK_EXISTED" = yes ]; then printf '%s' "$__VK_SAVED" > "$VKIND"; else rm -f "$VKIND"; fi; }
+
+# Feed a session-less Bash payload with an explicit cwd, so project_has_ui() is judged
+# against a real package.json rather than the empty-cwd "assume UI" default.
+run_hook_cwd() {
+  local cmd="$1" cwd="$2" input
+  input=$(python3 -c 'import json,sys; print(json.dumps({"tool_name":"Bash","cwd":sys.argv[2],"tool_input":{"command":sys.argv[1]}}))' "$cmd" "$cwd")
+  echo "$input" | bash "$HOOK" 2>/dev/null
+}
+arm_kind()     { rm -f "$VKIND"; run_hook "$1"        >/dev/null 2>&1; [ -f "$VKIND" ] && cat "$VKIND" || echo absent; }
+arm_kind_cwd() { rm -f "$VKIND"; run_hook_cwd "$1" "$2" >/dev/null 2>&1; [ -f "$VKIND" ] && cat "$VKIND" || echo absent; }
+assert_kind() {
+  local got; got="$(arm_kind "$3")"
+  if [ "$got" = "$2" ]; then echo "PASS: $1"; ((PASS++));
+  else echo "FAIL: $1  (want=$2 got=$got)"; FAIL_LABELS+=("$1"); ((FAIL++)); fi
+}
+assert_kind_cwd() {
+  local got; got="$(arm_kind_cwd "$3" "$4")"
+  if [ "$got" = "$2" ]; then echo "PASS: $1"; ((PASS++));
+  else echo "FAIL: $1  (want=$2 got=$got)"; FAIL_LABELS+=("$1"); ((FAIL++)); fi
+}
+
+# A non-UI project (CLI library: no UI deps, no dev/start/serve script) and a UI project.
+NONUI_DIR="$(mktemp -d)"; printf '{"name":"cli","dependencies":{"commander":"^12"},"scripts":{"build":"tsc","test":"vitest"}}' > "$NONUI_DIR/package.json"
+UI_DIR="$(mktemp -d)";    printf '{"name":"web","dependencies":{"react":"^19"}}' > "$UI_DIR/package.json"
+
+# --- The false positives this fix kills: a visual REFERENCE arms code, not visual ---
+# WRITE branch: a .tsx/.css that is only a cp READ SOURCE (target is non-visual).
+assert_kind     "cp .tsx to a .bak backup arms code (tsx is the read source)"  code   "cp src/App.tsx src/App.tsx.bak"
+assert_kind     "cp .tsx to a .txt arms code (tsx is the read source)"         code   "cp src/App.tsx /tmp/x.txt"
+# DEPLOY branch: a codemod that only NAMES a .tsx arg arms code in a non-UI project.
+assert_kind_cwd "codemod naming a .tsx arms code in a non-UI project"          code   "npx jscodeshift -t codemod.js src/Button.tsx" "$NONUI_DIR"
+
+# --- Negative controls: genuine visual WRITE TARGETS must STILL arm visual (recall) ---
+assert_kind     "sed -i on a .css is a write target -> visual"                 visual "sed -i 's/a/b/' src/app.css"
+assert_kind     "gsed -i on a .css (escaped verb) -> visual"                   visual "gsed -i s/a/b/ src/app.css"
+assert_kind     "tee into a .tsx is a write target -> visual"                  visual "tee src/App.tsx"
+assert_kind     "tee .tsx with a < stdin source -> visual (target is the .tsx)" visual "tee src/App.tsx < input.txt"
+assert_kind     "cp DEST is a .css -> visual"                                  visual "cp 'a.css' 'b.css'"
+assert_kind     "mv DEST is a .tsx (rename) -> visual"                         visual "mv src/Old.tsx src/New.tsx"
+assert_kind     "redirect target is a .css -> visual"                          visual "node gen.js > src/out.css"
+assert_kind     "cp wrapped in bash -lc, DEST .tsx -> visual (verb is substring)" visual 'bash -lc "cp src/a.ts dst/App.tsx"'
+assert_kind     "escaped \\cp with a .tsx DEST -> visual"                       visual '\cp src/a.ts dst/App.tsx'
+
+# --- Codex 2026-07-23 review: five RECALL REGRESSIONS the first cut introduced ---
+# The first version scored only the TRAILING file operand of a write-verb segment and
+# captured a redirect target with a bare \S+. Both silently downgraded REAL visual writes
+# to the logic-only demand - false NEGATIVES, the direction feedback_hooks_prefer_false_positives
+# forbids outright. The fold SIMPLIFIED the rule instead of patching each case: the only
+# reference among write-verb operands is a cp READ SOURCE, because cp alone leaves an
+# operand untouched. Each row below FAILED before the fold.
+# 1. an in-place write FLAG rewrites the file it names, with no cp/mv/tee/sed verb present.
+assert_kind_cwd "prettier --write on a .tsx -> visual (write flag, non-UI proj)" visual "npx prettier --write src/App.tsx" "$NONUI_DIR"
+# 2. sed -i / tee edit EVERY operand, not just the last one.
+assert_kind     "sed -i with a .css BEFORE a .ts operand -> visual"            visual "sed -i s/a/b/ src/app.css src/foo.ts"
+assert_kind     "tee with a .tsx BEFORE a .txt operand -> visual"              visual "tee src/App.tsx notes.txt"
+# 3. mv DESTROYS its source, so a visual SOURCE counts even when the dest is not visual.
+assert_kind     "mv a .tsx to a non-visual name -> visual (source is destroyed)" visual "mv src/App.tsx src/App.ts"
+assert_kind     "git mv a .tsx to a non-visual name -> visual"                 visual "git mv src/App.tsx src/App.ts"
+# 4. a redirect target hugging a separator / subshell close, or quoted with a space.
+assert_kind     "redirect .css followed by a ; separator -> visual"            visual "node gen.js > src/out.css; true"
+assert_kind     "redirect .css inside a subshell -> visual"                    visual "(node gen.js > src/out.css)"
+assert_kind     "QUOTED redirect target containing a space -> visual"          visual 'node gen.js > "src/out file.css"'
+# 5. process substitution must not hide the real inner redirect.
+assert_kind     "redirect .tsx inside a process substitution -> visual"        visual "tee /dev/null >(cat > src/App.tsx)"
+# Arrow guard must survive the widened redirect regex: a -> or --> in prose is NOT a redirect
+# (2026-07-18). The (?<![->]) lookbehind is what keeps these clear.
+assert_kind     "a -> arrow between .tsx names is not a redirect"              absent 'printf "%s -> %s" a.tsx b.tsx'
+assert_kind     "a --> arrow before a .css is not a redirect"                  absent 'while read l; do echo "$l --> done.css"; done'
+assert_kind     "fd-dup 2>&1 is not a redirect target"                         absent "node script.js 2>&1"
+# Chained visual write + build: the write target wins even in a NON-UI project (Codex
+# 2026-07-17 finding 1 - a named visual write target must never be downgraded by the build).
+assert_kind_cwd "sed -i .css && npm run build -> visual even in a non-UI project" visual "sed -i 's/a/b/' src/app.css && npm run build" "$NONUI_DIR"
+
+# --- Negative controls: real UI build still visual; non-UI build/code writes stay code ---
+assert_kind_cwd "npm run build in a UI project -> visual"                      visual "npm run build" "$UI_DIR"
+assert_kind_cwd "npm run build in a non-UI project -> code"                    code   "npm run build" "$NONUI_DIR"
+assert_kind     "sed -i on a .ts (code, not visual) -> code"                   code   "sed -i 's/x/y/' src/foo.ts"
+assert_kind     "cp .ts read source into a .md target -> code (still arms, prefer-FP)" code "cp src/foo.ts README.md"
+assert_kind     "tee .md target with a .tsx stdin source -> code (tsx is read source)" code "tee notes.md < src/App.tsx"
+
+echo ""
+echo "===== DEPLOY BRANCH: project_has_ui must not fail OPEN on a package.json-less dir ====="
+# project_has_ui walked up 6 levels for a package.json and, finding none, fell out of the
+# loop to a bare `return True`. Because the deploy branch ORs it with the write-target
+# check, EVERY package.json-less directory armed visual on zero evidence and made the
+# write-target check irrelevant there (lead review 2026-07-23). It now falls back to asking
+# whether the tree actually renders anything: an .html/.htm within 2 levels.
+# The .js rows are the DECISIVE controls - they name no visual file, carry no write verb and
+# no redirect, so _visual_write_target is provably False and ONLY project_has_ui can arm them.
+EMPTY_DIR="$(mktemp -d)"
+STATIC_DIR="$(mktemp -d)"; printf '<html><body>hi</body></html>' > "$STATIC_DIR/index.html"; printf '.a{color:red}' > "$STATIC_DIR/style.css"
+DEEP_DIR="$(mktemp -d)"; mkdir -p "$DEEP_DIR/src/pages"; printf '<html></html>' > "$DEEP_DIR/src/pages/index.html"
+DEEP3_DIR="$(mktemp -d)"; mkdir -p "$DEEP3_DIR/site/src/pages"; printf '<html></html>' > "$DEEP3_DIR/site/src/pages/index.html"
+LOOP_DIR="$(mktemp -d)"; mkdir -p "$LOOP_DIR/sub"; ln -s "$LOOP_DIR" "$LOOP_DIR/sub/back" 2>/dev/null
+
+assert_kind_cwd "codemod naming only a .js in an EMPTY dir -> code (decisive)"  code   "npx jscodeshift -t codemod.js src/Button.js" "$EMPTY_DIR"
+assert_kind_cwd "make in an EMPTY dir -> code (no evidence of UI)"              code   "make all" "$EMPTY_DIR"
+assert_kind_cwd "npm run build in an EMPTY dir -> code (no evidence of UI)"     code   "npm run build" "$EMPTY_DIR"
+assert_kind_cwd "codemod naming a .tsx in an EMPTY dir -> code (reference only)" code  "npx jscodeshift -t codemod.js src/Button.tsx" "$EMPTY_DIR"
+# RECALL negative controls: a package.json-less STATIC SITE is real UI and must stay visual.
+assert_kind_cwd "npm run build in a package.json-less STATIC SITE -> visual"    visual "npm run build" "$STATIC_DIR"
+assert_kind_cwd "make in a package.json-less STATIC SITE -> visual"            visual "make all" "$STATIC_DIR"
+assert_kind_cwd "codemod naming only a .js in a STATIC SITE -> visual"         visual "npx jscodeshift -t codemod.js src/Button.js" "$STATIC_DIR"
+assert_kind_cwd "html nested 2 levels down still counts as a static site"      visual "npm run build" "$DEEP_DIR"
+# Depth 2 was tighter than real static layouts and missed site/src/pages/index.html - a
+# recall loss found by probing the scan directly. The bound is depth 3.
+assert_kind_cwd "html nested 3 levels down still counts as a static site"      visual "npm run build" "$DEEP3_DIR"
+# A symlink loop must TERMINATE (the entry cap bounds it) and must never raise - a
+# traceback here would break the hook on every single tool call.
+assert_kind_cwd "a symlink loop terminates without a traceback"                code   "npm run build" "$LOOP_DIR"
+# A real visual WRITE TARGET must arm visual even where the project reads non-UI - the
+# write-target check is no longer masked by the OR.
+assert_kind_cwd "sed -i .css && build in an EMPTY dir -> visual (write target)" visual "sed -i 's/a/b/' src/app.css && npm run build" "$EMPTY_DIR"
+assert_kind_cwd "prettier --write .tsx in an EMPTY dir -> visual (write flag)"  visual "npx prettier --write src/App.tsx" "$EMPTY_DIR"
+# With NO cwd at all we still know nothing, so keep over-firing (prefer-FP, unchanged).
+assert_kind     "npm run build with NO cwd -> visual (cannot tell, over-fire)"  visual "npm run build"
+
+rm -rf "$EMPTY_DIR" "$STATIC_DIR" "$DEEP_DIR" "$DEEP3_DIR" "$LOOP_DIR"
+rm -rf "$NONUI_DIR" "$UI_DIR"
+restore_vkind
+
 # Do not leave the global test bucket armed for the next suite / a stray reader.
 rm -f "$HOME/.claude/.needs-verification.global"
 

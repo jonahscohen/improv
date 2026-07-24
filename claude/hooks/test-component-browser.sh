@@ -431,12 +431,14 @@ stage_toggle 'tilt-lab'
 stage_toggle 'tilt-lab'
 [ "$(pending_under 'tilt-lab')" = "0" ] && ok "toggle twice clears" || bad "toggle twice clears"
 
-# 2. justify partial install: one hook staged on, the other two land in the off-list.
+# 2. justify partial install: one hook staged on, the other three land in the off-list.
+# The off-list names EVERY other justify hook, so this pattern must too - a prefix match
+# would keep passing if a hook were dropped from the tree (cross-model review, 2026-07-23).
 INSTALLED="||"; stage_reset
 stage_toggle 'justify/Hooks/justify-source-guard'
 out="$(apply_plan)"
 case "$out" in
-  *"INSTALL justify justify-watch-guard justify-watch-standing-by"*) ok "justify partial install plan";;
+  *"INSTALL justify justify-watch-guard justify-watch-standing-by justify-queue-drain-stop"*) ok "justify partial install plan";;
   *) bad "justify partial install plan";;
 esac
 
@@ -453,7 +455,7 @@ esac
 # stage_all reaches the component leaf as well as the hooks, the leaf is staged off, and
 # rule 1 fires. This is now the ONLY path to a full uninstall for a payload component -
 # which is the point: it is reachable from a row that says "Remove all of Justify".
-INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|"; stage_reset
+INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|justify/Hooks/justify-queue-drain-stop|"; stage_reset
 stage_all 'justify' uninstall
 out="$(apply_plan)"
 case "$out" in
@@ -467,12 +469,12 @@ esac
 # `UNINSTALL_COMPONENT justify` from a row labelled "Disable all Justify hooks...", i.e.
 # the label understated the blast radius by the entire package. Both halves are
 # load-bearing: the plan must install, and must not uninstall.
-INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|"; stage_reset
+INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|justify/Hooks/justify-queue-drain-stop|"; stage_reset
 stage_all 'justify/Hooks' uninstall
 out="$(apply_plan)"
 case "$out" in
-  *"INSTALL justify justify-source-guard justify-watch-guard justify-watch-standing-by"*)
-    ok "disable-all-hooks keeps the component (all 3 off-listed)";;
+  *"INSTALL justify justify-source-guard justify-watch-guard justify-watch-standing-by justify-queue-drain-stop"*)
+    ok "disable-all-hooks keeps the component (all 4 off-listed)";;
   *) bad "disable-all-hooks keeps the component (got '$out')";;
 esac
 case "$out" in
@@ -552,7 +554,7 @@ INSTALLED="|justify/Hooks/justify-watch-guard|"; stage_reset
 stage_toggle 'justify/Hooks/justify-source-guard'
 out="$(apply_plan)"
 case "$out" in
-  *"INSTALL justify justify-watch-standing-by"*) ok "partial preserve plan";;
+  *"INSTALL justify justify-watch-standing-by justify-queue-drain-stop"*) ok "partial preserve plan";;
   *) bad "partial preserve plan";;
 esac
 
@@ -571,7 +573,7 @@ case "$out" in
 esac
 
 # 8. stage_all install is TOTAL: it clears an opposite-direction staged-uninstall.
-INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|"; stage_reset
+INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|justify/Hooks/justify-queue-drain-stop|"; stage_reset
 stage_toggle 'justify/Hooks/justify-source-guard'   # currently on -> stages UNINSTALL
 stage_all 'justify' install                          # "install all" must clear that
 [ "$(pending_under 'justify')" = "0" ] && ok "stage_all install clears opposite pending" || bad "stage_all install clears opposite pending"
@@ -639,7 +641,7 @@ apl_line() {
 # install, NOT a component uninstall - so codex rides the install pass and DEACTIVATE is
 # empty. Owner order is apply_plan first-seen: PENDING_INSTALL is scanned before
 # PENDING_UNINSTALL, so chrome (staged install) precedes codex (staged uninstall).
-INSTALLED="|Guardrails/codex/codex-failure-watcher|Guardrails/codex/codex-rescue-guard|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|"
+INSTALLED="|Guardrails/codex/codex-failure-watcher|Guardrails/codex/codex-rescue-guard|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|justify/Hooks/justify-queue-drain-stop|"
 stage_reset
 stage_toggle 'Guardrails/codex/codex-rescue-guard'   # currently ON -> stages uninstall
 stage_all 'Guardrails/chrome' install                # currently OFF -> stages all 3 on
@@ -652,7 +654,7 @@ stage_all 'Guardrails/chrome' install                # currently OFF -> stages a
 # justify, and justify must NOT also appear on the install line (the two lists are
 # disjoint by construction). The leaf is in INSTALLED because that is what stage_all has
 # to reach to trigger rule 1; hooks alone no longer collapse to a deactivate.
-INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|"
+INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|justify/Hooks/justify-queue-drain-stop|"
 stage_reset; stage_all 'justify' uninstall
 [ "$(apl_line 2)" = "DEACTIVATE justify" ] && ok "apply_pending_plan DEACTIVATE owner" || bad "apply_pending_plan DEACTIVATE owner"
 [ "$(apl_line 1)" = "INSTALL |" ] && ok "apply_pending_plan deactivated owner absent from INSTALL" || bad "apply_pending_plan deactivated owner absent from INSTALL"
@@ -663,8 +665,12 @@ INSTALLED="||"; stage_reset; stage_toggle 'tilt-lab'
 
 # 18. .sh suffix on a MULTI-hook off-list: apply_plan emits bare tree names, the off-list
 # must carry .sh on EVERY entry (install.sh's HOOK_OFF contract is filenames).
+# The off-list is justify's OTHER hooks in tree order, so this string is hook-count
+# sensitive by design - it is what caught the tree and the installer disagreeing when
+# justify-queue-drain-stop was packaged (2026-07-23). If justify gains a hook, this
+# expectation must grow with it; that coupling is the point, not friction to route around.
 INSTALLED="||"; stage_reset; stage_toggle 'justify/Hooks/justify-source-guard'
-[ "$(apl_line 1)" = "INSTALL justify|justify-watch-guard.sh justify-watch-standing-by.sh" ] \
+[ "$(apl_line 1)" = "INSTALL justify|justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh" ] \
   && ok "apply_pending_plan multi-hook off-list .sh suffix" || bad "apply_pending_plan multi-hook off-list .sh suffix"
 
 # 19. nothing staged -> both lines still emitted, both empty (fixed 2-line shape).

@@ -23,6 +23,8 @@ restore(){
   [ -n "$SAVED_FLAG" ] && printf '%s' "$SAVED_FLAG" > "$FLAG"
   [ -n "$SAVED_ACKED" ] && printf '%s' "$SAVED_ACKED" > "$ACKED"
   rm -f "$REPO_DIR/claude/hooks/zz-registry-fixture.sh"
+  [ -n "${SB:-}" ] && rm -rf "$SB"
+  return 0
 }
 trap restore EXIT
 
@@ -85,7 +87,9 @@ out="$(payload "$REPO_DIR/claude/hooks/browser-lib.sh" | "$GUARD" 2>/dev/null)"
 [ -z "$out" ] && ok "*-lib excluded" || bad "*-lib excluded"
 # Files outside claude/hooks are none of its business.
 out="$(payload "$REPO_DIR/install.sh" | "$GUARD" 2>/dev/null)"
-[ -z "$out" ] && ok "non-hook path ignored" || ok "non-hook path ignored"
+# Both branches used to call ok(), so this row could not fail - it would have stayed green
+# even if the guard started shouting about install.sh. Caught in cross-model review.
+[ -z "$out" ] && ok "non-hook path ignored" || bad "non-hook path ignored"
 
 # The gate self-heals: a hook deleted from disk stops blocking.
 rm -f "$FLAG" "$ACKED"; mkfixture
@@ -112,6 +116,148 @@ mkfixture
 "$GUARD" --audit 2>/dev/null | grep -q "UNMANAGED: test-" && bad "audit excludes tests" || ok "audit excludes tests"
 "$GUARD" --audit 2>/dev/null | grep -q "UNMANAGED: detect-session-model" && bad "audit excludes exemptions" || ok "audit excludes exemptions"
 rm -f "$REPO_DIR/claude/hooks/zz-registry-fixture.sh"
+
+# --- the escape that put three unmanaged hooks on main (2026-07-23) ------------------
+# task-loop-mandate, justify-queue-mandate and justify-queue-drain-stop were written into
+# this repo by a session whose PROJECT was a different repo (cwd .../ppai, writing into
+# improv by absolute path). The guard is project-scoped, so it never ran; nothing armed
+# the flag; and the Stop gate returned at its `[ -f "$FLAG" ]` line on every improv stop
+# for five days while all three sat in the tree and got committed. Same dead end for a
+# hook made by the Bash tool (`cat >`, heredoc, `cp`), which the Write|Edit|MultiEdit
+# matcher structurally cannot see, and for one that arrives by git pull.
+#
+# These rows run against a SYNTHETIC repo with its own $HOME, so they assert the GATE and
+# never this repo's tidiness. A row that goes red merely because the real tree is
+# momentarily dirty is a row that trains you to ignore the suite.
+SB="$(mktemp -d)"
+sbhome="$SB/home"; sbrepo="$SB/repo"; sbother="$SB/other"
+mkdir -p "$sbhome/.claude" "$sbrepo/claude/hooks" "$sbother/claude/hooks"
+cp "$GUARD" "$STOP" "$sbrepo/claude/hooks/"
+sbg="$sbrepo/claude/hooks/hook-registry-guard.sh"
+sbs="$sbrepo/claude/hooks/hook-registry-stop.sh"
+sbtree="$sbrepo/claude/hooks/browser-tree.json"
+sbflag="$sbhome/.claude/.unmanaged-hook"; sback="$sbhome/.claude/.unmanaged-hook-acked"
+chmod +x "$sbg" "$sbs"
+cat > "$sbtree" <<'J'
+{"pinned_hooks":["hook-registry-guard","hook-registry-stop"],
+ "hook_owner":{"good-hook":"demo"},
+ "hook_desc":{"good-hook":"a properly packaged hook"}}
+J
+printf 'picked demo && install_app_hooks demo good-hook.sh\n' > "$sbrepo/install.sh"
+for h in good-hook test-sb-suite sb-fake-lib; do
+  printf '#!/usr/bin/env bash\n:\n' > "$sbrepo/claude/hooks/$h.sh"
+done
+sbclear(){ rm -f "$sbflag" "$sback"; }
+
+# A fully packaged repo must stay SILENT. A gate that fires on everything gets ignored,
+# and this one now runs on every single stop.
+sbclear
+out="$(HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbs" 2>&1)"; rc=$?
+{ [ "$rc" = "0" ] && [ -z "$out" ]; } && ok "packaged repo: stop stays silent" || bad "packaged repo: stop stays silent (rc=$rc out=$out)"
+
+# THE ESCAPE. A hook appears on disk with no write-time guard involvement at all - the
+# Bash tool, another project's session, a git pull. The flag is genuinely never armed.
+printf '#!/usr/bin/env bash\n:\n' > "$sbrepo/claude/hooks/sb-unpackaged.sh"
+[ -f "$sbflag" ] && bad "escape precondition: flag genuinely unarmed" || ok "escape precondition: flag genuinely unarmed"
+out="$(HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbs" 2>&1)"; rc=$?
+[ "$rc" = "2" ] && ok "stop blocks a hook no write-time guard ever saw" || bad "stop blocks a hook no write-time guard ever saw (rc=$rc)"
+case "$out" in *sb-unpackaged*) ok "stop names the unseen hook" ;; *) bad "stop names the unseen hook" ;; esac
+# Exclusions survive the sweep, or the gate becomes noise.
+case "$out" in *test-sb-suite*) bad "sweep excludes test-*" ;; *) ok "sweep excludes test-*" ;; esac
+case "$out" in *sb-fake-lib*) bad "sweep excludes *-lib" ;; *) ok "sweep excludes *-lib" ;; esac
+case "$out" in *good-hook*) bad "sweep leaves packaged hooks alone" ;; *) ok "sweep leaves packaged hooks alone" ;; esac
+# Still blocks ONCE - the sweep must not be able to trap a session in a loop.
+HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbs" >/dev/null 2>&1; rc=$?
+[ "$rc" = "0" ] && ok "sweep blocks only once" || bad "sweep blocks only once (rc=$rc)"
+
+# A foreign CLAUDE_PROJECT_DIR is exactly the shape of the real incident: it used to make
+# --audit glob an empty directory and call the repo clean, and made the Stop gate treat
+# every armed name as gone-from-disk and clear the arm.
+sbclear
+HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbother" bash "$sbg" --audit >/dev/null 2>&1; rc=$?
+[ "$rc" = "1" ] && ok "audit resolves its own repo, not CLAUDE_PROJECT_DIR" || bad "audit resolves its own repo, not CLAUDE_PROJECT_DIR (rc=$rc)"
+HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbother" bash "$sbs" >/dev/null 2>&1; rc=$?
+[ "$rc" = "2" ] && ok "foreign CLAUDE_PROJECT_DIR cannot blind the gate" || bad "foreign CLAUDE_PROJECT_DIR cannot blind the gate (rc=$rc)"
+sbclear
+out="$(printf '{"tool_input":{"file_path":"%s"}}' "$sbrepo/claude/hooks/sb-unpackaged.sh" | HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbother" bash "$sbg" 2>&1)"
+case "$out" in *"UNMANAGED HOOK"*) ok "cross-project write still instructs" ;; *) bad "cross-project write still instructs" ;; esac
+grep -Fxq "sb-unpackaged" "$sbflag" 2>/dev/null && ok "cross-project write arms the flag" || bad "cross-project write arms the flag"
+
+# Invoked THROUGH a symlink, the way ~/.claude/hooks does it. BASH_SOURCE plus a plain
+# `cd` does not resolve symlinks, so without the walk _SELF_REPO lands on the link's
+# grandparent, finds no tree there, falls back to CLAUDE_PROJECT_DIR - and the whole
+# foreign-project blind spot reopens under a different name. Review finding.
+sbclear
+mkdir -p "$sbhome/.claude/hooks"
+ln -sf "$sbs" "$sbhome/.claude/hooks/hook-registry-stop.sh"
+HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbother" bash "$sbhome/.claude/hooks/hook-registry-stop.sh" >/dev/null 2>&1; rc=$?
+[ "$rc" = "2" ] && ok "symlinked invocation still finds the real repo" || bad "symlinked invocation still finds the real repo (rc=$rc)"
+rm -f "$sbhome/.claude/hooks/hook-registry-stop.sh"
+
+# Self-heal survives the rewrite: delete the file, the sweep stops reporting it.
+sbclear; rm -f "$sbrepo/claude/hooks/sb-unpackaged.sh"
+printf 'sb-unpackaged\n' > "$sbflag"
+HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbs" >/dev/null 2>&1; rc=$?
+[ "$rc" = "0" ] && ok "sweep self-heals on a deleted hook" || bad "sweep self-heals on a deleted hook (rc=$rc)"
+[ -f "$sbflag" ] && bad "sweep clears the flag when clean" || ok "sweep clears the flag when clean"
+
+# TORN READ. The gate now clears a live arm whenever the audit says "clean", so "clean"
+# and "I could not parse the tree" must not look alike. Seen for real on 2026-07-23 while
+# a concurrent session was rewriting browser-tree.json mid-suite.
+printf '#!/usr/bin/env bash\n:\n' > "$sbrepo/claude/hooks/sb-unpackaged.sh"
+printf 'sb-unpackaged\n' > "$sbflag"; rm -f "$sback"
+cp "$sbtree" "$SB/tree.bak"; printf '{ "pinned_hooks": [' > "$sbtree"
+HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbg" --audit >/dev/null 2>&1; rc=$?
+[ "$rc" = "3" ] && ok "torn tree is 'cannot tell', not 'clean'" || bad "torn tree is 'cannot tell', not 'clean' (rc=$rc)"
+HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbs" >/dev/null 2>&1; rc=$?
+[ "$rc" = "0" ] && ok "torn tree does not block on a transient" || bad "torn tree does not block on a transient (rc=$rc)"
+[ -f "$sbflag" ] && ok "torn tree leaves the arm intact" || bad "torn tree leaves the arm intact"
+cp "$SB/tree.bak" "$sbtree"
+
+# A tree that PARSES but is the wrong shape used to crash the batch python, which exited 1
+# with nothing printed - and the gate reads 1 as "found some", so an empty found-set
+# cleared a live arm. Fail-open, flagged in cross-model review. Now it is a 3 like any
+# other incomplete audit.
+sbclear
+printf '#!/usr/bin/env bash\n:\n' > "$sbrepo/claude/hooks/sb-unpackaged.sh"
+printf 'sb-unpackaged\n' > "$sbflag"
+cp "$sbtree" "$SB/tree.bak"; printf '[]\n' > "$sbtree"
+HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbg" --audit >/dev/null 2>&1; rc=$?
+[ "$rc" = "3" ] && ok "wrong-shaped tree is 'cannot tell', not 'found none'" || bad "wrong-shaped tree is 'cannot tell', not 'found none' (rc=$rc)"
+HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbs" >/dev/null 2>&1
+[ -f "$sbflag" ] && ok "wrong-shaped tree leaves the arm intact" || bad "wrong-shaped tree leaves the arm intact"
+cp "$SB/tree.bak" "$sbtree"; rm -f "$sbrepo/claude/hooks/sb-unpackaged.sh"
+
+# The batch audit and the per-name --check are two implementations of one question. They
+# are asserted equal here so the fast path cannot quietly drift from _is_managed.
+#
+# managed = pinned OR (in hook_owner AND named by install.sh), so BOTH asymmetric halves
+# are fixtured first: sb-tree-only is owned but never deployed (the browser would offer a
+# toggle for something no machine installs), sb-installer-only is deployed but unowned
+# (the browser under-reports - the original sidecoach 2-vs-6 lie). Without these two, a
+# batch rewrite that accepted either half ALONE would still pass this row. Review finding.
+sbclear
+python3 - "$sbtree" <<'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+d["hook_owner"]["sb-tree-only"] = "demo"
+json.dump(d, open(p, "w"), indent=2)
+PY
+printf 'picked demo && install_app_hooks demo good-hook.sh sb-installer-only.sh\n' > "$sbrepo/install.sh"
+printf '#!/usr/bin/env bash\n:\n' > "$sbrepo/claude/hooks/sb-tree-only.sh"
+printf '#!/usr/bin/env bash\n:\n' > "$sbrepo/claude/hooks/sb-installer-only.sh"
+audit_out="$(HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbg" --audit 2>/dev/null)"
+case "$audit_out" in *sb-tree-only*) ok "tree-only hook is unmanaged" ;; *) bad "tree-only hook is unmanaged" ;; esac
+case "$audit_out" in *sb-installer-only*) ok "installer-only hook is unmanaged" ;; *) bad "installer-only hook is unmanaged" ;; esac
+audit_set="$(HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbg" --audit 2>/dev/null | sed -n 's/^UNMANAGED: //p' | sort)"
+check_set=""
+for f in "$sbrepo"/claude/hooks/*.sh; do
+  n="$(basename "$f" .sh)"
+  HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbg" --check "$n" >/dev/null 2>&1 || check_set="$check_set$n"$'\n'
+done
+check_set="$(printf '%s' "$check_set" | sed '/^$/d' | sort)"
+[ "$audit_set" = "$check_set" ] && ok "batch audit agrees with per-name --check" || bad "batch audit agrees with per-name --check ([$audit_set] vs [$check_set])"
 
 echo "== $pass passed, $fail failed =="
 [ "$fail" = 0 ]

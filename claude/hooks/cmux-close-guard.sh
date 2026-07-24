@@ -28,12 +28,20 @@
 #       or a session ledger: ~/.claude/.cmux-owned-surfaces.<session_key>
 #       (one ref per line).
 #
-# DENY IS THE DEFAULT. Everything the guard cannot prove, it blocks: no cmux to
-# query, an unresolvable surface, no explicit target, an unparseable command, a
-# close hidden inside `bash -c` / `eval` / a command substitution, or cmux
-# output whose shape it does not recognise. A guard that falls through to allow
-# on anything it fails to understand is a guard the next unparsed command walks
-# straight past - which is exactly how the incident happened.
+# DENY IS THE DEFAULT once cmux can be seen. Everything the guard cannot prove, it
+# blocks: an unresolvable surface, no explicit target, an unparseable command, or a
+# close hidden inside `bash -c` / `eval` / a command substitution. A guard that
+# falls through to allow on anything it fails to understand is a guard the next
+# unparsed command walks straight past - which is exactly how the incident happened.
+#
+# That stays true even when cmux ITSELF cannot be seen (2026-07-23). Three drafts
+# tried to fail-SOFT there - allow when cmux looks absent, unreachable or drifted -
+# and independent review broke each one: a close subcommand keeps working while
+# introspection is down, a bare name can resolve for the shell but not for this hook,
+# and a missing path can be created by an earlier command on the same line. What
+# changed is the REMEDY, not the verdict: an unintrospectable cmux still denies, but
+# the denial offers CMUX_CLOSE_UNVERIFIED, an explicit per-target break-glass, so
+# getting unstuck no longer means restarting cmux. See the introspection section.
 #
 # Command parsing is a real quote-aware tokenizer, not a regex. Regex detection
 # was tried first and an independent review broke it in six ways in one pass
@@ -72,6 +80,15 @@ def emit(reason=None):
     else:
         print("{}")
     sys.exit(0)
+
+
+def warn(msg):
+    # Loud-but-non-blocking notice. Goes to stderr (surfaces in the hook log /
+    # transcript) and never touches the stdout decision, so an unverified close taken
+    # on a caller's explicit break-glass is announced without the warning itself
+    # changing any permission outcome - the same posture as the beats provenance lint,
+    # where a warning never blocks.
+    sys.stderr.write("cmux-close-guard: " + msg + "\n")
 
 
 raw = os.environ.get("CMUX_CLOSE_GUARD_INPUT") or ""
@@ -189,19 +206,26 @@ def tokenize(s):
             i = j + 1
             continue
         if c == '"':
-            j, buf = i + 1, []
+            j, buf, live = i + 1, [], []
             while j < n:
                 if s[j] == "\\" and j + 1 < n:
                     buf.append(s[j + 1])
+                    # An ESCAPED $ or backtick is literal text, not an expansion. The
+                    # escape used to be collapsed into the same buffer the dynamism test
+                    # read, so "\$(cmux close-surface ...)" - inert prose in a doc, a beat,
+                    # or a review prompt - looked like a live substitution. Track escaped
+                    # positions separately so only real expansions mark a word dynamic.
+                    live.append("\x00")
                     j += 2
                     continue
                 if s[j] == '"':
                     break
                 buf.append(s[j])
+                live.append(s[j])
                 j += 1
             chunk = "".join(buf)
             # Expansions inside double quotes still expand: "$CMUX" runs cmux.
-            if re.search(r"\$[({\w]|`", chunk):
+            if re.search(r"\$[({\w]|`", "".join(live)):
                 dyn = True
             word += chunk
             has_word = True
@@ -268,7 +292,11 @@ WRAPPERS = {"bash", "sh", "zsh", "dash", "ksh", "fish", "csh", "eval", "source",
             ".", "xargs", "ssh", "python", "python3", "perl", "ruby", "node",
             "osascript", "script", "watch", "parallel", "find", "awk", "gawk",
             "mawk", "make", "sed", "tmux", "screen", "expect", "docker"}
-ENV_ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+# `+?` covers bash's append form. Without it `PATH+=:/tmp/cbin cmux close-surface` was
+# not recognised as an env PREFIX at all, so the executable resolved to the assignment
+# word instead of to cmux, no close was parsed, and the line fell through ALLOWED -
+# closing the current pane with no target verification. (Codex, 9th pass.)
+ENV_ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\+?=")
 
 # Prefix flags that swallow the NEXT word. Skipping only flags and numbers left
 # `sudo -u spare3 cmux close-surface ...` resolving its executable to "spare3",
@@ -291,12 +319,24 @@ NUMERIC = re.compile(r"^[\d.]+$")
 
 
 def classify_command(words):
-    """-> (kind, exec_name, env, args, had_prefix). kind: cmux|wrapper|dynamic|other"""
-    env, idx, had_prefix = [], 0, False
+    """-> (kind, exec_name, env, args, args_dyn, had_prefix).
+
+    kind: cmux|wrapper|dynamic|other. args_dyn parallels args, flagging each word the
+    tokenizer could not resolve to a literal.
+    """
+    env, idx, had_prefix, env_dyn = [], 0, False, False
     while idx < len(words):
         w, dynamic = words[idx]
         if ENV_ASSIGN.match(w):
             env.append(w)
+            # An assignment whose VALUE is a substitution EXECUTES that substitution:
+            # `out=$(cmux close-surface --surface surface:23)` runs the close before the
+            # assignment ever happens. Swallowed as inert env, it yielded no parsed close
+            # and the line was allowed outright - and capturing output this way is an
+            # everyday shell shape, not an exotic one. Remembering the dynamism lets the
+            # coarse rule below deny it. (Codex, 10th pass.)
+            if dynamic:
+                env_dyn = True
             idx += 1
             continue
         base = os.path.basename(w)
@@ -319,15 +359,19 @@ def classify_command(words):
             continue
         break
     if idx >= len(words):
-        return "other", "", env, [], [], had_prefix
+        return ("dynamic" if env_dyn else "other"), "", env, [], [], had_prefix
     w, dynamic = words[idx]
     args = [x[0] for x in words[idx + 1:]]
     args_dyn = [x[1] for x in words[idx + 1:]]
-    if dynamic:
+    if dynamic or env_dyn:
         return "dynamic", w, env, args, args_dyn, had_prefix
     base = os.path.basename(w)
     if base == "cmux":
-        return "cmux", base, env, args, args_dyn, had_prefix
+        # Return the FULL word, not the basename. `/opt/cmux/bin/cmux` and `./cmux`
+        # are cmux invocations whose PATH matters: absence has to be judged against
+        # the binary the command actually names, not against the guard's own search
+        # list, or an out-of-tree cmux reads as "absent" and sails through.
+        return "cmux", w, env, args, args_dyn, had_prefix
     if base in WRAPPERS:
         return "wrapper", base, env, args, args_dyn, had_prefix
     return "other", base, env, args, args_dyn, had_prefix
@@ -411,13 +455,41 @@ if CLOSE_TOKEN_RE.search(re.sub(r"[\\'\"]", "", EXEC_REGION)):
                  "cannot follow a close routed through it, so it cannot prove which pane "
                  "would die. Run the close on its own, directly. %s"
                  % (_c[1] or "an unresolvable command", COOPERATIVE))
+        # A DYNAMIC WORD carrying a close subcommand is a substitution, and a
+        # substitution RUNS its contents - it does not matter which command it is
+        # attached to, or that the command itself is harmless:
+        #     echo $(cmux close-surface --surface surface:23)
+        #     export out=$(cmux close-surface --surface surface:23)
+        # bash executes the close before echo/export ever runs. Only `cmux` commands
+        # consulted args_dyn before, so a substitution hanging off any OTHER command
+        # was never examined and the line was allowed. (Codex, 11th pass.)
+        for _word, _is_dyn in zip(_c[3], _c[4]):
+            if _is_dyn and CLOSE_TOKEN_RE.search(re.sub(r"[\\'\"]", "", _word)):
+                emit("BLOCKED: this command line carries a cmux close subcommand inside a "
+                     "substitution (`%s`), which the shell EXECUTES before the surrounding "
+                     "command runs. The guard cannot prove which pane that would close. Run "
+                     "the close on its own, directly. %s"
+                     % (_word[:60], COOPERATIVE))
 
 close_cmds = []       # cmux invocations whose subcommand is a close
 for kind, name, env, args, args_dyn, had_prefix in commands:
     if kind == "cmux":
         sub, rest = subcommand_of(args)
         if sub in CLOSE_SUBS:
-            close_cmds.append((sub, rest, env))
+            # A close whose ARGS are not fully literal cannot be verified, even though
+            # its subcommand parsed cleanly. The flags are repeatable and last-value
+            # -wins, so a second target can expand in at run time:
+            #   cmux close-surface --surface surface:40 "$(printf -- '--surface')" surface:23
+            # The guard would prove the dead surface:40 and cmux would close the LIVE
+            # surface:23. The dynamic-arg check below used to sit only on the
+            # NOT-a-close branch, so a parsed close skipped it entirely. (Codex, 4th pass.)
+            if any(args_dyn):
+                emit("BLOCKED: this cmux close carries an argument the guard cannot resolve "
+                     "(a substitution or variable), so it cannot tell which surface would "
+                     "actually be closed - another --surface can expand in at run time and "
+                     "close a different pane than the one verified. Spell the close out "
+                     "literally. " + COOPERATIVE)
+            close_cmds.append((sub, rest, env, name))
             continue
         # A generated subcommand: `cmux "$(printf close-surface)" --surface surface:23`.
         # The word is not the literal token, so subcommand matching never sees a close.
@@ -437,6 +509,33 @@ for kind, name, env, args, args_dyn, had_prefix in commands:
         continue
 
     # (wrapper and dynamic commands never reach here - the coarse rule above took them.)
+
+    # A binary the guard cannot identify as cmux, run with a close subcommand AND a
+    # cmux pane-target flag: a renamed or copied cmux.
+    #     install -m 755 "$(command -v cmux)" /tmp/cmux-x
+    #     /tmp/cmux-x close-surface --surface surface:23
+    # Classification matches on basename == "cmux", so `cmux-x` was "other", the close
+    # token counted as inert data, and the line was allowed outright. (Codex, 4th pass.)
+    #
+    # Requiring a --surface/--panel/--pane/--workspace/--window target ALONGSIDE the
+    # close token is what keeps ordinary tooling out of this branch: `grep
+    # close-surface docs/`, `rg close-surface claude/hooks` and `echo close-surface`
+    # carry no such flag. A first draft keyed on "the first non-flag argument is a
+    # close subcommand", which applied cmux's own subcommand grammar to every
+    # executable and denied all three of those - blocking ordinary work on a hook that
+    # runs on EVERY Bash call. (Codex, 5th pass.) Scanning every arg rather than just
+    # the subcommand slot also covers a boolean global flag in front of the
+    # subcommand: `/tmp/cmux-x --no-focus close-surface --surface surface:23`.
+    # The cmux-in-the-name clause catches the no-target shape `/tmp/cmux-x
+    # close-surface` (which the real cmux would answer by closing the CURRENT pane),
+    # without widening the rule to executables that have nothing to do with cmux.
+    if kind == "other" and any(a in CLOSE_SUBS for a in args) and \
+            (flag_values(args, "surface", "panel", "pane", "workspace", "window")
+             or "cmux" in os.path.basename(name or "").lower()):
+        emit("BLOCKED: `%s` is being run with a cmux close subcommand. The guard can only "
+             "verify a close made through a binary it can identify as cmux - not a renamed "
+             "or copied one, which it cannot introspect and will not execute. Run the close "
+             "through `cmux`. %s" % (name or "?", COOPERATIVE))
 
     # The executable ITSELF named after a close subcommand: an alias, a shell function,
     # or a wrapper script. We cannot see through any of them.
@@ -459,13 +558,97 @@ for kind, name, env, args, args_dyn, had_prefix in commands:
 if not close_cmds:
     emit()
 
+# A close whose runtime executable could differ from the one this guard introspects.
+# The guard proves a pane is safe using the cmux IT resolves; that proof only transfers
+# if the shell resolves the same binary. Anything on the line that remaps command
+# resolution breaks the transfer, and the guard would prove one binary's view of the
+# panes while a different binary does the closing. Three shapes, all refused:
+#     PATH=/tmp/cbin:$PATH cmux close-surface ...     (env prefix)
+#     PATH=/tmp/cbin:$PATH; cmux close-surface ...    (bare assignment; also env)
+#     export PATH=/tmp/cbin:$PATH; cmux close-surface ...   (export/declare/set form)
+#     hash -p /tmp/cmux-x cmux; cmux close-surface ...      (hash/alias remap)
+# (Codex, 5th and 6th passes - the export and hash forms were missed by a first draft
+# that only scanned parsed env-prefix assignments.)
+PATH_MUTATORS = {"export", "declare", "typeset", "set"}
+REMAPPERS = {"hash", "alias", "unalias", "enable"}
+
+
+def assigns_path(word):
+    # Both `PATH=...` and bash's append form `PATH+=...`. Matching only on "PATH="
+    # missed `export PATH+=:/tmp/cbin`, which appends a directory just as effectively.
+    # (Codex, 8th pass.)
+    return word.startswith("PATH=") or word.startswith("PATH+=")
+
+
+for _k, _n, _env, _a, _ad, _hp in commands:
+    _base = os.path.basename(_n or "")
+    if any(assigns_path(x) for x in _env) or \
+            (_base in PATH_MUTATORS and any(assigns_path(x) for x in _a)):
+        emit("BLOCKED: this command line changes PATH and runs a cmux close. The guard "
+             "resolves cmux using its own PATH, so it cannot prove the binary that would "
+             "actually run is the one it inspected. Run the close without changing PATH. "
+             + COOPERATIVE)
+    if _base in REMAPPERS:
+        emit("BLOCKED: this command line remaps command resolution (`%s`) and runs a cmux "
+             "close, so the guard cannot prove the `cmux` it inspected is the one the "
+             "shell would run. Run the close on its own. %s" % (_base, COOPERATIVE))
+
 
 # ---------------------------------------------------------------------------
-# cmux introspection. No cmux, no proof, no close.
+# cmux introspection: the UNINTROSPECTABLE case (2026-07-23).
+#
+# The guard used to deny on EVERY uncertainty, including uncertainty about cmux
+# ITSELF, so an unavailable or drifted CLI blocked closes until the user restarted
+# cmux - costly, and it interrupts the very work the restart is meant to protect.
+#
+# The fix is NOT a fail-soft. Three drafts tried one (allow when cmux looks absent,
+# unreachable, or drifted) and independent Codex review broke every version: a close
+# subcommand keeps working while introspection is broken; a bare name resolves
+# differently for the shell than for this hook; and a missing path can be created by
+# an earlier command on the same line. There is no state in which "the guard cannot
+# see cmux" reliably implies "the close cannot kill a pane", so the guard no longer
+# tries to infer one. What changed instead is the REMEDY:
+#
+#   When cmux cannot be introspected - list-panels/top error, time out, come back
+#   empty, or arrive in a shape this parser does not recognise - the close is still
+#   DENIED, but the denial now carries CMUX_CLOSE_UNVERIFIED: an explicit, per-target
+#   break-glass the caller asserts on the same command after checking the pane by
+#   hand. That turns "restart cmux and lose your session" into one named, warned, and
+#   logged assertion, without ever making an unverified close the default.
+#
+#   The break-glass is scoped exactly to what is unverifiable. list-panels/top are
+#   needed by EVERY close, so their failure needs every close on the line to be
+#   asserted. The pane tree is needed only by workspace/window closes, so a tree
+#   outage clears only the close that asserted it - a surface close later on the same
+#   line is still fully liveness-checked (an earlier draft leaked a whole-line allow
+#   here, which re-opened the 2026-07-12 incident; caught by the second Codex pass).
+#
+# Introspection ALWAYS runs the binary find_cmux() resolves, never one the command
+# supplied, so a close can never be cleared by state a caller-provided binary
+# reported - and the guard never execs an unverified binary from a pre-exec hook.
+# For that proof to transfer to the command, the command has to resolve cmux the same
+# way this hook does, which is why a path-named executable and a PATH reassignment are
+# both refused above. What remains outside the guard's reach is shell state it cannot
+# see from a command string - an alias, a shell function, or a `hash -p` override
+# installed in an earlier tool call. Those are deliberate redirections, not the
+# accidental teardown this guard is built to stop.
 # ---------------------------------------------------------------------------
+OVERRIDE = os.environ.get("CMUX_CLOSE_GUARD_CMUX")
+
+
 def find_cmux():
-    for cand in (os.environ.get("CMUX_CLOSE_GUARD_CMUX"),
-                 shutil.which("cmux"),
+    # CMUX_CLOSE_GUARD_CMUX is a test/override seam. When set it is AUTHORITATIVE:
+    # resolve it or treat cmux as ABSENT - do NOT fall through to the real app.
+    # Falling through made tests non-hermetic (a stub-path typo silently drove the
+    # live cmux session) and defeated the override's purpose.
+    if OVERRIDE:
+        if os.path.isfile(OVERRIDE) and os.access(OVERRIDE, os.X_OK):
+            return OVERRIDE
+        warn("CMUX_CLOSE_GUARD_CMUX is set to '%s', which is not an executable file - "
+             "treating cmux as absent. Unset it to restore normal resolution."
+             % OVERRIDE)
+        return None
+    for cand in (shutil.which("cmux"),
                  os.path.expanduser("~/.claude/cmux/cmux"),
                  "/Applications/cmux.app/Contents/Resources/bin/cmux"):
         if cand and os.path.isfile(cand) and os.access(cand, os.X_OK):
@@ -473,11 +656,43 @@ def find_cmux():
     return None
 
 
+def names_explicit_path(exe):
+    """Does this close name its executable by PATH rather than by bare name?"""
+    return bool(exe) and ("/" in exe or exe.startswith("~"))
+
+
+if any(names_explicit_path(e) for (_s, _a, _v, e) in close_cmds):
+    # A path-named executable is refused outright, in BOTH directions:
+    #
+    #  - it EXISTS: the guard will not exec an unverified binary from a
+    #    pre-execution hook merely to introspect it. Its "read-only" subcommands
+    #    could do anything, including closing a pane before the guard has decided.
+    #    It is also never allowed to become the introspection source, so a caller
+    #    cannot hand the guard a binary that reports whatever clears the close.
+    #  - it does NOT exist: tempting to allow ("it cannot run"), but that is a
+    #    TOCTOU. An earlier command on the same line can create it:
+    #        install -m 755 <real cmux> /tmp/cmux-x; /tmp/cmux-x close-surface ...
+    #    is absent at hook time and fully functional at execution time. Same class
+    #    covers a broken symlink whose target appears, or a chmod +x in between.
+    #    (Codex third pass. An earlier draft allowed exactly this.)
+    emit("BLOCKED: this close names its executable by path rather than running the "
+         "installed `cmux`. The guard will not execute an unverified binary to check "
+         "the pane, and it cannot trust that a path missing now will still be missing "
+         "when the command runs. Run the close through `cmux` on PATH so the pane can "
+         "be verified first. " + COOPERATIVE)
+
+for _sub, _args, _env, _exe in close_cmds:
+    if "--" in _args:
+        # End-of-options. Past it, cmux's own parser stops reading --surface as a
+        # flag, so `cmux close-surface -- --surface surface:40` may close something
+        # else entirely while the guard "proved" surface:40 safe. The guard cannot
+        # model another program's option parser, so it refuses the shape.
+        emit("BLOCKED: this close contains a `--` end-of-options separator, so the "
+             "guard cannot tell which target cmux's own parser would actually use - "
+             "it could verify one pane and close another. Spell the close out without "
+             "`--`. " + COOPERATIVE)
+
 CMUX = find_cmux()
-if not CMUX:
-    emit("BLOCKED: cannot verify this close - the cmux CLI is not resolvable, so the "
-         "guard cannot check whether the target pane is backed by a live agent. "
-         + COOPERATIVE)
 
 
 def cmux_run(args, timeout=6):
@@ -488,12 +703,111 @@ def cmux_run(args, timeout=6):
     return (p.stdout or "") if p.returncode == 0 else None
 
 
+def target_values(sub, args):
+    """The raw --surface/--workspace/--window values this close names."""
+    if sub in ("close-surface", "close-panel", "close-pane"):
+        return flag_values(args, "surface", "panel", "pane")
+    if sub == "close-workspace":
+        return flag_values(args, "workspace")
+    if sub == "close-window":
+        return flag_values(args, "window")
+    return []
+
+
+def breakglass_for(sub, args, env):
+    """Does THIS close carry CMUX_CLOSE_UNVERIFIED naming every one of its targets?
+
+    Deliberately per-target and deliberately not a boolean: a truthy flag would be
+    pasted once and forgotten, while naming the surface forces the same positive
+    identification the ownership gate demands. Scoped to one command, so a token on
+    a different command in the same line proves nothing about this one.
+    """
+    raws = target_values(sub, args)
+    if not raws:
+        return False                  # no explicit target: nothing named, nothing to trust
+    claimed = set()
+    for a in env:
+        k, _, v = a.partition("=")
+        if k != "CMUX_CLOSE_UNVERIFIED":
+            continue
+        for part in re.split(r"[,\s]+", v):
+            if part.strip():
+                claimed.add(part.strip())
+    if not claimed:
+        return False
+    return all(r.strip() in claimed for r in raws)
+
+
+def breakglass_all():
+    """Every close on the line is individually break-glassed.
+
+    Required before a WHOLE-LINE allow, which is the only thing this hook can emit.
+    """
+    return bool(close_cmds) and all(breakglass_for(s, a, e) for s, a, e, _x in close_cmds)
+
+
+def unintrospectable(what):
+    """cmux RESOLVED but did not answer usefully -> fail-CLOSED, with a break-glass.
+
+    Only for a cmux the guard could actually locate and run. The "cannot resolve cmux
+    at all" case is a hard deny handled above: the break-glass asserts "I checked this
+    pane", and with no reachable cmux there is nothing for that assertion to attach to.
+
+    Denying is the safe default because a close subcommand can keep working while the
+    introspection subcommands are broken, so the break-glass exists to make the remedy
+    something other than "restart cmux and lose your session".
+
+    Only for failures that make EVERY close unverifiable (list-panels/top). A failure
+    that blocks just one close - the pane tree, which only workspace/window closes
+    need - must NOT come through here: allowing the whole line on that basis would
+    wave through surface closes whose liveness is still perfectly checkable.
+    """
+    if breakglass_all():
+        warn("%s - proceeding UNVERIFIED because every close on this line carries a "
+             "CMUX_CLOSE_UNVERIFIED assertion naming its own target. The live-pane "
+             "check did NOT run; this was taken on the caller's assertion alone." % what)
+        emit()
+    emit("BLOCKED: %s, so the guard cannot prove the target pane is dead - and a close "
+         "can still succeed while introspection is broken, so this is not safe to wave "
+         "through. Restarting cmux restores the check. If you cannot restart, verify "
+         "the pane yourself (the cmux UI, or `ps` against its process) and then assert "
+         "it per-target on the same command: CMUX_CLOSE_UNVERIFIED=<target> cmux "
+         "<close-subcommand> --... %s" % (what, COOPERATIVE))
+
+
+if not CMUX:
+    # A bare `cmux` that resolves nowhere the guard can see. NOT treated as absent:
+    # the shell that runs the command may resolve it anyway (a different PATH than this
+    # hook inherited, a profile entry, a shell function), so "I cannot find it" is not
+    # proof it will not run.
+    #
+    # Deliberately NOT break-glassable, unlike the paths below. CMUX_CLOSE_UNVERIFIED
+    # means "I checked this pane by hand"; with no reachable cmux the guard cannot
+    # confirm the asserted pane exists at all, so the assertion has nothing to attach
+    # to. It is also not the failure this change exists to relieve: the remedy here is
+    # a one-time resolution fix, not a per-session cmux restart. (Codex, 7th pass -
+    # unintrospectable() was reached from here, which let the break-glass cover it.)
+    emit("BLOCKED: the cmux CLI is not resolvable from this hook, so the guard cannot "
+         "check whether the target pane is backed by a live agent - and a bare name can "
+         "still resolve for the shell that runs the command, so this is not safe to wave "
+         "through. CMUX_CLOSE_UNVERIFIED does not apply here. Make cmux resolvable (it is "
+         "normally on PATH, at ~/.claude/cmux/cmux, or inside cmux.app) and re-run. "
+         + COOPERATIVE)
+
+
 panels_txt = cmux_run(["list-panels", "--id-format", "both"])
 top_txt = cmux_run(["top", "--all", "--processes", "--format", "tsv"])
 if panels_txt is None or top_txt is None:
-    emit("BLOCKED: cannot verify this close - cmux did not answer an introspection query "
-         "(list-panels / top), so the guard cannot prove the target pane's process is "
-         "dead. " + COOPERATIVE)
+    # TRANSIENT: cmux is installed but its CLI did not answer (non-zero exit, a
+    # timeout, or a crash). The close subcommand may still work, so this is not safe
+    # to wave through.
+    unintrospectable("cmux did not answer an introspection query (list-panels/top)")
+if not panels_txt.strip() or not top_txt.strip():
+    # EMPTY: cmux answered but reported no panels or no process data. The asymmetric
+    # shape is the dangerous one - list-panels naming surface:23 while `top` comes
+    # back empty means the pane demonstrably EXISTS and its liveness is simply
+    # unknown, which is the least safe moment to allow a close.
+    unintrospectable("cmux returned empty list-panels/top output")
 
 surface_by_key = {}
 for line in panels_txt.splitlines():
@@ -558,9 +872,13 @@ for line in top_txt.splitlines():
     # under its surface, so ignoring the duplicate row is safe.
 
 if not parse_ok or not attributed_to_a_surface:
-    emit("BLOCKED: cmux process output is not in the shape this guard understands, so it "
-         "cannot map panes to their backing processes and cannot prove the target is "
-         "dead. Fix the guard's parser before force-closing anything. " + COOPERATIVE)
+    # DRIFT: cmux answered, but `top` is not in the shape this guard parses - a schema
+    # change after a cmux auto-update, or a partial/garbled response. This is the
+    # WORST case to fail-soft on: cmux is provably healthy (it answered), so the close
+    # subcommand is almost certainly still fully functional. Deny, with the
+    # break-glass as the no-restart escape hatch.
+    unintrospectable("cmux process output is not in the shape this guard understands "
+                     "(schema drift after a cmux update, or a partial response)")
 
 
 def subtree(surface):
@@ -660,12 +978,38 @@ def owned(ref, env_assignments):
 # Resolve targets and decide.
 # ---------------------------------------------------------------------------
 tree_state = {}
+tree_unavailable = [False]     # memo: do not re-query a tree already known silent
 
 
-def load_tree():
+def load_tree(sub, args, env):
+    """The pane tree, or None when it is unavailable AND this close break-glasses it.
+
+    Returning None (rather than emitting a whole-line allow) is load-bearing. Only
+    workspace/window closes need the tree, so a tree outage leaves surface closes
+    fully verifiable. An earlier draft emitted allow straight from here, which meant
+        CMUX_CLOSE_UNVERIFIED=workspace:2 cmux close-workspace --workspace workspace:2; \\
+        CMUX_CLOSE_UNVERIFIED=surface:23 cmux close-surface  --surface  surface:23
+    cleared the LIVE surface:23 without ever running the liveness check - the exact
+    2026-07-12 incident, reintroduced. Caught by the second Codex pass. The caller
+    now skips member enumeration for THIS close only and keeps checking the rest.
+    """
     if tree_state:
         return tree_state
-    txt = cmux_run(["tree", "--all"]) or ""
+    txt = None if tree_unavailable[0] else cmux_run(["tree", "--all"])
+    if txt is None or not txt.strip():
+        tree_unavailable[0] = True
+        if breakglass_for(sub, args, env):
+            warn("cmux `tree` did not answer - %s taken UNVERIFIED on this command's "
+                 "own CMUX_CLOSE_UNVERIFIED assertion. Every other close on the line "
+                 "is still checked normally." % sub)
+            return None
+        emit("BLOCKED: cmux `tree` did not answer, so the panes inside this "
+             "workspace/window cannot be enumerated and the guard cannot tell what "
+             "the close would take down. Restarting cmux restores the check. If you "
+             "cannot restart, close the panes one at a time by surface, or verify "
+             "this container yourself and assert it on the same command: "
+             "CMUX_CLOSE_UNVERIFIED=%s cmux %s ... %s"
+             % ((target_values(sub, args) or ["<target>"])[0], sub, COOPERATIVE))
     ws_surfaces, win_workspaces = {}, {}
     cur_win = cur_ws = None
     for line in txt.splitlines():
@@ -700,9 +1044,9 @@ def load_tree():
     return tree_state
 
 
-for sub, args, env in close_cmds:
+for sub, args, env, _exe in close_cmds:
     if sub in ("close-surface", "close-panel", "close-pane"):
-        raws = flag_values(args, "surface", "panel", "pane")
+        raws = target_values(sub, args)
         if not raws:
             emit("BLOCKED: %s was called without an explicit --surface target, so it would "
                  "close whatever pane happens to be current and the guard cannot identify "
@@ -717,11 +1061,13 @@ for sub, args, env in close_cmds:
             groups.append((ref, [ref]))
 
     elif sub == "close-workspace":
-        raws = flag_values(args, "workspace")
+        raws = target_values(sub, args)
         if not raws:
             emit("BLOCKED: close-workspace was called without an explicit --workspace target. "
                  "It would close every pane in whatever workspace is current. " + COOPERATIVE)
-        tree = load_tree()
+        tree = load_tree(sub, args, env)
+        if tree is None:
+            continue          # break-glassed by this command alone; others still checked
         groups = []
         for raw_v in raws:
             ref = raw_v if raw_v.startswith("workspace:") else "workspace:" + raw_v.strip()
@@ -732,11 +1078,13 @@ for sub, args, env in close_cmds:
             groups.append((ref, members))
 
     elif sub == "close-window":
-        raws = flag_values(args, "window")
+        raws = target_values(sub, args)
         if not raws:
             emit("BLOCKED: close-window was called without an explicit --window target. It would "
                  "close every pane in whatever window is current. " + COOPERATIVE)
-        tree = load_tree()
+        tree = load_tree(sub, args, env)
+        if tree is None:
+            continue          # break-glassed by this command alone; others still checked
         groups = []
         for raw_v in raws:
             ref = raw_v if raw_v.startswith("window:") else "window:" + raw_v.strip()

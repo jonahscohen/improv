@@ -252,6 +252,49 @@ def effective_dir(cmd, cwd):
             return d
     return cwd or ""
 
+def _has_rendered_html(start, max_entries=400):
+    """Fallback for a tree with NO package.json anywhere: look for the signature of a
+    static site - a rendered .html/.htm within a few levels of the build dir.
+
+    This does NOT reintroduce the fixture-scan problem the deps rule above exists to
+    avoid. That problem is scoped to projects that HAVE a package.json: sidecoach ships
+    209 eval/pages HTML files it never renders as its own UI, and every one of them sits
+    UNDER sidecoach/package.json, so sidecoach is decided by deps/scripts and never
+    reaches this fallback. Only a package.json-less tree gets here - and there an .html
+    IS the project (a plain static marketing/reference site with no build tooling), which
+    is exactly the UI that must keep arming visual (Jonah 2026-07-23).
+
+    Bounded: depth 3, skips hidden dirs and node_modules, hard entry cap - this can run
+    on any Bash call that reaches the deploy branch. Depth 3 covers the realistic static
+    layouts (index.html at the root, public/, src/pages/, site/src/pages/); depth 2 was
+    tighter than real sites and missed a/b/c/index.html, a recall loss. An unreadable dir
+    or an inconclusive (cap-hit) scan returns True: cannot tell -> over-fire, the stance
+    this module already documents for a missing/unreadable package.json
+    (feedback_hooks_prefer_false_positives). The entry cap is what bounds a symlink loop,
+    so the walk terminates (over-firing) rather than spinning."""
+    seen = 0
+    queue = [(start, 0)]
+    while queue:
+        d, depth = queue.pop(0)
+        try:
+            entries = list(os.scandir(d))
+        except (OSError, PermissionError):
+            return True
+        for e in entries:
+            seen += 1
+            if seen > max_entries:
+                return True
+            try:
+                if e.is_file():
+                    if os.path.splitext(e.name)[1].lower() in (".html", ".htm"):
+                        return True
+                elif (e.is_dir() and depth < 3 and not e.name.startswith(".")
+                        and e.name != "node_modules"):
+                    queue.append((e.path, depth + 1))
+            except OSError:
+                continue
+    return False
+
 def project_has_ui(start):
     cur = os.path.abspath(start) if start else ""
     for _ in range(6):
@@ -276,7 +319,16 @@ def project_has_ui(start):
                 return True
             return any(k in (pkg.get("scripts") or {}) for k in UI_SCRIPT_KEYS)
         cur = os.path.dirname(cur)
-    return True
+    # Fell out of the loop: no package.json within 6 levels, so the dependency signal
+    # does not exist. A bare `return True` here made EVERY package.json-less directory a
+    # UI project, and because the deploy branch ORs this with the write-target check, it
+    # armed visual on zero evidence and made that check irrelevant (a codemod naming only
+    # a .js armed visual in an empty dir - lead review 2026-07-23). With no cwd at all we
+    # still know nothing, so keep over-firing; with a real directory, ask whether there is
+    # actually anything rendered in it.
+    if not start:
+        return True
+    return _has_rendered_html(os.path.abspath(start))
 
 def is_visual_verification_command(cmd):
     """Real VISUAL verification from the terminal: a cmux browser screenshot or
@@ -553,6 +605,76 @@ if tool == "Bash":
     def _has_redirect(s):
         return bool(_vre.search(r"(?<!-)>>? ", s))
 
+    # In-place write FLAGS. A tool invoked with an explicit write flag rewrites the files
+    # it names, so `npx prettier --write src/App.tsx` is a real visual write even though
+    # no cp/mv/tee/sed verb appears (Codex 2026-07-23, finding 1 - it downgraded to the
+    # logic-only demand). Only unambiguous LONG flags: a bare -i means case-insensitive
+    # to grep and would over-match wildly.
+    write_flag_indicators = ["--write", "--fix", "--in-place"]
+
+    def _visual_write_target(s):
+        """True iff a VISUAL file is a genuine WRITE TARGET of s - NOT merely a
+        REFERENCE (a tool/codemod arg, a cp read source, a redirect stdin source).
+
+        The ONE reference among write-verb operands is a cp READ SOURCE, because
+        cp is the only write verb that leaves an operand untouched. Everything
+        else a write verb names is CHANGED: sed -i and tee edit EVERY operand in
+        place, and mv DESTROYS its source as well as creating its destination, so
+        both ends of an mv count (Codex 2026-07-23, findings 2 and 3 - scoring only
+        the trailing operand silently dropped those real visual writes). Targets:
+          (a) the token after a dash-guarded > / >> redirect
+          (b) any file operand of a SEGMENT carrying a write verb - except a plain
+              cp, where only the destination (the trailing operand) is written
+          (c) any file operand of a SEGMENT carrying an in-place write FLAG
+        A visual file present only as a reference (npx <codemod> Button.tsx, or
+        cp App.tsx App.tsx.bak where the .tsx is the read source) is NOT a write
+        target and must not upgrade the flag to visual - that reference is the
+        false positive this narrows (Jonah 2026-07-23). Write VERBS stay SUBSTRING
+        matches (a wrapped/escaped verb like bash -lc "cp ..." or gsed -i still
+        counts), so visual recall is preserved per feedback_hooks_prefer_false_positives -
+        the 2026-07-18 de-quote attempt that lost that recall was Codex-rejected.
+        Quote chars are built via chr(): this whole block is a single-quoted
+        python3 -c string, so a literal one would close it and break the hook."""
+        _dq, _sq = chr(34), chr(39)
+        _q = _sq + _dq
+        # A target token stops at whitespace or shell punctuation, and may be quoted.
+        # Without that, a target hugging a separator or a subshell close captured the
+        # punctuation too (> out.css; true, > out.css), >(procsub)) and a quoted target
+        # with a space was truncated - all read as non-visual (Codex 2026-07-23, 4 and 5).
+        _bare = r"[^\s;&|<>()]+"
+        _tgt = (_dq + r"[^" + _dq + r"]*" + _dq + r"|" +
+                _sq + r"[^" + _sq + r"]*" + _sq + r"|" + _bare)
+        # (a) redirect target. Guarded against a preceding - or > so a prose arrow
+        #     (-> and -->) is never read as a redirect (the 2026-07-18 arrow fix), and
+        #     the capture class excludes & so an fd-dup like 2>&1 never matches.
+        for _t in _vre.findall(r"(?<![->])>>?\s*(" + _tgt + r")", s):
+            if is_visual_file(_t.strip(_q)):
+                return True
+        # (b)/(c) per SEGMENT carrying a write verb or an in-place write flag.
+        _sep = "[" + _vre.escape(_q + "()") + "]"
+        for _seg in _vre.split(r"[;&|]+", s):
+            _verb = any(w in _seg for w in write_verb_indicators)
+            _wflag = any(f in _seg for f in write_flag_indicators)
+            if not _verb and not _wflag:
+                continue
+            # Drop redirect operator+operand pairs so a `< source` stdin read is never
+            # taken for a written operand (tee notes.md < App.tsx writes notes.md only);
+            # a `> target` is already scored by (a).
+            _body = _vre.sub(r"[<>]+\s*(" + _tgt + r")?", " ", _seg)
+            _files = [t for t in _vre.sub(_sep, " ", _body).split()
+                      if _vre.search(r"\.[A-Za-z0-9]{1,8}$", t)]
+            if not _files:
+                continue
+            # A plain cp READS every operand but the last, so only its destination is
+            # written. Any other write verb in the segment (mv/tee/sed -i) or a write
+            # flag means every named file is changed - keep them all.
+            if (_verb and not _wflag and "cp " in _seg
+                    and not any(w in _seg for w in ("mv ", "tee ", "sed -i"))):
+                _files = _files[-1:]
+            if any(is_visual_file(f) for f in _files):
+                return True
+        return False
+
     def arm_and_report(kind="code"):
         # kind MUST be "visual" when the touched file(s) render UI. A Bash write to a
         # visual file (sed -i src/app.css, tee src/App.tsx, cp theme.css ...) is still a
@@ -579,45 +701,44 @@ if tool == "Bash":
         }))
         sys.exit(0)
 
-    # Extract file-ish operands ONCE, before the deploy check. A chained command like
-    # `sed -i s/a/b/ src/app.css && npm run build` matches deploy_indicators FIRST, so
-    # arming plain "code" there would let a named VISUAL file off with a logic-only demand
-    # (Codex review 2026-07-17, finding 1). If any operand anywhere in the command renders
-    # UI, the whole command owes a screenshot regardless of which branch claims it.
-    _sep_re_pre = "[" + _vre.escape(chr(39) + chr(34) + "<>|;&()") + "]"
-    _all_tokens = _vre.sub(_sep_re_pre, " ", cmd).split()
-    _all_files = [t for t in _all_tokens if _vre.search(r"\.[A-Za-z0-9]{1,8}$", t)]
-    _names_visual = any(is_visual_file(t) for t in _all_files)
-
     if any(w in cmd for w in deploy_indicators):
-        # Visual iff the command NAMES a visual file, or the project it builds actually
-        # renders UI. A CLI/library build (sidecoach) stays on the logic demand.
-        arm_and_report("visual" if (_names_visual or project_has_ui(effective_dir(cmd, cwd)))
+        # Visual iff a visual file is a genuine WRITE TARGET of the command, or the project
+        # it builds actually renders UI. A chained `sed -i ... app.css && npm run build`
+        # still owes a screenshot because the sed -i names a visual write target (Codex
+        # review 2026-07-17, finding 1). But a visual file merely NAMED as a tool/codemod
+        # arg (npx <codemod> Button.tsx) is only a REFERENCE - it no longer arms visual by
+        # itself (Jonah 2026-07-23). A CLI/library build (sidecoach) with no visual write
+        # target stays on the logic demand.
+        arm_and_report("visual" if (_visual_write_target(cmd) or project_has_ui(effective_dir(cmd, cwd)))
                        else "code")
 
     if _has_redirect(cmd) or any(w in cmd for w in write_verb_indicators):
         # Extract tokens that look like a filename (end in a short dot-extension) and
         # arm iff ANY is a CODE file. A command referencing only non-code files (a .md
         # beat/notes/doc, a .txt) does NOT arm - that is the re-arm bug being fixed.
-        # This intentionally treats every file operand alike, so a code file that
+        # WHETHER we arm still treats every file operand alike, so a code file that
         # appears only as a READ source (e.g. `cp src/a.ts notes.md`, `tee notes.md <
         # src/a.ts`) still arms. That is an over-arm - a FALSE POSITIVE - which is the
         # deliberately-preferred direction for this enforcement gate
         # (feedback_hooks_prefer_false_positives): never UNDER-arm a real code write,
-        # even at the cost of an occasional spurious screenshot prompt. Precisely
-        # separating write-targets from read-sources (cp source is a read, but mv
-        # source is deleted and a redirect target is a write) would risk false
-        # negatives, so we do not. No file-ish token at all (cannot tell) -> arm
-        # conservatively. The separator class is built via chr() so no literal single
-        # quote appears inside this shell single-quoted python3 -c block.
+        # even at the cost of an occasional spurious screenshot prompt. No file-ish token
+        # at all (cannot tell) -> arm conservatively. The separator class is built via
+        # chr() so no literal single quote appears inside this shell single-quoted
+        # python3 -c block.
         _sep_re = "[" + _vre.escape(chr(39) + chr(34) + "<>|;&()") + "]"
         tokens = _vre.sub(_sep_re, " ", cmd).split()
         file_tokens = [t for t in tokens if _vre.search(r"\.[A-Za-z0-9]{1,8}$", t)]
         if not file_tokens:
             arm_and_report()
         if any(is_code_file(t) for t in file_tokens):
-            # A visual operand anywhere -> visual flag -> real screenshot demanded.
-            arm_and_report("visual" if any(is_visual_file(t) for t in file_tokens) else "code")
+            # UPGRADE to visual ONLY when a visual file is a genuine WRITE TARGET
+            # (redirect target / sed -i / tee / cp-mv destination). A visual file present
+            # only as a REFERENCE - a cp/mv READ SOURCE (cp App.tsx App.tsx.bak), a tee
+            # stdin source - stays "code": it renders nothing new, so demanding a
+            # screenshot there is the reference false positive this narrows (Jonah
+            # 2026-07-23). Distinct from WHETHER we arm above: a referenced code file
+            # still arms (prefer-FP); only the visual-vs-code LABEL is narrowed here.
+            arm_and_report("visual" if _visual_write_target(cmd) else "code")
         # else: only non-code files touched -> do NOT arm
         print("{}"); sys.exit(0)
 

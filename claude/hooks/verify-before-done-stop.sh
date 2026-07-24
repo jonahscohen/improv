@@ -16,7 +16,75 @@
 
 INPUT=$(cat)
 printf '%s' "$INPUT" | python3 -c '
-import json, sys, os, re
+import json, sys, os, re, subprocess
+
+# Visual extensions, kept in sync with VISUAL_EXTS in verify-before-done.sh. This set MUST
+# stay a SUPERSET of anything that can ARM the visual flag: if the arm side can arm on an
+# extension this set does not know, a real visual change would be downgraded below and the
+# gate would fail OPEN on it. Widen this set whenever the arm side widens.
+VISUAL_EXTS = {".css", ".scss", ".sass", ".less",
+               ".html", ".htm", ".ejs", ".hbs", ".pug", ".twig",
+               ".vue", ".svelte", ".jsx", ".tsx"}
+
+# Hard bound on how much status output we will reason about. Hitting it means we could not
+# fully inspect the tree, which is a doubt, which blocks.
+MAX_STATUS_ENTRIES = 20000
+GIT_TIMEOUT_SECONDS = 5
+
+def tree_has_visual_evidence(cwd):
+    """True if the working tree holds a modified or untracked VISUAL file, OR if we cannot
+    tell. This is CORROBORATING evidence for an already-armed visual flag - it can never arm
+    anything, and it may only ever withhold a demand when it is certain there is nothing to
+    screenshot.
+
+    FAIL CLOSED, without exception. Every uncertainty returns True so the gate keeps
+    blocking: no cwd, not a directory, git missing, not a git repo, non-zero exit, a
+    timeout, undecodable output, too many entries, or a changed entry that is a DIRECTORY
+    (a submodule whose contents we cannot enumerate). The gate is the last line of defence,
+    so the only path that returns False is a clean, complete, fully-parsed status listing
+    that provably contains no visual file."""
+    if not cwd or not os.path.isdir(cwd):
+        return True
+    try:
+        # --untracked-files=all expands untracked DIRECTORIES into their files, so a
+        # brand-new component that was never git-added still shows up as a .tsx and still
+        # blocks. Plain --porcelain would collapse it to a single "?? newdir/" entry and
+        # hide it. --ignore-submodules=none forces dirty submodules to surface regardless
+        # of repo config, so the directory check below can block on them.
+        p = subprocess.run(
+            ["git", "status", "--porcelain", "-z",
+             "--untracked-files=all", "--ignore-submodules=none"],
+            cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            timeout=GIT_TIMEOUT_SECONDS)
+    except Exception:
+        return True
+    if p.returncode != 0:
+        return True
+    try:
+        raw = p.stdout.decode("utf-8", "replace")
+    except Exception:
+        return True
+    # -z gives NUL-terminated records and, unlike the default, never C-quotes or escapes a
+    # path - so a filename with a space or a newline cannot split into a wrong extension.
+    # A rename emits the new path and the original path as separate records, so scanning
+    # every record covers both ends of a move.
+    chunks = [c for c in raw.split(chr(0)) if c]
+    if len(chunks) > MAX_STATUS_ENTRIES:
+        return True
+    for c in chunks:
+        path = c
+        if len(c) > 3 and c[2] == " ":
+            path = c[3:]     # strip the leading XY status code
+        # Check the stripped path AND the raw record: if EITHER looks visual we block.
+        for cand in (path, c):
+            if os.path.splitext(cand)[1].lower() in VISUAL_EXTS:
+                return True
+        try:
+            if path and os.path.isdir(os.path.join(cwd, path)):
+                return True  # submodule or dir entry - cannot see inside, so cannot clear it
+        except Exception:
+            return True
+    return False
 
 try:
     d = json.load(sys.stdin)
@@ -58,6 +126,17 @@ def is_subagent(path):
     return False
 
 if content == "visual" and not is_subagent(d.get("transcript_path", "")):
+    # Corroborate the armed flag against the working tree before demanding a screenshot.
+    # The flag can be armed by a command that only MENTIONED a visual filename (proven
+    # undecidable to fix at the arm site - see decision_verify_hook_quoted_mention_arming),
+    # and it can outlive a change that was reverted. In either case the tree holds no
+    # visual file, so a screenshot of the change literally cannot be taken and the demand
+    # is unsatisfiable - it can only be answered by a manual override, which is what it
+    # cost the lead session on 2026-07-23. When the tree PROVES there is nothing visual,
+    # allow the stop, exactly as a non-visual "code" flag already does. Arming is untouched:
+    # this only ever withholds a demand it can prove is impossible, and every doubt blocks.
+    if not tree_has_visual_evidence(d.get("cwd", "")):
+        print("{}"); sys.exit(0)
     reason = (
         "BLOCKED: a visual file changed and was never visually verified. "
         "Capture a REAL screenshot of the rendered result (Chrome computer "

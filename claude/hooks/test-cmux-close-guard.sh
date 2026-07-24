@@ -111,10 +111,59 @@ exit 1
 EOF
 chmod +x "$TMP/cmux"
 
+# --- unhealthy-cmux stubs (TRANSIENT / DRIFT / EMPTY) -------------------------
+# A close stays FAIL-CLOSED when cmux cannot be introspected - the close subcommand
+# can still work while list-panels/top/tree are broken, so "cannot see it" is never
+# read as "cannot close it". The remedy is the per-target CMUX_CLOSE_UNVERIFIED
+# break-glass, not an automatic allow. The default "$TMP/cmux" stub is the healthy
+# case that exercises the normal liveness + ownership gates.
+
+# TRANSIENT: cmux resolves but every subcommand errors (server unreachable).
+cat > "$TMP/cmux-err" <<'EOF'
+#!/bin/bash
+echo "cmux: could not connect to server" >&2
+exit 1
+EOF
+chmod +x "$TMP/cmux-err"
+
+# DRIFT: cmux exits 0 but `top` is not the 7-column tsv this guard parses.
+cat > "$TMP/cmux-drift" <<EOF
+#!/bin/bash
+case "\$1 \$2" in
+  "list-panels --id-format") printf '  surface:23 BBBBBBBB-0000-4000-8000-000000000023 terminal "x"\n'; exit 0 ;;
+  "top --all")               printf 'this output is not tab separated at all\n'; exit 0 ;;
+esac
+exit 0
+EOF
+chmod +x "$TMP/cmux-drift"
+
+# EMPTY: cmux exits 0 but prints nothing (a half-up session).
+cat > "$TMP/cmux-empty" <<'EOF'
+#!/bin/bash
+exit 0
+EOF
+chmod +x "$TMP/cmux-empty"
+
+# An absolute path that does not exist. Its BASENAME must be `cmux` or the guard
+# never classifies the command as a cmux invocation in the first place (it matches
+# on basename), and the row would pass for the wrong reason.
+NO_CMUX="$TMP/no-such-dir/cmux"
+
 # --- harness -----------------------------------------------------------------
 SESSION="cmux-close-guard-test"
 
-decision() {  # decision <command> [ledger|drift]
+decision() {  # decision <command> [mode]
+  # mode: ""        healthy cmux (default fixtures)
+  #       ledger    healthy cmux + the session ownership ledger
+  #       drift     healthy cmux, but the pane TREE omits a surface (incomplete)
+  #       treefail  healthy list-panels/top, but `tree` answers with nothing
+  #       absent    no cmux binary resolves at all
+  #       cmuxerr   cmux resolves but every subcommand exits non-zero
+  #       cmuxdrift cmux exits 0 but `top` output schema is unrecognised
+  #       cmuxempty cmux exits 0 but prints nothing
+  #       nooverride  CMUX_CLOSE_GUARD_CMUX unset, so the guard must resolve the
+  #                   binary the COMMAND names. Only use with a command that spells
+  #                   out an absolute stub path, or the real cmux would be queried.
   local mode="${2:-}"
   local ledger_file="$HOME/.claude/.cmux-owned-surfaces.$SESSION"
   if [ "$mode" = "ledger" ]; then
@@ -123,14 +172,27 @@ decision() {  # decision <command> [ledger|drift]
   else
     rm -f "$ledger_file"
   fi
-  local stub_tree=""
-  [ "$mode" = "drift" ] && stub_tree="$TMP/tree-drift.txt"
-  local out
-  out=$(python3 -c '
+  local stub_tree="" cmux_bin="$TMP/cmux"
+  case "$mode" in
+    drift)     stub_tree="$TMP/tree-drift.txt" ;;
+    treefail)  stub_tree="$TMP/no-such-tree-file" ;;
+    absent)    cmux_bin="$NO_CMUX" ;;
+    cmuxerr)   cmux_bin="$TMP/cmux-err" ;;
+    cmuxdrift) cmux_bin="$TMP/cmux-drift" ;;
+    cmuxempty) cmux_bin="$TMP/cmux-empty" ;;
+  esac
+  local out payload
+  payload=$(python3 -c '
 import json,sys
 print(json.dumps({"tool_name":"Bash","session_id":sys.argv[2],"tool_input":{"command":sys.argv[1]}}))' \
-    "$1" "$SESSION" \
-    | CMUX_STUB_TREE="$stub_tree" CMUX_CLOSE_GUARD_CMUX="$TMP/cmux" bash "$GUARD" 2>/dev/null)
+    "$1" "$SESSION")
+  if [ "$mode" = "nooverride" ]; then
+    out=$(printf '%s' "$payload" \
+      | env -u CMUX_CLOSE_GUARD_CMUX CMUX_STUB_TREE="$stub_tree" bash "$GUARD" 2>/dev/null)
+  else
+    out=$(printf '%s' "$payload" \
+      | CMUX_STUB_TREE="$stub_tree" CMUX_CLOSE_GUARD_CMUX="$cmux_bin" bash "$GUARD" 2>/dev/null)
+  fi
   rm -f "$ledger_file"
   printf '%s' "$out" | python3 -c '
 import json,sys
@@ -152,6 +214,7 @@ expect() {  # expect <want> <command> <label> [ledger|drift]
 
 D="deny"; A="allow"
 CONFIRM="CMUX_CLOSE_CONFIRM"
+UNVERIFIED="CMUX_CLOSE_UNVERIFIED"
 
 echo "must BLOCK - a live pane is never a leftover:"
 expect "$D" "cmux close-surface --surface surface:23" \
@@ -340,6 +403,212 @@ python3 /tmp/probe.py" \
   "write a probe script that quotes the command, then run it"
 expect "$A" "kill 12345" \
   "unrelated command"
+# The renamed-cmux rule must not drag ordinary tooling in with it. A draft that keyed
+# on "first non-flag argument is a close subcommand" applied cmux's own subcommand
+# grammar to every executable and denied all four of these - ordinary work, blocked by
+# a hook that runs on EVERY Bash call. Requiring a pane-target flag alongside the close
+# token is what separates a renamed cmux from a grep. (Codex, 5th pass.)
+expect "$A" "rg close-surface claude/hooks" \
+  "ripgrep for the close subcommand name"
+expect "$A" "grep close-surface docs/cmux.md" \
+  "grep a file for the close subcommand name"
+expect "$A" "echo close-surface" \
+  "echo the bare close subcommand name"
+expect "$A" "cat close-surface" \
+  "cat a file literally named close-surface"
+expect "$A" "export FOO=bar; echo hi" \
+  "an export that has nothing to do with PATH"
+expect "$A" "out=\$(ls -la); echo done" \
+  "an ordinary capture-output assignment"
+expect "$A" "echo \$(ls -la)" \
+  "an ordinary substitution passed to echo"
+expect "$A" "export out=\$(date)" \
+  "an ordinary substitution passed to export"
+# An ESCAPED \$( or backtick inside double quotes is literal text, not an expansion.
+# The tokenizer collapsed escapes before testing for expansions, so inert prose in a
+# doc, a beat, or a review prompt read as a live substitution and was denied. This
+# fired for real while building the fix, on a command writing about this very guard.
+expect "$A" "mytool \"docs say \\\$(cmux close-surface --surface surface:23) is denied\"" \
+  "escaped \$( in double-quoted prose is inert"
+expect "$A" "mytool \"and \\\`cmux close-surface\\\` too\"" \
+  "escaped backticks in double-quoted prose are inert"
+
+echo
+echo "must BLOCK - a path-named executable, present or absent, is never trusted:"
+# Absent is NOT "cannot run": an earlier command on the same line can create it
+# (install/chmod/a symlink target appearing), so a missing path at hook time can be
+# a working cmux at execution time. Present is not trusted either - the guard will
+# not exec an unverified binary from a pre-execution hook. Both deny.
+expect "$D" "$NO_CMUX close-surface --surface surface:23" \
+  "absolute path absent at hook time (TOCTOU)" "nooverride"
+expect "$D" "install -m 755 $TMP/cmux $NO_CMUX; $NO_CMUX close-surface --surface surface:23" \
+  "line creates the binary before closing" "nooverride"
+expect "$D" "$NO_CMUX close-workspace --workspace workspace:1" \
+  "absolute path absent: workspace" "nooverride"
+
+echo
+echo "must BLOCK - an unresolvable BARE name is not proof the close cannot run:"
+# The shell that runs the command can resolve `cmux` differently than this hook can:
+# a PATH assignment on the same line, a shell function, or simply a different PATH.
+# "I cannot find it" is not "it will not run", so this stays fail-closed.
+expect "$D" "cmux close-surface --surface surface:23" \
+  "bare cmux unresolvable from the hook" "absent"
+expect "$D" "PATH=/tmp/cmux-bin:\$PATH cmux close-surface --surface surface:23" \
+  "line prepends its own PATH to reach a cmux" "absent"
+# The break-glass says "I checked this pane by hand". With no reachable cmux there is
+# nothing for that assertion to attach to, so it does NOT apply here - unlike the
+# unintrospectable paths below. The remedy is to make cmux resolvable, a one-time fix.
+expect "$D" "$UNVERIFIED=surface:23 cmux close-surface --surface surface:23" \
+  "break-glass does NOT cover an unresolvable cmux" "absent"
+
+echo
+echo "must BLOCK - the guard will not exec a caller-supplied binary to verify:"
+# Introspecting an unverified binary from a PRE-execution hook would run it before
+# the decision, and its "read-only" subcommands could do anything.
+expect "$D" "./cmux close-surface --surface surface:23" \
+  "relative path (CWD can change earlier in the line)" "nooverride"
+expect "$D" "~/cmux close-surface --surface surface:23" \
+  "tilde path (HOME can be reassigned)" "nooverride"
+expect "$D" "$TMP/cmux close-surface --surface surface:23" \
+  "existing out-of-tree absolute path" "nooverride"
+
+echo
+echo "must BLOCK - bypass routes Codex found in the FOURTH pass:"
+# A close whose SUBCOMMAND parsed cleanly but whose ARGS are not literal: the flags
+# are repeatable and last-value-wins, so a second target expands in at run time and
+# cmux closes a pane the guard never checked. surface:40 is dead/owned, surface:23
+# is the LIVE agent pane.
+expect "$D" "$CONFIRM=surface:40 cmux close-surface --surface surface:40 \"\$(printf -- '--surface')\" surface:23" \
+  "dynamic arg smuggles a second --surface"
+expect "$D" "$CONFIRM=surface:40 cmux close-surface --surface surface:40 \$OPTS" \
+  "unresolvable variable in a parsed close's args"
+expect "$D" "$UNVERIFIED=surface:40 cmux close-surface --surface surface:40 \$OPTS" \
+  "break-glass cannot launder a dynamic-arg close" "cmuxerr"
+# A renamed/copied cmux: classification matches on basename, so `cmux-x` used to be
+# "other" and the close token counted as data.
+expect "$D" "/tmp/cmux-x close-surface --surface surface:23" \
+  "renamed cmux copy run with a close subcommand"
+expect "$D" "install -m 755 $TMP/cmux /tmp/cmux-x
+/tmp/cmux-x close-surface --surface surface:23" \
+  "copy cmux to a new name, then close with it"
+expect "$D" "/tmp/cmux-x --no-focus close-surface --surface surface:23" \
+  "renamed cmux behind a boolean global flag"
+expect "$D" "$CONFIRM=surface:40 PATH=/tmp/cbin:\$PATH cmux close-surface --surface surface:40" \
+  "PATH reassigned so a different cmux would run"
+expect "$D" "export PATH=/tmp/cbin:\$PATH; $CONFIRM=surface:40 cmux close-surface --surface surface:40" \
+  "PATH exported before the close"
+expect "$D" "PATH=/tmp/cbin:\$PATH; $CONFIRM=surface:40 cmux close-surface --surface surface:40" \
+  "bare PATH assignment before the close"
+expect "$D" "hash -p /tmp/cmux-x cmux; $CONFIRM=surface:40 cmux close-surface --surface surface:40" \
+  "hash -p remaps cmux before the close"
+expect "$D" "export PATH+=:/tmp/cbin; $CONFIRM=surface:40 cmux close-surface --surface surface:40" \
+  "PATH appended with the += form"
+expect "$D" "PATH+=:/tmp/cbin cmux close-surface --surface surface:40" \
+  "PATH += as an env prefix"
+# The no-target variant is the sharp one: an unparsed `+=` prefix shifted the
+# executable off cmux entirely, so no close was parsed and the line fell through
+# ALLOWED - closing the CURRENT pane unverified.
+expect "$D" "PATH+=:/tmp/cbin cmux close-surface" \
+  "PATH += env prefix on a no-target close"
+expect "$D" "FOO+=bar cmux close-surface --surface surface:23" \
+  "unrelated += prefix still parses the close"
+# An assignment whose VALUE is a substitution EXECUTES it before the assignment. The
+# whole word matched ENV_ASSIGN and was swallowed as inert env, so no close was parsed
+# and the line was allowed - and capturing output this way is an everyday shape.
+expect "$D" "out=\$(cmux close-surface --surface surface:23)" \
+  "close inside an assignment's command substitution"
+expect "$D" "out=\`cmux close-surface --surface surface:23\`" \
+  "close inside an assignment's backticks"
+expect "$D" "out=\$(cmux close-surface) echo hi" \
+  "substitution assignment prefixing another command"
+# A substitution RUNS its contents regardless of which command it hangs off, and even
+# when that command is harmless. Only `cmux` commands consulted args_dyn before, so a
+# substitution attached to any OTHER command went unexamined.
+expect "$D" "echo \$(cmux close-surface --surface surface:23)" \
+  "close in a substitution passed to echo"
+expect "$D" "export out=\$(cmux close-surface --surface surface:23)" \
+  "close in a substitution passed to export"
+expect "$D" "printf '%s' \`cmux close-surface --surface surface:23\`" \
+  "close in backticks passed to printf"
+expect "$D" "/tmp/cmux-x close-surface" \
+  "renamed cmux with no target (closes current pane)"
+
+echo
+echo "must BLOCK - a \`--\` separator makes the real target unknowable:"
+# Past end-of-options cmux's own parser stops reading --surface as a flag, so the
+# guard could verify one pane while the close acts on another.
+expect "$D" "$CONFIRM=surface:40 cmux close-surface -- --surface surface:40" \
+  "end-of-options separator hides the real target"
+expect "$D" "$UNVERIFIED=surface:40 cmux close-surface -- --surface surface:40" \
+  "break-glass cannot launder a \`--\` close" "cmuxerr"
+
+echo
+echo "must BLOCK - UNINTROSPECTABLE cmux: it EXISTS, so the close can still work:"
+# Codex review + a stub repro falsified the tempting "if introspection is down the
+# close is down too" premise: `top` is heavy and can time out or drift after a cmux
+# update while `close-surface` (cheap, separate code path) keeps working. Allowing
+# here would let the 2026-07-12 incident straight through.
+expect "$D" "cmux close-surface --surface surface:23" \
+  "TRANSIENT: cmux CLI exits non-zero" "cmuxerr"
+expect "$D" "cmux close-surface --surface surface:23" \
+  "EMPTY: cmux answers with no output" "cmuxempty"
+expect "$D" "cmux close-surface --surface surface:23" \
+  "DRIFT: cmux top output schema unrecognised" "cmuxdrift"
+expect "$D" "cmux close-workspace --workspace workspace:2" \
+  "TRANSIENT: cmux tree answers with nothing" "treefail"
+
+echo
+echo "must ALLOW - the per-target break-glass unsticks an unintrospectable cmux:"
+# The no-restart escape hatch. It is deliberately per-target, so it forces the same
+# positive identification the ownership gate demands.
+expect "$A" "$UNVERIFIED=surface:23 cmux close-surface --surface surface:23" \
+  "break-glass names the target: transient" "cmuxerr"
+expect "$A" "$UNVERIFIED=surface:23 cmux close-surface --surface surface:23" \
+  "break-glass names the target: drift" "cmuxdrift"
+expect "$A" "$UNVERIFIED=surface:23 cmux close-surface --surface surface:23" \
+  "break-glass names the target: empty" "cmuxempty"
+expect "$A" "$UNVERIFIED=workspace:2 cmux close-workspace --workspace workspace:2" \
+  "break-glass names the target: tree unavailable" "treefail"
+
+echo
+echo "must BLOCK - the break-glass is narrow: it is not a blanket off-switch:"
+expect "$D" "$UNVERIFIED=surface:99 cmux close-surface --surface surface:23" \
+  "break-glass names a DIFFERENT surface" "cmuxerr"
+expect "$D" "$UNVERIFIED=1 cmux close-surface --surface surface:23" \
+  "truthy break-glass naming no surface" "cmuxerr"
+expect "$D" "$UNVERIFIED=surface:23 cmux close-surface --surface surface:23 --surface surface:41" \
+  "break-glass covers only one of two targets" "cmuxerr"
+expect "$D" "$UNVERIFIED=surface:23 echo ok; cmux close-surface --surface surface:23" \
+  "break-glass sits on a DIFFERENT command" "cmuxerr"
+# The hard gate is untouched: when cmux CAN see the pane, no token unlocks a live one.
+expect "$D" "$UNVERIFIED=surface:23 cmux close-surface --surface surface:23" \
+  "break-glass does NOT unlock a live pane on a healthy cmux"
+
+echo
+echo "must BLOCK - a tree outage must not clear OTHER closes on the same line:"
+# Codex second pass: the tree break-glass used to emit a whole-line allow, so a
+# workspace close carrying a token cleared a LIVE surface close sitting after it -
+# the 2026-07-12 incident, reintroduced. Only workspace/window closes need the tree,
+# so a tree outage leaves surface liveness perfectly checkable.
+expect "$D" "$UNVERIFIED=workspace:2 cmux close-workspace --workspace workspace:2; $UNVERIFIED=surface:23 cmux close-surface --surface surface:23" \
+  "tree break-glass must not clear a live surface close" "treefail"
+expect "$D" "$UNVERIFIED=workspace:2 cmux close-workspace --workspace workspace:2; cmux close-surface --surface surface:40" \
+  "tree break-glass must not clear an unowned close" "treefail"
+
+echo
+echo "must BLOCK - FAIL-CLOSED survives: a HEALTHY cmux still protects (control):"
+# The negative control. Same commands, healthy cmux: the protection this guard
+# exists for must be untouched by everything above.
+expect "$D" "cmux close-surface --surface surface:23" \
+  "healthy cmux: live agent pane still blocked"
+expect "$D" "$CONFIRM=surface:23 cmux close-surface --surface surface:23" \
+  "healthy cmux: live pane + token still blocked"
+expect "$D" "cmux close-surface --surface surface:40" \
+  "healthy cmux: dead pane without ownership still blocked"
+expect "$D" "cmux close-workspace --workspace workspace:1" \
+  "healthy cmux: workspace with a live pane still blocked"
+expect "$D" "$CONFIRM=workspace:2 cmux close-workspace --workspace workspace:2" \
+  "healthy cmux: incomplete pane tree still blocked" "drift"
 
 echo
 echo "passed=$PASS failed=$FAIL"

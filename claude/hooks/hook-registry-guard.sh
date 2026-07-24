@@ -33,7 +33,39 @@
 set -uo pipefail
 
 FLAG="$HOME/.claude/.unmanaged-hook"
-REPO_DIR="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+
+# REPO_DIR: this script's OWN checkout wins over CLAUDE_PROJECT_DIR.
+#
+# CLAUDE_PROJECT_DIR used to take precedence, which silently pointed the guard at the
+# WRONG repo whenever a session in project A touched project B. Proven 2026-07-23: with a
+# foreign CLAUDE_PROJECT_DIR, --audit globbed an empty directory and pronounced a repo with
+# three unmanaged hooks CLEAN (exit 0), and the Stop gate saw every armed name as "gone
+# from disk" and cleared a live arm. The guard reads THIS repo's browser-tree.json and
+# ships inside it, so the checkout containing the script is always the right answer;
+# CLAUDE_PROJECT_DIR is only a fallback for a checkout that has no tree to read.
+#
+# The symlink walk is load-bearing, not decoration: ~/.claude/hooks is a symlink farm
+# pointing back into this repo, and BASH_SOURCE plus a plain `cd` does NOT resolve
+# symlinks. Invoked as ~/.claude/hooks/hook-registry-guard.sh, an unresolved path puts
+# _SELF_REPO at $HOME, where there is no tree - which drops straight back to
+# CLAUDE_PROJECT_DIR and reopens the exact blind spot this fix exists to close.
+_self="${BASH_SOURCE[0]}"
+_hops=0
+while [ -L "$_self" ] && [ "$_hops" -lt 40 ]; do
+  _link="$(readlink "$_self")"
+  case "$_link" in
+    /*) _self="$_link" ;;
+    *)  _self="$(dirname "$_self")/$_link" ;;
+  esac
+  _hops=$((_hops + 1))
+done
+_SELF_REPO="$(cd -P "$(dirname "$_self")/../.." 2>/dev/null && pwd -P)"
+if [ -n "$_SELF_REPO" ] && [ -f "$_SELF_REPO/claude/hooks/browser-tree.json" ]; then
+  REPO_DIR="$_SELF_REPO"
+else
+  REPO_DIR="${CLAUDE_PROJECT_DIR:-${_SELF_REPO:-$PWD}}"
+fi
+
 TREE="$REPO_DIR/claude/hooks/browser-tree.json"
 INSTALL_SH="$REPO_DIR/install.sh"
 
@@ -120,14 +152,51 @@ EOF
 
 case "${1:-}" in
   --audit)
-    rc=0
+    # ONE python3 pass over every candidate, not one per hook file. hook-registry-stop.sh
+    # now runs this sweep on EVERY stop, so its cost sits on the session's critical path:
+    # the old per-name loop spawned 116 interpreters and took ~1.8s, the batch takes ~0.05s.
+    # Same answer either way - parity against the per-name loop is asserted in the tests.
+    [ -f "$TREE" ] || exit 0          # no tree: not our repo, stay quiet
+    [ -f "$INSTALL_SH" ] || exit 0
+    names=""
     for f in "$REPO_DIR"/claude/hooks/*.sh; do
       [ -e "$f" ] || continue
       n="$(basename "$f" .sh)"
       _is_excluded "$n" && continue
-      if ! _is_managed "$n"; then echo "UNMANAGED: $n"; rc=1; fi
+      names="$names$n"$'\n'
     done
-    exit "$rc"
+    [ -n "$names" ] || exit 0
+    NAMES="$names" TREE="$TREE" INSTALL_SH="$INSTALL_SH" python3 - <<'PY'
+import json, os, re, sys
+try:
+    names = [n for n in os.environ["NAMES"].split("\n") if n]
+    t = json.load(open(os.environ["TREE"]))
+    if not isinstance(t, dict):
+        raise ValueError("browser-tree.json is not an object")
+    pinned = set(t.get("pinned_hooks") or [])
+    in_tree = set(t.get("hook_owner") or {})
+    src = open(os.environ["INSTALL_SH"]).read()
+    bad = [n for n in names
+           if n not in pinned
+           and not (n in in_tree
+                    and re.search(r'(?<![\w-])' + re.escape(n) + r'\.sh(?![\w-])', src))]
+except Exception:
+    # ANYTHING that stops the audit COMPLETING is "I cannot tell" - a torn read mid-write,
+    # a tree that parses but is the wrong shape, install.sh vanishing between the shell's
+    # -f test and open(). Exit 3, never 0 and never 1.
+    #
+    # This distinction is load-bearing. hook-registry-stop.sh disarms the gate on a clean
+    # answer, so "clean" and "could not tell" must not look alike; and it treats 1 as
+    # "found some", so a crash that happened to exit 1 with no names printed would have
+    # read as an empty found-set and cleared a live arm. Exit 1 is now reserved for a
+    # COMPLETED audit with names to report. Observed live 2026-07-23: a concurrent
+    # teammate rewriting browser-tree.json turned one suite run red mid-flight.
+    sys.exit(3)
+for n in bad:
+    print("UNMANAGED: " + n)
+sys.exit(1 if bad else 0)
+PY
+    exit $?
     ;;
   --check)
     n="${2:-}"; [ -n "$n" ] || { echo "usage: --check <name>" >&2; exit 2; }
