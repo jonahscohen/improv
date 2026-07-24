@@ -73,14 +73,19 @@ resp = d.get("tool_response", d.get("tool_result", ""))
 if tool == "SendMessage" and isinstance(resp, dict) and resp.get("success") is True:
     print("{}"); sys.exit(0)
 
-# Agent async-launch results ECHO the natural-language prompt (and sync results
-# carry the subagent report), which legitimately contain words like "removed" /
+# Agent launch results ECHO the natural-language prompt (and sync results carry
+# the subagent report), which legitimately contain words like "removed" /
 # "deprecated" / "no longer exists" - e.g. a dispatch prompt about pruning symlinks
-# whose target "no longer exists". A successful spawn (an agentId / async_launched
-# status / isAsync) means the Agent contract held; genuine Agent drift is a FAILED
-# call (InputValidationError, no agentId) and still falls through to the scan.
+# whose target "no longer exists", or a diagnosis prompt about a deprecated
+# WordPress block. A successful spawn means the Agent contract held; genuine Agent
+# drift is a FAILED call (InputValidationError, no id) and still falls through to
+# the scan. Success shows up as: an async subagent (agentId / async_launched
+# status / isAsync) OR a named cmux teammate (status "teammate_spawned", carrying
+# agent_id / name). Both shapes are the contract holding - skip them.
 if tool == "Agent" and isinstance(resp, dict) and (
-        resp.get("agentId") or resp.get("status") == "async_launched" or resp.get("isAsync") is True):
+        resp.get("agentId") or resp.get("agent_id") or resp.get("name")
+        or resp.get("status") in ("async_launched", "teammate_spawned")
+        or resp.get("isAsync") is True):
     print("{}"); sys.exit(0)
 
 try:
@@ -88,12 +93,24 @@ try:
 except Exception:
     blob = str(resp)
 
-SIG = re.compile(
-    r"deprecated|no longer (supported|available|exists)|has been removed|was removed|"
+# HARD signals are harness-generated contract failures (a renamed/removed tool, a
+# rejected parameter). They mean drift no matter which tool produced them.
+HARD = re.compile(
     r"unknown (parameter|argument|option|field)|unexpected keyword|InputValidationError|"
     r"should have been initialized|not a valid tool|is not a recognized|no such tool",
     re.IGNORECASE)
-m = SIG.search(blob or "")
+# SOFT signals are prose ("deprecated", "has been removed") that ALSO appear in
+# arbitrary EXTERNAL content. Content-returning MCP reads (browser console/page/
+# network, ClickUp task bodies) are full of them - a browser console emits
+# "deprecated" warnings constantly, and a task can be titled "remove deprecated
+# plugin" - so SOFT is trusted ONLY for the non-MCP contract tools (Agent/Workflow/
+# SendMessage/ToolSearch/Task/Cron), which have the success carve-outs above.
+# Genuine MCP drift is a HARD harness error, not page text.
+SOFT = re.compile(
+    r"deprecated|no longer (supported|available|exists)|has been removed|was removed",
+    re.IGNORECASE)
+is_mcp = tool.startswith("mcp__")
+m = HARD.search(blob or "") or (None if is_mcp else SOFT.search(blob or ""))
 if not m:
     print("{}"); sys.exit(0)
 
