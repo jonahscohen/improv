@@ -31,7 +31,7 @@ const SIDECOACH = path.resolve(__dirname, '..');
 // `npm test` therefore builds first (see package.json: `npm run build && ...`, ~5s).
 // Invoking this file directly bypasses that - build first, or these suites check
 // stale output. The ts-node suites above test src/ directly and are unaffected.
-interface Suite { rel: string; cwd?: string; required?: boolean; runner?: 'ts-node' | 'node'; args?: string[]; }
+interface Suite { rel: string; cwd?: string; required?: boolean; runner?: 'ts-node' | 'node'; args?: string[]; env?: Record<string, string>; }
 const SUITES: Suite[] = [
   { rel: 'src/intent-detector.test.ts', required: true },                                 // legacy; outside __tests__/ - must not be dropped
   { rel: 'src/__tests__/classifier-parity.test.ts', required: true },                     // engine classifier copy guard (Task 7/8)
@@ -94,16 +94,38 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/objective-rendered-calibration.test.ts', required: true },   // Stage 1: owned objective scanner spec-correctness (incl referee adversarial INPUTS)
   { rel: 'src/__tests__/decouple-isolation.test.ts', required: true },               // Stage 1: objective/subjective scan decouple - subjective ReDoS can't starve objective
   { rel: 'src/__tests__/subjective-rendered-calibration.test.ts', required: true },  // Stage 1 ST1: owned subjective (taste) scanner - tiny-text precision-first spec
+  { rel: 'src/__tests__/typeface-vocabulary.test.ts', required: true },              // Stage 4a: default-typeface vocabulary single-source (reference-data == inlined scanner copy)
   { rel: 'src/__tests__/rendered-scan-integration.test.ts', required: true },        // Stage 1 convergence: rendered scanner findings surface through the LIVE run-validator path
   { rel: 'src/__tests__/forms-checks.test.ts', required: true },                      // Stage 2 convergence: absorbed forms-a11y checks (FORMS_016/018/019/002/015)
   { rel: 'src/__tests__/page-quality-checks.test.ts', required: true },               // Stage 2 convergence: cherry-picked DOM-evidence Tier-2 keepers (img/text/dark/chart/button)
   { rel: 'src/__tests__/validator-integration.test.ts', required: true },             // Stage 2 convergence: registry-facade migration contract tripwire (Extended===22, Polish+Extended===46, honest Flow J display)
   { rel: 'src/__tests__/audit-rendered.test.ts', required: true },                    // /sidecoach audit <url> rendered read path: url detect, severity mapping, FAIL-CLOSED inconclusive-not-clean
+  { rel: 'src/__tests__/detect-cli.test.ts', required: true },                        // Stage 3a bin/sidecoach-detect.js: fail-closed verdict matrix + exit-code classes + dispatch e2e
   { rel: 'eval/migration-harness/scanner-snapshot.mjs', runner: 'node', args: ['verify'], required: true },      // absolute-ban detector goldens (5 inputs) - the ONLY coverage that module has
   { rel: 'eval/migration-harness/reference-snapshot.mjs', runner: 'node', args: ['verify'], required: true },    // reference-loader bundle golden - the ONLY coverage that module has
   { rel: 'eval/migration-harness/routing-snapshot.mjs', runner: 'node', args: ['verify'], required: true },      // flow routing goldens
   { rel: 'eval/migration-harness/convergence-snapshot.mjs', runner: 'node', args: ['verify'], required: true },  // convergence goldens
   { rel: 'eval/migration-harness/buildreport-snapshot.mjs', runner: 'node', args: ['verify'], required: true },  // BuildReport golden (deterministic fields)
+  // EVAL-CORPUS INTEGRITY (wired 2026-07-24). `verify-candidates` is the freeze gate on the
+  // claim-bearing 90-page corpus: it re-hashes every page's canonical record (labels, file
+  // content, split, provenance) against lock-candidates.json, so it is what stops a corpus
+  // from being edited out from under a published number. It sat RED at 90/90 for a month
+  // because the runner never invoked it - the tool was correct, nothing asked it the question.
+  // Both are cheap (~1s, no browser) and fully reproducible: all 90 corpus HTML files and 25
+  // briefs are git-tracked, so a fresh clone gets the same verdict.
+  // corpus-tool.test.mjs covers the freeze/verify LOGIC in temp dirs (incl. the post-freeze
+  // re-label that caused the outage, and the vacuous-green guard); verify-candidates checks the
+  // REAL committed artifact. Logic tests first, so a broken gate reports as a broken gate rather
+  // than as a corrupt corpus.
+  // NOTE: the sibling `corpus-tool.mjs verify` (manifest corpus) is deliberately NOT wired. That
+  // corpus is intentionally empty (tooling-only path) so the command is vacuously green; adding it
+  // would bank a permanent pass that asserts nothing.
+  // `env` PINS SIDECOACH_CORPUS_DIR: corpus-tool resolves its corpus from that variable, so an
+  // ambient `SIDECOACH_CORPUS_DIR=/tmp/clean-fixture npm test` would otherwise point the gate at a
+  // decoy and pass green while the committed corpus was corrupt. The gate names its own subject.
+  { rel: 'eval/corpus-tool.test.mjs', runner: 'node', required: true },                                          // freeze/verify logic (temp-dir), incl. candidates path
+  { rel: 'eval/corpus-tool.mjs', runner: 'node', args: ['verify-candidates'], required: true,                    // REAL frozen 90-page corpus: canonical-record freeze intact
+    env: { SIDECOACH_CORPUS_DIR: path.join(SIDECOACH, 'eval', 'corpus') } },
 ];
 
 // Pin Playwright to the SHARED real-home browser cache BEFORE we isolate HOME below.
@@ -151,11 +173,12 @@ for (const s of SUITES) {
   const cwd = s.cwd ? path.join(SIDECOACH, s.cwd) : SIDECOACH;
   const argSuffix = s.args?.length ? ` ${s.args.join(' ')}` : '';
   process.stdout.write(`-> ${s.rel}${argSuffix}${s.cwd ? ` (cwd ${s.cwd})` : ''}\n`);
+  const env = s.env ? { ...process.env, ...s.env } : process.env;
   try {
     if (s.runner === 'node') {
-      execFileSync('node', [full, ...(s.args ?? [])], { stdio: 'inherit', cwd });
+      execFileSync('node', [full, ...(s.args ?? [])], { stdio: 'inherit', cwd, env });
     } else {
-      execFileSync('npx', ['ts-node', full], { stdio: 'inherit', cwd });
+      execFileSync('npx', ['ts-node', full], { stdio: 'inherit', cwd, env });
     }
   } catch {
     failed++;

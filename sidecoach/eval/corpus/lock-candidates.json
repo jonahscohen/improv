@@ -1,457 +1,462 @@
 {
-  "frozenAt": "2026-06-24T01:50:02.844Z",
+  "frozenAt": "2026-07-24T06:02:27.363Z",
+  "reason": "2026-06-24 MOTION GT UPGRADE, re-locked 2026-07-24 (Jonah). The 2 motion classes (layout-transition, bounce-easing) were re-labeled on all 90 pages by eval/motion-observe-label.mjs at 2026-06-24T17:17:50Z, ~15.5h AFTER the 2026-06-24T01:50:02.844Z freeze: labeledBy codex -> motion-observe-instrument, method 'screenshot-vision+text+motion' -> 'observed-css-motion', and present flipped on 51 of 180 motion labels. Observation-based motion GT supersedes the CSS-declaration guess per the standing ruling that a CSS reader cannot see motion; scorecard.json and every published number were already computed against this state. Verified before re-locking: page file contents are byte-identical (0 FILE CONTENT TAMPERED), all 23 briefs intact, and file/register/bucket/primaryDefects/provenance/objectiveLabels unchanged - ONLY the motion labels moved. The superseded pre-freeze candidates.json is recoverable at git blob ee51ec5e455028cbee1c58c47a9e0dd2e7184235, which reproduces all 90 old recordHashes under the current hasher (proving the hasher never changed).",
+  "supersedes": {
+    "frozenAt": "2026-06-24T01:50:02.844Z",
+    "changes": 90
+  },
   "pageCount": 90,
   "briefCount": 23,
   "records": {
     "ed_govuk_live": {
       "split": "known-good",
       "contentSha256": "0698e6cc1c745618541b8c13b6042951226ddae0d0cc867cefd8f9515cdd7e20",
-      "recordHash": "9f7ed79ab23e3ef7d7f82b7ce2e1476cc53397b549b6b45086ed144a07338374"
+      "recordHash": "eebdd501204b0c76687c29bda16f593efb9d92b465d5b52a69bd4ba708afac11"
     },
     "mk_python_live": {
       "split": "known-good",
       "contentSha256": "61482e0d7c771071408bf6774e1b87f4ee1573e1edd2f4fa37f2d3ae8f546930",
-      "recordHash": "efec276518dcc61da3137c4c68fc25d3d5b35c17bc81aa4b19b00a8bd6a493da"
+      "recordHash": "9724aacb8136ce0c0d3d0777b3686c47720feaa47575d0fe3fd69ae9e7077b4b"
     },
     "au_hn_live": {
       "split": "heldout",
       "contentSha256": "3924cdcb00a13bc41c9bf754bc4f94a65cb1fe4c874fc6e4ea9f012654051219",
-      "recordHash": "144bed7bdb1c8998b4c412f8f687914124b7204c06533f241539124f2c2449b3"
+      "recordHash": "83ebc696db1b7e70f8031257af10c62a30cb9b9d51583fa785e522d8a1d7648d"
     },
     "mk_mit_2012": {
       "split": "heldout",
       "contentSha256": "a75e54f28b627f282f3086e1833e4a9eb6e0fe491fe57081fd01c52775749e07",
-      "recordHash": "dbf76932488e9863355c4d981acf541f0308679d3a610cfaf1a99b63d5de68d1"
+      "recordHash": "769e3110f717e1ac2467eb6b2321bb8f67fd7c86d454db85a4bb966b3faa7063"
     },
     "ed_w3c_2020": {
       "split": "known-good",
       "contentSha256": "26e797d194a7336690eef4b0e074f9b3ed0327fbb71b2bd0b0b3b3d80969fb03",
-      "recordHash": "b44c1e2fca30d44e6d0b557fefc948c0589e087ad42f1f065435363c96028dfb"
+      "recordHash": "680e3fc8cf7b6bd84f9d0c1df76ef490b955eae3aa037a35598cb8a6ae8f3b73"
     },
     "fm_ghlogin_live": {
       "split": "known-good",
       "contentSha256": "3562952adc09ef09db05d3a9331df431a390871005f180e12c992d46755784ca",
-      "recordHash": "bb3862c87148faa2623cd2404b098193af818e48e5258becd7ca54781143f472"
+      "recordHash": "1becd6b76863409d9be8635455ee384dea5e05be91f80b95f38456fcc90b5b0f"
     },
     "fm_bsforms_live": {
       "split": "heldout",
       "contentSha256": "be9bdd837ba014093e9b638333ae6abbd4a8b0b6802dec59925afa6ffd436285",
-      "recordHash": "6a9d2f7d1716c94f9cb199e86a2438d76eb5c293d9b9e22f989f3421d3e2571f"
+      "recordHash": "9d0eec22a384dfbb079de2562e646bdc80a79d6d0fb25fab9dea07b35a349066"
     },
     "db_bsdash_live": {
       "split": "heldout",
       "contentSha256": "c9ff2a34908e3eff6ef6573d218ea6d1f321c33497ad5d50ea2836d870fb4bad",
-      "recordHash": "8b16e97e95a5259f374e5b1ac3f8fb34708232a5f32adb213df3286749109bfb"
+      "recordHash": "738fe1d27aa52e07482f5d003626a33348b91d2d0df44fd1e71f0da87bba379c"
     },
     "pr_bspricing_live": {
       "split": "heldout",
       "contentSha256": "b1d1bd9c656dfbafe7d2d60262ac3ce0c0d432386a5ac18a4793676eccf79cac",
-      "recordHash": "fac768a66fc9041c0eb2eebf3d1babd904b388e956cde2d7316eb795703624c8"
+      "recordHash": "1f6b54008f456996b8c7b24af249850017d1a1749a2d615c6f842f6aa4dc1a63"
     },
     "pr_stripe_2018": {
       "split": "heldout",
       "contentSha256": "3840d8f219d6d7439178266aca1a0d1e979c6a1e12a0b4fc166cfe78fc63010b",
-      "recordHash": "0aed9240529b2443225fb386b78bbffac759dbe93ad98565cf1055d325e4809c"
+      "recordHash": "33df7d87f8710e4c96919a3a192bd203c8846aae73dfe785c2bc560d4c5c686a"
     },
     "ed_mdn_live": {
       "split": "known-good",
       "contentSha256": "137eb936d0b63f27cb8be3cd089f27f2d44d589df69b91f958043e0046ce2e4e",
-      "recordHash": "902e61fe9773d350ba5096c5f3d2a8ee97243e48abc698238395215bceff9956"
+      "recordHash": "f6d6ec893379fe6899bc3a7b4cf3b1021f98f484ae14d20b53ccc3cb128f865a"
     },
     "mk_django_live": {
       "split": "heldout",
       "contentSha256": "989769096670cb4fa903788cb8c79657c59e0128c6590bc08ded027ab23211db",
-      "recordHash": "649db1e826893d11f45c9ce9b008f3cbd939888939408c3031ec3d3460115aae"
+      "recordHash": "bc5ad914ec5b9fe5fa769c4949af0b3a65a2bb1edac8be1bd4b086decd6f7323"
     },
     "mk_rust_live": {
       "split": "known-good",
       "contentSha256": "b08a4d7c0e748710d3417b3668bb4cafdc4384d8ff113f11873de4395a029d85",
-      "recordHash": "e594b55b2553559533971b4a75eb3af4339aa3d3362a3a7fa6ddc98d7e6cae9b"
+      "recordHash": "69ca657c3487f1a393892b7bae83496a54dd617afb6f0f726878f0a7f5f0e0a0"
     },
     "ed_nngroup_live": {
       "split": "known-good",
       "contentSha256": "2647073d68f97a404a70fcf26601125385bf10ac3d4d418877b2ceb37640a755",
-      "recordHash": "fafbfe3f82239e3a830a4cfb18be951dba14bf5260925d036e09252b24b07004"
+      "recordHash": "90185f2c71957058f8f9946bba49bfe1653d6009d579e768db13ad90df40904d"
     },
     "mk_bs_album_live": {
       "split": "known-good",
       "contentSha256": "9ea8973ab1bf6c19f90c4a7275442f1eb95fb5a2bc5256f3654f8b09dcf4830e",
-      "recordHash": "723b73300e35179ed1745d9784d5de094a482e30f73a76ac1d6212e3d95121bb"
+      "recordHash": "e5ab46c2b3bddf29807ae8caaee38a35e239cf9546026266e3bbbd660c61fc5d"
     },
     "mk_apple_2012": {
       "split": "known-good",
       "contentSha256": "d3f2d5a9e3cfa7931d0c02b458eaa37936ebf69e5e7790066d9a55ff2661e7c9",
-      "recordHash": "8e6464dc794d0483ef186b4db32a42fa40a6be6620d7679f2a65b0421c646f09"
+      "recordHash": "d0643bcff1f8f072e901791cd264f1f8ffe74f67d5d6cea413cfddfecebdd798"
     },
     "ed_wikipedia_2020": {
       "split": "known-good",
       "contentSha256": "8fb5f590f9b7beeeed55416da22701f884e3dc79e669daf433cff15cb35bf955",
-      "recordHash": "cc2ac9e37c5018f9d1a75b49fe4aba33f6445f9abdc7a13e62490c1472e25028"
+      "recordHash": "d321693ecb5e05d0b01391841ba5963c62372ca86768d379c7fd2ee94e10069d"
     },
     "ed_csstricks_live": {
       "split": "heldout",
       "contentSha256": "74d59b3c6c3d21a7e83b50f84e4bcc8e87f3d0aa19fd0b5fd4af2138fba7f28c",
-      "recordHash": "57cdf0ee97b0e697ef61b5aabafd49db7d9e95583bfd00f4a9596dc4b2b701fe"
+      "recordHash": "76ebb8a1da2d08e12da8343031cdd623bacb42f76e23c64d5dbc042c2001715f"
     },
     "mk_vuejs_live": {
       "split": "heldout",
       "contentSha256": "4ca35a5464e4ebffbbd1989768f06b0a042c8917dc7467e6326135992a6d5a78",
-      "recordHash": "3f3f5a2bdcfddc6a61486e15a74460060668024b22cb681e1bf5a5dd40168ee0"
+      "recordHash": "b192c0c5bc756d395ab67c1a50e9d452441e9290c9c9af43104cbda3b0b7b6b9"
     },
     "db_tabler_live": {
       "split": "known-good",
       "contentSha256": "84205d5ce7c998758495db82b80ed5424d699715bb6560bcc6d0412a32565de4",
-      "recordHash": "ba53a75230440719c2880a2dd91e8a2c1a2c74e77765b8d6097e7839cef77319"
+      "recordHash": "7a2d3dd13afbd7230a301f7051cdf915b161580e29efaefc962d4eec9b66e057"
     },
     "pr_amazon_2012": {
       "split": "heldout",
       "contentSha256": "6c8de666930d85c02e78c2703154dd253081a42c14b39e9a9fdff8a751d40068",
-      "recordHash": "cad7424cb0cc06b509fe51ddb734cbce8c3afe7bd66ca05ccf9e67f4e74d6ec6"
+      "recordHash": "d42f02742a403b4b5885b48b91e6ae18ba5389136b9f00fe0605a819d7ccd610"
     },
     "ed_nytimes_2012": {
       "split": "heldout",
       "contentSha256": "c593b6d2f5bad6d80906d3cb44f055ed3b30f3f9db8a4be0cdf147c7dbbf1564",
-      "recordHash": "3ed44ba07462b6d5edc3afcea60d6b3615911d90018a8204721c48ef848f6edf"
+      "recordHash": "a2b996f934c4a81d16261be957af71fc7fdc922ad9f1591951fc6182a803fe5f"
     },
     "au_stackoverflow_live": {
       "split": "known-good",
       "contentSha256": "6b9767fa41a10ebd81a7d91a825ca69f334a66070b14c7408ad59bfb14bdb438",
-      "recordHash": "3d3a587ab8145e1c43c315556f844febc73aa233ccc6df425556959571d4a11b"
+      "recordHash": "f65b97e843289053e659660aab4a775613181143dd64b66d73ffc9828c01271d"
     },
     "ed_wikipedia_live": {
       "split": "known-good",
       "contentSha256": "8da42cbb7b577103be9d232c0919880f4139af5cb3a66f71d30a61792e97e49f",
-      "recordHash": "e5a66a06d7a89333af116c544d6c58527f19163945b6eec3222a739c25060770"
+      "recordHash": "01e6c67ed90e6c507d2773564814b4577c06cb7fe3dae31a3f11dcf54a67c3b4"
     },
     "mk_go_live": {
       "split": "heldout",
       "contentSha256": "6aa6570cc80d938e39a07ff318491f75bba4d9ce8cfbaadecd8e911dab20176f",
-      "recordHash": "4b3901806d9fd7a353940d735b45bcd48ba2d9f2d4af0ed66acf0fbf398a60ba"
+      "recordHash": "0bea49ef059f149013723df1b6947d899eb0825a7db53b695dfaafc1129395fa"
     },
     "mk_kubernetes_live": {
       "split": "heldout",
       "contentSha256": "b0dc50e4e4d04672b4dff8d14abf2b74abd8c2a29edbdb4787146ddb1fe60d2d",
-      "recordHash": "83e9d5d83a9e4cfcc3dd944bb51076ec2d8bdf7afbff88ca6a27e9ef305731cf"
+      "recordHash": "a3f27d9a8f504872dce8dd50627b011f5a81c8425e086e030e465f0d0fe8ddf1"
     },
     "ed_a11yproject_live": {
       "split": "known-good",
       "contentSha256": "edcc17683e1d5007557b7c41b8e4e3ea372a5ca0cbc02eff0fde6d938516df68",
-      "recordHash": "f4a37b7f2f3c18e45e06c4ca38d4b3ce70df0927927cc60e94f00a7485fb95ff"
+      "recordHash": "bb2e4afafccdcd9a029508764fb55fcdd773b95f2e4bedb129a02571c8331b1d"
     },
     "pr_basecamp_live": {
       "split": "known-good",
       "contentSha256": "ae80272472896233d9d28b3145024ae7f9237f85ef56aaf3d847baff9eb6c0dd",
-      "recordHash": "e75498b9d270b6f9c74e7fe5e700f6fe6dbc0f1be4bbbff71cc62d9adc98fdeb"
+      "recordHash": "ea54e7e19a3a6b4c61e2356df5aecb4ba620e3c8aa2ce9565e7dc48877764e15"
     },
     "ed_wikipedia_2012": {
       "split": "heldout",
       "contentSha256": "5484a8c376944e1e49f3200644f7960c8acce0d1528ae3f3a54d927fd4bbbc7c",
-      "recordHash": "902a44daab93eb74159b475c9ace251c8d41c73faac79f78fde35334a4aa2fda"
+      "recordHash": "dcb395077f4385daf555bb3f1dff2f7f9800bab86662e1026a5482ca38f904a7"
     },
     "fm_bs_signin_live": {
       "split": "known-good",
       "contentSha256": "57ab56cca9948cd403808bd692a5c59e0008666c8e4dc355eec597fe8668aafc",
-      "recordHash": "ccea33a52228c49a993591dc2413d9bc22e5f1c56026dace2d19ce29c7c5d991"
+      "recordHash": "9182ff6f6cbd7f715ab7ec1f15fa522cf019516c6f71ce61a5fb24b0c853ad95"
     },
     "pr_bs_product_live": {
       "split": "heldout",
       "contentSha256": "defd03bd0abd61a0fc511faee6695db042c940059a4dce99f30bf3f308732dc5",
-      "recordHash": "429646873b58017bc3746808aedfc54936d4bf114e4da47fd9d5ce1fb46ebb88"
+      "recordHash": "07af4e74f4e00c3efc3eea05bf48e9ee11675ddaad08c27e8ea5b622147f224e"
     },
     "au_bs_cheatsheet_live": {
       "split": "heldout",
       "contentSha256": "57654f6e80496ec1c3417f036d6c28402e3d27c81ff0e148b025bd2b29e847ee",
-      "recordHash": "eb4dc67da3ce8953b64999e81de6091e8a203794c6b0601a139385c9c585164e"
+      "recordHash": "1b978317e4421cf933fd88aeec29e6dfa7f9fec88ab7a3f1202456218128f3bf"
     },
     "mk_jquery_live": {
       "split": "heldout",
       "contentSha256": "6b5b9c4a22168112ba5b2d5e066e1043db33a8132daec0f55ac92ecb1e3447c5",
-      "recordHash": "9a39bfb80f1294de50ff4c1358b3492325cbaeb99a88cc36d0161c07bc7692ed"
+      "recordHash": "890bf2092994c3f7996ebdac4aa7be77d91eeb49e12d4bce0928d4836fadbdcf"
     },
     "ed_smashing_live": {
       "split": "heldout",
       "contentSha256": "91e66f4117f6fc1eb435957ec71d8a1ae68e2299e43329c91dfbcd6fecfe3c8b",
-      "recordHash": "d10484005516fee390c273d4a77e113fa92a941a042dd23647e8622a783c7dca"
+      "recordHash": "b37db7e88e0ac7e8ff05d35966bbe5e72f0ce5b09e99c0c79ab3764f67de43d0"
     },
     "mk_apache_2012": {
       "split": "heldout",
       "contentSha256": "85d1576a64e3cea7106b18b30a4d105dc9cb2340fbd39e674057cf477fb4b95b",
-      "recordHash": "61357689c3e00b518144829d2bdff7e5b26d427547f415d2928b3a220004c759"
+      "recordHash": "20325bc85091a73410fe5e28c4a7367ae3ca972594c9b50859d171d62f62c0e3"
     },
     "fm_bs_checkout_live": {
       "split": "heldout",
       "contentSha256": "be6f3c8383fb326e674cbfa9d2c14553e36e4e49df32c6974bbf42b58698ce68",
-      "recordHash": "185437533231da0e2e24dd421cf15b14250f315c5bf2e48c658b7aa4be02facc"
+      "recordHash": "8d5b454b7eee69804e11728cb7698a68d23bc088d8d4802dc9d3fb138bbf54c3"
     },
     "ed_webdev_live": {
       "split": "known-good",
       "contentSha256": "3c85ce329af827ae35f80f5643cbacb89dddd8fb468473ade4b0ff4908e11b16",
-      "recordHash": "12ab53054a4ae16f82c8d845c340afb746c3def12bccd07e93c371a2a92548e6"
+      "recordHash": "a70edc3454e408796f0a88ec26731ee76eb9e0d5195a610470fe1add8f660f0e"
     },
     "mk_tailwind_live": {
       "split": "heldout",
       "contentSha256": "e1b3fc278f75f769cc89054b735a34977e13ee832f6beb7a3639167bf9b89097",
-      "recordHash": "ade5fbf4c6a621c48608be6c8ab40522c4bdd35a2784281c3bd59448d86b2497"
+      "recordHash": "2a8c9ebd49ca48e3c548a257ea171f2ee484f59f6cfaa7ad6f7ab2f95a3e9ed2"
     },
     "mk_astro_live": {
       "split": "known-good",
       "contentSha256": "630d1ecbf4d66146d1545d9c93ce8f434928ac1621297c07dd0191bd0d4f88b4",
-      "recordHash": "8775c221a7a329d3721fc3b3eed620e073e885fb50489673b73ad84a2d61381d"
+      "recordHash": "a33b5034cbb41ea402ccd6199f1fff0a31bcd671bc4450eb62eeb2a1c6468021"
     },
     "pr_netlify_live": {
       "split": "heldout",
       "contentSha256": "a369c4a31d834b19877aa4ef2aaab3ff742fcd3c7bc1a56386c93af7d4adc5e7",
-      "recordHash": "15299be11a8b55713bbcb9ea903603720a76800d605b67721338edbec5c363d0"
+      "recordHash": "2caa931185b7b216619cd0882f1773ca991a15273caddea9e105fab5da54ffb4"
     },
     "ed_mdncss_live": {
       "split": "known-good",
       "contentSha256": "489eedf1e985fa95cbc32ddeb4dced1f07546bec9f4c8b2ada6e26d074c3e7e0",
-      "recordHash": "12e0cef1d26ceeb48d01f4ff66a45533e7f55ed95120ea93e980cdbf00b64610"
+      "recordHash": "2c1dc893fe0592bd4f94e6a7f85e8fe8b195c540f31cc794cf12d31b3ba47d49"
     },
     "pr_digitalocean_live": {
       "split": "known-good",
       "contentSha256": "1626394db34272a041bf4f2e63ba6655fadb83c6eb62a883c4835ed72eed5de5",
-      "recordHash": "65213c513aba18a661bfb3949efcaf3a17f243ec5d51f1ab190f71d5792f1884"
+      "recordHash": "02fcf9c21b7baa5e51af5a402de7e82ba54022673c49ee8d7a94af0e35188759"
     },
     "fm_w3wai_live": {
       "split": "known-good",
       "contentSha256": "a5d28d3f4192f08f327574f21cf05f6300f4573461448d4b1b0b13c805126e73",
-      "recordHash": "d6799a148b8340a05760fa420c71c7f332e0cc2d117c044f133396a6c3d407c0"
+      "recordHash": "476f91c8fcd5845fc04ad5dff3df95503c2968a32d0063521a879d32429d18f7"
     },
     "ed_theverge_2016": {
       "split": "heldout",
       "contentSha256": "5e427f206bbc92092754549ba8d6f3e63c90dc4dfb4f2acf1e28a9aa40b4596a",
-      "recordHash": "7f1a1453ca13d3fc8a2bf4ccc50d9ecfda34e718e179e781aa3d5d6d9cd602b6"
+      "recordHash": "243b73f9f10174be572002634bc9611c9bfec76df234fefb251ea5e362661e68"
     },
     "mk_gatsby_2020": {
       "split": "known-good",
       "contentSha256": "b9cc5ab8faff159f1a8ab6884c002b90c3532d9210327d38ef3ca779d69a2d59",
-      "recordHash": "8b613468cefb8cd277b5f8e1e887bd63021833ca41e1b4580dc2c3f7a37dd383"
+      "recordHash": "16434c190ee1ba41e7ab56e4eeb0491bf2d20aa0cf399930e2b4a13d3a4cb1b8"
     },
     "db_sbadmin_live": {
       "split": "heldout",
       "contentSha256": "cee55c3b2033f0ff9a840dfa4d0ea965d36787ef297e50a09c179ea27f326f87",
-      "recordHash": "0b77f5668bf85adcdf4b7e90bb5cf6df9d070cf60c02af7b383b23803f7effc7"
+      "recordHash": "afbcf23b023fae0f0f99a1a074ffc6b2ab76fedaf90afdfab3d1fa1319b922fe"
     },
     "db_sbadmin_charts": {
       "split": "heldout",
       "contentSha256": "2cb6a4fd0c0ea11f3d68204f92345b27c027fa94cc113ef79a8af463f51a2025",
-      "recordHash": "4634834cc14f20daca98005ceea87f422588bb3f7d3bf9e8200c190446916cdc"
+      "recordHash": "8e4421b822df8c3711824ee45412972ecdfdea85129cf6e7a9d4e4b040a58658"
     },
     "mk_mailchimp_2016": {
       "split": "heldout",
       "contentSha256": "eda6750231f602db20a860d0bcf499f13b28d6280a1bfc04c09cfc64d12da6a8",
-      "recordHash": "377599c38baae8d740ec4534c6b631ddb48c3b7f0b1e063c667a97c241c4f2d6"
+      "recordHash": "1e31378f14907e501e772bd1f60748165b02e2874881c7ea58f5a1056256137f"
     },
     "pr_woocommerce_2016": {
       "split": "heldout",
       "contentSha256": "a1d7d7bdb67abd5c14443dc12e0927df859e9f382a35df4071448d6c51e7a872",
-      "recordHash": "5acf6901fe26b96981bb50520aad3c324aa5247b1c9fd8a1c4f25fc1db70e744"
+      "recordHash": "aa54d77a18368f97d57058b9a09cfeb5f4612879066cb0e6684de59843b5cfd1"
     },
     "mk_squarespace_2012": {
       "split": "heldout",
       "contentSha256": "8e504597f6a39abe06a76b1fa87fedeaa2ace3e8d97db673e79f8d1ad8ec2a39",
-      "recordHash": "c1510f167fe435abebd87ad5695e40f29435c2047f689c2f8bc77aaba722911a"
+      "recordHash": "55fde90971f83a8eb4c2fd98b05f4f3c27d95ff31131ad38270341c2d60d93ef"
     },
     "ed_medium_2016": {
       "split": "heldout",
       "contentSha256": "253bb27a030f4206a145c95e0a69b849710683a059caf1e25658f54de4a893e1",
-      "recordHash": "fdb9210c2244a5d6cb8e736b29d63f83dd10363ee6e37a6c5d49d1fdccd36243"
+      "recordHash": "c87869a2ced55fe15e99b30287e6c41e0c4a69eaf710e00cf37be2e59f78c504"
     },
     "au_discourse_live": {
       "split": "heldout",
       "contentSha256": "6d913d22b138be6ca0ea456d07f88fd35e07837c7e7557d7857898b82148e730",
-      "recordHash": "8279a473ed3a85cd1087f90acabbbe1be64f1762f861bd32f6d15384e8b43dbf"
+      "recordHash": "29db17491ae31107e890fbae236619f925adc7dbab843175c6ed3069f5251741"
     },
     "pr_gumroad_live": {
       "split": "heldout",
       "contentSha256": "206859a3390b2a49ec0576623b91d505bae07957e88be27a5ae5171c326d46b2",
-      "recordHash": "8fecff852453c2c09cb5ced929418276c7cfdbc8186bffe4b7c21d04bfea44a9"
+      "recordHash": "eff4f4bd125ad69e909d019c149089d43905300724a07e3db4a95285c9a1396e"
     },
     "pr_atlassian_2018": {
       "split": "heldout",
       "contentSha256": "b209bd0bfedcd4012c63d7d329b8ad0e18778e5b58d5945809d4ef2068987aa9",
-      "recordHash": "63ef5f552bb591dd9673d4ded5868342290b32498170e2b071a284fff8d4ddaf"
+      "recordHash": "3205b2c2f1a0008d1e83a9512b35852d1c4e29a87cab2a9102ce77690ce4eaa2"
     },
     "ed_techcrunch_2018": {
       "split": "known-good",
       "contentSha256": "fa45ea9aa2d34ade6afbf94fdd6705e52bcffe10e29f3892f9807db362279036",
-      "recordHash": "215e25d6c35b978959a9e064caaf5c1ff25db1c6d2e30f0a002229df2be61101"
+      "recordHash": "c9e891e0b89945bc9832c0e448b642d9d9a81fd8c1096f406e527856a9b886af"
     },
     "ed_guardian_2020": {
       "split": "heldout",
       "contentSha256": "7eac7e67cabba083e4365b09b7d523da5025547409cd8be25e4574ebd762509f",
-      "recordHash": "62797987e248c7405b7f8829a3e18fbac522650618eaf6fc7cc2816a5f1b9e91"
+      "recordHash": "db16f43d5be4802c034f84a6d1ecff69481e7309fb574883c59be65cfd9b4c2e"
     },
     "pr_wix_2020": {
       "split": "heldout",
       "contentSha256": "662414fb9bffac39977b8e8fb1cffb576fede2c56a9f61fc2ed5f030b8635ff3",
-      "recordHash": "e4d21e658f8ef079a2ca5e17d89a980e91b1dde8d0048a5d16fded2cc3521b85"
+      "recordHash": "d3a73446b287a6808b6fb382ea3ef6a12f2ac2622a9392f49014333b61a53519"
     },
     "db_adminlte_live": {
       "split": "heldout",
       "contentSha256": "47e901a7223a9bc72ded03d5ef31c4d595adce505371f62d29682e6067086001",
-      "recordHash": "7ebfdea9e8dc0f7ea5081a1b96bce3c2a2c95f8fa485ac8cf1bcecc3bfe22408"
+      "recordHash": "b8a4032360fa27efa6ff2ecf8968cea7d04bda5d8375edf380c174b30d602e3f"
     },
     "db_tabler_settings": {
       "split": "heldout",
       "contentSha256": "78f83354dc46ecaba847ecdba758f6c766af31e3c70ba3b9592290e43f17a28d",
-      "recordHash": "2c9da5191d92241892a137d9f2bbb0f28f22d7204ea19c6ad0afc068444a5139"
+      "recordHash": "69047e9ca2dc77cc630b4fbc17b0974659e174c9715ff4623b36d603b2e4bb56"
     },
     "mk_godaddy_2020": {
       "split": "known-good",
       "contentSha256": "6eb91858dfaee9435eabb3211ea13bd02bef3a8c29fc0c79fba73957ac8d4fa8",
-      "recordHash": "7d75bed0d236218714d938ccb50ed2cb941fcd11ee598de1daa1212902aadd31"
+      "recordHash": "da5271b7417cb166243719a0c588b711b9b6c8cb7c707e7661cf8d730cf42f28"
     },
     "ed_buzzfeed_2018": {
       "split": "heldout",
       "contentSha256": "1ceba20ca0f7c8b11ec2e460c33bdefe1b93efdf5713e52a4dff5e3e775b1f15",
-      "recordHash": "24da3348b866d4d1bca773bd297b611f02f6933a538117647fb97bd7464e5d4b"
+      "recordHash": "e66a2f32bfc230e7fc07f970a7b379ff4ccd39033687e5391332948265c91396"
     },
     "fm_w3schools_live": {
       "split": "heldout",
       "contentSha256": "f4f803d6269838a425c2351f7d2f2eb38e699e2df9dd56efcfa4c981dcff20f7",
-      "recordHash": "d9c7a23cf83f4518ffe3b1cc973f82d9759469d2d505970b59344b25ad6519d6"
+      "recordHash": "4d3215f46709ad4c85f228281ccd4bc058b9f29c19c3b8c18d8cc46e65734193"
     },
     "ed_reactdocs_live": {
       "split": "heldout",
       "contentSha256": "d4fb9098573a124b7a2ee5f968c1a97aa424b473ecef1e90e1b864fd17593c10",
-      "recordHash": "f441406da28bab9fef633a087f01f8d009aabcf7bb52e60fb864865d44a7614a"
+      "recordHash": "20fec9c81c86a4c47787779587f6480eb9dfa4c6a4bb1915341be556fd132ed3"
     },
     "ed_tailwinddocs_live": {
       "split": "known-good",
       "contentSha256": "15ab2134d68214f2a44437ea08fc6757bda7e412b15f96bbc181dde37d5a402a",
-      "recordHash": "c7f98eced3a5a0bae9aed591e4d0f5866ebfc66e44e1ebc53a74690224fae846"
+      "recordHash": "8a603360120cec00b17d495eec4cf1350c04b526513522af24bdf23da1d4b1e0"
     },
     "ed_mdn_grid": {
       "split": "known-good",
       "contentSha256": "b891d741fe7c48fdb5053a1d631ec70107222569533d964b3e3e98af900228bb",
-      "recordHash": "83fa9ce49f24d39f0cc41950f44227697a087462adaf544011599f1fa16d3bde"
+      "recordHash": "e0832f35df241e59697b138c2a8286051902f46789c5387ea2bde239111d8f59"
     },
     "pr_vercel_docs": {
       "split": "known-good",
       "contentSha256": "6e4c0e81053ba6277c68cbf1b1a9bb9e7280ebb3ab27f124f8e2b6b2a119a666",
-      "recordHash": "912051564a86d5bf2bc5d4c1722f98d22984b69fe1055645b1c6702ee6c31a02"
+      "recordHash": "be30dcd859b56433dc04359602f25dde4e9e9df40ce254939da9eabd8ba8239c"
     },
     "ed_web_dev_learn": {
       "split": "known-good",
       "contentSha256": "b0ea409ba13f4a1057562fc28ba5ce39a713ee2e6715d2c72f6884e447984fb5",
-      "recordHash": "148c5c02f109f8f707734aea2541b0dad49e60c13bc5c2d6ad7d49334fd4915c"
+      "recordHash": "3a9ff9bc70380bf70d8e0077cde2286fe309b015902b32218d1d1d79302126e4"
     },
     "pr_stripe_docs": {
       "split": "known-good",
       "contentSha256": "68cd6e7b49e5ac3735afbd90c02966bf731869ba2cbdcc12bc1c3f4145303a7b",
-      "recordHash": "43e88c7c22e0b1ea41ec037ff7d619aab7d43296273c2e081778ba9c93651f2c"
+      "recordHash": "16e15df86290a515e48856af132abb6c6c62666338a5a704fddd0eb94e5ee719"
     },
     "ed_smashing_article2": {
       "split": "heldout",
       "contentSha256": "2f2143823b182f61bb511ea31393fc80b9cf6c1d28565e6cbfb2f015594a7033",
-      "recordHash": "ef0c9d5eddeb4fafab44a5c1c8c1c2745f70e6583153c21a0e12d23b1d171376"
+      "recordHash": "64372f48eac8213b437f3dc9d5dbff97db5c29f4c971ec9f82dad00e2f40b3e0"
     },
     "mk_svelte_docs": {
       "split": "known-good",
       "contentSha256": "434adb72c56b0cd16c6a2e1ffb8a9caa3f2b65172a72e780d52ba37226658cc5",
-      "recordHash": "de2394d2eeb4f788a68a6d37282efd483716521bff575df40c8bf0cdd5856049"
+      "recordHash": "e2d91940bed8fb63cd0a949b230cb9233d53058f14b55cc5dedce51e8d16bcd1"
     },
     "ed_a11y_wcag": {
       "split": "known-good",
       "contentSha256": "07064e617b51bdb55f0138b11b29a4f9a3047a0127fba53cdcdf398d8ede5c90",
-      "recordHash": "9d0e52084b926d3c17631f103d44f9645e5e12e867a147d7e4120ea45cba7288"
+      "recordHash": "13350f262f319b00ad535103783b8d4ab69323c7495c1a98cde7d46689bd80b0"
     },
     "pr_github_features": {
       "split": "known-good",
       "contentSha256": "8adaa0ed4f23ce406028f7d35748824c126505e3d39f82407d07c3fbb89663b5",
-      "recordHash": "5b32e70db34bebf74981427deaba751ab65b0c2f90d2aa4dcdf6d016129c6559"
+      "recordHash": "d865c37354bc6135cc29306c6f0d84dfdb2af650c69f2d70d95c58422dede17f"
     },
     "ed_govuk_guidance": {
       "split": "known-good",
       "contentSha256": "5364503426d55dad4f1a33ef8d05db2fc2d7a965e53fd0ce71927db2afe9fcd4",
-      "recordHash": "c270a4150bc70d2f1ff2250f0db6e1c749d4c4541a7c222d1cd2f8deb37867c8"
+      "recordHash": "e409dab76bed1b4925e4851db3c5faa9a5866bfbddccc5e761b6f22f9b8a2f35"
     },
     "ed_mozilla_about": {
       "split": "known-good",
       "contentSha256": "b49afcd479fa1bbd0e2fcf120429c0e3f591542c5234b5663efb2660a2d92160",
-      "recordHash": "0ac294b5afa91a0ae15381380cf8f299e49a3f9148026ae4eae3f999f3d9f776"
+      "recordHash": "cce22ec329c2b34a2b508f971f32dd7ba2ff339343c5de1800c7bd04ef325ddd"
     },
     "pr_basecamp_features": {
       "split": "known-good",
       "contentSha256": "27c166de53aec6076f91b090923e1d2a4073368ecae8fb55e6a700bdf37e38c5",
-      "recordHash": "d86692c585a87858f2671bdeea8d184e70eb030323da3a9d6607fb33c9c0189a"
+      "recordHash": "932e2b7e2e8f6930253342de2b48fbdc5ac833da3c3c28eeb9cc2c862be9ca8f"
     },
     "ed_nngroup_article": {
       "split": "known-good",
       "contentSha256": "05edfdceae7fcb6eabb9ad2f66ff591c18de3c9aaefaceb12d6e23b3aae397ca",
-      "recordHash": "cdaa56c724ff02bd23d4b083c8d9f117f63a2cc5133e8f2acfe12ee1b5f254c4"
+      "recordHash": "7ec5ff77691ce29ec29e9f6ed4490a4292fce91cc933c86223dccf7736e6ed5b"
     },
     "mk_eleventy_live": {
       "split": "known-good",
       "contentSha256": "ed5b834227f1c0f6b07c1d115f8a86e4590524a7dc8f920095ccf8047e748988",
-      "recordHash": "7c6a6f359a366de3bbbf426a72220d2d2971dc0ddb498531e55b4fb8b1f19743"
+      "recordHash": "c84a6d9899c631fb1b077a5c08c35f1508b33266eeac01a21d61bb898035a1f5"
     },
     "fm_w3wai_tutorial": {
       "split": "known-good",
       "contentSha256": "39b3bffef240efbbbfa21ddd601643027b364c6ffb74bec83a34524abaf0f3d6",
-      "recordHash": "b836b8f669fa9080419336aa40f365b8ca98f7d77c899c99fb372aa816a18cf4"
+      "recordHash": "11d91c5829c21beb51e91c3be41b6e8da607680c69ba577116eef415508a0811"
     },
     "fm_govuk_vehicle": {
       "split": "known-good",
       "contentSha256": "c83fa25f9be2a48f2c876011bb9c4cdc59fa3fc9d2ffb9a5d64b3d88d35748fb",
-      "recordHash": "80d51c8928f515d403c3e0c3a50c8f25824e7f9209f53ce92d79287821758761"
+      "recordHash": "d0a7deedfd2014e33bdc13a8168df669eaaec06714aa755370632e3e6cda0451"
     },
     "fm_mdn_form": {
       "split": "known-good",
       "contentSha256": "729994f4cddc6f82b3622f8926c0eb30b9bbe56f7f89972c981e4b80f5b7c33c",
-      "recordHash": "b1a24cf597738b655412a6bada0363e826c52352d4acab4a0fce5f649a492c12"
+      "recordHash": "37839dc28662b24b189d7e51fd6ffc465539788fb1d06ed776ac96dc713f86dd"
     },
     "au_govuk_service": {
       "split": "known-good",
       "contentSha256": "9203b47afd29ff5cfa4c43de6ef755be046c2de50c218a2eade8912c0edd6f61",
-      "recordHash": "30ace17ebe645f9bdb015cc9b95b85c62bea5fd2478859eb8c092a51f84a7b21"
+      "recordHash": "b3d482ce039633d82340235577d4ad96cf610fa60feba681dee0a1c294b2b720"
     },
     "au_govuk_voting": {
       "split": "known-good",
       "contentSha256": "f7145dedda0868c610514c379e999beaa507cf83082fe185a49d78375056a005",
-      "recordHash": "af5a0d6616f571a20afc3c8f543a4206225756ef7904cefcba85b0edf033c8c2"
+      "recordHash": "489647bbd606b4da81907ec0da525ff72c0742c5f9c977de8d205b89ab5e70b7"
     },
     "au_a11y_patterns": {
       "split": "known-good",
       "contentSha256": "a50bc579671383a6791a00994c3c4601637aa420606c795e77f7c83dc92b1b46",
-      "recordHash": "9851fe4edce2d517972fbc497e4b3cbeb566873ebdb1753c1ad83a8d3341ddc2"
+      "recordHash": "850898fab2f6b1cefd9ef0beb27c397b36775b93f7783355dd8bd78133840d5d"
     },
     "db_govuk_search": {
       "split": "known-good",
       "contentSha256": "6fcde6f80c35e83dc6c80c40a770edb3028289e12007207654c0be5a0e4ab885",
-      "recordHash": "fa99e54e7f6dba096c99a7c996ba04015820fca0d45bb5388abb8fdbc4e66f78"
+      "recordHash": "3b2762bbcf98921dde451e5154e9eabee9c218eb4aedb0e034515b6c6076f781"
     },
     "db_datausa": {
       "split": "known-good",
       "contentSha256": "b02a9b3eeaba4118c28da248874ca5ef190534a02971e473d7e2373a326713a3",
-      "recordHash": "776c2b2b20e4cb83e746c1ec944e32076dc82d1a559e450adcd47c2cc8eb4acf"
+      "recordHash": "a8326f30c9dfc7fb0865743609796883494f016728f2ece9e8a8c7390681d250"
     },
     "db_ourworldindata": {
       "split": "heldout",
       "contentSha256": "25c87c4aba58db5a0596f4bce8cac407040a311c1415360567db202dacb04c86",
-      "recordHash": "ee2f543b7855099f0f05188b03238ee0b200b90c1882069f838803ad7654a8c3"
+      "recordHash": "ad6b524ba9734222f18db110f51e95480e1f5fd41c37a772fedcccc6f5bc9855"
     },
     "db_govuk_transparency": {
       "split": "known-good",
       "contentSha256": "75b5fd6b35da8b7fc4d34081cbd53138399d24578d9e7794af499180eddf03af",
-      "recordHash": "fa45f5fab8d756ea083d05ab6caea3359d367a7c063c9a27c9d70c3fc6d5d78c"
+      "recordHash": "173e33845012663492282fdf8b7a6d4f05dfec10ea5d8c2560cdbdaf8a3d4698"
     },
     "db_cdc_data": {
       "split": "known-good",
       "contentSha256": "f5d1be4bcfe63a4d2341fd72cafea0376df2d4d2b7dc3da50131f529fdb9e306",
-      "recordHash": "fe02f865e4b69c4dd3082a2bda6ae91561fdb3bb8c78595f22372c8e27b04cb4"
+      "recordHash": "03bb77179aef83255162f7fb0f6fdfaa34217b7d1afc1186bdb775bbd6dbab59"
     },
     "db_worldbank_data": {
       "split": "heldout",
       "contentSha256": "d50e827fa4c809887bb6d6d478f981b4ba2f56cddf191babdc6647148f3911c9",
-      "recordHash": "49c5cb47a86ba7b3ea000499529928fb6b3cd350a5b9f380780f016cc6f1d278"
+      "recordHash": "a860fde61108587221bdeba8da54c589c2e1d98e67900f9aac02e7636cc4e7bc"
     },
     "db_usafacts": {
       "split": "heldout",
       "contentSha256": "a912ff11dc370498c515fcd0bf033a7e948bb3e2f01d7400c2b519b00d51a98c",
-      "recordHash": "23b777027ab0a61e7bfa3139ff7f48771255e9cd56c157d8753e97e6b7d5003e"
+      "recordHash": "8673961d9ce26f224ae8b2e2edbc9828cbf56d56dea4b2cfbcbb7a70e03f27bd"
     }
   },
   "briefRecords": {

@@ -196,10 +196,30 @@ export function canonicalCandidateRecord(c, contentSha256) {
   };
 }
 
-export function freezeCandidates() {
+/** RE-FREEZE IS AUDITED (2026-07-24). A freeze that can be silently re-run over a DRIFTED corpus
+ *  is not a freeze - it is a rubber stamp, and it is exactly how the 2026-06-24 motion re-label
+ *  erased its own evidence for a month. So: re-locking a corpus whose records no longer match the
+ *  existing lock REQUIRES an explicit `reason`, which is recorded in the lock alongside the
+ *  superseded `frozenAt`. First freeze (no prior lock) and a no-op re-freeze (nothing drifted) do
+ *  not need one. `reason` is lock-level metadata; it is NOT part of any record hash. */
+/** Canonical brief record - the SINGLE builder used by both freeze and verify. Keeping one
+ *  definition is the point: while freeze hashed these fields inline and verify re-checked only
+ *  contentSha256, a brief's kind/authoredBy/file/provenance could drift with the bytes untouched
+ *  and still verify clean. Field ORDER is load-bearing (recordHash is sha256 of JSON.stringify). */
+function canonicalBriefRecord(b, contentSha256) {
+  const authoredBy = b.codexAuthored ? 'codex' : b.architectAuthored ? 'architect' : 'real';
+  return { id: b.id, kind: b.kind, file: b.file, authoredBy, contentSha256, provenance: b.provenance ?? {} };
+}
+
+export function freezeCandidates(opts = {}) {
   const cand = readJson(CANDIDATES, []);
   const records = {};
+  const seenPages = new Set();
   for (const c of cand) {
+    // Duplicate ids would COLLAPSE in the id-keyed record map, silently leaving a page present
+    // but unlocked (and invisible to the forward-bijection check, whose id does exist).
+    if (seenPages.has(c.id)) throw new Error(`cannot freeze: duplicate page id '${c.id}' - ids must be unique to be lockable`);
+    seenPages.add(c.id);
     const contentSha = fileSha(c.file);
     if (!contentSha) throw new Error(`cannot freeze ${c.id}: file missing (${c.file})`);
     c.frozen = true;
@@ -207,24 +227,94 @@ export function freezeCandidates() {
   }
   const briefs = readJson(BRIEFS, []);
   const briefRecords = {};
+  const seenBriefs = new Set();
   for (const b of briefs) {
+    if (seenBriefs.has(b.id)) throw new Error(`cannot freeze: duplicate brief id '${b.id}' - ids must be unique to be lockable`);
+    seenBriefs.add(b.id);
     const bsha = fileSha(b.file);
     if (!bsha) throw new Error(`cannot freeze brief ${b.id}: file missing (${b.file})`);
-    const authoredBy = b.codexAuthored ? 'codex' : b.architectAuthored ? 'architect' : 'real';
-    briefRecords[b.id] = { kind: b.kind, authoredBy, contentSha256: bsha, recordHash: recordHash({ id: b.id, kind: b.kind, file: b.file, authoredBy, contentSha256: bsha, provenance: b.provenance ?? {} }) };
+    const rec = canonicalBriefRecord(b, bsha);
+    briefRecords[b.id] = { kind: rec.kind, authoredBy: rec.authoredBy, contentSha256: bsha, recordHash: recordHash(rec) };
   }
+
+  const prior = existsSync(CANDLOCK) ? readJson(CANDLOCK, null) : null;
+  const drift = prior ? lockDrift(prior, records, briefRecords, cand.length, briefs.length) : [];
+  const reason = typeof opts.reason === 'string' ? opts.reason.trim() : '';
+  // BOOTSTRAP GATE: without this, the audited re-freeze below is defeated by `rm lock-candidates.json`
+  // - delete the prior lock and every drift becomes an unaudited "first freeze". Creating a lock for a
+  // non-empty corpus is therefore always an explicit act: --reason (normal) or --initial (true bootstrap).
+  if (!prior && cand.length && !reason && !opts.initial) {
+    throw new Error(
+      `refusing to create a lock for a non-empty corpus (${cand.length} page(s)) with no prior lock and no justification.\n` +
+      `  If lock-candidates.json was DELETED, that deletion is itself the drift - re-run with --reason "<why>".\n` +
+      `  If this is a genuine first freeze, say so explicitly: freeze-candidates --initial`);
+  }
+  if (drift.length && !reason) {
+    throw new Error(
+      `refusing to re-freeze a DRIFTED corpus without --reason (${drift.length} change(s); e.g. ${drift.slice(0, 3).join('; ')}).\n` +
+      `  A silent re-lock destroys the evidence of what moved. Understand the delta first, then re-run with:\n` +
+      `  freeze-candidates --reason "<what changed and why the new state is the correct ground truth>"`);
+  }
+
   writeJson(CANDIDATES, cand);
-  writeJson(CANDLOCK, { frozenAt: new Date().toISOString(), pageCount: cand.length, briefCount: briefs.length, records, briefRecords });
-  return { pages: Object.keys(records).length, briefs: Object.keys(briefRecords).length };
+  writeJson(CANDLOCK, {
+    frozenAt: new Date().toISOString(),
+    // audit trail: why this lock replaced the previous one, and which one it replaced.
+    reason: reason || (!prior && opts.initial ? 'initial freeze (--initial, no prior lock)' : prior?.reason || null),
+    supersedes: drift.length ? { frozenAt: prior?.frozenAt ?? null, changes: drift.length } : (prior?.supersedes ?? null),
+    pageCount: cand.length, briefCount: briefs.length, records, briefRecords,
+  });
+  return { pages: Object.keys(records).length, briefs: Object.keys(briefRecords).length, drift: drift.length };
 }
 
-/** Verify the REAL frozen corpus. { ok, errors, counts }. Never throws. */
+/** Human-readable list of what a re-freeze would change vs the existing lock. Takes the RAW
+ *  array lengths as well as the id-keyed maps: id-keyed comparison alone cannot see a
+ *  duplicate-id insertion (the map collapses it), so count drift is compared explicitly. */
+function lockDrift(prior, records, briefRecords, pageCount, briefCount) {
+  const changes = [];
+  const pr = prior.records ?? {}, pb = prior.briefRecords ?? {};
+  for (const id of Object.keys(records)) {
+    if (!(id in pr)) { changes.push(`${id}: newly locked`); continue; }
+    if (pr[id].recordHash !== records[id].recordHash) changes.push(`${id}: record changed`);
+    else if (pr[id].contentSha256 !== records[id].contentSha256) changes.push(`${id}: file content changed`);
+  }
+  for (const id of Object.keys(pr)) if (!(id in records)) changes.push(`${id}: dropped from corpus`);
+  for (const id of Object.keys(briefRecords)) {
+    if (!(id in pb)) changes.push(`brief ${id}: newly locked`);
+    else if (pb[id].recordHash !== briefRecords[id].recordHash) changes.push(`brief ${id}: record changed`);
+  }
+  for (const id of Object.keys(pb)) if (!(id in briefRecords)) changes.push(`brief ${id}: dropped from corpus`);
+  if (typeof prior.pageCount === 'number' && typeof pageCount === 'number' && prior.pageCount !== pageCount) changes.push(`page count ${prior.pageCount} -> ${pageCount}`);
+  if (typeof prior.briefCount === 'number' && typeof briefCount === 'number' && prior.briefCount !== briefCount) changes.push(`brief count ${prior.briefCount} -> ${briefCount}`);
+  return changes;
+}
+
+/** Verify the REAL frozen corpus. { ok, errors, counts }. Never throws.
+ *
+ *  FAIL-CLOSED ON AN ABSENT CORPUS (2026-07-24). Every read below falls back to an empty
+ *  value, so before this guard a MISSING or EMPTY candidates.json / lock-candidates.json
+ *  walked every loop zero times, collected zero errors and returned ok:true - a gate that
+ *  passes loudest exactly when there is nothing left to check. (The sibling `verify()` still
+ *  demonstrates the hazard live: it reports VERIFY OK on the intentionally-empty, tooling-only
+ *  manifest corpus.) An enforcement point has to re-ask its own question at enforcement time,
+ *  so the presence of the corpus is now itself a checked claim. */
 export function verifyCandidates() {
   const errors = [];
   const cand = readJson(CANDIDATES, []);
   const briefs = readJson(BRIEFS, []);
   const lock = readJson(CANDLOCK, { records: {}, briefRecords: {} });
   const ra = readJson(RULE_AUTHORS, {});
+
+  if (!existsSync(CANDIDATES)) errors.push(`corpus absent: ${path.relative(CORPUS_DIR, CANDIDATES) || 'candidates.json'} not found - nothing to verify`);
+  else if (!Array.isArray(cand) || cand.length === 0) errors.push('corpus EMPTY: candidates.json holds zero pages - refusing to pass vacuously');
+  if (!existsSync(CANDLOCK)) errors.push(`lock absent: ${path.relative(CORPUS_DIR, CANDLOCK) || 'lock-candidates.json'} not found - the corpus is unfrozen`);
+  else if (!lock.records || Object.keys(lock.records).length === 0) errors.push('lock EMPTY: lock-candidates.json holds zero records - refusing to pass vacuously');
+  // Count bijection: pages/briefs added or removed since the freeze without a re-freeze.
+  if (existsSync(CANDLOCK)) {
+    if (typeof lock.pageCount === 'number' && lock.pageCount !== cand.length) errors.push(`page count drifted since freeze (${lock.pageCount} locked -> ${cand.length} present) - re-freeze required`);
+    if (typeof lock.briefCount === 'number' && lock.briefCount !== briefs.length) errors.push(`brief count drifted since freeze (${lock.briefCount} locked -> ${briefs.length} present) - re-freeze required`);
+  }
+
   const byId = new Map(); const seen = new Set();
   for (const c of cand) {
     if (seen.has(c.id)) errors.push(`${c.id}: duplicate page id`);
@@ -257,13 +347,30 @@ export function verifyCandidates() {
     if (contentSha !== lk.contentSha256) errors.push(`${id}: FILE CONTENT TAMPERED since freeze`);
     if (recordHash(canonicalCandidateRecord(c, contentSha)) !== lk.recordHash) errors.push(`${id}: LOCKED RECORD TAMPERED since freeze (labels/file/split/provenance changed)`);
   }
-  // Briefs bijection + content integrity.
-  const briefById = new Map(briefs.map((b) => [b.id, b]));
+  // Briefs bijection + FULL canonical-record integrity. Checking contentSha256 alone left the
+  // rest of the locked brief record (kind, authoredBy, file, provenance) unverified: re-pointing a
+  // brief at a different same-content file, or flipping codexAuthored -> architectAuthored, moved
+  // the record without moving a byte the gate looked at.
+  const briefById = new Map(); const seenBriefs = new Set();
+  for (const b of briefs) {
+    if (seenBriefs.has(b.id)) errors.push(`brief ${b.id}: duplicate brief id (a duplicate collapses in the id-keyed lock and escapes bijection)`);
+    seenBriefs.add(b.id); if (!briefById.has(b.id)) briefById.set(b.id, b);
+  }
   for (const [id, lk] of Object.entries(lock.briefRecords ?? {})) {
     const b = briefById.get(id);
     if (!b) { errors.push(`brief ${id}: removed since lock`); continue; }
     const bsha = fileSha(b.file);
+    if (!bsha) { errors.push(`brief ${id}: locked file missing (${b.file})`); continue; }
     if (bsha !== lk.contentSha256) errors.push(`brief ${id}: CONTENT TAMPERED since freeze`);
+    if (lk.recordHash && recordHash(canonicalBriefRecord(b, bsha)) !== lk.recordHash) errors.push(`brief ${id}: LOCKED RECORD TAMPERED since freeze (kind/authoredBy/file/provenance changed)`);
+  }
+  // FORWARD bijection: freezeCandidates locks EVERY page and EVERY brief, so anything present but
+  // unlocked slipped in after the freeze. The reverse direction (locked-but-removed) is covered above.
+  if (existsSync(CANDLOCK)) {
+    const unlockedPages = cand.filter((c) => !(c.id in (lock.records ?? {}))).map((c) => c.id);
+    const unlockedBriefs = briefs.filter((b) => !(b.id in (lock.briefRecords ?? {}))).map((b) => b.id);
+    if (unlockedPages.length) errors.push(`${unlockedPages.length} page(s) present but NOT in lock (added since freeze): ${unlockedPages.slice(0, 5).join(', ')}${unlockedPages.length > 5 ? ', ...' : ''}`);
+    if (unlockedBriefs.length) errors.push(`${unlockedBriefs.length} brief(s) present but NOT in lock (added since freeze): ${unlockedBriefs.slice(0, 5).join(', ')}${unlockedBriefs.length > 5 ? ', ...' : ''}`);
   }
   const counts = { pages: cand.length, knownGood: cand.filter((c) => c.bucket === 'known-good').length, defectBearing: cand.filter((c) => c.bucket === 'defect-bearing').length, briefs: briefs.length };
   return { ok: errors.length === 0, errors, counts };
@@ -282,12 +389,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       if (r.ok) { console.log('VERIFY OK: provenance complete, author!=labeler, bijection + canonical-record freeze intact.'); process.exit(0); }
       console.error('VERIFY FAIL:'); for (const e of r.errors) console.error(`  - ${e}`); process.exit(1);
     }
-    else if (cmd === 'freeze-candidates') { const r = freezeCandidates(); console.log(`froze REAL corpus: ${r.pages} pages + ${r.briefs} briefs -> lock-candidates.json`); }
+    else if (cmd === 'freeze-candidates') {
+      const r = freezeCandidates({ reason: typeof a.reason === 'string' ? a.reason : '', initial: a.initial === true });
+      console.log(`froze REAL corpus: ${r.pages} pages + ${r.briefs} briefs${r.drift ? ` (AUDITED RE-LOCK over ${r.drift} drifted record(s))` : ''} -> lock-candidates.json`);
+    }
     else if (cmd === 'verify-candidates') {
       const r = verifyCandidates();
       console.log(`real corpus counts: ${JSON.stringify(r.counts)}`);
       if (r.ok) { console.log('VERIFY-CANDIDATES OK: provenance complete, subjective author!=labeler (codex), objective spec-math (no architect-label), bijection + canonical-record freeze intact.'); process.exit(0); }
       console.error('VERIFY-CANDIDATES FAIL:'); for (const e of r.errors) console.error(`  - ${e}`); process.exit(1);
-    } else { console.error('usage: corpus-tool.mjs <add|freeze|verify|freeze-candidates|verify-candidates> [...]'); process.exit(2); }
+    } else { console.error('usage: corpus-tool.mjs <add|freeze|verify|freeze-candidates [--reason "<why>" | --initial]|verify-candidates> [...]'); process.exit(2); }
   } catch (e) { console.error(`ERROR: ${e instanceof Error ? e.message : e}`); process.exit(2); }
 }
