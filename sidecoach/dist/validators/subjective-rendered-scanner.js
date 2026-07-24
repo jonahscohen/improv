@@ -1,10 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BUZZ_DENSITY_THRESHOLD = exports.SUBJECTIVE_RULES = void 0;
+exports.DEFAULT_TYPEFACE_GROUND_BRAND_MISMATCH = exports.DEFAULT_TYPEFACE_GROUND_DEFAULT_STACK = exports.TYPEFACE_MIN_CONTENT_CHARS = exports.BRAND_PRESENCE_MIN = exports.DEFAULT_STACK_SHARE = exports.BUZZ_DENSITY_THRESHOLD = exports.SUBJECTIVE_RULES = void 0;
 exports.stripScripts = stripScripts;
 exports.inPageSubjective = inPageSubjective;
 exports.inPageBuzzword = inPageBuzzword;
 exports.buzzwordFindingFromScore = buzzwordFindingFromScore;
+exports.inPageTypeface = inPageTypeface;
+exports.typefaceFindingFromScore = typefaceFindingFromScore;
+exports.typefaceGroundOf = typefaceGroundOf;
 exports.analyzeHtmlOnBrowserSubjective = analyzeHtmlOnBrowserSubjective;
 exports.scanSubjectiveRendered = scanSubjectiveRendered;
 /**
@@ -29,7 +32,7 @@ exports.scanSubjectiveRendered = scanSubjectiveRendered;
  * INDEPENDENCE: PRODUCT scanner; MUST NOT import anything under eval/. Distinct artifact from the eval referee.
  */
 const playwright_1 = require("playwright");
-exports.SUBJECTIVE_RULES = ['tiny-text', 'nested-cards', 'marketing-buzzword'];
+exports.SUBJECTIVE_RULES = ['tiny-text', 'nested-cards', 'marketing-buzzword', 'default-typeface'];
 function stripScripts(html) {
     return String(html)
         .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
@@ -389,8 +392,302 @@ function buzzwordFindingFromScore(s) {
         return null;
     return { rule: 'marketing-buzzword', severity: 'warning', selector: s.selector, detail: `buzzword density ${s.density.toFixed(1)}/100 words (e.g. ${s.matched.slice(0, 8).join(', ')})` };
 }
+/**
+ * default-typeface: the page's CONTENT text is not set in a typeface anyone CHOSE.
+ *
+ * ONE page-level judgment with two grounds, both expressed as a share of content text:
+ *   (A) default stack   - the content text computes to a bare system/generic stack (the vocabulary in
+ *                         reference-data.ts SYSTEM_FONT_STACK_FAMILIES), i.e. no typeface was chosen at all.
+ *                         The historically over-used monoculture faces (Arial, Helvetica, Times, Georgia,
+ *                         Verdana, Segoe UI) live IN that vocabulary - they are the families you get when
+ *                         nobody chose, which is exactly what "monoculture" means for a rendered read.
+ *   (B) brand mismatch  - a committed family IS known (caller-supplied, from PRODUCT.md / DESIGN.md) but it
+ *                         barely paints the content text, so the commitment did not land.
+ *
+ * MEASUREMENT BASIS = the computed `font-family` STACK, not the painted face. This is deliberate and it is
+ * the only honest basis here: the hermetic render aborts external subresources, so a page that loads its
+ * typeface from a CDN paints in the fallback no matter how well it is built. Scoring the painted face would
+ * therefore fire on nearly every real page as an artifact of the harness rather than a defect of the page.
+ * The declared stack is render-independent and is what the page actually asked for.
+ *
+ * HONEST EXCLUSION (deliberately NOT detected): "over-used Google-font monoculture" in the Inter/Poppins
+ * sense. Inter and Poppins are RECOMMENDED entries in our own catalog (reference-data.ts loadFontCatalog),
+ * and 13 of the 48 real dev-corpus pages lead with Inter as a deliberate, well-executed choice. Firing on
+ * them would be a low-precision taste guess about a family that is frequently the right answer - the
+ * category the plan says to mark out-of-scope rather than ship. Recorded here so no later pass claims this
+ * detector covers it.
+ *
+ * Returns the SCORE only; the firing thresholds are applied in Node by typefaceFindingFromScore, so the
+ * calibration harness sweeps EXACTLY what ships (the inPageBuzzword / buzzwordFindingFromScore contract).
+ */
+/* istanbul ignore next - executes in the browser context (serialized by page.evaluate; must be self-contained) */
+function inPageTypeface() {
+    // SINGLE-SOURCE vocabulary: the concrete expansion of the font catalog's `system_fonts` entry. An in-page
+    // function cannot import, so this is a verbatim copy of reference-data.ts SYSTEM_FONT_STACK_FAMILIES;
+    // typeface-vocabulary.test.ts asserts the two lists stay identical (drift is a test failure, not a silent
+    // detector change).
+    const SYSTEM_FAMILIES = new Set([
+        'system-ui', 'ui-sans-serif', 'ui-serif', 'ui-monospace', 'ui-rounded',
+        'sans-serif', 'serif', 'monospace', 'cursive', 'fantasy', 'math', 'emoji', 'fangsong',
+        '-apple-system', 'blinkmacsystemfont',
+        'segoe ui', 'helvetica', 'helvetica neue', 'arial', 'arial black',
+        'times', 'times new roman', 'georgia', 'courier', 'courier new',
+        'verdana', 'tahoma', 'trebuchet ms', 'palatino', 'palatino linotype', 'book antiqua',
+        'lucida grande', 'lucida sans unicode', 'geneva', 'menlo', 'monaco', 'consolas',
+        'liberation sans', 'liberation serif', 'liberation mono',
+        'dejavu sans', 'dejavu serif', 'dejavu sans mono', 'ms sans serif', 'ms serif',
+        'apple color emoji', 'segoe ui emoji', 'segoe ui symbol', 'noto color emoji',
+    ]);
+    function sel(el) {
+        const t = el.tagName.toLowerCase();
+        if (el.id)
+            return `${t}#${el.id}`;
+        const cls = (el.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).join('.');
+        return cls ? `${t}.${cls}` : t;
+    }
+    // The SAME hardened visibility predicate as inPageSubjective (each in-page fn must be self-contained for
+    // page.evaluate, so a verbatim duplicate is correct).
+    function visuallyVisible(el) {
+        const cs = getComputedStyle(el);
+        if (cs.visibility !== 'visible')
+            return false;
+        for (let n = el; n && n instanceof Element; n = n.parentElement) {
+            if (parseFloat(getComputedStyle(n).opacity) === 0)
+                return false;
+        }
+        const rects = el.getClientRects();
+        if (!rects.length)
+            return false;
+        const box = el.getBoundingClientRect();
+        if (box.width < 1 || box.height < 1)
+            return false;
+        if ((box.width <= 1 || box.height <= 1) && cs.overflow !== 'visible')
+            return false;
+        if (box.right <= 0 || box.bottom <= 0)
+            return false;
+        if (parseFloat(cs.textIndent) <= -999)
+            return false;
+        const clipM = (cs.clip || '').replace(/\s+/g, ' ').match(/^rect\(\s*([-\d.]+)(?:px)?[ ,]+([-\d.]+)(?:px)?[ ,]+([-\d.]+)(?:px)?[ ,]+([-\d.]+)(?:px)?\s*\)$/i);
+        if (clipM) {
+            const t = parseFloat(clipM[1]), rr = parseFloat(clipM[2]), b = parseFloat(clipM[3]), l = parseFloat(clipM[4]);
+            if (rr <= l || b <= t)
+                return false;
+        }
+        if (/^inset\(\s*(100%|50%)\b/.test(cs.clipPath || ''))
+            return false;
+        return true;
+    }
+    function ownText(el) {
+        let t = '';
+        for (const n of Array.from(el.childNodes))
+            if (n.nodeType === 3 && n.textContent)
+                t += n.textContent;
+        return t.replace(/\s+/g, ' ').trim();
+    }
+    function paintedInvisible(cs) {
+        const fill = cs.webkitTextFillColor;
+        const colors = [cs.color, fill].filter(Boolean);
+        return colors.some((c) => { const m = c.match(/rgba?\(([^)]+)\)/i); if (!m)
+            return /^transparent$/i.test(c.trim()); const p = m[1].split(/[,/]/).map((x) => parseFloat(x.trim())); return p.length >= 4 && p[3] <= 0.05; });
+    }
+    // CONTENT scope: footer/nav/aside/menu chrome is excluded exactly as in tiny-text - UI chrome routinely
+    // rides the system stack on purpose, and counting it would over-fire on well-typeset pages.
+    const PERIPHERAL_TAGS = new Set(['footer', 'nav', 'aside', 'menu']);
+    const PERIPHERAL_ROLES = new Set(['navigation', 'contentinfo', 'complementary', 'menubar', 'menu']);
+    const peripheral = (el) => {
+        for (let n = el; n && n instanceof Element; n = n.parentElement) {
+            if (PERIPHERAL_TAGS.has((n.tagName || '').toLowerCase()))
+                return true;
+            const role = (n.getAttribute('role') || '').trim().toLowerCase().split(/\s+/)[0];
+            if (role && PERIPHERAL_ROLES.has(role))
+                return true;
+        }
+        return false;
+    };
+    // QUOTE-AWARE font-family splitter. A naive split(',') is not CSS-correct: a legal quoted family name may
+    // CONTAIN a comma, and splitting first turns `"Arial, Sans"` (one custom family) into a leading token of
+    // `arial` - a default-vocabulary hit and therefore a false positive on a page that chose a typeface
+    // (Codex review P2). Walking the declaration character by character and only honouring commas OUTSIDE a
+    // quoted run keeps such a name whole. Quote characters are consumed as delimiters, so the emitted token is
+    // already unquoted; each token is then whitespace-collapsed and lowercased to match the vocabulary.
+    function splitFamilies(decl) {
+        const out = [];
+        let cur = '', quote = '';
+        for (const ch of String(decl)) {
+            if (quote) {
+                if (ch === quote)
+                    quote = '';
+                else
+                    cur += ch;
+                continue;
+            }
+            if (ch === '"' || ch === "'") {
+                quote = ch;
+                continue;
+            }
+            if (ch === ',') {
+                out.push(cur);
+                cur = '';
+                continue;
+            }
+            cur += ch;
+        }
+        out.push(cur);
+        return out.map((f) => f.trim().replace(/\s+/g, ' ').toLowerCase()).filter(Boolean);
+    }
+    const normFamily = (f) => f.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, ' ').toLowerCase();
+    let contentChars = 0, defaultStackChars = 0;
+    const tally = new Map();
+    let defaultSelector;
+    // SCOPE: document.body itself plus its descendants. Including body is deliberate - a bare page can put text
+    // directly in <body>, and omitting it would under-count exactly the unstyled pages this class exists to
+    // catch (Codex review P2).
+    // KNOWN LIMIT (documented, not silently accepted): text inside a SHADOW ROOT is invisible to this walk, as
+    // it is to every other class on this scanner. A page that renders its content entirely in web components
+    // would be scored on its light-DOM shell alone. Rather than special-case shadow traversal for one class and
+    // diverge from tiny-text / marketing-buzzword, the limit is recorded here so no later pass claims coverage
+    // this detector does not have.
+    const scope = document.body ? [document.body, ...Array.from(document.body.querySelectorAll('*'))] : [];
+    for (const el of scope) {
+        const text = ownText(el);
+        if (!text || !visuallyVisible(el) || peripheral(el))
+            continue;
+        const cs = getComputedStyle(el);
+        if (paintedInvisible(cs))
+            continue;
+        const stack = splitFamilies(cs.fontFamily || '');
+        const chars = text.length;
+        contentChars += chars;
+        const lead = stack[0] || '';
+        if (lead)
+            tally.set(lead, (tally.get(lead) || 0) + chars);
+        // THE LEADING FAMILY IS THE DECISION. A stack resolves left to right, so the first family is what the
+        // page actually asked for and everything after it is fallback. If the lead is system vocabulary, the
+        // page's first choice was a default; if the lead is a chosen face, a typeface was picked no matter what
+        // the fallbacks are.
+        // (An earlier draft required EVERY family in the stack to be system vocabulary. That was wrong and the
+        // calibration harness caught it: the canonical system-font boilerplate -
+        //   -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif
+        // - carries Roboto mid-stack, and Roboto is deliberately NOT in the vocabulary because it is a real
+        // downloadable typeface pages choose on purpose. The conjunction therefore scored the single most common
+        // default stack on the web as "chosen". Leading-family is both simpler and correct, and it keeps Roboto's
+        // exclusion working the way it was meant to: it only matters when Roboto LEADS, which is a real choice.)
+        if (!lead || SYSTEM_FAMILIES.has(lead)) {
+            defaultStackChars += chars;
+            if (!defaultSelector)
+                defaultSelector = sel(el);
+        }
+    }
+    // Families the page itself commits to via @font-face. Cross-origin stylesheets throw on cssRules access;
+    // that is caught per-sheet so an unreadable sheet degrades this DETAIL field instead of failing the scan.
+    const declared = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+        let rules = [];
+        try {
+            rules = Array.from(sheet.cssRules || []);
+        }
+        catch {
+            continue;
+        }
+        for (const rule of rules) {
+            const style = rule.style;
+            if (!style || rule.constructor?.name !== 'CSSFontFaceRule')
+                continue;
+            const fam = normFamily(style.getPropertyValue('font-family') || '');
+            if (fam && declared.indexOf(fam) === -1)
+                declared.push(fam);
+        }
+    }
+    const families = Array.from(tally.entries()).map(([family, chars]) => ({ family, chars })).sort((a, b) => b.chars - a.chars).slice(0, 25);
+    const dominant = families[0];
+    return {
+        contentChars,
+        defaultStackChars,
+        defaultStackShare: contentChars > 0 ? defaultStackChars / contentChars : 0,
+        families,
+        dominantFamily: dominant ? dominant.family : undefined,
+        dominantShare: dominant && contentChars > 0 ? dominant.chars / contentChars : 0,
+        declaredFamilies: declared.slice(0, 25),
+        defaultSelector,
+    };
+}
+// DEFAULT_STACK_SHARE = 0.75. Frozen on PRINCIPLE, confirmed (not set) by the dev corpus; never on held-out.
+// PRINCIPLE: the finding claims "this page has no chosen typeface", and that claim is only true when the
+// default stack is the page's DOMINANT typographic voice by a clear margin - not a bare majority. A page that
+// sets even a quarter of its content text in a chosen face HAS made a typographic decision, and a code block
+// on ui-monospace or a data table on system-ui is a normal, deliberate part of a well-typeset page. 0.75 is
+// that margin: three quarters of the content text must carry no chosen typeface before the page reads as
+// unstyled. It also satisfies the precision floor by construction - a single element (or a handful) on a
+// fallback stack can never reach it.
+// DEV CONFIRMATION (48 externally-sourced real shipped pages, char-weighted, via eval/typeface-calibrate.mjs):
+// the MAXIMUM default-stack share anywhere in the corpus is 0.058 (inngest); the next are 0.038 (monday) and
+// 0.036 (tailscale), and 40 of 48 pages sit at 0.000. The frozen 0.75 therefore sits ~13x above the worst real
+// page and fires on ZERO of them.
+// HONEST READING OF THE SWEEP: the score distribution is BIMODAL - real pages land in 0.000-0.058, pages with
+// no chosen typeface land at 1.000 - so every threshold from 0.30 to 0.95 scores identically (R 1.000 /
+// P 1.000) on the current data. The sweep therefore CONFIRMS that 0.75 sits inside a wide safe band; it does
+// NOT empirically discriminate 0.75 from its neighbours, and nobody should quote it as if it had. The number
+// is set by the principle above and by nothing else.
+exports.DEFAULT_STACK_SHARE = 0.75;
+// BRAND_PRESENCE_MIN = 0.25, the complement of the same principle. When a committed family is genuinely
+// KNOWN, that family must carry at least a quarter of the content text for the commitment to have landed.
+// Below that it is a decorative accent at best, and the page is really set in something else.
+// DEV CONFIRMATION (typeface-calibrate ground-B sweep, 48 real pages, each scanned against its OWN dominant
+// family as a must-stay-silent negative and against a family it provably does not use as a must-fire
+// positive): unlike ground A's sweep this one DISCRIMINATES. 0.05-0.40 give P 1.000 / R 1.000; 0.50 produces
+// the first false positive (a real page whose committed family legitimately carries under half the content),
+// and 0.75 produces ten. The frozen 0.25 therefore sits a full step below the first real-world failure while
+// still catching a family that never lands.
+exports.BRAND_PRESENCE_MIN = 0.25;
+// A page with almost no text cannot support a page-level typographic judgment (a 1-element page would read
+// as 100% of anything). Same guard, same value, as tiny-text's MIN_CONTENT_CHARS.
+exports.TYPEFACE_MIN_CONTENT_CHARS = 200;
+// Ground tags carried at the head of the finding detail, so a consumer can phrase the right verdict.
+exports.DEFAULT_TYPEFACE_GROUND_DEFAULT_STACK = 'default-stack';
+exports.DEFAULT_TYPEFACE_GROUND_BRAND_MISMATCH = 'brand-mismatch';
+/** Node-side: turn a typeface score into a default-typeface finding (or null). The ONE place the production
+ * thresholds are applied; the calibration harness sweeps the same defaultStackShare. */
+function typefaceFindingFromScore(s, opts = {}) {
+    if (s.contentChars < exports.TYPEFACE_MIN_CONTENT_CHARS)
+        return null;
+    const pct = (x) => `${Math.round(x * 100)}%`;
+    // (A) default stack. `ground:` prefixes the detail so the consuming check can phrase the verdict for the
+    // ground that actually fired instead of always claiming the default-stack story (Codex review P2).
+    if (s.defaultStackShare >= exports.DEFAULT_STACK_SHARE) {
+        const declared = s.declaredFamilies.length ? `; the page loads ${s.declaredFamilies.slice(0, 3).join(', ')} but the content text does not use it` : '';
+        return {
+            rule: 'default-typeface', severity: 'warning', selector: s.defaultSelector,
+            detail: `${exports.DEFAULT_TYPEFACE_GROUND_DEFAULT_STACK}: ${pct(s.defaultStackShare)} of content text renders on the default system stack (${s.dominantFamily || 'unset'})${declared}`,
+        };
+    }
+    // (B) brand mismatch - only where a committed family is known.
+    const brand = (opts.brandFamilies || []).map((f) => f.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, ' ').toLowerCase()).filter(Boolean);
+    if (brand.length) {
+        const brandChars = s.families.filter((f) => brand.indexOf(f.family) !== -1).reduce((n, f) => n + f.chars, 0);
+        const brandShare = s.contentChars > 0 ? brandChars / s.contentChars : 0;
+        if (brandShare < exports.BRAND_PRESENCE_MIN) {
+            return {
+                rule: 'default-typeface', severity: 'warning', selector: s.defaultSelector,
+                detail: `${exports.DEFAULT_TYPEFACE_GROUND_BRAND_MISMATCH}: the committed family (${opts.brandFamilies.slice(0, 3).join(', ')}) carries only ${pct(brandShare)} of content text; the page renders in ${s.dominantFamily || 'the default stack'} (${pct(s.dominantShare)})`,
+            };
+        }
+    }
+    return null;
+}
+/** Which ground fired, for a consumer that phrases a user-facing verdict. Ground B can fire on a page that is
+ *  set in a perfectly good CHOSEN face which simply is not the committed one, so a consumer must not describe
+ *  every default-typeface finding as "renders on the default system stack" (Codex review P2). */
+function typefaceGroundOf(detail) {
+    if (!detail)
+        return 'unknown';
+    if (detail.startsWith(exports.DEFAULT_TYPEFACE_GROUND_DEFAULT_STACK + ':'))
+        return 'default-stack';
+    if (detail.startsWith(exports.DEFAULT_TYPEFACE_GROUND_BRAND_MISMATCH + ':'))
+        return 'brand-mismatch';
+    return 'unknown';
+}
 const HERMETIC = { stripScripts: true, abortExternal: true, viewport: { width: 1280, height: 800 } };
-async function analyzeHtmlOnBrowserSubjective(browser, html, timeoutMs = 30000, render = {}) {
+async function analyzeHtmlOnBrowserSubjective(browser, html, timeoutMs = 30000, render = {}, typeface = {}) {
     const r = { ...HERMETIC, ...render };
     const context = await browser.newContext({ viewport: r.viewport, reducedMotion: 'reduce', deviceScaleFactor: 1 });
     try {
@@ -404,6 +701,10 @@ async function analyzeHtmlOnBrowserSubjective(browser, html, timeoutMs = 30000, 
         const buzz = buzzwordFindingFromScore(await page.evaluate(inPageBuzzword));
         if (buzz)
             findings.push(buzz);
+        // default-typeface via the SAME split (Stage 4a): in-page score, Node-side threshold.
+        const face = typefaceFindingFromScore(await page.evaluate(inPageTypeface), typeface);
+        if (face)
+            findings.push(face);
         return findings;
     }
     finally {
@@ -421,7 +722,7 @@ async function scanSubjectiveRendered(html, opts = {}) {
     let browser = null;
     try {
         browser = await launch();
-        const findings = await analyzeHtmlOnBrowserSubjective(browser, html, timeoutMs, opts.render ?? {});
+        const findings = await analyzeHtmlOnBrowserSubjective(browser, html, timeoutMs, opts.render ?? {}, opts.typeface ?? {});
         return { available: true, findings };
     }
     catch (e) {

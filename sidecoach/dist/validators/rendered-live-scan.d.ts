@@ -1,6 +1,6 @@
 import type { Browser } from 'playwright';
 import type { ObjectiveScan } from './objective-rendered-scanner';
-import type { SubjectiveScan } from './subjective-rendered-scanner';
+import type { SubjectiveScan, TypefaceFindingOptions } from './subjective-rendered-scanner';
 /** Both detector families from ONE rendered pass of a live renderUrl. Each family is independently fail-closed. */
 export interface RenderedScanCollection {
     objective: ObjectiveScan;
@@ -10,6 +10,10 @@ export interface LiveScanOptions {
     timeoutMs?: number;
     /** TEST-ONLY seam: inject a browser launcher for deterministic tests without a real Chromium. */
     launcher?: () => Promise<Browser>;
+    /** default-typeface brand-mismatch input (Stage 4a). Ground (B) of the class is INERT unless a committed
+     *  family is supplied; nothing on the live path reads PRODUCT.md yet, so the live scan runs ground (A)
+     *  (default stack) only. The option exists so a later PRODUCT.md/DESIGN.md wiring has a seam to fill. */
+    typeface?: TypefaceFindingOptions;
 }
 /**
  * Render `renderUrl` once and return both objective and subjective findings. FAIL-CLOSED + ABORTABLE.

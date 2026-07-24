@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RENDERED_CHECKS = exports.checkMarketingBuzzword = exports.checkTinyText = exports.checkLowContrast = exports.checkJustifiedText = exports.checkGrayOnColor = exports.checkSkippedHeading = exports.checkBrokenImage = void 0;
+exports.RENDERED_CHECKS = exports.checkDefaultTypeface = exports.checkMarketingBuzzword = exports.checkTinyText = exports.checkLowContrast = exports.checkJustifiedText = exports.checkGrayOnColor = exports.checkSkippedHeading = exports.checkBrokenImage = void 0;
 const check_context_1 = require("../check-context");
+const subjective_rendered_scanner_1 = require("../subjective-rendered-scanner");
 const selectorsOf = (findings) => findings.map((f) => f.selector).filter((s) => !!s);
 // Shared objective-family helper: gate on availability, then pass/fail on the presence of the rule's class.
 function objectiveVerdict(scan, rule, cleanMsg, failMsg, remediation) {
@@ -63,6 +64,23 @@ const checkMarketingBuzzword = (ctx) => {
         : (0, check_context_1.fail)(`the copy leans on generic marketing buzzwords (high buzzword density) rather than concrete specifics`, selectorsOf(hits), 'Replace generic buzzwords (seamless, powerful, revolutionary, ...) with concrete, specific claims');
 };
 exports.checkMarketingBuzzword = checkMarketingBuzzword;
+// default-typeface has TWO grounds and they need DIFFERENT verdict text: ground A is "no typeface was chosen"
+// (the content is on the system stack), ground B is "a typeface was chosen and it is not the committed one"
+// (the page may be set in a perfectly good face). Phrasing every finding as the default-stack story would be
+// wrong on ground B (Codex review P2), so the ground tag on the finding drives the message.
+const checkDefaultTypeface = (ctx) => {
+    const scan = ctx.renderedScan?.subjective;
+    if (!scan || !scan.available)
+        return (0, check_context_1.inconclusive)('default-typeface needs a live rendered scan of the page', 'unsupported_runtime');
+    const hits = scan.findings.filter((f) => f.rule === 'default-typeface');
+    if (hits.length === 0)
+        return (0, check_context_1.pass)('content text is set in a chosen typeface');
+    const brandMismatch = hits.every((f) => (0, subjective_rendered_scanner_1.typefaceGroundOf)(f.detail) === 'brand-mismatch');
+    return brandMismatch
+        ? (0, check_context_1.fail)('the content text is not set in the typeface the brand committed to', selectorsOf(hits), 'Apply the committed family to the body copy, or update the committed family if the page is right and the brand record is stale')
+        : (0, check_context_1.fail)('the content text is not set in a chosen typeface (it renders on the default system stack)', selectorsOf(hits), 'Set the content text in the typeface the brand committed to, and make sure that family actually reaches the body copy');
+};
+exports.checkDefaultTypeface = checkDefaultTypeface;
 exports.RENDERED_CHECKS = {
     'a11y/broken-image': exports.checkBrokenImage,
     'a11y/heading-order': exports.checkSkippedHeading,
@@ -71,5 +89,6 @@ exports.RENDERED_CHECKS = {
     'a11y/color-contrast': exports.checkLowContrast,
     'polish/tiny-text': exports.checkTinyText,
     'polish/marketing-buzzword': exports.checkMarketingBuzzword,
+    'polish/default-typeface': exports.checkDefaultTypeface,
 };
 //# sourceMappingURL=rendered-checks.js.map

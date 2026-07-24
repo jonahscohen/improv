@@ -56,6 +56,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.scannedBanLabel = scannedBanLabel;
 exports.scannedBanCount = scannedBanCount;
+exports.scanContentForAbsoluteBans = scanContentForAbsoluteBans;
 exports.scanSideStripeBorders = scanSideStripeBorders;
 exports.scanGradientText = scanGradientText;
 exports.scanGlassmorphism = scanGlassmorphism;
@@ -98,6 +99,21 @@ function scannedBanCount() {
 }
 function getBan(name) {
     return BAN_LOOKUP_BY_NAME.get(name);
+}
+/**
+ * Scan ONE already-read file's raw content. This is the single per-file scan step:
+ * scanForAbsoluteBans (directory walk) and the `detect` CLI (collector-driven, per-file)
+ * both route through it, so a directory scan and a single-file scan cannot drift apart.
+ * Takes content rather than a path so the caller owns IO - and therefore owns reporting
+ * an unreadable file as a coverage gap instead of silently skipping it.
+ */
+function scanContentForAbsoluteBans(content, file, kind) {
+    const findings = [];
+    for (const s of BAN_SCANNERS) {
+        if (kind === 'html' || s.kind === 'css')
+            findings.push(...s.scan(content, file));
+    }
+    return findings;
 }
 function lineNumberAt(content, offset) {
     if (offset <= 0)
@@ -268,11 +284,7 @@ function scanForAbsoluteBans(projectPath) {
             if (stat.size > 2 * 1024 * 1024)
                 continue;
             const content = fs.readFileSync(file, 'utf-8');
-            const rel = path.relative(projectPath, file);
-            for (const s of BAN_SCANNERS) {
-                if (s.kind === 'css')
-                    findings.push(...s.scan(content, rel));
-            }
+            findings.push(...scanContentForAbsoluteBans(content, path.relative(projectPath, file), 'css'));
         }
         catch { /* skip unreadable */ }
     }
@@ -282,10 +294,8 @@ function scanForAbsoluteBans(projectPath) {
             if (stat.size > 2 * 1024 * 1024)
                 continue;
             const content = fs.readFileSync(file, 'utf-8');
-            const rel = path.relative(projectPath, file);
             // css-kind scanners also run here, against inline <style> blocks.
-            for (const s of BAN_SCANNERS)
-                findings.push(...s.scan(content, rel));
+            findings.push(...scanContentForAbsoluteBans(content, path.relative(projectPath, file), 'html'));
         }
         catch { /* skip unreadable */ }
     }

@@ -518,6 +518,27 @@ const RAW_RULES = [
         narrowTargetBehavior: 'evaluate_expanded_context',
         applicability: 'inconclusive',
     },
+    {
+        // Stage 4a (taste rule-count delta): the rendered-subjective default-typeface detector - the page's
+        // content text is not set in a typeface anyone chose (bare system/default stack, or a known committed
+        // family that never reaches the content). findingClass 'polish' + owner 'polish-standard' mirror
+        // tiny-text / marketing-buzzword (the registry has no dedicated taste class). The precision-first
+        // operating point (DEFAULT_STACK_SHARE) lives in subjective-rendered-scanner.ts.
+        ruleId: 'polish.default-typeface',
+        sourceRuleAliases: ['rendered-scanner:default-typeface'],
+        canonicalRuleKey: 'polish/default-typeface',
+        ownerValidatorId: 'polish-standard',
+        sourceVocabulary: 'rendered-scanner',
+        sourceSeverity: 'medium',
+        severity: 'minor',
+        findingClass: 'polish',
+        registryScope: 'rendered-default-typeface',
+        evidenceRequirements: ['rendered-scan'],
+        supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('rendered-scan'),
+        scope: 'component',
+        narrowTargetBehavior: 'evaluate_expanded_context',
+        applicability: 'inconclusive',
+    },
     // ============ owner forms: absorbed FORMS rules (Stage 2 convergence) ============
     // The 5 highest-signal forms-a11y rules absorbed from ExtendedDomainValidator's FORMS_* (the one genuinely-real
     // domain it owned; the other ~190 rules were theater/redundant and are retired). Markup-evidence, scope:project

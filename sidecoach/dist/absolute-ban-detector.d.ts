@@ -38,6 +38,18 @@ export interface AbsoluteBanReport {
 export declare function scannedBanLabel(): string;
 /** How many bans actually have a scanner. Derived - never hand-type this count. */
 export declare function scannedBanCount(): number;
+/** Which BAN_SCANNERS apply to a file of this kind. `css` files get the css-kind scanners
+ *  only; a markup file gets EVERY scanner, because css-kind scanners also read inline
+ *  <style> blocks out of the raw markup text. Derived from BAN_SCANNERS, never hand-listed. */
+export type BanScanKind = 'css' | 'html';
+/**
+ * Scan ONE already-read file's raw content. This is the single per-file scan step:
+ * scanForAbsoluteBans (directory walk) and the `detect` CLI (collector-driven, per-file)
+ * both route through it, so a directory scan and a single-file scan cannot drift apart.
+ * Takes content rather than a path so the caller owns IO - and therefore owns reporting
+ * an unreadable file as a coverage gap instead of silently skipping it.
+ */
+export declare function scanContentForAbsoluteBans(content: string, file: string, kind: BanScanKind): AbsoluteBanFinding[];
 export declare function scanSideStripeBorders(content: string, file: string): AbsoluteBanFinding[];
 export declare function scanGradientText(content: string, file: string): AbsoluteBanFinding[];
 export declare function scanGlassmorphism(content: string, file: string): AbsoluteBanFinding[];

@@ -93,8 +93,9 @@ run();
         supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)(evidence), scope: '__scope__', narrowTargetBehavior: 'evaluate_expanded_context',
         applicability,
     });
-    // owner polish-standard (23): 21 static polish rules + polish.tiny-text + polish.marketing-buzzword
-    // (rendered-scan: Stage 1 tiny-text, Stage 5a marketing-buzzword)
+    // owner polish-standard (24): 21 static polish rules + polish.tiny-text + polish.marketing-buzzword
+    // + polish.default-typeface (rendered-scan: Stage 1 tiny-text, Stage 5a marketing-buzzword, Stage 4a
+    // default-typeface)
     const polish = [
         { ...P('polish.scale-on-press', 1, 'polish/scale-on-press', 'high', 'major', '', 'css-rule', 'not_applicable'), registryScope: 'polished-press-feedback', scope: 'file' },
         { ...P('polish.concentric-radius', 2, 'polish/concentric-radius', 'medium', 'minor', '', 'computed-style', 'inconclusive'), registryScope: 'polished-radius-concentricity', scope: 'component' },
@@ -119,6 +120,7 @@ run();
         { ...P('polish.anti-pattern-genericity', 22, 'polish/anti-pattern-genericity', 'medium', 'minor', '', 'dom', 'inconclusive'), registryScope: 'polished-genericity-floor', scope: 'component' },
         { ruleId: 'polish.tiny-text', sourceRuleAliases: ['rendered-scanner:tiny-text'], canonicalRuleKey: 'polish/tiny-text', ownerValidatorId: 'polish-standard', sourceVocabulary: 'rendered-scanner', sourceSeverity: 'medium', severity: 'minor', findingClass: 'polish', registryScope: 'rendered-tiny-text', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
         { ruleId: 'polish.marketing-buzzword', sourceRuleAliases: ['rendered-scanner:marketing-buzzword'], canonicalRuleKey: 'polish/marketing-buzzword', ownerValidatorId: 'polish-standard', sourceVocabulary: 'rendered-scanner', sourceSeverity: 'medium', severity: 'minor', findingClass: 'polish', registryScope: 'rendered-marketing-buzzword', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
+        { ruleId: 'polish.default-typeface', sourceRuleAliases: ['rendered-scanner:default-typeface'], canonicalRuleKey: 'polish/default-typeface', ownerValidatorId: 'polish-standard', sourceVocabulary: 'rendered-scanner', sourceSeverity: 'medium', severity: 'minor', findingClass: 'polish', registryScope: 'rendered-default-typeface', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
     ];
     // owner static-a11y (7): focus-visible (css) + min-hit-area (dom collector) + 5 rendered-scan classes
     // (broken-image, skipped-heading, gray-on-color, justified-text, and - Stage 6 - color-contrast, MIGRATED off
@@ -224,11 +226,11 @@ run();
         if ((0, product_rule_registry_1.resolveSourceAlias)(extended)?.canonicalRuleKey !== key)
             throw new Error(`bad alias ${extended}`);
     }
-    if (product_rule_registry_1.RULES.length !== 59)
-        throw new Error(`expected 59 canonical rules, got ${product_rule_registry_1.RULES.length}`); // 58 -> 59: +polish.marketing-buzzword (Stage 5a rendered-scan, 2026-06-25); 52 -> 58: +6 page-quality Tier-2 keepers (Stage 2, 2026-06-25); 41->52 = 11 more forms; 36->41 = first 5 forms; 31->36 = Stage 1 rendered
+    if (product_rule_registry_1.RULES.length !== 60)
+        throw new Error(`expected 60 canonical rules, got ${product_rule_registry_1.RULES.length}`); // 59 -> 60: +polish.default-typeface (Stage 4a rendered-scan, 2026-07-23); 58 -> 59: +polish.marketing-buzzword (Stage 5a rendered-scan, 2026-06-25); 52 -> 58: +6 page-quality Tier-2 keepers (Stage 2, 2026-06-25); 41->52 = 11 more forms; 36->41 = first 5 forms; 31->36 = Stage 1 rendered
     const owners = (id) => product_rule_registry_1.RULES.filter((r) => r.ownerValidatorId === id);
-    if (owners('polish-standard').length !== 23)
-        throw new Error('polish-standard must own 23 rules');
+    if (owners('polish-standard').length !== 24)
+        throw new Error('polish-standard must own 24 rules');
     if (owners('static-a11y').length !== 7)
         throw new Error('static-a11y must own 7 rules');
     if (owners('forms').length !== 16)

@@ -31,7 +31,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       "polish.state-completeness",
       "polish.anti-pattern-genericity",
       "polish.tiny-text",
-      "polish.marketing-buzzword"
+      "polish.marketing-buzzword",
+      "polish.default-typeface"
     ],
     "registryScope": [
       "polished-press-feedback",
@@ -56,7 +57,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       "polished-state-completeness",
       "polished-genericity-floor",
       "rendered-tiny-text",
-      "rendered-marketing-buzzword"
+      "rendered-marketing-buzzword",
+      "rendered-default-typeface"
     ],
     "supportedSourceKinds": [
       {
@@ -132,7 +134,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
     ],
     "renderedRuleIds": [
       "polish.tiny-text",
-      "polish.marketing-buzzword"
+      "polish.marketing-buzzword",
+      "polish.default-typeface"
     ],
     "renderedCoverageByScope": [
       {
@@ -147,6 +150,16 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       },
       {
         "ruleId": "polish.marketing-buzzword",
+        "scope": "component",
+        "evidenceAlternativesByRequirement": [
+          [
+            "rendered-scan"
+          ]
+        ],
+        "requireAllDiscoveredApplicableFiles": true
+      },
+      {
+        "ruleId": "polish.default-typeface",
         "scope": "component",
         "evidenceAlternativesByRequirement": [
           [

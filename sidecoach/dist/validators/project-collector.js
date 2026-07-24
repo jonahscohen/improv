@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CollectionAbortedError = void 0;
 exports.collectFromPath = collectFromPath;
+exports.collectFromSingleFile = collectFromSingleFile;
 exports.collect = collect;
 // sidecoach/src/validators/project-collector.ts
 //
@@ -105,29 +106,68 @@ async function collectFromPath(projectPath, signal) {
         if (signal?.aborted)
             throw new CollectionAbortedError();
         await yieldToEventLoop();
-        const abs = path.join(projectPath, d.path);
-        try {
-            if (fs.statSync(abs).size > MAX_BYTES) {
-                d.outcome = 'oversized';
-                d.reason = 'over_2mb';
-                continue;
-            }
-            const content = fs.readFileSync(abs, 'utf-8');
-            const kind = d.sourceKind;
-            const isCss = kind === 'css' || kind === 'scss' || kind === 'less';
-            files.push({
-                path: d.path, sourceKind: kind,
-                cssText: isCss ? content : extractInlineCss(content),
-                markup: isCss ? '' : content,
-                evidenceKindsPresent: [kind],
-            });
-        }
-        catch {
-            d.outcome = 'unreadable';
-            d.reason = 'stat_or_read_failed';
-        }
+        const file = readCollectedFile(path.join(projectPath, d.path), d);
+        if (file)
+            files.push(file);
     }
     return assemble(discovered, files);
+}
+// Read ONE discovered file into a CollectedFile, mutating its DiscoveredFile outcome to
+// oversized/unreadable when it cannot be read. Returns undefined in exactly those cases,
+// so a gap is always recorded rather than silently dropped. Shared by collectFromPath and
+// collectFromSingleFile so the two entry points read files identically.
+function readCollectedFile(abs, d) {
+    try {
+        if (fs.statSync(abs).size > MAX_BYTES) {
+            d.outcome = 'oversized';
+            d.reason = 'over_2mb';
+            return undefined;
+        }
+        const content = fs.readFileSync(abs, 'utf-8');
+        const kind = d.sourceKind;
+        const isCss = kind === 'css' || kind === 'scss' || kind === 'less';
+        return {
+            path: d.path, sourceKind: kind,
+            cssText: isCss ? content : extractInlineCss(content),
+            markup: isCss ? '' : content,
+            evidenceKindsPresent: [kind],
+        };
+    }
+    catch {
+        d.outcome = 'unreadable';
+        d.reason = 'stat_or_read_failed';
+        return undefined;
+    }
+}
+/**
+ * Collect a SINGLE file as a one-file project - the `detect` CLI's file-target mode.
+ *
+ * Uses the SAME source-kind matrix and the SAME read/extract step (readCollectedFile) as
+ * the directory walk, so the EVIDENCE is identical to what collectFromPath produces for
+ * that file. The reported `path` is the file's basename, which is exactly what
+ * collectFromPath(dirname(file)) yields for it - the file's own directory is the implied
+ * project root. Scanning a HIGHER directory reports a longer relative path for the same
+ * file; that is a difference in root, not in evidence.
+ *
+ * An unsupported or unreadable file yields ZERO collected files with the gap recorded in
+ * `discovered` - the caller reports that as a coverage gap, never as an
+ * empty-and-therefore-clean scan.
+ */
+function collectFromSingleFile(filePath) {
+    fs.statSync(filePath); // missing/unreadable target throws, mirroring collectFromPath's root
+    const kind = (0, source_support_matrix_1.sourceKindForPath)(filePath);
+    const d = {
+        path: path.basename(filePath),
+        sourceKind: kind ?? `extension:${path.extname(filePath).toLowerCase() || '<none>'}`,
+        outcome: kind && (0, source_support_matrix_1.isCollectableSourceKind)(kind) ? 'inspected' : 'unsupported',
+    };
+    const files = [];
+    if (d.outcome === 'inspected') {
+        const file = readCollectedFile(filePath, d);
+        if (file)
+            files.push(file);
+    }
+    return assemble([d], files);
 }
 function extractInlineCss(html) {
     let out = '';

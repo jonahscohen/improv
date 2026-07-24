@@ -27,7 +27,8 @@ exports.GENERATED_VALIDATORS = [
             "polish.state-completeness",
             "polish.anti-pattern-genericity",
             "polish.tiny-text",
-            "polish.marketing-buzzword"
+            "polish.marketing-buzzword",
+            "polish.default-typeface"
         ],
         "registryScope": [
             "polished-press-feedback",
@@ -52,7 +53,8 @@ exports.GENERATED_VALIDATORS = [
             "polished-state-completeness",
             "polished-genericity-floor",
             "rendered-tiny-text",
-            "rendered-marketing-buzzword"
+            "rendered-marketing-buzzword",
+            "rendered-default-typeface"
         ],
         "supportedSourceKinds": [
             {
@@ -128,7 +130,8 @@ exports.GENERATED_VALIDATORS = [
         ],
         "renderedRuleIds": [
             "polish.tiny-text",
-            "polish.marketing-buzzword"
+            "polish.marketing-buzzword",
+            "polish.default-typeface"
         ],
         "renderedCoverageByScope": [
             {
@@ -143,6 +146,16 @@ exports.GENERATED_VALIDATORS = [
             },
             {
                 "ruleId": "polish.marketing-buzzword",
+                "scope": "component",
+                "evidenceAlternativesByRequirement": [
+                    [
+                        "rendered-scan"
+                    ]
+                ],
+                "requireAllDiscoveredApplicableFiles": true
+            },
+            {
+                "ruleId": "polish.default-typeface",
                 "scope": "component",
                 "evidenceAlternativesByRequirement": [
                     [

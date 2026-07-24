@@ -98,6 +98,10 @@ async function scanRenderedLive(renderUrl, signal, opts = {}) {
             const buzz = (0, subjective_rendered_scanner_1.buzzwordFindingFromScore)(await race(page.evaluate(subjective_rendered_scanner_1.inPageBuzzword), 'evaluate'));
             if (buzz)
                 findings.push(buzz);
+            // default-typeface (Stage 4a) via the SAME single-source split: in-page score, Node-side threshold.
+            const face = (0, subjective_rendered_scanner_1.typefaceFindingFromScore)(await race(page.evaluate(subjective_rendered_scanner_1.inPageTypeface), 'evaluate'), opts.typeface ?? {});
+            if (face)
+                findings.push(face);
             subjective = { available: true, findings };
         }
         catch (e) {

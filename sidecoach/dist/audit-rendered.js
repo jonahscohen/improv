@@ -47,9 +47,16 @@ function looksLikeUrl(target) {
         return false; // 'Card.tsx' / 'styles.css' are files, not URLs
     return /:\d+/.test(t) || t.includes('/') || COMMON_TLD_RE.test(host);
 }
+// An ALREADY-ABSOLUTE document URL keeps its scheme; a bare host/host:port gets http://.
+// file: is included because a LOCAL .html target is rendered by navigating to its file URL
+// (the `detect` CLI's local-file path) and the rendered scan's hermeticity policy already
+// models a file: document explicitly (isSubresourceAllowed: a file: document may load
+// same-protocol subresources only). Without file: here, `file:///x.html` was rewritten to
+// `http://file:///x.html` and every local-file render failed with ERR_NAME_NOT_RESOLVED.
+const ABSOLUTE_DOC_URL_RE = /^(https?|file):\/\//i;
 function normalizeRenderUrl(target) {
     const t = target.trim();
-    return /^https?:\/\//i.test(t) ? t : `http://${t}`;
+    return ABSOLUTE_DOC_URL_RE.test(t) ? t : `http://${t}`;
 }
 /**
  * Render `target` and run both detection lenses. Pure except for the injected scan

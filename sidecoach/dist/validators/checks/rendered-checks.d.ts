@@ -6,5 +6,6 @@ export declare const checkJustifiedText: (ctx: ProductCheckContext) => RuleVerdi
 export declare const checkLowContrast: (ctx: ProductCheckContext) => RuleVerdict;
 export declare const checkTinyText: (ctx: ProductCheckContext) => RuleVerdict;
 export declare const checkMarketingBuzzword: (ctx: ProductCheckContext) => RuleVerdict;
+export declare const checkDefaultTypeface: (ctx: ProductCheckContext) => RuleVerdict;
 export declare const RENDERED_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict>;
 //# sourceMappingURL=rendered-checks.d.ts.map
