@@ -38,7 +38,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const sidecoach_orchestrator_1 = require("./sidecoach-orchestrator");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
-const projectPath = '/Users/spare3/Documents/Github/improv/marketing-site';
+const projectPath = path.resolve(__dirname, '..', '..', 'marketing-site');
 // User's verbatim brief from the prior session, lightly rephrased only to flow as one paragraph.
 const brief = `Build a brand new marketing landing page for the Improv repo, advertising justify, sidecoach, and memory tools, as well as mentions of our other tools. The page links to two other pages, one for justify and one for sidecoach. Both pages serve as marketing pages for each. Use the existing Improv DESIGN.md for color tokens and brand materials. The system chooses the new fonts.`;
 async function run() {

@@ -1,4 +1,4 @@
-import type { RenderedScanCollection } from './validators/rendered-live-scan';
+import type { RenderedScanCollection, LiveScanOptions } from './validators/rendered-live-scan';
 export type RenderedAuditVerdict = 'clean' | 'warnings-only' | 'blocked' | 'inconclusive';
 export interface RenderedAuditFinding {
     rule: string;
@@ -35,6 +35,8 @@ export declare function normalizeRenderUrl(target: string): string;
  * (defaults to the real live scanner); deterministic to test via the `scan` seam.
  */
 export declare function runRenderedAudit(target: string, deps?: {
-    scan?: (renderUrl: string | undefined) => Promise<RenderedScanCollection>;
+    scan?: (renderUrl: string | undefined, signal?: AbortSignal, opts?: LiveScanOptions) => Promise<RenderedScanCollection>;
+    projectPath?: string;
+    committedFamilies?: string[];
 }): Promise<RenderedAuditResult>;
 //# sourceMappingURL=audit-rendered.d.ts.map

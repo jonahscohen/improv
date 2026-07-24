@@ -56,4 +56,29 @@ export interface TechStack {
  */
 export declare function detectStackFromFilesystem(projectPath: string): 'angular' | 'wordpress' | 'drupal' | 'hubspot' | null;
 export declare function detectTechStack(projectPath: string): TechStack;
+/**
+ * The CONTENT families a DESIGN.md typography block commits to. Reads the LEAD
+ * family of every typography.<role>.family stack (display, body, mono, and any
+ * other role that declares a `family`; scale/weights carry none and are skipped).
+ *
+ * System/generic leads (sans-serif, system-ui, Arial, ...) are DROPPED: a
+ * "commitment" to a system stack is the ABSENCE of a chosen typeface, which is
+ * Ground A's domain, not a brand family Ground B can mismatch against. Reusing
+ * the scanner's own SYSTEM_FONT_STACK_FAMILIES keeps this classification
+ * single-sourced with the detector.
+ *
+ * Returns deduped, original-case families (so the finding message reads cleanly;
+ * the scanner lowercases for matching). [] when nothing qualifies.
+ */
+export declare function committedFontFamilies(typography: unknown): string[];
+/**
+ * Load the brand's committed font families from a project's DESIGN.md.
+ *
+ * FAIL-SAFE by construction: a missing / unreadable / frontmatter-less DESIGN.md
+ * yields [] so Ground B stays inert rather than inventing a brand. Resolves
+ * DESIGN.md at the project ROOT with the same case variants ContextLoader uses
+ * (root-only, no docs/ fallback - the validator/audit callers pass a concrete
+ * project root).
+ */
+export declare function loadCommittedFontFamilies(projectPath: string): string[];
 //# sourceMappingURL=project-context.d.ts.map

@@ -10,6 +10,7 @@ const project_collector_1 = require("./project-collector");
 const check_context_1 = require("./check-context");
 const browser_evidence_collector_1 = require("./browser-evidence-collector");
 const rendered_live_scan_1 = require("./rendered-live-scan");
+const project_context_1 = require("../project-context");
 function toCheckContext(c, raw, browser, rendered) {
     const r = raw;
     const e = browser?.available ? browser.evidence : undefined;
@@ -23,6 +24,13 @@ function toCheckContext(c, raw, browser, rendered) {
         designTokens: r?.designTokens, tasteOptions: r?.tasteOptions,
         renderedScan: rendered ?? r?.renderedScan,
     };
+}
+// default-typeface Ground B live input (Stage 4b): the brand's committed families come from the target
+// project's DESIGN.md typography tokens. Fail-closed - an in-memory context (no projectPath) or a project
+// with no committed face yields [], and the scanner leaves Ground B inert on an empty list.
+function committedFamiliesForContext(context) {
+    const c = context;
+    return typeof c?.projectPath === 'string' ? (0, project_context_1.loadCommittedFontFamilies)(c.projectPath) : [];
 }
 // Promote ONLY the generated browserRuleIds whose evidence requirements are ALL
 // present in the collected evidence kinds. Failed/absent collection -> kinds empty
@@ -229,7 +237,9 @@ async function runDetailed(validatorId, context, signal, deps = {}) {
         return abortedDetail(validatorId, policy);
     // ONE live rendered scan per target (objective + subjective), resolved BEFORE any rendered-scan rule runs so
     // checkProduct reads it synchronously and never launches its own browser (Codex P0-4). Fail-closed inside.
-    const rendered = await (deps.scanRenderedLive ?? rendered_live_scan_1.scanRenderedLive)(renderUrl, signal);
+    // Ground B of default-typeface receives the project's committed families here; [] leaves it inert (Stage 4b).
+    const brandFamilies = committedFamiliesForContext(context);
+    const rendered = await (deps.scanRenderedLive ?? rendered_live_scan_1.scanRenderedLive)(renderUrl, signal, brandFamilies.length ? { typeface: { brandFamilies } } : undefined);
     if (signal?.aborted)
         return abortedDetail(validatorId, policy);
     const activePolicy = activateRenderedPolicy(activateBrowserPolicy(policy, gen, browser.available ? browser.evidence.browserEvidence.kinds : []), gen, !!renderUrl);

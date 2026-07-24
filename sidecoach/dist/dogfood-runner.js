@@ -39,7 +39,10 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const sidecoach_orchestrator_1 = require("./sidecoach-orchestrator");
 const fs = __importStar(require("fs"));
-const projectPath = '/Users/spare3/Documents/Github/improv';
+const path = __importStar(require("path"));
+// Repo root, resolved relative to this module (sidecoach/src under ts-node,
+// sidecoach/dist when compiled) so the dogfood runs from any checkout.
+const projectPath = path.resolve(__dirname, '..', '..');
 const outputFile = '/tmp/sidecoach-dogfood-output.md';
 const brief = `Build a brand new marketing landing page for Improv. The page advertises three primary products - justify, sidecoach, and the memory tools - and mentions other tools (Discord chat agent, voice output, voice transcription, cmux browser pane, reflect, design references). The index page links to two sub-pages: one marketing justify specifically, one marketing sidecoach specifically. Use the existing Improv DESIGN.md tokens for colors and brand materials. New typefaces should be selected by the system (fontshare). Aesthetic register: brand (not product). Tone: professional, technical, restrained.`;
 const phases = [

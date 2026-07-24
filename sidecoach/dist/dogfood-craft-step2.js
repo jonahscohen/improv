@@ -40,7 +40,7 @@ const sidecoach_orchestrator_1 = require("./sidecoach-orchestrator");
 const fs = __importStar(require("fs"));
 const os = __importStar(require("os"));
 const path = __importStar(require("path"));
-const projectPath = '/Users/spare3/Documents/Github/improv/marketing-site';
+const projectPath = path.resolve(__dirname, '..', '..', 'marketing-site');
 const outputFile = '/tmp/sidecoach-craft-output.md';
 const historyFile = path.join(os.homedir(), '.claude', 'sidecoach-flow-history.json');
 async function run() {

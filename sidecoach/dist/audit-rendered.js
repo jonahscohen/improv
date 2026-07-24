@@ -24,6 +24,7 @@ exports.runRenderedAudit = runRenderedAudit;
 // 'inconclusive', NEVER 'clean'. A 'clean' verdict REQUIRES that at least one lens
 // actually scanned the page.
 const rendered_live_scan_1 = require("./validators/rendered-live-scan");
+const project_context_1 = require("./project-context");
 // An http(s) URL, localhost[:port][/path], or an ipv4[:port][/path]. Deliberately
 // conservative - a non-URL target (a file path, a component name) is left to the flow chain.
 const URL_RE = /^(https?:\/\/\S+|localhost(:\d+)?(\/\S*)?|(\d{1,3}\.){3}\d{1,3}(:\d+)?(\/\S*)?)$/i;
@@ -65,7 +66,8 @@ function normalizeRenderUrl(target) {
 async function runRenderedAudit(target, deps = {}) {
     const renderUrl = normalizeRenderUrl(target);
     const scan = deps.scan ?? rendered_live_scan_1.scanRenderedLive;
-    const collection = await scan(renderUrl);
+    const brandFamilies = deps.committedFamilies ?? (0, project_context_1.loadCommittedFontFamilies)(deps.projectPath ?? process.cwd());
+    const collection = await scan(renderUrl, undefined, brandFamilies.length ? { typeface: { brandFamilies } } : undefined);
     const findings = [];
     const unavailableReasons = [];
     const obj = collection.objective;
