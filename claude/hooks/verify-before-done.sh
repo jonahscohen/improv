@@ -136,8 +136,62 @@ EXEMPT_PATHS = [".claude/memory/", "MEMORY.md", ".claude/skills/",
 # falsely armed CODE FILE CHANGED because only the dot-prefixed deploy dir was exempt).
 _HOOK_DIR_RE = re.compile(r"(^|/)\.?claude/hooks/")
 
+# --- Non-rendered write targets: eval data, test probes, OS-temp scratch (Jonah 2026-07-24) ---
+# The visual Stop gate fired three times in one session on writes to
+# sidecoach/eval/fixtures/**/*.html (constructed detector/labeler probe inputs) and on
+# *.test.ts / *.spec.* files - none of which have a rendered product surface, so each firing was
+# screenshot theatre that cost a manual override. This is a PRECISION carve-out on the visual-arm
+# classifier applied to the write TARGET: a real product UI file OUTSIDE these paths still arms
+# exactly as before. It is additive - it never makes MORE things arm.
+
+# eval/fixtures and eval/corpus, anchored at the START of the path or after a "/". EXEMPT_PATHS
+# already lists the SUBSTRING "/eval/", which exempts an ABSOLUTE fixture path but MISSES a
+# cwd-relative one - a bash `sed -i ... eval/fixtures/x.html` from the project dir names
+# "eval/fixtures/..." with no leading slash, so "/eval/" does not match and the write armed
+# visual. The anchor is narrow on purpose (only fixtures//corpus/, not a bare "eval/"), so a real
+# product route like src/eval/Calculator.tsx keeps arming - a bare "eval/" substring would not.
+_EVAL_DATA_RE = re.compile(r"(^|/)eval/(fixtures|corpus)/")
+
+# A basename carrying a ".test." or ".spec." infix before its final extension is a test probe.
+# Foo.test.tsx / Bar.spec.tsx would otherwise arm VISUAL (.tsx is a visual ext) and trip the Stop
+# gate; a bare .test.ts already armed only "code". Declassifying the visual-extension test files
+# to "code" (they stay code files, so they still arm "code" and nudge "run its tests") means none
+# of them demand a screenshot, while a real product Bar.tsx (no .test./.spec. infix) still arms
+# visual.
+_TEST_FILE_RE = re.compile(r"\.(test|spec)\.[A-Za-z0-9]+$")
+
+# Direct scratch drop: a file written DIRECTLY into an OS temp root (its immediate parent IS the
+# temp dir) - what a throwaway probe looks like: /tmp/probe.html, $TMPDIR/out.html. This is
+# deliberately NOT a whole-subtree prefix match. A real product repo checked out UNDER temp
+# (/tmp/my-app/src/components/Foo.tsx, /var/folders/.../repo/app/page.tsx) has its file NESTED in
+# project dirs, so it is NOT a direct child and KEEPS arming visual - never under-arm real UI even
+# in temp (Codex 2026-07-24 recall finding + the hook prefer-FP law). _ENV_TMP reads the OS temp
+# dir from the env only ($TMPDIR/$TEMP/$TMP) - NOT tempfile.gettempdir(), which probes the
+# filesystem for writability on every tool call. The literal roots are /tmp and /private/tmp; the
+# bare /var/folders/ is intentionally NOT a root (its direct children are per-user hash dirs, not
+# scratch files - the real macOS temp dir arrives as $TMPDIR = /var/folders/xx/yy/T via _ENV_TMP).
+_ENV_TMP = tuple(os.path.normpath(v) for v in
+                 (os.environ.get("TMPDIR"), os.environ.get("TEMP"), os.environ.get("TMP")) if v)
+_TMP_DIRECT_ROOTS = frozenset({"/tmp", "/private/tmp"} | set(_ENV_TMP))
+
+def _is_test_file(path):
+    return bool(path) and bool(_TEST_FILE_RE.search(os.path.basename(path)))
+
+def _is_temp_target(path):
+    # Only an ABSOLUTE path can name the OS temp tree; a relative token never means system temp.
+    if not path or not os.path.isabs(path):
+        return False
+    return os.path.dirname(os.path.normpath(path)) in _TMP_DIRECT_ROOTS
+
 def is_exempt(path):
     if any(exempt in path for exempt in EXEMPT_PATHS):
+        return True
+    # eval/fixtures//corpus/ probe data is not rendered product UI and, like the existing "/eval/"
+    # exemption for absolute paths, arms NOTHING. (OS-temp is deliberately NOT here - it is handled
+    # in is_visual_file as a visual->code declassify, because a /tmp code file must still arm "code"
+    # like any code edit; fully exempting /tmp would stop a /tmp/fake-project/src/file.ts sandbox
+    # edit from arming at all. The task carve-out is "must not arm the VISUAL gate", not "arm nothing".)
+    if _EVAL_DATA_RE.search(path):
         return True
     # A file under a claude/hooks/ segment is exempt only if it is NOT a VISUAL file.
     # Hook scripts (.sh/.py/.ts/...) have no UI to screenshot, but a VISUAL file that
@@ -162,6 +216,13 @@ def is_visual_file(path):
     if not path:
         return False
     if is_exempt(path):
+        return False
+    # Test probes (.test./.spec. infix) and OS-temp scratch (/tmp, /private/tmp, /var/folders,
+    # $TMPDIR) render no product surface - never a screenshot demand. Both stay CODE files
+    # (is_code_file is unaffected), so a code-extension one still arms "code"; it just never arms
+    # visual. This is the (b)/(c) carve-out: declassify from visual, do NOT fully exempt - a /tmp
+    # code edit must keep arming code, and .test.ts already only armed code on HEAD.
+    if _is_test_file(path) or _is_temp_target(path):
         return False
     _, ext = os.path.splitext(path)
     return ext.lower() in VISUAL_EXTS

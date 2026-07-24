@@ -441,6 +441,83 @@ restore_vkind
 rm -f "$HOME/.claude/.needs-verification.global"
 
 echo ""
+echo "===== NON-RENDERED WRITE TARGETS: eval data / test probes / OS-temp must NOT arm visual (2026-07-24) ====="
+# The visual Stop gate fired 3x in one session on writes to sidecoach/eval/fixtures/**/*.html probe
+# inputs and on *.test.ts / *.spec.* files - none of which render a product surface, so each firing
+# was screenshot theatre that cost a manual override. This is a PRECISION carve-out on the visual-arm
+# classifier applied to the write TARGET: eval/fixtures//corpus/ and OS-temp scratch arm NOTHING
+# (fully exempt), .test.//.spec. files arm "code" (still code files, never a screenshot demand). A
+# real product UI file OUTSIDE these paths MUST still arm visual. These rows assert flag CONTENT
+# (absent/code/visual) on BOTH the Write branch (file_path) and the Bash write branch - the
+# cwd-relative eval gap is a bash-only vector the absolute-path "/eval/" substring never covered.
+# Own save/restore so a live session is safe.
+VNR="$HOME/.claude/.needs-verification.global"
+__VNR_EXISTED=no; __VNR_SAVED=""
+if [ -f "$VNR" ]; then __VNR_EXISTED=yes; __VNR_SAVED="$(cat "$VNR" 2>/dev/null)"; fi
+restore_vnr() { if [ "$__VNR_EXISTED" = yes ]; then printf '%s' "$__VNR_SAVED" > "$VNR"; else rm -f "$VNR"; fi; }
+
+# Write-tool file_path -> flag CONTENT (absent/code/visual).
+arm_kind_path() {
+  rm -f "$VNR"
+  python3 -c 'import json,sys; print(json.dumps({"tool_name":"Write","tool_input":{"file_path":sys.argv[1]}}))' "$1" \
+    | bash "$HOOK" >/dev/null 2>&1
+  [ -f "$VNR" ] && cat "$VNR" || echo absent
+}
+assert_kind_path() {
+  local got; got="$(arm_kind_path "$3")"
+  if [ "$got" = "$2" ]; then echo "PASS: $1"; ((PASS++));
+  else echo "FAIL: $1  (want=$2 got=$got)"; FAIL_LABELS+=("$1"); ((FAIL++)); fi
+}
+
+# --- WRITE branch (file_path). The 5 carve-out targets from the bug report must NOT arm visual. ---
+assert_kind_path "eval/fixtures/*.html write is fully exempt (absent)"   absent "/Users/x/proj/sidecoach/eval/fixtures/known-good/x.html"
+assert_kind_path "eval/corpus/*.html write is fully exempt (absent)"     absent "/Users/x/proj/sidecoach/eval/corpus/candidates/x.html"
+assert_kind_path "foo.test.ts arms code, never visual"                  code   "/Users/x/proj/src/foo.test.ts"
+assert_kind_path "bar.spec.tsx declassified visual -> code"             code   "/Users/x/proj/src/bar.spec.tsx"
+assert_kind_path "Foo.test.tsx declassified visual -> code (symmetric)" code   "/Users/x/proj/src/Foo.test.tsx"
+assert_kind_path "/tmp/*.html declassified visual -> code (not exempt)" code   "/tmp/x.html"
+assert_kind_path "/private/tmp/*.html declassified visual -> code"      code   "/private/tmp/x.html"
+# tmp is a visual->code DECLASSIFY, never a full exempt: a /tmp code file must keep arming "code"
+# (this guards the test-sandbox convention where fake projects live under /tmp - a full exempt
+# broke test-nudge-debounce Case D-A which edits /tmp/fake-project/src/file.ts and expects a nudge).
+assert_kind_path "/tmp code file still arms code (NOT over-exempted)"   code   "/tmp/fake-project/src/file.ts"
+# Codex 2026-07-24 recall finding: only a DIRECT scratch drop (immediate parent IS the temp root)
+# is declassified. A real product UI file NESTED in a repo that happens to live under /tmp must
+# still arm VISUAL - a whole-subtree prefix match would under-arm it (the prefer-FP violation).
+assert_kind_path "nested product .tsx under /tmp still arms visual (direct-child only)" visual "/tmp/my-app/src/components/Foo.tsx"
+assert_kind_path "nested product .css under /private/tmp still arms visual"             visual "/private/tmp/checkout/src/styles/app.css"
+# ACCEPTED RESIDUAL (Codex round 2, by design): a visual file placed DIRECTLY in a temp root
+# declassifies to code - this is exactly the spec (c) ask ("a temp dir path must not arm visual")
+# and its literal example /tmp/x.html. Real product UI lives NESTED in a repo (src//app//components/),
+# never loose in a temp root, so the real-world recall risk is negligible; the far larger
+# nested-repo recall loss is eliminated by the direct-child rule above. Pinned so it stays deliberate.
+assert_kind_path "visual file DIRECTLY in a temp root declassifies to code (accepted residual)" code "/tmp/App.tsx"
+# --- Negative controls: real product UI OUTSIDE the carve-out paths MUST still arm visual (recall) ---
+assert_kind_path "src/components/Foo.tsx still arms visual (control)"   visual "/Users/x/proj/src/components/Foo.tsx"
+assert_kind_path "styles/app.css still arms visual (control)"          visual "/Users/x/proj/src/styles/app.css"
+assert_kind_path "app/page.tsx still arms visual (control)"            visual "/Users/x/proj/app/page.tsx"
+# --- Anchor precision: a substring look-alike a NAIVE check would wrongly exempt MUST still arm. ---
+# preeval/fixtures/ contains the raw substring "eval/fixtures/" but has no "/eval/fixtures/" segment
+# boundary, and is not caught by the pre-existing "/eval/" substring either. A bare-substring rule
+# would exempt it (recall loss); the anchored (^|/)eval/(fixtures|corpus)/ regex must not.
+assert_kind_path "src/preeval/fixtures/x.html arms visual (anchor, not substring)" visual "/Users/x/proj/src/preeval/fixtures/x.html"
+# A file merely UNDER a dir that starts with tmp (not a tmp ROOT) is real UI - prefix-anchored, not substring.
+assert_kind_path "/home/x/tmp/App.tsx arms visual (tmp is prefix-anchored)"        visual "/home/x/mytmp/App.tsx"
+
+# --- BASH write branch. The cwd-relative eval gap is the vector "/eval/" (substring) never covered. ---
+assert_kind "sed -i on a cwd-relative eval/fixtures .html is exempt (absent) [THE FIX]" absent "sed -i 's/a/b/' eval/fixtures/x.html"
+assert_kind "tee into a cwd-relative eval/corpus .html is exempt (absent)"              absent "tee eval/corpus/x.html"
+assert_kind "sed -i on a .spec.tsx declassified visual -> code"                         code   "sed -i 's/a/b/' src/Bar.spec.tsx"
+assert_kind "tee into a /tmp .html declassified visual -> code"                         code   "tee /tmp/scratch.html"
+# Anchor + recall controls on the bash side.
+assert_kind "tee into preeval/fixtures .html arms visual (anchor holds)"                visual "tee preeval/fixtures/x.html"
+assert_kind "sed -i on a real src/app.css still arms visual (control)"                  visual "sed -i 's/a/b/' src/app.css"
+assert_kind "tee into a real src/App.tsx still arms visual (control)"                   visual "tee src/App.tsx"
+
+restore_vnr
+rm -f "$HOME/.claude/.needs-verification.global"
+
+echo ""
 echo "============================================================"
 echo "RESULTS: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
