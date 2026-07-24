@@ -1,0 +1,18 @@
+{
+  "name": "sidecoach",
+  "description": "Design orchestration for Improv: 26 flows across two command surfaces (phase commands and 21 verb commands) plus natural-language intent detection, with prerequisite gating, phase progression, flow chaining, and design-debt memory.",
+  "author": {
+    "name": "Jonah"
+  },
+  "repository": "https://github.com/jonahscohen/improv",
+  "license": "MIT",
+  "keywords": [
+    "sidecoach",
+    "intent-detection",
+    "nlp",
+    "design-workflows"
+  ],
+  "skills": [
+    "./claude/skills/sidecoach"
+  ]
+}

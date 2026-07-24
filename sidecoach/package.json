@@ -4,9 +4,20 @@
   "description": "Natural language intent detection for 14 Sidecoach design workflows",
   "main": "dist/intent-detector.js",
   "types": "dist/intent-detector.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jonahscohen/improv.git",
+    "directory": "sidecoach"
+  },
   "bin": {
     "sidecoach": "bin/sidecoach.js"
   },
+  "files": [
+    "dist/",
+    "bin/",
+    "data/",
+    "reference/"
+  ],
   "scripts": {
     "build": "ts-node scripts/generate-lanes.ts && ts-node scripts/generate-validators.ts && ts-node scripts/generate-validators.ts --check && tsc",
     "generate-lanes": "ts-node scripts/generate-lanes.ts",

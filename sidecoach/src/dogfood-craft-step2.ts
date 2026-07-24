@@ -7,7 +7,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-const projectPath = '/Users/spare3/Documents/Github/improv/marketing-site';
+const projectPath = path.resolve(__dirname, '..', '..', 'marketing-site');
 const outputFile = '/tmp/sidecoach-craft-output.md';
 const historyFile = path.join(os.homedir(), '.claude', 'sidecoach-flow-history.json');
 
