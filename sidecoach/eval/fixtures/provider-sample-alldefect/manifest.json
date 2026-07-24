@@ -1,0 +1,10 @@
+{
+  "schema": "sidecoach-provider-sample/v1",
+  "mode": "fixture",
+  "provider": "synthetic",
+  "note": "Hand-authored all-defect fixture for eval/defect-distribution.mjs verify check 3. Every page plants a justified-text block (WCAG 1.4.8), a skipped heading (h1->h3), and a tiny-text share, so the planted classes report rate ~1.0. Not model-generated; never a measurement.",
+  "pages": [
+    { "provider": "synthetic", "briefId": "alldefect-a", "file": "synthetic__alldefect-a__r0.html", "repeat": 0, "synthetic": true },
+    { "provider": "synthetic", "briefId": "alldefect-b", "file": "synthetic__alldefect-b__r0.html", "repeat": 0, "synthetic": true }
+  ]
+}
