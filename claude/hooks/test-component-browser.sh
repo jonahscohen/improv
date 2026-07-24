@@ -202,6 +202,14 @@ unset BR_STATE_PROBE
 hook_pinned 'beats-rebuild' && ok "beats-rebuild pinned" || bad "beats-rebuild pinned"
 hook_pinned 'beats-staleness-guard' && ok "beats-staleness pinned" || bad "beats-staleness pinned"
 hook_pinned 'memory-approve' && bad "memory-approve NOT pinned" || ok "memory-approve NOT pinned"
+# default_off is a SEPARATE property from pinned (see hook_default_off in browser-lib.sh):
+# sidecoach-detect is default_off but NOT pinned (still owned/toggleable), and no pinned hook
+# is default_off. The predicate must read the encoded BR_DEFAULTOFF_<hex> flag emitted from
+# the tree's default_off_hooks list.
+hook_default_off 'sidecoach-detect' && ok "sidecoach-detect default_off" || bad "sidecoach-detect default_off"
+hook_default_off 'sidecoach-preamble' && bad "sidecoach-preamble NOT default_off" || ok "sidecoach-preamble NOT default_off"
+hook_default_off 'memory-approve' && bad "memory-approve NOT default_off" || ok "memory-approve NOT default_off"
+hook_pinned 'sidecoach-detect' && bad "sidecoach-detect NOT pinned (default_off != pinned)" || ok "sidecoach-detect NOT pinned (default_off != pinned)"
 # a pinned hook reads as always active regardless of the probe
 BR_STATE_PROBE='fake_probe'; INSTALLED="||"   # nothing installed
 [ "$(item_state 'Beats/Hooks/beats-rebuild')" = "active" ] && ok "pinned hook always active" || bad "pinned hook always active"
@@ -619,6 +627,89 @@ out="$(apply_plan)"
 # 14. set -e smoke: the staging layer must not trip under set -e (install.sh runs set -euo pipefail).
 ( set -e; stage_reset; stage_toggle 'justify/Hooks/justify-source-guard'; apply_plan >/dev/null )
 [ "$?" = "0" ] && ok "staging layer clean under set -e" || bad "staging layer clean under set -e"
+
+# 15. DEFAULT-OFF HOOK under a browser MASTER-LEAF install (the Stage 3b gap this closes).
+# Staging the Sidecoach component LEAF is a whole-component install: apply_plan sets
+# leaf_install=1 and force-enables every OWNED hook - EXCEPT a default_off one. With nothing yet
+# installed, sidecoach-detect (the sole default_off hook) must land in the off-list while the
+# other 6 sidecoach hooks force-enable. Before the guard this emitted a BARE `INSTALL sidecoach`
+# that wired the per-edit scan on a fresh GUI install. The EXACT match is load-bearing TWICE:
+# detect IS off-listed (install-but-off), AND the off-list is ONLY detect - i.e. the other 6 are
+# NOT off-listed, they force-enable exactly as before (no recall loss).
+INSTALLED="||"; stage_reset
+stage_toggle 'sidecoach/sidecoach'
+out="$(apply_plan)"
+[ "$out" = "INSTALL sidecoach sidecoach-detect" ] \
+  && ok "master-leaf install leaves default-off sidecoach-detect off (install-but-off)" \
+  || bad "master-leaf install leaves default-off sidecoach-detect off (got '$out')"
+# no-recall-loss, asserted INDEPENDENTLY of the exact string above: a non-default-off sibling
+# must NOT be off-listed under leaf-install - it still force-enables as it did before the guard.
+case "$out" in
+  *sidecoach-preamble*) bad "no-recall-loss: non-default-off hook must NOT be off-listed under leaf-install (got '$out')";;
+  *) ok "no-recall-loss: non-default-off sidecoach hooks still force-enable under leaf-install";;
+esac
+
+# 16. The guard withholds ONLY the blanket force-enable, it does NOT force a default_off hook
+# OFF: under leaf_install it falls through to the probe (current state). A constructed probe
+# state with detect already present (an existing opt-in) must therefore keep detect ON, so with
+# every sibling force-enabled the off-list is EMPTY -> a bare INSTALL. This distinguishes the
+# correct `&& ! hook_default_off` fall-through from a wrong force-OFF that would rip out an
+# existing opt-in on a component re-install.
+INSTALLED="|sidecoach/Hooks/sidecoach-detect|"; stage_reset
+stage_toggle 'sidecoach/sidecoach'
+out="$(apply_plan)"
+[ "$out" = "INSTALL sidecoach" ] \
+  && ok "leaf-install honours an existing default-off opt-in via the probe (no off-list)" \
+  || bad "leaf-install honours an existing default-off opt-in via the probe (got '$out')"
+
+# 17. Per-hook toggle ON still opts a default_off hook IN (the browser opt-in path, and the
+# forward half of "toggle both directions still works"). Staging the detect HOOK with nothing
+# installed: staged-install (rung 2) wins ahead of the leaf/probe rungs, so detect installs and
+# the OTHER 6 (untouched-off, no leaf install) are off-listed. Proves default_off never blocks
+# an explicit opt-in.
+INSTALLED="||"; stage_reset
+stage_toggle 'sidecoach/Hooks/sidecoach-detect'
+out="$(apply_plan)"
+case "$out" in
+  *"INSTALL sidecoach sidecoach-sessionstart sidecoach-preamble sidecoach-postuserp sidecoach-keyword sidecoach-taste-gate sidecoach-postresponse"*)
+    ok "per-hook toggle opts default-off sidecoach-detect in (other 6 off-listed)";;
+  *) bad "per-hook toggle opts default-off sidecoach-detect in (got '$out')";;
+esac
+case "$out" in
+  *sidecoach-detect*) bad "per-hook opt-in: detect must NOT be in the off-list (got '$out')";;
+  *) ok "per-hook opt-in: detect installed, not off-listed";;
+esac
+
+# 18. Per-hook toggle OFF of a default_off hook that is currently on (the reverse half of
+# "toggle both directions"): staged-uninstall (rung 1) still wins, detect off-listed, component
+# preserved. Identical off-list string to case 15 but reached via a different rung - the point
+# is that neither the browser toggle nor the leaf force-enable was disturbed by the guard.
+INSTALLED="|sidecoach/sidecoach|sidecoach/Hooks/sidecoach-sessionstart|sidecoach/Hooks/sidecoach-preamble|sidecoach/Hooks/sidecoach-postuserp|sidecoach/Hooks/sidecoach-keyword|sidecoach/Hooks/sidecoach-taste-gate|sidecoach/Hooks/sidecoach-postresponse|sidecoach/Hooks/sidecoach-detect|"; stage_reset
+stage_toggle 'sidecoach/Hooks/sidecoach-detect'
+out="$(apply_plan)"
+case "$out" in
+  *"INSTALL sidecoach sidecoach-detect"*) ok "per-hook toggle OFF off-lists default-off detect, keeps component";;
+  *) bad "per-hook toggle OFF off-lists default-off detect (got '$out')";;
+esac
+case "$out" in
+  *UNINSTALL_COMPONENT*) bad "per-hook toggle OFF of default-off detect must NOT uninstall the component (got '$out')";;
+  *) ok "per-hook toggle OFF of default-off detect emits no component uninstall";;
+esac
+
+# 19. DELIBERATE BOUNDARY (Codex caveat, 2026-07-24): default_off is exempt ONLY from the
+# leaf_install blanket force-enable, NOT from an explicit bulk "Install all of Sidecoach..." /
+# "Enable all hooks..." row, which routes through `stage_all install` and stages EVERY
+# non-pinned leaf - detect included. That is intended: the row literally says "all", staged
+# install (rung 2) opts detect in exactly like a per-hook opt-in, and making "install all"
+# silently skip detect would be a label lie of the class the drift tests above exist to catch.
+# So under stage_all install, detect IS staged and is NOT in the off-list -> a bare INSTALL
+# line. This locks the boundary: the guard must not leak into the explicit-all affordance.
+INSTALLED="||"; stage_reset
+stage_all 'sidecoach' install
+out="$(apply_plan)"
+[ "$out" = "INSTALL sidecoach" ] \
+  && ok "stage_all install still includes default-off detect (explicit 'all' is not the leaf force-enable)" \
+  || bad "stage_all install still includes default-off detect (got '$out')"
 
 # ---- apply_pending_plan translation (Task 6) --------------------------------
 # apply_pending_plan is the PURE half of the apply layer: it collapses apply_plan's

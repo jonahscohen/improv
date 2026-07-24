@@ -611,5 +611,8 @@
   "beats-staleness-guard",
   "hook-registry-guard",
   "hook-registry-stop"
+ ],
+ "default_off_hooks": [
+  "sidecoach-detect"
  ]
 }

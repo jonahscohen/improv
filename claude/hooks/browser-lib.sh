@@ -52,7 +52,7 @@ browser_load() {
   # safe under `set -u` even when nothing matches (expands to nothing).
   for v in ${!BR_KIND_@} ${!BR_TAG_@} ${!BR_DESC_@} ${!BR_LABEL_@} \
            ${!BR_CHILDREN_@} ${!BR_HOOKDESC_@} ${!BR_SECTION_@} \
-           ${!BR_HOOKOWNER_@} ${!BR_PINNED_@} ${!BR_HOOKPATH_@} \
+           ${!BR_HOOKOWNER_@} ${!BR_PINNED_@} ${!BR_DEFAULTOFF_@} ${!BR_HOOKPATH_@} \
            ${!BR_OWNERLEAF_@}; do
     unset "$v"
   done
@@ -131,6 +131,9 @@ for h, o in tree.get("hook_owner", {}).items():
 for h in tree.get("pinned_hooks", []):
     emit("PINNED", h, "1")
 
+for h in tree.get("default_off_hooks", []):
+    emit("DEFAULTOFF", h, "1")
+
 print("BR_BUCKETS=" + esc("\t".join(b["key"] for b in buckets)))
 print("BR_ALLHOOKS=" + esc("\t".join(all_hooks)))
 PY
@@ -179,6 +182,18 @@ hook_owner() { _br_untab "$(_br_get HOOKOWNER "$1")"; }
 # directly; safe under `set -u` via the `-` default.
 hook_pinned() {
   local n="BR_PINNED_$(_br_enc "$1")"
+  [ "${!n-}" = "1" ]
+}
+
+# hook_default_off <hook> -> 0 if the hook is DEFAULT-OFF, 1 otherwise. Reads the encoded
+# BR_DEFAULTOFF_<hex> flag directly; safe under `set -u` via the `-` default. Mirrors
+# hook_pinned in mechanism but is a DIFFERENT property: unlike a pinned hook, a default-off
+# hook is still installer-managed - it stays in hooks_owned_by, is still per-hook toggleable,
+# and still reads its real on/off state from the probe. The ONLY behaviour it changes is in
+# apply_plan: it is exempt from the master-leaf force-enable, so installing the whole component
+# leaves a default-off hook INSTALL-but-off (owned, in the off-list) rather than wired on.
+hook_default_off() {
+  local n="BR_DEFAULTOFF_$(_br_enc "$1")"
   [ "${!n-}" = "1" ]
 }
 
@@ -601,7 +616,11 @@ EOF
         on=0
       elif _pend_has "$PENDING_INSTALL" "$hp"; then
         on=1
-      elif [ "$leaf_install" = "1" ]; then
+      elif [ "$leaf_install" = "1" ] && ! hook_default_off "$h"; then
+        # Master-leaf install force-enables every OWNED hook - EXCEPT a default-off one, which
+        # stays off here so a whole-component install leaves it INSTALL-but-off. A per-hook
+        # stage-install above still opts it in (that branch wins), and an existing opt-in is
+        # still honoured by the probe below; only the blanket leaf force-enable is withheld.
         on=1
       elif "$probe" "$hp"; then
         on=1
