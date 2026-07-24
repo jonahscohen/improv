@@ -1,0 +1,102 @@
+<!doctype html>
+<!-- Contract-6 eval KNOWN-GOOD fixture. The negative control for `bin/sidecoach-detect.js`:
+     a single self-contained page that every shipping lens must certify. It is deliberately
+     demanding - a `clean` verdict requires ALL FOUR lenses to actually run and find nothing:
+       - static-ban    : none of the 5 named absolute bans (no gradient-text, no glassmorphism,
+                         no side-stripe borders, no 3x stat-block hero, no modal-wrapped form)
+       - static-check  : all 6 product validators conclusive (polish / theming / anti-pattern /
+                         static-a11y / forms / page-quality) - so the page must carry applicable
+                         evidence for each, not be an empty page that is vacuously "fine"
+       - objective     : rendered WCAG (contrast, heading order, image load, justified text)
+       - subjective    : rendered taste (tiny-text, nested-cards, marketing-buzzword)
+     Copy is deliberately concrete and buzzword-free. The image is a data: URI so the page
+     renders identically over file:// with all cross-origin subresources blocked.
+     Hit targets are sized to the collector's real thresholds (44px buttons, 40px other
+     controls) and every text-bearing element carries an explicit line-height, because those
+     are what the shipping checks measure - not because they look tidy. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Account settings</title>
+    <style>
+      :root {
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+        --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+        --radius: 8px;
+        --c-brand: #1f4f8f;
+        --c-ink: #14181f;
+        --c-warn: #8a1c1c;
+        --c-page: #ffffff;
+        color-scheme: light dark;
+      }
+      * { -webkit-font-smoothing: antialiased; }
+      /* A COMMITTED typeface (Inter, from the shipped fontshare vocabulary) leads the stack,
+         with system fallbacks behind it. Without this the page renders on the bare system
+         stack and the default-typeface taste rule fires - correctly. */
+      body { background: var(--c-page); color: var(--c-ink); font-family: Inter, system-ui, sans-serif; font-size: 16px; line-height: 1.5; padding: 24px; }
+      h1 { text-wrap: balance; padding: 8px; font-size: 32px; line-height: 1.25; }
+      h2 { text-wrap: balance; padding: 8px; font-size: 22px; line-height: 1.35; }
+      p, label, li { font-size: 16px; line-height: 1.5; }
+      img { border: 1px solid rgba(0, 0, 0, 0.1); }
+      .field-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .field-error { color: var(--c-warn); font-size: 16px; line-height: 1.5; margin: 4px 0 16px; }
+      /* Spacing only - no measured property (hit area is width/height, concentric radius is
+         radius + padding), so this makes the negative control read as a real page without
+         changing what any lens evaluates. */
+      .field-label { display: block; margin-bottom: 4px; }
+      .choice-label { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+      /* Form controls do not inherit the page font by default (the UA font shorthand resets
+         it), so the committed family has to be handed to them explicitly. */
+      .btn { padding: 12px; min-width: 44px; min-height: 44px; font-family: inherit; font-size: 16px; line-height: 1.5; border-radius: var(--radius); box-shadow: var(--shadow-sm); transition: opacity 200ms, transform 200ms; }
+      .btn:active { transform: scale(0.96); opacity: 0; filter: blur(2px); }
+      .btn:hover { color: var(--c-brand); }
+      .text-input { min-width: 240px; min-height: 40px; font-family: inherit; font-size: 16px; line-height: 1.5; }
+      .choice-input { width: 40px; height: 40px; }
+      :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+      .panel { border-radius: var(--radius); box-shadow: var(--shadow-md); padding: 16px; }
+      .sheet { border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 16px; }
+      .list-item { animation-delay: 30ms; }
+      .exit { opacity: 0; transform: scale(0.96); }
+      .s:default {} .s:hover {} .s:focus {} .s:active {} .s:disabled {} .s:loading {} .s:error {} .s:success {}
+      @media (prefers-reduced-motion: reduce) { * { animation: none; transition: none; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Account settings</h1>
+      <p>Change the email address we send receipts to. Changes take effect on the next billing run.</p>
+
+      <img
+        src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAG0lEQVR42mNkYPhfz0AEYBxVSF+FjKMKGYaCQgB8sAf1lDdCgQAAAABJRU5ErkJggg=="
+        alt="Receipt icon"
+        width="8"
+        height="8"
+        loading="lazy"
+      />
+
+      <section class="panel">
+        <h2>Billing email</h2>
+        <p class="field-name">Receipts currently go to finance@example.com.</p>
+        <form action="/account/email" method="post">
+          <label class="field-label" for="email">New billing email</label>
+          <input
+            id="email"
+            class="text-input"
+            type="email"
+            name="email"
+            autocomplete="email"
+            spellcheck="false"
+            aria-invalid="false"
+            aria-describedby="email-error"
+          />
+          <p class="field-error" id="email-error">Enter the address exactly as it appears on the receipt.</p>
+
+          <label class="choice-label"><input class="choice-input" type="checkbox" name="confirm" /> Send a confirmation to the old address</label>
+
+          <button class="btn" type="submit">Update billing email</button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>
