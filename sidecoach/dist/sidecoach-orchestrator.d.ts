@@ -36,7 +36,6 @@ export declare class FlowExecutionEngine {
     private trackFlowMetrics;
     private determineConditionalFlow;
     private getExecutablePath;
-    private processWithEntryPoint;
     process(utterance: string, context?: Partial<FlowExecutionContext>): Promise<SidecoachResult>;
     /**
      * Sprint 8 T7: Build the verb-command guidance-append block.

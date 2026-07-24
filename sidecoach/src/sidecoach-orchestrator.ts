@@ -20,7 +20,6 @@ import { convergencePreflight } from './lane-convergence-preflight';
 import { gatherReferencePreflightArtifacts } from './reference-preflight-artifacts';
 import * as path from 'path';
 import { createHash } from 'crypto';
-import { SidecoachEntryPoint, globalEntryPoint, EntryPointRequest } from './sidecoach-entry-point';
 import { TeachCommandHandlerV2 } from './teach-command-handler-v2';
 import { DocumentCommandHandler } from './document-command-handler';
 import { FlowPrerequisiteValidator } from './flow-prerequisites';
@@ -638,35 +637,6 @@ export class FlowExecutionEngine {
   private getExecutablePath(context: FlowExecutionContext): string[] {
     // Get the conditional execution path for a context
     return FlowConditionalRouter.getExecutablePath(context);
-  }
-
-  private processWithEntryPoint(utterance: string, context: Partial<FlowExecutionContext> = {}): { flowIds: FlowId[], entryType: string, primaryFlow?: FlowId } | null {
-    // Process utterance through unified entry point system
-    const entryPointRequest: EntryPointRequest = {
-      utterance,
-      userId: context.userId || 'unknown',
-      projectPath: context.projectPath || process.cwd(),
-      sessionContext: context.metadata,
-    };
-
-    const entryPointResponse = globalEntryPoint.process(entryPointRequest);
-
-    // Record entry point request in context metadata if available
-    if (context.metadata) {
-      context.metadata.entryPointType = entryPointResponse.entryType;
-      context.metadata.entryPointFlows = entryPointResponse.selectedFlows;
-      context.metadata.entryPointReason = entryPointResponse.reason;
-    }
-
-    if (!entryPointResponse.isValid || entryPointResponse.selectedFlows.length === 0) {
-      return null;
-    }
-
-    return {
-      flowIds: entryPointResponse.selectedFlows,
-      entryType: entryPointResponse.entryType,
-      primaryFlow: entryPointResponse.primaryFlow,
-    };
   }
 
   async process(utterance: string, context: Partial<FlowExecutionContext> = {}): Promise<SidecoachResult> {

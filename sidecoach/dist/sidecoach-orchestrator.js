@@ -53,7 +53,6 @@ const lane_convergence_preflight_1 = require("./lane-convergence-preflight");
 const reference_preflight_artifacts_1 = require("./reference-preflight-artifacts");
 const path = __importStar(require("path"));
 const crypto_1 = require("crypto");
-const sidecoach_entry_point_1 = require("./sidecoach-entry-point");
 const teach_command_handler_v2_1 = require("./teach-command-handler-v2");
 const document_command_handler_1 = require("./document-command-handler");
 const flow_prerequisites_1 = require("./flow-prerequisites");
@@ -578,30 +577,6 @@ class FlowExecutionEngine {
     getExecutablePath(context) {
         // Get the conditional execution path for a context
         return flow_conditional_router_1.FlowConditionalRouter.getExecutablePath(context);
-    }
-    processWithEntryPoint(utterance, context = {}) {
-        // Process utterance through unified entry point system
-        const entryPointRequest = {
-            utterance,
-            userId: context.userId || 'unknown',
-            projectPath: context.projectPath || process.cwd(),
-            sessionContext: context.metadata,
-        };
-        const entryPointResponse = sidecoach_entry_point_1.globalEntryPoint.process(entryPointRequest);
-        // Record entry point request in context metadata if available
-        if (context.metadata) {
-            context.metadata.entryPointType = entryPointResponse.entryType;
-            context.metadata.entryPointFlows = entryPointResponse.selectedFlows;
-            context.metadata.entryPointReason = entryPointResponse.reason;
-        }
-        if (!entryPointResponse.isValid || entryPointResponse.selectedFlows.length === 0) {
-            return null;
-        }
-        return {
-            flowIds: entryPointResponse.selectedFlows,
-            entryType: entryPointResponse.entryType,
-            primaryFlow: entryPointResponse.primaryFlow,
-        };
     }
     async process(utterance, context = {}) {
         // Step 0: Load project context (PRODUCT.md, DESIGN.md, register detection)
