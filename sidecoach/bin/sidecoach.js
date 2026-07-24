@@ -4,11 +4,14 @@
  * sidecoach - terminal CLI that mirrors the /sidecoach slash-command surface.
  *
  *   sidecoach <verb> [target...]     resolve a verb to its flow chain
- *   sidecoach <mode> [target...]     resolve a composite mode to its chain
  *   sidecoach teach [brief]          setup: generate PRODUCT.md
  *   sidecoach document               setup: generate DESIGN.md
- *   sidecoach list                   enumerate verbs, modes, and flows
- *   sidecoach help [verb|mode]       help; with an arg, registry detail
+ *   sidecoach list                   enumerate verbs and flows
+ *   sidecoach help [verb]            help; with an arg, registry detail
+ *
+ * The retired one-word modes (forge/kiln/bloom/trim/ralph) are no longer a
+ * supported surface and are not listed, but they STILL resolve as deprecated
+ * back-compat aliases so existing scripts keep working (vocab collapse, GAP5).
  *
  * `sidecoach craft "a pricing page"` invokes the SAME verb->flow resolution
  * that `/sidecoach craft a pricing page` does in-session: both call
@@ -43,7 +46,6 @@
 let parseSlashCommand;
 let VERB_REGISTRY;
 let getVerbEntry;
-let MODE_LIST;
 let getMode;
 let getFlow;
 let flows;
@@ -51,7 +53,10 @@ let FLOW_MODELS;
 try {
   ({ parseSlashCommand } = require('../dist/slash-command-router'));
   ({ VERB_REGISTRY, getVerbEntry } = require('../dist/verb-command-registry'));
-  ({ MODE_LIST, getMode } = require('../dist/modes'));
+  // modes.ts is retired (do not surface as a live vocabulary); getMode is kept
+  // ONLY to resolve deprecated back-compat mode words (forge/kiln/..). It is not
+  // listed or advertised anywhere below.
+  ({ getMode } = require('../dist/modes'));
   ({ getFlow, flows } = require('../dist/flows'));
   ({ FLOW_MODELS } = require('../dist/model-routing'));
 } catch (err) {
@@ -88,10 +93,6 @@ function verbList() {
   return Object.keys(VERB_REGISTRY);
 }
 
-function modeNames() {
-  return MODE_LIST.map((m) => m.name);
-}
-
 function tierFor(flowId) {
   const cfg = FLOW_MODELS[flowId];
   if (!cfg) return '?';
@@ -126,11 +127,10 @@ function topLevelHelp() {
   console.log('');
   console.log('Usage:');
   console.log('  sidecoach <verb> [target...]   resolve a verb to its flow chain');
-  console.log('  sidecoach <mode> [target...]   resolve a composite mode to its chain');
   console.log('  sidecoach teach [brief]        setup: generate PRODUCT.md');
   console.log('  sidecoach document             setup: generate DESIGN.md');
-  console.log('  sidecoach list                 enumerate verbs, modes, and flows');
-  console.log('  sidecoach help [verb|mode]     this help, or registry detail for one');
+  console.log('  sidecoach list                 enumerate verbs and flows');
+  console.log('  sidecoach help [verb]          this help, or registry detail for one');
   console.log('');
 
   // Verbs grouped by phase.
@@ -146,13 +146,6 @@ function topLevelHelp() {
   }
   console.log('');
 
-  // Modes (composite presets).
-  console.log(`Modes (${MODE_LIST.length}) - composite presets that chain verbs:`);
-  for (const m of MODE_LIST) {
-    console.log(`  ${m.name.padEnd(8)} ${m.verbChain.join(' -> ')}`);
-  }
-  console.log('');
-
   console.log('Setup:');
   for (const [cmd, desc] of Object.entries(SETUP_COMMANDS)) {
     console.log(`  ${cmd.padEnd(10)} ${desc}`);
@@ -160,6 +153,9 @@ function topLevelHelp() {
   console.log('');
   console.log('Run `sidecoach help <verb>` for a verb\'s flow chain and guidance,');
   console.log('or `sidecoach list` for the full flow enumeration.');
+  console.log('');
+  console.log('Deprecated phase and mode words (research/implement/.., forge/kiln/..)');
+  console.log('are not a supported surface but still resolve for back-compat.');
   console.log('');
   console.log('Note: this CLI resolves and prints the plan that would run. Full flow');
   console.log('execution happens in a Claude session (`/sidecoach <verb>`).');
@@ -216,9 +212,8 @@ function helpForTarget(target) {
     return 0;
   }
 
-  console.error(`sidecoach: no verb or mode named "${target}".`);
+  console.error(`sidecoach: no verb named "${target}".`);
   console.error(`Valid verbs: ${verbList().join(', ')}`);
-  console.error(`Valid modes: ${modeNames().join(', ')}`);
   return 1;
 }
 
@@ -243,12 +238,6 @@ function listAll() {
         : '(dedicated handler, no flow chain)';
       console.log(`    ${verb.padEnd(10)} ${chain}`);
     }
-  }
-  console.log('');
-
-  console.log(`Modes (${MODE_LIST.length}) -> verb chains:`);
-  for (const m of MODE_LIST) {
-    console.log(`  ${m.name.padEnd(8)} ${m.verbChain.join(' -> ')}`);
   }
   console.log('');
 
@@ -287,7 +276,6 @@ function resolveAndPrint(command, target) {
     console.error(`sidecoach: ${result.reason}`);
     console.error('');
     console.error(`Valid verbs: ${verbList().join(', ')}`);
-    console.error(`Valid modes: ${modeNames().join(', ')}`);
     console.error(`Setup: ${Object.keys(SETUP_COMMANDS).join(', ')}`);
     console.error('Run `sidecoach help` for the full surface.');
     return 1;

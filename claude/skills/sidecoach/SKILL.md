@@ -1,6 +1,6 @@
 ---
 name: sidecoach
-description: The design orchestration system for Improv. 26 flows, two parallel command surfaces (phase commands + 21 verb commands), plus teach/document setup commands and a help command. Use for all design work: /sidecoach craft <feature>, /sidecoach shape <feature>, /sidecoach polish <target>, /sidecoach audit <target>, /sidecoach animate <target>, /sidecoach critique <target>, /sidecoach teach, /sidecoach document, /sidecoach list, /sidecoach help <verb>. Also triggers on: brand verification, component research, font pairing, motion patterns, design tokens, accessibility audit, responsive design, typography, clone/implement a design, colorize, delight, bolder, overdrive, quieter, distill, clarify, optimize, harden, adapt, onboarding flows.
+description: The design orchestration system for Improv. 26 flows, a typed surface of 21 verb commands plus natural-language intent (legacy phase words kept as back-compat aliases), plus teach/document setup commands and a help command. Use for all design work: /sidecoach craft <feature>, /sidecoach shape <feature>, /sidecoach polish <target>, /sidecoach audit <target>, /sidecoach animate <target>, /sidecoach critique <target>, /sidecoach teach, /sidecoach document, /sidecoach list, /sidecoach help <verb>. Also triggers on: brand verification, component research, font pairing, motion patterns, design tokens, accessibility audit, responsive design, typography, clone/implement a design, colorize, delight, bolder, overdrive, quieter, distill, clarify, optimize, harden, adapt, onboarding flows.
 ---
 
 # Sidecoach - Design Intelligence Orchestration
@@ -9,10 +9,10 @@ For a single-page reference covering every verb and flow at a glance, see [CHEAT
 
 Sidecoach is the design workflow layer built into this Claude Code installation. It provides 26 intelligent flows (post-T-0015 cull, 2026-05-28) covering every phase of design work, with full orchestration, memory, and validation.
 
-Three command surfaces share the same flow chains:
-- **Phase commands** - sidecoach native vocabulary grouped by phase (research / craft / review / special).
+The typed surface is the 21 verb commands; natural-language intent is the primary surface to lead with, and lanes are the one derived preset. The original phase words survive only as back-compat aliases (vocabulary collapse, GAP5). All share the same underlying flow chains:
 - **Verb commands** - 21 verb commands that mirror the canonical design verb vocabulary 1:1 and route to the same underlying flows. The orchestrator appends per-verb guidance (canonical reference sections plus sidecoach extensions) so output speaks the verb language while keeping sidecoach's validators, BuildReport, taste validation, and memory.
 - **Natural-language intent detection** - the primary surface, and the one to lead with. You describe a design task in plain English and the intent detector classifies it to the right flow (asking a single clarifying question when two are a close call), then runs it to convergence with checkpointing. Exposed to the model as the MCP tools `classify_intent` / `list_lanes` / `sidecoach_lane`, so the same plain-language request works in the CLI, desktop, or an IDE sidebar. This replaced the retired one-word mode keywords.
+- **Phase commands (back-compat aliases)** - the original sidecoach vocabulary grouped by phase (research / craft / review / special). No longer a co-equal surface: each phase word is kept as an alias that resolves to the exact flow chain it always did, so existing muscle memory and scripts keep working. Verbs win when a word is both (only `craft`).
 
 ## Dependent capabilities
 

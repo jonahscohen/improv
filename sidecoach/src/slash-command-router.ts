@@ -13,22 +13,42 @@ export interface CommandMatch {
   reason: string;
 }
 
-// T-0015 (2026-05-28): legacy flow1..flow14 IDs removed from verb routing.
-// Duplicates were folded into their lettered canonicals (see CHEATSHEET.md);
-// flow4/flow7 are now flowY_explore_discovery / flowZ_design_component.
-const SLASH_COMMANDS: Record<string, FlowId[]> = {
+// ---------------------------------------------------------------------------
+// PHASE_ALIASES - back-compat alias layer for the retired phase vocabulary.
+//
+// Vocabulary collapse (GAP5, option B - decision_2026-07-24_vocab-collapse-and-
+// plugin-coupling.md): the typed user-facing surfaces are now the 21 verbs +
+// natural-language intent, with lanes as the one derived preset. The old phase
+// words are NOT a co-equal surface anymore - they survive ONLY as aliases so
+// existing muscle memory and scripts keep resolving to the EXACT SAME flow chain
+// they always did (zero breaking change).
+//
+// Verbs are resolved FIRST in parseSlashCommand (below), so a phase word that is
+// also a verb routes through the verb. `craft` was exactly that case: the phase
+// `craft` entry was shadowed by the `craft` verb and never reachable, so it is
+// dropped here - `craft` still resolves to the verb's 11-flow chain, unchanged.
+//
+// Each alias maps a retired phase word -> its historical target flow chain (the
+// routing that must be preserved). The trailing comment names the nearest verb
+// where one exists; the VALUE stays the historical chain because most phases
+// predate the verbs and have no single-verb equivalent (`research` is a 7-flow
+// chain no single verb produces).
+//
+// T-0015 (2026-05-28): legacy flow1..flow14 IDs removed; folded into their
+// lettered canonicals (see CHEATSHEET.md); flow4/flow7 are now
+// flowY_explore_discovery / flowZ_design_component.
+const PHASE_ALIASES: Record<string, FlowId[]> = {
   research: ['flowA_brand_verify', 'flowB_component_research', 'flowC_font_research', 'flowD_reference_inspiration', 'flowE_motion_patterns', 'flowY_explore_discovery', 'flowZ_design_component'],
-  craft: ['flowF_design_tokens', 'flowG_component_implementation', 'flowH_motion_integration', 'flowI_accessibility'],
   implement: ['flowF_design_tokens', 'flowG_component_implementation', 'flowH_motion_integration', 'flowI_accessibility'],
   review: ['flowJ_tactical_polish', 'flowK_multi_lens_audit', 'flowL_design_critique', 'flowM_responsive_validation', 'flowN_rapid_iteration_refined'],
   clone: ['flowO_clone_match_special'],
   constrain: ['flowP_constraint_design_special'],
   migrate: ['flowQ_migration_special'],
-  refactor: ['flowR_layout_optimization'],
-  type: ['flowS_typography_excellence'],
-  motion: ['flowT_ambitious_motion'],
-  reference: ['flowU_curate'],
-  comprehensive: ['flowV_all_seven_qa'],
+  refactor: ['flowR_layout_optimization'],       // ~ layout
+  type: ['flowS_typography_excellence'],          // ~ typeset
+  motion: ['flowT_ambitious_motion'],             // ~ animate / overdrive
+  reference: ['flowU_curate'],                    // ~ extract
+  comprehensive: ['flowV_all_seven_qa'],          // ~ harden
   teach: [],
   rapid: ['flowN_rapid_iteration_refined'],
   list: [],
@@ -88,7 +108,9 @@ export function parseSlashCommand(utterance: string): CommandMatch {
     };
   }
 
-  // Sprint 8: verb-based commands (parallel to phase-based SLASH_COMMANDS)
+  // Sprint 8: verb-based commands. Verbs are the primary surface and are
+  // matched BEFORE the phase aliases below, so a word that is both (only
+  // `craft`) always routes through the verb.
   const verbEntry = getVerbEntry(command);
   if (verbEntry) {
     return {
@@ -100,7 +122,7 @@ export function parseSlashCommand(utterance: string): CommandMatch {
     };
   }
 
-  const flowIds = SLASH_COMMANDS[command];
+  const flowIds = PHASE_ALIASES[command];
 
   if (!flowIds) {
     return {
@@ -270,10 +292,12 @@ function firstToken(phrase: string): string {
   return m ? m[1].toLowerCase() : '';
 }
 
-// Known command vocabulary = the 22 verb-registry keys + the phase SLASH_COMMANDS
-// keys. Lanes are reached by the classifier (evaluateLane), not by name here.
+// Known command vocabulary = the verb-registry keys + the retired-phase alias
+// keys (kept for near-miss suggestions so a typo near a legacy phase word still
+// resolves to a hint). Lanes are reached by the classifier (evaluateLane), not
+// by name here.
 function knownCommandNames(): string[] {
-  return [...Object.keys(VERB_REGISTRY), ...Object.keys(SLASH_COMMANDS)];
+  return [...Object.keys(VERB_REGISTRY), ...Object.keys(PHASE_ALIASES)];
 }
 
 // Exact known-command fast path: if the phrase opens with a known verb/phase
@@ -282,7 +306,7 @@ function matchKnownCommand(phrase: string): string | null {
   const tok = firstToken(phrase);
   if (!tok) return null;
   if (getVerbEntry(tok)) return tok;
-  if (Object.prototype.hasOwnProperty.call(SLASH_COMMANDS, tok)) return tok;
+  if (Object.prototype.hasOwnProperty.call(PHASE_ALIASES, tok)) return tok;
   return null;
 }
 
