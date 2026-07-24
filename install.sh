@@ -607,6 +607,22 @@ HOOK_ON=""   # scripts explicitly requested via --only <hook>
 # _AMPERSAND_NO_SUMMARY.
 HOOK_OFF="${_AMPERSAND_HOOK_OFF:-}"  # scripts deselected in the TUI drill-in
 
+# sidecoach-detect ships OPT-IN (default OFF). It is FULLY packaged - listed in the tree,
+# deployed on the `picked sidecoach && install_app_hooks` line, and wired in app-wirings.json
+# - so the component browser can show and toggle it. But a per-edit Playwright scan adds
+# seconds of latency to every UI write, so a plain install must NOT arm it. Seed it into the
+# off-list ONLY when the caller did not SET _AMPERSAND_HOOK_OFF (a direct CLI install /
+# ampersand re-run): install_app_hooks then routes it to DROP, so the file is not deployed
+# and no PostToolUse scan is wired. The component browser ALWAYS sets _AMPERSAND_HOOK_OFF
+# (browser-lib.sh apply pass), so its per-hook toggle overrides this seed and wires
+# sidecoach-detect on; the browser then keeps that state via the is_our_hook probe. A plain
+# re-run resets it to OFF - the same way a plain re-run resets every other component hook to
+# its own default (ON). To opt in from the CLI, set the sentinel yourself so the seed is
+# skipped:  _AMPERSAND_HOOK_OFF="" bash install.sh --only sidecoach --yes
+if [ -z "${_AMPERSAND_HOOK_OFF+x}" ]; then
+  HOOK_OFF="${HOOK_OFF:+$HOOK_OFF }sidecoach-detect.sh"
+fi
+
 cluster_hooks() {
   case "$1" in
     safety)              echo "bash-guard.sh content-guard.sh content-guard-stop.sh destructive-ops-guard.sh destructive-confirm-detect.sh" ;;
@@ -1675,7 +1691,7 @@ deactivate_task_list() {
 deactivate_sidecoach() {
   [ -d "$CLAUDE_DIR/skills/sidecoach" ] && rm -rf "$CLAUDE_DIR/skills/sidecoach"
   local f
-  for f in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh sidecoach-keyword.sh sidecoach-preamble.sh sidecoach-taste-gate.sh sidecoach-verbs.json sidecoach-lanes.json sidecoach-intent.json sidecoach_lanes.py; do
+  for f in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh sidecoach-keyword.sh sidecoach-preamble.sh sidecoach-taste-gate.sh sidecoach-detect.sh sidecoach-verbs.json sidecoach-lanes.json sidecoach-intent.json sidecoach_lanes.py; do
     [ -L "$CLAUDE_DIR/hooks/$f" ] && rm -f "$CLAUDE_DIR/hooks/$f"
   done
   [ -L "$HOME/.local/bin/sidecoach" ] && rm -f "$HOME/.local/bin/sidecoach"
@@ -4657,8 +4673,10 @@ if picked sidecoach; then
   ln -sf "$REPO_DIR/claude/skills/sidecoach/SKILL.md" \
          "$HOME/.claude/skills/sidecoach/SKILL.md"
 
-  # Sidecoach's 6 hooks deploy + wire via install_app_hooks (see the `picked sidecoach &&`
-  # line in the app-hook pass). The ln -sf loop that used to live here, paired with the
+  # Sidecoach's 7 hooks deploy + wire via install_app_hooks (see the `picked sidecoach &&`
+  # line in the app-hook pass). The 7th, sidecoach-detect, ships OPT-IN via the default-off
+  # seed near the top of this script, so a plain install deploys the other 6 and leaves the
+  # per-edit detect scan unwired. The ln -sf loop that used to live here, paired with the
   # addHook block below it, wired them directly and so could not honor HOOK_OFF - the
   # browser offered per-hook toggles for sidecoach that were silently discarded.
   # The registries below are DATA, not hooks, and stay here.
@@ -4907,7 +4925,7 @@ picked memory       && install_app_hooks memory-approve.sh memory-nudge.sh memor
 # decision_beats_hooks_stay_project_scoped.md).
 picked reflect      && install_app_hooks reflect-nudge.sh
 picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh resume-guard.sh resume-toggle.sh team-reaper.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh teammate-relay-stop.sh
-picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-postresponse.sh
+picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-postresponse.sh sidecoach-detect.sh
 picked fable        && install_app_hooks fable-orchestrator-guard.sh
 picked voice-output && install_app_hooks voice-gate.sh voice-mandate.sh voice-toggle.sh
 picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh

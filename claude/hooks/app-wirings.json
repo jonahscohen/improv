@@ -423,6 +423,17 @@
    }
   }
  ],
+ "sidecoach-detect.sh": [
+  {
+   "event": "PostToolUse",
+   "matcher": "Write|Edit|MultiEdit",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/sidecoach-detect.sh",
+    "timeout": 120
+   }
+  }
+ ],
  "sidecoach-postresponse.sh": [
   {
    "event": "Stop",

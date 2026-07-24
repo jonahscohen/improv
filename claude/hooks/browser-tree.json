@@ -93,7 +93,8 @@
       "sidecoach-postuserp",
       "sidecoach-keyword",
       "sidecoach-taste-gate",
-      "sidecoach-postresponse"
+      "sidecoach-postresponse",
+      "sidecoach-detect"
      ]
     }
    ]
@@ -531,6 +532,7 @@
   "sidecoach-postuserp": "Sends your prompt to the sidecoach daemon.",
   "sidecoach-taste-gate": "Reviews UI files the moment they are written.",
   "sidecoach-postresponse": "Folds sidecoach daemon results into the reply.",
+  "sidecoach-detect": "Scans each UI file you write with the real detect engine and reports findings - advisory, never blocks, and off by default (opt-in; the per-edit browser scan adds a few seconds).",
   "voice-mandate": "Decides each session whether the speak tool is allowed, based on install and mute state.",
   "voice-toggle": "Turns voice on or off when you say so mid-session."
  },
@@ -600,6 +602,7 @@
   "sidecoach-postuserp": "sidecoach",
   "sidecoach-taste-gate": "sidecoach",
   "sidecoach-postresponse": "sidecoach",
+  "sidecoach-detect": "sidecoach",
   "voice-mandate": "voice-output",
   "voice-toggle": "voice-output"
  },

@@ -147,10 +147,13 @@ browser_load "$TREE"
 [ "$(node_children 'sidecoach')" = "sidecoach Hooks" ] \
   && ok "sidecoach children (leaf + Hooks)" || bad "sidecoach children (got '$(node_children 'sidecoach')')"
 [ "$(node_kind 'sidecoach/sidecoach')" = "leaf" ] && ok "sidecoach component leaf" || bad "sidecoach component leaf"
-# All SIX sidecoach hooks, in the order install_app_hooks deploys them. The tree used to
+# All SEVEN sidecoach hooks, in the order install_app_hooks deploys them. The tree used to
 # list only 2 of the 6 the installer actually deploys and wires, so the browser rendered
 # "2/2 active" for a component with 6 managed hooks and gave no toggle for the other 4.
-[ "$(node_children 'sidecoach/Hooks')" = "sidecoach-sessionstart sidecoach-preamble sidecoach-postuserp sidecoach-keyword sidecoach-taste-gate sidecoach-postresponse" ] \
+# sidecoach-detect is the 7th (Stage 3b): fully packaged but shipped OPT-IN via the default
+# off-list seed in install.sh, so the browser shows and can toggle it while a plain install
+# leaves the per-edit scan unwired.
+[ "$(node_children 'sidecoach/Hooks')" = "sidecoach-sessionstart sidecoach-preamble sidecoach-postuserp sidecoach-keyword sidecoach-taste-gate sidecoach-postresponse sidecoach-detect" ] \
   && ok "sidecoach hook children" || bad "sidecoach hook children (got '$(node_children 'sidecoach/Hooks')')"
 # Every payload component has the same shape, and each leaf resolves as its owner's
 # master switch. A regression here is what re-hides the install affordance.
