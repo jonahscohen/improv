@@ -1,10 +1,21 @@
-- [Sidecoach Session](session_2026-07-17_sidecoach.md) - design decisions, rules applied, metrics
-- [Sidecoach Session](session_2026-06-17_sidecoach.md) - design decisions, rules applied, metrics
-- [Lane P4b-2 Browser Evidence Collector](session_2026-06-14_lane-p4b2-browser-evidence.md) - Playwright headless-Chromium collector promotes four parked browser rules to real verdicts; genericity st…
-- [Sidecoach Session](session_2026-05-25_sidecoach.md) - design decisions, rules applied, metrics
-- [Sidecoach Session](session_2026-05-24_sidecoach.md) - design decisions, rules applied, metrics
-- [Phase G Block 1 Complete](session_2026-05-23_phase_g_block1_complete.md) - Flows O-P validator integration: clone-match (spatial/color/responsive), constraint-design (all 7 domains), TypeScript ve…
-- [Sidecoach v3 Phase 9 Complete](session_2026-05-21_sidecoach-v3-phase9-complete.md) - FlowU Curate and FlowV All-Seven QA handlers implemented, all 9 phases complete and compiling
-- [Slash Command E2E Test Complete](session_2026-05-22_slash_command_e2e_test.md) - Comprehensive E2E validation: 15/15 parsing tests, 13/13 orchestration tests, 36/36 flows reachable, zero duplicate…
-- [Phase 1 Tasks 4-7 Complete](session_2026-05-23_phase1_tasks_4-7_complete.md) - All foundation embeddings: anti-pattern validator (K,M,N), critique framework (L), AI slop detection (D,L), tactical…
-- [Phase 2 Enhancement Task 8 Progress](session_2026-05-23_phase2_task8.md) - Rich taxonomy for /sidecoach list: CommandInfo interface added, phase field (Research/Implement/Review/Special), getComma…
+# Beats moved to the repo root
+
+This directory is no longer a beats corpus. All 37 session beats that lived here were
+migrated to the canonical project-root record on 2026-07-24:
+
+    /Users/spare3/Documents/Github/improv/.claude/memory/
+
+**Write beats there, not here.** CLAUDE.md names the project-root `.claude/memory/` as the
+canonical source of truth, and a second corpus nested inside `sidecoach/` split the
+cross-session, cross-machine continuity layer in two.
+
+This was not theoretical. On 2026-07-24 a teammate working in `sidecoach/` reported that two
+beat files "do not exist" and proposed working around their absence - it was reading this
+directory while the beats sat in the root one. A split record produces confidently wrong
+reports about what has and has not been recorded.
+
+The 14 index lines that were here are appended to the root `MEMORY.md`; the beat files kept
+their filenames, so every link still resolves. Git history was preserved (`git mv`).
+
+This file is a tombstone, deliberately left in place rather than deleted, so that anything
+landing in `sidecoach/` is redirected instead of recreating the split.
