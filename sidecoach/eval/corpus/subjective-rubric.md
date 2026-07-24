@@ -46,6 +46,12 @@ registered as rule-author for all 22 so the freeze gate rejects any architect-au
 - tight-leading: line spacing on running text set tight enough that the lines feel crowded and harder to read.
 - extreme-negative-tracking: letters pulled together strongly enough that they crowd or visually touch.
 
+## Stage 4a addition (default-typeface) - added 2026-07-24 for the A5a taste-detection gate
+This class postdates the original lead-reviewed 22 above; it is added here so an independent Codex pass can set
+its subjective ground truth (the 22-class rubric predated the class). Same constraints as every class above -
+descriptive, screenshot-judgeable, no thresholds/properties/selectors.
+- default-typeface: the page never ASKS for a typeface for its body and content text - the font stack it requests is only the browser/operating-system default (or a generic websafe family like Times, Arial, Helvetica, Georgia, Verdana), rather than naming a deliberately selected typeface. Judge what the page REQUESTS, not what it happens to look like: a page that names a chosen family is ABSENT even if that font is unavailable and the text paints as a plain system face.
+
 ## LABELING SIGNAL per class (lead requirement - judge from what a human would)
 Most of these idioms are VISUAL gestalt judgments. Judging them from HTML/CSS text alone forces the labeler
 to mentally-render the CSS - the exact unreliability the objective labeler was rebuilt (rendered, not regex)
@@ -54,13 +60,21 @@ as the primary signal, with the page markup as a secondary signal. Per class:
 - VISUAL (primary signal = SCREENSHOT): cream-palette, ai-color-palette, hero-eyebrow-chip,
   repeated-section-kickers, numbered-section-markers, icon-tile-stack, italic-serif-display, nested-cards,
   side-stripe-borders, glassmorphism-default, hero-metric-template, gradient-text, dark-glow, tiny-text,
-  wide-tracking, all-caps-body, tight-leading, extreme-negative-tracking. The labeler looks at the rendered
-  page and judges appearance - never parses CSS to infer it.
+  wide-tracking, all-caps-body, tight-leading, extreme-negative-tracking. The labeler looks
+  at the rendered page and judges appearance - never parses CSS to infer it.
 - TEXTUAL (primary signal = page TEXT): marketing-buzzword, aphoristic-cadence. Judged from the copy.
 - MOTION (signal = the animation/transition character in the markup): layout-transition, bounce-easing.
   A static screenshot cannot show motion, so these are judged from the page's motion declarations - this is
   NOT detection logic (it's "does the page have bouncy / size-shifting motion"), and it must not borrow the
   architect's specific rule.
+- TYPEFACE (signal = the page's declared font-family stacks): default-typeface. This class is about what the
+  page REQUESTS, not what it paints, so a screenshot is the WRONG signal for it: the hermetic render blocks
+  webfonts, so a page that deliberately names a custom family still paints as a plain system face, and a
+  screenshot-only labeler reads that as "default" when the page in fact chose a typeface. (Recorded 2026-07-24:
+  the first A5a pass labeled this class from screenshots and flipped six deliberately-branded fixtures to
+  present, because they name fictional families that paint as generic system sans.) So it is judged from the
+  page's declared font-family declarations. This is NOT detection logic - the labeler is asked "does the page
+  ever ask for a chosen typeface for its content text", not to apply any share threshold or selector rule.
 The labeling model MUST actually SEE the screenshot (vision-capable) - verify on known visual cases before
 the full run (a known cream/gradient page -> present from the screenshot; a known plain page -> absent).
 

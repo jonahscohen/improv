@@ -22,5 +22,7 @@
   "gradient-text": ["sidecoach-architect"],
   "marketing-buzzword": ["sidecoach-architect"],
   "aphoristic-cadence": ["sidecoach-architect"],
-  "dark-glow": ["sidecoach-architect"]
+  "dark-glow": ["sidecoach-architect"],
+  "_stage4a_note": "default-typeface (Stage 4a, 2026-07-23) is authored by the teammate 'font-class', so that name is registered here and the freeze gate REJECTS any default-typeface label whose labeledBy is font-class. NOTE: no Codex subjective label for this class exists yet - the 22-class rubric predates it - so the A5a taste-detection gate cannot be graded for default-typeface until the lead runs a Codex labeling pass over an extended rubric. The class ships with fixture recall + a real-page precision measurement instead, and that limit is stated rather than papered over.",
+  "default-typeface": ["font-class"]
 }

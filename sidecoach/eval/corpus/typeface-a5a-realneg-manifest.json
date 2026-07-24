@@ -1,0 +1,54 @@
+{
+  "generatedUtc": null,
+  "note": "default-typeface A5a REAL NEGATIVES: register-diverse real shipped dev-corpus pages (all chose a typeface); precision set.",
+  "pages": [
+    {
+      "id": "overreacted",
+      "failed": false
+    },
+    {
+      "id": "martinfowler",
+      "failed": false
+    },
+    {
+      "id": "postgres-docs",
+      "failed": false
+    },
+    {
+      "id": "redis-docs",
+      "failed": false
+    },
+    {
+      "id": "nextjs-docs",
+      "failed": false
+    },
+    {
+      "id": "census",
+      "failed": false
+    },
+    {
+      "id": "nasa",
+      "failed": false
+    },
+    {
+      "id": "ghost",
+      "failed": false
+    },
+    {
+      "id": "linear",
+      "failed": false
+    },
+    {
+      "id": "supabase",
+      "failed": false
+    },
+    {
+      "id": "framer",
+      "failed": false
+    },
+    {
+      "id": "raycast",
+      "failed": false
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "generatedUtc": null,
+  "note": "default-typeface A5a fixtures (5 constructed positives p*, 6 branded negatives n*).",
+  "pages": [
+    {
+      "id": "n01-branded-body",
+      "failed": false
+    },
+    {
+      "id": "n02-brand-body-system-code-and-table",
+      "failed": false
+    },
+    {
+      "id": "n03-brand-with-system-fallback",
+      "failed": false
+    },
+    {
+      "id": "n04-single-system-caption",
+      "failed": false
+    },
+    {
+      "id": "n05-system-chrome-branded-content",
+      "failed": false
+    },
+    {
+      "id": "n06-brand-mismatch-negative",
+      "failed": false
+    },
+    {
+      "id": "p01-unstyled",
+      "failed": false
+    },
+    {
+      "id": "p02-system-stack",
+      "failed": false
+    },
+    {
+      "id": "p03-websafe-monoculture",
+      "failed": false
+    },
+    {
+      "id": "p04-webfont-declared-never-applied",
+      "failed": false
+    },
+    {
+      "id": "p05-tailwind-defaults",
+      "failed": false
+    }
+  ]
+}
