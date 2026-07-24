@@ -13,12 +13,28 @@
 // So: a buzzword-SATURATED page fires; a long CONCRETE page with a stray buzzword or two stays low-density and does
 // NOT fire; buzzwords confined to testimonials or peripheral chrome are excluded. (v1's tight prominent-cluster rule
 // overfit a homogeneous corpus and collapsed on the held-out; v2 is calibrated on a register-diverse dev set.)
+//
+// default-typeface spec (Stage 4a): a page-level judgment that the CONTENT text is not set in a typeface anyone
+// CHOSE. Flag a page iff >= 75% of its content text (char-weighted, visible, non-peripheral) leads with a family
+// from the system/default vocabulary - or, where a committed family is KNOWN, that family carries < 25% of the
+// content text. So: a bare system stack fires, an unstyled page fires, Tailwind's untouched ui-sans-serif fires,
+// a declared-but-never-applied webfont fires; a branded page does not, a chosen face LEADING a system fallback
+// chain does not, a single caption on Arial does not, and system-stack nav/footer chrome does not.
 import { chromium } from 'playwright';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { analyzeHtmlOnBrowserSubjective, type SubjectiveRule } from '../validators/subjective-rendered-scanner';
 
-const IMPLEMENTED_RULES: SubjectiveRule[] = ['tiny-text', 'nested-cards', 'marketing-buzzword'];
-interface Fixture { name: string; html: string; expect: SubjectiveRule | null; note?: string; }
-const doc = (body: string) => `<!doctype html><html><head><meta charset="utf-8"></head><body>${body}</body></html>`;
+const IMPLEMENTED_RULES: SubjectiveRule[] = ['tiny-text', 'nested-cards', 'marketing-buzzword', 'default-typeface'];
+interface Fixture { name: string; html: string; expect: SubjectiveRule | null; note?: string; brand?: string[]; }
+// The inline fixtures below exercise tiny-text / nested-cards / marketing-buzzword, so they declare a nominal
+// CHOSEN family. Without it every one of them would also be a default-typeface positive (an unstyled page
+// computes to the UA default) and the `expect: null` negatives would fail on an unrelated class. The family is
+// never loaded, so the PAINTED text and every rendered metric are byte-identical to the unstyled case - only
+// the DECLARED stack these fixtures were never about changes.
+const doc = (body: string) => `<!doctype html><html><head><meta charset="utf-8"></head><body style="font-family:'Fixture Sans',sans-serif">${body}</body></html>`;
+const FIXTURE_DIR = path.resolve(__dirname, '..', '..', 'eval', 'fixtures', 'default-typeface');
+const face = (file: string) => readFileSync(path.join(FIXTURE_DIR, file), 'utf8');
 // ~75-char sentence; repeat to clear the 200-char min-content guard with realistic running text.
 const S = 'This is a running body sentence with clearly more than six words of text. ';
 // CONCRETE filler (zero buzzwords): dilutes density so a stray buzzword stays below the 1.0 threshold. ~22 words.
@@ -72,6 +88,31 @@ const FIXTURES: Fixture[] = [
   { name: 'mb/single-stray-buzzword', expect: null, note: 'ONE stray buzzword diluted across substantial concrete copy stays below the density threshold', html: doc(`<main><h1 style="font-size:56px">A modern database for developers</h1><p style="font-size:16px">${CONC.repeat(6)}</p></main>`) },
   { name: 'mb/buzzwords-in-testimonial', expect: null, note: 'TESTIMONIAL exclusion: buzzword-heavy CUSTOMER QUOTE is social proof, excluded; the concrete body keeps density low', html: doc(`<main><h1 style="font-size:56px">Managed Postgres for teams</h1><blockquote class="testimonial" style="font-size:20px">This revolutionary, seamless, world-class platform supercharged our team and unlocked limitless, game-changing, best-in-class results.</blockquote><p style="font-size:16px">${CONC.repeat(3)}</p></main>`) },
   { name: 'mb/buzzwords-peripheral-only', expect: null, note: 'PERIPHERAL exclusion: a buzzword cluster in the footer is chrome, not the page copy => excluded', html: doc(`<main><h1 style="font-size:56px">Managed database for developers</h1><p style="font-size:16px">${CONC.repeat(3)}</p></main><footer style="font-size:18px">Seamless. Powerful. Revolutionary. Supercharge. Effortless. World-class. Unlock. Limitless.</footer>`) },
+
+  // ---- default-typeface (Stage 4a). Fixtures live on disk so eval/typeface-calibrate.mjs scores the SAME
+  // pages this test asserts on - one fixture set, two consumers, no drift between the sweep and the gate.
+  // PRESENT (the content text is not set in a typeface anyone chose)
+  { name: 'dt/unstyled', expect: 'default-typeface', note: 'no font-family anywhere - the page renders in the UA default', html: face('p01-unstyled.html') },
+  { name: 'dt/system-stack', expect: 'default-typeface', note: 'the canonical -apple-system/BlinkMacSystemFont/Segoe UI/Roboto boilerplate - the most common default stack on the web', html: face('p02-system-stack.html') },
+  { name: 'dt/websafe-monoculture', expect: 'default-typeface', note: 'Arial body + Georgia headings + Courier code - the OS-bundled websafe monoculture, i.e. no typeface was bought or chosen', html: face('p03-websafe-monoculture.html') },
+  { name: 'dt/webfont-declared-never-applied', expect: 'default-typeface', note: 'THE RENDERED-ENGINE EDGE: the brand face is loaded via @font-face but no content selector references it, so the content renders on system-ui. A static source read sees the declaration and calls this clean; the rendered read is correct.', html: face('p04-webfont-declared-never-applied.html') },
+  { name: 'dt/tailwind-defaults', expect: 'default-typeface', note: 'untouched utility defaults (ui-sans-serif / ui-monospace) - the framework default, never overridden', html: face('p05-tailwind-defaults.html') },
+
+  // ABSENT - precision. Each is a page that HAS chosen a typeface, in a way that is easy to over-fire on.
+  { name: 'dt/branded-body', expect: null, note: 'a chosen face throughout', html: face('n01-branded-body.html') },
+  { name: 'dt/brand-body-system-code-and-table', expect: null, note: 'brand face for prose + ui-monospace code + system-ui data table - normal, deliberate mixed typography; the default share stays well under the threshold', html: face('n02-brand-body-system-code-and-table.html') },
+  { name: 'dt/brand-with-system-fallback', expect: null, note: 'the chosen face LEADS a long system fallback chain - the standard correct way to ship a webfont, and the case a naive all-families-are-system rule would still pass but a naive any-system-family rule would fail', html: face('n03-brand-with-system-fallback.html') },
+  { name: 'dt/single-system-caption', expect: null, note: 'THE EXPLICIT PRECISION CONSTRAINT: exactly ONE element on a fallback stack must not fire the page', html: face('n04-single-system-caption.html') },
+  { name: 'dt/system-chrome-branded-content', expect: null, note: 'nav + footer on the system stack (peripheral, excluded) with branded content - a very common, deliberate pattern', html: face('n05-system-chrome-branded-content.html') },
+
+  // ---- default-typeface ground (B): brand mismatch, active ONLY where a committed family is KNOWN.
+  { name: 'dt/brand-committed-and-used', expect: null, brand: ['Ostinato Sans'], note: 'the committed family IS what paints the content - the commitment landed, so no finding', html: face('n06-brand-mismatch-negative.html') },
+  { name: 'dt/brand-committed-but-absent', expect: 'default-typeface', brand: ['Verge Serif'], note: 'GROUND B: the same well-typeset page scanned against a DIFFERENT committed family. The page is set in Alluvium Sans, so the committed Verge Serif carries 0% of the content - the brand decision did not land, even though the page is not on a default stack.', html: face('n01-branded-body.html') },
+  { name: 'dt/no-brand-supplied-is-inert', expect: null, note: 'the SAME page with NO committed family supplied - ground B must be INERT, not guess at a brand', html: face('n01-branded-body.html') },
+
+  // ---- default-typeface regressions folded from the Codex review ----
+  { name: 'dt/quoted-family-containing-comma', expect: null, note: 'CODEX P2: a legal quoted family name that CONTAINS a comma. A naive split(",") reads the lead as "arial" and false-positives on a page that chose a typeface; the quote-aware splitter keeps the name whole.', html: `<!doctype html><html><head><meta charset="utf-8"></head><body style="font-family:'Arial, Sans'"><main><p>${S.repeat(6)}</p></main></body></html>` },
+  { name: 'dt/body-level-text-on-system-stack', expect: 'default-typeface', note: 'CODEX P2: text placed DIRECTLY in <body> with no wrapping element. The walk includes document.body itself, so an unstyled bare page is still counted rather than scoring zero content.', html: `<!doctype html><html><head><meta charset="utf-8"></head><body style="font-family:system-ui,sans-serif">${S.repeat(6)}</body></html>` },
 ];
 
 async function run(): Promise<void> {
@@ -80,7 +121,7 @@ async function run(): Promise<void> {
   const failures: string[] = []; let asserted = 0;
   try {
     for (const f of FIXTURES) {
-      const findings = await analyzeHtmlOnBrowserSubjective(browser, f.html, 30000);
+      const findings = await analyzeHtmlOnBrowserSubjective(browser, f.html, 30000, {}, f.brand ? { brandFamilies: f.brand } : {});
       const fired = new Set(findings.map((x) => x.rule));
       if (f.expect === null) {
         asserted++;

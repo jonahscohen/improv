@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><title>Brackish</title>
+<style>
+  /* The brand face is loaded, then never referenced by any content selector - the commitment
+     does not reach the copy. This is the ground-A case with the declared-family detail. */
+  @font-face { font-family: "Brackish Grotesk"; src: url(data:font/woff2;base64,) format("woff2"); font-weight: 400; }
+  @font-face { font-family: "Brackish Mono"; src: url(data:font/woff2;base64,) format("woff2"); font-weight: 400; }
+
+  body { font-family: system-ui, sans-serif; margin: 0; color: #101314; background: #fff; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 44px 24px; }
+  h1 { font-size: 42px; line-height: 1.1; margin: 0 0 14px; }
+  h2 { font-size: 23px; margin: 30px 0 8px; }
+  p { font-size: 17px; line-height: 1.6; margin: 0 0 15px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Brackish monitors estuary water quality</h1>
+    <p>Sensors report salinity, dissolved oxygen, and turbidity every fifteen minutes. Shellfish
+    leaseholders get an alert before a closure is posted, not after.</p>
+    <h2>The sensor</h2>
+    <p>Each buoy carries a conductivity probe, an optical dissolved-oxygen sensor, and a nephelometer
+    on a shared mast. Power comes from a small panel with a four-day battery reserve, so a stretch
+    of overcast weather does not create a gap in the record.</p>
+    <h2>Closures</h2>
+    <p>State closures are driven by rainfall totals and coliform sampling. Brackish pairs its own
+    readings with the published rainfall gauges so a leaseholder can see a closure coming a day
+    ahead and pull product early instead of losing it.</p>
+    <h2>The record</h2>
+    <p>Every reading is retained at full resolution. You can export a lease's full history as CSV
+    for a permit application, and the export carries the calibration log for each sensor that
+    contributed to it.</p>
+  </div>
+</body>
+</html>

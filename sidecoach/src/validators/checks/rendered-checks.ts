@@ -15,6 +15,7 @@ import type { ProductCheckContext, RuleVerdict } from '../check-context';
 import { pass, fail, inconclusive } from '../check-context';
 import type { ObjectiveScan, ObjectiveRule } from '../objective-rendered-scanner';
 import type { SubjectiveScan } from '../subjective-rendered-scanner';
+import { typefaceGroundOf } from '../subjective-rendered-scanner';
 
 const selectorsOf = (findings: { selector?: string }[]): string[] =>
   findings.map((f) => f.selector).filter((s): s is string => !!s);
@@ -103,6 +104,23 @@ export const checkMarketingBuzzword = (ctx: ProductCheckContext): RuleVerdict =>
         'Replace generic buzzwords (seamless, powerful, revolutionary, ...) with concrete, specific claims');
 };
 
+// default-typeface has TWO grounds and they need DIFFERENT verdict text: ground A is "no typeface was chosen"
+// (the content is on the system stack), ground B is "a typeface was chosen and it is not the committed one"
+// (the page may be set in a perfectly good face). Phrasing every finding as the default-stack story would be
+// wrong on ground B (Codex review P2), so the ground tag on the finding drives the message.
+export const checkDefaultTypeface = (ctx: ProductCheckContext): RuleVerdict => {
+  const scan: SubjectiveScan | undefined = ctx.renderedScan?.subjective;
+  if (!scan || !scan.available) return inconclusive('default-typeface needs a live rendered scan of the page', 'unsupported_runtime');
+  const hits = scan.findings.filter((f) => f.rule === 'default-typeface');
+  if (hits.length === 0) return pass('content text is set in a chosen typeface');
+  const brandMismatch = hits.every((f) => typefaceGroundOf(f.detail) === 'brand-mismatch');
+  return brandMismatch
+    ? fail('the content text is not set in the typeface the brand committed to', selectorsOf(hits),
+        'Apply the committed family to the body copy, or update the committed family if the page is right and the brand record is stale')
+    : fail('the content text is not set in a chosen typeface (it renders on the default system stack)', selectorsOf(hits),
+        'Set the content text in the typeface the brand committed to, and make sure that family actually reaches the body copy');
+};
+
 export const RENDERED_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict> = {
   'a11y/broken-image': checkBrokenImage,
   'a11y/heading-order': checkSkippedHeading,
@@ -111,4 +129,5 @@ export const RENDERED_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleV
   'a11y/color-contrast': checkLowContrast,
   'polish/tiny-text': checkTinyText,
   'polish/marketing-buzzword': checkMarketingBuzzword,
+  'polish/default-typeface': checkDefaultTypeface,
 };

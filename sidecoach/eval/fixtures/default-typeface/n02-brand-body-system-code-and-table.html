@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><title>Ferrule - API</title>
+<style>
+  @font-face { font-family: "Ferrule Display"; src: url(data:font/woff2;base64,) format("woff2"); }
+  body { font-family: "Ferrule Display", sans-serif; margin: 0; color: #14161a; background: #fff; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 44px 24px; }
+  h1 { font-size: 38px; margin: 0 0 12px; }
+  h2 { font-size: 22px; margin: 28px 0 8px; }
+  p  { font-size: 16px; line-height: 1.65; margin: 0 0 14px; }
+  /* Deliberate, normal choices: code on the system mono stack, a dense data table on system-ui. */
+  pre, code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; }
+  table { font-family: system-ui, sans-serif; font-size: 14px; border-collapse: collapse; }
+  td, th { border: 1px solid #e5e7eb; padding: 6px 10px; text-align: left; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Ferrule API</h1>
+    <p>Ferrule exposes a single REST surface for creating, listing, and cancelling shipments. Every
+    endpoint takes and returns JSON, and every response carries the request id in a header so a
+    support ticket can be traced without you pasting a payload.</p>
+    <h2>Authentication</h2>
+    <p>Send your key as a bearer token. Keys are scoped to one environment and can be rotated without
+    downtime: the old key stays valid for one hour after a rotation, and both keys appear in the audit
+    log so you can confirm the cutover completed before the window closes.</p>
+    <pre><code>curl -H "Authorization: Bearer $KEY" https://api.example.test/v1/shipments</code></pre>
+    <h2>Rate limits</h2>
+    <p>Limits are per key and per endpoint family. A request that exceeds the limit is rejected with a
+    retry-after header rather than queued, so a runaway loop fails fast instead of building a backlog
+    you cannot see. The published numbers are floors, not targets.</p>
+    <table>
+      <tr><th>Endpoint family</th><th>Requests per minute</th><th>Burst</th></tr>
+      <tr><td>reads</td><td>600</td><td>120</td></tr>
+      <tr><td>writes</td><td>120</td><td>30</td></tr>
+      <tr><td>bulk exports</td><td>6</td><td>2</td></tr>
+    </table>
+    <h2>Versioning</h2>
+    <p>The version lives in the path. A version stays supported for eighteen months after its successor
+    ships, and breaking changes never land inside a version. Additive fields can appear at any time, so
+    parse defensively and ignore what you do not recognize.</p>
+  </div>
+</body>
+</html>

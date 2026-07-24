@@ -26,8 +26,8 @@ import { chromium } from 'playwright';
 import type { Browser } from 'playwright';
 import { inPageObjective } from './objective-rendered-scanner';
 import type { ObjectiveScan } from './objective-rendered-scanner';
-import { inPageSubjective, inPageBuzzword, buzzwordFindingFromScore } from './subjective-rendered-scanner';
-import type { SubjectiveScan } from './subjective-rendered-scanner';
+import { inPageSubjective, inPageBuzzword, buzzwordFindingFromScore, inPageTypeface, typefaceFindingFromScore } from './subjective-rendered-scanner';
+import type { SubjectiveScan, TypefaceFindingOptions } from './subjective-rendered-scanner';
 import { isSubresourceAllowed } from './browser-evidence-collector';
 
 /** Both detector families from ONE rendered pass of a live renderUrl. Each family is independently fail-closed. */
@@ -43,6 +43,10 @@ export interface LiveScanOptions {
   timeoutMs?: number;
   /** TEST-ONLY seam: inject a browser launcher for deterministic tests without a real Chromium. */
   launcher?: () => Promise<Browser>;
+  /** default-typeface brand-mismatch input (Stage 4a). Ground (B) of the class is INERT unless a committed
+   *  family is supplied; nothing on the live path reads PRODUCT.md yet, so the live scan runs ground (A)
+   *  (default stack) only. The option exists so a later PRODUCT.md/DESIGN.md wiring has a seam to fill. */
+  typeface?: TypefaceFindingOptions;
 }
 
 class AbortError extends Error {}
@@ -113,6 +117,9 @@ export async function scanRenderedLive(
       // calibration harness use, so the live NL workflow surfaces exactly what ships).
       const buzz = buzzwordFindingFromScore(await race(page.evaluate(inPageBuzzword), 'evaluate'));
       if (buzz) findings.push(buzz);
+      // default-typeface (Stage 4a) via the SAME single-source split: in-page score, Node-side threshold.
+      const face = typefaceFindingFromScore(await race(page.evaluate(inPageTypeface), 'evaluate'), opts.typeface ?? {});
+      if (face) findings.push(face);
       subjective = { available: true, findings };
     }
     catch (e) { if (e instanceof AbortError) throw e; subjective = { available: false, reason: reason(e) }; }

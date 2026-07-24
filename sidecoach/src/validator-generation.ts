@@ -40,6 +40,7 @@ export const RENDERED_BACKED_RULE_IDS = new Set([
   'a11y.color-contrast',
   'polish.tiny-text',
   'polish.marketing-buzzword',
+  'polish.default-typeface',
 ]);
 
 // Evidence kinds the browser-evidence collector actually produces. An allowlisted
