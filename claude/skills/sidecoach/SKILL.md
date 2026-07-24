@@ -51,7 +51,7 @@ Source of truth: `sidecoach/src/lanes.generated.ts` (generated task registry), `
 **Before doing any design work**, run the Sidecoach engine and use its output as your implementation plan:
 
 ```bash
-node /Users/spare3/Documents/Github/improv/sidecoach/bin/sidecoach-monitor.js "/sidecoach <command> <target>"
+sidecoach-monitor "/sidecoach <command> <target>"
 ```
 
 Always invoke the monitor with `--json` and consume the structured fields. The monitor RENDERS the executive report itself - `renderedReport` in the JSON (also the bare run's stdout). On text surfaces print `renderedReport` VERBATIM; do not rebuild, wrap, or summarize it. On rich surfaces (Desktop, web/Cowork, sidebar) render the same content as a visualizer artifact from the structured fields. (`renderedPanel` still exists as a compat alias of the same string for the postresponse hook - never reference it yourself.)
@@ -65,7 +65,7 @@ Always invoke the monitor with `--json` and consume the structured fields. The m
 **Template for every invocation** (one run: act on the structured fields yourself, print the engine-rendered report):
 
 ```bash
-RESULT=$(node /Users/spare3/Documents/Github/improv/sidecoach/bin/sidecoach-monitor.js "$UTTERANCE" --json)
+RESULT=$(sidecoach-monitor "$UTTERANCE" --json)
 echo "$RESULT" | node -e "
   const r = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
   if (r.renderedReport) console.log(r.renderedReport);  // the executive report - print verbatim

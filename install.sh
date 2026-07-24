@@ -1679,6 +1679,7 @@ deactivate_sidecoach() {
     [ -L "$CLAUDE_DIR/hooks/$f" ] && rm -f "$CLAUDE_DIR/hooks/$f"
   done
   [ -L "$HOME/.local/bin/sidecoach" ] && rm -f "$HOME/.local/bin/sidecoach"
+  [ -L "$HOME/.local/bin/sidecoach-monitor" ] && rm -f "$HOME/.local/bin/sidecoach-monitor"
   # Remove sidecoach hook entries from settings.json
   if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
     python3 -c "
@@ -4682,9 +4683,15 @@ if picked sidecoach; then
   chmod +x "$REPO_DIR/sidecoach/bin/sidecoach.js"
   mkdir -p "$HOME/.local/bin"
   ln -sf "$REPO_DIR/sidecoach/bin/sidecoach.js" "$HOME/.local/bin/sidecoach"
+  # The SKILL invokes the monitor by BARE NAME (`sidecoach-monitor "<utterance>" --json`).
+  # It used to hardcode this machine's absolute repo path, which made the skill
+  # non-portable to any other checkout (2026-06-23 distributability gap GAP4).
+  # Same symlink treatment as the CLI above, so the bare name resolves anywhere.
+  chmod +x "$REPO_DIR/sidecoach/bin/sidecoach-monitor.js"
+  ln -sf "$REPO_DIR/sidecoach/bin/sidecoach-monitor.js" "$HOME/.local/bin/sidecoach-monitor"
   case ":$PATH:" in
     *":$HOME/.local/bin:"*) : ;;
-    *) warn "~/.local/bin is not on PATH - add it to use the \`sidecoach\` CLI" ;;
+    *) warn "~/.local/bin is not on PATH - add it to use the \`sidecoach\` CLI and the \`sidecoach-monitor\` the SKILL invokes" ;;
   esac
 
   # NORMALIZE ONLY - the ADD half of this block moved to install_app_hooks/app-wirings.json
