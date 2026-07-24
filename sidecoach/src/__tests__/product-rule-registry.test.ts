@@ -4,8 +4,13 @@ import {
   EVIDENCE_SOURCE_COMPATIBILITY, sourceKindsForEvidence, isStaticallySatisfiable,
   SEVERITY_TABLE,
 } from '../product-rule-types';
-import { RULES, getRule, getRuleById, resolveSourceAlias } from '../product-rule-registry';
+import {
+  RULES, getRule, getRuleById, resolveSourceAlias,
+  resolveRenderedRule, renderedScannerRules, listRenderedManifest,
+} from '../product-rule-registry';
 import { supportedKindsFor } from '../validators/source-support-matrix';
+import { OBJECTIVE_RULES } from '../validators/objective-rendered-scanner';
+import { SUBJECTIVE_RULES } from '../validators/subjective-rendered-scanner';
 
 function run() {
   const blocker: CanonicalSeverity = 'blocker';
@@ -133,7 +138,7 @@ run();
   const a11y: Row[] = [
     { ruleId: 'a11y.focus-visible', sourceRuleAliases: ['polish-standard:18', 'POLISH_018'], canonicalRuleKey: 'a11y/focus-visible', ownerValidatorId: 'static-a11y', sourceVocabulary: 'polish-extended-antipattern', sourceSeverity: 'critical', severity: 'blocker', findingClass: 'a11y', registryScope: 'keyboard-accessibility-floor', evidenceRequirements: ['css-rule'], supportedSourceKinds: supportedKindsFor('css-rule'), scope: 'file', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'not_applicable' },
     { ruleId: 'a11y.min-hit-area', sourceRuleAliases: ['polish-standard:5', 'POLISH_005'], canonicalRuleKey: 'a11y/min-hit-area', ownerValidatorId: 'static-a11y', sourceVocabulary: 'polish-extended-antipattern', sourceSeverity: 'critical', severity: 'blocker', findingClass: 'a11y', registryScope: 'touch-target-floor', evidenceRequirements: ['dom'], supportedSourceKinds: supportedKindsFor('dom'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
-    { ruleId: 'a11y.color-contrast', sourceRuleAliases: ['polish-standard:20', 'POLISH_020'], canonicalRuleKey: 'a11y/color-contrast', ownerValidatorId: 'static-a11y', sourceVocabulary: 'polish-extended-antipattern', sourceSeverity: 'critical', severity: 'blocker', findingClass: 'a11y', registryScope: 'contrast-floor', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: supportedKindsFor('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
+    { ruleId: 'a11y.color-contrast', sourceRuleAliases: ['polish-standard:20', 'POLISH_020', 'rendered-scanner:low-contrast'], canonicalRuleKey: 'a11y/color-contrast', ownerValidatorId: 'static-a11y', sourceVocabulary: 'polish-extended-antipattern', sourceSeverity: 'critical', severity: 'blocker', findingClass: 'a11y', registryScope: 'contrast-floor', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: supportedKindsFor('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
     { ruleId: 'a11y.broken-image', sourceRuleAliases: ['rendered-scanner:broken-image'], canonicalRuleKey: 'a11y/broken-image', ownerValidatorId: 'static-a11y', sourceVocabulary: 'rendered-scanner', sourceSeverity: 'high', severity: 'major', findingClass: 'a11y', registryScope: 'rendered-broken-image', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: supportedKindsFor('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
     { ruleId: 'a11y.skipped-heading', sourceRuleAliases: ['rendered-scanner:skipped-heading'], canonicalRuleKey: 'a11y/heading-order', ownerValidatorId: 'static-a11y', sourceVocabulary: 'rendered-scanner', sourceSeverity: 'high', severity: 'major', findingClass: 'a11y', registryScope: 'rendered-heading-order', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: supportedKindsFor('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
     { ruleId: 'a11y.gray-on-color', sourceRuleAliases: ['rendered-scanner:gray-on-color'], canonicalRuleKey: 'a11y/gray-on-color', ownerValidatorId: 'static-a11y', sourceVocabulary: 'rendered-scanner', sourceSeverity: 'high', severity: 'major', findingClass: 'a11y', registryScope: 'rendered-gray-on-color', evidenceRequirements: ['rendered-scan'], supportedSourceKinds: supportedKindsFor('rendered-scan'), scope: 'component', narrowTargetBehavior: 'evaluate_expanded_context', applicability: 'inconclusive' },
@@ -269,4 +274,70 @@ run();
   }
 
   console.log('product-rule-registry (P4a-2 partial-static slice): OK');
+}
+
+// --- Stage 3c: the rendered-scan manifest is the SINGLE source; no orphan rendered rule ---
+// Verify-check #2: "every rule the rendered audit path can fire is present in the registry (no orphan rules)."
+// The rendered audit path (audit-rendered.ts / detect) fires exactly the rule names the two rendered SCANNERS
+// emit. Importing the scanners' own rule-name exports makes this gate track the REAL scanner surface: a scanner
+// that adds a rule name breaks this test until the registry registers it (the "one registry feeds all" guarantee).
+{
+  const scannerRules: Array<{ rule: string; lens: 'objective' | 'subjective' }> = [
+    ...OBJECTIVE_RULES.map((r) => ({ rule: r as string, lens: 'objective' as const })),
+    ...SUBJECTIVE_RULES.map((r) => ({ rule: r as string, lens: 'subjective' as const })),
+  ];
+
+  // (a) NO ORPHAN: every rule the rendered audit path can fire resolves to a registry descriptor, on the lens
+  //     the scanner emits it.
+  for (const { rule, lens } of scannerRules) {
+    const res = resolveRenderedRule(rule);
+    if (!res) throw new Error(`orphan rendered rule '${rule}' (${lens}): no registry entry - the registry is not the single source for it`);
+    if (res.lens !== lens) throw new Error(`rendered rule '${rule}' resolves to lens '${res.lens}', scanner emits it on '${lens}'`);
+  }
+
+  // (b) NO PHANTOM: every rendered manifest entry names a real scanner rule (no stale registration), and the
+  //     manifest covers EXACTLY the scanner universe - no more, no fewer.
+  const scannerRuleSet = new Set(scannerRules.map((s) => s.rule));
+  for (const name of renderedScannerRules()) {
+    if (!scannerRuleSet.has(name)) throw new Error(`rendered manifest names '${name}', which no scanner emits (stale registration)`);
+  }
+  if (renderedScannerRules().length !== scannerRules.length) {
+    throw new Error(`rendered manifest has ${renderedScannerRules().length} entries; the scanners emit ${scannerRules.length}`);
+  }
+
+  // (c) BEHAVIOUR LOCK: the blocking|warning each rendered rule resolves to must match the audit's historical
+  //     mapping (objective error-class -> blocking; justified-text + every taste rule -> warning). This pins the
+  //     Stage 3c consolidation to the pre-consolidation behaviour, so a future severity edit cannot silently
+  //     change what the audit blocks on without failing this gate.
+  const EXPECTED_BLOCKING: Record<string, boolean> = {
+    'broken-image': true, 'skipped-heading': true, 'low-contrast': true, 'gray-on-color': true,
+    'justified-text': false,
+    'tiny-text': false, 'nested-cards': false, 'marketing-buzzword': false, 'default-typeface': false,
+  };
+  for (const { rule } of scannerRules) {
+    const res = resolveRenderedRule(rule)!;
+    if (!(rule in EXPECTED_BLOCKING)) throw new Error(`no behaviour-lock expectation recorded for rendered rule '${rule}'`);
+    if (res.blocking !== EXPECTED_BLOCKING[rule]) {
+      throw new Error(`rendered rule '${rule}' resolves blocking=${res.blocking}, audit behaviour requires ${EXPECTED_BLOCKING[rule]}`);
+    }
+  }
+
+  // (d) nested-cards is registered AUDIT-ONLY: present for lookup, but NOT a validator-owned decision rule - so it
+  //     is never forced into the rendered decision path (RENDERED_BACKED_RULE_IDS via the inverse invariant),
+  //     which would change what run-validator fires. getRuleById must not find it as a RAW_RULE.
+  const nc = resolveRenderedRule('nested-cards')!;
+  if (nc.source !== 'audit-only' || nc.ruleId !== null) throw new Error('nested-cards must resolve as audit-only with no decision ruleId');
+  if (getRuleById('polish.nested-cards')) throw new Error('nested-cards must NOT be a validator-owned RAW_RULE (it would change run-validator behaviour)');
+
+  // (e) ALIAS CONSISTENCY: a validator-owned binding whose rule carries a rendered-scanner:<name> alias must
+  //     agree with the manifest (the alias and the manifest are the same binding, stated in two places).
+  for (const m of listRenderedManifest()) {
+    if (!m.ruleId) continue;
+    const viaAlias = resolveSourceAlias(`rendered-scanner:${m.scannerRule}`);
+    if (viaAlias && viaAlias.canonicalRuleKey !== m.canonicalRuleKey) {
+      throw new Error(`rendered-scanner:${m.scannerRule} alias -> ${viaAlias.canonicalRuleKey}, but the manifest maps it -> ${m.canonicalRuleKey}`);
+    }
+  }
+
+  console.log('product-rule-registry (Stage 3c rendered manifest - no orphan / no phantom / behaviour lock): OK');
 }

@@ -21,6 +21,7 @@
 import { scanRenderedLive } from './validators/rendered-live-scan';
 import type { RenderedScanCollection, LiveScanOptions } from './validators/rendered-live-scan';
 import { loadCommittedFontFamilies } from './project-context';
+import { resolveRenderedRule } from './product-rule-registry';
 
 export type RenderedAuditVerdict = 'clean' | 'warnings-only' | 'blocked' | 'inconclusive';
 
@@ -110,12 +111,16 @@ export async function runRenderedAudit(
   const obj = collection.objective;
   if (obj.available) {
     for (const f of obj.findings) {
+      // Resolve blocking|warning through the registry (Stage 3c single source). The registry's canonical
+      // severity for every objective rule agrees with the scanner's own error/warning tag - broken-image,
+      // skipped-heading, low-contrast and gray-on-color are blocking; justified-text is a warning - so this is
+      // behaviour-preserving. The inline error/warning map is the fallback for a finding the registry has not
+      // (yet) registered, so an unregistered rule can never be silently dropped or downgraded.
+      const res = resolveRenderedRule(f.rule);
       findings.push({
         rule: f.rule,
         lens: 'objective',
-        // objective 'error' (contrast, broken-image, skipped-heading) is blocking;
-        // 'warning' (justified-text) is a warning.
-        severity: f.severity === 'error' ? 'blocking' : 'warning',
+        severity: res ? (res.blocking ? 'blocking' : 'warning') : (f.severity === 'error' ? 'blocking' : 'warning'),
         selector: f.selector,
         detail: f.detail,
       });
@@ -127,8 +132,11 @@ export async function runRenderedAudit(
   const subj = collection.subjective;
   if (subj.available) {
     for (const f of subj.findings) {
-      // taste findings (tiny-text, nested-cards, marketing-buzzword) are warnings.
-      findings.push({ rule: f.rule, lens: 'subjective', severity: 'warning', selector: f.selector, detail: f.detail });
+      // Resolve through the registry (Stage 3c single source). Every subjective/taste rule is non-blocking
+      // (minor) - tiny-text, nested-cards, marketing-buzzword, default-typeface - so this resolves to 'warning',
+      // identical to the prior inline rule; 'warning' stays the fallback for an unregistered taste finding.
+      const res = resolveRenderedRule(f.rule);
+      findings.push({ rule: f.rule, lens: 'subjective', severity: res ? (res.blocking ? 'blocking' : 'warning') : 'warning', selector: f.selector, detail: f.detail });
     }
   } else {
     unavailableReasons.push(`subjective lens unavailable: ${subj.reason}`);

@@ -1,5 +1,6 @@
 // sidecoach/src/product-rule-registry.ts
-import type { ProductRuleDefinition, ProductRuleResult } from './product-rule-types';
+import type { ProductRuleDefinition, ProductRuleResult, CanonicalSeverity } from './product-rule-types';
+import { isBlocking } from './product-rule-types';
 import { supportedKindsFor } from './validators/source-support-matrix';
 import { CHECKS, missingCheck } from './validators/checks';
 import { stampResult } from './validators/check-context';
@@ -399,7 +400,10 @@ const RAW_RULES: ProductRuleDefinition[] = [
     // is orphaned (no live rule reads ctx.contrast). DETECTION-PRESERVING for eval: the eval calls the scanner
     // directly, not the registry, so frozen-90 numbers are unchanged.
     ruleId: 'a11y.color-contrast',
-    sourceRuleAliases: ['polish-standard:20', 'POLISH_020'],
+    // rendered-scanner:low-contrast makes the scanner-emitted rule name resolvable to this rule, matching the
+    // rendered-scanner:<name> alias every other rendered decision rule carries (Stage 3c consolidation). The
+    // rendered scanner emits 'low-contrast'; checkLowContrast (rendered-checks.ts) drives THIS rule from it.
+    sourceRuleAliases: ['polish-standard:20', 'POLISH_020', 'rendered-scanner:low-contrast'],
     canonicalRuleKey: 'a11y/color-contrast',
     ownerValidatorId: 'static-a11y',
     sourceVocabulary: 'polish-extended-antipattern',
@@ -807,4 +811,111 @@ export function getRuleById(ruleId: string): ProductRuleDefinition | null {
 }
 export function resolveSourceAlias(sourceId: string): ProductRuleDefinition | null {
   return RULES.find((r) => r.sourceRuleAliases.includes(sourceId)) ?? null;
+}
+
+/* ======================= rendered-scan manifest (Stage 3c registry consolidation) ======================= */
+//
+// The SINGLE lookup mapping every rule name the rendered SCANNERS emit (objective-rendered-scanner's
+// ObjectiveRule + subjective-rendered-scanner's SubjectiveRule) to its registry descriptor: canonical severity,
+// lens, finding class, and the validator-owned decision rule that consumes it. Before Stage 3c, audit-rendered.ts
+// and bin/sidecoach-detect.js each decided a rendered finding's blocking/warning severity with their own inline
+// rule (objective 'error' -> blocking, everything else -> warning). This manifest is that decision's single
+// source of truth, so adding a rendered rule updates every surface that resolves through it.
+//
+// Two kinds of entry:
+//   - validator-owned : a live decision rule (RENDERED_BACKED_RULE_IDS), promoted-required when a renderUrl is
+//                       present. Its severity/findingClass are read from the RAW_RULE via getRuleById - never
+//                       duplicated here - so the manifest can never drift from the rule it points at.
+//   - audit-only      : fires in the rendered audit/subjective lens but is NOT a validator-owned decision rule.
+//                       nested-cards is the only such rule today: the subjective scanner emits it and the audit
+//                       surfaces it, but no run-validator rule consumes it. It is DELIBERATELY not modeled as a
+//                       rendered-scan RAW_RULE, because the inverse invariant (validator-generation.ts) would
+//                       then force it into RENDERED_BACKED_RULE_IDS and promote it to a required decision rule -
+//                       changing what run-validator fires. Registering it here keeps the registry the single
+//                       manifest for EVERY fireable rendered rule WITHOUT altering the decision path.
+//
+// The no-orphan test (product-rule-registry.test.ts) pins this manifest to the scanners' OBJECTIVE_RULES +
+// SUBJECTIVE_RULES bidirectionally: a scanner rule with no manifest entry, or a manifest entry naming no scanner
+// rule, fails the gate. That is the "one registry feeds all / no orphan rule" guarantee.
+
+export type RenderedLens = 'objective' | 'subjective';
+
+// The blocking severity set the rendered audit maps a canonical severity to blocking|warning through. It is the
+// SAME set every generated validator carries (validator-generation BLOCKING), so a rendered rule's blocking-ness
+// matches the severity the registry authored for it.
+const RENDERED_BLOCKING_SEVERITIES: CanonicalSeverity[] = ['blocker', 'major'];
+
+interface RenderedManifestEntry {
+  scannerRule: string;               // the exact `rule` string the scanner emits on a finding
+  lens: RenderedLens;                // which rendered scanner lens fires it
+  ruleId: string | null;             // the validator-owned decision rule (getRuleById), or null for audit-only
+  // audit-only descriptor (present ONLY when ruleId === null):
+  severity?: CanonicalSeverity;
+  findingClass?: string;
+  registryScope?: string;
+  note?: string;
+}
+
+const RENDERED_RULE_MANIFEST: RenderedManifestEntry[] = [
+  // objective lens (WCAG / rendered quality) - each consumes a validator-owned static-a11y rule.
+  { scannerRule: 'broken-image', lens: 'objective', ruleId: 'a11y.broken-image' },
+  { scannerRule: 'skipped-heading', lens: 'objective', ruleId: 'a11y.skipped-heading' },
+  { scannerRule: 'low-contrast', lens: 'objective', ruleId: 'a11y.color-contrast' },
+  { scannerRule: 'gray-on-color', lens: 'objective', ruleId: 'a11y.gray-on-color' },
+  { scannerRule: 'justified-text', lens: 'objective', ruleId: 'a11y.justified-text' },
+  // subjective lens (taste) - three consume a validator-owned polish-standard rule; nested-cards is audit-only.
+  { scannerRule: 'tiny-text', lens: 'subjective', ruleId: 'polish.tiny-text' },
+  { scannerRule: 'marketing-buzzword', lens: 'subjective', ruleId: 'polish.marketing-buzzword' },
+  { scannerRule: 'default-typeface', lens: 'subjective', ruleId: 'polish.default-typeface' },
+  {
+    scannerRule: 'nested-cards', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-nested-cards',
+    note: 'card-in-card taste finding surfaced by the audit/subjective lens; no run-validator consumer (audit-only)',
+  },
+];
+
+export interface RenderedRuleResolution {
+  scannerRule: string;
+  lens: RenderedLens;
+  ruleId: string | null;             // owning decision rule, or null (audit-only)
+  canonicalRuleKey: string | null;
+  severity: CanonicalSeverity;       // canonical severity (from the decision rule, or the audit-only descriptor)
+  blocking: boolean;                 // severity in the blocking set -> the audit/detect blocking|warning decision
+  findingClass: string;
+  registryScope: string;
+  source: 'validator-owned' | 'audit-only';
+}
+
+// Resolve a rendered SCANNER rule name to its registry descriptor. Returns null for a name the manifest does not
+// cover (the no-orphan test forbids that for any real scanner rule; a caller that still hits null must fall back
+// to its own honest default rather than treat the finding as absent).
+export function resolveRenderedRule(scannerRule: string): RenderedRuleResolution | null {
+  const entry = RENDERED_RULE_MANIFEST.find((m) => m.scannerRule === scannerRule);
+  if (!entry) return null;
+  if (entry.ruleId) {
+    const def = getRuleById(entry.ruleId);
+    if (!def) return null; // manifest points at a rule that no longer exists - surfaced by the no-orphan test
+    return {
+      scannerRule: entry.scannerRule, lens: entry.lens, ruleId: def.ruleId, canonicalRuleKey: def.canonicalRuleKey,
+      severity: def.severity, blocking: isBlocking(def.severity, RENDERED_BLOCKING_SEVERITIES),
+      findingClass: def.findingClass, registryScope: def.registryScope, source: 'validator-owned',
+    };
+  }
+  return {
+    scannerRule: entry.scannerRule, lens: entry.lens, ruleId: null, canonicalRuleKey: null,
+    severity: entry.severity!, blocking: isBlocking(entry.severity!, RENDERED_BLOCKING_SEVERITIES),
+    findingClass: entry.findingClass!, registryScope: entry.registryScope!, source: 'audit-only',
+  };
+}
+
+// Every rendered scanner rule name the registry knows about (the manifest's key set), for a completeness cross-check.
+export function renderedScannerRules(): string[] {
+  return RENDERED_RULE_MANIFEST.map((m) => m.scannerRule);
+}
+
+// The full resolved rendered manifest, for enumeration (--list-rules) and the no-orphan test.
+export function listRenderedManifest(): RenderedRuleResolution[] {
+  return RENDERED_RULE_MANIFEST
+    .map((m) => resolveRenderedRule(m.scannerRule))
+    .filter((r): r is RenderedRuleResolution => r !== null);
 }

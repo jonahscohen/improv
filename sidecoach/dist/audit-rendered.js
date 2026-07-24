@@ -25,6 +25,7 @@ exports.runRenderedAudit = runRenderedAudit;
 // actually scanned the page.
 const rendered_live_scan_1 = require("./validators/rendered-live-scan");
 const project_context_1 = require("./project-context");
+const product_rule_registry_1 = require("./product-rule-registry");
 // An http(s) URL, localhost[:port][/path], or an ipv4[:port][/path]. Deliberately
 // conservative - a non-URL target (a file path, a component name) is left to the flow chain.
 const URL_RE = /^(https?:\/\/\S+|localhost(:\d+)?(\/\S*)?|(\d{1,3}\.){3}\d{1,3}(:\d+)?(\/\S*)?)$/i;
@@ -73,12 +74,16 @@ async function runRenderedAudit(target, deps = {}) {
     const obj = collection.objective;
     if (obj.available) {
         for (const f of obj.findings) {
+            // Resolve blocking|warning through the registry (Stage 3c single source). The registry's canonical
+            // severity for every objective rule agrees with the scanner's own error/warning tag - broken-image,
+            // skipped-heading, low-contrast and gray-on-color are blocking; justified-text is a warning - so this is
+            // behaviour-preserving. The inline error/warning map is the fallback for a finding the registry has not
+            // (yet) registered, so an unregistered rule can never be silently dropped or downgraded.
+            const res = (0, product_rule_registry_1.resolveRenderedRule)(f.rule);
             findings.push({
                 rule: f.rule,
                 lens: 'objective',
-                // objective 'error' (contrast, broken-image, skipped-heading) is blocking;
-                // 'warning' (justified-text) is a warning.
-                severity: f.severity === 'error' ? 'blocking' : 'warning',
+                severity: res ? (res.blocking ? 'blocking' : 'warning') : (f.severity === 'error' ? 'blocking' : 'warning'),
                 selector: f.selector,
                 detail: f.detail,
             });
@@ -90,8 +95,11 @@ async function runRenderedAudit(target, deps = {}) {
     const subj = collection.subjective;
     if (subj.available) {
         for (const f of subj.findings) {
-            // taste findings (tiny-text, nested-cards, marketing-buzzword) are warnings.
-            findings.push({ rule: f.rule, lens: 'subjective', severity: 'warning', selector: f.selector, detail: f.detail });
+            // Resolve through the registry (Stage 3c single source). Every subjective/taste rule is non-blocking
+            // (minor) - tiny-text, nested-cards, marketing-buzzword, default-typeface - so this resolves to 'warning',
+            // identical to the prior inline rule; 'warning' stays the fallback for an unregistered taste finding.
+            const res = (0, product_rule_registry_1.resolveRenderedRule)(f.rule);
+            findings.push({ rule: f.rule, lens: 'subjective', severity: res ? (res.blocking ? 'blocking' : 'warning') : 'warning', selector: f.selector, detail: f.detail });
         }
     }
     else {

@@ -4,6 +4,10 @@ exports.RULES = void 0;
 exports.getRule = getRule;
 exports.getRuleById = getRuleById;
 exports.resolveSourceAlias = resolveSourceAlias;
+exports.resolveRenderedRule = resolveRenderedRule;
+exports.renderedScannerRules = renderedScannerRules;
+exports.listRenderedManifest = listRenderedManifest;
+const product_rule_types_1 = require("./product-rule-types");
 const source_support_matrix_1 = require("./validators/source-support-matrix");
 const checks_1 = require("./validators/checks");
 const check_context_1 = require("./validators/check-context");
@@ -398,7 +402,10 @@ const RAW_RULES = [
         // is orphaned (no live rule reads ctx.contrast). DETECTION-PRESERVING for eval: the eval calls the scanner
         // directly, not the registry, so frozen-90 numbers are unchanged.
         ruleId: 'a11y.color-contrast',
-        sourceRuleAliases: ['polish-standard:20', 'POLISH_020'],
+        // rendered-scanner:low-contrast makes the scanner-emitted rule name resolvable to this rule, matching the
+        // rendered-scanner:<name> alias every other rendered decision rule carries (Stage 3c consolidation). The
+        // rendered scanner emits 'low-contrast'; checkLowContrast (rendered-checks.ts) drives THIS rule from it.
+        sourceRuleAliases: ['polish-standard:20', 'POLISH_020', 'rendered-scanner:low-contrast'],
         canonicalRuleKey: 'a11y/color-contrast',
         ownerValidatorId: 'static-a11y',
         sourceVocabulary: 'polish-extended-antipattern',
@@ -801,5 +808,59 @@ function getRuleById(ruleId) {
 }
 function resolveSourceAlias(sourceId) {
     return exports.RULES.find((r) => r.sourceRuleAliases.includes(sourceId)) ?? null;
+}
+// The blocking severity set the rendered audit maps a canonical severity to blocking|warning through. It is the
+// SAME set every generated validator carries (validator-generation BLOCKING), so a rendered rule's blocking-ness
+// matches the severity the registry authored for it.
+const RENDERED_BLOCKING_SEVERITIES = ['blocker', 'major'];
+const RENDERED_RULE_MANIFEST = [
+    // objective lens (WCAG / rendered quality) - each consumes a validator-owned static-a11y rule.
+    { scannerRule: 'broken-image', lens: 'objective', ruleId: 'a11y.broken-image' },
+    { scannerRule: 'skipped-heading', lens: 'objective', ruleId: 'a11y.skipped-heading' },
+    { scannerRule: 'low-contrast', lens: 'objective', ruleId: 'a11y.color-contrast' },
+    { scannerRule: 'gray-on-color', lens: 'objective', ruleId: 'a11y.gray-on-color' },
+    { scannerRule: 'justified-text', lens: 'objective', ruleId: 'a11y.justified-text' },
+    // subjective lens (taste) - three consume a validator-owned polish-standard rule; nested-cards is audit-only.
+    { scannerRule: 'tiny-text', lens: 'subjective', ruleId: 'polish.tiny-text' },
+    { scannerRule: 'marketing-buzzword', lens: 'subjective', ruleId: 'polish.marketing-buzzword' },
+    { scannerRule: 'default-typeface', lens: 'subjective', ruleId: 'polish.default-typeface' },
+    {
+        scannerRule: 'nested-cards', lens: 'subjective', ruleId: null,
+        severity: 'minor', findingClass: 'polish', registryScope: 'rendered-nested-cards',
+        note: 'card-in-card taste finding surfaced by the audit/subjective lens; no run-validator consumer (audit-only)',
+    },
+];
+// Resolve a rendered SCANNER rule name to its registry descriptor. Returns null for a name the manifest does not
+// cover (the no-orphan test forbids that for any real scanner rule; a caller that still hits null must fall back
+// to its own honest default rather than treat the finding as absent).
+function resolveRenderedRule(scannerRule) {
+    const entry = RENDERED_RULE_MANIFEST.find((m) => m.scannerRule === scannerRule);
+    if (!entry)
+        return null;
+    if (entry.ruleId) {
+        const def = getRuleById(entry.ruleId);
+        if (!def)
+            return null; // manifest points at a rule that no longer exists - surfaced by the no-orphan test
+        return {
+            scannerRule: entry.scannerRule, lens: entry.lens, ruleId: def.ruleId, canonicalRuleKey: def.canonicalRuleKey,
+            severity: def.severity, blocking: (0, product_rule_types_1.isBlocking)(def.severity, RENDERED_BLOCKING_SEVERITIES),
+            findingClass: def.findingClass, registryScope: def.registryScope, source: 'validator-owned',
+        };
+    }
+    return {
+        scannerRule: entry.scannerRule, lens: entry.lens, ruleId: null, canonicalRuleKey: null,
+        severity: entry.severity, blocking: (0, product_rule_types_1.isBlocking)(entry.severity, RENDERED_BLOCKING_SEVERITIES),
+        findingClass: entry.findingClass, registryScope: entry.registryScope, source: 'audit-only',
+    };
+}
+// Every rendered scanner rule name the registry knows about (the manifest's key set), for a completeness cross-check.
+function renderedScannerRules() {
+    return RENDERED_RULE_MANIFEST.map((m) => m.scannerRule);
+}
+// The full resolved rendered manifest, for enumeration (--list-rules) and the no-orphan test.
+function listRenderedManifest() {
+    return RENDERED_RULE_MANIFEST
+        .map((m) => resolveRenderedRule(m.scannerRule))
+        .filter((r) => r !== null);
 }
 //# sourceMappingURL=product-rule-registry.js.map

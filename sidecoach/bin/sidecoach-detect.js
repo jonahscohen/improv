@@ -41,7 +41,9 @@
  *   `inconclusive`. This is runRenderedAudit's verdict discipline, generalized over N lenses.
  *
  * OUTPUT
- *   stdout - the result JSON, always, so the exit code is never the only machine signal.
+ *   stdout - the result JSON of a SCAN, always, so the exit code is never the only machine signal.
+ *            The QUERY modes (--help, --list-rules) are the exception: they answer a question
+ *            without scanning and never emit a result JSON (see READING THE EXIT CODE below).
  *   stderr - a human-readable summary (suppress with --quiet).
  *
  * Exit codes (one per outcome class - a nonzero code always means "not certified clean"):
@@ -51,10 +53,12 @@
  *   3 = inconclusive  at least one attempted lens did not run; NEVER reported as clean
  *
  * READING THE EXIT CODE: exit 0 means clean ONLY when a result JSON was written to stdout.
- * `--help` and the load-failure path also exit without a scan, and they emit NO result JSON,
- * so a consumer must treat empty stdout as "no scan performed" rather than as a pass. Every
- * path that DID start a scan writes a JSON verdict, including the unexpected-failure path
- * (which reports inconclusive, not a usage error, because a scan was already in flight).
+ * The query modes exit 0 WITHOUT scanning: `--help` (text to stderr, empty stdout) and
+ * `--list-rules` (a rule-registry listing to stdout that is NOT a result JSON); the load-failure
+ * path also exits without a scan and emits no result JSON. A machine consumer must therefore
+ * parse stdout as a scan verdict ONLY when it did not pass a query flag - never treat --list-rules
+ * text as a pass. Every path that DID start a scan writes a JSON verdict, including the
+ * unexpected-failure path (inconclusive, not a usage error, because a scan was already in flight).
  */
 
 const fs = require('fs');
@@ -68,6 +72,8 @@ let VALIDATOR_REGISTRATIONS;
 let GENERATED_VALIDATORS;
 let SEVERITY_TABLE;
 let getRuleById;
+let RULES;
+let listRenderedManifest;
 try {
   ({ looksLikeUrl, normalizeRenderUrl, runRenderedAudit } = require('../dist/audit-rendered'));
   ({ scanContentForAbsoluteBans, scannedBanLabel } = require('../dist/absolute-ban-detector'));
@@ -75,7 +81,7 @@ try {
   ({ VALIDATOR_REGISTRATIONS } = require('../dist/flow-validation-capabilities'));
   ({ GENERATED_VALIDATORS } = require('../dist/validators.generated'));
   ({ SEVERITY_TABLE } = require('../dist/product-rule-types'));
-  ({ getRuleById } = require('../dist/product-rule-registry'));
+  ({ getRuleById, RULES, listRenderedManifest } = require('../dist/product-rule-registry'));
 } catch (err) {
   console.error('sidecoach-detect: failed to load ../dist. Run `npm run build` in sidecoach/ first.');
   console.error(err.message);
@@ -100,6 +106,7 @@ function usage() {
   console.error('                        deriving one (required to render a directory target)');
   console.error('  --no-render           skip the rendered lenses entirely');
   console.error('  --quiet               suppress the stderr summary (JSON still goes to stdout)');
+  console.error('  --list-rules          enumerate the rule registry and exit (runs no scan)');
   console.error('  -h, --help            show this help');
   console.error('');
   console.error('stdout is always the result JSON. stderr is the human summary.');
@@ -108,11 +115,41 @@ function usage() {
   console.error('A lens that did not run is NEVER clean - a partial scan with zero findings is inconclusive.');
 }
 
+// --list-rules: enumerate the SINGLE rule registry (Stage 3c consolidation). Prints the validator-owned decision
+// rules grouped by owner, then the rendered-scanner bindings (scanner rule name -> registry descriptor) that this
+// CLI and the audit resolve rendered findings through. A QUERY mode, not a scan: it writes the listing to stdout
+// and exits 0, so it never emits a result JSON and never claims a verdict.
+function printRuleList() {
+  const rendered = listRenderedManifest();
+  const lines = [];
+  lines.push(`sidecoach detect - rule registry: ${RULES.length} validator-owned rule(s), ${rendered.length} rendered-scanner binding(s)`);
+  lines.push('');
+  lines.push('VALIDATOR-OWNED RULES (resolved through the generated registry; static + browser + rendered evidence):');
+  const owners = [...new Set(RULES.map((r) => r.ownerValidatorId))].sort();
+  for (const owner of owners) {
+    const owned = RULES.filter((r) => r.ownerValidatorId === owner);
+    lines.push(`  ${owner} (${owned.length}):`);
+    for (const r of owned) {
+      lines.push(`    ${r.ruleId.padEnd(34)} ${r.severity.padEnd(9)} ${r.findingClass.padEnd(12)} ${r.evidenceRequirements.join('+').padEnd(14)} ${r.scope}`);
+    }
+  }
+  lines.push('');
+  lines.push('RENDERED-SCANNER BINDINGS (scanner rule -> registry; the single source detect + the audit resolve through):');
+  lines.push(`    ${'scannerRule'.padEnd(20)} ${'lens'.padEnd(11)} ${'severity/verdict'.padEnd(18)} maps to`);
+  for (const m of rendered) {
+    const verdict = m.blocking ? 'blocking' : 'warning';
+    const target = m.ruleId ? m.ruleId : `audit-only (${m.findingClass}/${m.registryScope})`;
+    lines.push(`    ${m.scannerRule.padEnd(20)} ${m.lens.padEnd(11)} ${`${m.severity}/${verdict}`.padEnd(18)} -> ${target}`);
+  }
+  process.stdout.write(lines.join('\n') + '\n');
+}
+
 function parseArgs(argv) {
   const args = { target: null, renderUrl: null, render: true, quiet: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '-h' || a === '--help') { usage(); process.exit(0); }
+    else if (a === '--list-rules') { printRuleList(); process.exit(EXIT_CLEAN); }
     else if (a === '--quiet') args.quiet = true;
     else if (a === '--no-render') args.render = false;
     else if (a === '--render-url') {
