@@ -989,7 +989,12 @@ class FlowExecutionEngine {
         // handled above (commandMatch.isCommand). Only an unrecognized `/sidecoach
         // <phrase>` reaches the classifier here; everything else (bare /sidecoach,
         // non-/sidecoach utterances) is 'not-addressed' and falls through unchanged.
-        const laneResolution = (0, slash_command_router_1.resolveSidecoachInput)(utterance, path.resolve(__dirname, '..', '..', 'claude', 'hooks', 'sidecoach-lanes.json'));
+        // Reads the PACKAGE-LOCAL vendored lane registry (sidecoach/data/), generated
+        // from the canonical claude/hooks/sidecoach-lanes.json at build time. Resolving
+        // package-relative (not a repo sibling) keeps sidecoach self-contained as an
+        // installed plugin: __dirname is dist/ (built) or src/ (ts-node), both one level
+        // under the package root, so '..','data' lands on sidecoach/data either way.
+        const laneResolution = (0, slash_command_router_1.resolveSidecoachInput)(utterance, path.resolve(__dirname, '..', 'data', 'sidecoach-lanes.json'));
         if (laneResolution.source === 'phrase' && laneResolution.phrase) {
             const pr = laneResolution.phrase;
             if (pr.kind === 'ROUTE' && pr.lane) {
