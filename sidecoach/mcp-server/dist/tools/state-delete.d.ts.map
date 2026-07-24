@@ -1,1 +1,0 @@
-{"version":3,"file":"state-delete.d.ts","sourceRoot":"","sources":["../../src/tools/state-delete.ts"],"names":[],"mappings":"AAMA,OAAO,EAAE,gBAAgB,EAAE,KAAK,iBAAiB,EAAE,MAAM,YAAY,CAAC;AAEtE,OAAO,KAAK,EAAE,cAAc,EAAE,WAAW,EAAE,MAAM,SAAS,CAAC;AAE3D,eAAO,MAAM,UAAU,EAAE,cAAc,CAAC,OAAO,gBAAgB,CAO9D,CAAC;AAEF,eAAO,MAAM,OAAO,EAAE,WAAW,CAAC,iBAAiB,CAiBlD,CAAC"}

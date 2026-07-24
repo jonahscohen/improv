@@ -1,20 +1,18 @@
 // ===========================================================================
 // Lane classifier (P1) - ENGINE copy.
 //
-// This is a DUPLICATE of the classifier core in
-// sidecoach/mcp-server/src/keyword-resolver.ts and a behavioral MIRROR of the
-// Python classifier in claude/hooks/sidecoach_lanes.py.
+// This is a behavioral MIRROR of the Python classifier in
+// claude/hooks/sidecoach_lanes.py - the SAME decisions in a different language.
 //
-// WHY A DUPLICATE (not a shared import): the engine (sidecoach/src) and the MCP
-// server (sidecoach/mcp-server/src) are separate TS packages, each with
-// `rootDir: ./src`. An mcp-server file importing `../../src/lane-classifier`
-// builds under ts-node but FAILS `tsc` with TS6059 (outside rootDir), which
-// would break `npm run build` in mcp-server. So each package keeps its own
-// copy. The shared parity corpus (sidecoach/parity/classifier-corpus.json) is
-// run against ALL THREE copies (this engine module, the mcp-server module, and
-// the Python module) so they cannot drift - see the *-parity tests.
+// WHY TWO COPIES (not one shared module): the production lane tier is a Python
+// hook (sidecoach-keyword.sh -> sidecoach_lanes.py); this TS module is what the
+// engine and the sidecoach CLI consume. The two languages cannot share source,
+// so they are held decision-identical by the shared parity corpus
+// (sidecoach/parity/classifier-corpus.json), run against BOTH copies (this
+// engine module and the Python module) so they cannot drift - see the
+// *-parity tests.
 //
-// Keep the function bodies below IDENTICAL to keyword-resolver.ts's lane block.
+// Keep the decision logic below in lockstep with sidecoach_lanes.py's lane logic.
 // Pure regex, no LLM/network (model-router-guard).
 // ===========================================================================
 

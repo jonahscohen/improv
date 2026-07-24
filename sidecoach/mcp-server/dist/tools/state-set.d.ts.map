@@ -1,1 +1,0 @@
-{"version":3,"file":"state-set.d.ts","sourceRoot":"","sources":["../../src/tools/state-set.ts"],"names":[],"mappings":"AAIA,OAAO,EAAE,aAAa,EAAE,KAAK,cAAc,EAAE,MAAM,YAAY,CAAC;AAEhE,OAAO,KAAK,EAAE,cAAc,EAAE,WAAW,EAAE,MAAM,SAAS,CAAC;AAE3D,eAAO,MAAM,UAAU,EAAE,cAAc,CAAC,OAAO,aAAa,CAQ3D,CAAC;AAEF,eAAO,MAAM,OAAO,EAAE,WAAW,CAAC,cAAc,CA+B/C,CAAC"}

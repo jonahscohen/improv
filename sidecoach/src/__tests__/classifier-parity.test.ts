@@ -1,9 +1,9 @@
-// Engine-side parity guard. Because the classifier core is DUPLICATED into the
-// engine (sidecoach/src/lane-classifier.ts) and the MCP server
-// (sidecoach/mcp-server/src/keyword-resolver.ts) - the two packages cannot
-// cross-import without breaking `tsc` (rootDir/TS6059) - this runs the ENGINE
-// copy against the SAME shared corpus the mcp-server + Python copies use, so all
-// three classifier copies are proven decision-identical and cannot drift.
+// Engine-side parity guard. The classifier core exists as two copies - this
+// engine module (sidecoach/src/lane-classifier.ts) and the Python hook
+// (claude/hooks/sidecoach_lanes.py) - which cannot share source across
+// languages. This runs the ENGINE copy against the SAME shared corpus the
+// Python copy uses (test_classifier_parity.py), so both copies are proven
+// decision-identical and cannot drift.
 import * as path from 'path';
 import * as assert from 'assert';
 import { loadRegistry, classifyIntent } from '../lane-classifier';

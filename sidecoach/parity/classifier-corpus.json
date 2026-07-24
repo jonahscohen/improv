@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "note": "Shared Python/TS classifier fixtures. Both sides MUST return identical outcome (+ winningLane/verbMatch where given). Run against BOTH claude/hooks/sidecoach_lanes.py (test_classifier_parity.py) AND sidecoach/mcp-server/src/keyword-resolver.ts (classifier-parity.test.ts). NUDGE_ELIGIBLE cases set eligible=true. The hook-only cooldown -> NUDGE/SILENT mapping is NOT covered here (see test-sidecoach-keyword.sh).",
+  "note": "Shared Python/TS classifier fixtures. Both sides MUST return identical outcome (+ winningLane/verbMatch where given). Run against BOTH claude/hooks/sidecoach_lanes.py (test_classifier_parity.py) AND sidecoach/src/lane-classifier.ts (classifier-parity.test.ts). NUDGE_ELIGIBLE cases set eligible=true. The hook-only cooldown -> NUDGE/SILENT mapping is NOT covered here (see test-sidecoach-keyword.sh).",
   "parityNotes": [
     "ABBREVIATION MASKING IS NOT A DIVERGENCE: Python segment_clauses masks abbreviation periods (e.g. / i.e. / etc.) with \\x00; the TS segmentClauses masks them with a space. Both are length-preserving and proven span-identical across this corpus and the unit suites. Do NOT 'fix' one side to match the other assuming a bug.",
     "Expected values are the ACTUAL verified behavior of both classifiers in P1, not aspirational. Lexicon weight calibration is out of P1 scope (spec section 3).",

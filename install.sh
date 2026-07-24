@@ -4734,28 +4734,21 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 " || warn "Could not normalize stale Sidecoach wirings - check settings.json manually"
   fi
 
-  # Build + register the sidecoach MCP server (Jonah 2026-07-15: wire it up, do
-  # not retire). Register ONLY on a successful build, and REPLACE any stale entry
-  # (e.g. the machine-specific path in sidecoach/.mcp.json) with a generated one.
-  MCP_OK=0
-  if (cd "$REPO_DIR/sidecoach/mcp-server" && npm install --silent && npm run build); then
-    MCP_OK=1
-  else
-    warn "sidecoach mcp-server build failed - run 'cd sidecoach/mcp-server && npm run build' manually"
-  fi
-  MCP_DIST="$REPO_DIR/sidecoach/mcp-server/dist/index.js"
-  if [ "$MCP_OK" = 1 ] && [ -f "$MCP_DIST" ] && command -v python3 >/dev/null 2>&1; then
-    CLAUDE_JSON="$HOME/.claude.json"
-    [ -f "$CLAUDE_JSON" ] || echo '{}' > "$CLAUDE_JSON"
+  # The sidecoach MCP server was RETIRED (Jonah 2026-07-24, reversing the 2026-07-15
+  # wire-up - the external surface was never consumed). It was built + registered here
+  # for ~9 days, so this block now REMOVES any stale mcpServers.sidecoach entry a
+  # post-2026-07-15 installer left in ~/.claude.json. Without this, a machine that
+  # registered it keeps a dead entry pointing at the deleted dist, which spawn-fails
+  # at Claude Code startup. Idempotent: rewrites only if the entry was actually present,
+  # and touches ONLY the sidecoach key.
+  if command -v python3 >/dev/null 2>&1 && [ -f "$HOME/.claude.json" ]; then
     python3 -c "
 import json
-p = '$CLAUDE_JSON'
+p = '$HOME/.claude.json'
 with open(p) as f: d = json.load(f)
-servers = d.setdefault('mcpServers', {})
-servers['sidecoach'] = {'type': 'stdio', 'command': 'node', 'args': ['$MCP_DIST'], 'env': {'SIDECOACH_MCP_LOG_LEVEL': 'info'}}
-with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-"
-    ok "Sidecoach MCP server registered in ~/.claude.json - restart Claude Code once for its tools to load"
+if d.get('mcpServers', {}).pop('sidecoach', None) is not None:
+    with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
+" || warn "Could not remove the retired Sidecoach MCP registration from ~/.claude.json - remove the 'sidecoach' entry under mcpServers manually"
   fi
 
   ok "Sidecoach installed"

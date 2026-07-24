@@ -40,8 +40,8 @@
 
 // ---------------------------------------------------------------------------
 // Load the compiled orchestrator modules. These are the SAME dist/ artifacts
-// the MCP server (sidecoach/mcp-server) and the in-session orchestrator read.
-// If they are missing the project has not been built yet.
+// the in-session orchestrator reads. If they are missing the project has not
+// been built yet.
 // ---------------------------------------------------------------------------
 let parseSlashCommand;
 let VERB_REGISTRY;

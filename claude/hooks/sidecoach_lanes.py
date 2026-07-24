@@ -2,7 +2,7 @@
 
 Pure regex/Python. No LLM calls (model-router-guard). Imported by
 sidecoach-keyword.sh and by tests. The TypeScript mirror lives at
-sidecoach/mcp-server/src/keyword-resolver.ts and MUST produce identical
+sidecoach/src/lane-classifier.ts and MUST produce identical
 decisions on every fixture in sidecoach/parity/classifier-corpus.json.
 """
 import json

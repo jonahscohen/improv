@@ -11,13 +11,11 @@ const SIDECOACH = path.resolve(__dirname, '..');
 // (t13-bench-harness, t16-bench-ledger) that only compile under
 // `--project benchmarks/tsconfig.bench.json` and FAIL under plain ts-node.
 //
-// There are THREE copies of the lane classifier (Python / mcp-server / engine)
-// kept in sync ONLY by parity tests against the shared corpus. The runner MUST
-// run BOTH TS parity suites + the slash-phrase guard, or a copy drifts unguarded.
-// The mcp-server parity suite lives in a DIFFERENT package, so it runs with
-// cwd=mcp-server (its own tsconfig + ts-node). NOTE: mcp-server's own `npm test`
-// does NOT cover it - that runner globs mcp-server/__tests__/, not
-// mcp-server/src/__tests__/ - which is exactly why this runner reaches it here.
+// There are TWO copies of the lane classifier (Python hook / engine TS), kept
+// in sync ONLY by parity tests against the shared corpus. This runner MUST run
+// the engine TS parity suite + the slash-phrase guard, or the engine copy drifts
+// unguarded. The Python copy has its own separate guard,
+// claude/hooks/test_classifier_parity.py, not run here.
 //
 // Forward-declared lane suites (created in later plan tasks) are SKIPPED-with-
 // warning until they exist; REQUIRED suites hard-fail (exit nonzero) if missing.
@@ -37,7 +35,6 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/classifier-parity.test.ts', required: true },                     // engine classifier copy guard (Task 7/8)
   { rel: 'src/__tests__/slash-phrase.test.ts', required: true },                          // /sidecoach phrase union + near-miss (Task 8)
   { rel: 'src/__tests__/executive-report.test.ts', required: true },                      // executive-report renderer contract (Jonah 2026-07-04)
-  { rel: 'mcp-server/src/__tests__/classifier-parity.test.ts', cwd: 'mcp-server', required: true }, // mcp-server classifier copy guard (separate package)
   { rel: 'src/__tests__/lane-derivation.test.ts', required: true },                       // verbSteps derivation (Task 2)
   { rel: 'src/__tests__/lane-types.test.ts', required: true },
   { rel: 'src/__tests__/lane-checkpoint-store.test.ts', required: true },
