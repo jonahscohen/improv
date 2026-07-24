@@ -3,7 +3,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { DesignTokens } from './design-md-parser';
+import { DesignTokens, parseDesignMd } from './design-md-parser';
+import { SYSTEM_FONT_STACK_FAMILIES } from './reference-data';
 
 export type Register = 'brand' | 'product';
 
@@ -377,4 +378,104 @@ export function detectTechStack(projectPath: string): TechStack {
   else if (fs.existsSync(path.join(projectPath, 'bun.lockb'))) packageManager = 'bun';
   else if (fs.existsSync(path.join(projectPath, 'package-lock.json'))) packageManager = 'npm';
   return { framework, hasAnimationLib: animationLib !== null, animationLib, hasTypescript, packageManager };
+}
+
+// ===========================================================================
+// Committed font families - default-typeface Ground B live input (Stage 4b)
+// ===========================================================================
+// The rendered `default-typeface` taste class has a second ground, "brand
+// mismatch": a family the brand COMMITTED to barely paints the content text, so
+// the commitment did not land. That ground is INERT unless a caller supplies
+// the committed family. The commitment lives in DESIGN.md's typography tokens
+// (typography.<role>.family) - the one place a project names a CHOSEN typeface;
+// PRODUCT.md carries no font tokens. These helpers turn that token block into
+// the family list the scanner's Ground B seam (TypefaceFindingOptions.brandFamilies)
+// consumes.
+//
+// FAIL-CLOSED CONTRACT (the load-bearing correctness property): when nothing is
+// committed - no DESIGN.md, no typography tokens, or only system/generic
+// families - the result is []. The scanner reads an empty list as "no brand
+// declared" and Ground B never fires; a page with no committed typeface is not a
+// brand mismatch. Every failure mode below (missing file, unreadable, no YAML
+// frontmatter) collapses to [] rather than fabricating a brand.
+
+const SYSTEM_FAMILY_SET = new Set(SYSTEM_FONT_STACK_FAMILIES);
+
+// The LEADING family of a CSS font stack, quote-stripped and whitespace-collapsed.
+// The lead is the decision; everything after it is fallback - the same basis the
+// scanner scores content on. Quote-aware so a legal quoted family containing a
+// comma (e.g. "'Arial, Sans'") is kept whole instead of truncated at the comma
+// (the split(',') hazard the scanner's splitFamilies also guards). '' when the
+// stack names no family.
+function leadFamily(stack: unknown): string {
+  if (typeof stack !== 'string') return '';
+  let cur = '';
+  let quote = '';
+  for (const ch of stack) {
+    if (quote) { if (ch === quote) quote = ''; else cur += ch; continue; }
+    if (ch === '"' || ch === "'") { quote = ch; continue; }
+    if (ch === ',') break; // end of the first (leading) family
+    cur += ch;
+  }
+  return cur.trim().replace(/\s+/g, ' ');
+}
+
+/**
+ * The CONTENT families a DESIGN.md typography block commits to. Reads the LEAD
+ * family of every typography.<role>.family stack (display, body, mono, and any
+ * other role that declares a `family`; scale/weights carry none and are skipped).
+ *
+ * System/generic leads (sans-serif, system-ui, Arial, ...) are DROPPED: a
+ * "commitment" to a system stack is the ABSENCE of a chosen typeface, which is
+ * Ground A's domain, not a brand family Ground B can mismatch against. Reusing
+ * the scanner's own SYSTEM_FONT_STACK_FAMILIES keeps this classification
+ * single-sourced with the detector.
+ *
+ * Returns deduped, original-case families (so the finding message reads cleanly;
+ * the scanner lowercases for matching). [] when nothing qualifies.
+ */
+export function committedFontFamilies(typography: unknown): string[] {
+  if (!typography || typeof typography !== 'object') return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const role of Object.values(typography as Record<string, unknown>)) {
+    if (!role || typeof role !== 'object') continue;
+    const fam = leadFamily((role as Record<string, unknown>).family);
+    if (!fam) continue;
+    const key = fam.toLowerCase();
+    if (SYSTEM_FAMILY_SET.has(key)) continue; // a system stack is not a chosen brand face
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(fam);
+  }
+  return out;
+}
+
+/**
+ * Load the brand's committed font families from a project's DESIGN.md.
+ *
+ * FAIL-SAFE by construction: a missing / unreadable / frontmatter-less DESIGN.md
+ * yields [] so Ground B stays inert rather than inventing a brand. Resolves
+ * DESIGN.md at the project ROOT with the same case variants ContextLoader uses
+ * (root-only, no docs/ fallback - the validator/audit callers pass a concrete
+ * project root).
+ */
+export function loadCommittedFontFamilies(projectPath: string): string[] {
+  if (!projectPath || typeof projectPath !== 'string') return [];
+  for (const name of ['DESIGN.md', 'Design.md', 'design.md']) {
+    const abs = path.join(projectPath, name);
+    let content: string;
+    try {
+      if (!fs.existsSync(abs)) continue;
+      content = fs.readFileSync(abs, 'utf-8');
+    } catch {
+      return []; // unreadable DESIGN.md -> no brand, not a fabricated one
+    }
+    try {
+      return committedFontFamilies(parseDesignMd(content).typography);
+    } catch {
+      return []; // no YAML frontmatter / parse failure -> inert
+    }
+  }
+  return [];
 }

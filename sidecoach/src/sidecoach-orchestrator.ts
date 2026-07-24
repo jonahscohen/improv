@@ -904,7 +904,10 @@ export class FlowExecutionEngine {
       // to a guidance-only flowK that never rendered and reported a FALSE 'clean'. This
       // path is FAIL-CLOSED: a render failure is reported inconclusive, never clean.
       if (commandMatch.command === 'audit' && looksLikeUrl(commandMatch.target)) {
-        const audit = await runRenderedAudit(commandMatch.target as string);
+        // Ground B of default-typeface reads the committed family from THIS project's DESIGN.md, so the audit
+        // must be scoped to the same project root the rest of the chain uses (context.projectPath || cwd),
+        // never a blind process.cwd() that could belong to an unrelated project (Stage 4b Codex High).
+        const audit = await runRenderedAudit(commandMatch.target as string, { projectPath: context.projectPath || process.cwd() });
         return this.toRenderedAuditResult(audit, commandMatch.command);
       }
 

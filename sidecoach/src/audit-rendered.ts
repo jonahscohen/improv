@@ -19,7 +19,8 @@
 // 'inconclusive', NEVER 'clean'. A 'clean' verdict REQUIRES that at least one lens
 // actually scanned the page.
 import { scanRenderedLive } from './validators/rendered-live-scan';
-import type { RenderedScanCollection } from './validators/rendered-live-scan';
+import type { RenderedScanCollection, LiveScanOptions } from './validators/rendered-live-scan';
+import { loadCommittedFontFamilies } from './project-context';
 
 export type RenderedAuditVerdict = 'clean' | 'warnings-only' | 'blocked' | 'inconclusive';
 
@@ -88,11 +89,20 @@ export function normalizeRenderUrl(target: string): string {
  */
 export async function runRenderedAudit(
   target: string,
-  deps: { scan?: (renderUrl: string | undefined) => Promise<RenderedScanCollection> } = {}
+  deps: {
+    scan?: (renderUrl: string | undefined, signal?: AbortSignal, opts?: LiveScanOptions) => Promise<RenderedScanCollection>;
+    // default-typeface Ground B live input (Stage 4b). The committed families come from the audited project's
+    // DESIGN.md typography tokens (projectPath defaults to process.cwd() - the project being audited); a caller
+    // may inject `committedFamilies` directly for deterministic tests. Fail-closed: no committed face -> [] ->
+    // Ground B stays inert, never a false brand-mismatch on a project with no DESIGN.md.
+    projectPath?: string;
+    committedFamilies?: string[];
+  } = {}
 ): Promise<RenderedAuditResult> {
   const renderUrl = normalizeRenderUrl(target);
   const scan = deps.scan ?? scanRenderedLive;
-  const collection = await scan(renderUrl);
+  const brandFamilies = deps.committedFamilies ?? loadCommittedFontFamilies(deps.projectPath ?? process.cwd());
+  const collection = await scan(renderUrl, undefined, brandFamilies.length ? { typeface: { brandFamilies } } : undefined);
 
   const findings: RenderedAuditFinding[] = [];
   const unavailableReasons: string[] = [];

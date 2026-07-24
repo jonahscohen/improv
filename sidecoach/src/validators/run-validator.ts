@@ -21,7 +21,8 @@ import type { ProductCheckContext, CollectedFile } from './check-context';
 import { collectBrowserEvidence, renderUrlFromContext } from './browser-evidence-collector';
 import type { BrowserEvidenceCollection } from './browser-evidence-collector';
 import { scanRenderedLive } from './rendered-live-scan';
-import type { RenderedScanCollection } from './rendered-live-scan';
+import type { RenderedScanCollection, LiveScanOptions } from './rendered-live-scan';
+import { loadCommittedFontFamilies } from '../project-context';
 
 function toCheckContext(c: Collected, raw: unknown, browser?: BrowserEvidenceCollection, rendered?: RenderedScanCollection): ProductCheckContext {
   const r = raw as Partial<ProductCheckContext>;
@@ -45,8 +46,17 @@ export interface ValidatorRuntimeDeps {
   collectBrowserEvidence?: (renderUrl: string | undefined, signal?: AbortSignal) => Promise<BrowserEvidenceCollection>;
   // Per-run seam mirroring collectBrowserEvidence: production uses the real live scanner; tests inject a
   // deterministic one. Absent -> the real scanRenderedLive (which degrades to {available:false} without a
-  // renderUrl or launchable Chromium).
-  scanRenderedLive?: (renderUrl: string | undefined, signal?: AbortSignal) => Promise<RenderedScanCollection>;
+  // renderUrl or launchable Chromium). The optional third `opts` carries the default-typeface Ground B
+  // committed families (Stage 4b); an injected 2-arg double stays assignable (fewer params is fine).
+  scanRenderedLive?: (renderUrl: string | undefined, signal?: AbortSignal, opts?: LiveScanOptions) => Promise<RenderedScanCollection>;
+}
+
+// default-typeface Ground B live input (Stage 4b): the brand's committed families come from the target
+// project's DESIGN.md typography tokens. Fail-closed - an in-memory context (no projectPath) or a project
+// with no committed face yields [], and the scanner leaves Ground B inert on an empty list.
+function committedFamiliesForContext(context: unknown): string[] {
+  const c = context as { projectPath?: unknown };
+  return typeof c?.projectPath === 'string' ? loadCommittedFontFamilies(c.projectPath) : [];
 }
 
 // Promote ONLY the generated browserRuleIds whose evidence requirements are ALL
@@ -305,7 +315,10 @@ async function runDetailed(
   if (signal?.aborted) return abortedDetail(validatorId, policy);
   // ONE live rendered scan per target (objective + subjective), resolved BEFORE any rendered-scan rule runs so
   // checkProduct reads it synchronously and never launches its own browser (Codex P0-4). Fail-closed inside.
-  const rendered = await (deps.scanRenderedLive ?? scanRenderedLive)(renderUrl, signal);
+  // Ground B of default-typeface receives the project's committed families here; [] leaves it inert (Stage 4b).
+  const brandFamilies = committedFamiliesForContext(context);
+  const rendered = await (deps.scanRenderedLive ?? scanRenderedLive)(
+    renderUrl, signal, brandFamilies.length ? { typeface: { brandFamilies } } : undefined);
   if (signal?.aborted) return abortedDetail(validatorId, policy);
   const activePolicy = activateRenderedPolicy(
     activateBrowserPolicy(policy, gen, browser.available ? browser.evidence.browserEvidence.kinds : []),
