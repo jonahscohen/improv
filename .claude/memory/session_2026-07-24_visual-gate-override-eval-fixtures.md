@@ -21,5 +21,8 @@ Collaborator: Jonah. 2026-07-24.
 ## Update - 3rd recurrence -> durable fix spawned
 The gate re-fired a 3rd time in the same session (eval fixtures + `*.test.ts` writes from the parallel wave). Repeatedly clearing a flag is a workaround, not a fix, so a DURABLE narrowing was spawned as `task_03b0922e`: exclude `eval/fixtures/`, `eval/corpus/`, `*.test.*`/`*.spec.*`, and temp-dir write targets from the visual arm, PRESERVING the gate for genuine product UI, with regression cases both ways. This is the same class the hook was narrowed for on 2026-07-23 (`session_2026-07-23_verify-visual-arm-reference-narrowed.md`), a new sub-case. Not fixed inline - the hook is delicate and heavily tested, so it belongs in its own reviewed task, not a mid-wave hack.
 
+## Post-fix recurrence (confirms arm-narrow's residual gap)
+After arm-narrow's fix LANDED + committed (3be6dd62), the gate STILL armed once more during wave 3 - because a concurrent teammate wrote a scratch HTML page OUTSIDE `eval/fixtures/` (e.g. stage2a/stage4cd write a contrast-swatch / probe HTML to a nested temp or repo scratch path). arm-narrow's carve-out exempts `eval/fixtures/`|`eval/corpus/`, `*.test.*`, and DIRECT temp-root children - but NOT a scratch HTML at an arbitrary path. arm-narrow itself flagged this residual (visual scratch writes outside the anchored patterns). Standing override applied again (no product UI this session). The fuller fix (exempt a scratch/probe HTML the detector/palette WRITES to feed the scanner, wherever it lands) is a follow-up on the arm classifier - or, better, have those tools write their scanner-input HTML under an exempt path (eval/fixtures or a temp-root direct child) so the existing carve-out covers it.
+
 ## Files touched
-- this beat + MEMORY.md index. No code changed (durable fix is task_03b0922e).
+- this beat + MEMORY.md index. No code changed (durable fix is task_03b0922e; residual gap noted above).
