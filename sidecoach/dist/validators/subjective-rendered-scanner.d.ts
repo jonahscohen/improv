@@ -145,7 +145,7 @@ export declare const TYPO_MIN_CONTENT_CHARS = 200;
 export declare const TRACKING_SHARE_MIN = 0.15;
 export declare const LEADING_SHARE_MIN = 0.1;
 export declare const ALLCAPS_SHARE_MIN = 0.15;
-export declare const H1_VW_RATIO = 0.11;
+export declare const H1_VW_RATIO = 0.09;
 export declare const SUB11_MIN_CHARS = 150;
 /** Node-side: turn a typography-extremes score into 0-5 findings (one page-level verdict per firing class). The
  * ONE place these production thresholds are applied; the calibration harness sweeps the same raw score fields, so

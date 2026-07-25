@@ -67,6 +67,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/lane-convergence-preflight.test.ts', required: true },      // P4c coverage-plan preflight
   { rel: 'src/__tests__/lane-converge-e2e.test.ts', required: true },               // P4c real-fixture convergence e2e
   { rel: 'src/__tests__/t20-convergence-loop.test.ts', required: true },            // P4c renamed convergence-loop diagnostic + truthful-convergence fix
+  { rel: 'src/__tests__/domain-validation-coverage.test.ts', required: true },       // orchestrator domain-validation coverage (all execute branches) + memory-before-validation ordering
   { rel: 'src/__tests__/product-rule-registry.test.ts', required: true },
   { rel: 'src/__tests__/flow-validation-capabilities.test.ts', required: true },
   { rel: 'src/__tests__/generate-validators.test.ts', required: true },

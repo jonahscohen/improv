@@ -193,6 +193,19 @@ class FlowExecutionEngine {
             entry.aiSlopDetection = memory.aiSlopDetection;
             entry.summary = memory.summary;
         }
+        // Persist the orchestrator's domain-validation outcomes (result.validationResults, the
+        // flow-composition ValidationResult shape) so a flow's memory entry carries its domain
+        // validation results - not just the handler's self-reported memory channel. Kept under a
+        // DISTINCT key: entry.validationResults above is the { check, result, details } memory
+        // channel (consumed by session-memory-writer + build-report's memory reader), which must
+        // NOT be shape-corrupted by the { domain, status, passedRules, failedRules } shape.
+        // Callers attach the flow's DOMAIN-validation outcomes to result.validationResults BEFORE
+        // calling this method (the memory-before-validation ordering fix), so whatever is present
+        // here is snapshotted as-is. Validators appended AFTER the record call (e.g. the composite
+        // loop's post-push ClaudemdMandate) are intentionally not mirrored into memory.
+        if (Array.isArray(result.validationResults) && result.validationResults.length > 0) {
+            entry.domainValidationResults = result.validationResults;
+        }
         flowHistory.recordFlow(entry);
     }
     /**
@@ -262,8 +275,9 @@ class FlowExecutionEngine {
                         executionDuration: this.contextManager.getExecutionDuration(step.flowId),
                     };
                     this.runTasteValidationGate(step.flowId, executionContext, result);
-                    this.recordFlowWithMemory(result);
-                    // Apply automatic domain validators based on flow type (soft-fail)
+                    // Apply automatic domain validators based on flow type (soft-fail).
+                    // MUST run BEFORE recordFlowWithMemory so the persisted memory entry carries this
+                    // step's domain-validation outcomes (the memory-before-validation ordering fix).
                     if (result.status === 'success') {
                         const validatorsForFlow = (0, flow_domain_validators_1.getValidatorsForFlow)(step.flowId);
                         if (validatorsForFlow.length > 0) {
@@ -286,6 +300,9 @@ class FlowExecutionEngine {
                         // Check if any validation failed
                         const allPassed = flow_composition_1.FlowCompositionEngine.allValidationsPassed(validations);
                         if (!allPassed && step.domainValidation.failOnError) {
+                            // Persist this step's memory WITH its validation outcomes before halting, so a
+                            // failOnError halt still records the domain-validation results (ordering fix).
+                            this.recordFlowWithMemory(result);
                             // Halt composition on validation failure
                             return {
                                 success: false,
@@ -295,6 +312,8 @@ class FlowExecutionEngine {
                             };
                         }
                     }
+                    // Persist memory AFTER domain validation is attached (ordering fix).
+                    this.recordFlowWithMemory(result);
                     flowResults.push(result);
                     // Phase 6 part 2: persist a checkpoint after each successful step.
                     if (result.status === 'success' && this.checkpointStore && !checkpointDisabled) {
@@ -885,6 +904,27 @@ class FlowExecutionEngine {
                             executionChain: this.contextManager.getExecutionChain(),
                             executionDuration: this.contextManager.getExecutionDuration(flowId),
                         };
+                        // Apply automatic domain validators based on flow type (soft-fail). Parity with
+                        // the composite + natural-language paths: every executed flow gets its mapped
+                        // domain validators attached to result.validationResults before memory is persisted.
+                        if (result.status === 'success') {
+                            const validatorsForFlow = (0, flow_domain_validators_1.getValidatorsForFlow)(flowId);
+                            if (validatorsForFlow.length > 0) {
+                                const validations = this.compositionEngine.validateMultipleDomains(validatorsForFlow, result);
+                                // APPEND, do not overwrite: this command-match path previously ran no domain
+                                // validators, so a handler that pushes its own result.validationResults during
+                                // execute() (e.g. flowJ_tactical_polish -> PolishStandard + linguistic/absolute-ban)
+                                // had them survive. Overwriting here would drop them before BuildReport reads them.
+                                result.validationResults = [...(result.validationResults || []), ...validations];
+                                const failedValidations = validations.filter(v => v.status !== 'pass');
+                                if (failedValidations.length > 0) {
+                                    const warningMsg = failedValidations
+                                        .map(v => `[${v.domain}] ${v.failedRules.join(', ')}`)
+                                        .join('; ');
+                                    result.message = `${result.message}\n\nValidation warnings: ${warningMsg}`;
+                                }
+                            }
+                        }
                         // Sprint 7 T6: ClaudemdMandate validation for single-flow execution path.
                         if (result.status === 'success') {
                             try {
@@ -1185,6 +1225,19 @@ class FlowExecutionEngine {
             executionChain: this.contextManager.getExecutionChain(),
             executionDuration: this.contextManager.getExecutionDuration('flowA_brand_verify'),
         };
+        // Flow A is the mandatory brand-verify GATE, run outside the chain loop. Attach its mapped
+        // domain validators (design_system) so the outcome is uniform with every other branch and is
+        // persisted to memory. PERSISTENCE-ONLY: unlike chain flows, do NOT append a soft-fail warning
+        // to the user-facing brand-verify message - the generic design_system rules are not brand-verify
+        // criteria, so a warning there would be misleading gate noise (Codex review). Append (not
+        // overwrite) to preserve any validationResults the handler pushed during execute().
+        if (flowAResult.status === 'success') {
+            const validatorsForFlowA = (0, flow_domain_validators_1.getValidatorsForFlow)('flowA_brand_verify');
+            if (validatorsForFlowA.length > 0) {
+                const validations = this.compositionEngine.validateMultipleDomains(validatorsForFlowA, flowAResult);
+                flowAResult.validationResults = [...(flowAResult.validationResults || []), ...validations];
+            }
+        }
         flowResults.push(flowAResult);
         this.recordFlowWithMemory(flowAResult);
         // If Flow A failed, block the chain (context is mandatory)
