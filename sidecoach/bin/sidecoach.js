@@ -46,17 +46,16 @@
 let parseSlashCommand;
 let VERB_REGISTRY;
 let getVerbEntry;
-let getMode;
 let getFlow;
 let flows;
 let FLOW_MODELS;
 try {
   ({ parseSlashCommand } = require('../dist/slash-command-router'));
   ({ VERB_REGISTRY, getVerbEntry } = require('../dist/verb-command-registry'));
-  // modes.ts is retired (do not surface as a live vocabulary); getMode is kept
-  // ONLY to resolve deprecated back-compat mode words (forge/kiln/..). It is not
-  // listed or advertised anywhere below.
-  ({ getMode } = require('../dist/modes'));
+  // The retired one-word mode words (forge/kiln/bloom/trim/ralph) now resolve as
+  // deprecated back-compat aliases in PHASE_ALIASES (slash-command-router), routed
+  // through parseSlashCommand below exactly like the retired phase words - there is
+  // no separate modes module to load anymore.
   ({ getFlow, flows } = require('../dist/flows'));
   ({ FLOW_MODELS } = require('../dist/model-routing'));
 } catch (err) {
@@ -119,7 +118,7 @@ function printFlowChain(flowIds, indent) {
 }
 
 // ---------------------------------------------------------------------------
-// help (top-level + per verb/mode)
+// help (top-level + per verb)
 // ---------------------------------------------------------------------------
 
 function topLevelHelp() {
@@ -188,20 +187,6 @@ function helpForTarget(target) {
     return 0;
   }
 
-  // Mode detail.
-  const mode = getMode(name);
-  if (mode) {
-    console.log(`mode: ${mode.name}   (composite preset)`);
-    console.log('');
-    console.log(mode.oneLineExplanation || mode.description);
-    console.log('');
-    console.log(`Verb chain: ${mode.verbChain.join(' -> ')}`);
-    console.log('');
-    console.log('Resolved flow chain (deduped union, execution order):');
-    printFlowChain(mode.chain);
-    return 0;
-  }
-
   // Setup command detail.
   if (SETUP_COMMANDS[name]) {
     console.log(`command: ${name}   (setup)`);
@@ -249,26 +234,13 @@ function listAll() {
 }
 
 // ---------------------------------------------------------------------------
-// verb / mode resolution (the dispatch path)
+// verb / alias resolution (the dispatch path)
 // ---------------------------------------------------------------------------
 
 function resolveAndPrint(command, target) {
-  // Mode? Resolve to its verb + flow chain.
-  const mode = getMode(command);
-  if (mode) {
-    console.log(`Resolved mode: ${mode.name}${target ? `   target: ${target}` : ''}`);
-    console.log(mode.oneLineExplanation || mode.description);
-    console.log('');
-    console.log(`Verb chain: ${mode.verbChain.join(' -> ')}`);
-    console.log('');
-    console.log('Flow plan (would run in-session, execution order):');
-    printFlowChain(mode.chain);
-    console.log('');
-    console.log('Resolver only - run `/sidecoach ' + mode.name + '` in a session to execute.');
-    return 0;
-  }
-
-  // Verb? Route through the SAME parser the slash command uses.
+  // Route through the SAME parser the slash command uses. Verbs, retired phase
+  // words, and retired mode words (forge/kiln/..) all resolve here now - the mode
+  // words are back-compat aliases in PHASE_ALIASES, no longer a separate path.
   const slash = `/sidecoach ${command}${target ? ' ' + target : ''}`;
   const result = parseSlashCommand(slash);
 

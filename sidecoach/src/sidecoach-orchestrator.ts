@@ -737,28 +737,22 @@ export class FlowExecutionEngine {
       }
 
       if (commandMatch.command === 'list') {
-        const byPhase = getCommandsByPhase();
+        // Vocab collapse (2026-07-24): the typed command surface is the verb set
+        // plus natural-language intent. The retired phase words (research/implement/..)
+        // and retired mode words (forge/kiln/..) are no longer presented as a co-equal
+        // surface here - they survive only as deprecated back-compat aliases
+        // (PHASE_ALIASES) and still resolve, but are not listed.
         const verbCommands = getVerbCommandInfo();
         const groupedGuidance: string[] = [
           'Available Sidecoach Commands',
           '',
+          'The typed surface is the verb set below, plus natural-language intent',
+          '(just describe what you want). Retired phase and mode words',
+          '(research/implement/.., forge/kiln/..) are not listed but still resolve',
+          'as deprecated back-compat aliases.',
+          '',
+          '## Verb commands',
         ];
-
-        // Build grouped output by phase (existing phase-based commands)
-        groupedGuidance.push('## Phase commands');
-        for (const phase of ['Research', 'Implement', 'Review', 'Special']) {
-          const phaseCommands = byPhase[phase]?.commands || [];
-          if (phaseCommands.length > 0) {
-            groupedGuidance.push(`\n### ${phase} Phase (${phaseCommands.length} commands)`);
-            for (const cmd of phaseCommands) {
-              groupedGuidance.push(`  /sidecoach ${cmd.command} - ${cmd.description} (${cmd.flowCount} flows)`);
-            }
-          }
-        }
-
-        // Sprint 8 T8: append the 21 verb commands under a separate heading
-        groupedGuidance.push('');
-        groupedGuidance.push('## Verb commands');
         for (const [verb, info] of Object.entries(verbCommands)) {
           groupedGuidance.push(`  /sidecoach ${verb} - ${info.description}`);
         }

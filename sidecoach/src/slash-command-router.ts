@@ -14,7 +14,7 @@ export interface CommandMatch {
 }
 
 // ---------------------------------------------------------------------------
-// PHASE_ALIASES - back-compat alias layer for the retired phase vocabulary.
+// PHASE_ALIASES - back-compat alias layer for the retired phase AND mode vocabulary.
 //
 // Vocabulary collapse (GAP5, option B - decision_2026-07-24_vocab-collapse-and-
 // plugin-coupling.md): the typed user-facing surfaces are now the 21 verbs +
@@ -52,6 +52,21 @@ const PHASE_ALIASES: Record<string, FlowId[]> = {
   teach: [],
   rapid: ['flowN_rapid_iteration_refined'],
   list: [],
+
+  // Retired one-word MODE presets (forge/kiln/bloom/trim/ralph), RETIRED 2026-06-12.
+  // Formerly resolved by the now-deleted modes module - a CLI-ONLY surface
+  // (bin/sidecoach.js); the in-session orchestrator never resolved them. Folded here
+  // (vocab collapse finish, 2026-07-24) so they keep routing to their EXACT historical
+  // FlowId chain - the deduped union of each mode's verb flowIds in execution order -
+  // as deprecated back-compat aliases on both surfaces, exactly like the phase words
+  // above. Each chain is byte-identical to the former mode preset's resolved chain.
+  // `canvas` is intentionally ABSENT: that mode was cut 2026-07-23, resolves to nothing
+  // today, and must stay unresolved (adding it would change its target).
+  forge: ['flowA_brand_verify', 'flowB_component_research', 'flowE_motion_patterns', 'flowF_design_tokens', 'flowG_component_implementation', 'flowH_motion_integration', 'flowI_accessibility', 'flowM_responsive_validation', 'flowJ_tactical_polish'],
+  kiln: ['flowK_multi_lens_audit', 'flowI_accessibility', 'flowL_design_critique', 'flowV_all_seven_qa', 'flowM_responsive_validation', 'flowJ_tactical_polish'],
+  bloom: ['flowF_design_tokens', 'flowH_motion_integration', 'flowT_ambitious_motion', 'flowJ_tactical_polish'],
+  trim: ['flowJ_tactical_polish', 'flowX_copywriting', 'flowM_responsive_validation'],
+  ralph: ['flowJ_tactical_polish', 'flowK_multi_lens_audit', 'flowL_design_critique'],
 };
 
 export function parseSlashCommand(utterance: string): CommandMatch {
