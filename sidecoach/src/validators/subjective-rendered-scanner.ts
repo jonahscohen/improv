@@ -931,12 +931,23 @@ export const LEADING_SHARE_MIN = 0.10;
 // aligns with the tracking floor, and reads as "a real page-level all-caps-body characteristic" rather than a few
 // incidental long caps runs.
 export const ALLCAPS_SHARE_MIN = 0.15;
-// H1_VW_RATIO = 0.11. The h1 firing threshold IS the size ratio (no proportion - the h1 is inherently one
-// prominent element). Tasteful hero h1s run ~48-96px = 0.038-0.075 of the 1280 hermetic viewport width; a large-
-// but-deliberate hero reaches ~120px = 0.094. Beyond ~0.11 (about 141px at 1280) the h1 has left heading scale
-// for poster scale and reads as oversized. 0.11 sits above the tasteful-hero band (precision) and is confirmed
-// clear of every dev page's h1 (see the calibration report).
-export const H1_VW_RATIO = 0.11;
+// H1_VW_RATIO = 0.09. The h1 firing threshold IS the size ratio (no proportion - the h1 is inherently one
+// prominent element). The A5a real-world grade set this: at the old 0.11 (about 141px at 1280) real-world recall
+// was 0.000 - every Codex-present real page whose hero IS an <h1> sat below it. The dev-corpus h1 distribution
+// shows a clean gap that decides the operating point: the largest <h1> Codex reads as NOT oversized is asana at
+// 102px = 0.080, and the only Codex-present real hero that is actually an <h1> is upstash at 128px = 0.100. 0.09
+// (115px) is the midpoint of that gap - ~13px of margin on each side - so it catches the genuinely-oversized hero
+// while staying above every tasteful real <h1> (asana 0.080) and the tasteful-hero negative fixture (0.069). It
+// holds precision exactly (0/36 dev-negative false fires, 0/43 constructed-negative, verified) and preserves the
+// constructed-positive fixture (p01 at 0.148 still fires).
+// HONEST CEILING (recorded, not papered over): this raises real recall only to ~0.167 (1 of 6 Codex-present real
+// pages). The other five are structurally out of reach of ANY <h1>-scoped detector - four (resend/inngest/polygon/
+// nasa) render their dominating hero headline as a NON-h1 element (a div or h2), so largestH1Px is 0, and gong's
+// h1 (60px = 0.047) is indistinguishable from a dozen tasteful absent h1s at the same size. Catching the four
+// no-<h1> heroes would require re-scoping the class from "<h1> size" to "largest hero-scale text in the first
+// viewport", which trades this class's identity and adds a big-non-heading-text failure mode (a giant stat or
+// wordmark); that is a lead product call, deliberately not taken here. See the A5a taste-revisit results beat.
+export const H1_VW_RATIO = 0.09;
 // SUB11_MIN_CHARS = 150. A SUBSTANTIAL body of genuinely-tiny (sub-10px) interface text, not a handful of
 // incidental micro-labels. The dev signal set this: after the sub-10px floor + SVG exclusion, the only real page
 // still carrying sub-floor text is calcom (113 chars of Framer product-mockup timestamps like "Just now" at 8px);
