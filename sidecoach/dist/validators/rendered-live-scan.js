@@ -102,6 +102,8 @@ async function scanRenderedLive(renderUrl, signal, opts = {}) {
             const face = (0, subjective_rendered_scanner_1.typefaceFindingFromScore)(await race(page.evaluate(subjective_rendered_scanner_1.inPageTypeface), 'evaluate'), opts.typeface ?? {});
             if (face)
                 findings.push(face);
+            // Stage 4b typographic-extreme classes via the SAME split: one in-page score, Node-side thresholds -> 0-5 findings.
+            findings.push(...(0, subjective_rendered_scanner_1.typographyExtremesFindingsFromScore)(await race(page.evaluate(subjective_rendered_scanner_1.inPageTypographyExtremes), 'evaluate')));
             subjective = { available: true, findings };
         }
         catch (e) {

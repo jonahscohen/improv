@@ -1,5 +1,5 @@
 import type { Browser } from 'playwright';
-export type SubjectiveRule = 'tiny-text' | 'nested-cards' | 'marketing-buzzword' | 'default-typeface';
+export type SubjectiveRule = 'tiny-text' | 'nested-cards' | 'marketing-buzzword' | 'default-typeface' | 'extreme-negative-tracking' | 'tight-leading' | 'all-caps-body' | 'oversized-h1' | 'sub-11px-ui';
 export interface SubjectiveFinding {
     rule: SubjectiveRule;
     severity: 'warning';
@@ -110,6 +110,47 @@ export declare function typefaceFindingFromScore(s: TypefaceScore, opts?: Typefa
  *  set in a perfectly good CHOSEN face which simply is not the committed one, so a consumer must not describe
  *  every default-typeface finding as "renders on the default system stack" (Codex review P2). */
 export declare function typefaceGroundOf(detail: string | undefined): 'default-stack' | 'brand-mismatch' | 'unknown';
+export interface TypographyExtremesScore {
+    contentChars: number;
+    viewportWidth: number;
+    tightTrackingChars: number;
+    tightTrackingShare: number;
+    tightestTrackingEm: number;
+    trackingSelector?: string;
+    runningTextChars: number;
+    tightLeadingChars: number;
+    tightLeadingShare: number;
+    tightestLeading: number;
+    leadingSelector?: string;
+    allCapsBodyChars: number;
+    allCapsShare: number;
+    allCapsSelector?: string;
+    largestH1Px: number;
+    h1Ratio: number;
+    h1Selector?: string;
+    sub11Chars: number;
+    sub11MinPx: number;
+    sub11Selector?: string;
+}
+export declare const TRACKING_EXTREME_EM = -0.05;
+export declare const LEADING_TIGHT_RATIO = 1.1;
+export declare const LEADING_MIN_RUN_CHARS = 40;
+export declare const LEADING_MAX_BODY_PX = 28;
+export declare const ALLCAPS_MIN_RUN_CHARS = 40;
+export declare const ALLCAPS_MAX_BODY_PX = 28;
+export declare const ALLCAPS_MIN_CASED = 20;
+export declare const SUB11_MAX_PX = 10;
+export declare function inPageTypographyExtremes(): TypographyExtremesScore;
+export declare const TYPO_MIN_CONTENT_CHARS = 200;
+export declare const TRACKING_SHARE_MIN = 0.15;
+export declare const LEADING_SHARE_MIN = 0.1;
+export declare const ALLCAPS_SHARE_MIN = 0.15;
+export declare const H1_VW_RATIO = 0.11;
+export declare const SUB11_MIN_CHARS = 150;
+/** Node-side: turn a typography-extremes score into 0-5 findings (one page-level verdict per firing class). The
+ * ONE place these production thresholds are applied; the calibration harness sweeps the same raw score fields, so
+ * the sweep measures exactly what ships (the inPageBuzzword / inPageTypeface contract). */
+export declare function typographyExtremesFindingsFromScore(s: TypographyExtremesScore): SubjectiveFinding[];
 export interface RenderOpts {
     stripScripts?: boolean;
     abortExternal?: boolean;

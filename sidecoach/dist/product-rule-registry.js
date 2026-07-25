@@ -829,6 +829,35 @@ const RENDERED_RULE_MANIFEST = [
         severity: 'minor', findingClass: 'polish', registryScope: 'rendered-nested-cards',
         note: 'card-in-card taste finding surfaced by the audit/subjective lens; no run-validator consumer (audit-only)',
     },
+    // Stage 4b typographic-extreme classes - all AUDIT-ONLY (ruleId:null), for the same reason as nested-cards:
+    // modeling any as a rendered-scan RAW_RULE trips the inverse invariant -> RENDERED_BACKED_RULE_IDS -> run-validator
+    // would newly consume it as a required decision rule. These are precision-first taste rules whose A5a gate is
+    // PENDING, so that promotion is not intended. Their frozen operating points live in subjective-rendered-scanner.ts.
+    {
+        scannerRule: 'extreme-negative-tracking', lens: 'subjective', ruleId: null,
+        severity: 'minor', findingClass: 'polish', registryScope: 'rendered-extreme-negative-tracking',
+        note: 'letter-spacing crowded strongly negative on a share of content text; audit-only (A5a pending)',
+    },
+    {
+        scannerRule: 'tight-leading', lens: 'subjective', ruleId: null,
+        severity: 'minor', findingClass: 'polish', registryScope: 'rendered-tight-leading',
+        note: 'line-height on running body text set tight enough to crowd; audit-only (A5a pending)',
+    },
+    {
+        scannerRule: 'all-caps-body', lens: 'subjective', ruleId: null,
+        severity: 'minor', findingClass: 'polish', registryScope: 'rendered-all-caps-body',
+        note: 'long runs of body/content text set all-caps (slows reading); audit-only (A5a pending)',
+    },
+    {
+        scannerRule: 'oversized-h1', lens: 'subjective', ruleId: null,
+        severity: 'minor', findingClass: 'polish', registryScope: 'rendered-oversized-h1',
+        note: 'h1 rendered font-size beyond a taste threshold vs the viewport; audit-only (A5a pending)',
+    },
+    {
+        scannerRule: 'sub-11px-ui', lens: 'subjective', ruleId: null,
+        severity: 'minor', findingClass: 'polish', registryScope: 'rendered-sub-11px-ui',
+        note: 'a substantial body of interface text rendered below the legibility floor; audit-only (A5a pending)',
+    },
 ];
 // Resolve a rendered SCANNER rule name to its registry descriptor. Returns null for a name the manifest does not
 // cover (the no-orphan test forbids that for any real scanner rule; a caller that still hits null must fall back

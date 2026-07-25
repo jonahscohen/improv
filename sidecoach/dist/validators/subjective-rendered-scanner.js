@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_TYPEFACE_GROUND_BRAND_MISMATCH = exports.DEFAULT_TYPEFACE_GROUND_DEFAULT_STACK = exports.TYPEFACE_MIN_CONTENT_CHARS = exports.BRAND_PRESENCE_MIN = exports.DEFAULT_STACK_SHARE = exports.BUZZ_DENSITY_THRESHOLD = exports.SUBJECTIVE_RULES = void 0;
+exports.SUB11_MIN_CHARS = exports.H1_VW_RATIO = exports.ALLCAPS_SHARE_MIN = exports.LEADING_SHARE_MIN = exports.TRACKING_SHARE_MIN = exports.TYPO_MIN_CONTENT_CHARS = exports.SUB11_MAX_PX = exports.ALLCAPS_MIN_CASED = exports.ALLCAPS_MAX_BODY_PX = exports.ALLCAPS_MIN_RUN_CHARS = exports.LEADING_MAX_BODY_PX = exports.LEADING_MIN_RUN_CHARS = exports.LEADING_TIGHT_RATIO = exports.TRACKING_EXTREME_EM = exports.DEFAULT_TYPEFACE_GROUND_BRAND_MISMATCH = exports.DEFAULT_TYPEFACE_GROUND_DEFAULT_STACK = exports.TYPEFACE_MIN_CONTENT_CHARS = exports.BRAND_PRESENCE_MIN = exports.DEFAULT_STACK_SHARE = exports.BUZZ_DENSITY_THRESHOLD = exports.SUBJECTIVE_RULES = void 0;
 exports.stripScripts = stripScripts;
 exports.inPageSubjective = inPageSubjective;
 exports.inPageBuzzword = inPageBuzzword;
@@ -8,6 +8,8 @@ exports.buzzwordFindingFromScore = buzzwordFindingFromScore;
 exports.inPageTypeface = inPageTypeface;
 exports.typefaceFindingFromScore = typefaceFindingFromScore;
 exports.typefaceGroundOf = typefaceGroundOf;
+exports.inPageTypographyExtremes = inPageTypographyExtremes;
+exports.typographyExtremesFindingsFromScore = typographyExtremesFindingsFromScore;
 exports.analyzeHtmlOnBrowserSubjective = analyzeHtmlOnBrowserSubjective;
 exports.scanSubjectiveRendered = scanSubjectiveRendered;
 /**
@@ -32,7 +34,10 @@ exports.scanSubjectiveRendered = scanSubjectiveRendered;
  * INDEPENDENCE: PRODUCT scanner; MUST NOT import anything under eval/. Distinct artifact from the eval referee.
  */
 const playwright_1 = require("playwright");
-exports.SUBJECTIVE_RULES = ['tiny-text', 'nested-cards', 'marketing-buzzword', 'default-typeface'];
+exports.SUBJECTIVE_RULES = [
+    'tiny-text', 'nested-cards', 'marketing-buzzword', 'default-typeface',
+    'extreme-negative-tracking', 'tight-leading', 'all-caps-body', 'oversized-h1', 'sub-11px-ui',
+];
 function stripScripts(html) {
     return String(html)
         .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
@@ -686,6 +691,331 @@ function typefaceGroundOf(detail) {
         return 'brand-mismatch';
     return 'unknown';
 }
+// ---- per-element classification constants (the "what counts" definitions, baked into the in-page scorer the way
+//      SMALL_PX = 13 is baked into tiny-text). Each is frozen on a perceptual/readability PRINCIPLE. ----
+// TRACKING_EXTREME_EM = -0.05. letter-spacing is perceptually a fraction of the font size, so the honest measure
+// is letterSpacing/fontSize (the em value the author effectively set). Tasteful optical tightening on display
+// type runs -0.02 to -0.03em and is everywhere; -0.04em is the edge. At -0.05em (five percent of the type size
+// pulled out from between every pair of glyphs) the crowding is visible on running text, and by -0.07/-0.08em
+// letters begin to touch. -0.05 is the conservative "beyond optical tightening, into crowding" bar - it sits
+// below the near-universal tasteful band so a well-tracked headline never trips it (precision), and it is the
+// per-element definition of "extreme"; the page-level firing threshold is the share below.
+exports.TRACKING_EXTREME_EM = -0.05;
+// LEADING_TIGHT_RATIO = 1.10. Comfortable body leading is 1.4-1.6 (WCAG 1.4.12 asks >= 1.5); the browser default
+// `normal` computes to ~1.2 and is the single most common value on the web, so any bar at/above 1.2 would fire on
+// the default and destroy precision. "Tight enough to crowd" is BELOW the default: at a line-height ratio under
+// 1.10 the descenders of one line reach the ascenders of the next and running text genuinely crowds. line-height
+// `normal` is treated as not-tight and never counted (it is the default, not a decision) - only an EXPLICIT
+// sub-1.10 leading on body-scale running text is an offender.
+exports.LEADING_TIGHT_RATIO = 1.10;
+// LEADING_MIN_RUN_CHARS = 40 / LEADING_MAX_BODY_PX = 28. "Running text" per the rubric is body copy
+// (sentences/paragraphs), not headings or labels: a run must be >= 40 chars (about a sentence) and body-scale
+// (<= 28px, above which tight leading is a normal display-heading choice, not a body-crowding defect). Headings
+// (h1-h6 / role=heading) are excluded outright - tight leading on a large heading is correct typography.
+exports.LEADING_MIN_RUN_CHARS = 40;
+exports.LEADING_MAX_BODY_PX = 28;
+// ALLCAPS_MIN_RUN_CHARS = 40 / ALLCAPS_MAX_BODY_PX = 28 / ALLCAPS_MIN_CASED = 20. The rubric scopes all-caps-body
+// to "running body text (sentences/paragraphs, not short labels)". The 40-char run guard excludes every short
+// label, eyebrow, button, kicker and nav item (the "conventional label spacing which is normal" the rubric sets
+// aside); the 28px body-scale cap excludes deliberate all-caps DISPLAY heroes (a poster choice, not body text);
+// the 20-cased-letter minimum means a paragraph merely containing an acronym (NASA, API) is not misread as caps.
+exports.ALLCAPS_MIN_RUN_CHARS = 40;
+exports.ALLCAPS_MAX_BODY_PX = 28;
+exports.ALLCAPS_MIN_CASED = 20;
+// SUB11_MAX_PX = 10. The class is the plan's "interface text rendered below ~11px" (the tilde is load-bearing).
+// The dev corpus DISPROVED a literal 11px floor: 10px (0.625rem / a common Tailwind micro size) is everywhere on
+// competently built pages - clerk renders 1421 chars, dub 252, linear 113, calcom 238 of legitimate 10px
+// metadata / timestamps / component labels - so firing at 11px is a precision disaster (6/48 real pages). Below
+// 10px (9px and smaller) is where interface text is unambiguously too small to read, and it is genuinely rare on
+// good pages. Unlike tiny-text (a content-region proportion at <= 13px), this is an ABSOLUTE floor applied to all
+// visible text with chrome INCLUDED (SVG diagram labels excluded) - tiny UI chrome below the floor is the target.
+exports.SUB11_MAX_PX = 10;
+/* istanbul ignore next - executes in the browser context (serialized by page.evaluate; must be self-contained) */
+function inPageTypographyExtremes() {
+    // per-element definitions (must be inside the serialized fn - it cannot close over module scope).
+    const TRACKING_EXTREME_EM = -0.05;
+    const LEADING_TIGHT_RATIO = 1.10;
+    const LEADING_MIN_RUN_CHARS = 40;
+    const LEADING_MAX_BODY_PX = 28;
+    const ALLCAPS_MIN_RUN_CHARS = 40;
+    const ALLCAPS_MAX_BODY_PX = 28;
+    const ALLCAPS_MIN_CASED = 20;
+    const SUB11_MAX_PX = 10;
+    function sel(el) {
+        const t = el.tagName.toLowerCase();
+        if (el.id)
+            return `${t}#${el.id}`;
+        const cls = (el.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).join('.');
+        return cls ? `${t}.${cls}` : t;
+    }
+    // The SAME hardened visibility predicate as inPageSubjective / inPageTypeface (each in-page fn must be
+    // self-contained for page.evaluate, so a verbatim duplicate is correct).
+    function visuallyVisible(el) {
+        const cs = getComputedStyle(el);
+        if (cs.visibility !== 'visible')
+            return false;
+        for (let n = el; n && n instanceof Element; n = n.parentElement) {
+            if (parseFloat(getComputedStyle(n).opacity) === 0)
+                return false;
+        }
+        const rects = el.getClientRects();
+        if (!rects.length)
+            return false;
+        const box = el.getBoundingClientRect();
+        if (box.width < 1 || box.height < 1)
+            return false;
+        if ((box.width <= 1 || box.height <= 1) && cs.overflow !== 'visible')
+            return false;
+        if (box.right <= 0 || box.bottom <= 0)
+            return false;
+        if (parseFloat(cs.textIndent) <= -999)
+            return false;
+        const clipM = (cs.clip || '').replace(/\s+/g, ' ').match(/^rect\(\s*([-\d.]+)(?:px)?[ ,]+([-\d.]+)(?:px)?[ ,]+([-\d.]+)(?:px)?[ ,]+([-\d.]+)(?:px)?\s*\)$/i);
+        if (clipM) {
+            const t = parseFloat(clipM[1]), rr = parseFloat(clipM[2]), b = parseFloat(clipM[3]), l = parseFloat(clipM[4]);
+            if (rr <= l || b <= t)
+                return false;
+        }
+        if (/^inset\(\s*(100%|50%)\b/.test(cs.clipPath || ''))
+            return false;
+        return true;
+    }
+    function ownText(el) {
+        let t = '';
+        for (const n of Array.from(el.childNodes))
+            if (n.nodeType === 3 && n.textContent)
+                t += n.textContent;
+        return t.replace(/\s+/g, ' ').trim();
+    }
+    function paintedInvisible(cs) {
+        const fill = cs.webkitTextFillColor;
+        const colors = [cs.color, fill].filter(Boolean);
+        return colors.some((c) => { const m = c.match(/rgba?\(([^)]+)\)/i); if (!m)
+            return /^transparent$/i.test(c.trim()); const p = m[1].split(/[,/]/).map((x) => parseFloat(x.trim())); return p.length >= 4 && p[3] <= 0.05; });
+    }
+    // CONTENT scope excludes peripheral chrome exactly as tiny-text / default-typeface do (footer/nav/aside/menu and
+    // their ARIA roles) - four of the five classes are content-typography judgments. sub-11px-ui is the deliberate
+    // exception: the 11px floor applies to chrome too, so it is measured BEFORE the peripheral guard below.
+    const PERIPHERAL_TAGS = new Set(['footer', 'nav', 'aside', 'menu']);
+    const PERIPHERAL_ROLES = new Set(['navigation', 'contentinfo', 'complementary', 'menubar', 'menu']);
+    const peripheral = (el) => {
+        for (let n = el; n && n instanceof Element; n = n.parentElement) {
+            if (PERIPHERAL_TAGS.has((n.tagName || '').toLowerCase()))
+                return true;
+            const role = (n.getAttribute('role') || '').trim().toLowerCase().split(/\s+/)[0];
+            if (role && PERIPHERAL_ROLES.has(role))
+                return true;
+        }
+        return false;
+    };
+    // A heading OR any element INSIDE a heading (h1-h6 / role=heading) is excluded from tight-leading and
+    // all-caps-body: tight leading and all-caps are correct, deliberate typography on headings, and both classes are
+    // BODY-copy defects. Walking ANCESTORS (not just the element) is what catches the common
+    // `<h2><span>...</span></h2>`, where the text-bearing span is not itself a heading (Codex P1).
+    const HEADING_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+    const inHeading = (el) => {
+        for (let n = el; n && n instanceof Element; n = n.parentElement) {
+            if (HEADING_TAGS.has((n.tagName || '').toLowerCase()))
+                return true;
+            const role = (n.getAttribute('role') || '').trim().toLowerCase().split(/\s+/)[0];
+            if (role === 'heading')
+                return true;
+        }
+        return false;
+    };
+    const scope = document.body ? [document.body, ...Array.from(document.body.querySelectorAll('*'))] : [];
+    const viewportWidth = window.innerWidth || 1280;
+    let contentChars = 0;
+    let tightTrackingChars = 0, tightestTrackingEm = 0;
+    let trackingSelector;
+    let runningTextChars = 0, tightLeadingChars = 0, tightestLeading = 0;
+    let leadingSelector;
+    let allCapsBodyChars = 0;
+    let allCapsSelector;
+    let sub11Chars = 0, sub11MinPx = 0;
+    let sub11Selector;
+    for (const el of scope) {
+        const text = ownText(el);
+        if (!text || !visuallyVisible(el))
+            continue;
+        // SVG graphic text (<text>/<tspan> inside a diagram/illustration) is illustrative content, not the page's
+        // typographic copy or interface chrome, so it is excluded from EVERY class - it is the DOM-visible cousin of
+        // the raster-art honest exclusion, and the dev corpus confirms it (a server-diagram's 5.8px tspan labels are
+        // not "interface text rendered too small"). HTML inside <foreignObject> keeps the XHTML namespace and is NOT
+        // excluded.
+        if (el.namespaceURI === 'http://www.w3.org/2000/svg')
+            continue;
+        const cs = getComputedStyle(el);
+        if (paintedInvisible(cs))
+            continue;
+        const fontPx = parseFloat(cs.fontSize);
+        if (!(fontPx > 0))
+            continue;
+        const chars = text.length;
+        // sub-11px-ui: ALL visible painted text, chrome INCLUDED (measured before the peripheral guard).
+        if (fontPx < SUB11_MAX_PX) {
+            sub11Chars += chars;
+            if (sub11MinPx === 0 || fontPx < sub11MinPx)
+                sub11MinPx = fontPx;
+            if (!sub11Selector)
+                sub11Selector = sel(el);
+        }
+        // the remaining four classes are CONTENT-scope (peripheral chrome excluded).
+        if (peripheral(el))
+            continue;
+        contentChars += chars;
+        // extreme-negative-tracking. letter-spacing:normal computes to the keyword and is 0 tracking.
+        const lsRaw = cs.letterSpacing;
+        const lsPx = !lsRaw || lsRaw === 'normal' ? 0 : parseFloat(lsRaw);
+        if (Number.isFinite(lsPx) && lsPx < 0) {
+            const em = lsPx / fontPx;
+            if (em < tightestTrackingEm)
+                tightestTrackingEm = em;
+            if (em <= TRACKING_EXTREME_EM) {
+                tightTrackingChars += chars;
+                if (!trackingSelector)
+                    trackingSelector = sel(el);
+            }
+        }
+        // tight-leading: running BODY text only (not a heading and not inside one, body-scale, sentence-length run).
+        // line-height:normal is the browser default and is never counted (only an explicit tight leading is a decision).
+        if (!inHeading(el) && fontPx <= LEADING_MAX_BODY_PX && chars >= LEADING_MIN_RUN_CHARS) {
+            runningTextChars += chars;
+            const lhRaw = cs.lineHeight;
+            if (lhRaw && lhRaw !== 'normal') {
+                const lhPx = parseFloat(lhRaw);
+                if (Number.isFinite(lhPx) && lhPx > 0) {
+                    const ratio = lhPx / fontPx;
+                    if (tightestLeading === 0 || ratio < tightestLeading)
+                        tightestLeading = ratio;
+                    if (ratio <= LEADING_TIGHT_RATIO) {
+                        tightLeadingChars += chars;
+                        if (!leadingSelector)
+                            leadingSelector = sel(el);
+                    }
+                }
+            }
+        }
+        // all-caps-body: long, body-scale, NON-heading runs rendered entirely in capitals. The cased-letter minimum
+        // gates BOTH branches, so a long CJK / numeric / punctuation run inside a text-transform:uppercase wrapper
+        // (which uppercase does not actually capitalise) is not misread as caps (Codex P2). \p{Lu}/\p{Ll} count only
+        // cased letters; the source-caps branch also requires near-zero lowercase (a stray lowercase char tolerated).
+        if (!inHeading(el) && fontPx <= ALLCAPS_MAX_BODY_PX && chars >= ALLCAPS_MIN_RUN_CHARS) {
+            const upper = (text.match(/\p{Lu}/gu) || []).length;
+            const lower = (text.match(/\p{Ll}/gu) || []).length;
+            const cased = upper + lower;
+            const renderedCaps = cased >= ALLCAPS_MIN_CASED && (cs.textTransform === 'uppercase' || lower / cased <= 0.05);
+            if (renderedCaps) {
+                allCapsBodyChars += chars;
+                if (!allCapsSelector)
+                    allCapsSelector = sel(el);
+            }
+        }
+    }
+    // oversized-h1: a separate pass so a heading whose text lives in a child (`<h1><span>...</span></h1>`) is still
+    // measured. For each visible h1 with rendered text, the h1 size is the MAX computed font-size over the h1 and
+    // its text-bearing descendants (the size the reader actually sees).
+    let largestH1Px = 0;
+    let h1Selector;
+    for (const h1 of Array.from(document.body ? document.body.querySelectorAll('h1') : [])) {
+        if (!visuallyVisible(h1) || !(h1.textContent || '').trim())
+            continue;
+        let maxPx = parseFloat(getComputedStyle(h1).fontSize) || 0;
+        for (const d of Array.from(h1.querySelectorAll('*'))) {
+            if (!ownText(d) || !visuallyVisible(d))
+                continue;
+            const px = parseFloat(getComputedStyle(d).fontSize) || 0;
+            if (px > maxPx)
+                maxPx = px;
+        }
+        if (maxPx > largestH1Px) {
+            largestH1Px = maxPx;
+            h1Selector = sel(h1);
+        }
+    }
+    const share = (n) => (contentChars > 0 ? n / contentChars : 0);
+    return {
+        contentChars, viewportWidth,
+        tightTrackingChars, tightTrackingShare: share(tightTrackingChars), tightestTrackingEm, trackingSelector,
+        runningTextChars, tightLeadingChars, tightLeadingShare: share(tightLeadingChars), tightestLeading, leadingSelector,
+        allCapsBodyChars, allCapsShare: share(allCapsBodyChars), allCapsSelector,
+        largestH1Px, h1Ratio: viewportWidth > 0 ? largestH1Px / viewportWidth : 0, h1Selector,
+        sub11Chars, sub11MinPx, sub11Selector,
+    };
+}
+// ---- page-level FIRING thresholds (applied in Node; the calibration harness sweeps exactly these). Each is
+//      frozen on principle + the dev signal, NEVER on held-out. ----
+// A page with almost no text cannot support a page-level proportion judgment (a 1-element page reads as 100% of
+// anything). Same guard, same value, as tiny-text / default-typeface. Applies to the three proportion classes
+// (tracking, leading, all-caps); oversized-h1 and sub-11px-ui use absolute measures and do not need it.
+exports.TYPO_MIN_CONTENT_CHARS = 200;
+// TRACKING_SHARE_MIN = 0.15. Once "extreme" is defined per-element (<= -0.05em), the page fires only when a
+// SUBSTANTIAL share of content text is that tightly tracked - extreme tracking as a page-level characteristic, not
+// one incidental word. 15% mirrors tiny-text's proportion floor: a single tightly-tracked hero word can never
+// reach it, a page that tracks its headings-and-body tight does. Confirmed by the dev corpus (no real page reaches
+// it; see the calibration report).
+exports.TRACKING_SHARE_MIN = 0.15;
+// LEADING_SHARE_MIN = 0.10. Same page-level logic - fire when a substantial share of content text is set as tight
+// running copy, not on a single crowded caption - but the floor is 0.10 not 0.15 for a principled reason: the
+// NUMERATOR here is only body-scale running-text chars (a SUBSET of content), where tracking/all-caps count over
+// all content, so the equivalent "substantial share" bar is lower. The dev signal confirms it: with the Codex
+// tight-leading labels (17/48 present), 0.10 fires on the pages carrying the most genuinely-crowded running BODY
+// copy (nasa 0.117, polygon 0.107) at precision 1.000 (zero false positives on the 31 labeled negatives), where
+// 0.15 catches none. It sits in the widest P=1.000 band (0.05-0.10 score identically).
+// HONEST RECALL NOTE: dev recall is ~0.12 (2/17). The other 15 Codex-positives carry NO running BODY text under
+// the strict 1.10 crowding bar - they set body leading in the 1.2-1.4 range or use the ~1.2 `normal` default (which
+// this class deliberately does not flag), OR their tight leading is on HEADINGS (arstechnica; excluded because
+// tight leading is correct display typography, not a body-copy defect - the Codex-P1 heading-ancestor guard). That
+// gap is the precision-first cost, not a miscalibration.
+exports.LEADING_SHARE_MIN = 0.10;
+// ALLCAPS_SHARE_MIN = 0.15. A substantial share of content text set as long all-caps body runs. The dev signal
+// set this: at 0.10 the detector false-fired on polygon (10.7% of its content is incidental long all-caps labels,
+// Codex-labeled NOT all-caps-body); 0.15 clears polygon (P=1.000) while the fixture (94%) fires cleanly. 0.15 also
+// aligns with the tracking floor, and reads as "a real page-level all-caps-body characteristic" rather than a few
+// incidental long caps runs.
+exports.ALLCAPS_SHARE_MIN = 0.15;
+// H1_VW_RATIO = 0.11. The h1 firing threshold IS the size ratio (no proportion - the h1 is inherently one
+// prominent element). Tasteful hero h1s run ~48-96px = 0.038-0.075 of the 1280 hermetic viewport width; a large-
+// but-deliberate hero reaches ~120px = 0.094. Beyond ~0.11 (about 141px at 1280) the h1 has left heading scale
+// for poster scale and reads as oversized. 0.11 sits above the tasteful-hero band (precision) and is confirmed
+// clear of every dev page's h1 (see the calibration report).
+exports.H1_VW_RATIO = 0.11;
+// SUB11_MIN_CHARS = 150. A SUBSTANTIAL body of genuinely-tiny (sub-10px) interface text, not a handful of
+// incidental micro-labels. The dev signal set this: after the sub-10px floor + SVG exclusion, the only real page
+// still carrying sub-floor text is calcom (113 chars of Framer product-mockup timestamps like "Just now" at 8px);
+// 150 clears that incidental amount while the fixture (~295 chars of 9px metadata/legal) fires. 150 chars is about
+// a full sentence or a dozen tiny labels - enough to read as "the page systematically sets interface text below
+// the legibility floor" rather than one mockup badge. Confirmed 0/48 dev false positives at this point.
+exports.SUB11_MIN_CHARS = 150;
+/** Node-side: turn a typography-extremes score into 0-5 findings (one page-level verdict per firing class). The
+ * ONE place these production thresholds are applied; the calibration harness sweeps the same raw score fields, so
+ * the sweep measures exactly what ships (the inPageBuzzword / inPageTypeface contract). */
+function typographyExtremesFindingsFromScore(s) {
+    const out = [];
+    const pct = (x) => `${Math.round(x * 100)}%`;
+    const enoughContent = s.contentChars >= exports.TYPO_MIN_CONTENT_CHARS;
+    if (enoughContent && s.tightTrackingShare >= exports.TRACKING_SHARE_MIN) {
+        out.push({ rule: 'extreme-negative-tracking', severity: 'warning', selector: s.trackingSelector,
+            detail: `${pct(s.tightTrackingShare)} of content text is tracked <= ${exports.TRACKING_EXTREME_EM}em (tightest ${s.tightestTrackingEm.toFixed(3)}em); letters crowd` });
+    }
+    if (enoughContent && s.tightLeadingShare >= exports.LEADING_SHARE_MIN) {
+        out.push({ rule: 'tight-leading', severity: 'warning', selector: s.leadingSelector,
+            detail: `${pct(s.tightLeadingShare)} of content text is running copy with line-height <= ${exports.LEADING_TIGHT_RATIO} (tightest ${s.tightestLeading.toFixed(2)}); lines crowd` });
+    }
+    if (enoughContent && s.allCapsShare >= exports.ALLCAPS_SHARE_MIN) {
+        out.push({ rule: 'all-caps-body', severity: 'warning', selector: s.allCapsSelector,
+            detail: `${pct(s.allCapsShare)} of content text is long-run all-caps body copy (slows reading)` });
+    }
+    if (s.h1Ratio >= exports.H1_VW_RATIO) {
+        out.push({ rule: 'oversized-h1', severity: 'warning', selector: s.h1Selector,
+            detail: `h1 renders at ${Math.round(s.largestH1Px)}px, ${pct(s.h1Ratio)} of the ${s.viewportWidth}px viewport width (oversized)` });
+    }
+    if (s.sub11Chars >= exports.SUB11_MIN_CHARS) {
+        out.push({ rule: 'sub-11px-ui', severity: 'warning', selector: s.sub11Selector,
+            detail: `${s.sub11Chars} chars of interface text render below ${exports.SUB11_MAX_PX}px (smallest ${s.sub11MinPx.toFixed(1)}px)` });
+    }
+    return out;
+}
 const HERMETIC = { stripScripts: true, abortExternal: true, viewport: { width: 1280, height: 800 } };
 async function analyzeHtmlOnBrowserSubjective(browser, html, timeoutMs = 30000, render = {}, typeface = {}) {
     const r = { ...HERMETIC, ...render };
@@ -705,6 +1035,8 @@ async function analyzeHtmlOnBrowserSubjective(browser, html, timeoutMs = 30000, 
         const face = typefaceFindingFromScore(await page.evaluate(inPageTypeface), typeface);
         if (face)
             findings.push(face);
+        // Stage 4b typographic-extreme classes via the SAME split: one in-page score, Node-side thresholds -> 0-5 findings.
+        findings.push(...typographyExtremesFindingsFromScore(await page.evaluate(inPageTypographyExtremes)));
         return findings;
     }
     finally {
