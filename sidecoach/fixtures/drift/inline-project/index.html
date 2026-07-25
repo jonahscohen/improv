@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Inline style drift fixture</title>
+  <style>
+    :root {
+      --c-brand-red: #DC2618;        /* sanctioned - matches DESIGN.md */
+      --c-accent-lime: #A3E635;      /* drift - not in DESIGN.md */
+      --r-md: 8px;                   /* sanctioned */
+    }
+    .cta { background: var(--c-accent-lime); border-radius: var(--r-md); }
+  </style>
+</head>
+<body>
+  <button class="cta">Go</button>
+</body>
+</html>

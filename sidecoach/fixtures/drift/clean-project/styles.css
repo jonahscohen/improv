@@ -1,0 +1,25 @@
+:root {
+  /* every token here matches DESIGN.md exactly - zero drift expected */
+  --c-brand-red: #DC2618;
+  --c-brand-ink: #1A1F1B;
+  --c-brand-cream: #F4EFE4;
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --s-2: 8px;
+  --s-4: 16px;
+  --s-6: 24px;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --d-fast: 180ms;
+  --d-medium: 260ms;
+
+  /* var() references resolve to sanctioned tokens - not drift */
+  --c-brand-primary: var(--c-brand-red);
+  --r-button: var(--r-md);
+}
+
+.card {
+  background: var(--c-brand-cream);
+  border-radius: var(--r-lg);
+  padding: var(--s-6);
+}

@@ -1,0 +1,35 @@
+:root {
+  /* --- sanctioned: values match DESIGN.md, must NOT drift --- */
+  --c-brand-red: #DC2618;
+  --c-brand-ink: #1A1F1B;
+  --r-sm: 4px;
+  --r-md: 8px;
+  --s-2: 8px;
+  --s-4: 16px;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --d-fast: 180ms;
+
+  /* --- drift: off-system values, must be flagged (one per category) --- */
+  --c-brand-red-hover: #B01F15;
+  --r-tiny: 2px;
+  --s-7: 28px;
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --d-crawl: 900ms;
+
+  /* --- var() reference: not a literal, must NOT drift --- */
+  --c-brand-primary: var(--c-brand-red);
+
+  /* --- outside the governed namespaces: counted, never a verdict driver --- */
+  --z-index-modal: 1000;
+}
+
+.button {
+  background: var(--c-brand-ink);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+  transition: transform var(--d-fast) var(--ease-out);
+}
+
+.button:hover {
+  background: var(--c-brand-red-hover);
+}
