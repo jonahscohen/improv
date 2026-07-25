@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Contract-6 A5a TASTE-DETECTION head-to-head for the 15 Stage 4b/4c/4d rendered taste classes.
+ * Contract-6 A5a TASTE-DETECTION head-to-head for the 13 Stage 4b/4c/4d rendered taste classes.
+ * (tight-leading + blinking-cursor were PULLED from the product 2026-07-25 - unfixable in the wild; see the pull beat.)
  *
  * WHAT THIS IS (and what typography-extremes-calibrate / structural-motion-calibrate are NOT): those grade ONLY
  * our detector against DEFINITIONAL fixture labels (filename p-prefixed / n-prefixed) and never run the oracle. This IS the A5a gate:
@@ -31,7 +32,7 @@
  *   3 = infra (dist not built / chromium / import / bad sink)
  *   2 = INCONCLUSIVE / fail-closed: a labeled page could not be graded (html not found, our scorer returned
  *       nothing, or the oracle was unavailable). A partial head-to-head must never read OK.
- *   0 = MEASURED completely for all 15 classes. This grader MEASURES and REPORTS per-class numbers; it does NOT
+ *   0 = MEASURED completely for all 13 classes. This grader MEASURES and REPORTS per-class numbers; it does NOT
  *       pass/fail a class (several of these are expected recall-weak). The LEAD makes the ship call per class.
  *
  * Build dist first (npm run build); pin the oracle: SIDECOACH_ORACLE_DETECT=<oracle detect.mjs>. Then:
@@ -66,12 +67,11 @@ const SEARCH_DIRS = [
   path.join(ROOT, 'eval/corpus/dev'),
 ];
 
-// The 15 classes with their ORACLE mapping. `strict` = the exact-idiom oracle rule; `generous` = strict + plausible
+// The 13 classes with their ORACLE mapping. `strict` = the exact-idiom oracle rule; `generous` = strict + plausible
 // broader neighbors (strongest-case reading for the oracle). The oracle's actual fired rules print per page so any
 // mapping is auditable. Verified present in the oracle vocabulary 2026-07-25.
 const CLASSES = [
   { name: 'extreme-negative-tracking', strict: ['extreme-negative-tracking'], generous: ['extreme-negative-tracking'] },
-  { name: 'tight-leading', strict: ['tight-leading'], generous: ['tight-leading'] },
   { name: 'all-caps-body', strict: ['all-caps-body'], generous: ['all-caps-body'] },
   { name: 'oversized-h1', strict: ['oversized-h1'], generous: ['oversized-h1'] },
   { name: 'sub-11px-ui', strict: ['undersized-ui-text'], generous: ['undersized-ui-text', 'tiny-text'] },
@@ -83,7 +83,6 @@ const CLASSES = [
   { name: 'soft-radial-glow', strict: ['radial-halo'], generous: ['radial-halo'] },
   { name: 'numbered-section-markers', strict: ['numbered-section-labels'], generous: ['numbered-section-labels'] },
   { name: 'marquee', strict: ['marquee'], generous: ['marquee'] },
-  { name: 'blinking-cursor', strict: ['blinking-cursor'], generous: ['blinking-cursor', 'pulsing-dot', 'content-hidden-at-rest'] },
   { name: 'image-hover-transform', strict: ['image-hover-transform'], generous: ['image-hover-transform'] },
 ];
 const CLASS_NAMES = new Set(CLASSES.map((c) => c.name));
@@ -124,7 +123,7 @@ const excluded = [];
 const pages = [];
 for (const [id, rec] of Object.entries(sink.labels || {})) {
   if (!rec || rec.status !== 'labeled-codex' || !Array.isArray(rec.labels)) { excluded.push(`${id}: not labeled-codex`); continue; }
-  const codex = {}; // class -> present (only for our 15)
+  const codex = {}; // class -> present (only for our 13)
   let missing = 0;
   for (const cls of CLASSES) {
     const lab = rec.labels.find((l) => l.class === cls.name);
@@ -132,7 +131,7 @@ for (const [id, rec] of Object.entries(sink.labels || {})) {
     if (lab.labeledBy !== 'codex') { excluded.push(`${id}/${cls.name}: labeledBy=${lab.labeledBy} (must be codex)`); }
     codex[cls.name] = !!lab.present;
   }
-  if (missing === CLASSES.length) { excluded.push(`${id}: none of the 15 classes labeled`); continue; }
+  if (missing === CLASSES.length) { excluded.push(`${id}: none of the 13 classes labeled`); continue; }
   const file = findHtml(id);
   if (!file) { excluded.push(`${id}: html not found under ${SEARCH_DIRS.join(' | ')}`); continue; }
   pages.push({ id, file, source: sourceOf(file, id), codex });

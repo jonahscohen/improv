@@ -1,7 +1,7 @@
 // sidecoach/src/__tests__/typography-extremes.test.ts
 //
 // OWNED test for the Stage 4b typographic-extreme rendered SUBJECTIVE classes:
-//   extreme-negative-tracking, tight-leading, all-caps-body, oversized-h1, sub-11px-ui.
+//   extreme-negative-tracking, all-caps-body, oversized-h1, sub-11px-ui. (tight-leading PULLED 2026-07-25.)
 //
 // Two layers:
 //   1. SYNTHETIC-SCORE boundary tests (no browser) - pin each frozen threshold in typographyExtremesFindingsFromScore
@@ -16,11 +16,11 @@ import path from 'node:path';
 import {
   analyzeHtmlOnBrowserSubjective,
   typographyExtremesFindingsFromScore,
-  TYPO_MIN_CONTENT_CHARS, TRACKING_SHARE_MIN, LEADING_SHARE_MIN, ALLCAPS_SHARE_MIN, H1_VW_RATIO, SUB11_MIN_CHARS,
+  TYPO_MIN_CONTENT_CHARS, TRACKING_SHARE_MIN, ALLCAPS_SHARE_MIN, H1_VW_RATIO, SUB11_MIN_CHARS,
   type TypographyExtremesScore, type SubjectiveRule, type SubjectiveFinding,
 } from '../validators/subjective-rendered-scanner';
 
-const MY_RULES: SubjectiveRule[] = ['extreme-negative-tracking', 'tight-leading', 'all-caps-body', 'oversized-h1', 'sub-11px-ui'];
+const MY_RULES: SubjectiveRule[] = ['extreme-negative-tracking', 'all-caps-body', 'oversized-h1', 'sub-11px-ui'];
 const failures: string[] = [];
 let asserted = 0;
 const check = (cond: boolean, msg: string) => { asserted++; if (!cond) failures.push(msg); };
@@ -30,7 +30,6 @@ const check = (cond: boolean, msg: string) => { asserted++; if (!cond) failures.
 const baseScore = (over: Partial<TypographyExtremesScore> = {}): TypographyExtremesScore => ({
   contentChars: 1000, viewportWidth: 1280,
   tightTrackingChars: 0, tightTrackingShare: 0, tightestTrackingEm: 0,
-  runningTextChars: 0, tightLeadingChars: 0, tightLeadingShare: 0, tightestLeading: 0,
   allCapsBodyChars: 0, allCapsShare: 0,
   largestH1Px: 0, h1Ratio: 0,
   sub11Chars: 0, sub11MinPx: 0,
@@ -42,11 +41,6 @@ const rulesOf = (s: TypographyExtremesScore): Set<string> => new Set(typographyE
 check(rulesOf(baseScore({ tightTrackingShare: TRACKING_SHARE_MIN })).has('extreme-negative-tracking'), `tracking must fire at share=${TRACKING_SHARE_MIN}`);
 check(!rulesOf(baseScore({ tightTrackingShare: TRACKING_SHARE_MIN - 0.01 })).has('extreme-negative-tracking'), 'tracking must NOT fire just below the share floor');
 check(!rulesOf(baseScore({ tightTrackingShare: 1, contentChars: TYPO_MIN_CONTENT_CHARS - 1 })).has('extreme-negative-tracking'), 'tracking must NOT fire below the min-content guard even at share 1.0');
-
-// tight-leading: fires at exactly LEADING_SHARE_MIN; guarded by min content chars.
-check(rulesOf(baseScore({ tightLeadingShare: LEADING_SHARE_MIN })).has('tight-leading'), `leading must fire at share=${LEADING_SHARE_MIN}`);
-check(!rulesOf(baseScore({ tightLeadingShare: LEADING_SHARE_MIN - 0.01 })).has('tight-leading'), 'leading must NOT fire just below the share floor');
-check(!rulesOf(baseScore({ tightLeadingShare: 1, contentChars: TYPO_MIN_CONTENT_CHARS - 1 })).has('tight-leading'), 'leading must NOT fire below the min-content guard');
 
 // all-caps-body: fires at exactly ALLCAPS_SHARE_MIN; guarded by min content chars.
 check(rulesOf(baseScore({ allCapsShare: ALLCAPS_SHARE_MIN })).has('all-caps-body'), `all-caps must fire at share=${ALLCAPS_SHARE_MIN}`);
@@ -67,7 +61,7 @@ check(rulesOf(baseScore({ sub11Chars: SUB11_MIN_CHARS, sub11MinPx: 8, contentCha
 {
   const multi = rulesOf(baseScore({ tightTrackingShare: 0.5, h1Ratio: 0.2, largestH1Px: 256, sub11Chars: 400, sub11MinPx: 8 }));
   check(multi.has('extreme-negative-tracking') && multi.has('oversized-h1') && multi.has('sub-11px-ui'), 'a multi-defect score must return one finding per firing class');
-  check(!multi.has('tight-leading') && !multi.has('all-caps-body'), 'silent slices must not emit findings');
+  check(!multi.has('all-caps-body'), 'silent slices must not emit findings');
 }
 
 // ---- layer 2: browser end-to-end over the on-disk fixtures + the shipped known-good page ---------------------

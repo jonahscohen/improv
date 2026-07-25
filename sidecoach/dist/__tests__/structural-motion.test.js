@@ -8,13 +8,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // OWNED test for the Stage 4c structural + 4d motion/marker rendered SUBJECTIVE classes:
 //   4c: thin-border-wide-shadow, repeating-stripe-gradients, text-under-overlay, first-viewport-overflow,
 //       decorative-dot-grid, soft-radial-glow, image-hover-transform
-//   4d: marquee, blinking-cursor, numbered-section-markers
+//   4d: marquee, numbered-section-markers (blinking-cursor PULLED 2026-07-25)
 //
 // Two layers (the typography-extremes.test.ts shape):
 //   1. SYNTHETIC-SCORE boundary tests (no browser) - pin each frozen threshold in structuralFindingsFromScore /
 //      motionMarkerFindingsFromScore exactly at its edge.
 //   2. BROWSER end-to-end over the on-disk fixtures (the SAME pages eval/structural-motion-calibrate.mjs sweeps)
-//      plus the shipped known-good page - the A2 precision non-regression: clean-page.html fires NONE of the ten.
+//      plus the shipped known-good page - the A2 precision non-regression: clean-page.html fires NONE of the nine.
 //
 // Precision-first: every negative fixture is asserted to NOT fire its class; the known-good page is asserted clean.
 const playwright_1 = require("playwright");
@@ -24,7 +24,7 @@ const subjective_rendered_scanner_1 = require("../validators/subjective-rendered
 const MY_RULES = [
     'thin-border-wide-shadow', 'repeating-stripe-gradients', 'text-under-overlay', 'first-viewport-overflow',
     'decorative-dot-grid', 'soft-radial-glow', 'image-hover-transform',
-    'marquee', 'blinking-cursor', 'numbered-section-markers',
+    'marquee', 'numbered-section-markers',
 ];
 const failures = [];
 let asserted = 0;
@@ -44,7 +44,6 @@ const baseStructural = (over = {}) => ({
 });
 const baseMotion = (over = {}) => ({
     marqueeElementCount: 0, marqueeAnimCount: 0,
-    blinkCount: 0,
     numberedMarkerCount: 0, numberedZeroPadded: false,
     ...over,
 });
@@ -75,8 +74,6 @@ check(!sRules(baseStructural({ imageHoverTransformCount: subjective_rendered_sca
 check(mRules(baseMotion({ marqueeElementCount: subjective_rendered_scanner_1.MARQUEE_MIN_COUNT })).has('marquee'), 'marquee must fire on a <marquee> element');
 check(mRules(baseMotion({ marqueeAnimCount: subjective_rendered_scanner_1.MARQUEE_MIN_COUNT })).has('marquee'), 'marquee must fire on a marquee animation');
 check(!mRules(baseMotion({})).has('marquee'), 'marquee must NOT fire with no element and no animation');
-check(mRules(baseMotion({ blinkCount: subjective_rendered_scanner_1.BLINK_MIN_COUNT })).has('blinking-cursor'), `blink must fire at count=${subjective_rendered_scanner_1.BLINK_MIN_COUNT}`);
-check(!mRules(baseMotion({ blinkCount: subjective_rendered_scanner_1.BLINK_MIN_COUNT - 1 })).has('blinking-cursor'), 'blink must NOT fire below its count floor');
 check(mRules(baseMotion({ numberedMarkerCount: subjective_rendered_scanner_1.NUM_MARKER_MIN_COUNT, numberedZeroPadded: true })).has('numbered-section-markers'), `numbered must fire at count=${subjective_rendered_scanner_1.NUM_MARKER_MIN_COUNT}`);
 check(!mRules(baseMotion({ numberedMarkerCount: subjective_rendered_scanner_1.NUM_MARKER_MIN_COUNT - 1 })).has('numbered-section-markers'), 'numbered must NOT fire below its count floor');
 // ---- layer 2: browser end-to-end over the on-disk fixtures + the shipped known-good page ---------------------
@@ -100,7 +97,7 @@ async function run() {
             else
                 check(!fired.has(cls), `negative fixture ${id} must NOT fire ${cls}`);
         }
-        // A2 precision non-regression: the shipped known-good page fires NONE of the ten new classes.
+        // A2 precision non-regression: the shipped known-good page fires NONE of the nine new classes.
         const kg = new Set((await (0, subjective_rendered_scanner_1.analyzeHtmlOnBrowserSubjective)(browser, (0, node_fs_1.readFileSync)(KNOWN_GOOD, 'utf8'))).map((x) => x.rule));
         for (const r of MY_RULES)
             check(!kg.has(r), `known-good clean-page.html must NOT fire ${r} (A2 precision non-regression)`);

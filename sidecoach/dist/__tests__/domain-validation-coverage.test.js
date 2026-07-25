@@ -182,11 +182,46 @@ async function testMemoryChannelNotCorrupted() {
     // Explicit non-corruption guard: the memory channel must not contain a { domain } object.
     check('memory channel is NOT polluted with { domain, ... } domain-shape objects', !memChannel.some((v) => typeof v.domain === 'string'), `entry.validationResults=${JSON.stringify(memChannel)}`);
 }
+// ---------------------------------------------------------------------------
+// Test 4 (uniform-append fix): domain validation APPENDS to result.validationResults
+// rather than overwriting it, so a result the handler / taste gate / ClaudemdMandate
+// check already pushed survives into result.validationResults AND the persisted memory
+// (which the build-report reads). Directly exercises the composite auto-validator site.
+// NEGATIVE CONTROL: asserting the pre-existing entry survives is exactly the assertion
+// that FAILS under the old `result.validationResults = validations` overwrite. The
+// natural-language single-flow site and the explicit-domain site apply the identical
+// append expression.
+// ---------------------------------------------------------------------------
+async function testDomainValidationAppends() {
+    const PRE = { domain: 'handler-preexisting', status: 'fail', passedRules: [], failedRules: ['handler-rule'] };
+    const orch = makeOrchestratorWithFake(() => ({
+        flowId: 'flowE_motion_patterns',
+        flowName: 'flowE_motion_patterns',
+        status: 'success',
+        message: 'motion guidance produced',
+        guidance: ['Ship the build now'], // performance domain fails -> auto domain validation produces outcomes
+        checklist: [],
+        // A result the handler (standing in for the taste gate / mandate check) pushed BEFORE domain validation runs.
+        validationResults: [PRE],
+    }));
+    const composite = await runComposite(orch);
+    const stepResult = composite.flowResults?.[0];
+    const topVrs = (stepResult?.validationResults) || [];
+    // the pre-existing entry SURVIVES (the old overwrite dropped it - this is the discriminating assertion).
+    check('append: a pre-existing result.validationResults entry survives domain validation (not overwritten)', topVrs.some((v) => v.domain === 'handler-preexisting' && v.status === 'fail'), `topVrs=${JSON.stringify(topVrs)}`);
+    // the domain-validation outcome is ALSO present (append added to, did not replace).
+    check('append: the domain-validation outcome is present alongside the pre-existing entry', topVrs.some((v) => v.domain === 'performance' && v.status !== 'pass'), `topVrs=${JSON.stringify(topVrs)}`);
+    // both survive into the persisted memory (build-report reads entry.domainValidationResults).
+    const entry = persistedEntryFor('flowE_motion_patterns');
+    const memVrs = (entry && entry.domainValidationResults) || [];
+    check('append: BOTH the pre-existing entry and the domain outcome persist to memory', memVrs.some((v) => v.domain === 'handler-preexisting') && memVrs.some((v) => v.domain === 'performance'), `entryDomainVrs=${JSON.stringify(memVrs)}`);
+}
 async function runTests() {
     try {
         await testFailureInBothPlaces();
         await testPassingStillValidates();
         await testMemoryChannelNotCorrupted();
+        await testDomainValidationAppends();
     }
     catch (err) {
         check('test harness ran without throwing', false, err.stack || String(err));

@@ -3,13 +3,13 @@
 // OWNED test for the Stage 4c structural + 4d motion/marker rendered SUBJECTIVE classes:
 //   4c: thin-border-wide-shadow, repeating-stripe-gradients, text-under-overlay, first-viewport-overflow,
 //       decorative-dot-grid, soft-radial-glow, image-hover-transform
-//   4d: marquee, blinking-cursor, numbered-section-markers
+//   4d: marquee, numbered-section-markers (blinking-cursor PULLED 2026-07-25)
 //
 // Two layers (the typography-extremes.test.ts shape):
 //   1. SYNTHETIC-SCORE boundary tests (no browser) - pin each frozen threshold in structuralFindingsFromScore /
 //      motionMarkerFindingsFromScore exactly at its edge.
 //   2. BROWSER end-to-end over the on-disk fixtures (the SAME pages eval/structural-motion-calibrate.mjs sweeps)
-//      plus the shipped known-good page - the A2 precision non-regression: clean-page.html fires NONE of the ten.
+//      plus the shipped known-good page - the A2 precision non-regression: clean-page.html fires NONE of the nine.
 //
 // Precision-first: every negative fixture is asserted to NOT fire its class; the known-good page is asserted clean.
 import { chromium } from 'playwright';
@@ -19,14 +19,14 @@ import {
   analyzeHtmlOnBrowserSubjective,
   structuralFindingsFromScore, motionMarkerFindingsFromScore,
   TBWS_MIN_COUNT, STRIPE_MIN_COUNT, TUO_MIN_COUNT, FVO_OVERFLOW_MIN_PX, DOTGRID_MIN_COUNT, GLOW_MIN_COUNT, IHT_MIN_COUNT,
-  MARQUEE_MIN_COUNT, BLINK_MIN_COUNT, NUM_MARKER_MIN_COUNT,
+  MARQUEE_MIN_COUNT, NUM_MARKER_MIN_COUNT,
   type StructuralScore, type MotionMarkerScore, type SubjectiveRule, type SubjectiveFinding,
 } from '../validators/subjective-rendered-scanner';
 
 const MY_RULES: SubjectiveRule[] = [
   'thin-border-wide-shadow', 'repeating-stripe-gradients', 'text-under-overlay', 'first-viewport-overflow',
   'decorative-dot-grid', 'soft-radial-glow', 'image-hover-transform',
-  'marquee', 'blinking-cursor', 'numbered-section-markers',
+  'marquee', 'numbered-section-markers',
 ];
 const failures: string[] = [];
 let asserted = 0;
@@ -46,7 +46,6 @@ const baseStructural = (over: Partial<StructuralScore> = {}): StructuralScore =>
 });
 const baseMotion = (over: Partial<MotionMarkerScore> = {}): MotionMarkerScore => ({
   marqueeElementCount: 0, marqueeAnimCount: 0,
-  blinkCount: 0,
   numberedMarkerCount: 0, numberedZeroPadded: false,
   ...over,
 });
@@ -80,8 +79,6 @@ check(!sRules(baseStructural({ imageHoverTransformCount: IHT_MIN_COUNT - 1 })).h
 check(mRules(baseMotion({ marqueeElementCount: MARQUEE_MIN_COUNT })).has('marquee'), 'marquee must fire on a <marquee> element');
 check(mRules(baseMotion({ marqueeAnimCount: MARQUEE_MIN_COUNT })).has('marquee'), 'marquee must fire on a marquee animation');
 check(!mRules(baseMotion({})).has('marquee'), 'marquee must NOT fire with no element and no animation');
-check(mRules(baseMotion({ blinkCount: BLINK_MIN_COUNT })).has('blinking-cursor'), `blink must fire at count=${BLINK_MIN_COUNT}`);
-check(!mRules(baseMotion({ blinkCount: BLINK_MIN_COUNT - 1 })).has('blinking-cursor'), 'blink must NOT fire below its count floor');
 check(mRules(baseMotion({ numberedMarkerCount: NUM_MARKER_MIN_COUNT, numberedZeroPadded: true })).has('numbered-section-markers'), `numbered must fire at count=${NUM_MARKER_MIN_COUNT}`);
 check(!mRules(baseMotion({ numberedMarkerCount: NUM_MARKER_MIN_COUNT - 1 })).has('numbered-section-markers'), 'numbered must NOT fire below its count floor');
 
@@ -102,7 +99,7 @@ async function run(): Promise<void> {
       if (f.startsWith('p')) check(fired.has(cls), `positive fixture ${id} must fire ${cls}`);
       else check(!fired.has(cls), `negative fixture ${id} must NOT fire ${cls}`);
     }
-    // A2 precision non-regression: the shipped known-good page fires NONE of the ten new classes.
+    // A2 precision non-regression: the shipped known-good page fires NONE of the nine new classes.
     const kg = new Set((await analyzeHtmlOnBrowserSubjective(browser, readFileSync(KNOWN_GOOD, 'utf8'))).map((x) => x.rule));
     for (const r of MY_RULES) check(!kg.has(r), `known-good clean-page.html must NOT fire ${r} (A2 precision non-regression)`);
   } finally { await browser.close(); }

@@ -1,5 +1,5 @@
 import type { Browser } from 'playwright';
-export type SubjectiveRule = 'tiny-text' | 'nested-cards' | 'marketing-buzzword' | 'default-typeface' | 'extreme-negative-tracking' | 'tight-leading' | 'all-caps-body' | 'oversized-h1' | 'sub-11px-ui' | 'thin-border-wide-shadow' | 'repeating-stripe-gradients' | 'text-under-overlay' | 'first-viewport-overflow' | 'decorative-dot-grid' | 'soft-radial-glow' | 'image-hover-transform' | 'marquee' | 'blinking-cursor' | 'numbered-section-markers';
+export type SubjectiveRule = 'tiny-text' | 'nested-cards' | 'marketing-buzzword' | 'default-typeface' | 'extreme-negative-tracking' | 'all-caps-body' | 'oversized-h1' | 'sub-11px-ui' | 'thin-border-wide-shadow' | 'repeating-stripe-gradients' | 'text-under-overlay' | 'first-viewport-overflow' | 'decorative-dot-grid' | 'soft-radial-glow' | 'image-hover-transform' | 'marquee' | 'numbered-section-markers';
 export interface SubjectiveFinding {
     rule: SubjectiveRule;
     severity: 'warning';
@@ -117,11 +117,6 @@ export interface TypographyExtremesScore {
     tightTrackingShare: number;
     tightestTrackingEm: number;
     trackingSelector?: string;
-    runningTextChars: number;
-    tightLeadingChars: number;
-    tightLeadingShare: number;
-    tightestLeading: number;
-    leadingSelector?: string;
     allCapsBodyChars: number;
     allCapsShare: number;
     allCapsSelector?: string;
@@ -133,9 +128,6 @@ export interface TypographyExtremesScore {
     sub11Selector?: string;
 }
 export declare const TRACKING_EXTREME_EM = -0.05;
-export declare const LEADING_TIGHT_RATIO = 1.1;
-export declare const LEADING_MIN_RUN_CHARS = 40;
-export declare const LEADING_MAX_BODY_PX = 28;
 export declare const ALLCAPS_MIN_RUN_CHARS = 40;
 export declare const ALLCAPS_MAX_BODY_PX = 28;
 export declare const ALLCAPS_MIN_CASED = 20;
@@ -143,7 +135,6 @@ export declare const SUB11_MAX_PX = 10;
 export declare function inPageTypographyExtremes(): TypographyExtremesScore;
 export declare const TYPO_MIN_CONTENT_CHARS = 200;
 export declare const TRACKING_SHARE_MIN = 0.15;
-export declare const LEADING_SHARE_MIN = 0.1;
 export declare const ALLCAPS_SHARE_MIN = 0.15;
 export declare const H1_VW_RATIO = 0.09;
 export declare const SUB11_MIN_CHARS = 150;
@@ -197,8 +188,6 @@ export interface MotionMarkerScore {
     marqueeElementCount: number;
     marqueeAnimCount: number;
     marqueeSelector?: string;
-    blinkCount: number;
-    blinkSelector?: string;
     numberedMarkerCount: number;
     numberedZeroPadded: boolean;
     numberedSelector?: string;
@@ -206,13 +195,10 @@ export interface MotionMarkerScore {
 export declare const MARQUEE_MIN_X_PCT = 50;
 export declare const MARQUEE_MIN_X_PX = 200;
 export declare const MARQUEE_MIN_COUNT = 1;
-export declare const BLINK_OPACITY_LOW = 0.1;
-export declare const BLINK_OPACITY_HIGH = 0.9;
-export declare const BLINK_MIN_COUNT = 1;
 export declare const NUM_MARKER_MIN_PX = 32;
 export declare const NUM_MARKER_MIN_COUNT = 3;
 export declare function inPageMotionMarker(): MotionMarkerScore;
-/** Node-side: turn a motion/marker score into 0-3 findings (one page-level verdict per firing class). */
+/** Node-side: turn a motion/marker score into 0-2 findings (one page-level verdict per firing class). */
 export declare function motionMarkerFindingsFromScore(s: MotionMarkerScore): SubjectiveFinding[];
 export interface RenderOpts {
     stripScripts?: boolean;

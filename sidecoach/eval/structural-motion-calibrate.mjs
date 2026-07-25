@@ -3,7 +3,7 @@
  * Stage 4c/4d calibration harness for the rendered structural + motion/marker classes:
  *   4c: thin-border-wide-shadow, repeating-stripe-gradients, text-under-overlay, first-viewport-overflow,
  *       decorative-dot-grid, soft-radial-glow, image-hover-transform
- *   4d: marquee, blinking-cursor, numbered-section-markers
+ *   4d: marquee, numbered-section-markers (blinking-cursor PULLED 2026-07-25)
  *
  * INTEGRITY (the buzzword/typeface/typography-extremes-calibrate contract): it imports the SHIPPING in-page
  * scorers (inPageStructural + inPageMotionMarker) and the SHIPPING Node-side decision fns
@@ -81,7 +81,6 @@ const CLASSES = [
   { rule: 'soft-radial-glow', family: 'structural', field: 'radialGlowCount', labeled: false },
   { rule: 'image-hover-transform', family: 'structural', field: 'imageHoverTransformCount', labeled: false },
   { rule: 'marquee', family: 'motion', field: 'marqueeElementCount', labeled: false },
-  { rule: 'blinking-cursor', family: 'motion', field: 'blinkCount', labeled: false },
   { rule: 'numbered-section-markers', family: 'motion', field: 'numberedMarkerCount', labeled: true },
 ];
 

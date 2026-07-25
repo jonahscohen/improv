@@ -827,8 +827,8 @@ export function resolveSourceAlias(sourceId: string): ProductRuleDefinition | nu
 //                       present. Its severity/findingClass are read from the RAW_RULE via getRuleById - never
 //                       duplicated here - so the manifest can never drift from the rule it points at.
 //   - audit-only      : fires in the rendered audit/subjective lens but is NOT a validator-owned decision rule.
-//                       nested-cards (Stage 3c) and the five Stage 4b typographic-extreme classes
-//                       (extreme-negative-tracking, tight-leading, all-caps-body, oversized-h1, sub-11px-ui) are
+//                       nested-cards (Stage 3c) and the four Stage 4b typographic-extreme classes
+//                       (extreme-negative-tracking, all-caps-body, oversized-h1, sub-11px-ui) are
 //                       such rules: the subjective scanner emits them and the audit surfaces them, but no
 //                       run-validator rule consumes them. They are DELIBERATELY not modeled as rendered-scan
 //                       RAW_RULEs, because the inverse invariant (validator-generation.ts) would then force each
@@ -884,11 +884,6 @@ const RENDERED_RULE_MANIFEST: RenderedManifestEntry[] = [
     scannerRule: 'extreme-negative-tracking', lens: 'subjective', ruleId: null,
     severity: 'minor', findingClass: 'polish', registryScope: 'rendered-extreme-negative-tracking',
     note: 'letter-spacing crowded strongly negative on a share of content text; audit-only (A5a pending)',
-  },
-  {
-    scannerRule: 'tight-leading', lens: 'subjective', ruleId: null,
-    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-tight-leading',
-    note: 'line-height on running body text set tight enough to crowd; audit-only (A5a pending)',
   },
   {
     scannerRule: 'all-caps-body', lens: 'subjective', ruleId: null,
@@ -949,11 +944,6 @@ const RENDERED_RULE_MANIFEST: RenderedManifestEntry[] = [
     scannerRule: 'marquee', lens: 'subjective', ruleId: null,
     severity: 'minor', findingClass: 'polish', registryScope: 'rendered-marquee',
     note: 'a <marquee> element or an infinite horizontal-scroll (CSS marquee) animation; audit-only (A5a pending)',
-  },
-  {
-    scannerRule: 'blinking-cursor', lens: 'subjective', ruleId: null,
-    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-blinking-cursor',
-    note: 'an infinite opacity/visibility blink animation; audit-only (A5a pending)',
   },
   {
     scannerRule: 'numbered-section-markers', lens: 'subjective', ruleId: null,

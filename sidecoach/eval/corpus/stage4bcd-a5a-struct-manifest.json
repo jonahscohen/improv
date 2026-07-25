@@ -3,10 +3,6 @@
   "note": "Stage 4c/4d structural+motion A5a fixtures (constructed positives p* + near-miss negatives n*).",
   "pages": [
     {
-      "id": "n01-blinking-cursor-pulse",
-      "failed": false
-    },
-    {
       "id": "n01-decorative-dot-grid-plain",
       "failed": false
     },
@@ -43,10 +39,6 @@
       "failed": false
     },
     {
-      "id": "n02-blinking-cursor-finite",
-      "failed": false
-    },
-    {
       "id": "n02-first-viewport-overflow-scrolling-page",
       "failed": false
     },
@@ -76,10 +68,6 @@
     },
     {
       "id": "n03-numbered-section-markers-big-stats",
-      "failed": false
-    },
-    {
-      "id": "p01-blinking-cursor",
       "failed": false
     },
     {

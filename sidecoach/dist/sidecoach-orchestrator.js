@@ -282,7 +282,10 @@ class FlowExecutionEngine {
                         const validatorsForFlow = (0, flow_domain_validators_1.getValidatorsForFlow)(step.flowId);
                         if (validatorsForFlow.length > 0) {
                             const validations = this.compositionEngine.validateMultipleDomains(validatorsForFlow, result);
-                            result.validationResults = validations;
+                            // APPEND (not overwrite): the taste gate, a ClaudemdMandate check, or the handler itself may have
+                            // already pushed onto result.validationResults; overwriting dropped those before the build-report
+                            // read them. Uniform-append keeps every prior result alongside these domain outcomes.
+                            result.validationResults = [...(result.validationResults || []), ...validations];
                             // Log validation failures as warnings (soft-fail mode)
                             const failedValidations = validations.filter(v => v.status !== 'pass');
                             if (failedValidations.length > 0) {
@@ -296,7 +299,9 @@ class FlowExecutionEngine {
                     // Also support explicit domain validation if configured in the step
                     if (step.domainValidation?.domains && step.domainValidation.domains.length > 0) {
                         const validations = this.compositionEngine.validateMultipleDomains(step.domainValidation.domains, result);
-                        result.validationResults = validations;
+                        // APPEND (not overwrite): preserve any results already pushed (auto domain validators above, taste
+                        // gate, mandate check, handler) so this explicit-domain pass adds to them rather than dropping them.
+                        result.validationResults = [...(result.validationResults || []), ...validations];
                         // Check if any validation failed
                         const allPassed = flow_composition_1.FlowCompositionEngine.allValidationsPassed(validations);
                         if (!allPassed && step.domainValidation.failOnError) {
@@ -1352,7 +1357,9 @@ class FlowExecutionEngine {
             const validatorsForFlow = (0, flow_domain_validators_1.getValidatorsForFlow)(currentFlowId);
             if (validatorsForFlow.length > 0 && result.status === 'success') {
                 const validations = this.compositionEngine.validateMultipleDomains(validatorsForFlow, result);
-                result.validationResults = validations;
+                // APPEND (not overwrite): the natural-language single-flow path likewise may carry results the handler /
+                // taste gate / mandate check pushed; keep them alongside the domain outcomes for the build-report.
+                result.validationResults = [...(result.validationResults || []), ...validations];
                 // Log any validation failures as warnings (soft-fail mode)
                 const failedValidations = validations.filter(v => v.status !== 'pass');
                 if (failedValidations.length > 0) {

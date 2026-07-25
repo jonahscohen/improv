@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Stage 4b calibration harness for the rendered typographic-extreme classes:
- *   extreme-negative-tracking, tight-leading, all-caps-body, oversized-h1, sub-11px-ui.
+ *   extreme-negative-tracking, all-caps-body, oversized-h1, sub-11px-ui. (tight-leading PULLED 2026-07-25.)
  *
  * INTEGRITY (the buzzword/typeface-calibrate contract): it imports the SHIPPING in-page scorer
  * (inPageTypographyExtremes) and the SHIPPING Node-side threshold constants + decision fn
@@ -19,9 +19,10 @@
  *
  *   - POPULATION 1 (dev corpus, 48 externally-sourced real shipped pages) is INDEPENDENT of this rule's author
  *     and carries the PRECISION / false-positive claim - the number that matters for a precision-first class.
- *     THREE classes carry a real Codex DEV label (author != labeler, eval/corpus/dev-subjective-labels.json):
- *       tight-leading (17/48 present), extreme-negative-tracking (0/48), all-caps-body (0/48).
- *     For those the dev corpus yields real P AND (for tight-leading) real R against an independent labeler.
+ *     TWO classes carry a real Codex DEV label (author != labeler, eval/corpus/dev-subjective-labels.json):
+ *       extreme-negative-tracking (0/48), all-caps-body (0/48). (tight-leading carried a dev label too, but was
+ *       PULLED 2026-07-25 - the A5a grade proved it unfixable in the wild; see the pull beat.)
+ *     For those the dev corpus yields real P against an independent labeler.
  *     TWO classes postdate the 22-class rubric and have NO Codex dev label (like Stage 4a default-typeface):
  *       oversized-h1, sub-11px-ui. Their dev pages enter as PRESUMED-NEGATIVES (precision only); recall for
  *       them comes from the author fixtures, and that limit is stated rather than papered over.
@@ -50,7 +51,7 @@ if (!existsSync(DIST)) { console.error(`typography-extremes-calibrate: dist not 
 const {
   inPageTypographyExtremes, typographyExtremesFindingsFromScore,
   TYPO_MIN_CONTENT_CHARS, TRACKING_EXTREME_EM, TRACKING_SHARE_MIN,
-  LEADING_TIGHT_RATIO, LEADING_SHARE_MIN, ALLCAPS_SHARE_MIN, H1_VW_RATIO, SUB11_MAX_PX, SUB11_MIN_CHARS,
+  ALLCAPS_SHARE_MIN, H1_VW_RATIO, SUB11_MAX_PX, SUB11_MIN_CHARS,
 } = await import(DIST);
 
 const DEV = path.join(ROOT, 'eval/corpus/dev');
@@ -58,11 +59,11 @@ const FIX = path.join(ROOT, 'eval/fixtures/typography-extremes');
 const LABELS = path.join(ROOT, 'eval/corpus/dev-subjective-labels.json');
 const stripScripts = (h) => String(h).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<script\b[^>]*\/?>/gi, '');
 
-// ---- the 5 classes: rule name, the raw score field the sweep reads, the frozen op point, a candidate sweep,
-//      whether a min-content guard applies (proportion classes), and whether a real Codex dev label exists. ----
+// ---- the 4 classes: rule name, the raw score field the sweep reads, the frozen op point, a candidate sweep,
+//      whether a min-content guard applies (proportion classes), and whether a real Codex dev label exists.
+//      (tight-leading was PULLED 2026-07-25 - unfixable in the wild per the A5a grade; see the pull beat.) ----
 const CLASSES = [
   { rule: 'extreme-negative-tracking', field: 'tightTrackingShare', frozen: TRACKING_SHARE_MIN, sweep: [0.05, 0.10, 0.15, 0.20, 0.30, 0.50], guarded: true, labeled: true },
-  { rule: 'tight-leading', field: 'tightLeadingShare', frozen: LEADING_SHARE_MIN, sweep: [0.05, 0.10, 0.15, 0.20, 0.30, 0.50], guarded: true, labeled: true },
   { rule: 'all-caps-body', field: 'allCapsShare', frozen: ALLCAPS_SHARE_MIN, sweep: [0.05, 0.10, 0.15, 0.20, 0.30, 0.50], guarded: true, labeled: true },
   { rule: 'oversized-h1', field: 'h1Ratio', frozen: H1_VW_RATIO, sweep: [0.08, 0.10, 0.11, 0.12, 0.15, 0.20], guarded: false, labeled: false },
   { rule: 'sub-11px-ui', field: 'sub11Chars', frozen: SUB11_MIN_CHARS, sweep: [40, 60, 100, 150, 200, 300], guarded: false, labeled: false },
@@ -103,7 +104,7 @@ const classOfFixture = (id) => CLASSES.find((c) => id.includes(c.rule))?.rule;
 
 const browser = await chromium.launch({ headless: true });
 
-// ---- POPULATION 1: dev corpus (independent; precision, + real recall for tight-leading) ----
+// ---- POPULATION 1: dev corpus (independent; precision only - the labeled classes carry 0 present in dev) ----
 const devRows = [];
 const devFiles = readdirSync(DEV).filter((x) => x.endsWith('.html')).sort();
 for (const f of devFiles) {
@@ -130,7 +131,7 @@ const scoredPages = devRows.length + fixRows.length;
 
 const pct = (x) => `${(x * 100).toFixed(1)}%`;
 console.log('typographic-extremes CALIBRATION  (source: SHIPPING inPageTypographyExtremes + typographyExtremesFindingsFromScore)');
-console.log(`per-element defs: TRACKING_EXTREME_EM=${TRACKING_EXTREME_EM}  LEADING_TIGHT_RATIO=${LEADING_TIGHT_RATIO}  SUB11_MAX_PX=${SUB11_MAX_PX}   min content chars=${TYPO_MIN_CONTENT_CHARS}`);
+console.log(`per-element defs: TRACKING_EXTREME_EM=${TRACKING_EXTREME_EM}  SUB11_MAX_PX=${SUB11_MAX_PX}   min content chars=${TYPO_MIN_CONTENT_CHARS}`);
 console.log('NOT an A5a result: A5a (held-out Codex detection gate) is PENDING for every class here.\n');
 
 // track precision/recall failures for the exit contract.

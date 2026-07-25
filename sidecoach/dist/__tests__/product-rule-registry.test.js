@@ -310,14 +310,14 @@ run();
         'justified-text': false,
         'tiny-text': false, 'nested-cards': false, 'marketing-buzzword': false, 'default-typeface': false,
         // Stage 4b typographic-extreme classes - audit-only taste warnings, non-blocking.
-        'extreme-negative-tracking': false, 'tight-leading': false, 'all-caps-body': false,
+        'extreme-negative-tracking': false, 'all-caps-body': false,
         'oversized-h1': false, 'sub-11px-ui': false,
         // Stage 4c structural taste classes - audit-only taste warnings, non-blocking.
         'thin-border-wide-shadow': false, 'repeating-stripe-gradients': false, 'text-under-overlay': false,
         'first-viewport-overflow': false, 'decorative-dot-grid': false, 'soft-radial-glow': false,
         'image-hover-transform': false,
         // Stage 4d detectable motion/marker classes - audit-only taste warnings, non-blocking.
-        'marquee': false, 'blinking-cursor': false, 'numbered-section-markers': false,
+        'marquee': false, 'numbered-section-markers': false,
     };
     for (const { rule } of scannerRules) {
         const res = (0, product_rule_registry_1.resolveRenderedRule)(rule);
@@ -335,10 +335,10 @@ run();
         throw new Error('nested-cards must resolve as audit-only with no decision ruleId');
     if ((0, product_rule_registry_1.getRuleById)('polish.nested-cards'))
         throw new Error('nested-cards must NOT be a validator-owned RAW_RULE (it would change run-validator behaviour)');
-    // (d.2) the five Stage 4b typographic-extreme classes are likewise AUDIT-ONLY - precision-first taste rules whose
+    // (d.2) the four Stage 4b typographic-extreme classes are likewise AUDIT-ONLY - precision-first taste rules whose
     //       A5a gate is pending, so none may be a validator-owned RAW_RULE (which would force it into the required
     //       rendered decision path via the inverse invariant and change what run-validator gates on).
-    for (const r of ['extreme-negative-tracking', 'tight-leading', 'all-caps-body', 'oversized-h1', 'sub-11px-ui']) {
+    for (const r of ['extreme-negative-tracking', 'all-caps-body', 'oversized-h1', 'sub-11px-ui']) {
         const res = (0, product_rule_registry_1.resolveRenderedRule)(r);
         if (res.source !== 'audit-only' || res.ruleId !== null)
             throw new Error(`${r} must resolve as audit-only with no decision ruleId`);
@@ -351,7 +351,7 @@ run();
     for (const r of [
         'thin-border-wide-shadow', 'repeating-stripe-gradients', 'text-under-overlay', 'first-viewport-overflow',
         'decorative-dot-grid', 'soft-radial-glow', 'image-hover-transform',
-        'marquee', 'blinking-cursor', 'numbered-section-markers',
+        'marquee', 'numbered-section-markers',
     ]) {
         const res = (0, product_rule_registry_1.resolveRenderedRule)(r);
         if (res.source !== 'audit-only' || res.ruleId !== null)

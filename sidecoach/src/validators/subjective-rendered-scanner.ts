@@ -25,12 +25,12 @@ import type { Browser } from 'playwright';
 export type SubjectiveRule =
   | 'tiny-text' | 'nested-cards' | 'marketing-buzzword' | 'default-typeface'
   // Stage 4b typographic-extreme classes (audit-only rendered taste findings).
-  | 'extreme-negative-tracking' | 'tight-leading' | 'all-caps-body' | 'oversized-h1' | 'sub-11px-ui'
+  | 'extreme-negative-tracking' | 'all-caps-body' | 'oversized-h1' | 'sub-11px-ui'
   // Stage 4c structural taste classes (audit-only; computed-style + geometry reads).
   | 'thin-border-wide-shadow' | 'repeating-stripe-gradients' | 'text-under-overlay' | 'first-viewport-overflow'
   | 'decorative-dot-grid' | 'soft-radial-glow' | 'image-hover-transform'
   // Stage 4d detectable motion/marker classes (audit-only).
-  | 'marquee' | 'blinking-cursor' | 'numbered-section-markers';
+  | 'marquee' | 'numbered-section-markers';
 
 export interface SubjectiveFinding {
   rule: SubjectiveRule;
@@ -45,12 +45,12 @@ export type SubjectiveScan =
 
 export const SUBJECTIVE_RULES: SubjectiveRule[] = [
   'tiny-text', 'nested-cards', 'marketing-buzzword', 'default-typeface',
-  'extreme-negative-tracking', 'tight-leading', 'all-caps-body', 'oversized-h1', 'sub-11px-ui',
+  'extreme-negative-tracking', 'all-caps-body', 'oversized-h1', 'sub-11px-ui',
   // Stage 4c structural taste classes.
   'thin-border-wide-shadow', 'repeating-stripe-gradients', 'text-under-overlay', 'first-viewport-overflow',
   'decorative-dot-grid', 'soft-radial-glow', 'image-hover-transform',
   // Stage 4d detectable motion/marker classes.
-  'marquee', 'blinking-cursor', 'numbered-section-markers',
+  'marquee', 'numbered-section-markers',
 ];
 
 export function stripScripts(html: string): string {
@@ -639,15 +639,16 @@ export function typefaceGroundOf(detail: string | undefined): 'default-stack' | 
 
 /* ====================== typographic-extreme classes (Stage 4b) ====================== */
 //
-// Five rendered SUBJECTIVE (taste) classes, each a computed-style read on the rendered tree, each precision-first,
+// Four rendered SUBJECTIVE (taste) classes, each a computed-style read on the rendered tree, each precision-first,
 // each following the SINGLE-SOURCE score+threshold split the buzzword/typeface classes use: ONE in-page scorer
 // (inPageTypographyExtremes) walks the tree once and returns a rich SCORE; the firing THRESHOLDS are applied in
 // Node by typographyExtremesFindingsFromScore, so the calibration harness sweeps EXACTLY what ships (no
-// reimplementation - the integrity rule). All five are page-level judgments, not per-element nags: each emits at
+// reimplementation - the integrity rule). All four are page-level judgments, not per-element nags: each emits at
 // most ONE finding per page (the page-level verdict + a representative selector), never one-per-offender.
+// (tight-leading was PULLED 2026-07-25 - the A5a grade proved it unfixable in the wild: a line-height ratio cannot
+// track the Codex labeler's perceived-density judgment without destroying precision. See the pull beat.)
 //
 //   extreme-negative-tracking - computed letter-spacing pulled strongly negative (letters crowd/touch).
-//   tight-leading             - computed line-height on running body text set tight enough to crowd lines.
 //   all-caps-body             - long runs of body/content text in all-caps (text-transform or actual caps).
 //   oversized-h1              - the page's h1 computed font-size vs viewport beyond a taste threshold.
 //   sub-11px-ui               - interface text rendered below ~11px (a hard legibility floor).
@@ -667,12 +668,6 @@ export interface TypographyExtremesScore {
   tightTrackingShare: number;        // tightTrackingChars / contentChars
   tightestTrackingEm: number;        // most-negative letterSpacing/fontSize ratio seen (0 if none) - detail
   trackingSelector?: string;
-  // tight-leading (running body text only; line-height:normal is the default and is never counted)
-  runningTextChars: number;          // body-scale, non-heading running-text chars (context)
-  tightLeadingChars: number;         // of contentChars, running-text chars whose lineHeight/fontSize <= LEADING_TIGHT_RATIO
-  tightLeadingShare: number;         // tightLeadingChars / contentChars
-  tightestLeading: number;           // tightest lineHeight/fontSize ratio seen on running text (0 if none) - detail
-  leadingSelector?: string;
   // all-caps-body (long runs of body-scale caps text; short labels are excluded by the run-length guard)
   allCapsBodyChars: number;          // chars in long, body-scale, all-caps runs
   allCapsShare: number;              // allCapsBodyChars / contentChars
@@ -698,19 +693,6 @@ export interface TypographyExtremesScore {
 // below the near-universal tasteful band so a well-tracked headline never trips it (precision), and it is the
 // per-element definition of "extreme"; the page-level firing threshold is the share below.
 export const TRACKING_EXTREME_EM = -0.05;
-// LEADING_TIGHT_RATIO = 1.10. Comfortable body leading is 1.4-1.6 (WCAG 1.4.12 asks >= 1.5); the browser default
-// `normal` computes to ~1.2 and is the single most common value on the web, so any bar at/above 1.2 would fire on
-// the default and destroy precision. "Tight enough to crowd" is BELOW the default: at a line-height ratio under
-// 1.10 the descenders of one line reach the ascenders of the next and running text genuinely crowds. line-height
-// `normal` is treated as not-tight and never counted (it is the default, not a decision) - only an EXPLICIT
-// sub-1.10 leading on body-scale running text is an offender.
-export const LEADING_TIGHT_RATIO = 1.10;
-// LEADING_MIN_RUN_CHARS = 40 / LEADING_MAX_BODY_PX = 28. "Running text" per the rubric is body copy
-// (sentences/paragraphs), not headings or labels: a run must be >= 40 chars (about a sentence) and body-scale
-// (<= 28px, above which tight leading is a normal display-heading choice, not a body-crowding defect). Headings
-// (h1-h6 / role=heading) are excluded outright - tight leading on a large heading is correct typography.
-export const LEADING_MIN_RUN_CHARS = 40;
-export const LEADING_MAX_BODY_PX = 28;
 // ALLCAPS_MIN_RUN_CHARS = 40 / ALLCAPS_MAX_BODY_PX = 28 / ALLCAPS_MIN_CASED = 20. The rubric scopes all-caps-body
 // to "running body text (sentences/paragraphs, not short labels)". The 40-char run guard excludes every short
 // label, eyebrow, button, kicker and nav item (the "conventional label spacing which is normal" the rubric sets
@@ -732,9 +714,6 @@ export const SUB11_MAX_PX = 10;
 export function inPageTypographyExtremes(): TypographyExtremesScore {
   // per-element definitions (must be inside the serialized fn - it cannot close over module scope).
   const TRACKING_EXTREME_EM = -0.05;
-  const LEADING_TIGHT_RATIO = 1.10;
-  const LEADING_MIN_RUN_CHARS = 40;
-  const LEADING_MAX_BODY_PX = 28;
   const ALLCAPS_MIN_RUN_CHARS = 40;
   const ALLCAPS_MAX_BODY_PX = 28;
   const ALLCAPS_MIN_CASED = 20;
@@ -787,10 +766,10 @@ export function inPageTypographyExtremes(): TypographyExtremesScore {
     }
     return false;
   };
-  // A heading OR any element INSIDE a heading (h1-h6 / role=heading) is excluded from tight-leading and
-  // all-caps-body: tight leading and all-caps are correct, deliberate typography on headings, and both classes are
-  // BODY-copy defects. Walking ANCESTORS (not just the element) is what catches the common
-  // `<h2><span>...</span></h2>`, where the text-bearing span is not itself a heading (Codex P1).
+  // A heading OR any element INSIDE a heading (h1-h6 / role=heading) is excluded from all-caps-body: all-caps is
+  // correct, deliberate typography on headings, and all-caps-body is a BODY-copy defect. Walking ANCESTORS (not
+  // just the element) is what catches the common `<h2><span>...</span></h2>`, where the text-bearing span is not
+  // itself a heading (Codex P1).
   const HEADING_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
   const inHeading = (el: Element): boolean => {
     for (let n: Element | null = el; n && n instanceof Element; n = n.parentElement) {
@@ -806,7 +785,6 @@ export function inPageTypographyExtremes(): TypographyExtremesScore {
 
   let contentChars = 0;
   let tightTrackingChars = 0, tightestTrackingEm = 0; let trackingSelector: string | undefined;
-  let runningTextChars = 0, tightLeadingChars = 0, tightestLeading = 0; let leadingSelector: string | undefined;
   let allCapsBodyChars = 0; let allCapsSelector: string | undefined;
   let sub11Chars = 0, sub11MinPx = 0; let sub11Selector: string | undefined;
 
@@ -845,21 +823,6 @@ export function inPageTypographyExtremes(): TypographyExtremesScore {
       if (em <= TRACKING_EXTREME_EM) { tightTrackingChars += chars; if (!trackingSelector) trackingSelector = sel(el); }
     }
 
-    // tight-leading: running BODY text only (not a heading and not inside one, body-scale, sentence-length run).
-    // line-height:normal is the browser default and is never counted (only an explicit tight leading is a decision).
-    if (!inHeading(el) && fontPx <= LEADING_MAX_BODY_PX && chars >= LEADING_MIN_RUN_CHARS) {
-      runningTextChars += chars;
-      const lhRaw = cs.lineHeight;
-      if (lhRaw && lhRaw !== 'normal') {
-        const lhPx = parseFloat(lhRaw);
-        if (Number.isFinite(lhPx) && lhPx > 0) {
-          const ratio = lhPx / fontPx;
-          if (tightestLeading === 0 || ratio < tightestLeading) tightestLeading = ratio;
-          if (ratio <= LEADING_TIGHT_RATIO) { tightLeadingChars += chars; if (!leadingSelector) leadingSelector = sel(el); }
-        }
-      }
-    }
-
     // all-caps-body: long, body-scale, NON-heading runs rendered entirely in capitals. The cased-letter minimum
     // gates BOTH branches, so a long CJK / numeric / punctuation run inside a text-transform:uppercase wrapper
     // (which uppercase does not actually capitalise) is not misread as caps (Codex P2). \p{Lu}/\p{Ll} count only
@@ -892,7 +855,6 @@ export function inPageTypographyExtremes(): TypographyExtremesScore {
   return {
     contentChars, viewportWidth,
     tightTrackingChars, tightTrackingShare: share(tightTrackingChars), tightestTrackingEm, trackingSelector,
-    runningTextChars, tightLeadingChars, tightLeadingShare: share(tightLeadingChars), tightestLeading, leadingSelector,
     allCapsBodyChars, allCapsShare: share(allCapsBodyChars), allCapsSelector,
     largestH1Px, h1Ratio: viewportWidth > 0 ? largestH1Px / viewportWidth : 0, h1Selector,
     sub11Chars, sub11MinPx, sub11Selector,
@@ -903,8 +865,8 @@ export function inPageTypographyExtremes(): TypographyExtremesScore {
 //      frozen on principle + the dev signal, NEVER on held-out. ----
 
 // A page with almost no text cannot support a page-level proportion judgment (a 1-element page reads as 100% of
-// anything). Same guard, same value, as tiny-text / default-typeface. Applies to the three proportion classes
-// (tracking, leading, all-caps); oversized-h1 and sub-11px-ui use absolute measures and do not need it.
+// anything). Same guard, same value, as tiny-text / default-typeface. Applies to the two proportion classes
+// (tracking, all-caps); oversized-h1 and sub-11px-ui use absolute measures and do not need it.
 export const TYPO_MIN_CONTENT_CHARS = 200;
 // TRACKING_SHARE_MIN = 0.15. Once "extreme" is defined per-element (<= -0.05em), the page fires only when a
 // SUBSTANTIAL share of content text is that tightly tracked - extreme tracking as a page-level characteristic, not
@@ -912,19 +874,6 @@ export const TYPO_MIN_CONTENT_CHARS = 200;
 // reach it, a page that tracks its headings-and-body tight does. Confirmed by the dev corpus (no real page reaches
 // it; see the calibration report).
 export const TRACKING_SHARE_MIN = 0.15;
-// LEADING_SHARE_MIN = 0.10. Same page-level logic - fire when a substantial share of content text is set as tight
-// running copy, not on a single crowded caption - but the floor is 0.10 not 0.15 for a principled reason: the
-// NUMERATOR here is only body-scale running-text chars (a SUBSET of content), where tracking/all-caps count over
-// all content, so the equivalent "substantial share" bar is lower. The dev signal confirms it: with the Codex
-// tight-leading labels (17/48 present), 0.10 fires on the pages carrying the most genuinely-crowded running BODY
-// copy (nasa 0.117, polygon 0.107) at precision 1.000 (zero false positives on the 31 labeled negatives), where
-// 0.15 catches none. It sits in the widest P=1.000 band (0.05-0.10 score identically).
-// HONEST RECALL NOTE: dev recall is ~0.12 (2/17). The other 15 Codex-positives carry NO running BODY text under
-// the strict 1.10 crowding bar - they set body leading in the 1.2-1.4 range or use the ~1.2 `normal` default (which
-// this class deliberately does not flag), OR their tight leading is on HEADINGS (arstechnica; excluded because
-// tight leading is correct display typography, not a body-copy defect - the Codex-P1 heading-ancestor guard). That
-// gap is the precision-first cost, not a miscalibration.
-export const LEADING_SHARE_MIN = 0.10;
 // ALLCAPS_SHARE_MIN = 0.15. A substantial share of content text set as long all-caps body runs. The dev signal
 // set this: at 0.10 the detector false-fired on polygon (10.7% of its content is incidental long all-caps labels,
 // Codex-labeled NOT all-caps-body); 0.15 clears polygon (P=1.000) while the fixture (94%) fires cleanly. 0.15 also
@@ -967,10 +916,6 @@ export function typographyExtremesFindingsFromScore(s: TypographyExtremesScore):
   if (enoughContent && s.tightTrackingShare >= TRACKING_SHARE_MIN) {
     out.push({ rule: 'extreme-negative-tracking', severity: 'warning', selector: s.trackingSelector,
       detail: `${pct(s.tightTrackingShare)} of content text is tracked <= ${TRACKING_EXTREME_EM}em (tightest ${s.tightestTrackingEm.toFixed(3)}em); letters crowd` });
-  }
-  if (enoughContent && s.tightLeadingShare >= LEADING_SHARE_MIN) {
-    out.push({ rule: 'tight-leading', severity: 'warning', selector: s.leadingSelector,
-      detail: `${pct(s.tightLeadingShare)} of content text is running copy with line-height <= ${LEADING_TIGHT_RATIO} (tightest ${s.tightestLeading.toFixed(2)}); lines crowd` });
   }
   if (enoughContent && s.allCapsShare >= ALLCAPS_SHARE_MIN) {
     out.push({ rule: 'all-caps-body', severity: 'warning', selector: s.allCapsSelector,
@@ -1345,9 +1290,11 @@ export function structuralFindingsFromScore(s: StructuralScore): SubjectiveFindi
 
 /* ====================== detectable motion/marker classes (Stage 4d) ====================== */
 //
-// Three rendered SUBJECTIVE classes a DOM/computed-style engine CAN truthfully detect: marquee, blinking-cursor,
+// Two rendered SUBJECTIVE classes a DOM/computed-style engine CAN truthfully detect: marquee,
 // numbered-section-markers. Same single-source split: ONE in-page scorer (inPageMotionMarker) reads the DOM +
 // the @keyframes/animation declarations, Node applies the thresholds (motionMarkerFindingsFromScore).
+// (blinking-cursor was PULLED 2026-07-25 - it is JS-driven and the hermetic render strips scripts, so a keyframe-
+// only detector is structurally blind to real carets; firing from @keyframes alone costs precision. See the pull beat.)
 //
 // HONEST EXCLUSIONS (Stage 4d - deliberately NOT built; recorded so no later pass claims render-detection of a
 // class a DOM/computed-style engine cannot truthfully see):
@@ -1374,9 +1321,6 @@ export interface MotionMarkerScore {
   marqueeElementCount: number;       // <marquee> elements (deprecated, always the idiom)
   marqueeAnimCount: number;          // elements running an infinite horizontal-translate (CSS marquee) animation
   marqueeSelector?: string;
-  // blinking-cursor
-  blinkCount: number;                // elements running an infinite opacity/visibility blink animation
-  blinkSelector?: string;
   // numbered-section-markers
   numberedMarkerCount: number;       // prominent, standalone, decorative numerals forming a motif
   numberedZeroPadded: boolean;       // the run is zero-padded (01,02,03) - the strong decorative signal (detail)
@@ -1389,12 +1333,6 @@ export interface MotionMarkerScore {
 export const MARQUEE_MIN_X_PCT = 50;   // translateX delta as a % of the element's box, or...
 export const MARQUEE_MIN_X_PX = 200;   // ...an absolute px delta, either qualifies
 export const MARQUEE_MIN_COUNT = 1;
-// blinking-cursor. An INFINITE animation whose keyframes toggle opacity between near-0 and near-1 (a hard blink),
-// or visibility hidden<->visible. A breathing/pulse (0.5<->1) is NOT a blink - require the low frame <= 0.1 and
-// the high frame >= 0.9, so only a true on/off blink qualifies (precision).
-export const BLINK_OPACITY_LOW = 0.1;
-export const BLINK_OPACITY_HIGH = 0.9;
-export const BLINK_MIN_COUNT = 1;
 // numbered-section-markers. A prominent (>= NUM_MARKER_MIN_PX, display-scale) standalone decorative numeral -
 // its rendered text (own text OR ::before/::after literal content) is EXACTLY a 1-2 digit numeral. The page fires
 // only when >= NUM_MARKER_MIN_COUNT such markers are ZERO-PADDED (01,02,03 - the reliable decorative signal). Two
@@ -1409,7 +1347,6 @@ export const NUM_MARKER_MIN_COUNT = 3;
 /* istanbul ignore next - executes in the browser context (serialized by page.evaluate; must be self-contained) */
 export function inPageMotionMarker(): MotionMarkerScore {
   const MARQUEE_MIN_X_PCT = 50, MARQUEE_MIN_X_PX = 200;
-  const BLINK_OPACITY_LOW = 0.1, BLINK_OPACITY_HIGH = 0.9;
   const NUM_MARKER_MIN_PX = 32, NUM_MARKER_MIN_COUNT = 3;
 
   function sel(el: Element): string {
@@ -1440,10 +1377,9 @@ export function inPageMotionMarker(): MotionMarkerScore {
     return t.replace(/\s+/g, ' ').trim();
   }
 
-  // ---- collect @keyframes once: name -> classification (isMarquee via large translateX; isBlink via opacity
-  //      toggling near-0<->near-1 or visibility). Cross-origin sheets throw on cssRules; caught per-sheet. ----
+  // ---- collect @keyframes once: name -> classification (isMarquee via large translateX travel delta).
+  //      Cross-origin sheets throw on cssRules; caught per-sheet. ----
   const marqueeKeyframes = new Set<string>();
-  const blinkKeyframes = new Set<string>();
   function readKeyframes(rules: CSSRule[]): void {
     for (const rule of rules) {
       const asKf = rule as CSSKeyframesRule;
@@ -1451,7 +1387,6 @@ export function inPageMotionMarker(): MotionMarkerScore {
         // marquee is TRAVEL DELTA, not max absolute translate (Codex): a set that sits at translateX(250px) at
         // every frame never MOVES, so track signed min/max per unit and require max-min >= the threshold.
         let pctMin = Infinity, pctMax = -Infinity, pxMin = Infinity, pxMax = -Infinity;
-        let minOp = 1, maxOp = 0, sawOpacity = false, visToggle = false;
         for (const fr of Array.from(asKf.cssRules) as CSSKeyframeRule[]) {
           const st = fr.style; if (!st) continue;
           const tf = st.transform || '';
@@ -1464,13 +1399,10 @@ export function inPageMotionMarker(): MotionMarkerScore {
             else if (unit === '%') { if (v < pctMin) pctMin = v; if (v > pctMax) pctMax = v; }
             else { if (v < pxMin) pxMin = v; if (v > pxMax) pxMax = v; }
           }
-          const op = st.opacity; if (op !== '' && op != null) { const o = parseFloat(op); if (Number.isFinite(o)) { sawOpacity = true; if (o < minOp) minOp = o; if (o > maxOp) maxOp = o; } }
-          if ((st.visibility || '').toLowerCase() === 'hidden') visToggle = true;
         }
         const pctDelta = pctMax >= pctMin ? pctMax - pctMin : 0;
         const pxDelta = pxMax >= pxMin ? pxMax - pxMin : 0;
         if (pctDelta >= MARQUEE_MIN_X_PCT || pxDelta >= MARQUEE_MIN_X_PX) marqueeKeyframes.add(asKf.name);
-        if ((sawOpacity && minOp <= BLINK_OPACITY_LOW && maxOp >= BLINK_OPACITY_HIGH) || visToggle) blinkKeyframes.add(asKf.name);
         continue;
       }
       const grouping = (rule as CSSGroupingRule).cssRules;
@@ -1500,7 +1432,6 @@ export function inPageMotionMarker(): MotionMarkerScore {
   };
 
   let marqueeElementCount = 0, marqueeAnimCount = 0; let marqueeSelector: string | undefined;
-  let blinkCount = 0; let blinkSelector: string | undefined;
 
   // <marquee> elements (deprecated) - counted only when actually rendered (a display:none template must not fire).
   for (const m of Array.from(document.getElementsByTagName('marquee'))) { if (visuallyVisible(m)) { marqueeElementCount++; if (!marqueeSelector) marqueeSelector = sel(m); } }
@@ -1517,11 +1448,10 @@ export function inPageMotionMarker(): MotionMarkerScore {
     if (!visuallyVisible(el)) continue; // gate marquee/blink AND markers on visibility (no hidden-template fires - Codex)
     const cs = getComputedStyle(el);
 
-    // marquee / blink via animation usage (element runs an ENDLESS marquee/blink keyframe - paired by index above).
+    // marquee via animation usage (element runs an ENDLESS marquee keyframe - paired by index above).
     const inf = infiniteAnimNames(cs);
     if (inf.length) {
       if (inf.some((n) => marqueeKeyframes.has(n))) { marqueeAnimCount++; if (!marqueeSelector) marqueeSelector = sel(el); }
-      if (inf.some((n) => blinkKeyframes.has(n))) { blinkCount++; if (!blinkSelector) blinkSelector = sel(el); }
     }
 
     // numbered marker: own text is exactly a numeral, OR a VISIBLE ::before/::after carries a literal-string numeral.
@@ -1564,22 +1494,17 @@ export function inPageMotionMarker(): MotionMarkerScore {
 
   return {
     marqueeElementCount, marqueeAnimCount, marqueeSelector,
-    blinkCount, blinkSelector,
     numberedMarkerCount, numberedZeroPadded, numberedSelector,
   };
 }
 
-/** Node-side: turn a motion/marker score into 0-3 findings (one page-level verdict per firing class). */
+/** Node-side: turn a motion/marker score into 0-2 findings (one page-level verdict per firing class). */
 export function motionMarkerFindingsFromScore(s: MotionMarkerScore): SubjectiveFinding[] {
   const out: SubjectiveFinding[] = [];
   const marquees = s.marqueeElementCount + s.marqueeAnimCount;
   if (marquees >= MARQUEE_MIN_COUNT) {
     out.push({ rule: 'marquee', severity: 'warning', selector: s.marqueeSelector,
       detail: `${marquees} marquee(s) (${s.marqueeElementCount} <marquee> element(s), ${s.marqueeAnimCount} infinite horizontal-scroll animation(s))` });
-  }
-  if (s.blinkCount >= BLINK_MIN_COUNT) {
-    out.push({ rule: 'blinking-cursor', severity: 'warning', selector: s.blinkSelector,
-      detail: `${s.blinkCount} element(s) running an infinite blink (opacity/visibility) animation` });
   }
   if (s.numberedMarkerCount >= NUM_MARKER_MIN_COUNT) {
     out.push({ rule: 'numbered-section-markers', severity: 'warning', selector: s.numberedSelector,
@@ -1607,11 +1532,11 @@ export async function analyzeHtmlOnBrowserSubjective(browser: Browser, html: str
     // default-typeface via the SAME split (Stage 4a): in-page score, Node-side threshold.
     const face = typefaceFindingFromScore(await page.evaluate(inPageTypeface), typeface);
     if (face) findings.push(face);
-    // Stage 4b typographic-extreme classes via the SAME split: one in-page score, Node-side thresholds -> 0-5 findings.
+    // Stage 4b typographic-extreme classes via the SAME split: one in-page score, Node-side thresholds -> 0-4 findings.
     findings.push(...typographyExtremesFindingsFromScore(await page.evaluate(inPageTypographyExtremes)));
     // Stage 4c structural classes via the SAME split: one in-page score, Node-side thresholds -> 0-7 findings.
     findings.push(...structuralFindingsFromScore(await page.evaluate(inPageStructural)));
-    // Stage 4d motion/marker classes via the SAME split: one in-page score, Node-side thresholds -> 0-3 findings.
+    // Stage 4d motion/marker classes via the SAME split: one in-page score, Node-side thresholds -> 0-2 findings.
     findings.push(...motionMarkerFindingsFromScore(await page.evaluate(inPageMotionMarker)));
     return findings;
   } finally {

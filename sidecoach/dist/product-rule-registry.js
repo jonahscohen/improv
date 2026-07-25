@@ -839,11 +839,6 @@ const RENDERED_RULE_MANIFEST = [
         note: 'letter-spacing crowded strongly negative on a share of content text; audit-only (A5a pending)',
     },
     {
-        scannerRule: 'tight-leading', lens: 'subjective', ruleId: null,
-        severity: 'minor', findingClass: 'polish', registryScope: 'rendered-tight-leading',
-        note: 'line-height on running body text set tight enough to crowd; audit-only (A5a pending)',
-    },
-    {
         scannerRule: 'all-caps-body', lens: 'subjective', ruleId: null,
         severity: 'minor', findingClass: 'polish', registryScope: 'rendered-all-caps-body',
         note: 'long runs of body/content text set all-caps (slows reading); audit-only (A5a pending)',
@@ -902,11 +897,6 @@ const RENDERED_RULE_MANIFEST = [
         scannerRule: 'marquee', lens: 'subjective', ruleId: null,
         severity: 'minor', findingClass: 'polish', registryScope: 'rendered-marquee',
         note: 'a <marquee> element or an infinite horizontal-scroll (CSS marquee) animation; audit-only (A5a pending)',
-    },
-    {
-        scannerRule: 'blinking-cursor', lens: 'subjective', ruleId: null,
-        severity: 'minor', findingClass: 'polish', registryScope: 'rendered-blinking-cursor',
-        note: 'an infinite opacity/visibility blink animation; audit-only (A5a pending)',
     },
     {
         scannerRule: 'numbered-section-markers', lens: 'subjective', ruleId: null,
