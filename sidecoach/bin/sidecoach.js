@@ -179,6 +179,7 @@ function topLevelHelp() {
   console.log('  sidecoach teach [brief]        setup: generate PRODUCT.md');
   console.log('  sidecoach document             setup: generate DESIGN.md');
   console.log('  sidecoach list                 enumerate verbs and flows');
+  console.log('  sidecoach counter-rules [prov] classes a model over-produces (Stage 1c defect-mining)');
   console.log('  sidecoach help [verb]          this help, or registry detail for one');
   console.log('');
 
@@ -357,6 +358,48 @@ function resolveAndPrint(command, target) {
 }
 
 // ---------------------------------------------------------------------------
+// counter-rules: print the Stage 1c provider-specific defect counter-rules -
+// the classes a given model over-produces (from the committed defect-mining
+// distribution), so a builder can watch for them. YOU name the provider; the
+// CLI never guesses which model you are building with (sidecoach advises, it
+// does not know your target model).
+// ---------------------------------------------------------------------------
+function printCounterRules(provider) {
+  let mod;
+  try {
+    mod = require('../dist/counter-rules.generated');
+  } catch (err) {
+    console.error('sidecoach: counter-rules unavailable - run `npm run build` in sidecoach/ first.');
+    return 2;
+  }
+  const { COUNTER_RULES, counterRulesForProvider } = mod;
+  const providers = Array.from(new Set(COUNTER_RULES.map((r) => r.provider))).sort();
+
+  if (!provider) {
+    console.log('sidecoach counter-rules - classes each model over-produces (Stage 1c defect-mining).');
+    console.log('');
+    console.log(`Providers with counter-rules (${providers.length}): ${providers.join(', ')}`);
+    console.log('');
+    console.log('Pass one to see its watch-list, e.g. `sidecoach counter-rules claude`.');
+    console.log('Advisory: name the model you are building with - sidecoach does not guess it.');
+    return 0;
+  }
+
+  const key = provider.toLowerCase();
+  const rules = counterRulesForProvider(key);
+  if (rules.length === 0) {
+    console.log(`No counter-rules for provider "${provider}".  Known: ${providers.join(', ')}.`);
+    return providers.includes(key) ? 0 : 1;
+  }
+  console.log(`Counter-rules for ${key} - classes it over-produces, watch for these (Stage 1c):`);
+  console.log('');
+  for (const r of rules) console.log(`  ${r.guidance}`);
+  console.log('');
+  console.log(`${rules.length} class(es), most-fired first. Source: eval/corpus/defect-distribution.json.`);
+  return 0;
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -383,6 +426,11 @@ function main() {
   if (cmd === 'list' || cmd === '--list') {
     listAll();
     process.exit(0);
+  }
+
+  // Stage 1c: provider-specific defect counter-rules (you name the provider).
+  if (cmd === 'counter-rules' || cmd === 'counter_rules' || cmd === 'counterrules') {
+    process.exit(printCounterRules(argv[1]));
   }
 
   // Per-verb help: `sidecoach craft --help` / `-h`.

@@ -99,6 +99,7 @@ When unsure, run `/sidecoach list` for the full menu. Once an entry command is l
 | `/sidecoach shape <feature>` | Plans design approach before building; runs exploration and rapid iteration |
 | `/sidecoach list` | Shows both phase commands and the 21 verb commands grouped by phase |
 | `/sidecoach help <verb>` | Shows registry detail for a verb: description, phase, reference path, flow chain, parity checklist, sidecoach parity-plus additions |
+| `sidecoach counter-rules [provider]` | Stage 1c defect-mining: the classes a given model systematically over-produces (e.g. default-typeface, nested-cards, low-contrast) so you can watch for them while building. YOU name the provider (claude/gpt/gemini) - sidecoach advises and does not guess your target model; no arg lists the providers. Source: `eval/corpus/defect-distribution.json`, regenerated periodically via the Stage 1a/1b sampling. |
 
 ### Implementation
 | Command | What it does |

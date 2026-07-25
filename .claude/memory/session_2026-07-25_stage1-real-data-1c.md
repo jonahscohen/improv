@@ -40,7 +40,10 @@ Real signal: ALL 3 over-produce default-typeface (90-100%) + nested-cards; gemin
 - counter-rules.test: OK, 81 asserted, 13 rules over the registry.
 - Full gate (npm test, expect 87 suites) + Codex 1c review RUNNING.
 
-## WIRING = the one design call left (flagged, not fabricated)
+## WIRING DECIDED (Jonah): CLI surface, user picks the provider - DONE + verified
+`sidecoach counter-rules [provider]` added to bin/sidecoach.js (dispatch + printCounterRules + topLevelHelp line) + a SKILL.md row. Honest design: YOU name the provider (claude/gpt/gemini); the CLI never guesses your target model (sidecoach advises, it can't know which model you build with - the reason auto-inject was rejected). Lazy-requires dist/counter-rules.generated (exit 2 if unbuilt). Verified live: `counter-rules claude` prints its 4 rules (default-typeface 100%, low-contrast 55%, nested-cards 35%, gray-on-color 30%) exit 0; no-arg lists the 3 providers exit 0; unknown provider exit 1; help/list regression clean (unknown verb still exit 1). Display-only, reads the already-Codex-reviewed generated module - verified by exercising the 3 cases rather than a 3rd heavyweight Codex pass. Core 1c committed 971070a5; CLI surface commit next.
+
+## (superseded) prior wiring-flag note
 The orchestrator has NO active-provider signal AND no single guidance-finalization seam (guidance is assembled per-branch; the one append at L535 is taste-failure-specific). So auto-injecting counterRuleGuidanceForProvider needs 2 decisions: (a) provider source (recommend env SIDECOACH_ACTIVE_PROVIDER default 'claude' since sidecoach runs under Claude) + (b) WHERE to append. The counter-rules ARE consumable NOW via the exported counterRuleGuidanceForProvider(p) - compiled, tested, queryable API, not hollow. Will ASK Jonah the wiring depth rather than risk the sensitive orchestrator per-branch or fabricate a signal nothing sets.
 
 ## Samples NOT committed (60 HTML pages = repo bloat); the DISTRIBUTION artifact (with fired/total + model ids + provenance) is the committed record. Periodic re-run regenerates.
