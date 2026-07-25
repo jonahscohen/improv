@@ -104,6 +104,10 @@ async function scanRenderedLive(renderUrl, signal, opts = {}) {
                 findings.push(face);
             // Stage 4b typographic-extreme classes via the SAME split: one in-page score, Node-side thresholds -> 0-5 findings.
             findings.push(...(0, subjective_rendered_scanner_1.typographyExtremesFindingsFromScore)(await race(page.evaluate(subjective_rendered_scanner_1.inPageTypographyExtremes), 'evaluate')));
+            // Stage 4c structural classes via the SAME split: one in-page score, Node-side thresholds -> 0-7 findings.
+            findings.push(...(0, subjective_rendered_scanner_1.structuralFindingsFromScore)(await race(page.evaluate(subjective_rendered_scanner_1.inPageStructural), 'evaluate')));
+            // Stage 4d motion/marker classes via the SAME split: one in-page score, Node-side thresholds -> 0-3 findings.
+            findings.push(...(0, subjective_rendered_scanner_1.motionMarkerFindingsFromScore)(await race(page.evaluate(subjective_rendered_scanner_1.inPageMotionMarker), 'evaluate')));
             subjective = { available: true, findings };
         }
         catch (e) {

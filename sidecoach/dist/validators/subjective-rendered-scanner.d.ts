@@ -1,5 +1,5 @@
 import type { Browser } from 'playwright';
-export type SubjectiveRule = 'tiny-text' | 'nested-cards' | 'marketing-buzzword' | 'default-typeface' | 'extreme-negative-tracking' | 'tight-leading' | 'all-caps-body' | 'oversized-h1' | 'sub-11px-ui';
+export type SubjectiveRule = 'tiny-text' | 'nested-cards' | 'marketing-buzzword' | 'default-typeface' | 'extreme-negative-tracking' | 'tight-leading' | 'all-caps-body' | 'oversized-h1' | 'sub-11px-ui' | 'thin-border-wide-shadow' | 'repeating-stripe-gradients' | 'text-under-overlay' | 'first-viewport-overflow' | 'decorative-dot-grid' | 'soft-radial-glow' | 'image-hover-transform' | 'marquee' | 'blinking-cursor' | 'numbered-section-markers';
 export interface SubjectiveFinding {
     rule: SubjectiveRule;
     severity: 'warning';
@@ -151,6 +151,69 @@ export declare const SUB11_MIN_CHARS = 150;
  * ONE place these production thresholds are applied; the calibration harness sweeps the same raw score fields, so
  * the sweep measures exactly what ships (the inPageBuzzword / inPageTypeface contract). */
 export declare function typographyExtremesFindingsFromScore(s: TypographyExtremesScore): SubjectiveFinding[];
+export interface StructuralScore {
+    viewportWidth: number;
+    viewportHeight: number;
+    thinBorderWideShadowCount: number;
+    tbwsMaxRatio: number;
+    tbwsSelector?: string;
+    stripeGradientCount: number;
+    stripeSelector?: string;
+    textUnderOverlayCount: number;
+    overlaySelector?: string;
+    firstViewportOverflowPx: number;
+    overflowSelector?: string;
+    dotGridCount: number;
+    dotGridSelector?: string;
+    radialGlowCount: number;
+    glowSelector?: string;
+    imageHoverTransformCount: number;
+    hoverSelector?: string;
+}
+export declare const TBWS_BORDER_MAX_PX = 1.5;
+export declare const TBWS_SPREAD_MIN_PX = 6;
+export declare const TBWS_RATIO_MIN = 4;
+export declare const TBWS_PANEL_MIN_W = 100;
+export declare const TBWS_PANEL_MIN_H = 60;
+export declare const TBWS_MIN_COUNT = 1;
+export declare const STRIPE_MIN_DIM = 60;
+export declare const STRIPE_MIN_COUNT = 1;
+export declare const TUO_MIN_COUNT = 1;
+export declare const FVO_VH_FRAC = 0.85;
+export declare const FVO_TOP_MAX_PX = 8;
+export declare const FVO_OVERFLOW_MIN_PX = 64;
+export declare const FVO_OVERFLOW_MAX_PX = 1200;
+export declare const DOTGRID_TILE_MAX_PX = 40;
+export declare const DOTGRID_MIN_COUNT = 1;
+export declare const GLOW_BLUR_MIN_PX = 40;
+export declare const GLOW_MIN_AREA: number;
+export declare const GLOW_MIN_COUNT = 1;
+export declare const IHT_MIN_COUNT = 1;
+export declare function inPageStructural(): StructuralScore;
+/** Node-side: turn a structural score into 0-7 findings (one page-level verdict per firing class). The ONE place
+ * these production thresholds are applied; the calibration harness sweeps the same raw score fields. */
+export declare function structuralFindingsFromScore(s: StructuralScore): SubjectiveFinding[];
+export interface MotionMarkerScore {
+    marqueeElementCount: number;
+    marqueeAnimCount: number;
+    marqueeSelector?: string;
+    blinkCount: number;
+    blinkSelector?: string;
+    numberedMarkerCount: number;
+    numberedZeroPadded: boolean;
+    numberedSelector?: string;
+}
+export declare const MARQUEE_MIN_X_PCT = 50;
+export declare const MARQUEE_MIN_X_PX = 200;
+export declare const MARQUEE_MIN_COUNT = 1;
+export declare const BLINK_OPACITY_LOW = 0.1;
+export declare const BLINK_OPACITY_HIGH = 0.9;
+export declare const BLINK_MIN_COUNT = 1;
+export declare const NUM_MARKER_MIN_PX = 32;
+export declare const NUM_MARKER_MIN_COUNT = 3;
+export declare function inPageMotionMarker(): MotionMarkerScore;
+/** Node-side: turn a motion/marker score into 0-3 findings (one page-level verdict per firing class). */
+export declare function motionMarkerFindingsFromScore(s: MotionMarkerScore): SubjectiveFinding[];
 export interface RenderOpts {
     stripScripts?: boolean;
     abortExternal?: boolean;
