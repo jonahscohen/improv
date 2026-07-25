@@ -147,6 +147,28 @@ Every verb routes to a sidecoach flow chain and the orchestrator appends the ver
 
 Type `/sidecoach list` to see all commands organized by phase (phase commands plus the 21 verbs). Type `/sidecoach help <verb>` for the registry detail on any specific verb.
 
+## Standalone tools (sibling CLIs on the sidecoach surface)
+
+Alongside the `sidecoach` resolver, six self-contained CLIs ship in `sidecoach/bin/`. They are NOT verbs or flows - each is its own tool with its own fail-closed exit-code contract (a nonzero exit never means "clean") - but they are part of the sidecoach surface, so `sidecoach list` and `sidecoach help` enumerate them. Run `node bin/<tool> --help` for full options. Grouped by role:
+
+**Generative (authoring aids)** - reach for these while shaping a new direction or design system:
+
+| Tool | Purpose | Invocation |
+|---|---|---|
+| `sidecoach-palette` | Emit a WCAG-verified DESIGN.md palette from brand OKLCH anchors. The palette is printed ONLY when every required contrast pair passes - never a silently-failing palette. | `node bin/sidecoach-palette.js --brand <brand.json>` (exit 0 clean / 1 contrast fail / 2 usage / 3 inconclusive) |
+| `sidecoach-roll` | Draw a design direction from the deck; seed for a reproducible draw, `--exclude` prior draws, `--model-top` ranks this build's own instinct last. | `node bin/sidecoach-roll.js [--seed <uint32>] [--exclude <id,...>]` (exit 0 drawn / 2 usage / 3 exhausted) |
+| `sidecoach-preauthor` | Render-before-build gate: from a brief JSON it renders board.html + mock.html and runs the rendered-audit engine over the mock, returning a fail-closed proceed/block verdict BEFORE you write component code. | `node bin/sidecoach-preauthor.js --brief <brief.json> [--out-dir <dir>]` (exit 0 proceed / 1 blocked / 2 usage / 3 inconclusive) |
+| `sidecoach-deck` | Present drawn directions as a Markdown (default) or rich-HTML pick list for the user to choose from; the user picks by responding. | `node bin/sidecoach-deck.js --ids <id,...> [--surface text\|rich]`, or pipe `sidecoach-roll | sidecoach-deck` (exit 0 presented / 2 usage) |
+
+**Governance (checks / maintenance):**
+
+| Tool | Purpose | Invocation |
+|---|---|---|
+| `sidecoach-refs` | Refresh the bundled reference systems on demand, merging and preserving your `/curate` captures (local captures survive an upstream refresh). `--check` is a pure read. | `node bin/sidecoach-refs.js [--check \| --apply]` (exit 0 ok / 2 usage / 3 upstream / 4 validation / 5 io / 10 drift / 70 internal) |
+| `sidecoach-drift` | Report custom-property tokens that drifted from the project's committed DESIGN.md baseline (off-system colors/radii/spacings/easings/durations), each named with its value and file. A missing baseline fails closed (never "no drift"). | `node bin/sidecoach-drift.js <project-dir> [--json]` (exit 0 no drift / 1 drift / 2 usage / 3 cannot assess) |
+
+**`sidecoach-drift` is additionally wired into the audit flow.** flowK (multi-lens audit - reached by `/sidecoach audit <project>`) invokes the drift bin for its Theming/token-consistency lens: a real drift escalates the Theming dimension to a failure that names the drifted tokens, while a clean or unassessable verdict leaves the other (still-manual) theming checks as warnings - never a false pass. The call is fully contained: if the bin is missing or errors, the audit keeps its static Theming placeholder and never crashes. The other five tools are invoked directly (by you or the user), not auto-run by a flow.
+
 ## Mandatory Workflow Gates
 
 These are not optional:

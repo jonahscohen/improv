@@ -1,6 +1,39 @@
 "use strict";
 // Flow K: Multi-Lens Audit
 // 5-dimension scan: accessibility, performance, theming, responsive, anti-patterns
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FlowKMultiLensAuditHandler = void 0;
 exports.createFlowKHandler = createFlowKHandler;
@@ -8,6 +41,77 @@ const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const model_routing_1 = require("./model-routing");
 const retry_control_1 = require("./retry-control");
+const child_process_1 = require("child_process");
+const path = __importStar(require("path"));
+/**
+ * Token-drift lens for the Theming dimension. Invokes the sibling bin
+ * `bin/sidecoach-drift.js` against the project and maps its fail-closed verdict
+ * onto the "token consistency" check the audit already claims to cover.
+ *
+ * FULLY CONTAINED: returns `null` on ANY failure (bin missing, spawn failure,
+ * timeout, non-JSON, usage/IO error) so the caller keeps the static Theming
+ * placeholder and the audit NEVER crashes. A non-zero drift exit that still
+ * emits JSON (drift=1, inconclusive=3) is a real verdict, not a failure.
+ * FAIL-CLOSED: an "inconclusive" verdict maps to a warning, never a false pass.
+ */
+function runTokenDriftCheck(projectPath) {
+    if (!projectPath)
+        return null;
+    const bin = path.resolve(__dirname, '..', 'bin', 'sidecoach-drift.js');
+    let stdout = '';
+    try {
+        stdout = (0, child_process_1.execFileSync)(process.execPath, [bin, projectPath, '--json', '--quiet'], {
+            encoding: 'utf8',
+            timeout: 20000,
+            // Explicit headroom (default is 1MB): a large drift report must not be
+            // truncated into unparseable JSON. On overflow execFileSync throws ->
+            // helper returns null -> static Theming placeholder (still fail-safe).
+            maxBuffer: 16 * 1024 * 1024,
+            stdio: ['ignore', 'pipe', 'ignore'],
+        });
+    }
+    catch (err) {
+        // Non-zero exit still throws here; drift=1 and inconclusive=3 carry their
+        // JSON verdict on stdout. A usage/IO error (exit 2) emits nothing -> bail.
+        const captured = err && typeof err.stdout === 'string'
+            ? (err.stdout)
+            : '';
+        if (!captured.trim())
+            return null;
+        stdout = captured;
+    }
+    let parsed;
+    try {
+        parsed = JSON.parse(stdout);
+    }
+    catch {
+        return null;
+    }
+    if (parsed.verdict === 'drift') {
+        const n = typeof parsed.driftCount === 'number' ? parsed.driftCount : 0;
+        const names = Array.isArray(parsed.drifted)
+            ? parsed.drifted.slice(0, 5).map((d) => d && d.name).filter(Boolean)
+            : [];
+        return {
+            status: 'fail',
+            issue: `${n} token(s) drifted from DESIGN.md${names.length ? `: ${names.join(', ')}` : ''}`,
+            check: `Token drift vs DESIGN.md (sidecoach-drift): ${n} off-system token(s)`,
+        };
+    }
+    if (parsed.verdict === 'clean') {
+        return {
+            status: 'pass',
+            issue: '',
+            check: 'Token drift vs DESIGN.md (sidecoach-drift): none - tokens match the baseline',
+        };
+    }
+    // inconclusive / unknown -> fail-closed warning (never a silent pass).
+    return {
+        status: 'warning',
+        issue: `token drift not assessed: ${parsed.reason || 'no DESIGN.md baseline or no governed tokens'}`,
+        check: 'Token drift vs DESIGN.md (sidecoach-drift): not assessed (fail-closed)',
+    };
+}
 class FlowKMultiLensAuditHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowK_multi_lens_audit');
@@ -92,6 +196,27 @@ class FlowKMultiLensAuditHandler extends flow_handler_1.BaseFlowHandler {
                     issues: [],
                 },
             ];
+            // Theming lens: fold a REAL token-drift verdict from bin/sidecoach-drift.js
+            // into the "token consistency" check when a project path is known. Fully
+            // contained - a null outcome leaves the static placeholder intact and the
+            // audit never crashes. Only a PROVEN drift escalates the dimension to
+            // 'fail'; a clean/inconclusive verdict keeps the existing 'warning' (the
+            // other theming checks - dark-mode contrast, focus indicators - are still
+            // manual), appending the drift result as an audited note. Never a false pass.
+            const drift = runTokenDriftCheck(context.projectPath);
+            if (drift) {
+                const theming = dimensions.find((d) => d.name === 'Theming');
+                if (theming) {
+                    theming.checks = [...theming.checks, drift.check];
+                    if (drift.status === 'fail') {
+                        theming.status = 'fail';
+                        theming.issues = [drift.issue, ...theming.issues.filter((i) => i !== 'visual testing required')];
+                    }
+                    else if (drift.issue) {
+                        theming.issues = [...theming.issues, drift.issue];
+                    }
+                }
+            }
             const checklist = this.createChecklist([
                 { label: 'Run WCAG 2.1 AA contrast checker', required: true },
                 { label: 'Test keyboard navigation (Tab, Shift+Tab, Enter, Space)', required: true },

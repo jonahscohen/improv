@@ -88,6 +88,56 @@ const SETUP_COMMANDS = {
   document: 'Generate Google-spec DESIGN.md (token frontmatter + six sections) from project HTML/CSS',
 };
 
+// Standalone sibling bins that ship alongside this resolver. They are NOT verbs
+// or flows - each is its own self-contained CLI with its own exit-code contract -
+// but they are part of the sidecoach surface, so `list` and `help` enumerate them
+// here to make them discoverable and reachable (grouped by role). Each entry is
+// [bin, one-line purpose, primary invocation]. `drift` is additionally wired into
+// the audit flow (flowK): its verdict feeds the Theming/token-consistency lens.
+const STANDALONE_BINS = {
+  generative: {
+    label: 'Generative (authoring aids)',
+    bins: [
+      ['sidecoach-palette', 'Emit a WCAG-verified DESIGN.md palette from brand OKLCH anchors', 'node bin/sidecoach-palette.js --brand <brand.json>'],
+      ['sidecoach-roll', 'Draw a design direction from the deck (seeded = reproducible)', 'node bin/sidecoach-roll.js [--seed <uint32>]'],
+      ['sidecoach-preauthor', 'Render-before-build gate: board + mock from a brief, fail-closed proceed/block', 'node bin/sidecoach-preauthor.js --brief <brief.json>'],
+      ['sidecoach-deck', 'Present drawn directions as a Markdown or rich-HTML pick list', 'node bin/sidecoach-roll.js | node bin/sidecoach-deck.js'],
+    ],
+  },
+  governance: {
+    label: 'Governance (checks / maintenance)',
+    bins: [
+      ['sidecoach-refs', 'Refresh the bundled reference systems on demand, preserving your captures', 'node bin/sidecoach-refs.js [--check | --apply]'],
+      ['sidecoach-drift', 'Report custom-property tokens drifted from DESIGN.md (also feeds the audit flow)', 'node bin/sidecoach-drift.js <project-dir>'],
+    ],
+  },
+};
+
+/** Look up a standalone bin by name (accepts `sidecoach-drift` or bare `drift`). */
+function findStandaloneBin(name) {
+  const want = name.startsWith('sidecoach-') ? name : `sidecoach-${name}`;
+  for (const group of Object.values(STANDALONE_BINS)) {
+    const entry = group.bins.find(([bin]) => bin === want);
+    if (entry) return { groupLabel: group.label, entry };
+  }
+  return null;
+}
+
+function printStandaloneBins(detailed) {
+  for (const group of Object.values(STANDALONE_BINS)) {
+    console.log(`  ${group.label}`);
+    for (const [bin, purpose, invocation] of group.bins) {
+      if (detailed) {
+        console.log(`    ${bin}`);
+        console.log(`      ${purpose}`);
+        console.log(`      $ ${invocation}`);
+      } else {
+        console.log(`    ${bin.padEnd(20)} ${purpose}`);
+      }
+    }
+  }
+}
+
 function verbList() {
   return Object.keys(VERB_REGISTRY);
 }
@@ -150,6 +200,11 @@ function topLevelHelp() {
     console.log(`  ${cmd.padEnd(10)} ${desc}`);
   }
   console.log('');
+
+  console.log('Standalone tools (each is its own CLI - run `node bin/<tool>.js --help` for options):');
+  printStandaloneBins(false);
+  console.log('');
+
   console.log('Run `sidecoach help <verb>` for a verb\'s flow chain and guidance,');
   console.log('or `sidecoach list` for the full flow enumeration.');
   console.log('');
@@ -197,7 +252,24 @@ function helpForTarget(target) {
     return 0;
   }
 
-  console.error(`sidecoach: no verb named "${target}".`);
+  // Standalone-bin detail (accepts `sidecoach-drift` or bare `drift`).
+  const binHit = findStandaloneBin(name);
+  if (binHit) {
+    const [bin, purpose, invocation] = binHit.entry;
+    console.log(`tool: ${bin}   (standalone CLI - ${binHit.groupLabel})`);
+    console.log('');
+    console.log(purpose);
+    console.log('');
+    console.log(`  $ ${invocation}`);
+    console.log('');
+    console.log(`Run \`node bin/${bin}.js --help\` for its full options and exit-code contract.`);
+    if (bin === 'sidecoach-drift') {
+      console.log('Also invoked by the audit flow (flowK) as its Theming token-drift lens.');
+    }
+    return 0;
+  }
+
+  console.error(`sidecoach: no verb or tool named "${target}".`);
   console.error(`Valid verbs: ${verbList().join(', ')}`);
   return 1;
 }
@@ -231,6 +303,15 @@ function listAll() {
     console.log(`  ${f.id}`);
     console.log(`    ${f.name}  [model: ${tierFor(f.id)}]`);
   }
+  console.log('');
+
+  const binCount = Object.values(STANDALONE_BINS).reduce((n, g) => n + g.bins.length, 0);
+  console.log(`Standalone tools (${binCount}) - sibling CLIs on the sidecoach surface:`);
+  printStandaloneBins(true);
+  console.log('');
+  console.log('Each standalone tool has its own exit-code contract; run `node bin/<tool>.js --help`,');
+  console.log('or `sidecoach help <tool>` for its purpose and invocation.');
+  console.log('`sidecoach-drift` also feeds the audit flow (flowK) as its token-drift lens.');
 }
 
 // ---------------------------------------------------------------------------

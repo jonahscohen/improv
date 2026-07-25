@@ -13,12 +13,95 @@ import {
   buildHaltResult,
   attachRetryStateToResult,
 } from './retry-control';
+import { execFileSync } from 'child_process';
+import * as path from 'path';
 
 interface AuditDimension {
   name: string;
   checks: string[];
   status: 'pass' | 'warning' | 'fail';
   issues: string[];
+}
+
+/** What the token-drift lens contributes to the Theming dimension. */
+interface DriftOutcome {
+  status: 'pass' | 'warning' | 'fail';
+  issue: string;
+  check: string;
+}
+
+/**
+ * Token-drift lens for the Theming dimension. Invokes the sibling bin
+ * `bin/sidecoach-drift.js` against the project and maps its fail-closed verdict
+ * onto the "token consistency" check the audit already claims to cover.
+ *
+ * FULLY CONTAINED: returns `null` on ANY failure (bin missing, spawn failure,
+ * timeout, non-JSON, usage/IO error) so the caller keeps the static Theming
+ * placeholder and the audit NEVER crashes. A non-zero drift exit that still
+ * emits JSON (drift=1, inconclusive=3) is a real verdict, not a failure.
+ * FAIL-CLOSED: an "inconclusive" verdict maps to a warning, never a false pass.
+ */
+function runTokenDriftCheck(projectPath: string | undefined): DriftOutcome | null {
+  if (!projectPath) return null;
+  const bin = path.resolve(__dirname, '..', 'bin', 'sidecoach-drift.js');
+  let stdout = '';
+  try {
+    stdout = execFileSync(process.execPath, [bin, projectPath, '--json', '--quiet'], {
+      encoding: 'utf8',
+      timeout: 20000,
+      // Explicit headroom (default is 1MB): a large drift report must not be
+      // truncated into unparseable JSON. On overflow execFileSync throws ->
+      // helper returns null -> static Theming placeholder (still fail-safe).
+      maxBuffer: 16 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch (err) {
+    // Non-zero exit still throws here; drift=1 and inconclusive=3 carry their
+    // JSON verdict on stdout. A usage/IO error (exit 2) emits nothing -> bail.
+    const captured =
+      err && typeof (err as { stdout?: unknown }).stdout === 'string'
+        ? ((err as { stdout: string }).stdout)
+        : '';
+    if (!captured.trim()) return null;
+    stdout = captured;
+  }
+
+  let parsed: {
+    verdict?: string;
+    driftCount?: number;
+    reason?: string | null;
+    drifted?: Array<{ name?: string }>;
+  };
+  try {
+    parsed = JSON.parse(stdout);
+  } catch {
+    return null;
+  }
+
+  if (parsed.verdict === 'drift') {
+    const n = typeof parsed.driftCount === 'number' ? parsed.driftCount : 0;
+    const names = Array.isArray(parsed.drifted)
+      ? parsed.drifted.slice(0, 5).map((d) => d && d.name).filter(Boolean)
+      : [];
+    return {
+      status: 'fail',
+      issue: `${n} token(s) drifted from DESIGN.md${names.length ? `: ${names.join(', ')}` : ''}`,
+      check: `Token drift vs DESIGN.md (sidecoach-drift): ${n} off-system token(s)`,
+    };
+  }
+  if (parsed.verdict === 'clean') {
+    return {
+      status: 'pass',
+      issue: '',
+      check: 'Token drift vs DESIGN.md (sidecoach-drift): none - tokens match the baseline',
+    };
+  }
+  // inconclusive / unknown -> fail-closed warning (never a silent pass).
+  return {
+    status: 'warning',
+    issue: `token drift not assessed: ${parsed.reason || 'no DESIGN.md baseline or no governed tokens'}`,
+    check: 'Token drift vs DESIGN.md (sidecoach-drift): not assessed (fail-closed)',
+  };
 }
 
 export class FlowKMultiLensAuditHandler extends BaseFlowHandler {
@@ -109,6 +192,27 @@ export class FlowKMultiLensAuditHandler extends BaseFlowHandler {
           issues: [],
         },
       ];
+
+      // Theming lens: fold a REAL token-drift verdict from bin/sidecoach-drift.js
+      // into the "token consistency" check when a project path is known. Fully
+      // contained - a null outcome leaves the static placeholder intact and the
+      // audit never crashes. Only a PROVEN drift escalates the dimension to
+      // 'fail'; a clean/inconclusive verdict keeps the existing 'warning' (the
+      // other theming checks - dark-mode contrast, focus indicators - are still
+      // manual), appending the drift result as an audited note. Never a false pass.
+      const drift = runTokenDriftCheck(context.projectPath);
+      if (drift) {
+        const theming = dimensions.find((d) => d.name === 'Theming');
+        if (theming) {
+          theming.checks = [...theming.checks, drift.check];
+          if (drift.status === 'fail') {
+            theming.status = 'fail';
+            theming.issues = [drift.issue, ...theming.issues.filter((i) => i !== 'visual testing required')];
+          } else if (drift.issue) {
+            theming.issues = [...theming.issues, drift.issue];
+          }
+        }
+      }
 
       const checklist = this.createChecklist([
         { label: 'Run WCAG 2.1 AA contrast checker', required: true },
