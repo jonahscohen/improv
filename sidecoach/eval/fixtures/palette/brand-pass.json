@@ -1,0 +1,15 @@
+{
+  "name": "Northwind",
+  "description": "Northwind is a calm, trustworthy product surface: a cool neutral base, one indigo primary accent, and conventional semantic roles. Every text/background pairing in this system was verified against the rendered WCAG engine before the tokens were written.",
+  "base": { "hue": 250, "chroma": 0.012 },
+  "primary": { "hue": 262, "chroma": 0.15 },
+  "success": { "hue": 155, "chroma": 0.10 },
+  "warning": { "hue": 75, "chroma": 0.14 },
+  "danger": { "hue": 27, "chroma": 0.16 },
+  "info": { "hue": 245, "chroma": 0.13 },
+  "fonts": {
+    "display": "'Inter', system-ui, sans-serif",
+    "body": "'Inter', system-ui, sans-serif",
+    "mono": "'JetBrains Mono', ui-monospace, monospace"
+  }
+}

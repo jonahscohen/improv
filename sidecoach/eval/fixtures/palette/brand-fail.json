@@ -1,0 +1,6 @@
+{
+  "name": "Midtone Miss",
+  "description": "A brand engineered to FAIL the fail-closed gate: its primary solid is pinned to the mid-lightness 500 stop, a luminance dead zone where neither a light nor a dark label reaches WCAG AA for normal button text (scanner-measured light 3.47:1, dark 4.00:1 - both below 4.5:1). The recipe must name the on-primary pair and refuse to emit a palette.",
+  "base": { "hue": 250, "chroma": 0.012 },
+  "primary": { "hue": 340, "chroma": 0.15, "solidStop": 500 }
+}
