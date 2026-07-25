@@ -103,6 +103,8 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/detect-cli.test.ts', required: true },                        // Stage 3a bin/sidecoach-detect.js: fail-closed verdict matrix + exit-code classes + dispatch e2e
   { rel: 'src/__tests__/palette-recipe.test.ts', required: true },                     // Stage 2a bin/sidecoach-palette.js: OKLCH ramps, fail-closed WCAG gate (shipping scanner), DESIGN.md emit
   { rel: 'src/__tests__/direction-roll.test.ts', required: true },                     // Stage 2c bin/sidecoach-roll.js: outside-ranking deck roll - determinism, unsigned-seed domain, exclusion re-roll, full-sweep no-repeat + exhaustion
+  { rel: 'src/__tests__/pre-authorship.test.ts', required: true },                     // Stage 2b bin/sidecoach-preauthor.js: author board+mock, render both, fail-closed gate (proceed/blocked/inconclusive) + e2e render/halt
+  { rel: 'src/__tests__/direction-deck-present.test.ts', required: true },             // Stage 2d bin/sidecoach-deck.js: dual-surface deck (markdown table + static artifact), exclusion self-scan, roll-json ids + e2e
   { rel: 'eval/migration-harness/scanner-snapshot.mjs', runner: 'node', args: ['verify'], required: true },      // absolute-ban detector goldens (5 inputs) - the ONLY coverage that module has
   { rel: 'eval/migration-harness/reference-snapshot.mjs', runner: 'node', args: ['verify'], required: true },    // reference-loader bundle golden - the ONLY coverage that module has
   { rel: 'eval/migration-harness/routing-snapshot.mjs', runner: 'node', args: ['verify'], required: true },      // flow routing goldens
