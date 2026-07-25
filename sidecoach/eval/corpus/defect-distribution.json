@@ -1,0 +1,712 @@
+{
+  "schema": "sidecoach-defect-distribution/v1",
+  "generatedUtc": "2026-07-25T23:21:17.012Z",
+  "scanner": "dist/validators/rendered-live-scan.js#scanRenderedLive (shipping, unmodified)",
+  "note": "Stage 1b merged per-provider defect fire-rate distribution over 20 held-out briefs each (Stage 1a). Committed as the Stage 1c input; regenerate periodically.",
+  "models": {
+    "claude": "claude-opus-4-8",
+    "gpt": "gpt-5.4",
+    "gemini": "gemini-3.6-flash"
+  },
+  "ruleUniverse": [
+    "broken-image",
+    "skipped-heading",
+    "low-contrast",
+    "gray-on-color",
+    "justified-text",
+    "tiny-text",
+    "nested-cards",
+    "marketing-buzzword",
+    "default-typeface",
+    "extreme-negative-tracking",
+    "all-caps-body",
+    "oversized-h1",
+    "sub-11px-ui",
+    "thin-border-wide-shadow",
+    "repeating-stripe-gradients",
+    "text-under-overlay",
+    "first-viewport-overflow",
+    "decorative-dot-grid",
+    "soft-radial-glow",
+    "image-hover-transform",
+    "marquee",
+    "numbered-section-markers"
+  ],
+  "lensOf": {
+    "broken-image": "objective",
+    "skipped-heading": "objective",
+    "low-contrast": "objective",
+    "gray-on-color": "objective",
+    "justified-text": "objective",
+    "tiny-text": "subjective",
+    "nested-cards": "subjective",
+    "marketing-buzzword": "subjective",
+    "default-typeface": "subjective",
+    "extreme-negative-tracking": "subjective",
+    "all-caps-body": "subjective",
+    "oversized-h1": "subjective",
+    "sub-11px-ui": "subjective",
+    "thin-border-wide-shadow": "subjective",
+    "repeating-stripe-gradients": "subjective",
+    "text-under-overlay": "subjective",
+    "first-viewport-overflow": "subjective",
+    "decorative-dot-grid": "subjective",
+    "soft-radial-glow": "subjective",
+    "image-hover-transform": "subjective",
+    "marquee": "subjective",
+    "numbered-section-markers": "subjective"
+  },
+  "providers": {
+    "claude": {
+      "pagesTotal": 20,
+      "pagesConclusive": 20,
+      "lens": {
+        "objective": {
+          "available": 20,
+          "unavailable": 0
+        },
+        "subjective": {
+          "available": 20,
+          "unavailable": 0
+        }
+      },
+      "rules": {
+        "broken-image": {
+          "fired": 0,
+          "total": 20
+        },
+        "skipped-heading": {
+          "fired": 4,
+          "total": 20
+        },
+        "low-contrast": {
+          "fired": 11,
+          "total": 20
+        },
+        "gray-on-color": {
+          "fired": 6,
+          "total": 20
+        },
+        "justified-text": {
+          "fired": 0,
+          "total": 20
+        },
+        "tiny-text": {
+          "fired": 5,
+          "total": 20
+        },
+        "nested-cards": {
+          "fired": 7,
+          "total": 20
+        },
+        "marketing-buzzword": {
+          "fired": 3,
+          "total": 20
+        },
+        "default-typeface": {
+          "fired": 20,
+          "total": 20
+        },
+        "extreme-negative-tracking": {
+          "fired": 0,
+          "total": 20
+        },
+        "all-caps-body": {
+          "fired": 0,
+          "total": 20
+        },
+        "oversized-h1": {
+          "fired": 0,
+          "total": 20
+        },
+        "sub-11px-ui": {
+          "fired": 1,
+          "total": 20
+        },
+        "thin-border-wide-shadow": {
+          "fired": 0,
+          "total": 20
+        },
+        "repeating-stripe-gradients": {
+          "fired": 0,
+          "total": 20
+        },
+        "text-under-overlay": {
+          "fired": 0,
+          "total": 20
+        },
+        "first-viewport-overflow": {
+          "fired": 0,
+          "total": 20
+        },
+        "decorative-dot-grid": {
+          "fired": 0,
+          "total": 20
+        },
+        "soft-radial-glow": {
+          "fired": 1,
+          "total": 20
+        },
+        "image-hover-transform": {
+          "fired": 0,
+          "total": 20
+        },
+        "marquee": {
+          "fired": 0,
+          "total": 20
+        },
+        "numbered-section-markers": {
+          "fired": 0,
+          "total": 20
+        }
+      }
+    },
+    "gpt": {
+      "pagesTotal": 20,
+      "pagesConclusive": 20,
+      "lens": {
+        "objective": {
+          "available": 20,
+          "unavailable": 0
+        },
+        "subjective": {
+          "available": 20,
+          "unavailable": 0
+        }
+      },
+      "rules": {
+        "broken-image": {
+          "fired": 0,
+          "total": 20
+        },
+        "skipped-heading": {
+          "fired": 3,
+          "total": 20
+        },
+        "low-contrast": {
+          "fired": 5,
+          "total": 20
+        },
+        "gray-on-color": {
+          "fired": 2,
+          "total": 20
+        },
+        "justified-text": {
+          "fired": 0,
+          "total": 20
+        },
+        "tiny-text": {
+          "fired": 4,
+          "total": 20
+        },
+        "nested-cards": {
+          "fired": 15,
+          "total": 20
+        },
+        "marketing-buzzword": {
+          "fired": 4,
+          "total": 20
+        },
+        "default-typeface": {
+          "fired": 18,
+          "total": 20
+        },
+        "extreme-negative-tracking": {
+          "fired": 0,
+          "total": 20
+        },
+        "all-caps-body": {
+          "fired": 0,
+          "total": 20
+        },
+        "oversized-h1": {
+          "fired": 0,
+          "total": 20
+        },
+        "sub-11px-ui": {
+          "fired": 0,
+          "total": 20
+        },
+        "thin-border-wide-shadow": {
+          "fired": 0,
+          "total": 20
+        },
+        "repeating-stripe-gradients": {
+          "fired": 0,
+          "total": 20
+        },
+        "text-under-overlay": {
+          "fired": 0,
+          "total": 20
+        },
+        "first-viewport-overflow": {
+          "fired": 0,
+          "total": 20
+        },
+        "decorative-dot-grid": {
+          "fired": 1,
+          "total": 20
+        },
+        "soft-radial-glow": {
+          "fired": 10,
+          "total": 20
+        },
+        "image-hover-transform": {
+          "fired": 0,
+          "total": 20
+        },
+        "marquee": {
+          "fired": 0,
+          "total": 20
+        },
+        "numbered-section-markers": {
+          "fired": 0,
+          "total": 20
+        }
+      }
+    },
+    "gemini": {
+      "pagesTotal": 20,
+      "pagesConclusive": 20,
+      "lens": {
+        "objective": {
+          "available": 20,
+          "unavailable": 0
+        },
+        "subjective": {
+          "available": 20,
+          "unavailable": 0
+        }
+      },
+      "rules": {
+        "broken-image": {
+          "fired": 0,
+          "total": 20
+        },
+        "skipped-heading": {
+          "fired": 10,
+          "total": 20
+        },
+        "low-contrast": {
+          "fired": 15,
+          "total": 20
+        },
+        "gray-on-color": {
+          "fired": 6,
+          "total": 20
+        },
+        "justified-text": {
+          "fired": 0,
+          "total": 20
+        },
+        "tiny-text": {
+          "fired": 8,
+          "total": 20
+        },
+        "nested-cards": {
+          "fired": 12,
+          "total": 20
+        },
+        "marketing-buzzword": {
+          "fired": 5,
+          "total": 20
+        },
+        "default-typeface": {
+          "fired": 19,
+          "total": 20
+        },
+        "extreme-negative-tracking": {
+          "fired": 0,
+          "total": 20
+        },
+        "all-caps-body": {
+          "fired": 0,
+          "total": 20
+        },
+        "oversized-h1": {
+          "fired": 0,
+          "total": 20
+        },
+        "sub-11px-ui": {
+          "fired": 0,
+          "total": 20
+        },
+        "thin-border-wide-shadow": {
+          "fired": 0,
+          "total": 20
+        },
+        "repeating-stripe-gradients": {
+          "fired": 0,
+          "total": 20
+        },
+        "text-under-overlay": {
+          "fired": 0,
+          "total": 20
+        },
+        "first-viewport-overflow": {
+          "fired": 0,
+          "total": 20
+        },
+        "decorative-dot-grid": {
+          "fired": 2,
+          "total": 20
+        },
+        "soft-radial-glow": {
+          "fired": 2,
+          "total": 20
+        },
+        "image-hover-transform": {
+          "fired": 0,
+          "total": 20
+        },
+        "marquee": {
+          "fired": 0,
+          "total": 20
+        },
+        "numbered-section-markers": {
+          "fired": 1,
+          "total": 20
+        }
+      }
+    }
+  },
+  "inconclusive": [],
+  "distribution": {
+    "claude": {
+      "broken-image": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "skipped-heading": {
+        "fired": 4,
+        "total": 20,
+        "rate": 0.2
+      },
+      "low-contrast": {
+        "fired": 11,
+        "total": 20,
+        "rate": 0.55
+      },
+      "gray-on-color": {
+        "fired": 6,
+        "total": 20,
+        "rate": 0.3
+      },
+      "justified-text": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "tiny-text": {
+        "fired": 5,
+        "total": 20,
+        "rate": 0.25
+      },
+      "nested-cards": {
+        "fired": 7,
+        "total": 20,
+        "rate": 0.35
+      },
+      "marketing-buzzword": {
+        "fired": 3,
+        "total": 20,
+        "rate": 0.15
+      },
+      "default-typeface": {
+        "fired": 20,
+        "total": 20,
+        "rate": 1
+      },
+      "extreme-negative-tracking": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "all-caps-body": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "oversized-h1": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "sub-11px-ui": {
+        "fired": 1,
+        "total": 20,
+        "rate": 0.05
+      },
+      "thin-border-wide-shadow": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "repeating-stripe-gradients": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "text-under-overlay": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "first-viewport-overflow": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "decorative-dot-grid": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "soft-radial-glow": {
+        "fired": 1,
+        "total": 20,
+        "rate": 0.05
+      },
+      "image-hover-transform": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "marquee": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "numbered-section-markers": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      }
+    },
+    "gpt": {
+      "broken-image": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "skipped-heading": {
+        "fired": 3,
+        "total": 20,
+        "rate": 0.15
+      },
+      "low-contrast": {
+        "fired": 5,
+        "total": 20,
+        "rate": 0.25
+      },
+      "gray-on-color": {
+        "fired": 2,
+        "total": 20,
+        "rate": 0.1
+      },
+      "justified-text": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "tiny-text": {
+        "fired": 4,
+        "total": 20,
+        "rate": 0.2
+      },
+      "nested-cards": {
+        "fired": 15,
+        "total": 20,
+        "rate": 0.75
+      },
+      "marketing-buzzword": {
+        "fired": 4,
+        "total": 20,
+        "rate": 0.2
+      },
+      "default-typeface": {
+        "fired": 18,
+        "total": 20,
+        "rate": 0.9
+      },
+      "extreme-negative-tracking": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "all-caps-body": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "oversized-h1": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "sub-11px-ui": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "thin-border-wide-shadow": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "repeating-stripe-gradients": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "text-under-overlay": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "first-viewport-overflow": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "decorative-dot-grid": {
+        "fired": 1,
+        "total": 20,
+        "rate": 0.05
+      },
+      "soft-radial-glow": {
+        "fired": 10,
+        "total": 20,
+        "rate": 0.5
+      },
+      "image-hover-transform": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "marquee": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "numbered-section-markers": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      }
+    },
+    "gemini": {
+      "broken-image": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "skipped-heading": {
+        "fired": 10,
+        "total": 20,
+        "rate": 0.5
+      },
+      "low-contrast": {
+        "fired": 15,
+        "total": 20,
+        "rate": 0.75
+      },
+      "gray-on-color": {
+        "fired": 6,
+        "total": 20,
+        "rate": 0.3
+      },
+      "justified-text": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "tiny-text": {
+        "fired": 8,
+        "total": 20,
+        "rate": 0.4
+      },
+      "nested-cards": {
+        "fired": 12,
+        "total": 20,
+        "rate": 0.6
+      },
+      "marketing-buzzword": {
+        "fired": 5,
+        "total": 20,
+        "rate": 0.25
+      },
+      "default-typeface": {
+        "fired": 19,
+        "total": 20,
+        "rate": 0.95
+      },
+      "extreme-negative-tracking": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "all-caps-body": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "oversized-h1": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "sub-11px-ui": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "thin-border-wide-shadow": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "repeating-stripe-gradients": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "text-under-overlay": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "first-viewport-overflow": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "decorative-dot-grid": {
+        "fired": 2,
+        "total": 20,
+        "rate": 0.1
+      },
+      "soft-radial-glow": {
+        "fired": 2,
+        "total": 20,
+        "rate": 0.1
+      },
+      "image-hover-transform": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "marquee": {
+        "fired": 0,
+        "total": 20,
+        "rate": 0
+      },
+      "numbered-section-markers": {
+        "fired": 1,
+        "total": 20,
+        "rate": 0.05
+      }
+    }
+  }
+}

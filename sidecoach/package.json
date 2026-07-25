@@ -19,7 +19,7 @@
     "reference/"
   ],
   "scripts": {
-    "build": "ts-node scripts/generate-lanes.ts && ts-node scripts/generate-lanes-data.ts --check && ts-node scripts/generate-validators.ts && ts-node scripts/generate-validators.ts --check && tsc",
+    "build": "ts-node scripts/generate-lanes.ts && ts-node scripts/generate-lanes-data.ts --check && ts-node scripts/generate-validators.ts && ts-node scripts/generate-validators.ts --check && ts-node scripts/generate-counter-rules.ts && ts-node scripts/generate-counter-rules.ts --check && tsc",
     "generate-lanes": "ts-node scripts/generate-lanes.ts",
     "generate-lanes-data": "ts-node scripts/generate-lanes-data.ts",
     "test": "npm run build && ts-node scripts/run-tests.ts",

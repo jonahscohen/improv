@@ -6,7 +6,7 @@ relates_to: [session_2026-07-25_domain-validation-coverage-ordering-fix.md, sess
 author_human: Jonah
 author_model: claude-opus-4.8
 source: session
-verified: in-progress (build clean; combined gate running; Codex review pending)
+verified: DONE - committed 9e5e5bf9; 86 suites + domain-validation-coverage 11/11 (incl. Test 4 discriminator); Codex reviewed (append correctness confirmed)
 confidence: high
 ---
 
