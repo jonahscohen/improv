@@ -1,0 +1,62 @@
+{
+  "generatedUtc": null,
+  "note": "Stage 4b typography-extremes A5a fixtures (constructed positives p* + near-miss negatives n*).",
+  "pages": [
+    {
+      "id": "n01-all-caps-body-labels",
+      "failed": false
+    },
+    {
+      "id": "n01-extreme-negative-tracking-tasteful",
+      "failed": false
+    },
+    {
+      "id": "n01-oversized-h1-tasteful",
+      "failed": false
+    },
+    {
+      "id": "n01-sub-11px-ui-readable",
+      "failed": false
+    },
+    {
+      "id": "n01-tight-leading-comfortable",
+      "failed": false
+    },
+    {
+      "id": "n02-all-caps-body-heading",
+      "failed": false
+    },
+    {
+      "id": "n02-tight-leading-headings-only",
+      "failed": false
+    },
+    {
+      "id": "n03-all-caps-body-uncased-uppercase",
+      "failed": false
+    },
+    {
+      "id": "n03-tight-leading-heading-descendant",
+      "failed": false
+    },
+    {
+      "id": "p01-all-caps-body",
+      "failed": false
+    },
+    {
+      "id": "p01-extreme-negative-tracking",
+      "failed": false
+    },
+    {
+      "id": "p01-oversized-h1",
+      "failed": false
+    },
+    {
+      "id": "p01-sub-11px-ui",
+      "failed": false
+    },
+    {
+      "id": "p01-tight-leading",
+      "failed": false
+    }
+  ]
+}

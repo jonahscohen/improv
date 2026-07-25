@@ -33,21 +33,31 @@ const CANDIDATES = path.join(CORPUS, 'candidates.json');
 const RUBRIC = path.join(CORPUS, 'subjective-rubric.md');
 const SHOTS = path.join(CORPUS, '.shots'); // derived screenshots (gitignored; regenerated deterministically)
 
-const VISUAL = new Set(['cream-palette', 'ai-color-palette', 'hero-eyebrow-chip', 'repeated-section-kickers', 'numbered-section-markers', 'icon-tile-stack', 'italic-serif-display', 'nested-cards', 'side-stripe-borders', 'glassmorphism-default', 'hero-metric-template', 'gradient-text', 'dark-glow', 'tiny-text', 'wide-tracking', 'all-caps-body', 'tight-leading', 'extreme-negative-tracking']);
+const VISUAL = new Set(['cream-palette', 'ai-color-palette', 'hero-eyebrow-chip', 'repeated-section-kickers', 'numbered-section-markers', 'icon-tile-stack', 'italic-serif-display', 'nested-cards', 'side-stripe-borders', 'glassmorphism-default', 'hero-metric-template', 'gradient-text', 'dark-glow', 'tiny-text', 'wide-tracking', 'all-caps-body', 'tight-leading', 'extreme-negative-tracking',
+  // Stage 4b/4c added 2026-07-25: geometry / computed-style idioms the hermetic render paints faithfully
+  // (heading scale, small UI text, hairline-border+wide-shadow, stripe/dot/glow backgrounds, first-view overflow,
+  // text-over-darkening-overlay). The screenshot IS the construct, exactly like the other VISUAL classes.
+  'oversized-h1', 'sub-11px-ui', 'thin-border-wide-shadow', 'repeating-stripe-gradients', 'text-under-overlay', 'first-viewport-overflow', 'decorative-dot-grid', 'soft-radial-glow']);
 // TYPEFACE: judged from the page's DECLARED font-family stacks, never the screenshot. The hermetic render
 // blocks webfonts, so a page that deliberately names a custom family still PAINTS as a plain system face -
 // a screenshot-only labeler calls that "default" when the page in fact chose a typeface. Proven 2026-07-24:
 // the first A5a pass flipped six deliberately-branded fixtures to present for exactly this reason.
 const TYPEFACE = new Set(['default-typeface']);
 const TEXTUAL = new Set(['marketing-buzzword', 'aphoristic-cadence']);
-const MOTION = new Set(['layout-transition', 'bounce-easing']);
+// MOTION: a single static frame cannot show motion. Stage 4d added marquee + blinking-cursor 2026-07-25 - the
+// signal surfaces <marquee> elements and keyframe BODIES (an actual horizontal slide / opacity on-off), so the
+// labeler judges the motion itself, not merely that an animation exists.
+const MOTION = new Set(['layout-transition', 'bounce-easing', 'marquee', 'blinking-cursor']);
+// HOVER (new 2026-07-25): a :hover effect is invisible in a static frame and is NOT a keyframe animation, so it
+// is judged from the page's :hover rules - what the page DOES when an image is pointed at. Stage 4c.
+const HOVER = new Set(['image-hover-transform']);
 
 // Provenance of HOW a label was obtained. Stale strings are a silent integrity problem: a reader auditing
 // `method` would conclude the typeface classes were judged from the screenshot (they are judged from the
 // CSSOM walk), which is exactly the mistake the screenshot-basis pass made.
-export const LABEL_METHOD = 'screenshot-vision+text+motion+typeface-cssom';
+export const LABEL_METHOD = 'screenshot-vision+text+motion+hover+typeface-cssom';
 /** Signal-count banner, DERIVED from the sets - a hardcoded count drifts the moment a class is added. */
-export function signalCounts() { return `${VISUAL.size} screenshot / ${TEXTUAL.size} text / ${MOTION.size} motion / ${TYPEFACE.size} typeface`; }
+export function signalCounts() { return `${VISUAL.size} screenshot / ${TEXTUAL.size} text / ${MOTION.size} motion / ${HOVER.size} hover / ${TYPEFACE.size} typeface`; }
 // THROWS on an unknown class rather than defaulting. A rubric class that is not in any signal set used to
 // fall through to 'motion', which silently mislabels HOW the label was obtained for every future class.
 export function signalOfClass(cls) {
@@ -55,7 +65,8 @@ export function signalOfClass(cls) {
   if (TEXTUAL.has(cls)) return 'text';
   if (TYPEFACE.has(cls)) return 'typeface';
   if (MOTION.has(cls)) return 'motion';
-  throw new Error(`refused: class "${cls}" is in the rubric but in no signal set - add it to VISUAL/TEXTUAL/TYPEFACE/MOTION before labeling`);
+  if (HOVER.has(cls)) return 'hover';
+  throw new Error(`refused: class "${cls}" is in the rubric but in no signal set - add it to VISUAL/TEXTUAL/TYPEFACE/MOTION/HOVER before labeling`);
 }
 /**
  * Validate a Codex verdict against the rubric before it becomes ground truth. A verdict that silently
@@ -575,10 +586,186 @@ export function formatTypefaceFacts(facts) {
     + (unread.length ? `\n\nSTYLESHEETS THE PAGE ASKS FOR BUT THIS RENDER COULD NOT LOAD (${unread.length}) - their font-family declarations are NOT represented anywhere above, so treat the lists above as incomplete by exactly these sources:\n`
       + unread.slice(0, 10).map((u) => `  [${u.kind}] ${u.href || '(source unknown)'}`).join('\n') : '');
 }
+// Strip HTML + CSS comments before deriving ANY text/motion/hover signal. The fixtures annotate the ANSWER in
+// comments ("POSITIVE: a CSS marquee...", "NEGATIVE: ..."), and a comment reaching the labeler is exactly the
+// DEFECT-2 independence leak the 4a typeface extractor was hardened against. Idempotent - safe to call twice.
+export function stripComments(s) { return String(s).replace(/<!--[\s\S]*?-->/g, ' ').replace(/\/\*[\s\S]*?\*\//g, ' '); }
+
+// Alias author-chosen animation/keyframe NAMES (a keyframe literally named "blink" or "marquee" states the
+// answer). CSS-identifier-aware boundaries (lookaround, NOT \b): \b fails to bound a name starting with '-'/'--'
+// (e.g. -blink, --marquee), which would leak the author name (Codex review High-2). The FRAME BODIES stay
+// verbatim - transform / opacity / visibility ARE the motion the labeler must judge and carry no author intent.
+function aliasAnimNames(text, names) {
+  let out = String(text), i = 0;
+  for (const nm of [...new Set(names)].filter(Boolean)) {
+    i++;
+    const esc = nm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    out = out.replace(new RegExp(`(?<![-\\w])${esc}(?![-\\w])`, 'g'), `anim${i}`);
+  }
+  return out;
+}
+// Alias custom-property NAMES (--foo) that appear anywhere in the surfaced motion/hover text. A value like
+// `transform: var(--animate-marquee-x)` or `var(--blinking-cursor-answer)` would otherwise hand the labeler the
+// class word / the answer verbatim (Codex review High-B). The DECLARED values stay - only the author-chosen NAME
+// is redacted, exactly as the typeface CSSOM formatter aliases custom-property names to --custom-N.
+function aliasVarNames(text) {
+  const map = new Map();
+  return String(text).replace(/--[-\w]+/g, (nm) => { if (!map.has(nm)) map.set(nm, `--var${map.size + 1}`); return map.get(nm); });
+}
+// Animation KEYWORDS (not names): shorthandNames must NOT alias one of these (aliasing "infinite"/"linear" would
+// corrupt the surfaced value). Times (12s/.5s) and numbers start with a digit and are excluded separately.
+const ANIM_KEYWORDS = new Set(['none', 'initial', 'inherit', 'unset', 'revert', 'revert-layer', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear', 'step-start', 'step-end', 'normal', 'reverse', 'alternate', 'alternate-reverse', 'forwards', 'backwards', 'both', 'running', 'paused', 'infinite']);
+// Extract the author-chosen NAME token(s) from an `animation:` SHORTHAND value. Drops functions
+// (cubic-bezier(...)/steps(...)), keywords, times and numbers; what remains is the keyframe name - which must be
+// aliased even when its @keyframes lives in an external (aborted) sheet (independent review High-1: the shorthand
+// path was previously unguarded, so `animation:marquee` leaked the class word).
+function shorthandNames(value) {
+  const noFn = String(value).replace(/[-a-z]+\([^()]*\)/gi, ' ');
+  return [...noFn.matchAll(/(?<![-\w.])-?[a-zA-Z_][-\w]*/g)].map((m) => m[0])
+    .filter((t) => !ANIM_KEYWORDS.has(t.toLowerCase()) && !/^-?\d/.test(t) && !/^-?(?:\d*\.?\d+)(?:s|ms)$/i.test(t));
+}
+// EVERY author-chosen animation/keyframe name on the page: @keyframes definitions, animation-name references, AND
+// animation: shorthand names. BOTH the motion and hover signals alias against this union, so no surfaced path
+// (shorthand decl, longhand ref, or a :hover rule body) can leak a name (independent review High-1 + High-2).
+function animNamesFrom(keyframes, style) {
+  const defNames = keyframes.map((k) => (/@[-\w]*keyframes\s+("[^"]*"|'[^']*'|[-\w]+)/i.exec(k.prelude) || [])[1]).filter(Boolean).map((n) => n.replace(/^["']|["']$/g, ''));
+  const nameRefs = style.flatMap((r) => [...r.body.matchAll(/(?<![-\w])animation-name\s*:\s*([^;{}]+)/gi)]
+    .flatMap((m) => m[1].split(',').map((s) => s.trim()).filter((s) => s && !/^(?:none|initial|inherit|unset|revert)$/i.test(s))));
+  const shortNames = style.flatMap((r) => [...r.body.matchAll(/(?<![-\w])(?:-[a-z]+-)?animation\s*:\s*([^;{}]+)/gi)].flatMap((m) => shorthandNames(m[1])));
+  return [...defNames, ...nameRefs, ...shortNames];
+}
+
+// Brace-depth scanner over concatenated CSS -> the TOP-LEVEL rules as { prelude, body }, string-aware (braces in
+// a quoted value like content:"{" do not shift depth) and nesting-correct. FAILS LOUD on an unbalanced block
+// instead of silently dropping it: for this integrity-critical harness a silently-empty motion/hover signal
+// would mislabel a page (Codex review Medium). Replaces the fragile one-level-nesting regexes.
+function scanTopLevelRules(css) {
+  const rules = []; let depth = 0, paren = 0, start = 0, preludeEnd = -1, q = null;
+  for (let i = 0; i < css.length; i++) {
+    const c = css[i];
+    // CSS BACKSLASH ESCAPE, handled EVERYWHERE (not only inside strings). Tailwind/CSS-module selectors escape
+    // special chars - `.before\:content-\[\'\'\]`, `.bg-\[url\(\'...\'\)\]` - so an escaped `\'` or `\"` in a
+    // SELECTOR must not open a string. Missing this made the scanner see a never-closing string and throw on
+    // ~26/48 real dev pages (root cause of the "unterminated string" false failures).
+    if (c === '\\') { i++; continue; }
+    if (q) { if (c === q) q = null; continue; }
+    if (c === '"' || c === "'") { q = c; continue; }
+    // Track PARENTHESIS depth: braces and semicolons inside (...) are LITERAL, not structural - real minified CSS
+    // routinely carries `url(data:image/svg+xml,<svg>...{...}</svg>)` and `:is(...)`/`clamp(...)` whose contents
+    // include { } ; . Counting those as rule delimiters made the fail-loud scanner throw on ~18/48 real dev pages.
+    if (c === '(') { paren++; continue; }
+    if (c === ')') { if (paren > 0) paren--; continue; }
+    if (paren > 0) continue;
+    // A top-level ';' terminates a statement at-rule (@import/@charset/@namespace) that has NO block. Consume it
+    // so it does not glue onto the NEXT rule's prelude - otherwise `@import "x"; img:hover{...}` would classify
+    // as an @import and DROP the hover rule, and a dropped @keyframes then leaks its name via the animation decl
+    // (Codex review High-A). These statement at-rules carry no motion/hover signal, so skipping them is correct.
+    if (c === ';' && depth === 0) { start = i + 1; continue; }
+    if (c === '{') { if (depth === 0) preludeEnd = i; depth++; }
+    else if (c === '}') {
+      if (--depth < 0) throw new Error('refused: unbalanced CSS braces in motion/hover extraction - stylesheet unparseable, signal would be silently empty');
+      if (depth === 0) { rules.push({ prelude: css.slice(start, preludeEnd).trim(), body: css.slice(preludeEnd + 1, i) }); start = i + 1; }
+    }
+  }
+  // Fail loud ONLY on a genuinely unterminated BLOCK or STRING (would corrupt rule extraction). An unbalanced
+  // paren is clamped above (never negative) and not thrown on - a stray ) in a value must not fail the page.
+  if (depth !== 0 || q) throw new Error('refused: unterminated CSS block/string in motion/hover extraction - stylesheet unparseable');
+  return rules;
+}
+// Split a stylesheet into { keyframes[], style[] }, recursing into conditional at-rules so hover rules / keyframes
+// nested inside @media/@supports/... are not missed. Vendor-prefixed @-webkit-keyframes etc. counted as keyframes.
+function collectCssRules(css, out = { keyframes: [], style: [] }) {
+  for (const { prelude, body } of scanTopLevelRules(css)) {
+    const at = /^@([-\w]+)/.exec(prelude);
+    if (at) {
+      const kind = at[1].toLowerCase();
+      if (/(?:^|-)keyframes$/.test(kind)) out.keyframes.push({ prelude, body });
+      else if (['media', 'supports', 'layer', 'container', 'scope'].includes(kind)) collectCssRules(body, out);
+      // other at-rules (font-face/import/...) carry no motion/hover signal
+    } else {
+      out.style.push({ prelude, body });
+      // CSS NESTING: a style rule's body may itself hold nested rules (`.card{ &:hover img{...} }`). Descend so a
+      // nested &:hover is not silently dropped and mislabeled ABSENT (independent review Medium-3). The scanner's
+      // top-level ';'-skip discards the parent's own declarations, leaving nested rule blocks to parse cleanly.
+      if (body.includes('{')) collectCssRules(body, out);
+    }
+  }
+  return out;
+}
+const styleCss = (html) => [...stripComments(html).matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
+const MARQUEE_ATTRS = ['direction', 'behavior', 'loop', 'scrollamount', 'scrolldelay'];
+
+/**
+ * MOTION signal (marquee / blinking-cursor / layout-transition / bounce-easing). Surfaces the ACTUAL motion as
+ * RAW facts, never a pre-decided classification:
+ *   - <marquee> start tags with their SPEC attributes (direction/behavior/loop/...) - a vertical (direction=up)
+ *     or finite (loop=3) marquee is NOT the sideways-forever idiom, and pre-deciding "<marquee> = the idiom"
+ *     would copy the detector's own classification into the ground truth (Codex review High-1),
+ *   - @keyframes BODIES (so a horizontal translateX(-100%) or an opacity 1<->0 toggle is visible; vendor-prefixed
+ *     @-webkit-keyframes included), and
+ *   - animation / transition declarations (duration / timing / iteration-count: "infinite", "linear", easing).
+ * Author-chosen keyframe/animation names are aliased and selectors dropped; the geometric motion is kept verbatim.
+ */
 function motionDeclarations(html) {
-  const css = [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
-  const lines = [...css.matchAll(/[^{};]*(transition|animation|@keyframes|cubic-bezier|bounce|elastic)[^{};]*[;{]/gi)].map((m) => m[0].trim());
-  return [...new Set(lines)].slice(0, 40).join('\n').slice(0, 1500) || '(no explicit motion declarations found)';
+  const clean = stripComments(html);
+  const facts = [];
+  for (const m of clean.matchAll(/<marquee\b([^>]*)>/gi)) {
+    const attrs = MARQUEE_ATTRS.map((a) => { const mm = new RegExp(`\\b${a}\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)`, 'i').exec(m[1]); return mm ? `${a}=${mm[1].replace(/^["']|["']$/g, '')}` : null; }).filter(Boolean);
+    facts.push(`<marquee${attrs.length ? ' ' + attrs.join(' ') : ''}> element (a deprecated HTML auto-scrolling element)`);
+  }
+  // The scanner is fail-LOUD (throws on genuinely unbalanced/unterminated CSS - the Medium finding). A handful
+  // of real pages ship CSS a LINEAR scanner cannot cleanly balance (orphaned declarations, unclosed blocks). Do
+  // NOT let that kill the whole page (it would lose the 12 SCREENSHOT-class labels too) and do NOT fabricate
+  // garbled rules: catch it and surface an EXPLICIT caveat, so the signal is honest (not silent-empty, not wrong)
+  // and the page is still labeled. The <marquee> facts above are regex-derived and survive regardless.
+  let declBody;
+  try {
+    const { keyframes, style } = collectCssRules(styleCss(clean));
+    const kfNames = animNamesFrom(keyframes, style);   // @keyframes defs + animation-name refs + shorthand names
+    const kfBlocks = keyframes.map((k) => {
+      const nm = (/@[-\w]*keyframes\s+(.+)$/i.exec(k.prelude) || [, ''])[1].trim();
+      return `@keyframes ${nm} {${k.body}}`.replace(/\s+/g, ' ').trim();
+    });
+    // animation / transition declarations (vendor-prefixed included), from every style rule body - no selector. The
+    // (?<![-\w]) boundary rejects a CUSTOM PROPERTY named --animation/--transition (which is data, not a real
+    // animation) while still accepting `-webkit-animation` (Codex review High-B).
+    const declRe = /(?<![-\w])(?:-[a-z]+-)?(?:animation|transition)(?:-[-\w]+)?\s*:\s*[^;{}]+/gi;
+    const decls = style.flatMap((r) => [...r.body.matchAll(declRe)].map((m) => m[0].replace(/\s+/g, ' ').trim()));
+    declBody = aliasAnimNames([...new Set([...kfBlocks, ...decls])].join('\n'), kfNames);
+  } catch {
+    // NEUTRAL caveat: signal unavailable, no class named and no answer direction injected - the labeler judges
+    // from the copy/screenshot it does have, exactly as it would for a page that genuinely declares no animation.
+    declBody = '(this page’s stylesheet could not be fully parsed, so no reliable animation declarations are available for it)';
+  }
+  const all = aliasVarNames([...facts, declBody].filter(Boolean).join('\n').trim());
+  return (all || '(no explicit motion declarations found)').slice(0, 2000);
+}
+
+/**
+ * HOVER signal (image-hover-transform). A :hover effect is invisible in a static frame, so the labeler is shown
+ * the page's :hover rules with their declarations (found via the fail-loud brace scanner, recursing into @media).
+ * The selector's STRUCTURE is kept (so "img" survives and the labeler knows an image is hovered) while author
+ * class/id names are redacted via the typeface sanitizer. ALL :hover rules are surfaced (not only transforms) so
+ * the labeler can correctly REJECT a hover that only changes color/opacity, or one targeting a button not an image.
+ */
+function hoverDeclarations(html) {
+  let keyframes, style;
+  try { ({ keyframes, style } = collectCssRules(styleCss(html))); }
+  catch {
+    // Same fail-soft posture as motionDeclarations: an unparseable stylesheet must not kill the page. Surface an
+    // explicit caveat rather than a silent empty or a fabricated rule.
+    return '(this page’s stylesheet could not be fully parsed, so no reliable :hover declarations are available for it)';
+  }
+  const kfNames = animNamesFrom(keyframes, style);   // the hover body needs the SAME name redaction as motion
+  const rules = [];
+  for (const { prelude, body } of style) {
+    if (!/:hover\b/i.test(prelude)) continue;
+    const decl = body.replace(/\s+/g, ' ').trim();
+    // Redact, in order: author animation NAMES in the body (e.g. `:hover{animation:blink}` leaked "blink" -
+    // independent review High-2), author custom-property names (var(--...)), and class/id in the selector.
+    if (decl) rules.push(aliasVarNames(aliasAnimNames(`${sanitizeSelector(prelude)} { ${decl} }`, kfNames)));
+  }
+  return ([...new Set(rules)].slice(0, 30).join('\n') || '(no :hover rules found)').slice(0, 1500);
 }
 
 export function buildPrompt(pageId, html, typefaceFacts) {
@@ -586,19 +773,32 @@ export function buildPrompt(pageId, html, typefaceFacts) {
   // pageId is accepted for call-site symmetry ONLY and must never reach the prompt text - the id encodes the
   // scenario and its polarity. Guarded, not merely intended.
   const typefaceBlock = formatTypefaceFacts(typefaceFacts);
-  const line = (c) => `- ${c.class} [${VISUAL.has(c.class) ? 'SCREENSHOT' : TEXTUAL.has(c.class) ? 'TEXT' : TYPEFACE.has(c.class) ? 'TYPEFACE' : 'MOTION'}]: ${c.desc}`;
+  // Strip SCRIPTS then COMMENTS once here, so no text-derived section (copy / motion / hover) can leak them. The
+  // render aborts/strips scripts too, so a <marquee> or <style> that exists only inside a <script> STRING must not
+  // become a phantom motion/style fact for a page whose screenshot shows none (independent review Low/Medium-4).
+  // Comments carry the fixture author's stated answer ("POSITIVE: a CSS marquee"). The screenshot + CSSOM typeface
+  // facts come from the rendered page and are unaffected.
+  const clean = stripComments(stripScripts(html));
+  // Route the prompt tag through signalOfClass (single source of truth) - do NOT re-implement the set lookups,
+  // which would let an unrouted class silently tag as [MOTION] in the prompt (Codex review Low). signalOfClass
+  // THROWS on a class in no signal set, so buildPrompt fails loud exactly like recordLabels.
+  const TAG = { screenshot: 'SCREENSHOT', text: 'TEXT', motion: 'MOTION', hover: 'HOVER', typeface: 'TYPEFACE' };
+  const line = (c) => `- ${c.class} [${TAG[signalOfClass(c.class)]}]: ${c.desc}`;
   return `You are an INDEPENDENT design labeler with no stake in any tool. Judge whether each design idiom is `
     + `PRESENT or ABSENT on THIS page, using ONLY the neutral descriptions below and the signal noted per class:\n`
     + `- [SCREENSHOT] classes: judge from the ATTACHED rendered screenshot (what the page LOOKS like). Do not parse CSS.\n`
     + `- [TEXT] classes: judge from the page COPY below.\n`
     + `- [MOTION] classes: judge from the MOTION declarations below (a static image can't show motion).\n`
+    + `- [HOVER] classes: judge from the :hover declarations below (a hover effect is invisible in a static image; `
+    + `the pointer is over nothing). Judge what the page DOES when an image is pointed at.\n`
     + `- [TYPEFACE] classes: judge from the FONT-FAMILY declarations below - what the page ASKS FOR. Do NOT use `
     + `the screenshot for these: the render blocks webfonts, so a page that deliberately names a custom family `
     + `still paints as a plain system face. Naming a chosen family counts as chosen even if it paints plain.\n`
     + `Do not infer which tool or author made the page. Output ONLY JSON keyed by class name, each value `
     + `{"present":true|false,"confidence":0..1,"note":"<=12 words"}. Include all ${classes.length} classes.\n\n`
-    + `CLASSES:\n${classes.map(line).join('\n')}\n\nPAGE COPY (for TEXT classes):\n${visibleTextSample(html)}\n\n`
-    + `MOTION DECLARATIONS (for MOTION classes):\n${motionDeclarations(html)}\n\n`
+    + `CLASSES:\n${classes.map(line).join('\n')}\n\nPAGE COPY (for TEXT classes):\n${visibleTextSample(clean)}\n\n`
+    + `MOTION DECLARATIONS (for MOTION classes):\n${motionDeclarations(clean)}\n\n`
+    + `HOVER DECLARATIONS (for HOVER classes):\n${hoverDeclarations(clean)}\n\n`
     + `FONT-FAMILY DECLARATIONS (for TYPEFACE classes):\n${typefaceBlock}`;
 }
 

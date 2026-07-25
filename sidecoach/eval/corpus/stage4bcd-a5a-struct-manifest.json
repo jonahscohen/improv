@@ -1,0 +1,130 @@
+{
+  "generatedUtc": null,
+  "note": "Stage 4c/4d structural+motion A5a fixtures (constructed positives p* + near-miss negatives n*).",
+  "pages": [
+    {
+      "id": "n01-blinking-cursor-pulse",
+      "failed": false
+    },
+    {
+      "id": "n01-decorative-dot-grid-plain",
+      "failed": false
+    },
+    {
+      "id": "n01-first-viewport-overflow-fits",
+      "failed": false
+    },
+    {
+      "id": "n01-image-hover-transform-button",
+      "failed": false
+    },
+    {
+      "id": "n01-marquee-fadein",
+      "failed": false
+    },
+    {
+      "id": "n01-numbered-section-markers-small-list",
+      "failed": false
+    },
+    {
+      "id": "n01-repeating-stripe-gradients-two-stop",
+      "failed": false
+    },
+    {
+      "id": "n01-soft-radial-glow-none",
+      "failed": false
+    },
+    {
+      "id": "n01-text-under-overlay-no-scrim",
+      "failed": false
+    },
+    {
+      "id": "n01-thin-border-wide-shadow-soft",
+      "failed": false
+    },
+    {
+      "id": "n02-blinking-cursor-finite",
+      "failed": false
+    },
+    {
+      "id": "n02-first-viewport-overflow-scrolling-page",
+      "failed": false
+    },
+    {
+      "id": "n02-image-hover-transform-opacity",
+      "failed": false
+    },
+    {
+      "id": "n02-marquee-small-slide",
+      "failed": false
+    },
+    {
+      "id": "n02-numbered-section-markers-small-padded",
+      "failed": false
+    },
+    {
+      "id": "n02-repeating-stripe-gradients-three-stop",
+      "failed": false
+    },
+    {
+      "id": "n02-text-under-overlay-no-image",
+      "failed": false
+    },
+    {
+      "id": "n02-thin-border-wide-shadow-thick-border",
+      "failed": false
+    },
+    {
+      "id": "n03-numbered-section-markers-big-stats",
+      "failed": false
+    },
+    {
+      "id": "p01-blinking-cursor",
+      "failed": false
+    },
+    {
+      "id": "p01-decorative-dot-grid",
+      "failed": false
+    },
+    {
+      "id": "p01-first-viewport-overflow",
+      "failed": false
+    },
+    {
+      "id": "p01-image-hover-transform",
+      "failed": false
+    },
+    {
+      "id": "p01-marquee",
+      "failed": false
+    },
+    {
+      "id": "p01-numbered-section-markers",
+      "failed": false
+    },
+    {
+      "id": "p01-repeating-stripe-gradients",
+      "failed": false
+    },
+    {
+      "id": "p01-soft-radial-glow",
+      "failed": false
+    },
+    {
+      "id": "p01-text-under-overlay",
+      "failed": false
+    },
+    {
+      "id": "p01-thin-border-wide-shadow",
+      "failed": false
+    },
+    {
+      "id": "p02-marquee-css",
+      "failed": false
+    },
+    {
+      "id": "p02-numbered-section-markers-pseudo",
+      "failed": false
+    }
+  ]
+}
