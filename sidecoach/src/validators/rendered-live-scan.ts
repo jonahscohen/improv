@@ -26,7 +26,7 @@ import { chromium } from 'playwright';
 import type { Browser } from 'playwright';
 import { inPageObjective } from './objective-rendered-scanner';
 import type { ObjectiveScan } from './objective-rendered-scanner';
-import { inPageSubjective, inPageBuzzword, buzzwordFindingFromScore, inPageTypeface, typefaceFindingFromScore, inPageTypographyExtremes, typographyExtremesFindingsFromScore } from './subjective-rendered-scanner';
+import { inPageSubjective, inPageBuzzword, buzzwordFindingFromScore, inPageTypeface, typefaceFindingFromScore, inPageTypographyExtremes, typographyExtremesFindingsFromScore, inPageStructural, structuralFindingsFromScore, inPageMotionMarker, motionMarkerFindingsFromScore } from './subjective-rendered-scanner';
 import type { SubjectiveScan, TypefaceFindingOptions } from './subjective-rendered-scanner';
 import { isSubresourceAllowed } from './browser-evidence-collector';
 
@@ -122,6 +122,10 @@ export async function scanRenderedLive(
       if (face) findings.push(face);
       // Stage 4b typographic-extreme classes via the SAME split: one in-page score, Node-side thresholds -> 0-5 findings.
       findings.push(...typographyExtremesFindingsFromScore(await race(page.evaluate(inPageTypographyExtremes), 'evaluate')));
+      // Stage 4c structural classes via the SAME split: one in-page score, Node-side thresholds -> 0-7 findings.
+      findings.push(...structuralFindingsFromScore(await race(page.evaluate(inPageStructural), 'evaluate')));
+      // Stage 4d motion/marker classes via the SAME split: one in-page score, Node-side thresholds -> 0-3 findings.
+      findings.push(...motionMarkerFindingsFromScore(await race(page.evaluate(inPageMotionMarker), 'evaluate')));
       subjective = { available: true, findings };
     }
     catch (e) { if (e instanceof AbortError) throw e; subjective = { available: false, reason: reason(e) }; }

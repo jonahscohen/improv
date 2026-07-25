@@ -905,6 +905,61 @@ const RENDERED_RULE_MANIFEST: RenderedManifestEntry[] = [
     severity: 'minor', findingClass: 'polish', registryScope: 'rendered-sub-11px-ui',
     note: 'a substantial body of interface text rendered below the legibility floor; audit-only (A5a pending)',
   },
+  // Stage 4c structural taste classes - all AUDIT-ONLY (ruleId:null), same reason as nested-cards / the 4b set:
+  // modeling any as a rendered-scan RAW_RULE trips the inverse invariant -> RENDERED_BACKED_RULE_IDS -> run-validator
+  // would newly consume it as a required decision rule. Precision-first taste rules whose A5a gate is PENDING, so
+  // that promotion is not intended. Frozen operating points live in subjective-rendered-scanner.ts.
+  {
+    scannerRule: 'thin-border-wide-shadow', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-thin-border-wide-shadow',
+    note: 'a hairline border under a wide-spread shadow (muddy double-elevation); audit-only (A5a pending)',
+  },
+  {
+    scannerRule: 'repeating-stripe-gradients', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-repeating-stripe-gradients',
+    note: 'a repeating / many-hard-stop linear-gradient striped background; audit-only (A5a pending)',
+  },
+  {
+    scannerRule: 'text-under-overlay', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-text-under-overlay',
+    note: 'content text over a translucent scrim layered on a background image (structure, not measured contrast); audit-only (A5a pending)',
+  },
+  {
+    scannerRule: 'first-viewport-overflow', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-first-viewport-overflow',
+    note: 'a viewport-height top section that clips content overflowing the first screen; audit-only (A5a pending)',
+  },
+  {
+    scannerRule: 'decorative-dot-grid', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-decorative-dot-grid',
+    note: 'a small-tiled radial/grid decorative background field; audit-only (A5a pending)',
+  },
+  {
+    scannerRule: 'soft-radial-glow', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-soft-radial-glow',
+    note: 'a large soft radial-gradient glow / heavy-blur decorative blob; audit-only (A5a pending)',
+  },
+  {
+    scannerRule: 'image-hover-transform', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-image-hover-transform',
+    note: 'a :hover rule transforming an image (hover zoom/slide); audit-only (A5a pending)',
+  },
+  // Stage 4d detectable motion/marker classes - AUDIT-ONLY (ruleId:null), same invariant reasoning; A5a PENDING.
+  {
+    scannerRule: 'marquee', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-marquee',
+    note: 'a <marquee> element or an infinite horizontal-scroll (CSS marquee) animation; audit-only (A5a pending)',
+  },
+  {
+    scannerRule: 'blinking-cursor', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-blinking-cursor',
+    note: 'an infinite opacity/visibility blink animation; audit-only (A5a pending)',
+  },
+  {
+    scannerRule: 'numbered-section-markers', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-numbered-section-markers',
+    note: 'prominent decorative section numerals (01/02/03) as an organizing motif; audit-only (A5a pending)',
+  },
 ];
 
 export interface RenderedRuleResolution {

@@ -12,7 +12,7 @@
   "ai-color-palette": ["sidecoach-architect"],
   "hero-eyebrow-chip": ["sidecoach-architect"],
   "repeated-section-kickers": ["sidecoach-architect"],
-  "numbered-section-markers": ["sidecoach-architect"],
+  "numbered-section-markers": ["stage4cd"],
   "icon-tile-stack": ["sidecoach-architect"],
   "italic-serif-display": ["sidecoach-architect"],
   "nested-cards": ["sidecoach-architect"],
@@ -27,5 +27,16 @@
   "default-typeface": ["font-class"],
   "_stage4b_note": "The five Stage 4b typographic-extreme classes (2026-07-24) are authored by the teammate 'stage4b', so that name is registered here and the freeze gate REJECTS any label whose labeledBy is stage4b (author != labeler). extreme-negative-tracking / tight-leading / all-caps-body were placeholder-registered to sidecoach-architect and are REASSIGNED to the real author, matching the Stage 4a font-class precedent; they DO carry Codex dev labels (labeledBy=codex, dev-subjective-labels.json), which the calibration uses for real dev P/R. oversized-h1 and sub-11px-ui postdate the 22-class rubric (like default-typeface), so no Codex label exists for them yet and their A5a gate is likewise PENDING - they ship with fixture recall + a real-page precision measurement. A5a for ALL FIVE is PENDING, not passed; the classes ship built + dev-calibrated + registered AUDIT-ONLY, and that limit is stated rather than papered over.",
   "oversized-h1": ["stage4b"],
-  "sub-11px-ui": ["stage4b"]
+  "sub-11px-ui": ["stage4b"],
+  "_stage4cd_note": "The Stage 4c structural + 4d motion/marker classes (2026-07-24) are authored by the teammate 'stage4cd', so that name is registered here and the freeze gate REJECTS any label whose labeledBy is stage4cd (author != labeler). numbered-section-markers was placeholder-registered to sidecoach-architect and is REASSIGNED to the real detector author (matching the Stage 4a font-class / Stage 4b precedent); it DOES carry Codex dev labels (labeledBy=codex, dev-subjective-labels.json: present airtable/calcom/raycast, absent 45), which the calibration uses for real dev P/R - and it is honestly bounded-recall because airtable renders its 01-04 as pseudo-element counters (invisible to a text walk) while polygon carries literal 01..06 text tokens yet is labeled absent (a prominence judgment). The 9 other classes postdate the 22-class rubric and have NO Codex label yet, so their A5a gate is PENDING - they ship with fixture recall + a real-page (presumed-negative) precision measurement, and that limit is stated rather than papered over. A5a for ALL TEN is PENDING; the classes ship built + dev-calibrated + registered AUDIT-ONLY.",
+  "_stage4cd_exclusions_note": "Stage 4d HONEST EXCLUSIONS - NOT built as detectors, recorded so no future pass claims render-detection of a class a DOM/computed-style engine cannot truthfully see: (1) stock geometric hero ART inside a raster image - DOM-invisible (the shapes are the image's pixels, not the tree) and the hermetic render aborts the image; it would require OCR/vision, which this engine never does, and it hits oracle's DOM engine equally. (2) aphoristic-cadence / theater-slop-phrase - a COPY-SEMANTIC cadence judgment, not a computed-style read; the marketing-buzzword density model is the closest this engine goes, and a cadence detector is a separate calibrated NLP effort, not a cheap geometry read (shipping a low-precision regex guess would break the fail-closed edge). aphoristic-cadence stays registered to sidecoach-architect above (it is a rubric class the Codex pass labels), NOT to stage4cd, precisely because no stage4cd detector claims it.",
+  "thin-border-wide-shadow": ["stage4cd"],
+  "repeating-stripe-gradients": ["stage4cd"],
+  "text-under-overlay": ["stage4cd"],
+  "first-viewport-overflow": ["stage4cd"],
+  "decorative-dot-grid": ["stage4cd"],
+  "soft-radial-glow": ["stage4cd"],
+  "image-hover-transform": ["stage4cd"],
+  "marquee": ["stage4cd"],
+  "blinking-cursor": ["stage4cd"]
 }

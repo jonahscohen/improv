@@ -25,7 +25,12 @@ import type { Browser } from 'playwright';
 export type SubjectiveRule =
   | 'tiny-text' | 'nested-cards' | 'marketing-buzzword' | 'default-typeface'
   // Stage 4b typographic-extreme classes (audit-only rendered taste findings).
-  | 'extreme-negative-tracking' | 'tight-leading' | 'all-caps-body' | 'oversized-h1' | 'sub-11px-ui';
+  | 'extreme-negative-tracking' | 'tight-leading' | 'all-caps-body' | 'oversized-h1' | 'sub-11px-ui'
+  // Stage 4c structural taste classes (audit-only; computed-style + geometry reads).
+  | 'thin-border-wide-shadow' | 'repeating-stripe-gradients' | 'text-under-overlay' | 'first-viewport-overflow'
+  | 'decorative-dot-grid' | 'soft-radial-glow' | 'image-hover-transform'
+  // Stage 4d detectable motion/marker classes (audit-only).
+  | 'marquee' | 'blinking-cursor' | 'numbered-section-markers';
 
 export interface SubjectiveFinding {
   rule: SubjectiveRule;
@@ -41,6 +46,11 @@ export type SubjectiveScan =
 export const SUBJECTIVE_RULES: SubjectiveRule[] = [
   'tiny-text', 'nested-cards', 'marketing-buzzword', 'default-typeface',
   'extreme-negative-tracking', 'tight-leading', 'all-caps-body', 'oversized-h1', 'sub-11px-ui',
+  // Stage 4c structural taste classes.
+  'thin-border-wide-shadow', 'repeating-stripe-gradients', 'text-under-overlay', 'first-viewport-overflow',
+  'decorative-dot-grid', 'soft-radial-glow', 'image-hover-transform',
+  // Stage 4d detectable motion/marker classes.
+  'marquee', 'blinking-cursor', 'numbered-section-markers',
 ];
 
 export function stripScripts(html: string): string {
@@ -966,6 +976,607 @@ export function typographyExtremesFindingsFromScore(s: TypographyExtremesScore):
   return out;
 }
 
+/* ====================== structural taste classes (Stage 4c) ====================== */
+//
+// Seven rendered SUBJECTIVE (taste) classes, each a computed-style + geometry read on the rendered tree, each
+// precision-first, each following the SINGLE-SOURCE score+threshold split the 4a/4b classes use: ONE in-page
+// scorer (inPageStructural) walks the tree once (and inspects the stylesheets for the hover class) and returns a
+// rich SCORE; the firing THRESHOLDS are applied in Node by structuralFindingsFromScore, so the calibration
+// harness sweeps EXACTLY what ships (no reimplementation - the integrity rule). All seven are PAGE-LEVEL
+// judgments: each emits at most ONE finding per page (the page-level verdict + a representative selector).
+//
+//   thin-border-wide-shadow    - a hairline border under a wide-SPREAD shadow (muddy double-elevation).
+//   repeating-stripe-gradients - a repeating-linear-gradient (or many-hard-stop linear-gradient) striped fill.
+//   text-under-overlay         - content text over a translucent colour scrim layered on a background IMAGE.
+//   first-viewport-overflow    - a viewport-height top section that CLIPS content overflowing the first screen.
+//   decorative-dot-grid        - a small tiled radial/grid pattern used as a decorative background field.
+//   soft-radial-glow           - a large soft radial-gradient glow / heavy-blur blob used as decoration.
+//   image-hover-transform      - a :hover rule that transforms an image (hover zoom/slide).
+//
+// PRECISION-FIRST (lead condition, co-equal with recall): a normal card with a 1px border and a soft drop
+// shadow, a single tasteful hero glow, one image with a subtle hover lift, and a full-height hero whose content
+// fits are ALL near-universal on competently built pages. Each operating point sits BELOW that normal band, on
+// the perceptual/structural principle stated at each constant, and is CONFIRMED (not set) by the dev signal -
+// never on held-out. A5a (the held Codex detection gate) is a separate CLOSURE step and is PENDING for every
+// class here (see structural-motion-calibrate.mjs header + the rule-authors registry).
+//
+// HERMETIC-RENDER HONESTY (text-under-overlay): the hermetic render aborts external subresources, so a url()
+// background image never PAINTS. This class therefore reads the DECLARED layered background - the computed
+// background-image string still lists the url() + the scrim gradient, render-independent - NOT the measured
+// contrast of text against the photo, whose pixels are unavailable by construction. It detects the STRUCTURE
+// (text over a translucent scrim over an image), not the contrast, and its recall is bounded to that CSS shape.
+
+export interface StructuralScore {
+  viewportWidth: number;
+  viewportHeight: number;
+  // thin-border-wide-shadow (panel elements: hairline border + wide-spread shadow)
+  thinBorderWideShadowCount: number;
+  tbwsMaxRatio: number;              // max shadow-spread / border-width seen (detail)
+  tbwsSelector?: string;
+  // repeating-stripe-gradients
+  stripeGradientCount: number;
+  stripeSelector?: string;
+  // text-under-overlay (text over a scrim layered on a bg image)
+  textUnderOverlayCount: number;
+  overlaySelector?: string;
+  // first-viewport-overflow (viewport-height top section that clips overflowing content)
+  firstViewportOverflowPx: number;   // 0 if none; else scrollHeight - clientHeight of the clipped hero
+  overflowSelector?: string;
+  // decorative-dot-grid
+  dotGridCount: number;
+  dotGridSelector?: string;
+  // soft-radial-glow
+  radialGlowCount: number;
+  glowSelector?: string;
+  // image-hover-transform (stylesheet :hover rule transforming an image)
+  imageHoverTransformCount: number;
+  hoverSelector?: string;
+}
+
+// ---- per-element classification constants (the "what counts" definitions, baked into the in-page scorer). Each
+//      is frozen on a perceptual/structural PRINCIPLE and duplicated inside inPageStructural (a serialized in-page
+//      fn cannot close over module scope). ----
+
+// thin-border-wide-shadow. The DEFECT is a hairline border fighting a wide SOLID shadow halo - redundant double
+// elevation that reads muddy. It is NOT "a border and a shadow" (that is normal, and the polish standard even
+// prefers shadows to borders): the discriminator is shadow SPREAD (the 4th box-shadow length), which extends a
+// solid halo, versus the 0-spread soft blur normal cards use. Border must be genuinely hairline (<= 1.5px) and
+// the shadow spread genuinely wide (>= 6px), on a real panel (>= card min), with the spread at least 4x the
+// border. Normal cards (1px border, 0-spread blur) never reach it.
+export const TBWS_BORDER_MAX_PX = 1.5;
+export const TBWS_SPREAD_MIN_PX = 6;
+export const TBWS_RATIO_MIN = 4;
+export const TBWS_PANEL_MIN_W = 100;
+export const TBWS_PANEL_MIN_H = 60;
+export const TBWS_MIN_COUNT = 1;
+// repeating-stripe-gradients. A "stripe" is definitionally a REPEATING linear-gradient (hard-edged repeated
+// bands), NOT a smooth many-stop wash, and it must fill a real 2D AREA (both dims >= STRIPE_MIN_DIM), not a 1px
+// divider or graph line. The dev corpus set this: an earlier many-stop-linear-gradient rule fired on 15 gradient
+// graph-lines (linear), a code block (posthog) and thin dividers (retool); requiring repeating-linear-gradient +
+// a real area clears every one of those false positives while the barber-pole stripe fixture still fires. One
+// striped surface is the idiom.
+export const STRIPE_MIN_DIM = 60;
+export const STRIPE_MIN_COUNT = 1;
+// text-under-overlay. The scrim layer must carry real translucency (alpha strictly between 0 and 1, or the
+// `transparent` keyword) layered with a url() image; a fully-opaque overlay is not a scrim and a 0-alpha layer is
+// not painted. One such text-bearing surface is the idiom.
+export const TUO_MIN_COUNT = 1;
+// first-viewport-overflow. A top SECTION (starts within FVO_TOP_MAX_PX of the page top, and is NOT body/html)
+// that is viewport-height locked (rendered >= FVO_VH_FRAC of the viewport height) AND clips (overflow hidden/clip)
+// content that overflows its frame by a bounded amount in [FVO_OVERFLOW_MIN_PX, FVO_OVERFLOW_MAX_PX]. This is the
+// "hero doesn't fit its own first screen and gets clipped" defect - not "the page is taller than the viewport"
+// (which is every page). MIN excludes a rounding artifact; MAX excludes an element acting as the page scroll
+// container (a body/wrapper clipping the whole 2000-11000px page), which is not a clipped hero. Both guards, and
+// the body/html exclusion, were set by the dev corpus (loom/redis-docs fired the whole <body>).
+export const FVO_VH_FRAC = 0.85;
+export const FVO_TOP_MAX_PX = 8;
+export const FVO_OVERFLOW_MIN_PX = 64;
+export const FVO_OVERFLOW_MAX_PX = 1200;
+// decorative-dot-grid. A radial-gradient (dots) or a two-linear-gradient grid tiled at a SMALL cell (both
+// background-size dims <= DOTGRID_TILE_MAX_PX), or any repeating-radial-gradient. The small tile is what makes it
+// a repeated decorative FIELD rather than a single large radial wash (which is the glow class). One field is the
+// idiom.
+export const DOTGRID_TILE_MAX_PX = 40;
+export const DOTGRID_MIN_COUNT = 1;
+// soft-radial-glow. A large soft decoration: a heavy blur() filter (>= GLOW_BLUR_MIN_PX) on a real-area element,
+// or a large radial-gradient that fades to transparent on a large element whose tile is NOT small (separating it
+// from the dot-grid field). The large area + soft fade is the "ambient glow blob" gesture.
+export const GLOW_BLUR_MIN_PX = 40;
+export const GLOW_MIN_AREA = 200 * 200;
+export const GLOW_MIN_COUNT = 1;
+// image-hover-transform. A stylesheet :hover rule whose selector explicitly targets an image (`img`) and whose
+// declaration sets a non-none transform (hover zoom/slide/rotate). Reading the rule (not a live :hover) is the
+// only render-independent way to see a hover effect; recall is bounded to selectors that name `img` (a
+// background-image div or <picture> hover is not caught) - stated, not papered over.
+export const IHT_MIN_COUNT = 1;
+
+/* istanbul ignore next - executes in the browser context (serialized by page.evaluate; must be self-contained) */
+export function inPageStructural(): StructuralScore {
+  // per-element definitions (inlined - the serialized fn cannot close over module scope).
+  const TBWS_BORDER_MAX_PX = 1.5, TBWS_SPREAD_MIN_PX = 6, TBWS_RATIO_MIN = 4, TBWS_PANEL_MIN_W = 100, TBWS_PANEL_MIN_H = 60;
+  const STRIPE_MIN_DIM = 60;
+  const FVO_VH_FRAC = 0.85, FVO_TOP_MAX_PX = 8, FVO_OVERFLOW_MIN_PX = 64, FVO_OVERFLOW_MAX_PX = 1200;
+  const DOTGRID_TILE_MAX_PX = 40;
+  const GLOW_BLUR_MIN_PX = 40, GLOW_MIN_AREA = 200 * 200;
+
+  function sel(el: Element): string {
+    const t = el.tagName.toLowerCase();
+    if (el.id) return `${t}#${el.id}`;
+    const cls = (el.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).join('.');
+    return cls ? `${t}.${cls}` : t;
+  }
+  // The SAME hardened visibility predicate as the other in-page scorers (self-contained duplicate).
+  function visuallyVisible(el: Element): boolean {
+    const cs = getComputedStyle(el);
+    if (cs.visibility !== 'visible') return false;
+    for (let n: Element | null = el; n && n instanceof Element; n = n.parentElement) { if (parseFloat(getComputedStyle(n).opacity) === 0) return false; }
+    const rects = (el as HTMLElement).getClientRects();
+    if (!rects.length) return false;
+    const box = (el as HTMLElement).getBoundingClientRect();
+    if (box.width < 1 || box.height < 1) return false;
+    if ((box.width <= 1 || box.height <= 1) && cs.overflow !== 'visible') return false;
+    if (box.right <= 0 || box.bottom <= 0) return false;
+    if (parseFloat(cs.textIndent) <= -999) return false;
+    const clipM = (cs.clip || '').replace(/\s+/g, ' ').match(/^rect\(\s*([-\d.]+)(?:px)?[ ,]+([-\d.]+)(?:px)?[ ,]+([-\d.]+)(?:px)?[ ,]+([-\d.]+)(?:px)?\s*\)$/i);
+    if (clipM) { const t = parseFloat(clipM[1]), rr = parseFloat(clipM[2]), b = parseFloat(clipM[3]), l = parseFloat(clipM[4]); if (rr <= l || b <= t) return false; }
+    if (/^inset\(\s*(100%|50%)\b/.test(cs.clipPath || '')) return false;
+    return true;
+  }
+  // split a comma-separated value at TOP LEVEL only (commas inside rgba()/gradient() parens are not delimiters).
+  function splitTopLevel(s: string, sep: string): string[] {
+    const out: string[] = []; let depth = 0, cur = '';
+    for (const ch of s) {
+      if (ch === '(') depth++; else if (ch === ')') depth = Math.max(0, depth - 1);
+      if (ch === sep && depth === 0) { out.push(cur); cur = ''; } else cur += ch;
+    }
+    out.push(cur); return out;
+  }
+  // a scrim carries at least one colour STOP that is genuinely translucent (0 < alpha < 1). Scans EVERY colour
+  // function in the layer (not just the first - Codex), and reads the slash-alpha form rgb(... / .4). A bare
+  // `transparent`-only or fully-opaque gradient is NOT a scrim (the former paints nothing, the latter hides the
+  // image), so the earlier `transparent`-keyword shortcut is dropped.
+  function hasScrimAlpha(layer: string): boolean {
+    for (const c of layer.match(/(?:rgba?|hsla?)\([^)]*\)/gi) || []) {
+      const parts = c.slice(c.indexOf('(') + 1, -1).split(/[,/]/).map((x) => x.trim()).filter(Boolean);
+      if (parts.length < 4) continue;
+      const raw = parts[3];
+      const a = parseFloat(raw.replace('%', ''));
+      const alpha = raw.includes('%') ? a / 100 : a;
+      if (Number.isFinite(alpha) && alpha > 0 && alpha < 1) return true;
+    }
+    return false;
+  }
+  // max shadow SPREAD (4th length) and max BLUR (3rd length) across the comma-separated box-shadow layers. INSET
+  // layers are SKIPPED entirely: an inset ring is not an elevation halo, so its spread must not trip the
+  // thin-border-wide-shadow "double-elevation" defect (Codex).
+  function shadowLengths(boxShadow: string): { spread: number; blur: number } | null {
+    if (!boxShadow || boxShadow === 'none') return null;
+    let maxSpread = 0, maxBlur = 0, any = false;
+    for (const layer of splitTopLevel(boxShadow, ',')) {
+      if (/\binset\b/i.test(layer)) continue;
+      const noColor = layer.replace(/(?:rgba?|hsla?)\([^)]*\)/gi, ' ');
+      const lens = (noColor.match(/-?\d*\.?\d+px/g) || []).map(parseFloat);
+      if (lens.length >= 1) { any = true; const blur = lens.length >= 3 ? lens[2] : 0, spread = lens.length >= 4 ? lens[3] : 0; if (spread > maxSpread) maxSpread = spread; if (blur > maxBlur) maxBlur = blur; }
+    }
+    return any ? { spread: maxSpread, blur: maxBlur } : null;
+  }
+  // small tiled background-size: BOTH dims explicit px and <= tileMax (a repeated field, not a cover wash).
+  function isSmallTile(backgroundSize: string, tileMax: number): boolean {
+    const first = splitTopLevel(backgroundSize, ',')[0].trim().toLowerCase();
+    if (!first || /cover|contain|auto/.test(first)) return false;
+    const dims = first.split(/\s+/).map((d) => parseFloat(d));
+    if (!dims.length || dims.some((d) => !Number.isFinite(d))) return false;
+    const x = dims[0], y = dims.length > 1 ? dims[1] : dims[0];
+    return x > 0 && y > 0 && x <= tileMax && y <= tileMax;
+  }
+
+  const scope: Element[] = document.body ? [document.body, ...Array.from(document.body.querySelectorAll('*'))] : [];
+  const viewportWidth = window.innerWidth || 1280;
+  const viewportHeight = window.innerHeight || 800;
+
+  let thinBorderWideShadowCount = 0, tbwsMaxRatio = 0; let tbwsSelector: string | undefined;
+  let stripeGradientCount = 0; let stripeSelector: string | undefined;
+  let textUnderOverlayCount = 0; let overlaySelector: string | undefined;
+  let firstViewportOverflowPx = 0; let overflowSelector: string | undefined;
+  let dotGridCount = 0; let dotGridSelector: string | undefined;
+  let radialGlowCount = 0; let glowSelector: string | undefined;
+
+  for (const el of scope) {
+    if (!visuallyVisible(el)) continue;
+    if (el.namespaceURI === 'http://www.w3.org/2000/svg') continue; // SVG graphic nodes are illustrative, not chrome
+    const cs = getComputedStyle(el);
+    const box = (el as HTMLElement).getBoundingClientRect();
+    const bg = cs.backgroundImage || '';
+
+    // thin-border-wide-shadow: hairline border + wide-spread shadow on a real panel.
+    if (box.width >= TBWS_PANEL_MIN_W && box.height >= TBWS_PANEL_MIN_H) {
+      const bw = parseFloat(cs.borderTopWidth) || 0;
+      const hasBorder = bw > 0 && bw <= TBWS_BORDER_MAX_PX && cs.borderTopStyle !== 'none' && cs.borderTopStyle !== 'hidden';
+      if (hasBorder) {
+        const sh = shadowLengths(cs.boxShadow);
+        if (sh && sh.spread >= TBWS_SPREAD_MIN_PX) {
+          const ratio = sh.spread / bw;
+          if (ratio >= TBWS_RATIO_MIN) { thinBorderWideShadowCount++; if (ratio > tbwsMaxRatio) tbwsMaxRatio = ratio; if (!tbwsSelector) tbwsSelector = sel(el); }
+        }
+      }
+    }
+
+    // repeating-stripe-gradients: a repeating-linear-gradient filling a real 2D area (not a thin line/divider).
+    if (bg && /repeating-linear-gradient\(/i.test(bg) && box.width >= STRIPE_MIN_DIM && box.height >= STRIPE_MIN_DIM) {
+      stripeGradientCount++; if (!stripeSelector) stripeSelector = sel(el);
+    }
+
+    // text-under-overlay: a translucent scrim gradient layered OVER (earlier index = higher z-order) a url()
+    // image, on a text-bearing surface. LAYER ORDER matters (Codex): `linear-gradient(scrim), url(photo)` is the
+    // defect (scrim on top of the image); `url(photo), linear-gradient(scrim)` is NOT (the image paints over the
+    // scrim). So the scrim layer must sit at a lower index than the image layer.
+    if (bg && /url\(/i.test(bg) && (el.textContent || '').trim().length > 0) {
+      const layers = splitTopLevel(bg, ',');
+      const urlIdx = layers.findIndex((l) => /url\(/i.test(l));
+      const scrimIdx = layers.findIndex((l) => /gradient\(/i.test(l) && hasScrimAlpha(l));
+      if (urlIdx >= 0 && scrimIdx >= 0 && scrimIdx < urlIdx) { textUnderOverlayCount++; if (!overlaySelector) overlaySelector = sel(el); }
+    }
+
+    // first-viewport-overflow: a viewport-height TOP SECTION that clips overflowing content. Excludes body/html
+    // (a viewport-height scroll-root with a taller page is not a "clipped hero" - it is the page), and caps the
+    // overflow window: below FVO_OVERFLOW_MIN_PX is a rounding artifact, above FVO_OVERFLOW_MAX_PX the element is
+    // acting as the page scroll container (loom/redis-docs fired the whole body at 2000-11000px), not clipping a
+    // hero. The dev corpus set both guards.
+    const tag = el.tagName.toLowerCase();
+    if (tag !== 'body' && tag !== 'html' && box.top <= FVO_TOP_MAX_PX && box.height >= FVO_VH_FRAC * viewportHeight) {
+      // key off overflowY ONLY (Codex): a section with overflow-x:hidden but overflow-y:auto scrolls its vertical
+      // content rather than clipping it, so the horizontal clip must not count as a vertical first-viewport clip.
+      const clips = /hidden|clip/.test(cs.overflowY);
+      const he = el as HTMLElement;
+      const overflow = he.scrollHeight - he.clientHeight;
+      if (clips && overflow >= FVO_OVERFLOW_MIN_PX && overflow <= FVO_OVERFLOW_MAX_PX && overflow > firstViewportOverflowPx) { firstViewportOverflowPx = overflow; overflowSelector = sel(el); }
+    }
+
+    // decorative-dot-grid: a radial-gradient / grid tiled at a small cell, or a repeating-radial-gradient.
+    if (bg && bg !== 'none') {
+      const isRepeatingRadial = /repeating-radial-gradient\(/i.test(bg);
+      const hasRadial = /(^|\s|,)radial-gradient\(/i.test(bg);
+      const linearLayers = splitTopLevel(bg, ',').filter((l) => /(^|\s)linear-gradient\(/i.test(l)).length;
+      const smallTile = isSmallTile(cs.backgroundSize || '', DOTGRID_TILE_MAX_PX);
+      if (isRepeatingRadial || (hasRadial && smallTile) || (linearLayers >= 2 && smallTile)) { dotGridCount++; if (!dotGridSelector) dotGridSelector = sel(el); }
+    }
+
+    // soft-radial-glow: a heavy blur() filter, or a large radial-gradient fading to transparent on a large area.
+    {
+      const filterBlur = ((cs.filter || '').match(/blur\(\s*([\d.]+)px\s*\)/i) || [])[1];
+      const bigBlur = filterBlur !== undefined && parseFloat(filterBlur) >= GLOW_BLUR_MIN_PX;
+      const area = box.width * box.height;
+      const bigRadialGlow = /radial-gradient\(/i.test(bg) && !/repeating-radial-gradient\(/i.test(bg)
+        && area >= GLOW_MIN_AREA && !isSmallTile(cs.backgroundSize || '', DOTGRID_TILE_MAX_PX)
+        && splitTopLevel(bg, ',').some((l) => /radial-gradient\(/i.test(l) && (/\btransparent\b/i.test(l) || hasScrimAlpha(l)));
+      if ((bigBlur && area >= GLOW_MIN_AREA) || bigRadialGlow) { radialGlowCount++; if (!glowSelector) glowSelector = sel(el); }
+    }
+  }
+
+  // image-hover-transform: a stylesheet :hover rule that names an image and sets a non-none transform. Reading
+  // the rule is the only render-independent way to see a hover effect (a live :hover cannot be simulated in a
+  // static scan). Cross-origin sheets throw on cssRules access; caught per-sheet so an unreadable sheet degrades
+  // this class instead of failing the scan. Grouping rules (@media/@supports) are recursed one universe deep.
+  let imageHoverTransformCount = 0; let hoverSelector: string | undefined;
+  // an `img` ELEMENT token, not the substring in `.img-card` (Codex): preceded by start or a combinator/space,
+  // followed by end or a class/id/pseudo/attr/combinator - never by `-` or another word char.
+  const IMG_TOKEN = /(^|[\s>+~(,])img([\s.:#[>+~,)]|$)/i;
+  function scanRules(rules: CSSRule[]): void {
+    for (const rule of rules) {
+      const grouping = (rule as CSSGroupingRule).cssRules;
+      if (grouping && !(rule as CSSStyleRule).selectorText) { try { scanRules(Array.from(grouping)); } catch { /* */ } continue; }
+      const styleRule = rule as CSSStyleRule;
+      const selText = styleRule.selectorText;
+      if (!selText || !/:hover/i.test(selText)) continue;
+      const tf = styleRule.style && styleRule.style.transform;
+      if (!tf || tf === 'none' || tf.trim() === '') continue;
+      // the TRANSFORMED element is the selector SUBJECT (the rightmost compound). Require the subject to BE an img
+      // (Codex): `.card:hover img` / `img:hover` fire, but `img:hover + .caption` (caption is the subject) and
+      // `.img-card:hover` (substring) do not.
+      for (const one of selText.split(',')) {
+        const subject = one.trim().split(/[\s>+~]+/).pop() || '';
+        if (IMG_TOKEN.test(' ' + subject)) { imageHoverTransformCount++; if (!hoverSelector) hoverSelector = selText.slice(0, 80); break; }
+      }
+    }
+  }
+  for (const sheet of Array.from(document.styleSheets)) {
+    let rules: CSSRule[] = [];
+    try { rules = Array.from((sheet as CSSStyleSheet).cssRules || []); } catch { continue; }
+    scanRules(rules);
+  }
+
+  return {
+    viewportWidth, viewportHeight,
+    thinBorderWideShadowCount, tbwsMaxRatio, tbwsSelector,
+    stripeGradientCount, stripeSelector,
+    textUnderOverlayCount, overlaySelector,
+    firstViewportOverflowPx, overflowSelector,
+    dotGridCount, dotGridSelector,
+    radialGlowCount, glowSelector,
+    imageHoverTransformCount, hoverSelector,
+  };
+}
+
+/** Node-side: turn a structural score into 0-7 findings (one page-level verdict per firing class). The ONE place
+ * these production thresholds are applied; the calibration harness sweeps the same raw score fields. */
+export function structuralFindingsFromScore(s: StructuralScore): SubjectiveFinding[] {
+  const out: SubjectiveFinding[] = [];
+  if (s.thinBorderWideShadowCount >= TBWS_MIN_COUNT) {
+    out.push({ rule: 'thin-border-wide-shadow', severity: 'warning', selector: s.tbwsSelector,
+      detail: `${s.thinBorderWideShadowCount} panel(s) with a hairline border under a wide-spread shadow (spread/border up to ${s.tbwsMaxRatio.toFixed(1)}x)` });
+  }
+  if (s.stripeGradientCount >= STRIPE_MIN_COUNT) {
+    out.push({ rule: 'repeating-stripe-gradients', severity: 'warning', selector: s.stripeSelector,
+      detail: `${s.stripeGradientCount} repeating-linear-gradient striped surface(s)` });
+  }
+  if (s.textUnderOverlayCount >= TUO_MIN_COUNT) {
+    out.push({ rule: 'text-under-overlay', severity: 'warning', selector: s.overlaySelector,
+      detail: `${s.textUnderOverlayCount} text surface(s) over a translucent scrim layered on a background image (contrast unmeasured: image aborted in hermetic render)` });
+  }
+  if (s.firstViewportOverflowPx >= FVO_OVERFLOW_MIN_PX) {
+    out.push({ rule: 'first-viewport-overflow', severity: 'warning', selector: s.overflowSelector,
+      detail: `a viewport-height top section clips ${Math.round(s.firstViewportOverflowPx)}px of overflowing content in the first screen` });
+  }
+  if (s.dotGridCount >= DOTGRID_MIN_COUNT) {
+    out.push({ rule: 'decorative-dot-grid', severity: 'warning', selector: s.dotGridSelector,
+      detail: `${s.dotGridCount} small-tiled radial/grid decorative field(s)` });
+  }
+  if (s.radialGlowCount >= GLOW_MIN_COUNT) {
+    out.push({ rule: 'soft-radial-glow', severity: 'warning', selector: s.glowSelector,
+      detail: `${s.radialGlowCount} large soft radial-glow / heavy-blur decoration(s)` });
+  }
+  if (s.imageHoverTransformCount >= IHT_MIN_COUNT) {
+    out.push({ rule: 'image-hover-transform', severity: 'warning', selector: s.hoverSelector,
+      detail: `${s.imageHoverTransformCount} :hover rule(s) transform an image (hover zoom/slide)` });
+  }
+  return out;
+}
+
+/* ====================== detectable motion/marker classes (Stage 4d) ====================== */
+//
+// Three rendered SUBJECTIVE classes a DOM/computed-style engine CAN truthfully detect: marquee, blinking-cursor,
+// numbered-section-markers. Same single-source split: ONE in-page scorer (inPageMotionMarker) reads the DOM +
+// the @keyframes/animation declarations, Node applies the thresholds (motionMarkerFindingsFromScore).
+//
+// HONEST EXCLUSIONS (Stage 4d - deliberately NOT built; recorded so no later pass claims render-detection of a
+// class a DOM/computed-style engine cannot truthfully see):
+//   - stock geometric hero ART inside a raster image: DOM-invisible (the shapes live in the image's pixels, not
+//     the tree), and the hermetic render aborts the image anyway - it would require OCR/vision, which this engine
+//     never does. It hits oracle's DOM engine equally; neither can read it.
+//   - aphoristic-cadence / theater-slop-phrase: a COPY-SEMANTIC judgment (short punchy fragment cadence), not a
+//     computed-style read. The marketing-buzzword density model is the closest this engine goes; a cadence
+//     detector is a separate calibrated NLP effort, not a cheap geometry read, and shipping a low-precision
+//     regex guess would break the fail-closed edge. Left to the buzzword model + a future calibrated pass.
+//
+// numbered-section-markers HONESTY (recorded here, reported in the calibration): this is a VISUAL-PROMINENCE
+// gestalt ("prominent decorative 01/02/03 organizing numerals"). The dev corpus proves a text-node count cannot
+// truthfully judge it: airtable (labeled PRESENT) renders its 01-04 markers as CSS pseudo-element counters
+// (invisible to a textContent walk), while polygon (labeled ABSENT) carries literal "01".."06" text tokens that
+// are not a prominent motif. So this detector (a) reads ::before/::after literal-string content as well as own
+// text, and (b) gates on PROMINENCE (display-scale font-size) + a repeated zero-padded/sequential run, set so the
+// small incidental numerals (polygon) do not fire. Real recall on the labeled-present pages is therefore bounded
+// (pseudo-element COUNTER content - content:counter(x) - does not serialize to a readable string in every engine)
+// and is reported honestly rather than hidden behind the fixture recall.
+
+export interface MotionMarkerScore {
+  // marquee
+  marqueeElementCount: number;       // <marquee> elements (deprecated, always the idiom)
+  marqueeAnimCount: number;          // elements running an infinite horizontal-translate (CSS marquee) animation
+  marqueeSelector?: string;
+  // blinking-cursor
+  blinkCount: number;                // elements running an infinite opacity/visibility blink animation
+  blinkSelector?: string;
+  // numbered-section-markers
+  numberedMarkerCount: number;       // prominent, standalone, decorative numerals forming a motif
+  numberedZeroPadded: boolean;       // the run is zero-padded (01,02,03) - the strong decorative signal (detail)
+  numberedSelector?: string;
+}
+
+// marquee. A <marquee> element is deprecated and always the idiom. A CSS marquee is an INFINITE animation whose
+// keyframes translate content horizontally by a large delta (>= MARQUEE_MIN_X_PCT of its own box, or a large px
+// span). The infinite iteration + large horizontal travel is what separates a scroller from an ordinary slide-in.
+export const MARQUEE_MIN_X_PCT = 50;   // translateX delta as a % of the element's box, or...
+export const MARQUEE_MIN_X_PX = 200;   // ...an absolute px delta, either qualifies
+export const MARQUEE_MIN_COUNT = 1;
+// blinking-cursor. An INFINITE animation whose keyframes toggle opacity between near-0 and near-1 (a hard blink),
+// or visibility hidden<->visible. A breathing/pulse (0.5<->1) is NOT a blink - require the low frame <= 0.1 and
+// the high frame >= 0.9, so only a true on/off blink qualifies (precision).
+export const BLINK_OPACITY_LOW = 0.1;
+export const BLINK_OPACITY_HIGH = 0.9;
+export const BLINK_MIN_COUNT = 1;
+// numbered-section-markers. A prominent (>= NUM_MARKER_MIN_PX, display-scale) standalone decorative numeral -
+// its rendered text (own text OR ::before/::after literal content) is EXACTLY a 1-2 digit numeral. The page fires
+// only when >= NUM_MARKER_MIN_COUNT such markers are ZERO-PADDED (01,02,03 - the reliable decorative signal). Two
+// dev-proven guards: PROMINENCE (>= 32px) clears polygon's small incidental "01..06" (labeled ABSENT), and the
+// ZERO-PADDING requirement clears prominent sequential digits that are not section markers (raycast's rendered
+// keyboard number keys 1-9,0; a gong keypad). The recall cost is real and reported: airtable's markers are CSS
+// counter() pseudo-content (does not serialize to a readable string) and calcom's are not zero-padded, so both
+// labeled-present pages are MISSED - dev recall is honestly low, not hidden.
+export const NUM_MARKER_MIN_PX = 32;
+export const NUM_MARKER_MIN_COUNT = 3;
+
+/* istanbul ignore next - executes in the browser context (serialized by page.evaluate; must be self-contained) */
+export function inPageMotionMarker(): MotionMarkerScore {
+  const MARQUEE_MIN_X_PCT = 50, MARQUEE_MIN_X_PX = 200;
+  const BLINK_OPACITY_LOW = 0.1, BLINK_OPACITY_HIGH = 0.9;
+  const NUM_MARKER_MIN_PX = 32, NUM_MARKER_MIN_COUNT = 3;
+
+  function sel(el: Element): string {
+    const t = el.tagName.toLowerCase();
+    if (el.id) return `${t}#${el.id}`;
+    const cls = (el.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).join('.');
+    return cls ? `${t}.${cls}` : t;
+  }
+  function visuallyVisible(el: Element): boolean {
+    const cs = getComputedStyle(el);
+    if (cs.visibility !== 'visible') return false;
+    for (let n: Element | null = el; n && n instanceof Element; n = n.parentElement) { if (parseFloat(getComputedStyle(n).opacity) === 0) return false; }
+    const rects = (el as HTMLElement).getClientRects();
+    if (!rects.length) return false;
+    const box = (el as HTMLElement).getBoundingClientRect();
+    if (box.width < 1 || box.height < 1) return false;
+    if ((box.width <= 1 || box.height <= 1) && cs.overflow !== 'visible') return false;
+    if (box.right <= 0 || box.bottom <= 0) return false;
+    if (parseFloat(cs.textIndent) <= -999) return false;
+    const clipM = (cs.clip || '').replace(/\s+/g, ' ').match(/^rect\(\s*([-\d.]+)(?:px)?[ ,]+([-\d.]+)(?:px)?[ ,]+([-\d.]+)(?:px)?[ ,]+([-\d.]+)(?:px)?\s*\)$/i);
+    if (clipM) { const t = parseFloat(clipM[1]), rr = parseFloat(clipM[2]), b = parseFloat(clipM[3]), l = parseFloat(clipM[4]); if (rr <= l || b <= t) return false; }
+    if (/^inset\(\s*(100%|50%)\b/.test(cs.clipPath || '')) return false;
+    return true;
+  }
+  function ownText(el: Element): string {
+    let t = '';
+    for (const n of Array.from(el.childNodes)) if (n.nodeType === 3 && n.textContent) t += n.textContent;
+    return t.replace(/\s+/g, ' ').trim();
+  }
+
+  // ---- collect @keyframes once: name -> classification (isMarquee via large translateX; isBlink via opacity
+  //      toggling near-0<->near-1 or visibility). Cross-origin sheets throw on cssRules; caught per-sheet. ----
+  const marqueeKeyframes = new Set<string>();
+  const blinkKeyframes = new Set<string>();
+  function readKeyframes(rules: CSSRule[]): void {
+    for (const rule of rules) {
+      const asKf = rule as CSSKeyframesRule;
+      if (asKf.name !== undefined && asKf.cssRules) {
+        // marquee is TRAVEL DELTA, not max absolute translate (Codex): a set that sits at translateX(250px) at
+        // every frame never MOVES, so track signed min/max per unit and require max-min >= the threshold.
+        let pctMin = Infinity, pctMax = -Infinity, pxMin = Infinity, pxMax = -Infinity;
+        let minOp = 1, maxOp = 0, sawOpacity = false, visToggle = false;
+        for (const fr of Array.from(asKf.cssRules) as CSSKeyframeRule[]) {
+          const st = fr.style; if (!st) continue;
+          const tf = st.transform || '';
+          const txm = tf.match(/translate(?:X|3d)?\(\s*(-?[\d.]+)(px|%)?/i) || tf.match(/translate\(\s*(-?[\d.]+)(px|%)?/i);
+          if (txm) {
+            const v = parseFloat(txm[1]); const unit = txm[2];
+            // a 0 endpoint is unit-agnostic (0 = the origin in any unit): a `0 -> -100%` marquee mixes units, so a
+            // bare/0px/0% zero must count as 0 in BOTH unit tracks, or the %-track never sees its 0 endpoint.
+            if (v === 0) { if (pctMin > 0) pctMin = 0; if (pctMax < 0) pctMax = 0; if (pxMin > 0) pxMin = 0; if (pxMax < 0) pxMax = 0; }
+            else if (unit === '%') { if (v < pctMin) pctMin = v; if (v > pctMax) pctMax = v; }
+            else { if (v < pxMin) pxMin = v; if (v > pxMax) pxMax = v; }
+          }
+          const op = st.opacity; if (op !== '' && op != null) { const o = parseFloat(op); if (Number.isFinite(o)) { sawOpacity = true; if (o < minOp) minOp = o; if (o > maxOp) maxOp = o; } }
+          if ((st.visibility || '').toLowerCase() === 'hidden') visToggle = true;
+        }
+        const pctDelta = pctMax >= pctMin ? pctMax - pctMin : 0;
+        const pxDelta = pxMax >= pxMin ? pxMax - pxMin : 0;
+        if (pctDelta >= MARQUEE_MIN_X_PCT || pxDelta >= MARQUEE_MIN_X_PX) marqueeKeyframes.add(asKf.name);
+        if ((sawOpacity && minOp <= BLINK_OPACITY_LOW && maxOp >= BLINK_OPACITY_HIGH) || visToggle) blinkKeyframes.add(asKf.name);
+        continue;
+      }
+      const grouping = (rule as CSSGroupingRule).cssRules;
+      if (grouping && !(rule as CSSStyleRule).selectorText) { try { readKeyframes(Array.from(grouping)); } catch { /* */ } }
+    }
+  }
+  for (const sheet of Array.from(document.styleSheets)) {
+    let rules: CSSRule[] = [];
+    try { rules = Array.from((sheet as CSSStyleSheet).cssRules || []); } catch { continue; }
+    readKeyframes(rules);
+  }
+
+  // pair each animation-name with its OWN iteration-count by index (CSS lists them positionally, cycling the
+  // shorter list): an animation is endless only if ITS iteration count is infinite/large. An earlier version fired
+  // if ANY animation on the element was infinite, so `animation-name: marquee, fade; iteration-count: 1, infinite`
+  // wrongly counted the FINITE marquee (Codex). Returns the names of the element's endless animations.
+  const infiniteAnimNames = (cs: CSSStyleDeclaration): string[] => {
+    const names = (cs.animationName || '').split(',').map((n) => n.trim());
+    const counts = (cs.animationIterationCount || '').split(',').map((c) => c.trim());
+    const out: string[] = [];
+    for (let i = 0; i < names.length; i++) {
+      const n = names[i]; if (!n || n === 'none') continue;
+      const c = counts.length ? counts[i % counts.length] : '';
+      if (/^infinite$/i.test(c) || parseFloat(c) >= 10) out.push(n);
+    }
+    return out;
+  };
+
+  let marqueeElementCount = 0, marqueeAnimCount = 0; let marqueeSelector: string | undefined;
+  let blinkCount = 0; let blinkSelector: string | undefined;
+
+  // <marquee> elements (deprecated) - counted only when actually rendered (a display:none template must not fire).
+  for (const m of Array.from(document.getElementsByTagName('marquee'))) { if (visuallyVisible(m)) { marqueeElementCount++; if (!marqueeSelector) marqueeSelector = sel(m); } }
+
+  // numbered-section-markers candidates: prominent standalone decorative numerals (own text OR ::before/::after
+  // literal-string content). A marker's rendered text is EXACTLY a 1-2 digit numeral.
+  const numRe = /^0?\d{1,2}$/;
+  const markers: { value: number; padded: boolean }[] = [];
+  const markerEls: Element[] = [];
+
+  const scope: Element[] = document.body ? [document.body, ...Array.from(document.body.querySelectorAll('*'))] : [];
+  for (const el of scope) {
+    if (el.namespaceURI === 'http://www.w3.org/2000/svg') continue;
+    if (!visuallyVisible(el)) continue; // gate marquee/blink AND markers on visibility (no hidden-template fires - Codex)
+    const cs = getComputedStyle(el);
+
+    // marquee / blink via animation usage (element runs an ENDLESS marquee/blink keyframe - paired by index above).
+    const inf = infiniteAnimNames(cs);
+    if (inf.length) {
+      if (inf.some((n) => marqueeKeyframes.has(n))) { marqueeAnimCount++; if (!marqueeSelector) marqueeSelector = sel(el); }
+      if (inf.some((n) => blinkKeyframes.has(n))) { blinkCount++; if (!blinkSelector) blinkSelector = sel(el); }
+    }
+
+    // numbered marker: own text is exactly a numeral, OR a VISIBLE ::before/::after carries a literal-string numeral.
+    const candidates: { text: string; px: number }[] = [];
+    const ot = ownText(el);
+    if (ot) candidates.push({ text: ot, px: parseFloat(cs.fontSize) || 0 });
+    for (const pseudo of ['::before', '::after']) {
+      const pcs = getComputedStyle(el, pseudo);
+      if (pcs.display === 'none' || pcs.visibility === 'hidden') continue; // hidden generated content is not a marker (Codex)
+      const content = (pcs.content || '').trim();
+      const lit = content.match(/^["']([^"']*)["']$/);
+      if (lit) candidates.push({ text: lit[1].trim(), px: parseFloat(pcs.fontSize) || parseFloat(cs.fontSize) || 0 });
+    }
+    for (const c of candidates) {
+      if (c.px >= NUM_MARKER_MIN_PX && numRe.test(c.text)) {
+        markers.push({ value: parseInt(c.text, 10), padded: /^0\d$/.test(c.text) });
+        markerEls.push(el);
+        break;
+      }
+    }
+  }
+
+  // MOTIF test: >= MIN prominent standalone ZERO-PADDED numerals (01,02,03...). The zero-padding is the reliable
+  // decorative-section-marker signal. A bare-sequential branch (1,2,3...) was DROPPED after the dev corpus proved
+  // it false-fires on prominent sequential digits that are NOT section markers - raycast's rendered KEYBOARD
+  // (number keys 1-9,0 at display scale) and a gong keypad both tripped it. Zero-padding is what a designer adds
+  // to make numerals read as a decorative organizing motif, so it is the precision-first signal; the recall cost
+  // (a page that numbers sections 1,2,3 without padding is missed) is accepted and reported.
+  // Require a CONSECUTIVE run (01,02,03...), not merely N scattered zero-padded numbers (Codex): the documented
+  // motif is a section-marker SEQUENCE, so 01,07,99 is not it. Find the longest consecutive-increasing run over the
+  // distinct padded values; fire only when it reaches NUM_MARKER_MIN_COUNT.
+  let numberedMarkerCount = 0; const numberedZeroPadded = true; let numberedSelector: string | undefined;
+  const paddedVals = markers.filter((m) => m.padded).map((m) => m.value);
+  if (paddedVals.length >= NUM_MARKER_MIN_COUNT) {
+    const uniq = Array.from(new Set(paddedVals)).sort((a, b) => a - b);
+    let run = 1, best = 1;
+    for (let i = 1; i < uniq.length; i++) { if (uniq[i] === uniq[i - 1] + 1) { run++; if (run > best) best = run; } else run = 1; }
+    if (best >= NUM_MARKER_MIN_COUNT) { numberedMarkerCount = best; numberedSelector = markerEls.length ? sel(markerEls[0]) : undefined; }
+  }
+
+  return {
+    marqueeElementCount, marqueeAnimCount, marqueeSelector,
+    blinkCount, blinkSelector,
+    numberedMarkerCount, numberedZeroPadded, numberedSelector,
+  };
+}
+
+/** Node-side: turn a motion/marker score into 0-3 findings (one page-level verdict per firing class). */
+export function motionMarkerFindingsFromScore(s: MotionMarkerScore): SubjectiveFinding[] {
+  const out: SubjectiveFinding[] = [];
+  const marquees = s.marqueeElementCount + s.marqueeAnimCount;
+  if (marquees >= MARQUEE_MIN_COUNT) {
+    out.push({ rule: 'marquee', severity: 'warning', selector: s.marqueeSelector,
+      detail: `${marquees} marquee(s) (${s.marqueeElementCount} <marquee> element(s), ${s.marqueeAnimCount} infinite horizontal-scroll animation(s))` });
+  }
+  if (s.blinkCount >= BLINK_MIN_COUNT) {
+    out.push({ rule: 'blinking-cursor', severity: 'warning', selector: s.blinkSelector,
+      detail: `${s.blinkCount} element(s) running an infinite blink (opacity/visibility) animation` });
+  }
+  if (s.numberedMarkerCount >= NUM_MARKER_MIN_COUNT) {
+    out.push({ rule: 'numbered-section-markers', severity: 'warning', selector: s.numberedSelector,
+      detail: `${s.numberedMarkerCount} prominent decorative section numerals${s.numberedZeroPadded ? ' (zero-padded 01/02/03 motif)' : ' (sequential run)'}` });
+  }
+  return out;
+}
+
 export interface RenderOpts { stripScripts?: boolean; abortExternal?: boolean; viewport?: { width: number; height: number }; }
 const HERMETIC: Required<RenderOpts> = { stripScripts: true, abortExternal: true, viewport: { width: 1280, height: 800 } };
 
@@ -987,6 +1598,10 @@ export async function analyzeHtmlOnBrowserSubjective(browser: Browser, html: str
     if (face) findings.push(face);
     // Stage 4b typographic-extreme classes via the SAME split: one in-page score, Node-side thresholds -> 0-5 findings.
     findings.push(...typographyExtremesFindingsFromScore(await page.evaluate(inPageTypographyExtremes)));
+    // Stage 4c structural classes via the SAME split: one in-page score, Node-side thresholds -> 0-7 findings.
+    findings.push(...structuralFindingsFromScore(await page.evaluate(inPageStructural)));
+    // Stage 4d motion/marker classes via the SAME split: one in-page score, Node-side thresholds -> 0-3 findings.
+    findings.push(...motionMarkerFindingsFromScore(await page.evaluate(inPageMotionMarker)));
     return findings;
   } finally {
     try { await context.close(); } catch { /* */ }
