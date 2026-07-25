@@ -1,0 +1,27 @@
+{
+  "name": "Northwind Billing",
+  "description": "A deliberately broken variant: the palette pins near-white text on a white canvas, so the authored mock fails WCAG contrast and the pre-authorship gate must return blocked and halt the build.",
+  "surface": {
+    "kind": "settings",
+    "headline": "Update your billing email",
+    "subhead": "Receipts and invoices are sent to this address. A change takes effect on the next billing run.",
+    "sections": [
+      { "heading": "Current address", "body": "Receipts currently go to finance@northwind.example. Update it below to redirect future invoices." },
+      { "heading": "Confirmation", "body": "We send a confirmation to both the old and new address so a mistyped entry is easy to catch." }
+    ],
+    "primaryCta": "Save billing email"
+  },
+  "palette": {
+    "ink": "#c4c4c4",
+    "canvas": "#ffffff",
+    "muted": "#d0d0d0",
+    "primary": "#eaeaea",
+    "onPrimary": "#ffffff",
+    "border": "#eeeeee"
+  },
+  "type": {
+    "display": "Inter, system-ui, sans-serif",
+    "body": "Inter, system-ui, sans-serif"
+  },
+  "components": ["button-primary", "button-secondary", "card", "input", "link"]
+}

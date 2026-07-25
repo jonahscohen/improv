@@ -1,0 +1,27 @@
+{
+  "name": "Northwind Billing",
+  "description": "The billing settings surface for Northwind: concrete, operational copy on a calm neutral palette with one indigo accent. Every text pairing is authored to clear WCAG AA before the build proceeds.",
+  "surface": {
+    "kind": "settings",
+    "headline": "Update your billing email",
+    "subhead": "Receipts and invoices are sent to this address. A change takes effect on the next billing run.",
+    "sections": [
+      { "heading": "Current address", "body": "Receipts currently go to finance@northwind.example. Update it below to redirect future invoices." },
+      { "heading": "Confirmation", "body": "We send a confirmation to both the old and new address so a mistyped entry is easy to catch." }
+    ],
+    "primaryCta": "Save billing email"
+  },
+  "palette": {
+    "ink": "#14181f",
+    "canvas": "#ffffff",
+    "muted": "#55606e",
+    "primary": "#1f4f8f",
+    "onPrimary": "#ffffff",
+    "border": "#d0d5dd"
+  },
+  "type": {
+    "display": "Inter, system-ui, sans-serif",
+    "body": "Inter, system-ui, sans-serif"
+  },
+  "components": ["button-primary", "button-secondary", "card", "input", "link"]
+}
