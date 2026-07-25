@@ -26,7 +26,7 @@ import { chromium } from 'playwright';
 import type { Browser } from 'playwright';
 import { inPageObjective } from './objective-rendered-scanner';
 import type { ObjectiveScan } from './objective-rendered-scanner';
-import { inPageSubjective, inPageBuzzword, buzzwordFindingFromScore, inPageTypeface, typefaceFindingFromScore } from './subjective-rendered-scanner';
+import { inPageSubjective, inPageBuzzword, buzzwordFindingFromScore, inPageTypeface, typefaceFindingFromScore, inPageTypographyExtremes, typographyExtremesFindingsFromScore } from './subjective-rendered-scanner';
 import type { SubjectiveScan, TypefaceFindingOptions } from './subjective-rendered-scanner';
 import { isSubresourceAllowed } from './browser-evidence-collector';
 
@@ -120,6 +120,8 @@ export async function scanRenderedLive(
       // default-typeface (Stage 4a) via the SAME single-source split: in-page score, Node-side threshold.
       const face = typefaceFindingFromScore(await race(page.evaluate(inPageTypeface), 'evaluate'), opts.typeface ?? {});
       if (face) findings.push(face);
+      // Stage 4b typographic-extreme classes via the SAME split: one in-page score, Node-side thresholds -> 0-5 findings.
+      findings.push(...typographyExtremesFindingsFromScore(await race(page.evaluate(inPageTypographyExtremes), 'evaluate')));
       subjective = { available: true, findings };
     }
     catch (e) { if (e instanceof AbortError) throw e; subjective = { available: false, reason: reason(e) }; }

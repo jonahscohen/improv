@@ -3,11 +3,11 @@
   "_boundary_moved_note": "The 7 classes below were moved OBJECTIVE->SUBJECTIVE by the lead spec-crispness boundary ruling (2026-06-23): their thresholds are taste-calibrated (no spec constant two faithful impls must agree on), so they are labeled by the held Codex pass. tight-leading + extreme-negative-tracking joined this set when the lead sharpened the test ('extreme'/'tight' are fuzzy thresholds, not spec constants). Registered to the architect so the freeze gate rejects the architect labeling them.",
   "tiny-text": ["sidecoach-architect"],
   "wide-tracking": ["sidecoach-architect"],
-  "all-caps-body": ["sidecoach-architect"],
+  "all-caps-body": ["stage4b"],
   "layout-transition": ["sidecoach-architect"],
   "bounce-easing": ["sidecoach-architect"],
-  "tight-leading": ["sidecoach-architect"],
-  "extreme-negative-tracking": ["sidecoach-architect"],
+  "tight-leading": ["stage4b"],
+  "extreme-negative-tracking": ["stage4b"],
   "cream-palette": ["sidecoach-architect"],
   "ai-color-palette": ["sidecoach-architect"],
   "hero-eyebrow-chip": ["sidecoach-architect"],
@@ -24,5 +24,8 @@
   "aphoristic-cadence": ["sidecoach-architect"],
   "dark-glow": ["sidecoach-architect"],
   "_stage4a_note": "default-typeface (Stage 4a, 2026-07-23) is authored by the teammate 'font-class', so that name is registered here and the freeze gate REJECTS any default-typeface label whose labeledBy is font-class. NOTE: no Codex subjective label for this class exists yet - the 22-class rubric predates it - so the A5a taste-detection gate cannot be graded for default-typeface until the lead runs a Codex labeling pass over an extended rubric. The class ships with fixture recall + a real-page precision measurement instead, and that limit is stated rather than papered over.",
-  "default-typeface": ["font-class"]
+  "default-typeface": ["font-class"],
+  "_stage4b_note": "The five Stage 4b typographic-extreme classes (2026-07-24) are authored by the teammate 'stage4b', so that name is registered here and the freeze gate REJECTS any label whose labeledBy is stage4b (author != labeler). extreme-negative-tracking / tight-leading / all-caps-body were placeholder-registered to sidecoach-architect and are REASSIGNED to the real author, matching the Stage 4a font-class precedent; they DO carry Codex dev labels (labeledBy=codex, dev-subjective-labels.json), which the calibration uses for real dev P/R. oversized-h1 and sub-11px-ui postdate the 22-class rubric (like default-typeface), so no Codex label exists for them yet and their A5a gate is likewise PENDING - they ship with fixture recall + a real-page precision measurement. A5a for ALL FIVE is PENDING, not passed; the classes ship built + dev-calibrated + registered AUDIT-ONLY, and that limit is stated rather than papered over.",
+  "oversized-h1": ["stage4b"],
+  "sub-11px-ui": ["stage4b"]
 }

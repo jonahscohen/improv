@@ -827,12 +827,16 @@ export function resolveSourceAlias(sourceId: string): ProductRuleDefinition | nu
 //                       present. Its severity/findingClass are read from the RAW_RULE via getRuleById - never
 //                       duplicated here - so the manifest can never drift from the rule it points at.
 //   - audit-only      : fires in the rendered audit/subjective lens but is NOT a validator-owned decision rule.
-//                       nested-cards is the only such rule today: the subjective scanner emits it and the audit
-//                       surfaces it, but no run-validator rule consumes it. It is DELIBERATELY not modeled as a
-//                       rendered-scan RAW_RULE, because the inverse invariant (validator-generation.ts) would
-//                       then force it into RENDERED_BACKED_RULE_IDS and promote it to a required decision rule -
-//                       changing what run-validator fires. Registering it here keeps the registry the single
-//                       manifest for EVERY fireable rendered rule WITHOUT altering the decision path.
+//                       nested-cards (Stage 3c) and the five Stage 4b typographic-extreme classes
+//                       (extreme-negative-tracking, tight-leading, all-caps-body, oversized-h1, sub-11px-ui) are
+//                       such rules: the subjective scanner emits them and the audit surfaces them, but no
+//                       run-validator rule consumes them. They are DELIBERATELY not modeled as rendered-scan
+//                       RAW_RULEs, because the inverse invariant (validator-generation.ts) would then force each
+//                       into RENDERED_BACKED_RULE_IDS and promote it to a required decision rule - changing what
+//                       run-validator fires. The Stage 4b classes are precision-first taste rules whose A5a
+//                       (held-out Codex detection) gate is still PENDING, so promoting them to convergence-gating
+//                       decision rules is explicitly not intended yet. Registering them here keeps the registry
+//                       the single manifest for EVERY fireable rendered rule WITHOUT altering the decision path.
 //
 // The no-orphan test (product-rule-registry.test.ts) pins this manifest to the scanners' OBJECTIVE_RULES +
 // SUBJECTIVE_RULES bidirectionally: a scanner rule with no manifest entry, or a manifest entry naming no scanner
@@ -871,6 +875,35 @@ const RENDERED_RULE_MANIFEST: RenderedManifestEntry[] = [
     scannerRule: 'nested-cards', lens: 'subjective', ruleId: null,
     severity: 'minor', findingClass: 'polish', registryScope: 'rendered-nested-cards',
     note: 'card-in-card taste finding surfaced by the audit/subjective lens; no run-validator consumer (audit-only)',
+  },
+  // Stage 4b typographic-extreme classes - all AUDIT-ONLY (ruleId:null), for the same reason as nested-cards:
+  // modeling any as a rendered-scan RAW_RULE trips the inverse invariant -> RENDERED_BACKED_RULE_IDS -> run-validator
+  // would newly consume it as a required decision rule. These are precision-first taste rules whose A5a gate is
+  // PENDING, so that promotion is not intended. Their frozen operating points live in subjective-rendered-scanner.ts.
+  {
+    scannerRule: 'extreme-negative-tracking', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-extreme-negative-tracking',
+    note: 'letter-spacing crowded strongly negative on a share of content text; audit-only (A5a pending)',
+  },
+  {
+    scannerRule: 'tight-leading', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-tight-leading',
+    note: 'line-height on running body text set tight enough to crowd; audit-only (A5a pending)',
+  },
+  {
+    scannerRule: 'all-caps-body', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-all-caps-body',
+    note: 'long runs of body/content text set all-caps (slows reading); audit-only (A5a pending)',
+  },
+  {
+    scannerRule: 'oversized-h1', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-oversized-h1',
+    note: 'h1 rendered font-size beyond a taste threshold vs the viewport; audit-only (A5a pending)',
+  },
+  {
+    scannerRule: 'sub-11px-ui', lens: 'subjective', ruleId: null,
+    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-sub-11px-ui',
+    note: 'a substantial body of interface text rendered below the legibility floor; audit-only (A5a pending)',
   },
 ];
 

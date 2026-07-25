@@ -313,6 +313,9 @@ run();
     'broken-image': true, 'skipped-heading': true, 'low-contrast': true, 'gray-on-color': true,
     'justified-text': false,
     'tiny-text': false, 'nested-cards': false, 'marketing-buzzword': false, 'default-typeface': false,
+    // Stage 4b typographic-extreme classes - audit-only taste warnings, non-blocking.
+    'extreme-negative-tracking': false, 'tight-leading': false, 'all-caps-body': false,
+    'oversized-h1': false, 'sub-11px-ui': false,
   };
   for (const { rule } of scannerRules) {
     const res = resolveRenderedRule(rule)!;
@@ -328,6 +331,15 @@ run();
   const nc = resolveRenderedRule('nested-cards')!;
   if (nc.source !== 'audit-only' || nc.ruleId !== null) throw new Error('nested-cards must resolve as audit-only with no decision ruleId');
   if (getRuleById('polish.nested-cards')) throw new Error('nested-cards must NOT be a validator-owned RAW_RULE (it would change run-validator behaviour)');
+
+  // (d.2) the five Stage 4b typographic-extreme classes are likewise AUDIT-ONLY - precision-first taste rules whose
+  //       A5a gate is pending, so none may be a validator-owned RAW_RULE (which would force it into the required
+  //       rendered decision path via the inverse invariant and change what run-validator gates on).
+  for (const r of ['extreme-negative-tracking', 'tight-leading', 'all-caps-body', 'oversized-h1', 'sub-11px-ui']) {
+    const res = resolveRenderedRule(r)!;
+    if (res.source !== 'audit-only' || res.ruleId !== null) throw new Error(`${r} must resolve as audit-only with no decision ruleId`);
+    if (getRuleById(`polish.${r}`)) throw new Error(`${r} must NOT be a validator-owned RAW_RULE (it would change run-validator behaviour)`);
+  }
 
   // (e) ALIAS CONSISTENCY: a validator-owned binding whose rule carries a rendered-scanner:<name> alias must
   //     agree with the manifest (the alias and the manifest are the same binding, stated in two places).

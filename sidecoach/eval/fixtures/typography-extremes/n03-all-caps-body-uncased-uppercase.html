@@ -1,0 +1,25 @@
+<!doctype html>
+<!-- NEGATIVE (precision, Codex P2): long body runs with text-transform:uppercase but NO cased letters - a numeric
+     data row and a CJK paragraph. text-transform:uppercase does not capitalise digits or CJK, so there is nothing
+     that reads as shouting caps. The cased-letter minimum must keep these clean. Must NOT fire all-caps-body. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Report</title>
+    <style>
+      body { font-family: Inter, system-ui, sans-serif; color: #14181f; background: #fff; padding: 40px; }
+      .col { max-width: 640px; }
+      h1 { font-size: 26px; line-height: 1.3; }
+      p { font-size: 15px; line-height: 1.5; }
+      .up { text-transform: uppercase; }
+    </style>
+  </head>
+  <body>
+    <main class="col">
+      <h1>Quarterly figures</h1>
+      <p class="up">2026-03-14 / 1,204,880 / 98,220,145 / 4,180,900 / 12,004 / 3,890,220 / 55.4% / 12.1% / 0.008 / 41,200 / 9,120,455 / 320,110 / 8,004,221 / 66,700 / 2,051 / 780,410 / 19.02.</p>
+      <p class="up">四半期ごとの数値は地域全体で集計され、前年同期と比較して着実な増加を示しています。詳細は付録の表を参照してください。合計は監査の後に確定します。以上、報告を終わります。</p>
+      <p>The figures above are provisional and are finalised after the quarterly audit closes at the end of the following month, once every regional ledger has been reconciled against the central record.</p>
+    </main>
+  </body>
+</html>

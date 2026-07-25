@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- NEGATIVE (precision): all-caps used only on SHORT labels (eyebrow, button, nav) - the
+     conventional label spacing the rubric sets aside. Body copy is normal sentence case.
+     Every caps run is under the 40-char body-run guard, so this must NOT fire. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Terms summary</title>
+    <style>
+      body { font-family: Inter, system-ui, sans-serif; color: #14181f; background: #fff; padding: 40px; }
+      .col { max-width: 640px; }
+      .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #55606f; }
+      h1 { font-size: 28px; line-height: 1.3; }
+      p { font-size: 15px; line-height: 1.5; }
+      .btn { text-transform: uppercase; font-size: 13px; padding: 10px 16px; }
+      nav a { text-transform: uppercase; font-size: 12px; margin-right: 12px; }
+    </style>
+  </head>
+  <body>
+    <nav><a href="#">Overview</a><a href="#">Billing</a><a href="#">Support</a></nav>
+    <main class="col">
+      <p class="eyebrow">Account</p>
+      <h1>Summary of the agreement</h1>
+      <p>This summary describes how the service handles the account after the trial ends, including when the first charge is taken and how a refund is requested inside the first thirty days.</p>
+      <p>The service keeps a copy of the exported files for ninety days after an account closes, after which the copy is deleted and cannot be recovered without a written request.</p>
+      <button class="btn" type="button">Accept terms</button>
+    </main>
+  </body>
+</html>

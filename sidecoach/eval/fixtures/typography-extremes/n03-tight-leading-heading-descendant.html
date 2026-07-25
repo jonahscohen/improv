@@ -1,0 +1,25 @@
+<!doctype html>
+<!-- NEGATIVE (precision, Codex P1): the tight leading lives on a SPAN INSIDE headings, not on the heading
+     element itself. The span is not a heading, but it is inside one, so the ancestor-walking heading guard must
+     exclude it. Body running copy is comfortable. Must NOT fire tight-leading. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Release history</title>
+    <style>
+      body { font-family: Inter, system-ui, sans-serif; color: #14181f; background: #fff; padding: 40px; }
+      .col { max-width: 620px; }
+      h1 span, h2 span { display: block; font-size: 26px; line-height: 1.0; }
+      p { font-size: 16px; line-height: 1.5; }
+    </style>
+  </head>
+  <body>
+    <main class="col">
+      <h1><span>A long tightly set display heading whose text lives inside a span element</span></h1>
+      <p>The first build shipped to the pilot team on a Tuesday, and by Friday they had filed nineteen reports, most of them about the export dialog losing the last folder a user had picked.</p>
+      <h2><span>A second long tightly led heading again wrapped inside a nested span element here</span></h2>
+      <p>The second build fixed the folder memory and added a keyboard shortcut for the export, which the pilot team had asked for twice in the notes attached to their earlier reports.</p>
+      <p>The third build was mostly cleanup, trimming the startup time and removing a settings panel that nobody in the pilot group had opened once across the whole four weeks of testing.</p>
+    </main>
+  </body>
+</html>
