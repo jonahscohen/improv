@@ -1,3 +1,4 @@
+- [REFERENCE Sidecoach 20 validators catalog - complete factual list (A-X) from source, not 12…](session_2026-07-26_sidecoach-20-validators-catalog.md)
 - [** ACTIVE ** Concise-mode feature committed (default-ON brevity ruleset, SessionStart/PostCompact inject + UserPromptSubmit toggle, grounding…](session_2026-07-26_concise-mode-feature-committed.md)
 - [** ACTIVE ** Dependency-map wave lead-integration - 6 agents (compactor, orphan, capability, dogfood, justify-core, cmux); records the 168-s…](session_2026-07-26_dependency-map-wave-integration.md)
 - [** ACTIVE ** Marketing site (improv-site) justify-core.js decoupled - 6 pages hard-loaded a localhost:9223 daemon <script> that errored the cons…](session_2026-07-26_marketing-site-justify-core.md)
