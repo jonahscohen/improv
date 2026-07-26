@@ -246,6 +246,7 @@ export const SHARED_DESIGN_LAWS = {
       'ALL-CAPS needs 5-12% letter-spacing',
       'Semantic token naming: --text-body not --font-size-16',
       'Minimum 16px for web, 44px+ touch targets, rem/em sizing for accessibility',
+      'Choose a real typeface; never leave content on the bare system stack. Set body and headings to a font-family you deliberately picked. The bare system-ui / -apple-system stack and its monoculture members (Arial, Helvetica, Times, Georgia, Verdana, Segoe UI) are what you get when nobody chose, not a decision. Because this document must stay self-contained with no external fonts, lead your body and heading font-family with a characterful OS-installed face (Iowan Old Style, Charter, Baskerville, or Cambria for serif; Optima, Avenir, Futura, or Gill Sans for sans) ahead of any generic fallback, rather than defaulting to the system stack.',
     ],
   },
   spatial: {

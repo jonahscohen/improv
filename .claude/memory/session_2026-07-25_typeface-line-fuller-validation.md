@@ -6,8 +6,8 @@ relates_to: [session_2026-07-25_act-on-stage1-findings.md, session_2026-07-25_st
 author_human: Jonah
 author_model: claude-opus-4-8
 source: session
-verified: pending (live 3-provider ablation running)
-confidence: medium
+verified: measured (3-provider WITH/WITHOUT ablation, N=10/condition, shipping scanner: default-typeface craters to 0% on all 3, claude/gpt/gemini -100/-80/-100pp; siblings non-systematic, net-beneficial aggregate) + build green + Codex clean. LEAD-INTEGRATED 2026-07-26: rebuilt dist (design-laws.js recompiled), re-gated = 140 suites no-drop, committed + pushed. The nested-cards line was NOT applied (unvalidated + non-systematic tick).
+confidence: high
 ---
 
 # Fuller validation of the default-typeface guidance line (3 providers)
@@ -54,11 +54,76 @@ rather than defaulting to the system stack."
 surfaced to building models via flow-handler-font-research / design-tokens / brand-verify (per beat #2).
 Existing nested-cards line lives at `spatial.rules` ("Cards are lazy answer ... never nested").
 
-## Status: RUNNING (results + decision + edits appended on landing)
-Background run handles (each: 10 briefs, shared baseline = 20 calls; --out retains pages under scratchpad):
-claude=b6nbz6ntd, gpt=b740dqgof, gemini=b7m7pl4at (model gemini-3.6-flash). Post-run sibling measurement
-script staged at scratchpad/measure-siblings.mjs (runs shipping `measure()` over each retained baseline/with dir).
+## RESULT (all 3 runs landed exit 0; 10 briefs each, shared baseline, N/condition=10, MDE ~63pp)
 
-## Files touched (this session)
-- scratchpad/typeface-candidate.json (candidates-file, NOT in repo)
-- .claude/memory/session_2026-07-25_typeface-line-fuller-validation.md (this beat)
+default-typeface WITH vs WITHOUT (the TARGET), measured via the shipping scanner over the retained pages:
+- claude-opus-4-8:   100% (10/10) -> 0% (0/10) = **-100pp**
+- gpt-5.4:            80% (8/10)  -> 0% (0/10) = **-80pp**
+- gemini-3.6-flash:  100% (10/10) -> 0% (0/10) = **-100pp**
+ALL THREE crater to 0% WITH the line. Every drop is far above the N=10 MDE (~63pp). Reproduces the n=6
+claude -100pp and extends it to gpt + gemini. (gpt baseline 80% here vs 90% in Stage-1 mining = 10-brief
+sampling variance; WITH is 0/10 regardless.)
+
+Sibling rules (the n=6 pilot's nested-cards +2/6 and low-contrast +1/6 were the concern):
+| rule          | claude | gpt   | gemini | cross-provider read |
+|---------------|--------|-------|--------|---------------------|
+| nested-cards  | +20pp  | +0pp  | -20pp  | NET ~0; non-systematic (claude up, gemini down) -> NOISE |
+| low-contrast  | +0pp   | +0pp  | +0pp   | FLAT everywhere -> the pilot's +1/6 was pure noise |
+| gray-on-color | +10pp  | -10pp | -10pp  | NET slightly negative; non-systematic |
+| tiny-text     | -10pp  | -10pp | +10pp  | NET slightly negative; non-systematic |
+No sibling systematically worsens. Every per-provider sibling delta is <=20pp i.e. BELOW the ~63pp MDE.
+
+Harness paired aggregate delta (net over ALL rules, matched denominators) is NEGATIVE = defect-reducing
+for all three: claude -1.8pp, gpt -4.6pp, gemini -6.8pp. The huge default-typeface win dominates and the
+siblings net out neutral-to-beneficial.
+
+Other rules that moved (all <=20pp, below MDE, scattered, non-systematic -> noise): claude skipped-heading
++10 / marketing-buzzword +10 / soft-radial-glow +20; gpt skipped-heading +10 / marketing-buzzword -20;
+gemini skipped-heading -20 / numbered-section-markers -20 / soft-radial-glow +20 / repeating-stripe -10.
+
+Token spend (60 calls total): claude 20 calls, 13.7k in / 226.6k out ~= $5.73 (only claude has a recorded
+rate); gpt 20 calls, 8.5k in / 155.2k out; gemini 20 calls, 8.7k in / 247.5k out. gemini-3.6-flash resolved
+and generated all 20 pages (tokensComplete=true) - the task's id was valid in this env; --model was required
+because the harness deliberately carries no default Gemini id.
+
+## DECISION: CONFIRMED -> APPLY the typeface line
+default-typeface drops to 0% across ALL 3 providers; no sibling systematically worsens (low-contrast dead
+flat, nested-cards nets ~0, gray-on-color + tiny-text net negative); net aggregate is beneficial on every
+provider. The n=6 sibling ticks were noise: low-contrast is now flat 0/0/0, and the nested-cards uptick is
+claude-specific and non-replicating (gemini moves the opposite way by the same magnitude), which is exactly
+what generation noise looks like for a line that says nothing about cards.
+
+nested-cards DRAFTED line: NOT applied. Two reasons: (1) it is unvalidated for its OWN efficacy (never
+ablated), and (2) my run shows a non-systematic +20pp nested-cards tick on claude WITH the typeface line.
+The task gates the nested-cards line on "not worsened by the typeface line"; the evidence is mixed (claude
++20 offset by gemini -20), so shipping an unvalidated line on ambiguous evidence is against the discipline.
+Left for a dedicated ablation. (Recommended next: ablate the nested-cards line the same way, all 3 providers.)
+
+## APPLIED (not committed - lead integrates)
+Edit: `src/design-laws.ts`, `SHARED_DESIGN_LAWS.typography.rules` - appended ONE new string entry, VERBATIM
+and byte-identical to the validated 640-char line (verified in code: length 640==640, no emdash, no emoji),
+directly after the existing "Minimum 16px for web, 44px+ touch targets..." rule (now the last typography rule,
+src line 249). This is the surfaced guidance home reaching building models via flow-handler-font-research /
+design-tokens / brand-verify. No other line changed. The nested-cards DRAFTED line was NOT applied (unvalidated
++ non-systematic claude uptick; see DECISION above).
+
+Verification gate (all green):
+- `npm run build` GREEN (exit 0): generate-lanes / generate-validators / generate-counter-rules all `--check`
+  OK (no drift), `tsc` clean. The edit does NOT propagate to any `*.generated.ts` (byte-identical to HEAD) -
+  it is pure guidance content, isolated to design-laws.ts.
+- dist/ RESTORED to HEAD after confirming the green build (only design-laws.js/.js.map/.d.ts.map recompiled);
+  dist left physically untouched per task - lead rebuilds + commits dist at integration.
+- Independent Codex review (codex-cli 0.142.5, `codex exec --sandbox read-only`): "No findings. The change
+  looks correct and safe" - all 4 checks pass (valid TS single-quoted literal + array intact; no emoji/emdash;
+  single-element diff; typography.rules is the correct domain). Nothing to fold.
+
+## Lead integration notes
+- ONLY deliverable src edit: `src/design-laws.ts` (+1 typography rule). NOT committed.
+- NOT touched: `scripts/run-tests.ts`, `dist/` (restored), `*.generated.ts` (unchanged by the edit).
+- To ship: re-run `npm run build` (regenerates only design-laws.js in dist) + commit src/design-laws.ts + dist.
+- Recommended follow-up: ablate the drafted nested-cards line the same way (3 providers, N>=10) before applying it.
+
+## Files touched (final)
+- src/design-laws.ts (typography.rules += 1 validated guidance line) - the ONLY repo deliverable, NOT committed
+- .claude/memory/session_2026-07-25_typeface-line-fuller-validation.md (this beat) + MEMORY.md index pointer
+- scratchpad only (NOT in repo): typeface-candidate.json, measure-siblings.mjs, run-{claude,gpt,gemini}/, logs
