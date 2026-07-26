@@ -37,7 +37,7 @@ typography:
       "5xl": "clamp(4rem, 10vw, 9rem)"
 
 rounded:
-  none: "0"
+  none: "0px"
   sm: "6px"
   md: "12px"
   lg: "20px"

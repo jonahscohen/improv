@@ -41,7 +41,7 @@ typography:
       "4xl": "4.5rem"
 
 rounded:
-  none: "0"
+  none: "0px"
   sm: "4px"
   md: "8px"
   lg: "12px"

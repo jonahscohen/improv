@@ -44,7 +44,7 @@ typography:
       "2xl": "32px"
 
 rounded:
-  none: "0"
+  none: "0px"
   sm: "4px"
   md: "6px"
 

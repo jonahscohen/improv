@@ -194,10 +194,10 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/taste-validator-observer-race.test.ts', required: true },
   { rel: 'src/__tests__/taste-validator-tailwind-tokens.test.ts', required: true },
   // ROUTING/COMMAND-RESOLUTION tests (2026-07-26): deferred during the routing consolidation, now reconciled
-  // against the landed refactor - 20 of 21 pass green and are gated here. (sprint3-process-path is a PRE-EXISTING
-  // red - process('lint design.md') no longer emits the "Source: DESIGN.md L<n>" citation the test expects; it is
-  // silently-unverified live code, NOT a refactor regression, and is flagged for a separate feature-vs-test call,
-  // not gated red. sprint12 had a stale length assertion, fixed 8->11.)
+  // against the landed refactor - ALL 21 gated. sprint12 had a stale length assertion (fixed 8->11).
+  // sprint3-process-path was a DATA regression, not a stale test: reference/DESIGN.md had drifted out of
+  // lint-compliance (rounded.none: "0" -> "0px"), so @google/design.md lint blocked flowF and the
+  // "Source: DESIGN.md L<n>" citation never emitted; fixing the fixture unblocked the feature (resolved 2026-07-26).
   { rel: 'src/__tests__/intent-detector-tiebreak.test.ts', required: true },
   { rel: 'src/__tests__/sprint7-intent-detector-flowwx.test.ts', required: true },
   { rel: 'src/__tests__/sprint5-disambiguation-silent-tiebreak.test.ts', required: true },
@@ -218,6 +218,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/sprint2-orchestrator-getHandlers.test.ts', required: true },
   { rel: 'src/__tests__/sprint7-composite-parser-both-forms.test.ts', required: true },
   { rel: 'src/__tests__/sprint2-integration.test.ts', required: true },
+  { rel: 'src/__tests__/sprint3-process-path.test.ts', required: true },              // resolved 2026-07-26: reference/DESIGN.md lint drift was blocking flowF's citation
   // Ported 2026-07-26 from an unrunnable jest-style test to plain-assert - the ONLY coverage for
   // FlowSpecificValidator / FlowMetricsTracker / FlowHandlerCache (all live, orchestrator-imported).
   { rel: 'src/phase-iii-integration.test.ts', required: true },

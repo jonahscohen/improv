@@ -61,7 +61,7 @@ typography:
       bold: 700
 
 rounded:
-  none: "0"
+  none: "0px"
   sm: "4px"
   md: "8px"
   lg: "12px"
