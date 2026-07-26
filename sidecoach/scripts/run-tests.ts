@@ -221,6 +221,15 @@ const SUITES: Suite[] = [
   // Ported 2026-07-26 from an unrunnable jest-style test to plain-assert - the ONLY coverage for
   // FlowSpecificValidator / FlowMetricsTracker / FlowHandlerCache (all live, orchestrator-imported).
   { rel: 'src/phase-iii-integration.test.ts', required: true },
+  // SLOW-BUT-GREEN cohort gated 2026-07-26 (the orphan-triage "5 slow", gate-cost decision resolved = GATE).
+  // Each verified green in isolation (npx ts-node); isolated cost ~1-8s though the triage saw up to ~44s under
+  // full-gate concurrent ts-node load. Coverage otherwise absent: build-report single/opt-in + CLI e2e, orchestrator
+  // enrich-before-canExecute ordering, model-tier routing (t12, a distinct subsystem), retry-control (t9).
+  { rel: 'src/__tests__/sprint4-build-report-single-opt-in.test.ts', required: true },
+  { rel: 'src/__tests__/sprint4-build-report-cli.test.ts', required: true },
+  { rel: 'src/__tests__/sprint3-orchestrator-enrich-before-canexecute.test.ts', required: true },
+  { rel: 'src/__tests__/t12-model-routing.test.ts', required: true },
+  { rel: 'src/__tests__/t9-retry-control.test.ts', required: true },
 ];
 
 // Pin Playwright to the SHARED real-home browser cache BEFORE we isolate HOME below.
