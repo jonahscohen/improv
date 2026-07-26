@@ -8,7 +8,7 @@ author_model: claude-opus-4-8
 session_id: a3c67e5e-d9fc-47aa-8a70-811b0253db4c
 machine: spare3
 source: session
-verified: tests (24/24 new suite green, 8 sibling suites green), live hook invocation in a real teammate + against real lead argv, dual falsification against both broken versions, codex-review.py cross-model pass
+verified: tests (27/27 new suite green, 8 sibling suites green), live hook invocation in a real teammate + against real lead argv, dual falsification against both broken versions, codex-review.py cross-model pass
 confidence: high
 ---
 
@@ -98,14 +98,46 @@ actually runs in, and a signal named "child session" should be assumed to mean
 "is a child" until proven to mean "is a teammate."
 
 The rejected signal is documented in the hook with a do-not-re-add note and the
-`ps eww` trap that produced it, and the regression is pinned by four test cases.
+`ps eww` trap that produced it, and the regression is pinned by four verdict cases plus three advice cases.
+
+## The lead observed the near-miss live, and it exposed a hole in my tests
+
+team-lead reported it independently: a lead spawn of `Agent name=artifact-builder`
+got the TEAMMATE notice ("you are a spawned teammate ... spawn UNNAMED ... do NOT
+pass name"). The spawn still succeeded and the pane still rendered, because the
+teammate path only ever advises. Attribution is unambiguous from the wording:
+
+- the originally shipped hook contains the string "Teammate context" **zero**
+  times, so the misfire did NOT predate my edit - it was mine;
+- the lead quoted `Teammate context: this session is...`, with no
+  `(detected via: ...)` parenthetical, which only the intermediate version
+  emitted;
+- **the bad signal was never committed** - `git log -p` over every revision of
+  the hook shows 0 occurrences of it. The ~20-minute exposure was uncommitted
+  working-tree state, live because `~/.claude/hooks/` symlinks into this repo.
+
+Reproduced both ways on the lead's exact input (lead transcript + real lead argv +
+`CLAUDE_CODE_CHILD_SESSION=1`, `name=artifact-builder`): the intermediate hook
+answers with the teammate notice; the committed hook answers "Named teammate spawn
+permitted", and the same context UNNAMED still denies.
+
+**The second self-analysis, and the more useful one.** My suite already had the
+lead cases and they were all green while the misfire was live. They passed because
+they asserted only the permission DECISION, and the misfire did not change the
+decision - it inverted the ADVICE. A gate has two outputs and I was testing one.
+The lesson generalizes past this hook: when a hook's payload is guidance, the
+guidance is part of the contract and needs its own assertion, because wrong advice
+delivered with a correct verdict is invisible to a verdict-only test. Added:
+`expect_advice` plus three cases pinning the notice text in both directions. They
+score FAIL against the intermediate version on exactly the case the lead saw.
 
 ## Verification
 
-- `claude/hooks/test-agent-teams-guard.sh` (new): **24 passed, 0 failed**.
-- Dual falsification: the same suite scores **16/8** against the pre-fix hook
-  (the original deadlock) and **21/3** against the near-miss version (the lead
-  cases go red on exactly the `CLAUDE_CODE_CHILD_SESSION` regression).
+- `claude/hooks/test-agent-teams-guard.sh` (new): **27 passed, 0 failed**.
+- Dual falsification: the same suite scores **18/9** against the pre-fix hook
+  (the original deadlock) and **23/4** against the near-miss version (the lead
+  cases go red on exactly the `CLAUDE_CODE_CHILD_SESSION` regression, including
+  the lead's live repro).
 - Live, no stubs, inside a real teammate: transcript signal -> exempt,
   ancestor-walk-only signal -> exempt. Real lead argv (`ps` of the live lead pid)
   + real lead transcript -> **deny**, mandate intact.
@@ -142,5 +174,5 @@ succeeding mid-session. Registration is unchanged (`claude/hooks/app-wirings.jso
 
 - `claude/hooks/agent-teams-guard.sh` - teammate detection + exemption, the
   rejected-signal note, `ps -ww`, signal named in the notice.
-- `claude/hooks/test-agent-teams-guard.sh` - new, 24 cases.
+- `claude/hooks/test-agent-teams-guard.sh` - new, 27 cases (24 verdict + 3 advice).
 - `.claude/memory/MEMORY.md` - index pointer.

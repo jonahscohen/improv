@@ -105,8 +105,13 @@ EOF
 #        teammate-nops     teammate transcript, ps sees no claude ancestor at all
 #        forced-teammate   AGENT_TEAMS_GUARD_FORCE_CONTEXT=teammate over lead signals
 #        forced-lead       AGENT_TEAMS_GUARD_FORCE_CONTEXT=lead over teammate signals
-# Prints the permission decision, or crash(...)/unparseable - never a silent allow.
-decision() {
+# _invoke prints the guard's RAW stdout (empty on crash); decision() reduces that
+# to a permission verdict and advice() to the notice text. Both directions of the
+# hook's output matter: the 2026-07-26 lead misfire ALLOWED the spawn and only
+# inverted the ADVICE, so a decision-only assertion passed it. (Reported live by
+# team-lead: a named lead spawn succeeded but was told "you are a teammate, spawn
+# UNNAMED".)
+_invoke() {
   local tool="$1" name="$2" bg="$3" ctx="$4" nocmux="${5:-}"
   local ps_stub="$TMP/ps-lead" transcript="$TMP/transcript-lead.jsonl"
   local -a extra=("AGENT_TEAMS_GUARD_FORCE_CONTEXT=")
@@ -144,10 +149,17 @@ print(json.dumps({"tool_name": tool, "session_id": "test-atg",
     "${mode[@]}" "AGENT_TEAMS_GUARD_PS=$ps_stub" "${extra[@]}" \
     bash "$GUARD" 2>/dev/null)
   rc=$?
-  # A hook that dies emits nothing. Scoring that as "allow" would let 13 of the
+  [ "$rc" -eq 0 ] || return 1
+  printf '%s' "$out"
+}
+
+# Prints the permission decision, or crash(...)/unparseable - never a silent allow.
+decision() {
+  local out
+  # A hook that dies emits nothing. Scoring that as "allow" would let most of the
   # cases below pass on a guard that never ran, so it is its own verdict.
-  if [ "$rc" -ne 0 ]; then printf 'crash(exit=%s)\n' "$rc"; return; fi
-  if [ -z "$out" ]; then printf 'crash(no output)\n'; return; fi
+  out=$(_invoke "$@") || { printf 'crash(nonzero exit)\n'; return; }
+  [ -n "$out" ] || { printf 'crash(no output)\n'; return; }
   printf '%s' "$out" | python3 -c '
 import json, sys
 try:
@@ -156,6 +168,37 @@ except Exception:
     print("unparseable"); sys.exit(0)
 h = d.get("hookSpecificOutput") or {}
 print(h.get("permissionDecision", "allow"))'
+}
+
+# Prints the advisory notice the pass path attaches (additionalContext).
+advice() {
+  local out
+  out=$(_invoke "$@") || { printf 'crash(nonzero exit)\n'; return; }
+  [ -n "$out" ] || { printf 'crash(no output)\n'; return; }
+  printf '%s' "$out" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print("unparseable"); sys.exit(0)
+h = d.get("hookSpecificOutput") or {}
+print(h.get("additionalContext", "") or h.get("permissionDecisionReason", "") or "(none)")'
+}
+
+# expect_advice <substring-that-must-appear> <substring-that-must-NOT-appear|-> <label> <tool> <name> <bg> <ctx>
+expect_advice() {
+  local want="$1" forbid="$2" label="$3"; shift 3
+  local got; got="$(advice "$@")"
+  local okwant=1 okforbid=1
+  case "$got" in *"$want"*) ;; *) okwant=0 ;; esac
+  if [ "$forbid" != "-" ]; then
+    case "$got" in *"$forbid"*) okforbid=0 ;; esac
+  fi
+  if [ "$okwant" -eq 1 ] && [ "$okforbid" -eq 1 ]; then
+    PASS=$((PASS + 1)); printf "  ok    %-58s -> %s...\n" "$label" "$(printf '%s' "$got" | cut -c1-32)"
+  else
+    FAIL=$((FAIL + 1)); printf "  FAIL  %-58s -> %s\n" "$label" "$(printf '%s' "$got" | cut -c1-90)"
+  fi
 }
 
 expect() {  # expect <want> <label> <tool> <name> <bg> <ctx> [nocmux]
@@ -187,6 +230,19 @@ expect "$D" "lead + CHILD_SESSION, background variant"           Agent ""     1 
 expect "$D" "lead + CHILD_SESSION, Workflow variant"             Workflow ""  0 lead-childenv
 expect "$A" "lead + CHILD_SESSION, named foreground still passes" Agent "prod" 0 lead-childenv
 expect "$D" "lead argv has --teammate-mode, still enforced"      Agent ""     0 lead
+
+echo
+echo "THE LEAD MISFIRE (reported live 2026-07-26) - the ADVICE must not invert:"
+# team-lead spawned Agent name=artifact-builder and the hook attached the TEAMMATE
+# notice ("you are a spawned teammate ... spawn UNNAMED ... do NOT pass name").
+# The spawn still SUCCEEDED, which is why the decision-only cases above passed
+# right through it. Only asserting the notice text catches this class.
+expect_advice "Named teammate spawn permitted" "Teammate context" \
+  "named lead spawn is told it is the LEAD"        Agent "artifact-builder" 0 lead-childenv
+expect_advice "Named teammate spawn permitted" "Teammate context" \
+  "same, with only the ambient lead signals"       Agent "artifact-builder" 0 lead
+expect_advice "Teammate context" "Named teammate spawn permitted" \
+  "a real teammate is still told it is a teammate" Agent ""                 0 teammate-script
 
 echo
 echo "TEAMMATE session - every gate exempt, by EACH signal on its own:"
