@@ -41,10 +41,14 @@ Collaborator: Jonah. 2026-07-26. Lead integration of the dependency-map / harnes
 
 Independent Claude review flagged one confidence-80 durability gap: the launcher gates on `[ -x "$_cmux_pf" ]`, so if `cmux-preflight.sh` ever regresses to mode 644 the guard silently skips forever; nothing re-asserts the bit (install.sh symlinks the `claude/cmux` dir with no chmod, unlike ~20 other scripts) and the 15-case suite ran the script via `sh "$PF"`, bypassing the exec bit. FOLDED: added a 16th test assertion `[ -x "$PF" ]` so a mode regression fails the suite loudly (the file is currently correctly 755 and git tracks the bit). DEFERRED to a task chip: the install.sh `chmod +x` for `claude/cmux` entry points - it would entangle this commit with the unrelated pending concise-hooks install.sh change (the grounding-cluster wiring), so it is left for the concise-hooks commit to add alongside.
 
+## Dep-map audit HTML updated (browser-verified)
+
+`docs/dependency-map/index.html` (hand-maintained inline-JS, no generator): flipped findings 654 (orphan) + 657 (justify-core) + 661 (dogfood) to resolved=true with dated resolution text + beat citations; cmux (660) rewritten to "Partly managed" (pin+guard, kept false for the residual CLI-shape risk); the sidecoach node's stale dogfood evidence/debt (537/539) corrected. Header stat corrected 6 -> 9 resolved and the intro narrative + updated-reason subtitle rewritten to this wave. Browser-verified via the Browser pane (file://): JS executes, all 11 findings render, header shows "11 findings, 9 resolved".
+
 ## Still open at time of writing
 
-- Consolidated `docs/dependency-map/index.html` update for the now-resolved findings 654 (orphan), 657 (justify-core), 661 (dogfood) - the audit HTML artifact, to be updated + browser-verified in one pass. cmux's finding 660 moves to PARTLY MANAGED.
-- Single end-of-wave push (ask).
+- Single end-of-wave push (ask) - the local wave commits (3b21a22b compactor+orphan, 38cce633 dogfood, b3f71e4d capability, a15c290c cmux, + final dep-map/beats commit) plus justify-core already on improv-site (74cc31f).
+- Task chip spawned: install.sh `chmod +x` for claude/cmux entry points (rides with the pending concise-hooks install.sh change).
 
 ## Files touched (lead)
 - sidecoach/src/flow-handler-font-research.ts (derive principle count)

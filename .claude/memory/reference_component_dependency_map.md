@@ -89,6 +89,8 @@ skills launchers -> tilt-lab/lotus/sidecoach.
 
 ## The 11 open findings
 
+> WAVE UPDATE 2026-07-26 (dependency-map wave): finding 4 (orphan improv skill) RESOLVED - see [[session_2026-07-26_orphan-improv-skill]]; finding 5 (marketing pages hard-loading justify-core.js) RESOLVED in the improv-site repo (74cc31f) - see [[session_2026-07-26_marketing-site-justify-core]]; finding 10 (cmux) PARTLY MANAGED (pin + preflight, updated inline below) - see [[session_2026-07-26_cmux-dependency-pinned]]; finding 11 (dogfood marketing-site path) RESOLVED by deletion (ce3743fd) + orphan-dist cleanup (38cce633) - see [[session_2026-07-26_dogfood-marketing-path]]. The rendered audit at docs/dependency-map/index.html now reads "11 findings, 9 resolved". Integration: [[session_2026-07-26_dependency-map-wave-integration]].
+
 1. `install.sh:364` points at `ghostty/shaders`, which does not exist (real path:
    top-level `shaders/`); the TUI "open directory" for shaders silently fails.
 2. `.justify` marker still references the pre-rename `/public/improv-core.js`.
@@ -105,8 +107,14 @@ skills launchers -> tilt-lab/lotus/sidecoach.
    hook that breaks on any other machine (the beats hooks derive their root correctly).
 9. `reference/serve.py` is a copy of marketing-site's with the same default port 4830 -
    only convention keeps the two sites from colliding.
-10. cmux is the highest-risk dependency: an external, unpinned binary with 10 in-repo
-    consumers. If its CLI changes, ten hooks break at once and the repo cannot fix itself.
+10. cmux is the highest-risk dependency: an external binary with ~10 in-repo consumers.
+    If its CLI changes, hooks can break at once and the repo cannot fix cmux itself.
+    PARTLY MANAGED (2026-07-26): the required version is now PINNED
+    (`claude/cmux/cmux.version` = 0.64.20) and enforced by a shared preflight guard
+    (`claude/cmux/cmux-preflight.sh`, fail-closed on missing/old, `--warn` for the
+    always-on hooks), wired into the Teams launcher. See reference_cmux_dependency.md.
+    Residual (inherent): cmux is an auto-updating GUI app, so the pin can DETECT drift,
+    not prevent it - and vendoring the running app is rejected as infeasible.
 11. (2026-07-13) The sidecoach dogfood scripts and the TASKS.md marketing-site area now
     point at a path that left the repo: `dogfood-craft-step2.ts:10` and
     `dogfood-teach-step1.ts:8` hard-code `/Users/spare3/Documents/Github/improv/marketing-site`,

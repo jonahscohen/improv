@@ -1,3 +1,8 @@
+- [** ACTIVE ** Dependency-map wave lead-integration - 6 agents (compactor, orphan, capability, dogfood, justify-core, cmux); records the 168-s…](session_2026-07-26_dependency-map-wave-integration.md)
+- [** ACTIVE ** Marketing site (improv-site) justify-core.js decoupled - 6 pages hard-loaded a localhost:9223 daemon <script> that errored the cons…](session_2026-07-26_marketing-site-justify-core.md)
+- [** ACTIVE ** cmux dependency PINNED + guarded (the real finding-10 risk, not the shim). The 2026-06-25 PATH shim only fixed a hook command-not-found…](session_2026-07-26_cmux-dependency-pinned.md)
+- [** ACTIVE REFERENCE ** cmux external dependency record - the version pin (cmux.version=0.64.20), the fail-closed preflight guard, the ~10 consumers, ins…](reference_cmux_dependency.md)
+- [** ACTIVE ** Dogfood marketing-site "fix" was already resolved by DELETION - the dogfood scripts (dogfood-craft-step2/teach-step1/runner) were delete…](session_2026-07-26_dogfood-marketing-path.md)
 - [** ACTIVE ** Orphan improv skill removed - STALE rename orphan (improv -> justify), not a live skill missing source. ~/.claude/skills/improv/SKILL.md ha…](session_2026-07-26_orphan-improv-skill.md)
 - [** ACTIVE ** MEMORY.md auto-compactor FIXED - root cause: cap_line only trimmed the post-link rest group, never the giant hook text inside the title…](session_2026-07-26_memory-compactor-fixed.md)
 - [** ACTIVE ** Capability breadth - built the 2 highest-value self-contained long-tail guidance rows (borrow-list section 5, rows 19-33) as SHARED_DESIGN_L…](session_2026-07-26_capability-breadth.md)

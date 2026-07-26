@@ -398,11 +398,11 @@
     <p>What stands on what. Tiers run top to bottom, most load-bearing to leaf. Every edge below was read out of the tree at a specific file and line; click any node to see its evidence.</p>
     <div class="meta">
       <span>Generated 2026-07-13</span>
-      <span>Updated 2026-07-26 (sidecoach/mcp-server retired)</span>
+      <span>Updated 2026-07-26 (dependency-map wave: orphan skill, justify-core, dogfood resolved; cmux guarded)</span>
       <span class="verified">Evidence-verified</span>
       <span>14 components</span>
       <span>5 classes</span>
-      <span>11 findings, 6 resolved</span>
+      <span>11 findings, 9 resolved</span>
     </div>
   </header>
 
@@ -436,7 +436,7 @@
 
   <section class="findings">
     <h2>Honest findings</h2>
-    <p>Eleven things the sweep turned up. Wave 1 and 2 resolved five of them (marked resolved below). The rest are still wrong, dead, or fragile - none blocking today, all load-bearing for whoever touches this repo next.</p>
+    <p>Eleven things the sweep turned up. Earlier waves resolved five; the 2026-07-26 dependency-map wave resolved three more (the orphan improv skill, the justify-core daemon coupling, and the dead dogfood marketing-site path) and brought cmux under version management. What remains: cmux's residual CLI-shape risk (now guarded by a version pin, not eliminated) and the by-design beats/mcp-server install hint - neither blocking, both load-bearing for whoever touches this repo next.</p>
     <ol id="findings"></ol>
   </section>
 
@@ -534,9 +534,9 @@
       evidence: [
         ["SessionStart hook starts the daemon", "claude/hooks/sidecoach-sessionstart.sh:8,21"],
         ["Its tests read the reference site's DESIGN.md", "sidecoach tests -> reference/DESIGN.md"],
-        ["Its dogfood config points at marketing-site by absolute path", "sidecoach dogfood config"]
+        ["Its dogfood scripts formerly pointed at marketing-site by absolute path; deleted as dead harnesses 2026-07-25", "ce3743fd"]
       ],
-      debt: ["The dogfood scripts still hard-code an absolute marketing-site path (machine-bound), but the silent mkdirSync is gone: dogfood-teach-step1.ts now throws a clear error naming ~/Documents/Github/improv-site instead of recreating a ghost directory (Wave 1, U5)."]
+      debt: ["Resolved: the machine-bound dogfood marketing-site path is gone - the dogfood scripts were deleted 2026-07-25 (ce3743fd) as dead harnesses and their orphan dist artifacts removed. sidecoach's remaining cross-component coupling is its reference-site DESIGN.md test dependency (see evidence above)."]
     },
     "justify": {
       name: "justify", cls: "tool",
@@ -651,14 +651,14 @@
     ["Resolved (Wave 1, U1). `install.sh` pointed at `ghostty/shaders`, a directory that does not exist - the real shaders live at the top-level `shaders/`, so the TUI 'open directory' action failed silently. install.sh now points at `$REPO_DIR/shaders`.", true],
     ["Resolved (Wave 1, U2). The `.justify` marker file still pointed at the pre-rename core script path; it now reads `/public/justify-core.js`.", true],
     ["Resolved (Wave 1, U2). `public/justify-core.js` was tracked in git despite `.gitignore:5` (committed before the ignore rule, so it never took effect). Wave 1 git-rm-cached it, so it is no longer tracked - a gitignored generated build artifact that exists only where built and is absent from a fresh clone.", true],
-    ["`~/.claude/skills/improv/SKILL.md` is deployed on this machine with no corresponding source in the repo - an orphan from the rename. Wave 1 (U1) added a human-gated, dry-run-default prune (`prune_broken_skill_symlinks`) so install.sh can now remove such orphans, but it is not applied automatically, so an already-deployed orphan persists until someone runs the prune.", false],
+    ["Resolved (2026-07-26). `~/.claude/skills/improv/SKILL.md` was a pre-rename orphan (improv -> justify) deployed with no repo source. It has been removed from the live skill set (moved to a reversible backup); the successor `justify` skill is deployed and sourced from its installer heredoc, and no installer path recreates the orphan. See session_2026-07-26_orphan-improv-skill.md.", true],
     ["Resolved (2026-07-24, commit c9985f6f). `sidecoach/mcp-server` was retired - the directory and its `.mcp.json` were deleted (4157 files) and the run-tests.ts parity tether severed, after the classifier was de-duplicated to the Python hook <-> engine-TS pair. Nothing is bound to a dead server anymore.", true],
     ["`beats/mcp-server` is inert by design: it exists as an install hint, not as a live server. Recorded here so nobody 'fixes' it by wiring it up.", true],
-    ["The marketing site is not actually static. Seven of its pages hard-code `http://localhost:9223/justify-core.js`, so every one of them degrades to a failed script load whenever the justify daemon is down. A static site that depends on a running daemon is not a static site. As of 2026-07-13 those pages are no longer committed here - they live in ~/Documents/Github/improv-site - so the daemon dependency now crosses a repo boundary and nothing in this tree can fix it.", false],
+    ["Resolved (2026-07-26, improv-site 74cc31f). The seven improv-site pages that hard-loaded `http://localhost:9223/justify-core.js` were decoupled from the daemon: a self-hosted, same-origin `justify-loader.js` now injects the toolbar only on explicit opt-in (`?justify=1`/localStorage), default OFF, so a normal visit makes zero requests to :9223 and never errors when the daemon is down. Browser-verified. The fix lives in the separate improv-site repo. See session_2026-07-26_marketing-site-justify-core.md.", true],
     ["Resolved (Wave 1, U4). `sidecoach-sessionstart.sh` hard-coded an absolute `/Users/spare3` path - the one hook in the repo that broke on any other machine. It now derives the repo root from its own real path through the deploy symlink, like the beats hooks, with no machine-specific literal.", true],
     ["Resolved (Wave 1, U5). `reference/serve.py` was a copy of marketing-site's `serve.py` and inherited its default port, so only convention kept the two sites from colliding. Its default is now 4831, distinct from marketing-site.", true],
-    ["cmux is the highest-risk dependency in the tree: an external binary, unpinned and unvendored, with 10 in-repo consumers. If its CLI changes, ten hooks break simultaneously and nothing in this repo can repair itself.", false],
-    ["Partly resolved (Wave 1, U5). The sidecoach dogfood scripts still name the departed `/Users/spare3/Documents/Github/improv/marketing-site` (`dogfood-craft-step2.ts:10`, `dogfood-teach-step1.ts:8`); the site moved to ~/Documents/Github/improv-site. But the silent mkdirSync that used to recreate an empty ghost `marketing-site/` here is gone - `dogfood-teach-step1.ts` now throws a clear error naming improv-site instead of failing quietly. `TASKS.md` still heads a marketing-site area, now annotated to point at the separate improv-site project.", false]
+    ["Partly managed (2026-07-26). cmux is still an external, unvendored binary with ~10 in-repo consumers, but the version risk is now guarded: `claude/cmux/cmux.version` pins the required version (0.64.20) and `claude/cmux/cmux-preflight.sh` fail-closes with an actionable message when cmux is missing or older than the pin, wired into the Teams launcher with a graceful fallback. The residual, unguardable risk is a cmux CLI-shape change (no version pin catches that). See session_2026-07-26_cmux-dependency-pinned.md.", false],
+    ["Resolved (2026-07-25, commit ce3743fd). The sidecoach dogfood scripts that named the departed `marketing-site` path (dogfood-craft-step2/teach-step1/runner) were deleted as dead dev harnesses (zero importers, not gated); their 12 orphan `dist/` artifacts were removed on integration (2026-07-26, commit 38cce633). `TASKS.md` still heads a marketing-site area, annotated to point at the separate improv-site project. See session_2026-07-26_dogfood-marketing-path.md.", true]
   ];
 
   // ---------------------------------------------------------------- render
