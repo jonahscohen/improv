@@ -351,5 +351,38 @@
     "timeout": 5
    }
   }
+ ],
+ "concise-mandate.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/concise-mandate.sh SessionStart",
+    "timeout": 5,
+    "statusMessage": "Loading concise mode..."
+   }
+  },
+  {
+   "event": "PostCompact",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/concise-mandate.sh PostCompact",
+    "timeout": 5,
+    "statusMessage": "Loading concise mode..."
+   }
+  }
+ ],
+ "concise-toggle.sh": [
+  {
+   "event": "UserPromptSubmit",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/concise-toggle.sh",
+    "timeout": 5
+   }
+  }
  ]
 }

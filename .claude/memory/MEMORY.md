@@ -1,3 +1,4 @@
+- [** ACTIVE ** Concise-mode feature committed (default-ON brevity ruleset, SessionStart/PostCompact inject + UserPromptSubmit toggle, grounding…](session_2026-07-26_concise-mode-feature-committed.md)
 - [** ACTIVE ** Dependency-map wave lead-integration - 6 agents (compactor, orphan, capability, dogfood, justify-core, cmux); records the 168-s…](session_2026-07-26_dependency-map-wave-integration.md)
 - [** ACTIVE ** Marketing site (improv-site) justify-core.js decoupled - 6 pages hard-loaded a localhost:9223 daemon <script> that errored the cons…](session_2026-07-26_marketing-site-justify-core.md)
 - [** ACTIVE ** cmux dependency PINNED + guarded (the real finding-10 risk, not the shim). The 2026-06-25 PATH shim only fixed a hook command-not-found…](session_2026-07-26_cmux-dependency-pinned.md)

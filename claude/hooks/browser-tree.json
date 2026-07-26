@@ -263,13 +263,15 @@
     {
      "key": "grounding",
      "kind": "hooks",
-     "tag": "the 4 grounding hooks",
-     "desc": "The 4 hooks in the grounding cluster: source-grounding (grounding-gate, grounding-guard) plus completion discipline (task-loop-mandate, justify-queue-mandate).",
+     "tag": "the 6 grounding hooks",
+     "desc": "The 6 hooks in the grounding cluster - always-on behavioral discipline: source-grounding (grounding-gate, grounding-guard), completion discipline (task-loop-mandate, justify-queue-mandate), and response conciseness (concise-mandate, concise-toggle).",
      "hooks": [
       "grounding-gate",
       "grounding-guard",
       "task-loop-mandate",
-      "justify-queue-mandate"
+      "justify-queue-mandate",
+      "concise-mandate",
+      "concise-toggle"
      ]
     },
     {
@@ -518,6 +520,8 @@
   "grounding-guard": "Checks claims against real sources.",
   "task-loop-mandate": "Re-injects the rule to finish the task list you were handed.",
   "justify-queue-mandate": "Re-injects the rule to finish every prompt queued in Justify.",
+  "concise-mandate": "Injects the concise-response ruleset each session so replies stay brief. On by default; say \"concise off\" to stop.",
+  "concise-toggle": "Turns brevity on or off at runtime - reacts to \"concise on\", \"concise off\", \"verbose\", and \"concise status\".",
   "api-drift-detector": "Detects drifted or renamed API calls.",
   "api-drift-stop": "Enforces the API-drift check at stop.",
   "api-drift-ack": "Records your acknowledgement of a drift.",
@@ -573,6 +577,8 @@
   "grounding-guard": "grounding",
   "task-loop-mandate": "grounding",
   "justify-queue-mandate": "grounding",
+  "concise-mandate": "grounding",
+  "concise-toggle": "grounding",
   "api-drift-detector": "api-drift",
   "api-drift-stop": "api-drift",
   "api-drift-ack": "api-drift",
