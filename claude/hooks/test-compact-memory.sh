@@ -17,9 +17,17 @@
 # proves archive de-duplication (collapse pre-existing dupes + never re-append a
 # pointer already in the archive) and full idempotency across both files.
 #
+# Scenario D (title-heavy cap regression, added 2026-07-26): the live index
+# drifted to a one-liner style where the whole hook sits INSIDE the [title]
+# brackets and `rest` is empty. The old cap_line only trimmed `rest`, so those
+# entries returned UNCAPPED and a 96-entry index sat at ~108KB, 4.4x over budget,
+# with the compactor a silent no-op. cap_line must now cap the title too (keeping
+# the ](file) pointer + leading pin marker intact) so an all-title-heavy pinned
+# index lands under budget by CAPPING ALONE, every pointer retained, no archival.
+#
 # It loads the real module via importlib and shrinks BUDGET to force archival,
-# so the actual is_standing()/is_pinned()/main() logic is exercised. Exits
-# non-zero on any failure.
+# so the actual is_standing()/is_pinned()/cap_line()/main() logic is exercised.
+# Exits non-zero on any failure.
 
 set -u
 HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -215,6 +223,72 @@ beforeC = open(memC, encoding="utf-8").read()
 run(memC)
 check(open(memC, encoding="utf-8").read() == beforeC,
       "scenario C: idempotent even while still over budget")
+
+# ---------------------------------------------------------------------------
+# Scenario D: TITLE-heavy one-liners must line-cap (2026-07-26 regression).
+# The whole hook sits inside the [title] brackets, `rest` is empty. The old
+# cap_line only trimmed `rest`, so these returned uncapped -> a 96-entry index
+# at ~108KB, 4.4x over budget, compactor a silent no-op. cap_line must now cap
+# the title too, keeping the ](file) pointer + pin marker, so an all-pinned
+# title-heavy index reaches budget by CAPPING ALONE.
+# ---------------------------------------------------------------------------
+print("\n=== Scenario D: title-heavy one-liners line-cap to budget (regression) ===")
+
+# A single ~1550-char title-heavy entry with an empty rest (the live-corpus shape).
+long_title = "** ACTIVE ** " + "detail " * 220
+heavy = "- [" + long_title.rstrip() + "](session_2026-07-26_heavy-one.md)"
+mh = cm.ENTRY_RE.match(heavy)
+assert mh, "regression fixture must parse"
+capped = cm.cap_line(heavy, mh)
+check(len(heavy) > cm.MAX_LINE, "regression fixture is over-long before capping")
+check(len(capped) <= cm.MAX_LINE,
+      f"title-heavy entry capped to <= MAX_LINE ({len(capped)} <= {cm.MAX_LINE})")
+mc = cm.ENTRY_RE.match(capped)
+check(mc is not None, "capped title-heavy line still parses as an index entry")
+check(bool(mc) and mc.group("file") == "session_2026-07-26_heavy-one.md",
+      "capped entry keeps its ](file) pointer intact (still grep-able)")
+check(bool(mc) and cm.is_pinned(mc), "capped entry keeps its ** ACTIVE pin marker")
+
+# A whole index of 40 title-heavy PINNED one-liners at the real 23KB budget: the
+# fix must land it under budget by capping alone, every pointer retained, nothing
+# archived (the old code left this shape 4x+ over budget as a no-op).
+tmpD = tempfile.mkdtemp(prefix="compact-test-D-")
+memD = os.path.join(tmpD, "MEMORY.md")
+
+
+def heavy_name(i):
+    return f"session_2026-07-{i % 28 + 1:02d}_heavy-{i:02d}.md"
+
+
+heavy_lines = []
+for i in range(40):
+    t = f"** ACTIVE ** entry {i:02d} " + "verbose hook text over the one-line rule " * 30
+    heavy_lines.append("- [" + t.rstrip() + "](" + heavy_name(i) + ")")
+with open(memD, "w", encoding="utf-8") as fh:
+    fh.write("\n".join(heavy_lines) + "\n")
+
+raw_bytes = os.path.getsize(memD)
+cm.BUDGET = 23000  # reset from scenario C's BUDGET=1 back to the real budget
+check(raw_bytes > cm.BUDGET,
+      f"raw title-heavy index over budget before compaction ({raw_bytes} > {cm.BUDGET})")
+check(run(memD) == 0, "scenario D: compactor returns 0")
+
+liveD = open(memD, encoding="utf-8").read()
+sizeD = len(liveD.encode("utf-8"))
+check(sizeD <= cm.BUDGET,
+      f"scenario D: title-heavy index UNDER budget after capping ({sizeD} <= {cm.BUDGET})")
+archD_path = os.path.join(tmpD, "MEMORY-archive.md")
+archD = open(archD_path, encoding="utf-8").read() if os.path.isfile(archD_path) else ""
+missing = [heavy_name(i) for i in range(40) if heavy_name(i) not in liveD]
+check(not missing, f"scenario D: all 40 pointers retained in live index (missing: {missing})")
+check(archD == "", "scenario D: nothing archived - capping alone reached budget")
+longest = max(len(l) for l in liveD.splitlines())
+check(longest <= cm.MAX_LINE, f"scenario D: longest line <= MAX_LINE ({longest} <= {cm.MAX_LINE})")
+
+# Idempotent second pass.
+beforeD = open(memD, encoding="utf-8").read()
+run(memD)
+check(open(memD, encoding="utf-8").read() == beforeD, "scenario D: idempotent")
 
 print()
 if fails:

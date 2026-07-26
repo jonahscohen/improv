@@ -7,7 +7,10 @@ half-blind. This keeps it under budget MECHANICALLY, with zero data loss:
 
   1. Line-cap every index entry to MAX_LINE chars (the index is pointers + a
      short hook; the full detail lives in the beat file, so capping the line
-     loses nothing real and just enforces the existing one-line rule).
+     loses nothing real and just enforces the existing one-line rule). The cap
+     covers hook text WHEREVER it sits - inside the [title] brackets (the current
+     one-liner style) or after the link - always keeping the ](file) pointer and
+     the leading pin marker intact.
   2. If still over BUDGET, ARCHIVE the oldest entries into MEMORY-archive.md
      until under budget. Order of sacrifice: oldest NON-STANDING dated entries
      first (feedback/decision/reference/user are "standing" and shed last); but
@@ -101,15 +104,36 @@ def date_key(fn: str) -> str:
 
 
 def cap_line(line: str, m: "re.Match") -> str:
+    """Trim an over-long index entry to MAX_LINE chars, preserving the pointer.
+
+    The variable ("hook") text can live INSIDE the [title] brackets - the current
+    one-liner style, where `rest` is empty - or AFTER the link in `rest` - the
+    older "pointer + short hook" style. Either way the rendered line is capped to
+    MAX_LINE. The link `](file)` is always kept whole so the beat stays grep-able,
+    and because the title is trimmed from its TAIL, the leading `** ACTIVE` /
+    `** START HERE` pin marker survives (so is_pinned still classifies the entry).
+
+    The old implementation only trimmed `rest`: it built prefix=`- [title](file)`
+    with the FULL title, so a title-heavy entry made avail negative and the line
+    was returned UNCAPPED - which is why a 96-entry index sat at ~108KB, 4.4x over
+    budget, every entry a 1000-4000 char one-liner. Capping the title fixes that.
+    """
     if len(line) <= MAX_LINE:
         return line
-    prefix = f"- [{m.group('title')}]({m.group('file')})"
-    rest = m.group("rest")  # usually ": hook text"
-    avail = MAX_LINE - len(prefix) - 1
-    if avail < 0:
-        return prefix  # pathologically long title/link: keep the pointer only
-    rest = rest[:avail].rstrip() + "…"
-    return prefix + rest
+    title = m.group("title")
+    link = "](" + m.group("file") + ")"
+    rest = m.group("rest")  # older style: short hook text AFTER the link
+    fixed = len("- [") + len(link)   # head + pointer: always kept whole
+    avail = MAX_LINE - fixed         # chars left for the title + rest text
+    if avail <= 0:
+        return "- [" + link  # link alone exceeds budget: keep the bare pointer
+    if len(title) >= avail:
+        # Title alone overflows the text budget: trim the title tail, drop rest.
+        return "- [" + title[:avail - 1].rstrip() + "…" + link
+    # Title fits; spend the remaining budget on the trailing rest, trimmed. For a
+    # short-title/long-rest entry this reduces to the old rest-cap exactly.
+    rest_avail = avail - len(title)
+    return "- [" + title + link + rest[:rest_avail - 1].rstrip() + "…"
 
 
 def byte_size(header, entries) -> int:
