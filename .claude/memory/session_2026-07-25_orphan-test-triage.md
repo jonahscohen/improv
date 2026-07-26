@@ -5,7 +5,7 @@ type: project
 author_human: Jonah
 author_model: claude-opus-4-8
 source: session
-verified: tests (ran every ungated suite twice; proposed set 52/52 green)
+verified: tests (ran every ungated suite twice; proposed set 52/52 green). LEAD-INTEGRATED 2026-07-26: added all 52 to scripts/run-tests.ts, full gate = 140 suites no-drop (88->140, ~40% more real coverage incl the build-report subsystem which had ZERO gated coverage). ts-node under-load flake did NOT bite this run; retry-once wrapper flagged as a follow-up if it recurs in CI. 21 routing tests + 1 broken jest-style + 1 stale craft-length test held for separate handling.
 confidence: high
 relates_to: [session_2026-07-24_simplification-plan.md, session_2026-07-25_routing-consolidation.md]
 ---
