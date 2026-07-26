@@ -53,6 +53,9 @@ Joined the `grounding` cluster alongside its two siblings: `install.sh` (`cluste
 
 **Live now, no restart needed for the gate itself** - Claude Code reads `settings.json` per hook invocation, and the hook was invoked live from the registered path. The updated ruleset TEXT lands at the next SessionStart (or on the next "concise on").
 
+## Commit
+`7179d597` - hooks: add concise-detect-stop Stop gate for tangents and over-cap lists (branch main, not pushed).
+
 ## Files touched
 - `claude/hooks/concise-detect-stop.sh` (new)
 - `claude/hooks/test-concise-detect-stop.sh` (new)
