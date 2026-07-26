@@ -83,7 +83,7 @@ export class FlowCFontResearchHandler extends BaseFlowHandler {
       const guidance = [
         `Brand personality: ${brandPersonality || 'Not defined'}`,
         '',
-        'Typography Domain Rules (16 principles):',
+        `Typography Domain Rules (${typographyRules.length} principles):`,
         ...typographyRules,
         '',
         'Font Pairing Strategy:',

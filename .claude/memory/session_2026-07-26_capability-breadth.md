@@ -90,13 +90,40 @@ Two rules appended to `typography.rules` (after the typeface line), in existing 
 
 ## Verification (finalized)
 
-- `npm run build` green (exit 0) - generators + tsc, no drift.
-- new test PASSES via ts-node.
-- Codex review: see final section below.
-- dist restored to HEAD (source-only diff); run-tests.ts NOT edited (entry reported to lead); NOT committed.
+- `npm run build` green (exit 0) - generate-lanes/validators/counter-rules + tsc, no drift.
+- new test PASSES via ts-node (both rules present, clamp WCAG-1.4.4 caveat, two-family cap, consistency, emission).
+- Negative controls (scratchpad, proved each load-bearing assertion BITES): stripping the clamp WCAG/rem caveat
+  -> clampOk FALSE; removing the two-family cap -> pairCapOk FALSE; removing a handler's map+spread -> emits FALSE
+  (both handlers); injecting 'Roboto'/'Times New Roman' -> disallowed-face guard fires. Not vacuous.
+- Codex 0.142.5, TWO foreground rounds:
+  - R1: 4 findings (no blockers). (1) MED content: "Never pair two faces from the same class" overbroad ->
+    SOFTENED to allow same-class pairs with a real contrast axis (weight/width/optical-size/era), serif+sans
+    the safe default. (2) MED test: emission guard matched ANY `.typography.rules` reference (incl. non-emitting
+    ones) -> TIGHTENED to require the actual map+SPREAD shape, tracing domain-local -> mapped-local -> spread.
+    (3) MED test: no rejection of disallowed faces -> ADDED a DISALLOWED_FACES negative guard. (4) LOW test:
+    bare `200%` could satisfy the WCAG check -> now requires literal `WCAG 1.4.4`. Codex independently confirmed
+    the pure-vw / WCAG-1.4.4 claim is CORRECT (cited W3C F94). All 4 folded + each backed by a negative control.
+  - R2: all 4 folds confirmed addressed, NO new content defect. R2's one new finding (the test is absent from
+    scripts/run-tests.ts SUITES) is the EXPECTED reporting-contract gap, not a code defect: I was told not to
+    touch run-tests.ts and to report the entry for the lead. Handled below, not by editing the runner.
+- dist restored to HEAD (source-only diff: design-laws.ts M + new test ??); run-tests.ts NOT edited; NOT committed.
 
-run-tests entry for the lead to add:
+run-tests entry for the lead to add (keeps alph.-ish grouping with the other typography/typeface suites):
 `{ rel: 'src/__tests__/typography-fluid-pairing.test.ts', required: true },`
+
+### Self-analysis (why the emission guard took three passes)
+The source-scraping emission guard was FIRST too narrow (literal `SHARED_DESIGN_LAWS.typography.rules` only -
+failed immediately because font-research emits through a local alias), then after fixing that it was too LOOSE
+(a bare reference passed - Codex R1 caught it). Failure mode: I asserted TOKEN PRESENCE instead of the
+load-bearing SHAPE. Lesson for future source-guards: assert the actual dataflow shape you care about
+(here: map -> spread into the guidance array), not that a symbol merely appears. The test's own first-run
+failure (too narrow) and Codex's R1 (too loose) bracketed the correct assertion from both sides.
+
+### Flagged in passing (NOT fixed - out of scope)
+flow-handler-font-research.ts:86 hardcodes the guidance label `'Typography Domain Rules (16 principles):'`.
+That count was already stale before this change (typography.rules had 9 entries, not 16) and my two additions
+make it 11 - still not 16. It is a pre-existing literal, unrelated to the guidance additions; deriving it from
+`.length` is a handler-logic change out of this task's scope. Flagged for a separate task.
 
 ## Deliberately left (so it is not mistaken for done)
 
