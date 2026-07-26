@@ -64,7 +64,6 @@ import { FlowXCopywritingHandler } from './flow-handler-copywriting';
 import { FlowHandlerCache, globalPerformanceCache } from './flow-performance-cache';
 import { FlowSpecificValidator } from './flow-specific-validators';
 import { FlowMetricsTracker, globalMetricsTracker } from './flow-metrics-tracker';
-import { FlowConditionalRouter } from './flow-conditional-router';
 import { ClaudemdMandateValidator } from './clausemd-mandate-validator';
 import { BuildReport, computeVerdict, passRateToLetter, SeverityCounts, FindingEntry, LetterGrade } from './build-report-types';
 import { generateBuildReport, renderBuildReportMarkdown } from './build-report-aggregator';
@@ -653,16 +652,6 @@ export class FlowExecutionEngine {
       userId: context?.userId,
       metadataKeys: context?.metadata ? Object.keys(context.metadata) : [],
     });
-  }
-
-  private determineConditionalFlow(context: FlowExecutionContext): string | null {
-    // Evaluate conditional execution routing
-    return FlowConditionalRouter.determineRoute(context) || null;
-  }
-
-  private getExecutablePath(context: FlowExecutionContext): string[] {
-    // Get the conditional execution path for a context
-    return FlowConditionalRouter.getExecutablePath(context);
   }
 
   async process(utterance: string, context: Partial<FlowExecutionContext> = {}): Promise<SidecoachResult> {

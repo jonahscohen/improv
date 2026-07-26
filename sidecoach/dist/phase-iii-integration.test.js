@@ -4,7 +4,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const flow_specific_validators_1 = require("./flow-specific-validators");
 const flow_metrics_tracker_1 = require("./flow-metrics-tracker");
-const flow_conditional_router_1 = require("./flow-conditional-router");
 const flow_performance_cache_1 = require("./flow-performance-cache");
 describe('Phase III: Integration Tests', () => {
     let metricsTracker;
@@ -153,69 +152,6 @@ describe('Phase III: Integration Tests', () => {
             expect(summary?.validationSummary.passed).toBe(4);
         });
     });
-    // ===== Conditional Routing Tests =====
-    describe('Conditional Flow Routing', () => {
-        test('Determines brand verify flow for brand keyword', () => {
-            const context = {
-                utterance: 'verify the brand',
-                userId: 'test',
-                projectPath: '/test',
-                metadata: {},
-            };
-            const route = flow_conditional_router_1.FlowConditionalRouter.determineRoute(context);
-            expect(route).toBe('flowA_brand_verify');
-        });
-        test('Determines component research flow', () => {
-            const context = {
-                utterance: 'research components',
-                userId: 'test',
-                projectPath: '/test',
-                metadata: {},
-            };
-            const route = flow_conditional_router_1.FlowConditionalRouter.determineRoute(context);
-            expect(route).toBe('flowB_component_research');
-        });
-        test('Design tokens flow requires prerequisites', () => {
-            const routes = flow_conditional_router_1.FlowConditionalRouter.buildConditionalRoutes();
-            const tokenRoute = routes.find(r => r.flowId === 'flowF_design_tokens');
-            expect(tokenRoute).toBeDefined();
-            expect(tokenRoute?.conditions.length).toBeGreaterThan(0);
-            expect(tokenRoute?.conditions[0].name).toBe('brand-verified');
-        });
-        test('Component implementation requires design tokens', () => {
-            const routes = flow_conditional_router_1.FlowConditionalRouter.buildConditionalRoutes();
-            const implRoute = routes.find(r => r.flowId === 'flowG_component_implementation');
-            expect(implRoute).toBeDefined();
-            expect(implRoute?.skipIfConditionFails).toBe(true);
-            expect(implRoute?.alternativeFlow).toBe('flowF_design_tokens');
-        });
-        test('Evaluates route conditions correctly', () => {
-            const route = {
-                flowId: 'flowF_design_tokens',
-                conditions: [
-                    {
-                        name: 'test-condition',
-                        description: 'Test',
-                        evaluate: (ctx) => !!ctx.metadata?.designTokens,
-                    },
-                ],
-                skipIfConditionFails: false,
-            };
-            const canExecute = flow_conditional_router_1.FlowConditionalRouter.evaluateRouteConditions(testContext, route);
-            expect(canExecute).toBe(true);
-        });
-        test('Executable path includes primary flow', () => {
-            const context = {
-                utterance: 'verify brand',
-                userId: 'test',
-                projectPath: '/test',
-                metadata: {},
-            };
-            const path = flow_conditional_router_1.FlowConditionalRouter.getExecutablePath(context);
-            expect(path.length).toBeGreaterThan(0);
-            expect(path[0]).toBe('flowA_brand_verify');
-        });
-    });
     // ===== Performance Cache Tests =====
     describe('Performance Optimization Cache', () => {
         test('Caches handler results', () => {
@@ -345,20 +281,6 @@ describe('Phase III: Integration Tests', () => {
             }
             const duration = Date.now() - start;
             expect(duration).toBeLessThan(200); // 100 validations in < 200ms
-        });
-        test('Conditional routing performance', () => {
-            const context = {
-                utterance: 'verify brand',
-                userId: 'test',
-                projectPath: '/test',
-                metadata: {},
-            };
-            const start = Date.now();
-            for (let i = 0; i < 100; i++) {
-                flow_conditional_router_1.FlowConditionalRouter.determineRoute(context);
-            }
-            const duration = Date.now() - start;
-            expect(duration).toBeLessThan(50); // 100 route determinations in < 50ms
         });
     });
     // ===== End-to-End Integration =====

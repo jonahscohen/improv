@@ -85,7 +85,6 @@ const flow_handler_copywriting_1 = require("./flow-handler-copywriting");
 const flow_performance_cache_1 = require("./flow-performance-cache");
 const flow_specific_validators_1 = require("./flow-specific-validators");
 const flow_metrics_tracker_1 = require("./flow-metrics-tracker");
-const flow_conditional_router_1 = require("./flow-conditional-router");
 const clausemd_mandate_validator_1 = require("./clausemd-mandate-validator");
 const build_report_types_1 = require("./build-report-types");
 const build_report_aggregator_1 = require("./build-report-aggregator");
@@ -593,14 +592,6 @@ class FlowExecutionEngine {
             userId: context?.userId,
             metadataKeys: context?.metadata ? Object.keys(context.metadata) : [],
         });
-    }
-    determineConditionalFlow(context) {
-        // Evaluate conditional execution routing
-        return flow_conditional_router_1.FlowConditionalRouter.determineRoute(context) || null;
-    }
-    getExecutablePath(context) {
-        // Get the conditional execution path for a context
-        return flow_conditional_router_1.FlowConditionalRouter.getExecutablePath(context);
     }
     async process(utterance, context = {}) {
         // Step 0: Load project context (PRODUCT.md, DESIGN.md, register detection)
