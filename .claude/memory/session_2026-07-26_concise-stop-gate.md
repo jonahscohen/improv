@@ -51,7 +51,7 @@ Skips entirely when: `~/.claude/.concise-disabled` exists, the user's last promp
 
 Joined the `grounding` cluster alongside its two siblings: `install.sh` (`cluster_hooks` list + the FILES display string 6 -> 7 grounding hooks), `claude/hooks/browser-tree.json` (`hook_owner`, `hook_desc`, grounding node tag/desc/hooks), `claude/hooks/cluster-wirings.json` (Stop registration). The wiring command string matches live `~/.claude/settings.json` exactly so install dedupes. Registered live on Stop (backup `~/.claude/settings.json.bak.20260726_194016`; diff is the 9 added lines only, no reformatting) and symlinked both new files into `~/.claude/hooks/` per the repo's per-file convention.
 
-**Live now, no restart needed for the gate itself** - Claude Code reads `settings.json` per hook invocation, and the hook was invoked live from the registered path. The updated ruleset TEXT lands at the next SessionStart (or on the next "concise on").
+**NEEDS RESTART.** Claude Code reads hook registrations at session start, so already-running sessions will not fire the new Stop entry - a fresh session (or restart) picks it up, exactly as the original concise pair did. The hook itself is proven working by direct invocation from the registered path `~/.claude/hooks/concise-detect-stop.sh`. The updated ruleset TEXT also lands at the next SessionStart (or immediately on "concise on", which re-injects from `--emit-body`).
 
 ## Commit
 `7179d597` - hooks: add concise-detect-stop Stop gate for tangents and over-cap lists (branch main, not pushed).
