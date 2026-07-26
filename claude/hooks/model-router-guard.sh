@@ -37,7 +37,10 @@ if [ "$TOOL" = "Bash" ]; then
 
   if echo "$CMD" | grep -qiE 'fable[-_]?router'; then
     REASON="BLOCKED (non-negotiable): fable-router is forbidden. Claude never routes to another model, automatically or otherwise. Stay on the session model; if a different model seems needed, ask the user."
-  elif echo "$CMD" | grep -qE '(^|[[:space:];|&])claude([[:space:]]+[^;|&]*)?[[:space:]]--(model|fallback-model)([[:space:]=]|$)'; then
+  elif echo "$CMD" | grep -qE '(^|[;|&(][[:space:]]*)claude([[:space:]]+[^;|&]*)?[[:space:]]--(model|fallback-model)([[:space:]=]|$)'; then
+    # `claude` must be at a COMMAND position (start, or after ; | & ( ) - not merely preceded by a
+    # space - so a bare `claude --model X` override is blocked while an arg like `--provider claude
+    # --model gemini-3.6-flash` to ANOTHER tool (the sidecoach eval harness) is not false-blocked.
     REASON="BLOCKED (non-negotiable): claude --model/--fallback-model overrides the session model. Model choice belongs to the user alone - never set it from a command."
   elif echo "$CMD" | grep -qE '(^|[[:space:];|&])(export[[:space:]]+)?ANTHROPIC_MODEL='; then
     REASON="BLOCKED (non-negotiable): setting ANTHROPIC_MODEL re-routes work to another model. Model choice belongs to the user alone."
