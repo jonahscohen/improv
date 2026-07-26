@@ -131,6 +131,19 @@ delivered with a correct verdict is invisible to a verdict-only test. Added:
 `expect_advice` plus three cases pinning the notice text in both directions. They
 score FAIL against the intermediate version on exactly the case the lead saw.
 
+## Commits
+
+- `d891ed1a` - the fix: `claude/hooks/agent-teams-guard.sh` (teammate detection +
+  exemption) plus the initial suite and this beat. The hook has not been touched
+  since.
+- `d8ff9645` - `claude/hooks/test-agent-teams-guard.sh` advice-direction cases
+  (27 total) plus the beat update covering the lead's live repro. Test-and-beat
+  only.
+
+Both files are tracked at HEAD and the committed hook content is byte-for-byte
+identical to the live `~/.claude/hooks/agent-teams-guard.sh`, so there is no
+uncommitted drift of the kind that produced the misfire window.
+
 ## Verification
 
 - `claude/hooks/test-agent-teams-guard.sh` (new): **27 passed, 0 failed**.
