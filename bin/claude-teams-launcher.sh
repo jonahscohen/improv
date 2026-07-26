@@ -72,6 +72,20 @@ function _claude_teams_maybe_rc() {
 }
 
 function _claude_teams_launch() {
+  # Preflight the external cmux dependency BEFORE launching a team. This path
+  # drives the `cmux` binary directly; a missing or too-old cmux otherwise fails
+  # cryptically mid-launch. The shared guard (claude/cmux/cmux-preflight.sh)
+  # checks presence + the pinned minimum (claude/cmux/cmux.version) and exits
+  # non-zero when unmet. On failure, fall back to a standard session rather than
+  # bricking the shell - the guard has already printed what is wrong and how to
+  # fix it. (Skipped silently if the guard is not installed.)
+  local _cmux_pf="$HOME/.claude/cmux/cmux-preflight.sh"
+  if [ -x "$_cmux_pf" ] && ! "$_cmux_pf" --quiet; then
+    printf "cmux preflight failed; launching a standard session instead of Teams.\n" >&2
+    _claude_teams_passthrough "$@"
+    return $?
+  fi
+
   # RC is asked first within the launch (i.e. right after the Teams prompt) and,
   # matching the terminal launcher, takes precedence over Discord: opting into
   # Remote Control skips the Discord question entirely.

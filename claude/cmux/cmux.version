@@ -1,0 +1,15 @@
+# cmux dependency pin (the "required version" record).
+#
+# cmux is an EXTERNAL, unvendored macOS app (/Applications/cmux.app) that this
+# repo's hooks and launchers introspect and drive. It has no in-repo binary and
+# no upstream version lock, which is why the dependency-map flags it as the
+# highest-risk dependency (finding 10). This file is the durable pin: the
+# minimum cmux version the in-repo consumers have been verified against.
+#
+# cmux-preflight.sh reads the FIRST non-comment, non-blank line below as the
+# required MAJOR.MINOR.PATCH and refuses (fail-closed) when the live cmux is
+# missing or older. Bump this line when you re-verify the consumers against a
+# newer cmux (see reference_cmux_dependency.md for the update procedure).
+#
+# Verified against: cmux 0.64.20 (build 100) on 2026-07-26.
+0.64.20
