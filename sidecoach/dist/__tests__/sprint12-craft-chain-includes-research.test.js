@@ -10,7 +10,7 @@ async function run() {
         checks.push(['T1.2: craft.flowIds includes flowE_motion_patterns', craft.flowIds.includes('flowE_motion_patterns')]);
         checks.push(['T1.2: craft.flowIds includes flowH_motion_integration', craft.flowIds.includes('flowH_motion_integration')]);
         checks.push(['T1.2: craft.flowIds includes flowI_accessibility', craft.flowIds.includes('flowI_accessibility')]);
-        checks.push(['T1.3: craft.flowIds has 8 entries', craft.flowIds.length === 8]);
+        checks.push(['T1.3: craft.flowIds has 11 entries', craft.flowIds.length === 11]);
         // Order check: B before G, E before H (prereq order)
         const idx = (id) => craft.flowIds.indexOf(id);
         checks.push(['T1.4: flowB precedes flowG (prereq order)', idx('flowB_component_research') < idx('flowG_component_implementation')]);
