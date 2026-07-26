@@ -116,6 +116,7 @@ const SUITES: Suite[] = [
   { rel: 'eval/migration-harness/routing-snapshot.mjs', runner: 'node', args: ['verify'], required: true },      // flow routing goldens
   { rel: 'eval/migration-harness/convergence-snapshot.mjs', runner: 'node', args: ['verify'], required: true },  // convergence goldens
   { rel: 'eval/migration-harness/buildreport-snapshot.mjs', runner: 'node', args: ['verify'], required: true },  // BuildReport golden (deterministic fields)
+  { rel: 'eval/prose-ablation.mjs', runner: 'node', args: ['--self-test'], required: true },                    // Stage 1d prose-ablation: seeded priming/protective ordering assertion (dry-run, no keys)
   // EVAL-CORPUS INTEGRITY (wired 2026-07-24). `verify-candidates` is the freeze gate on the
   // claim-bearing 90-page corpus: it re-hashes every page's canonical record (labels, file
   // content, split, provenance) against lock-candidates.json, so it is what stops a corpus

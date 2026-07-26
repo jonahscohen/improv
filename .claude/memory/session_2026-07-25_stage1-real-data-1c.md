@@ -6,7 +6,7 @@ relates_to: [session_2026-07-25_pull-tight-leading-blinking-cursor.md]
 author_human: Jonah
 author_model: claude-opus-4.8
 source: session
-verified: CORE 1c DONE - 87 suites green (incl counter-rules 81 asserted), npm run build green (generate + --check no drift), Codex "Findings: None" + independently re-derived the 13 rules from the distribution and confirmed byte-match + raw/distribution consistency. Committing core; wiring is a flagged Jonah decision.
+verified: DONE + PUSHED (971070a5 core + 92075d8c CLI, origin/main). 87 suites, npm run build clean (generate + --check), Codex Findings:None + re-derived byte-match. CLI surface verified live (3 cases + help/list regression). Gap 2 CLOSED.
 confidence: high
 ---
 
