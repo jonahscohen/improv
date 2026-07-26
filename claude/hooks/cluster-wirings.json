@@ -384,5 +384,16 @@
     "timeout": 5
    }
   }
+ ],
+ "concise-detect-stop.sh": [
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/concise-detect-stop.sh",
+    "timeout": 10
+   }
+  }
  ]
 }
