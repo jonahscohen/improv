@@ -31,6 +31,18 @@
 # pane, PROVIDED the shim fix is in place (cmux regenerates the stock shim per
 # session). The pass-path notice points the spawner at that dependency.
 # team-reaper.sh cleans up the per-session team/task dirs on session end.
+#
+# HISTORY (2026-07-26, Jonah): every gate below is a LEAD-session concern - it
+# exists to make a spawn land as a visible cmux pane. A teammate has no pane to
+# spawn into, and the agent-teams runtime REJECTS a named spawn that originates
+# from a teammate ("Teammates cannot spawn other teammates - the team roster is
+# flat"). So inside a teammate this hook's name REQUIREMENT and the runtime's name
+# PROHIBITION cancelled out and no spawn shape was possible at all: unnamed was
+# denied here, named was denied there. A teammate session could not delegate
+# (fan-out, independent reviewers) and had to do everything inline. Fix: a
+# teammate context is EXEMPT from every gate in this hook. The lead's
+# named-teammate mandate is untouched. See
+# session_2026-07-26_teammate-spawn-hook-contradiction-fix.md.
 
 set -euo pipefail
 
@@ -57,6 +69,117 @@ emit_allow_with_notice() {
   python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','additionalContext':sys.argv[1]}}))" "$1"
   exit 0
 }
+
+# --- teammate vs lead context -------------------------------------------------
+# A teammate inherits CMUX_SOCKET_PATH and CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
+# from the lead, so the mode check above cannot tell the two apart. Detect the
+# teammate case explicitly and exempt it (see the 2026-07-26 history note).
+#
+# Either ONE signal is enough. Exempting is the fail-safe direction: a missed
+# teammate deadlocks delegation entirely, while a misread lead only loses a
+# spawn-shape nudge.
+#   1. transcript records carrying `teamName` or `isSidechain: true` - the same
+#      signal memory-nudge.sh and verify-before-done.sh already key off. Verified
+#      2026-07-26: a teammate transcript carries teamName from record 3 onward; a
+#      lead transcript carries neither. An in-process sidechain subagent of the
+#      LEAD trips isSidechain and is exempted too, which is correct - it has no
+#      pane of its own either.
+#   2. an ancestor process argv carrying --agent-id / --agent-name /
+#      --parent-session-id - the flags the harness launches a teammate with.
+#      CAUTION: the LEAD's argv carries --teammate-mode, so never match on the
+#      word "teammate" here; only those three flags are teammate-only.
+#
+# REJECTED SIGNAL - do not re-add: CLAUDE_CODE_CHILD_SESSION. It reads like a
+# teammate marker and IS present in a teammate's hook env, but claude.exe sets it
+# unconditionally on every process it spawns, in every session - it is hardcoded
+# next to CLAUDECODE / CLAUDE_PID in the child-env builder, with no teammate
+# condition. Keying off it exempted the LEAD too, silently voiding the mandate
+# this hook exists for (caught by an independent review, 2026-07-26). Note the
+# trap that produced it: `ps eww` on the lead's own pid shows the lead's EXEC-time
+# env, which cannot show what claude passes to its CHILDREN, so the var looks
+# teammate-only when checked that way. Inspect a lead-spawned child process
+# instead.
+#
+# Seams: AGENT_TEAMS_GUARD_FORCE_CONTEXT=teammate|lead is a break-glass and the
+# hermetic-test hook; AGENT_TEAMS_GUARD_PS points the ancestor walk at a stub ps.
+# Both are ambient env, so the emitted notice names whichever signal fired - a
+# stray export is then diagnosable from the transcript instead of invisible.
+PS_BIN="${AGENT_TEAMS_GUARD_PS:-ps}"
+
+_transcript_says_teammate() {
+  printf '%s' "$INPUT" | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    print("0"); sys.exit(0)
+path = data.get("transcript_path") or ""
+if not path:
+    print("0"); sys.exit(0)
+try:
+    with open(path) as fh:
+        for i, line in enumerate(fh):
+            if i > 20:  # only the header + first few records carry these
+                break
+            try:
+                d = json.loads(line)
+            except Exception:
+                continue
+            if d.get("isSidechain") is True or d.get("teamName"):
+                print("1"); sys.exit(0)
+except OSError:
+    pass
+print("0")
+' 2>/dev/null || printf '0'
+}
+
+_ancestor_is_teammate() {
+  local p cmd i
+  p="${PPID:-}"
+  [ -n "$p" ] || return 1
+  i=0
+  while [ -n "$p" ] && [ "$p" != "0" ] && [ "$p" != "1" ] && [ "$i" -lt 12 ]; do
+    # -ww: BSD/macOS ps truncates `command` to the terminal width unless widened.
+    # The teammate flags sit early in argv so truncation has not been observed,
+    # but a long wrapper path could push them past the cut and misread a teammate
+    # as the lead - which is the deadlock direction. (Codex review, 2026-07-26.)
+    cmd=$("$PS_BIN" -ww -o command= -p "$p" 2>/dev/null) || cmd=""
+    case "$cmd" in
+      *--agent-id*|*--agent-name*|*--parent-session-id*) return 0 ;;
+      # A claude session WITHOUT those flags is the lead. Stop there rather than
+      # walking on into cmux/login/launchd.
+      */claude.exe*|*/claude\ *) return 1 ;;
+    esac
+    p=$("$PS_BIN" -o ppid= -p "$p" 2>/dev/null | tr -d '[:space:]') || p=""
+    i=$((i + 1))
+  done
+  return 1
+}
+
+TEAMMATE_SIGNAL=""
+
+is_teammate_context() {
+  case "${AGENT_TEAMS_GUARD_FORCE_CONTEXT:-}" in
+    teammate) TEAMMATE_SIGNAL="AGENT_TEAMS_GUARD_FORCE_CONTEXT=teammate"; return 0 ;;
+    lead)     return 1 ;;
+  esac
+  if [ "$(_transcript_says_teammate)" = "1" ]; then
+    TEAMMATE_SIGNAL="transcript teamName/isSidechain"
+    return 0
+  fi
+  if _ancestor_is_teammate; then
+    TEAMMATE_SIGNAL="ancestor argv --agent-id"
+    return 0
+  fi
+  return 1
+}
+
+# Teammate: exempt from every gate below, and never deny. Denying the named shape
+# too (the runtime rejects it) would only re-create the deadlock from the other
+# side if detection ever misread a lead, so this path only ever advises.
+if is_teammate_context; then
+  emit_allow_with_notice "Teammate context (detected via: ${TEAMMATE_SIGNAL}): this session is a spawned teammate, not the lead, so the cmux-teams spawn gates (name required, no run_in_background, no Workflow) do NOT apply - a teammate has no pane of its own to spawn into. Spawn UNNAMED in-process subagents: Agent({subagent_type, prompt}). Do NOT pass name (or team_name): the runtime rejects a named spawn from a teammate with 'Teammates cannot spawn other teammates - the team roster is flat'. Relay results to the lead with SendMessage."
+fi
 
 # Workflow spawns silent in-process subagents that can never appear as cmux
 # splits. In cmux-teams mode that defeats the team flow, so it is hard-blocked.
