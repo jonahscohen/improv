@@ -196,6 +196,48 @@ assert_allows "prose quoting the command, same state"    "echo 'now git commit -
 rm -f "$FAKE_HOME/.claude/.needs-verification.global"
 
 echo ""
+echo "===== gate 2 NARROWING: deletions + non-app paths must NOT block the commit (2026-07-26) ====="
+# The gate re-derives "is this renderable source" from the STAGED files. A staged DELETION of a
+# visual file, or a staged file under docs//fixtures//eval//scratchpad/ or a *.test.*, cannot be
+# screenshotted and must NOT block - these false-blocked commits and cost manual overrides. Real
+# product UI staged in the same repo MUST still block (recall). Each case builds its own repo so the
+# staged set is exactly the file under test.
+mk_repo_staged() {  # $1=path $2=content ; stages an ADD of the file, echoes the repo dir
+  local d; d=$(mktemp -d)
+  ( cd "$d" && git init -q . && git config user.email t@t && git config user.name t \
+    && mkdir -p "$(dirname "$1")" && printf '%s' "$2" > "$1" && git add -A ) >/dev/null 2>&1
+  echo "$d"
+}
+mk_repo_deleted() {  # $1=path $2=content ; commits the file then stages its DELETION
+  local d; d=$(mktemp -d)
+  ( cd "$d" && git init -q . && git config user.email t@t && git config user.name t \
+    && mkdir -p "$(dirname "$1")" && printf '%s' "$2" > "$1" && git add -A \
+    && git commit -qm seed && git rm -q "$1" ) >/dev/null 2>&1
+  echo "$d"
+}
+REPO_DEL_HTML=$(mk_repo_deleted page.html '<html></html>')
+REPO_DEL_FIX=$(mk_repo_deleted sidecoach/eval/fixtures/f.html '<i>')
+REPO_DOCS=$(mk_repo_staged docs/dependency-map/index.html '<html>')
+REPO_FIXNEW=$(mk_repo_staged sidecoach/eval/fixtures/new.html '<html>')
+REPO_SCRATCH=$(mk_repo_staged scratchpad/x.html '<html>')
+REPO_TESTF=$(mk_repo_staged src/Button.test.tsx 'x')
+REPO_REAL_TSX=$(mk_repo_staged src/components/Foo.tsx 'x')
+REPO_REFSITE=$(mk_repo_staged reference-site/pages/Home.tsx 'x')
+
+: > "$FAKE_HOME/.claude/.needs-verification.global"
+assert_allows "staged DELETION of page.html does not block"        'git commit -m x' "$REPO_DEL_HTML"
+assert_allows "staged DELETION of eval fixture does not block"     'git commit -m x' "$REPO_DEL_FIX"
+assert_allows "staged docs/dependency-map/index.html does not block" 'git commit -m x' "$REPO_DOCS"
+assert_allows "staged NEW eval/fixtures/new.html does not block"   'git commit -m x' "$REPO_FIXNEW"
+assert_allows "staged scratchpad/x.html does not block"            'git commit -m x' "$REPO_SCRATCH"
+assert_allows "staged src/Button.test.tsx does not block"          'git commit -m x' "$REPO_TESTF"
+# RECALL: real product UI (and a segment look-alike of the exemptions) MUST still block.
+assert_blocks "staged real src/components/Foo.tsx STILL blocks"    'git commit -m x' "$REPO_REAL_TSX"
+assert_blocks "staged reference-site/Home.tsx STILL blocks (not 'reference/')" 'git commit -m x' "$REPO_REFSITE"
+rm -f "$FAKE_HOME/.claude/.needs-verification.global"
+rm -rf "$REPO_DEL_HTML" "$REPO_DEL_FIX" "$REPO_DOCS" "$REPO_FIXNEW" "$REPO_SCRATCH" "$REPO_TESTF" "$REPO_REAL_TSX" "$REPO_REFSITE"
+
+echo ""
 echo "===== gate 2 CROSS-SESSION ISOLATION (the 2026-07-18 all-projects leak) ====="
 # Before keying, .needs-verification was ONE global file: session A arming it (a .css edit in
 # project A) blocked commits in session B / project B. Now the flag is session-keyed, so the

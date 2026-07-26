@@ -170,6 +170,70 @@ PY
 )
 chk "stop VISUAL_EXTS is a superset of the arm side" "ok" "$EXT_CHECK"
 
+echo ""
+echo "===== STOP GATE: deletions + non-app dev/test/scratch paths are NOT visual evidence (2026-07-26) ====="
+# A visual file that is a DELETION, or lives under docs//fixtures//eval//scratchpad/ or is a
+# *.test.*, renders nothing to screenshot. These false-blocked turns and cost manual overrides.
+# The flag stays "visual" (armed by some earlier reverted/mentioned change); only the tree
+# corroboration changes. Real product UI in the tree must STILL block (recall rows at the end).
+# committed helper: build a repo, stage/commit, then delete a file so the tree shows a deletion.
+gmk_del() { local d; d=$(gmk "$1"); ( cd "$d" && printf '%s' "$3" > "$2" && git add -A \
+  && git -c user.email=t@t -c user.name=t commit -qm seed && rm -f "$2" ) >/dev/null 2>&1; echo "$d"; }
+
+D_DELHTML=$(gmk_del del-html page.html '<html></html>')
+chk_stop "a DELETED .html is not visual evidence -> allow"     "allow" "$D_DELHTML"
+D_DELCSS=$(gmk_del del-css src/App.css 'a{}')
+chk_stop "a DELETED real .css is not visual evidence -> allow" "allow" "$D_DELCSS"
+# staged deletion of an eval fixture (git rm leaves a staged D record).
+D_DELFIX=$(gmk del-fix); mkdir -p "$D_DELFIX/eval/fixtures"; printf '<i>' > "$D_DELFIX/eval/fixtures/f.html"
+( cd "$D_DELFIX" && git add -A && git -c user.email=t@t -c user.name=t commit -qm s && git rm -q eval/fixtures/f.html ) >/dev/null 2>&1
+chk_stop "staged DELETION of eval/fixtures/f.html -> allow"    "allow" "$D_DELFIX"
+# untracked non-app visual files: dev-doc, scratchpad, fixtures, test-probe - none is a surface.
+D_DOCS=$(gmk docsdoc); mkdir -p "$D_DOCS/docs/dependency-map"; printf '<html>' > "$D_DOCS/docs/dependency-map/index.html"
+chk_stop "untracked docs/dependency-map/index.html -> allow"   "allow" "$D_DOCS"
+D_SCR=$(gmk scratchdir); mkdir -p "$D_SCR/scratchpad"; printf '<html>' > "$D_SCR/scratchpad/x.html"
+chk_stop "untracked scratchpad/x.html -> allow"                "allow" "$D_SCR"
+D_FIX=$(gmk fixdir); mkdir -p "$D_FIX/src/__fixtures__"; printf '<i>' > "$D_FIX/src/__fixtures__/card.html"
+chk_stop "untracked src/__fixtures__/card.html -> allow"       "allow" "$D_FIX"
+D_TST=$(gmk testfile); mkdir -p "$D_TST/src"; printf 'x' > "$D_TST/src/Button.test.tsx"
+chk_stop "untracked src/Button.test.tsx -> allow"              "allow" "$D_TST"
+# RECALL: segment look-alikes and real UI must STILL block.
+D_REFSITE=$(gmk refsite); mkdir -p "$D_REFSITE/reference-site/pages"; printf 'x' > "$D_REFSITE/reference-site/pages/Home.tsx"
+chk_stop "untracked reference-site/pages/Home.tsx BLOCKS (not 'reference/')" "block" "$D_REFSITE"
+D_REALADD=$(gmk realadd); mkdir -p "$D_REALADD/src/components"; printf 'x' > "$D_REALADD/src/components/Card.css"
+chk_stop "untracked real src/components/Card.css BLOCKS (recall)"           "block" "$D_REALADD"
+
+echo ""
+echo "===== 3-WAY NON-APP EXEMPTION LITERALS AGREE (arm / stop / commit) ====="
+# The arm hook, the Stop corroboration, and the bash-guard commit gate each carry their OWN copy of
+# the non-app dir pattern. If they drift, the three gates disagree on what is product UI and a false
+# fire creeps back into one of them. Assert the literal is byte-identical in all three.
+NON_APP_SYNC=$(python3 - "$HOOK_DIR/verify-before-done.sh" "$HOOK_DIR/verify-before-done-stop.sh" "$HOOK_DIR/bash-guard.sh" <<'PY'
+import re, sys
+want = r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|docs|reference|dependency-map|scratchpad)/"
+hits = [want in open(p).read() for p in sys.argv[1:]]
+print("ok" if all(hits) else "MISSING:" + ",".join(p for p, h in zip(sys.argv[1:], hits) if not h))
+PY
+)
+chk "non-app dir pattern is byte-identical in arm/stop/commit" "ok" "$NON_APP_SYNC"
+
+echo ""
+echo "===== ARM GATE: a SUBAGENT/teammate edit must NOT arm the (parent) session flag (2026-07-26) ====="
+# A sidechain/teammate edit is keyed by session_id and can land on the PARENT key, blocking the
+# parent Stop on work the parent never did. Subagents are already Stop-exempt, so they must arm
+# nothing. A top-level session (no sidechain marker) still arms exactly as before.
+SUB_TP="$TMP/sidechain.jsonl"; printf '%s\n' '{"isSidechain":true}' > "$SUB_TP"
+TOP_TP="$TMP/toplevel.jsonl";  printf '%s\n' '{"type":"summary"}'    > "$TOP_TP"
+arm_sub() {
+  rm -f "$FLAG"
+  python3 -c 'import json,sys;print(json.dumps({"tool_name":"Edit","transcript_path":sys.argv[1],"tool_input":{"file_path":sys.argv[2]}}))' "$1" "$2" \
+    | bash "$VBD" >/dev/null 2>&1
+  [ -f "$FLAG" ] && cat "$FLAG" || printf '(absent)'
+}
+chk "subagent .css edit arms NOTHING (absent)"        "(absent)" "$(arm_sub "$SUB_TP" "/proj/src/App.css")"
+chk "subagent .tsx edit arms NOTHING (absent)"        "(absent)" "$(arm_sub "$SUB_TP" "/proj/src/components/Foo.tsx")"
+chk "top-level .css edit STILL arms visual (control)" "visual"   "$(arm_sub "$TOP_TP" "/proj/src/App.css")"
+
 rm -rf "$GTMP"
 
 echo ""

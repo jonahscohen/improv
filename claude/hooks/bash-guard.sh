@@ -1588,13 +1588,24 @@ fi
 # BUT: allow documentation/config-only commits (SKILL.md, *.md, JSON files, etc.)
 if [ -z "$REASON" ] && is_real_git_commit; then
   if [ -f "$HOME/.claude/.needs-verification.$_SESSION_KEY" ]; then
-    # Check if staged files are documentation/config only
-    STAGED_FILES=$(git diff --cached --name-only 2>/dev/null)
+    # Check if staged files are documentation/config only.
+    # --diff-filter=d EXCLUDES deletions: a staged DELETION of a .html/.css cannot be screenshotted,
+    # so it must not trip the browser-verify gate. This is THE deleted-fixture false-block that cost
+    # manual overrides this month - the deletion still shows a visual PATH that the old --name-only
+    # scan read as renderable source (Jonah 2026-07-26).
+    STAGED_FILES=$(git diff --cached --name-only --diff-filter=d 2>/dev/null)
     HAS_SOURCE_CODE=false
 
     while IFS= read -r file; do
+      # Non-app dev/test/scratch paths (docs/, any fixtures/, eval/, reference/, dependency-map/,
+      # scratchpad/, *.test.*/*.spec.*): not product UI, so no browser verification is owed. Kept in
+      # step with the arm side (verify-before-done.sh is_exempt) and the Stop re-derivation so all
+      # three agree on what is not a rendered surface (Jonah 2026-07-26). This regex is asserted
+      # byte-identical to the Python _NON_APP_DIR_RE copies by test-verify-visual-gate.sh.
+      if echo "$file" | grep -qE '(^|/)(eval|fixtures|__fixtures__|test-fixtures|docs|reference|dependency-map|scratchpad)/|\.(test|spec)\.[A-Za-z0-9]+$'; then
+        continue
       # Documentation files: skip verification requirement
-      if echo "$file" | grep -qE '\.md$|SKILL\.md|DESIGN\.md|README|CHANGELOG'; then
+      elif echo "$file" | grep -qE '\.md$|SKILL\.md|DESIGN\.md|README|CHANGELOG'; then
         continue
       # Config files: skip verification requirement
       elif echo "$file" | grep -qE '\.json$|\.yml$|\.yaml$|\.lock$|\.eslintrc|tsconfig'; then

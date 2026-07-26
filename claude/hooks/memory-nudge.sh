@@ -192,10 +192,11 @@ if tool == "Bash":
     # token and dirties (out.txt is a real sink), and `tee /dev/null.log` / `/dev/nullx`
     # (a real named path, not the device) are not matched either.
     cmd_scan = _re.sub(r"\btee(?:\s+-\S+)*\s+/dev/null(?=\s*(?:$|[|&;)]|<|\d*>))", " ", cmd_scan)
-    # A redirect to session scratchpad / system-temp is not a PROJECT write (temp-file over-fire,
-    # 2026-07-26): strip `> /tmp/...` and `> /private/tmp/...` before the write-token scan, exactly
+    # A redirect to session SCRATCHPAD is not a PROJECT write (temp-file over-fire, 2026-07-26):
+    # strip a redirect whose target path contains /scratchpad/ before the write-token scan, exactly
     # as /dev/null is stripped above, so a backgrounded run logging to scratchpad does not dirty.
-    cmd_scan = _re.sub(r"(?:\d*|&)>>?\s*(?:/private)?/tmp/\S+", " ", cmd_scan)
+    # (Bare /tmp is NOT stripped - a throwaway project tree can live under /tmp/; only /scratchpad/ declassifies.)
+    cmd_scan = _re.sub(r"(?:\d*|&)>>?\s*\S*/scratchpad/\S+", " ", cmd_scan)
     # Commands that write files. Redirects are handled by _has_redirect below, NOT by bare
     # "> " / ">>" substrings: those also matched the "-> " ARROW. De-quoting (cmd_bare) already
     # neutralizes a QUOTED arrow, but an UNQUOTED arrow in a for/while/printf compound (not in
@@ -297,10 +298,11 @@ if is_memory:
     touch_last_memory_write()
     print("{}"); sys.exit(0)
 
-# A write to session scratchpad / system-temp is NOT a project change and must not arm the commit
-# dirty flag (the temp-file-write over-fire, flagged 2026-07-26). Scratchpad lives under
-# /private/tmp/.../scratchpad or /tmp; neither is tracked project content.
-if file_path.startswith(("/tmp/", "/private/tmp/")) or "/scratchpad/" in file_path:
+# A write to session SCRATCHPAD is NOT a project change and must not arm the commit dirty flag (the
+# temp-file-write over-fire, flagged 2026-07-26). Scratchpad lives under /private/tmp/.../scratchpad.
+# NOTE: bare /tmp is deliberately NOT excluded - tests and real callers put throwaway project trees
+# under /tmp/ (the test-nudge-debounce fixture uses /tmp/fake-project), so ONLY the explicit /scratchpad/ segment declassifies.
+if "/scratchpad/" in file_path:
     print("{}"); sys.exit(0)
 
 # Project file changed - set dirty flag and nudge

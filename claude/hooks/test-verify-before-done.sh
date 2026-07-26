@@ -497,10 +497,22 @@ assert_kind_path "src/components/Foo.tsx still arms visual (control)"   visual "
 assert_kind_path "styles/app.css still arms visual (control)"          visual "/Users/x/proj/src/styles/app.css"
 assert_kind_path "app/page.tsx still arms visual (control)"            visual "/Users/x/proj/app/page.tsx"
 # --- Anchor precision: a substring look-alike a NAIVE check would wrongly exempt MUST still arm. ---
-# preeval/fixtures/ contains the raw substring "eval/fixtures/" but has no "/eval/fixtures/" segment
-# boundary, and is not caught by the pre-existing "/eval/" substring either. A bare-substring rule
-# would exempt it (recall loss); the anchored (^|/)eval/(fixtures|corpus)/ regex must not.
-assert_kind_path "src/preeval/fixtures/x.html arms visual (anchor, not substring)" visual "/Users/x/proj/src/preeval/fixtures/x.html"
+# 2026-07-26: the _NON_APP_DIR_RE broadening added a bare fixtures/ segment (any fixtures/ dir is
+# test data), so src/preeval/fixtures/x.html is now EXEMPT via that segment - NOT via eval/. The
+# eval anchor itself is unchanged and still must NOT substring-match "preeval"; the row below pins
+# that with a NON-fixtures preeval path that must still arm.
+assert_kind_path "src/preeval/fixtures/x.html now exempt via bare fixtures/ segment" absent "/Users/x/proj/src/preeval/fixtures/x.html"
+assert_kind_path "src/preeval/pages/x.html arms visual (preeval is NOT eval)"        visual "/Users/x/proj/src/preeval/pages/x.html"
+# Segment look-alikes of the NEW dev-doc exemptions MUST still arm - reference-site/ is not
+# reference/, docs-panel/ is not docs/. A substring rule would wrongly exempt these real surfaces.
+assert_kind_path "reference-site/pages/Home.tsx arms visual (not 'reference/')" visual "/Users/x/proj/reference-site/pages/Home.tsx"
+assert_kind_path "src/docs-panel/Panel.tsx arms visual (not 'docs/')"          visual "/Users/x/proj/src/docs-panel/Panel.tsx"
+# The NEW dev-doc / scratch exemptions: a visual file under docs/, reference/, or scratchpad/ arms
+# NOTHING (no rendered product surface). dependency-map is the lead-named dev-doc graph.
+assert_kind_path "docs/dependency-map/index.html fully exempt (dev-doc, absent)"  absent "/Users/x/proj/docs/dependency-map/index.html"
+assert_kind_path "docs/guide/page.html fully exempt (dev-doc, absent)"           absent "/Users/x/proj/docs/guide/page.html"
+assert_kind_path "reference/api.html fully exempt (dev-doc, absent)"             absent "/Users/x/proj/reference/api.html"
+assert_kind_path "scratchpad/x.html fully exempt (scratch, absent)"             absent "/private/tmp/claude-1/blah/scratchpad/x.html"
 # A file merely UNDER a dir that starts with tmp (not a tmp ROOT) is real UI - prefix-anchored, not substring.
 assert_kind_path "/home/x/tmp/App.tsx arms visual (tmp is prefix-anchored)"        visual "/home/x/mytmp/App.tsx"
 
@@ -510,9 +522,15 @@ assert_kind "tee into a cwd-relative eval/corpus .html is exempt (absent)"      
 assert_kind "sed -i on a .spec.tsx declassified visual -> code"                         code   "sed -i 's/a/b/' src/Bar.spec.tsx"
 assert_kind "tee into a /tmp .html declassified visual -> code"                         code   "tee /tmp/scratch.html"
 # Anchor + recall controls on the bash side.
-assert_kind "tee into preeval/fixtures .html arms visual (anchor holds)"                visual "tee preeval/fixtures/x.html"
+# preeval/fixtures now exempt via the bare fixtures/ segment (2026-07-26); preeval is still NOT eval.
+assert_kind "tee into preeval/fixtures .html now exempt (bare fixtures/ segment)"       absent "tee preeval/fixtures/x.html"
+assert_kind "tee into preeval/pages .html arms visual (preeval is NOT eval)"            visual "tee preeval/pages/x.html"
+# NEW dev-doc / scratch exemptions on the bash write branch.
+assert_kind "sed -i on docs/dependency-map/index.html is exempt (dev-doc)"              absent "sed -i 's/a/b/' docs/dependency-map/index.html"
+assert_kind "tee into a scratchpad .html is exempt (scratch)"                           absent "tee blah/scratchpad/x.html"
 assert_kind "sed -i on a real src/app.css still arms visual (control)"                  visual "sed -i 's/a/b/' src/app.css"
 assert_kind "tee into a real src/App.tsx still arms visual (control)"                   visual "tee src/App.tsx"
+assert_kind "tee into reference-site/Home.tsx arms visual (not 'reference/')"           visual "tee reference-site/Home.tsx"
 
 restore_vnr
 rm -f "$HOME/.claude/.needs-verification.global"

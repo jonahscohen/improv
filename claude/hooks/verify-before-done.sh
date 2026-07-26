@@ -148,9 +148,27 @@ _HOOK_DIR_RE = re.compile(r"(^|/)\.?claude/hooks/")
 # already lists the SUBSTRING "/eval/", which exempts an ABSOLUTE fixture path but MISSES a
 # cwd-relative one - a bash `sed -i ... eval/fixtures/x.html` from the project dir names
 # "eval/fixtures/..." with no leading slash, so "/eval/" does not match and the write armed
-# visual. The anchor is narrow on purpose (only fixtures//corpus/, not a bare "eval/"), so a real
-# product route like src/eval/Calculator.tsx keeps arming - a bare "eval/" substring would not.
+# visual. Kept as a NARROW backstop; the broader _NON_APP_DIR_RE below now also matches these.
 _EVAL_DATA_RE = re.compile(r"(^|/)eval/(fixtures|corpus)/")
+
+# --- Non-app DEV / TEST / SCRATCH directories (Jonah 2026-07-26) ----------------------
+# A visual file (.css/.html/.tsx/...) living under any of these renders no PRODUCT surface, so a
+# change to one can never be screenshotted and must NOT arm the visual gate. This extends the
+# 2026-07-24 eval/fixtures + OS-temp arm-narrow in the same spirit, closing the false-fires that
+# cost manual overrides this month: a deleted .html eval fixture, docs/dependency-map dev-docs, a
+# scratchpad .html, any fixtures/ probe dir.
+#
+# SEGMENT-anchored ((^|/)name/): it matches a real path SEGMENT in absolute OR cwd-relative form
+# but never a bare substring, so the genuine front-end surfaces stay ARMED - "reference-site/" is
+# not "reference/", "docs-panel/" is not "docs/", "preevaluation/" is not "eval/". This is the same
+# anchoring discipline _EVAL_DATA_RE uses. "dependency-map" is the lead-named dev-doc graph; it
+# already sits under docs/ in practice but is listed so a bare dependency-map/ is covered too.
+#
+# Kept BYTE-IDENTICAL to the copies in verify-before-done-stop.sh (tree_has_visual_evidence) and
+# bash-guard.sh (the commit gate) so the ARM site and the two re-derivations AGREE on what is not
+# product UI; test-verify-visual-gate.sh asserts the three literals match.
+_NON_APP_DIR_RE = re.compile(
+    r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|docs|reference|dependency-map|scratchpad)/")
 
 # A basename carrying a ".test." or ".spec." infix before its final extension is a test probe.
 # Foo.test.tsx / Bar.spec.tsx would otherwise arm VISUAL (.tsx is a visual ext) and trip the Stop
@@ -192,6 +210,10 @@ def is_exempt(path):
     # like any code edit; fully exempting /tmp would stop a /tmp/fake-project/src/file.ts sandbox
     # edit from arming at all. The task carve-out is "must not arm the VISUAL gate", not "arm nothing".)
     if _EVAL_DATA_RE.search(path):
+        return True
+    # Non-app dev/test/scratch dirs (docs/, reference/, any fixtures/, bare eval/, dependency-map/,
+    # scratchpad/): fully exempt - not a rendered product surface, so no screenshot is possible.
+    if _NON_APP_DIR_RE.search(path):
         return True
     # A file under a claude/hooks/ segment is exempt only if it is NOT a VISUAL file.
     # Hook scripts (.sh/.py/.ts/...) have no UI to screenshot, but a VISUAL file that
@@ -737,6 +759,14 @@ if tool == "Bash":
         return False
 
     def arm_and_report(kind="code"):
+        # A subagent/teammate must NOT arm the flag: it is keyed by session_id, and an in-flight
+        # sidechain edit can land on the PARENT session key, saddling the parent with screenshot
+        # debt it never incurred (the parent Stop then blocks on the subagent work). The Stop gate
+        # already exempts subagents from being blocked, so the flag is meaningless for them anyway -
+        # arm nothing rather than only muting the nudge. No apostrophe in this comment: the whole
+        # block is a single-quoted python3 -c string, so one would close it. (Jonah 2026-07-26.)
+        if IS_SUBAGENT:
+            print("{}"); sys.exit(0)
         # kind MUST be "visual" when the touched file(s) render UI. A Bash write to a
         # visual file (sed -i src/app.css, tee src/App.tsx, cp theme.css ...) is still a
         # VISUAL change and still owes a real screenshot - routing it through the plain
@@ -808,13 +838,17 @@ if tool == "Bash":
 # --- Handle Write/Edit/MultiEdit ---
 file_path = data.get("tool_input", {}).get("file_path", "")
 
-if is_code_file(file_path):
+# A subagent/teammate edit must NOT arm the session-keyed flag (see arm_and_report): its work can
+# land on the PARENT session key and block the parent Stop, and subagents are already Stop-exempt.
+if IS_SUBAGENT:
+    print("{}")
+elif is_code_file(file_path):
     _visual = is_visual_file(file_path)
     prev = flag_content()
     set_flag("visual" if _visual else "code")
     # Once-per-episode nudge (see arm_and_report): silent when the flag state is unchanged,
     # so a run of edits to already-armed code stops re-nagging on every single one.
-    if recently_verified() or IS_SUBAGENT or flag_content() == prev:
+    if recently_verified() or flag_content() == prev:
         print("{}")
     else:
         print(json.dumps({

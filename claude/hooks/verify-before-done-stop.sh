@@ -26,6 +26,16 @@ VISUAL_EXTS = {".css", ".scss", ".sass", ".less",
                ".html", ".htm", ".ejs", ".hbs", ".pug", ".twig",
                ".vue", ".svelte", ".jsx", ".tsx"}
 
+# Non-app dev/test/scratch DIRECTORIES and test-probe basenames - the SAME notion the arm side
+# uses in is_exempt (Jonah 2026-07-26). A visual-extension file that is a DELETION, or lives under
+# one of these, renders no product surface and cannot be screenshotted, so it is not "visual
+# evidence" and must not keep the gate blocking. _NON_APP_DIR_RE is kept BYTE-IDENTICAL to the copy
+# in verify-before-done.sh and bash-guard.sh so the arm site and this re-derivation agree;
+# test-verify-visual-gate.sh asserts the three literals match.
+_NON_APP_DIR_RE = re.compile(
+    r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|docs|reference|dependency-map|scratchpad)/")
+_TEST_SPEC_RE = re.compile(r"\.(test|spec)\.[A-Za-z0-9]+$")
+
 # Hard bound on how much status output we will reason about. Hitting it means we could not
 # fully inspect the tree, which is a doubt, which blocks.
 MAX_STATUS_ENTRIES = 20000
@@ -73,8 +83,21 @@ def tree_has_visual_evidence(cwd):
         return True
     for c in chunks:
         path = c
+        status = ""
         if len(c) > 3 and c[2] == " ":
+            status = c[:2]   # the XY porcelain status code
             path = c[3:]     # strip the leading XY status code
+        # A DELETION cannot be screenshotted, so it is never visual evidence. Git porcelain marks a
+        # delete with "D" in either status column (" D" worktree, "D " staged); a rename is "R" and
+        # a copy "C", so this skips only genuine removals and still blocks a real modify/add. This is
+        # THE fix for the deleted-.html-fixture false-block that cost manual overrides (Jonah
+        # 2026-07-26): the deletion record still carries a .html path the old scan read as visual.
+        if "D" in status:
+            continue
+        # Non-app dev/test/scratch paths (docs/, any fixtures/, eval/, scratchpad/, *.test.*, ...)
+        # are not product UI - agree with the arm side and do not treat them as visual evidence.
+        if _NON_APP_DIR_RE.search(path) or _TEST_SPEC_RE.search(path):
+            continue
         # Check the stripped path AND the raw record: if EITHER looks visual we block.
         for cand in (path, c):
             if os.path.splitext(cand)[1].lower() in VISUAL_EXTS:

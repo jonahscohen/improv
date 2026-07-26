@@ -2,7 +2,7 @@
 name: Visual-verify gate armed on eval-fixture HTML writes; overridden (no rendered UI deliverable)
 description: The Stop-time visual-verification gate armed because teammates wrote HTML files this session, but those are eval FIXTURES (constructed detector/labeler inputs graded behaviorally), not a product UI surface. A screenshot would prove nothing. Jonah overrode; flag cleared. Recorded so future sessions know eval-fixture writes spuriously arm the visual gate.
 type: feedback
-relates_to: [session_2026-07-24_autonomous-wave1-dispatched.md]
+relates_to: [session_2026-07-24_autonomous-wave1-dispatched.md, session_2026-07-26_visual-gate-narrowed.md]
 author_human: Jonah
 author_model: claude-opus-4.8
 source: session
