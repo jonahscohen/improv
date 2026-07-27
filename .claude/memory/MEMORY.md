@@ -110,4 +110,4 @@
 - [** ACTIVE ** Gap-analysis VISUAL ARTIFACT built + verified (coverage-console dashboard, both themes, gaps-only filter tested via real Playwright…](session_2026-07-25_gap-analysis-artifact-build.md)
 - [** ACTIVE ** project-drift-detector WIRED into a real fail-closed CLI (not committed; dist NOT rebuilt) - bin/sidecoach-drift.js (NEW) reads a project'…](session_2026-07-25_drift-detector-wired.md)
 - [** ACTIVE ** Taste Tier-2 revisit - 1 REAL fix (oversized-h1 H1_VW_RATIO 0.11->0.09, Rreal 0->0.167, precision held, beats oracle), 3 NAMED-UNFIXABLE h…](session_2026-07-25_taste-revisit-honest.md)
-- [RULE: a negative assertion (asserting absence) proves nothing by passing - inject the defect and watch it fail, then restore and check byte…](session_2026-07-26_assertion-polarity-mutation-test.md)
+- [Three of Task 3's five suppression tests asserted nothing - proven by disabling suppression, only code-fence and backtick cases were real](session_2026-07-26_vacuous-suppression-tests.md)

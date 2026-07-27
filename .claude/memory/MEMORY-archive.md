@@ -1318,3 +1318,8 @@
 
 <!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
 - [Agent routing Task 3 SHIPPED - route-intent.sh scrubs code fences/backticks/URLs/XML then gates on min_prompt_chars then exempt patterns; ex…](session_2026-07-26_agent-routing-task3-suppression.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Replacement suppression assertions pre-validated before dispatch - all three fire with suppression removed, XML-scrub branch now covered](session_2026-07-26_replacement-assertions-validated.md)
+- [Agent routing Task 3 FIX SHIPPED - vacuous suppression assertions replaced with mutation-verified ones, route-intent.sh/json untouched,…](session_2026-07-26_agent-routing-task3-suppression-fix.md)
+- [RULE: a negative assertion (asserting absence) proves nothing by passing - inject the defect and watch it fail, then restore and check byte…](session_2026-07-26_assertion-polarity-mutation-test.md)
