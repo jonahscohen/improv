@@ -168,6 +168,53 @@ link_or_copy() {
 }
 
 # ------------------------------------------------------------
+# link_or_copy_data: the same symlink-vs-copy decision as link_or_copy, for a DATA
+# file a component owns (a lexicon, a registry, an agent definition).
+#
+# Data files are READ, never exec'd, so the exec bit is not load-bearing and both
+# the source chmod and the destination chmod are skipped.
+#
+# Why this exists rather than a bare `ln -sf`: hook_deploy_mode returns `copy` for a
+# repo in a temp location, which is exactly the documented
+# `git clone /tmp/improv && ./install.sh && rm -rf /tmp/improv` case. A hook
+# deployed as a copy survives that, but a bare `ln -sf` data file becomes a
+# DANGLING symlink the moment the clone is deleted. route-intent.sh then hits
+# `[ -f "$LEXICON" ] || exit 0` forever, and Agent(subagent_type: quick-answer)
+# cannot resolve - silently and permanently.
+#
+# Ownership-aware: backup_if_exists preserves a user's own real same-named file
+# (their ~/.claude/agents/quick-answer.md) before it is replaced.
+link_or_copy_data() {
+  local src="$1" dst="$2"
+
+  if [ ! -f "$src" ]; then
+    err "data source missing: $src"
+    return 1
+  fi
+
+  mkdir -p "$(dirname "$dst")"
+
+  if [ "$(hook_deploy_mode)" = "symlink" ]; then
+    if [ -L "$dst" ] && [ "$(readlink "$dst")" = "$src" ]; then
+      return 0                       # already linked correctly - do not churn it
+    fi
+    if declare -f backup_if_exists >/dev/null 2>&1; then
+      backup_if_exists "$dst"
+    fi
+    rm -f "$dst"
+    ln -s "$src" "$dst"
+  else
+    # Back up a DIFFERENT real file before overwriting, but do not churn our own
+    # byte-identical re-install.
+    if [ -e "$dst" ] && ! cmp -s "$dst" "$src" 2>/dev/null && declare -f backup_if_exists >/dev/null 2>&1; then
+      backup_if_exists "$dst"
+    fi
+    rm -f "$dst"                     # clears a stale symlink, so nothing dangles
+    cp "$src" "$dst"
+  fi
+}
+
+# ------------------------------------------------------------
 # prune_broken_skill_symlinks: remove DEAD skill symlinks under ~/.claude/skills.
 #
 # A skill deployed as a symlink into this repo dangles the moment the repo stops
@@ -681,6 +728,21 @@ rm_hook_if_ours() {
   return 0
 }
 
+# rm_data_if_ours <deployed-path> <repo-source-path>
+# The data-file counterpart of rm_hook_if_ours: remove a deployed DATA file only if
+# it is OURS - a symlink into the repo (dangling ones included, which is how a dead
+# throwaway-clone install gets cleaned up), or a copy byte-identical to the repo
+# source. A user's own different same-named file is left intact. Best-effort:
+# ALWAYS returns 0, so callers inside `set -e` loops do not abort on a missing file.
+rm_data_if_ours() {
+  local dst="$1" src="$2"
+  if { [ -L "$dst" ] && [[ "$(readlink "$dst")" == "$REPO_DIR/"* ]]; } \
+     || { [ -f "$dst" ] && [ -f "$src" ] && cmp -s "$dst" "$src"; }; then
+    rm -f "$dst"
+  fi
+  return 0
+}
+
 # If settings.json is a legacy symlink into the repo, convert to a real file before
 # mutating it (else edits would hit the repo's source settings).
 ensure_real_settings() {
@@ -696,6 +758,17 @@ deactivate_cluster() {
   for h in $(cluster_hooks "$name"); do
     rm_hook_if_ours "$h"
   done
+  # Cluster-owned DATA files. cluster_hooks only knows .sh members, so anything a
+  # cluster deploys alongside its hooks leaks unless it is removed explicitly -
+  # deactivate_sidecoach rms its own registries for the same reason.
+  if [ "$name" = "agent-routing" ]; then
+    local af
+    rm_data_if_ours "$CLAUDE_DIR/hooks/route-intent.json" "$REPO_DIR/claude/hooks/route-intent.json"
+    for af in "$REPO_DIR"/claude/agents/*.md; do
+      [ -f "$af" ] || continue
+      rm_data_if_ours "$CLAUDE_DIR/agents/$(basename "$af")" "$af"
+    done
+  fi
   if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
     ensure_real_settings
     NAMES="$(cluster_hooks "$name")" python3 -c "
@@ -4834,17 +4907,20 @@ if [ "$_cluster_any" = 1 ] || [ -n "${HOOK_ON// /}" ]; then
       link_or_copy "$REPO_DIR/claude/hooks/detect-session-model.sh" "$CLAUDE_DIR/hooks/detect-session-model.sh"
     fi
     if [ "$_h" = "route-intent.sh" ]; then
-      # route-intent.json is DATA, not an executable - symlinked directly (not
-      # chmod'd via link_or_copy), matching the sidecoach registry convention.
-      # WITHOUT it the hook fails open silently (missing lexicon = no routing).
+      # route-intent.json is DATA, not an executable, so it goes through
+      # link_or_copy_data - which makes the SAME symlink-vs-copy decision the hook
+      # itself just made. A bare `ln -sf` here dangled on every copy-mode install
+      # (the throwaway-clone case), and WITHOUT the lexicon the hook fails open
+      # silently: missing lexicon = no routing, forever, with no signal.
       [ -f "$REPO_DIR/claude/hooks/route-intent.json" ] && \
-        ln -sf "$REPO_DIR/claude/hooks/route-intent.json" "$CLAUDE_DIR/hooks/route-intent.json"
+        link_or_copy_data "$REPO_DIR/claude/hooks/route-intent.json" "$CLAUDE_DIR/hooks/route-intent.json"
       # The roster the nudges name (quick-answer/sonnet-impl/opus-executor) must
       # exist in the GLOBAL agents dir for Agent(subagent_type: ...) to resolve
-      # it from any project, not just this repo.
+      # it from any project, not just this repo. link_or_copy_data backs up a
+      # user's own same-named agent file before replacing it.
       mkdir -p "$CLAUDE_DIR/agents"
       for _af in "$REPO_DIR"/claude/agents/*.md; do
-        [ -f "$_af" ] && ln -sf "$_af" "$CLAUDE_DIR/agents/$(basename "$_af")"
+        [ -f "$_af" ] && link_or_copy_data "$_af" "$CLAUDE_DIR/agents/$(basename "$_af")"
       done
     fi
   done
