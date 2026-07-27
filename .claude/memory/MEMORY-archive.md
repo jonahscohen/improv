@@ -1293,3 +1293,12 @@
 
 <!-- archived 2026-07-25 (moved from MEMORY.md to stay under load budget) -->
 - [** RULING ** FlowDomainIntegrator (flow-domain-integration.ts) SUPERSEDED - recommend DELETE, not wire. Domain rules already reach flows two live ways w/o it: ~12 handlers import SHARED_DESIGN_LAWS directly (pre-exec), and orchestrator getValidatorsForFlow->compositionEngine.validateMultipleDomains writes result.validationResults (post-exec, CONSUMED by convergence-loop:179 + build-report-aggregator:140/201, surfaced to result.message, halts composites). Integrator only enumerates rules into UNREAD metadata (executionMetadata.enhancedContext.domainValidations / context.metadata.flowDomains); validates nothing. ZERO source importers; its dep flow-domain-mapping.ts dead too. Wiring would be BROKEN not just redundant: FLOW_DOMAIN_MATRIX covers only flowA-flowJ (10 of 26 flows) so 16 return []; and it keys 'uxWriting' while design-laws exposes 'writing' -> getSharedLawsForDomain returns undefined, silently dropping the writing laws. Deepens phase2-deadcode's zero-importer flag. Verified: grep + tsc exit 0 + foreground Codex AGREE. No code changed, delete flagged for lead - DECISION (2026-07-25)](decision_2026-07-25_flow-domain-integration-superseded.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing PLAN (8 TDD tasks, nothing implemented) - roster/classifier/suppression/tie-break/cooldown/fail-open/wiring, plus model-routing cluster rem…](session_2026-07-26_agent-routing-plan.md)
+- [Agent routing EXECUTION started (branch agent-routing off 160eeed3, SDD Tasks 1-7, Task 8 excluded) - baseline green 128/128](session_2026-07-26_agent-routing-execution.md)
+- [model-router-guard LIVE registrations removed (surgical; repo-side 8-site refactor still deferred to Task 8) - it blocked the SDD dispatch b…](session_2026-07-26_model-router-guard-live-removal.md)
+- [REFERENCE Sidecoach 20 validators catalog - complete factual list (A-X) from source, not 12…](session_2026-07-26_sidecoach-20-validators-catalog.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 1 SHIPPED - roster (quick-answer haiku, sonnet-impl sonnet, opus-executor global copy) + test-route-intent.sh harness, TDD RED…](session_2026-07-26_agent-routing-task1-roster.md)
