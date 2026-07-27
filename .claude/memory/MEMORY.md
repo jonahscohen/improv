@@ -115,3 +115,4 @@
 - [** ACTIVE ** Gap-analysis VISUAL ARTIFACT built + verified (coverage-console dashboard, both themes, gaps-only filter tested via real Playwright…](session_2026-07-25_gap-analysis-artifact-build.md)
 - [** ACTIVE ** project-drift-detector WIRED into a real fail-closed CLI (not committed; dist NOT rebuilt) - bin/sidecoach-drift.js (NEW) reads a project'…](session_2026-07-25_drift-detector-wired.md)
 - [** ACTIVE ** Taste Tier-2 revisit - 1 REAL fix (oversized-h1 H1_VW_RATIO 0.11->0.09, Rreal 0->0.167, precision held, beats oracle), 3 NAMED-UNFIXABLE h…](session_2026-07-25_taste-revisit-honest.md)
+- [DECISION: imperative-recall widening REJECTED - "want you to|need to|lets" are verb phrases not clause markers, so \\b anchors nothing; 7 negations routed to the opus tier. Gap kept deliberately](session_2026-07-27_imperative-widening-rejected.md)

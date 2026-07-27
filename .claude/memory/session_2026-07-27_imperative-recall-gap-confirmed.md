@@ -3,6 +3,7 @@ name: Imperative recall gap confirmed - four natural phrasings miss the opus tie
 description: With prompts held over the 40-char bail so the length gate cannot confound, bare and "can you" imperatives route to opus-executor while "i want you to", "lets", "we need to", and "time to" go silent. Reviewer's Minor was exactly right.
 type: project
 relates_to: [session_2026-07-27_agent-routing-rereview-clean.md, session_2026-07-27_mutation-testing-fail-open-code.md]
+superseded_by: session_2026-07-27_imperative-widening-rejected.md
 author_human: Jonah
 author_model: claude-opus-5
 source: session
@@ -11,6 +12,11 @@ confidence: high
 ---
 
 # Imperative recall gap
+
+**SUPERSEDED:** the proposed fix in this beat was implemented and REVERTED - it
+made seven negations route to the most expensive tier. See
+[[session_2026-07-27_imperative-widening-rejected]]. The gap below is real; the
+fix below is wrong.
 
 Reviewer Minor confirmed by direct probe. All six prompts held between 57 and
 66 characters so the length gate is constant and only the imperative shape
