@@ -112,3 +112,4 @@
 - [** ACTIVE ** project-drift-detector WIRED into a real fail-closed CLI (not committed; dist NOT rebuilt) - bin/sidecoach-drift.js (NEW) reads a project'…](session_2026-07-25_drift-detector-wired.md)
 - [** ACTIVE ** Taste Tier-2 revisit - 1 REAL fix (oversized-h1 H1_VW_RATIO 0.11->0.09, Rreal 0->0.167, precision held, beats oracle), 3 NAMED-UNFIXABLE h…](session_2026-07-25_taste-revisit-honest.md)
 - [Agent routing DESIGN (spec only, not implemented) - Jonah reversed the 2026-06-11 no-routing rule; 4-tier global roster (haiku quick-answer / Explore / sonnet-impl / opus-executor) + shell classifier hook, lead decides each dispatch](session_2026-07-26_agent-routing-design.md)
+- [Agent routing PLAN (8 TDD tasks, nothing implemented) - roster/classifier/suppression/tie-break/cooldown/fail-open/wiring, plus model-routing cluster removal isolated as independent Task 8; spec Removal scope corrected from 2 sites to 8](session_2026-07-26_agent-routing-plan.md)

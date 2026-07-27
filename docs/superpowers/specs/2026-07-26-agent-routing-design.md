@@ -143,11 +143,32 @@ Verified at `1bd2e239`. The requested "drop the rule entirely" resolves to a
 narrower removal than it first appears, because two files in the trio have
 consumers unrelated to routing.
 
+Correction (same day, after a fuller grep): the guard is a registered INSTALLER
+CLUSTER, not a standalone hook, so removal touches eight sites rather than two.
+The original scoping in this section missed `install.sh` and
+`cluster-wirings.json` entirely.
+
 Remove:
 - `claude/hooks/model-router-guard.sh`
 - Its two registrations at `settings.json:64` and `settings.json:109`
-- Stale comment references at `sidecoach_lanes.py:3` and
-  `sidecoach-keyword.sh:89` (both are prose mentions, not calls)
+- Its wirings in `cluster-wirings.json:293-310`
+- The `model-routing` cluster in `install.sh`: `KEYS` (`:477`), its `DESCS`
+  entry, its `FILES` entry (`:506`), one element each from `DIRS` (`:508`) and
+  `PICKS` (`:509`), `CLUSTER_KEYS` (`:602`), the `cluster_hooks()` case
+  (`:635`), and the `model-routing` alternative in two case statements
+  (`:1222`, `:1789`)
+- The special-case dependency link at `install.sh:4827`
+- Stale comment references at `sidecoach_lanes.py:3`,
+  `sidecoach-keyword.sh:89`, and `fable-orchestrator-guard.sh:10` (all prose
+  mentions, not calls)
+
+Hazard: `KEYS`, `DESCS`, `FILES`, `DIRS`, and `PICKS` are index-aligned
+parallel arrays. Removing an entry from one without the others silently
+relabels every cluster below the insertion point. The removal task asserts
+equal lengths across all five before it commits.
+
+Because the removal is this much larger than the routing build, it is the LAST
+and INDEPENDENT task. Routing ships without it.
 
 Keep:
 - `detect-session-model.sh` (still called by `fable-orchestrator-guard.sh:26`)
