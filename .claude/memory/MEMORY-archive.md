@@ -1346,3 +1346,8 @@
 - [FINDING: a string `patterns` value in route-intent.json iterates char-by-char and hijacks routing to the most expensive tier - type-check before…](session_2026-07-26_lexicon-type-validation-gap.md)
 - [FINAL REVIEW: 1 Critical (route-intent unregistered in browser-tree.json - 2 repo suites red, cluster unreachable from default installer) + 5 Importan…](session_2026-07-26_final-review-findings.md)
 - [route-intent latency: flat 60-85ms on adversarial input incl 200KB, no catastrophic backtracking - bounded quantifiers must stay bounded in futur…](session_2026-07-26_route-intent-latency-probe.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing RE-REVIEW CLEAN - all 11 findings addressed and mutation-tested, none of the 21 new assertions vacuous; ready to merge](session_2026-07-27_agent-routing-rereview-clean.md)
+- [Imperative recall gap confirmed - "i want you to / lets / we need to / time to refactor" miss the opus tier; one-line lexicon fix, non-block…](session_2026-07-27_imperative-recall-gap-confirmed.md)
+- [RULE: mutation-testing fail-open code - NEUTER the behavior (never-matching regex), never DELETE the line; a crashed fail-open program is si…](session_2026-07-27_mutation-testing-fail-open-code.md)

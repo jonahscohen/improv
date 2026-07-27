@@ -1,4 +1,5 @@
-- [** ACTIVE ** Agent-routing FINAL REVIEW fix wave - all 10 findings folded in one pass: browser-tree registration (2 suites red -> green), quadratic XML scrub latency DoS, install deploy modes, 4 vacuous test assertions mutation-proved, lexicon type guards](session_2026-07-26_agent-routing-fixwave.md)
+- [** ACTIVE ** Agent-routing Minor follow-ups - recovered five natural imperative openers (want you to / need to / lets / let us / time to) on t…](session_2026-07-27_agent-routing-minor-followups.md)
+- [** ACTIVE ** Agent-routing FINAL REVIEW fix wave - all 10 findings folded in one pass: browser-tree registration (2 suites red -> green), quadratic XM…](session_2026-07-26_agent-routing-fixwave.md)
 - [** ACTIVE ** Task 7 Codex-review fix - installer never deployed route-intent.json/agents roster (fresh installs silently non-functional); also…](session_2026-07-26_agent-routing-task7-codex-fix.md)
 - [** ACTIVE ** Agent-routing Task 7 (installer wiring) - 28->30 passing, hook now LIVE. Found a 6th uncounted install.sh array (TITLES) and a stale…](session_2026-07-26_agent-routing-task7.md)
 - [** ACTIVE ** Agent-routing Task 6 (fail-open hardening) - 21->28 passing, no code changes needed. Mutation-proved 6/7 assertions real; whitespace-p…](session_2026-07-26_agent-routing-task6.md)
@@ -114,6 +115,3 @@
 - [** ACTIVE ** Gap-analysis VISUAL ARTIFACT built + verified (coverage-console dashboard, both themes, gaps-only filter tested via real Playwright…](session_2026-07-25_gap-analysis-artifact-build.md)
 - [** ACTIVE ** project-drift-detector WIRED into a real fail-closed CLI (not committed; dist NOT rebuilt) - bin/sidecoach-drift.js (NEW) reads a project'…](session_2026-07-25_drift-detector-wired.md)
 - [** ACTIVE ** Taste Tier-2 revisit - 1 REAL fix (oversized-h1 H1_VW_RATIO 0.11->0.09, Rreal 0->0.167, precision held, beats oracle), 3 NAMED-UNFIXABLE h…](session_2026-07-25_taste-revisit-honest.md)
-- [RULE: mutation-testing fail-open code - NEUTER the behavior (never-matching regex), never DELETE the line; a crashed fail-open program is silent, which looks exactly like the feature working](session_2026-07-27_mutation-testing-fail-open-code.md)
-- [Agent routing RE-REVIEW CLEAN - all 11 findings addressed and mutation-tested, none of the 21 new assertions vacuous; ready to merge](session_2026-07-27_agent-routing-rereview-clean.md)
-- [Imperative recall gap confirmed - "i want you to / lets / we need to / time to refactor" miss the opus tier; one-line lexicon fix, non-blocking](session_2026-07-27_imperative-recall-gap-confirmed.md)
