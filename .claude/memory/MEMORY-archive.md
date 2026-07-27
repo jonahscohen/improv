@@ -1302,3 +1302,7 @@
 
 <!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
 - [Agent routing Task 1 SHIPPED - roster (quick-answer haiku, sonnet-impl sonnet, opus-executor global copy) + test-route-intent.sh harness, TDD RED…](session_2026-07-26_agent-routing-task1-roster.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 1 fix round 1 - removed bogus "tools: All tools" from sonnet-impl.md (omit key = all tools), fixed awk leak in assert_agen…](session_2026-07-26_agent-routing-task1-fix-round1.md)
+- [Agent routing DESIGN (spec only, not implemented) - Jonah reversed the 2026-06-11 no-routing rule; 4-tier global roster (haiku quick-answer / Explore /…](session_2026-07-26_agent-routing-design.md)
