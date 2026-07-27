@@ -1,3 +1,4 @@
+- [** ACTIVE ** Task 7 Codex-review fix - installer never deployed route-intent.json/agents roster (fresh installs silently non-functional); also…](session_2026-07-26_agent-routing-task7-codex-fix.md)
 - [** ACTIVE ** Agent-routing Task 7 (installer wiring) - 28->30 passing, hook now LIVE. Found a 6th uncounted install.sh array (TITLES) and a stale…](session_2026-07-26_agent-routing-task7.md)
 - [** ACTIVE ** Agent-routing Task 6 (fail-open hardening) - 21->28 passing, no code changes needed. Mutation-proved 6/7 assertions real; whitespace-p…](session_2026-07-26_agent-routing-task6.md)
 - [** ACTIVE ** Concise-mode STOP GATE - concise-detect-stop.sh blocks once on a post-conclusion tangent (named opener lexicon) or a list past 5 items at one…](session_2026-07-26_concise-stop-gate.md)

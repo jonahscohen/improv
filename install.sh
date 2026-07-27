@@ -4833,6 +4833,20 @@ if [ "$_cluster_any" = 1 ] || [ -n "${HOOK_ON// /}" ]; then
       chmod +x "$REPO_DIR/claude/hooks/detect-session-model.sh"
       link_or_copy "$REPO_DIR/claude/hooks/detect-session-model.sh" "$CLAUDE_DIR/hooks/detect-session-model.sh"
     fi
+    if [ "$_h" = "route-intent.sh" ]; then
+      # route-intent.json is DATA, not an executable - symlinked directly (not
+      # chmod'd via link_or_copy), matching the sidecoach registry convention.
+      # WITHOUT it the hook fails open silently (missing lexicon = no routing).
+      [ -f "$REPO_DIR/claude/hooks/route-intent.json" ] && \
+        ln -sf "$REPO_DIR/claude/hooks/route-intent.json" "$CLAUDE_DIR/hooks/route-intent.json"
+      # The roster the nudges name (quick-answer/sonnet-impl/opus-executor) must
+      # exist in the GLOBAL agents dir for Agent(subagent_type: ...) to resolve
+      # it from any project, not just this repo.
+      mkdir -p "$CLAUDE_DIR/agents"
+      for _af in "$REPO_DIR"/claude/agents/*.md; do
+        [ -f "$_af" ] && ln -sf "$_af" "$CLAUDE_DIR/agents/$(basename "$_af")"
+      done
+    fi
   done
 
   # Only wire hooks that actually landed on disk; track any that did NOT so their
