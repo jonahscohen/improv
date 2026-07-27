@@ -21,6 +21,13 @@ LEXICON="${ROUTE_INTENT_LEXICON:-$HOOK_DIR/route-intent.json}"
 
 INPUT="$(cat)"
 
+# PROMPT_RAW is passed through the environment, and env counts against ARG_MAX
+# (1 MB on macOS). A paste past that makes exec fail with "Argument list too
+# long" on STDERR - rc stays 0, but the hook is contractually silent on both
+# streams, so the guard has to live out here in bash, before python3 is reached.
+# 100000 is 5x the in-python prompt cap below: nothing this large can route.
+[ "${#INPUT}" -gt 100000 ] && exit 0
+
 LEXICON_PATH="$LEXICON" PROMPT_RAW="$INPUT" python3 <<'PYEOF'
 import json
 import os
@@ -47,6 +54,12 @@ try:
     if not prompt.strip():
         sys.exit(0)
 
+    # The scrub below is superlinear in input length, and this hook sits in the
+    # prompt path under a 5s timeout. A prompt this long is never a routing
+    # candidate anyway, so bail before doing any regex work on it.
+    if len(prompt) > 20000:
+        sys.exit(0)
+
     with open(os.environ["LEXICON_PATH"], "r", encoding="utf-8") as fh:
         lex = json.load(fh)
 
@@ -63,7 +76,13 @@ try:
     scrubbed = re.sub(r"~~~.*?~~~", " ", scrubbed, flags=re.S)
     scrubbed = re.sub(r"`[^`]*`", " ", scrubbed)
     scrubbed = re.sub(r"https?://\S+", " ", scrubbed)
-    scrubbed = re.sub(r"<([a-zA-Z][\w-]*)\b[^>]*>.*?</\1>", " ", scrubbed, flags=re.S)
+    # The backreference defeats the engine's prefix optimization, so an UNBOUNDED
+    # .*? here makes every void tag (<br>, <img> - the common case in a pasted
+    # HTML snippet) walk the lazy gap to end of string. That is quadratic: 40k
+    # <br> measured 14.9s against a 5s timeout. Bounding the gap caps the work
+    # per opening tag; a quoted XML body longer than 2000 chars simply is not
+    # scrubbed, which costs at most one wrong advisory line.
+    scrubbed = re.sub(r"<([a-zA-Z][\w-]*)\b[^>]*>.{0,2000}?</\1>", " ", scrubbed, flags=re.S)
 
     text = scrubbed.lower().strip()
 
