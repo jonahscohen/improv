@@ -4,7 +4,7 @@
     "fire_rule": "Fires only on a high-confidence tier match, outside cooldown, on a prompt longer than min_prompt_chars, with no exempt pattern matching. Silence is the default.",
     "tie_break": "A prompt matching several tiers resolves to the MOST capable matched tier, in escalation_order. Routing too low produces work that must be redone.",
     "pattern_syntax": "Values are regex fragments, matched case-insensitively against the scrubbed prompt (code fences, inline backticks, URLs, and XML bodies removed).",
-    "imperative_shape": "A bare verb (\\brefactor\\b) fires on discussion as readily as on instruction - 'do not refactor it', 'i hate the redesign we shipped', 'should we refactor this'. Verbs in the opus_executor tier therefore require an IMPERATIVE shape: the verb sits at a clause boundary (string start, sentence punctuation, or after and/then/please/now/also/next) AND takes a determiner-led object. Keep any new bare verb to the same shape - this is the most expensive tier to route to by mistake.",
+    "imperative_shape": "A bare verb (\\brefactor\\b) fires on discussion as readily as on instruction - 'do not refactor it', 'i hate the redesign we shipped', 'should we refactor this'. Verbs in the opus_executor tier therefore require an IMPERATIVE shape: the verb sits at a clause boundary (string start, sentence punctuation, or after and/then/now/also/next), optionally behind a 'can you' / 'please' softener, AND takes a determiner-led object. Note the softeners are INSIDE the optional group rather than boundary tokens of their own - as boundary tokens, 'please' matched mid-clause and let 'should we please refactor the parser' through. Keep any new bare verb to the same shape; this is the most expensive tier to route to by mistake.",
     "bounded_quantifiers": "Every {n,m} here must stay BOUNDED. route-intent.sh scrubs quoted XML with a backreference, which defeats the engine's prefix optimization; an unbounded gap made a 156 KB paste take 14.9s against a 5s timeout."
   },
   "config": {
@@ -55,10 +55,10 @@
       "model": "opus",
       "label": "a multi-file build",
       "patterns": [
-        "(?:^|[.;!?\\n]\\s*|\\b(?:and|then|please|now|also|next)\\s+)refactor\\s+(?:the|this|that|these|those|our|its|all|every|a|an)\\b",
+        "(?:^|[.;!?\\n]\\s*|\\b(?:and|then|now|also|next)\\s+)(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?refactor\\s+(?:the|this|that|these|those|our|its|all|every|a|an)\\b",
         "implement (a|the|an) [a-z0-9_.\\- ]{2,40}(layer|module|system|pipeline|engine)",
         "\\bmigrate\\b [a-z0-9_.\\- ]{2,40} (to|from|onto)",
-        "(?:^|[.;!?\\n]\\s*|\\b(?:and|then|please|now|also|next)\\s+)redesign\\s+(?:the|this|that|these|those|our|its|all|every|a|an)\\b",
+        "(?:^|[.;!?\\n]\\s*|\\b(?:and|then|now|also|next)\\s+)(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?redesign\\s+(?:the|this|that|these|those|our|its|all|every|a|an)\\b",
         "build (a|the|an) [a-z0-9_.\\- ]{2,40}(system|subsystem|pipeline|harness)"
       ]
     }

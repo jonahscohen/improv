@@ -729,11 +729,20 @@ rm_hook_if_ours() {
 }
 
 # rm_data_if_ours <deployed-path> <repo-source-path>
-# The data-file counterpart of rm_hook_if_ours: remove a deployed DATA file only if
-# it is OURS - a symlink into the repo (dangling ones included, which is how a dead
-# throwaway-clone install gets cleaned up), or a copy byte-identical to the repo
-# source. A user's own different same-named file is left intact. Best-effort:
-# ALWAYS returns 0, so callers inside `set -e` loops do not abort on a missing file.
+# The data-file counterpart of rm_hook_if_ours, and it uses is_our_hook's exact
+# ownership rule: a symlink pointing INTO the current $REPO_DIR (dangling ones
+# included, so a file the repo has since stopped shipping is still cleaned up), or a
+# copy byte-identical to the repo source. A user's own different same-named file is
+# left intact.
+#
+# What this deliberately does NOT remove: a symlink pointing somewhere OTHER than the
+# current $REPO_DIR - for instance one left by an install run from a clone that has
+# since been deleted. That target is indistinguishable from a link the user made into
+# their own dotfiles, and guessing wrong deletes their file. is_our_hook has made the
+# same trade since it was written; this matches it rather than inventing a second rule.
+#
+# Best-effort: ALWAYS returns 0, so callers inside `set -e` loops do not abort on a
+# missing file.
 rm_data_if_ours() {
   local dst="$1" src="$2"
   if { [ -L "$dst" ] && [[ "$(readlink "$dst")" == "$REPO_DIR/"* ]]; } \

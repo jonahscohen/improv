@@ -93,14 +93,25 @@ json_prompt() {
 # python3 exec fail with "Argument list too long" on stderr while rc stayed 0 and
 # stdout stayed empty, and the suite was green throughout.
 #
+# BOTH streams are file-backed, deliberately. A `$(...)` capture strips trailing
+# newlines, so a hook emitting nothing but "\n" would read as empty and satisfy every
+# "no output" assertion below. Reading the file with `wc -c` keeps that visible.
+#
 # Extra args are VAR=value overrides passed through env.
-HOOK_OUT=""; HOOK_ERR=""; HOOK_RC=0
+HOOK_OUT=""; HOOK_ERR=""; HOOK_RC=0; HOOK_OUT_BYTES=0; HOOK_ERR_BYTES=0
 run_hook_raw() {
   local stdin_payload="$1"; shift
-  local errfile; errfile=$(mktemp -t routeintent-err)
-  HOOK_OUT=$(printf '%s' "$stdin_payload" | env "$@" bash "$HOOK" 2>"$errfile"); HOOK_RC=$?
-  HOOK_ERR=$(cat "$errfile"); rm -f "$errfile"
+  local outfile errfile
+  outfile=$(mktemp -t routeintent-out); errfile=$(mktemp -t routeintent-err)
+  printf '%s' "$stdin_payload" | env "$@" bash "$HOOK" >"$outfile" 2>"$errfile"; HOOK_RC=$?
+  HOOK_OUT=$(cat "$outfile"); HOOK_ERR=$(cat "$errfile")
+  HOOK_OUT_BYTES=$(wc -c < "$outfile" | tr -d ' ')
+  HOOK_ERR_BYTES=$(wc -c < "$errfile" | tr -d ' ')
+  rm -f "$outfile" "$errfile"
 }
+
+# True when the hook wrote NOTHING to either stream - not even a bare newline.
+hook_wrote_nothing() { [ "$HOOK_OUT_BYTES" -eq 0 ] && [ "$HOOK_ERR_BYTES" -eq 0 ]; }
 
 # Assert the hook fires, names the expected agent, and stays clean on rc + stderr.
 assert_routes() {
@@ -121,10 +132,10 @@ assert_routes() {
 assert_silent() {
   local label="$1" prompt="$2"
   run_hook_raw "$(json_prompt "$prompt")"
-  if [ "$HOOK_RC" -eq 0 ] && [ -z "$HOOK_OUT" ] && [ -z "$HOOK_ERR" ]; then
+  if [ "$HOOK_RC" -eq 0 ] && hook_wrote_nothing; then
     pass "$label"
   else
-    fail "$label" "rc=$HOOK_RC out=${HOOK_OUT:-<empty>} err=${HOOK_ERR:-<empty>}"
+    fail "$label" "rc=$HOOK_RC out=${HOOK_OUT:-<empty>}(${HOOK_OUT_BYTES}B) err=${HOOK_ERR:-<empty>}(${HOOK_ERR_BYTES}B)"
   fi
 }
 
@@ -207,9 +218,19 @@ assert_silent "a past-tense redesign complaint does not route" \
   "i hate the redesign we shipped last quarter and it still bothers me today"
 assert_silent "deliberating about a refactor does not route" \
   "should we refactor this or leave it alone until the next release cycle"
-# ...while a real instruction still reaches the tier, including mid-sentence.
+# A softener ("please", "can you") is NOT a clause boundary of its own. Treating it as
+# one let a deliberation through: "should we please refactor..." matched on `please`
+# sitting mid-clause. The softeners are inside the optional group instead.
+assert_silent "a softener does not make a deliberation imperative" \
+  "should we please refactor the parser module or wait until the next cycle"
+# ...while a real instruction still reaches the tier, including mid-sentence and
+# behind a softener. "can you refactor X" is the single most common way this gets
+# phrased, so the tightening must not swallow it.
 assert_routes "an imperative refactor still routes to opus-executor" \
   "clean up the imports and refactor the parser module while you are in there" \
+  "opus-executor"
+assert_routes "a softened imperative still routes to opus-executor" \
+  "can you refactor the parser module across every file that imports it" \
   "opus-executor"
 
 # Guard the lexicon's declared order against a silent reorder.
@@ -262,10 +283,10 @@ rm -f "$cd_file"
 assert_failopen() {
   local label="$1" stdin_payload="$2"
   run_hook_raw "$stdin_payload"
-  if [ "$HOOK_RC" -eq 0 ] && [ -z "$HOOK_OUT" ] && [ -z "$HOOK_ERR" ]; then
+  if [ "$HOOK_RC" -eq 0 ] && hook_wrote_nothing; then
     pass "$label"
   else
-    fail "$label" "rc=$HOOK_RC out=${HOOK_OUT:-<empty>} err=${HOOK_ERR:-<empty>}"
+    fail "$label" "rc=$HOOK_RC out=${HOOK_OUT:-<empty>}(${HOOK_OUT_BYTES}B) err=${HOOK_ERR:-<empty>}(${HOOK_ERR_BYTES}B)"
   fi
 }
 
@@ -287,7 +308,7 @@ assert_failopen "paste past ARG_MAX is silent on BOTH streams" \
 bad_lex=$(mktemp -t routelex); echo '{ this is not valid json' > "$bad_lex"
 run_hook_raw '{"prompt":"find all the callers of detect-session-model in the hooks dir"}' \
   ROUTE_INTENT_LEXICON="$bad_lex"
-if [ "$HOOK_RC" -eq 0 ] && [ -z "$HOOK_OUT" ] && [ -z "$HOOK_ERR" ]; then
+if [ "$HOOK_RC" -eq 0 ] && hook_wrote_nothing; then
   pass "corrupt lexicon exits 0 silently"
 else
   fail "corrupt lexicon exits 0 silently" "rc=$HOOK_RC out=${HOOK_OUT:-<empty>} err=${HOOK_ERR:-<empty>}"
@@ -395,15 +416,6 @@ assert_fast_and_silent "dense markup just under the length bail is still fast" \
 # one and the other keeps the clock under any threshold a non-flaky test could use.
 # The timing cases above stay as the behavioral backstop against a future regression
 # by any mechanism; these two catch the individual halves going missing.
-assert_hook_matches() {
-  local label="$1" grep_flag="$2" pattern="$3"
-  if grep -q$grep_flag -- "$pattern" "$HOOK"; then
-    pass "$label"
-  else
-    fail "$label" "no line in $HOOK matches: $pattern"
-  fi
-}
-
 assert_bounded_scrub() {
   local label="the XML scrub quantifier stays bounded" line
   line=$(grep -F 'a-zA-Z' "$HOOK" | grep -F '</\1>')
@@ -416,7 +428,14 @@ assert_bounded_scrub() {
   fi
 }
 assert_bounded_scrub
-assert_hook_matches "the in-python length bail is present" E '^ *if len\(prompt\) > [0-9]+:'
+
+# The length bail gets a BEHAVIORAL assertion rather than a structural one, because a
+# structural check ("a line shaped like `if len(prompt) > N:` exists") would still
+# pass if the body stopped exiting. This payload is over the in-python bail and under
+# the bash-side guard, and its opening words route to opus-executor on their own - so
+# silence here can only mean the bail fired.
+assert_silent "a prompt over the length bail is not routed" \
+  "refactor the flow handler and $(python3 -c 'print("x"*25000)')"
 
 # The hook must be registered in cluster-wirings.json so `install.sh` can
 # deploy it on a fresh machine, not just on the machine that authored it.
