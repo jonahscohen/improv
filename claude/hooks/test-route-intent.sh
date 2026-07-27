@@ -405,13 +405,19 @@ assert_fast_and_silent() {
 }
 
 # There are THREE size bands, each protected by a different guard, and each needs its
-# own case. A single large payload only ever proves the outermost one - the 156 KB
-# case below is stopped by the bash-side guard and never reaches python at all, so on
-# its own it says nothing about the in-python bail.
+# own case. A single large payload proves whichever guard happens to fire first and
+# says nothing about the others.
 #
-#   > 100000 chars   the bash-side ARG_MAX guard   (156 KB case, was 14.94s)
+#   > 100000 chars   the bash-side ARG_MAX guard   (1.2 MB case above, ~line 304)
 #   > 20000 chars    the in-python length bail     (78 KB case,  was  3.82s)
 #   <= 20000 chars   the bounded scrub span        (19.6 KB case, was  0.27s)
+#
+# The 156 KB case below sits above BOTH of the first two guards, so it discriminates
+# neither: delete the bash guard and the in-python bail keeps it silent, delete the
+# bail and the bash guard does. What it does hold down is wall clock - it was 14.94s
+# against a 5s timeout before the scrub span was bounded. The bash ARG_MAX guard is
+# proved by the 1.2 MB assertion instead, which is the one that actually goes loud
+# ("Argument list too long" on stderr) when that guard is removed.
 assert_fast_and_silent "a 156 KB markup paste is handled quickly and silently" \
   "$(python3 -c 'import json; print(json.dumps({"prompt": "please refactor the flow handler " + "<br>"*40000}))')" \
   1.0
