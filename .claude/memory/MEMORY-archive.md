@@ -1306,3 +1306,9 @@
 <!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
 - [Agent routing Task 1 fix round 1 - removed bogus "tools: All tools" from sonnet-impl.md (omit key = all tools), fixed awk leak in assert_agen…](session_2026-07-26_agent-routing-task1-fix-round1.md)
 - [Agent routing DESIGN (spec only, not implemented) - Jonah reversed the 2026-06-11 no-routing rule; 4-tier global roster (haiku quick-answer / Explore /…](session_2026-07-26_agent-routing-design.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [RULE: grant an agent all tools by OMITTING the tools key - "All tools" is a display string, not a value; writing it yields two bogus tool names…](session_2026-07-26_agent-tools-frontmatter-rule.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 2 SHIPPED - route-intent.json (4-tier lexicon) + route-intent.sh (fail-open bash+python3 classifier), TDD RED 6/10…](session_2026-07-26_agent-routing-task2-classifier.md)
