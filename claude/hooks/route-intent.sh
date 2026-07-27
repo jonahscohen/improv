@@ -130,7 +130,14 @@ try:
 
     # An informational or conversational framing is a question to answer, not
     # work to delegate.
-    for pat in lex.get("exempt", []):
+    #
+    # The isinstance guard here and on tier["patterns"] below is load-bearing, not
+    # defensive noise: a STRING where a list belongs iterates character by
+    # character, and every single character is a valid regex. A malformed
+    # opus_executor tier would therefore match on nearly every prompt and route the
+    # whole session to the most expensive model.
+    exempt = lex.get("exempt", [])
+    for pat in (exempt if isinstance(exempt, list) else []):
         try:
             if re.search(pat, text, re.I):
                 sys.exit(0)
@@ -143,7 +150,10 @@ try:
         tier = tiers.get(key)
         if not isinstance(tier, dict):
             continue
-        for pat in tier.get("patterns", []):
+        patterns = tier.get("patterns", [])
+        if not isinstance(patterns, list):
+            continue
+        for pat in patterns:
             try:
                 if re.search(pat, text, re.I):
                     nudge = (template
