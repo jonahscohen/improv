@@ -78,6 +78,29 @@ audit="$("$GUARD" --audit 2>/dev/null)"; audit_rc=$?
 
 still="$(printf '%s\n' "$audit" | sed -n 's/^UNMANAGED: //p' | sort -u)"
 
+# THE OTHER TWO CLASSES (2026-07-27). --audit covers claude/hooks/*.sh and nothing else,
+# so a hook's runtime lexicon and a whole skill directory could both go unpackaged with
+# no gate anywhere - which is exactly how grounding-intent.json (hook silently dead on
+# every fresh install) and the consolidate/tilt-lab skills reached main. These sweeps are
+# disk-derived like the one above, so they catch a file created by ANY means.
+#
+# Each is treated the same way as the hook sweep: rc 0 clean, 1 found, anything else
+# "cannot tell" -> contribute nothing rather than risk clearing a real block. A findings
+# rc with no parseable names is self-contradictory and is likewise ignored.
+# ONE invocation per mode. Every finding line is "<LABEL>: <name> (<why>)", so strip the
+# label and the parenthetical to get a bare name list, exactly like the hook sweep above.
+_extra() {   # $1 = guard mode
+  local out rc
+  out="$("$GUARD" "$1" 2>/dev/null)"; rc=$?
+  [ "$rc" = "1" ] || return 0        # 0 clean, 3 cannot tell -> contribute nothing
+  printf '%s\n' "$out" \
+    | sed -n 's/^[A-Z][A-Z ]*: //p' \
+    | sed 's/ (.*$//' \
+    | sed '/^$/d' | sort -u
+}
+data_bad="$(_extra --audit-data)"
+skills_bad="$(_extra --audit-skills)"
+
 # rc 1 means "completed, and found some". Zero parsed names CONTRADICTS that, so the
 # audit did not really complete - and believing it would clear a live arm on the strength
 # of a crash. Refuse to act on a self-contradictory answer; leave FLAG and ACKED alone.
@@ -85,31 +108,63 @@ if [ "$audit_rc" = "1" ] && [ -z "$still" ]; then
   exit 0
 fi
 
-if [ -z "$still" ]; then
+# Nothing unpackaged in ANY of the three classes - clear and let the session end.
+if [ -z "$still" ] && [ -z "$data_bad" ] && [ -z "$skills_bad" ]; then
   rm -f "$FLAG" "$ACKED"
   exit 0
 fi
 
+# FLAG stays HOOK-ONLY on purpose: hook-registry-guard.sh's write-time path clears
+# entries from it by bare hook name, so mixing data/skill names in would leave
+# entries nothing can ever clear. The ACK key below is what spans all three classes.
 mkdir -p "$(dirname "$FLAG")"
-printf '%s\n' "$still" > "$FLAG"
+if [ -n "$still" ]; then printf '%s\n' "$still" > "$FLAG"; else rm -f "$FLAG"; fi
+
+acked_key="$(printf 'H:%s\nD:%s\nS:%s\n' "$still" "$data_bad" "$skills_bad")"
 
 # Already blocked once for exactly this set - let the session end.
-if [ -f "$ACKED" ] && [ "$(cat "$ACKED" 2>/dev/null)" = "$still" ]; then
+if [ -f "$ACKED" ] && [ "$(cat "$ACKED" 2>/dev/null)" = "$acked_key" ]; then
   exit 0
 fi
-printf '%s' "$still" > "$ACKED"
+printf '%s' "$acked_key" > "$ACKED"
 
 {
-  echo "BLOCKED: hook(s) in claude/hooks/ are not packaged, so they will not install"
-  echo "anywhere else and the component browser cannot show or toggle them:"
-  printf '%s\n' "$still" | sed 's/^/  - /'
-  echo ""
-  echo "Wire each into claude/hooks/browser-tree.json (hooks list + hook_desc + hook_owner)"
-  echo "and install.sh (picked <owner> && install_app_hooks ... <name>.sh), plus"
-  echo "claude/hooks/app-wirings.json for its event wiring. If it is repo-only tooling,"
-  echo "wire it in .claude/settings.json and add it to pinned_hooks instead."
-  echo "Verify: /bin/bash claude/hooks/test-component-browser.sh"
-  echo ""
+  if [ -n "$still" ]; then
+    echo "BLOCKED: hook(s) in claude/hooks/ are not packaged, so they will not install"
+    echo "anywhere else and the component browser cannot show or toggle them:"
+    printf '%s\n' "$still" | sed 's/^/  - /'
+    echo ""
+    echo "Wire each into claude/hooks/browser-tree.json (hooks list + hook_desc + hook_owner)"
+    echo "and install.sh (picked <owner> && install_app_hooks ... <name>.sh), plus"
+    echo "claude/hooks/app-wirings.json for its event wiring. If it is repo-only tooling,"
+    echo "wire it in .claude/settings.json and add it to pinned_hooks instead."
+    echo "Verify: /bin/bash claude/hooks/test-component-browser.sh"
+    echo ""
+  fi
+  if [ -n "$data_bad" ]; then
+    echo "BLOCKED: hook COMPANION DATA file(s) are unpackaged. A hook whose lexicon or"
+    echo "config does not ship FAILS OPEN SILENTLY - it installs, shows up in the browser,"
+    echo "and does nothing (measured: grounding-gate emits 573 bytes with its lexicon, 0"
+    echo "without). Affected:"
+    printf '%s\n' "$data_bad" | sed 's/^/  - /'
+    echo ""
+    echo "Register each in claude/hooks/browser-tree.json \"hook_data\" under its owning"
+    echo "hook, add it to install.sh's hook_data_files() table, or - if it is not a runtime"
+    echo "companion - list it in \"hook_data_excluded\" WITH a reason."
+    echo "Verify: /bin/bash claude/hooks/test-hook-data-parity.sh"
+    echo ""
+  fi
+  if [ -n "$skills_bad" ]; then
+    echo "BLOCKED: skill(s) in claude/skills/ are never deployed by install.sh, so they"
+    echo "ship to no other machine (install.sh enumerates every skill by hand - there is"
+    echo "no glob):"
+    printf '%s\n' "$skills_bad" | sed 's/^/  - /'
+    echo ""
+    echo "Add a deploy line to the owning component's install block, following the reflect"
+    echo "precedent (mkdir -p \"\$CLAUDE_DIR/skills/<n>\" + safe_cp of its SKILL.md), and"
+    echo "name it in that component's FILES entry."
+    echo ""
+  fi
   echo "Deliberately leaving it unpackaged? Say so plainly and stop again - this blocks once."
 } >&2
 exit 2

@@ -8,7 +8,13 @@
 # Outside that combination (regular shell, or claude run without the cmux
 # claude-teams wrapper), the hook is a no-op.
 #
-# Decisions in cmux-teams mode:
+# PRECONDITION (2026-07-27): every decision below asserts something about cmux
+# PANES, so all of them are gated on the session actually being pane-capable
+# (TMUX/TMUX_PANE set). In a session that has fallen back to in-process agents no
+# spawn shape can be visible, so the hook advises and never denies there. See the
+# pane-capability block further down for the measurements behind that.
+#
+# Decisions in cmux-teams mode (pane-capable LEAD session only):
 #   - Workflow tool            -> DENY  (silent in-process subagents, never a split)
 #   - Agent missing `name`     -> DENY  (an unnamed agent is not a teammate)
 #   - Agent run_in_background  -> DENY  (background = in-process = INVISIBLE; can
@@ -52,11 +58,29 @@ if [ -z "${CMUX_SOCKET_PATH:-}" ] || [ "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-
   exit 0
 fi
 
+# Every parse below AND both emitters go through python3. Without it the hook can
+# only fail open - but it must do so with VALID JSON on stdout, not die silently
+# with rc=127 and no output. Checked here, once, because emit_allow_with_notice
+# itself cannot report this failure. The message below is hand-built rather than
+# json.dumps'd for exactly that reason; it deliberately contains no quotes or
+# backslashes, so it needs no escaping. (Codex confirmation review, 2026-07-27.)
+if ! command -v python3 >/dev/null 2>&1; then
+  printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"agent-teams-guard: python3 is not on PATH, so the cmux-teams spawn gates were SKIPPED for this call. The hook fails open rather than blocking a spawn it cannot evaluate. If named teammates stop landing in visible cmux panes, this is why."}}'
+  exit 0
+fi
+
 INPUT=$(cat)
 
+# `|| true` matters under `set -euo pipefail`: an assignment takes the exit status
+# of its command substitution, so unparseable stdin (or a missing python3) would
+# otherwise abort the hook here and emit NOTHING. A hook that emits nothing is
+# the one outcome this guard must never produce - guarantee #3 of the suite is
+# that a crash is never scored as a silent allow. Fail SOFT (never block a spawn
+# because the guard broke) but never fail QUIET: the empty-tool_name branch below
+# says out loud that the gates were skipped. (Codex review, 2026-07-27.)
 TOOL_NAME=$(echo "$INPUT" | python3 -c 'import json,sys
 d=json.load(sys.stdin)
-print(d.get("tool_name","") or "")' 2>/dev/null)
+print(d.get("tool_name","") or "")' 2>/dev/null || true)
 
 emit_deny() {
   python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$1"
@@ -181,6 +205,71 @@ if is_teammate_context; then
   emit_allow_with_notice "Teammate context (detected via: ${TEAMMATE_SIGNAL}): this session is a spawned teammate, not the lead, so the cmux-teams spawn gates (name required, no run_in_background, no Workflow) do NOT apply - a teammate has no pane of its own to spawn into. Spawn UNNAMED in-process subagents: Agent({subagent_type, prompt}). Do NOT pass name (or team_name): the runtime rejects a named spawn from a teammate with 'Teammates cannot spawn other teammates - the team roster is flat'. Relay results to the lead with SendMessage."
 fi
 
+# --- pane capability: the precondition every gate below asserts ---------------
+# HISTORY (2026-07-27, Jonah): every message this hook emits makes a claim about
+# cmux PANES, and until now it never checked whether the session could produce
+# one. In session-c3ca5a31 it denied `run_in_background: true` telling the spawner
+# to "Re-issue WITHOUT run_in_background for a visible teammate that renders as
+# its own cmux pane", the spawner complied, and the re-issued spawn registered
+# `backendType: in-process, tmuxPaneId: in-process` - no pane. It then permitted
+# that named spawn with the notice "renders as its own visible cmux pane", which
+# was false. Advice that cannot be honoured is worse than silence.
+#
+# THE SIGNAL, and why it is sound (measured 2026-07-27, session-d883bc0d):
+#   lead pid 56638   -> TMUX=/tmp/cmux-claude-teams/...  TMUX_PANE=%2113856107433619678
+#   teammate pid 61831 -> both unset
+# `cmux claude-teams` sets a tmux-like environment precisely so Claude's auto mode
+# selects the cmux/tmux split backend; Claude picks that backend ONLY when it is
+# inside tmux. So for the LEAD, TMUX unset is not merely correlated with the
+# in-process fallback, it is the cause of it. Teammates legitimately have TMUX
+# unset while still owning a real pane, which is why this check sits AFTER the
+# teammate exemption above and never runs in a teammate.
+#
+# Fail direction: when panes are impossible, this hook must not DENY a shape,
+# because no other shape can succeed either - the deny would be unactionable in
+# the session it fires in. It advises instead. That also gives the 2026-07-26
+# deadlock a second layer of defence: a teammate misread as a lead now lands on
+# this advisory path rather than on a deny it cannot satisfy.
+#
+# Seam: AGENT_TEAMS_GUARD_FORCE_PANES=yes|no (break-glass + hermetic tests). As
+# with the other seams, the emitted notice names whichever signal decided.
+PANE_SIGNAL=""
+
+_session_is_pane_capable() {
+  case "${AGENT_TEAMS_GUARD_FORCE_PANES:-}" in
+    yes) PANE_SIGNAL="AGENT_TEAMS_GUARD_FORCE_PANES=yes"; return 0 ;;
+    no)  PANE_SIGNAL="AGENT_TEAMS_GUARD_FORCE_PANES=no";  return 1 ;;
+  esac
+  # BOTH are required, not either. The measured pane-capable lead had both set,
+  # and this gate's fail direction is "advise unless pane-capability is PROVEN":
+  # a stale or partial env (the classic one is TMUX_PANE surviving into a child
+  # that is no longer inside tmux) would otherwise be read as pane-capable and
+  # re-enable exactly the unactionable denies this block exists to prevent.
+  # Requiring both can only ever cost a nudge; accepting either can resurrect the
+  # bug. (Codex review, 2026-07-27.)
+  if [ -n "${TMUX:-}" ] && [ -n "${TMUX_PANE:-}" ]; then
+    PANE_SIGNAL="TMUX and TMUX_PANE both set"
+    return 0
+  fi
+  if [ -n "${TMUX:-}" ] || [ -n "${TMUX_PANE:-}" ]; then
+    PANE_SIGNAL="only one of TMUX/TMUX_PANE set - partial tmux env, treated as NOT pane-capable"
+    return 1
+  fi
+  PANE_SIGNAL="TMUX and TMUX_PANE both unset"
+  return 1
+}
+
+# Only Agent and Workflow are gated. Anything else passes through untouched.
+case "$TOOL_NAME" in
+  Agent|Workflow) ;;
+  "") emit_allow_with_notice "agent-teams-guard: could not read tool_name from this PreToolUse payload (malformed JSON on stdin, or python3 unavailable). The cmux-teams spawn gates were SKIPPED for this call rather than guessed at - the hook fails open so a broken guard can never block a spawn. If named teammates stop landing in visible cmux panes, check this first." ;;
+  *) echo '{}'; exit 0 ;;
+esac
+
+if ! _session_is_pane_capable; then
+  emit_allow_with_notice "cmux-teams PANE FALLBACK (detected via: ${PANE_SIGNAL}): this session cannot produce cmux panes, so NO spawn shape will be visible here - a named teammate registers with backendType 'in-process' and tmuxPaneId 'in-process' and runs invisibly. The spawn-shape gates (name required, no run_in_background, no Workflow) are therefore NOT enforced in this session; enforcing them would be advice you could not act on. Named spawns still register on the team roster and stay addressable via SendMessage - they are simply not visible as panes. To get real panes, relaunch the session with 'cmux claude-teams' (it sets the tmux-like environment Claude needs before it will select the tmux split backend) and re-dispatch the work there."
+fi
+
 # Workflow spawns silent in-process subagents that can never appear as cmux
 # splits. In cmux-teams mode that defeats the team flow, so it is hard-blocked.
 if [ "$TOOL_NAME" = "Workflow" ]; then
@@ -193,14 +282,46 @@ if [ "$TOOL_NAME" != "Agent" ]; then
   exit 0
 fi
 
+# A payload whose tool_input is not an object cannot be evaluated: the NAME parse
+# would come back empty and the missing-name gate below would DENY it. That is
+# fail-CLOSED, and it contradicts this hook's stated rule that a guard which
+# cannot evaluate a call must never block it. Distinguish "no readable
+# tool_input" from "name absent" and fail open on the former. (Codex
+# confirmation review, 2026-07-27.)
+TOOL_INPUT_OK=$(echo "$INPUT" | python3 -c 'import json,sys
+d=json.load(sys.stdin)
+print("1" if isinstance(d.get("tool_input"), dict) else "0")' 2>/dev/null || true)
+
+if [ "$TOOL_INPUT_OK" != "1" ]; then
+  emit_allow_with_notice "agent-teams-guard: this PreToolUse payload carries no readable tool_input object, so the cmux-teams spawn gates were SKIPPED for this call rather than guessed at. The hook fails open - a guard that cannot evaluate a call must never block it. If named teammates stop landing in visible cmux panes, check this first."
+fi
+
 NAME=$(echo "$INPUT" | python3 -c 'import json,sys
 d=json.load(sys.stdin)
-print((d.get("tool_input") or {}).get("name","") or "")' 2>/dev/null)
+print((d.get("tool_input") or {}).get("name","") or "")' 2>/dev/null || true)
 
+# The default below is `False`, and that is deliberate - NOT an oversight.
+# MEASURED 2026-07-27 by dumping this hook's raw stdin on three live spawns:
+#   parameter omitted        -> tool_input has NO "run_in_background" key at all
+#   run_in_background:false  -> tool_input["run_in_background"] is False
+#   run_in_background:true   -> tool_input["run_in_background"] is True
+# So the harness does NOT materialise its default into the payload, and this hook
+# genuinely cannot distinguish "omitted" from "false". The Agent tool's own schema
+# says background is the DEFAULT ("Subagents run in the background by default"),
+# which makes absence look like it should mean background=true.
+#
+# It must NOT be read that way here. Evidence: in pane-capable session-d883bc0d
+# all four named teammates (ampersand, coverage, panespawn, routecheck) were
+# spawned with this parameter ABSENT and all four registered real pane ids
+# (%3758..., %7105..., %7522..., %2086...). Omission is the shape that WORKS on
+# the lead's named path - the runtime selects the tmux backend from `name` plus a
+# pane-capable session, not from this flag. Treating absence as background would
+# deny the only shape proven to produce a pane, which is the 2026-07-26 deadlock
+# class all over again (hook demands a shape the runtime cannot deliver).
 RUN_BG=$(echo "$INPUT" | python3 -c 'import json,sys
 d=json.load(sys.stdin)
 v=(d.get("tool_input") or {}).get("run_in_background", False)
-print("1" if v in (True,"true","True",1) else "0")' 2>/dev/null)
+print("1" if v in (True,"true","True",1) else "0")' 2>/dev/null || true)
 
 # Missing name: not a teammate. Block.
 if [ -z "$NAME" ]; then
@@ -210,7 +331,7 @@ fi
 # Background = invisible. A background subagent runs in-process and can NEVER be a
 # cmux split/pane. Block unless the user explicitly asked for a background agent.
 if [ "$RUN_BG" = "1" ]; then
-  emit_deny "BLOCKED: run_in_background:true makes an INVISIBLE in-process subagent - it can never appear as a cmux pane/split. You named the agent to make it a visible teammate, then set run_in_background, which defeats that. Re-issue WITHOUT run_in_background for a visible (foreground) teammate that renders as its own cmux pane. Use run_in_background ONLY if the user EXPLICITLY asked for a background/invisible agent."
+  emit_deny "BLOCKED: run_in_background:true makes an INVISIBLE in-process subagent - it can never appear as a cmux pane/split. You named the agent to make it a visible teammate, then set run_in_background, which defeats that. The Agent tool's schema says background is its DEFAULT; inside a cmux-teams lead session that default is wrong, and this gate is the correction. FIX: re-issue the SAME call with the run_in_background key OMITTED entirely - that is the shape every teammate that actually got a pane in this repo used, and this session IS pane-capable (${PANE_SIGNAL}), so the re-issue will land in a real pane. Passing run_in_background:false also clears this gate. Use run_in_background:true ONLY if the user EXPLICITLY asked for a background/invisible agent."
 fi
 
 # Named foreground Agent - the correct teammate form. Allow, with a note about

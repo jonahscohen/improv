@@ -24,6 +24,21 @@
 #   (stdin JSON)  PostToolUse Write|Edit|MultiEdit - the live guard.
 #   --audit       list every unmanaged hook on disk and exit 1 if any. For tests/CI.
 #   --check NAME  check one hook name; exit 0 managed, 1 unmanaged.
+#   --audit-data  list every unmanaged hook COMPANION DATA file and exit 1 if any.
+#   --audit-skills list every skill dir install.sh never deploys; exit 1 if any.
+#
+# WHY --audit-data EXISTS (added 2026-07-27)
+# --audit covers claude/hooks/*.sh and nothing else, so an entire class was unguarded:
+# the JSON lexicons and config a hook reads at RUNTIME. Shipping the .sh without its
+# companion produces a hook that installs, looks present in the browser, and silently
+# does nothing - every one of these fails open by design rather than erroring. It has
+# now happened twice: route-intent.json (caught by Codex review 2026-07-26) and
+# grounding-intent.json, which install.sh never deployed at all. Measured: grounding-gate
+# emits 573 bytes of nudge with its lexicon and 0 without.
+#
+# A companion is MANAGED when browser-tree.json's "hook_data" maps it to an owning hook
+# AND install.sh names it. Anything else on disk must be listed in "hook_data_excluded"
+# with a stated reason - an exemption without a reason is a place to hide a dead hook.
 #
 # Project-scoped by design (wired in this repo's .claude/settings.json, like
 # beats-rebuild), because it reads THIS repo's browser-tree.json and install.sh. It is
@@ -87,6 +102,15 @@ _is_excluded() {
     # ~/Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist. Appears in no
     # settings.json event, so there is nothing to wire or toggle. Verified 2026-07-16.
     beats-reflect-weekly) return 0 ;;
+    # RETIRED, SUPERSEDED: a Stop-shaped hook (reads stdin, exits 1 to block) that was
+    # never wired to any settings event, so every machine that installed the
+    # question-discipline cluster got it and it did nothing, silently, forever. The live
+    # path is multiple-choice-detect-stop.sh + multiple-choice-inject-prompt.sh, created
+    # the same day (2026-05-24), wired twice each, and named in CLAUDE.md. install.sh no
+    # longer deploys it and the tree no longer registers it. It stays on disk ONLY
+    # because test-multiple-choice-enforce.sh still exercises it - delete that coverage
+    # and this file should go too, along with this exemption.
+    question-enforcement) return 0 ;;
     # CORE, BASE-WIRED: config-owned and shipped in the base claude/settings.json
     # (install.sh's deactivate_config calls it "config-owned (core, base-wired)"). It is
     # what makes the Bash tool honor the nvm default, so it is not individually
@@ -194,6 +218,99 @@ except Exception:
     sys.exit(3)
 for n in bad:
     print("UNMANAGED: " + n)
+sys.exit(1 if bad else 0)
+PY
+    exit $?
+    ;;
+  --audit-data)
+    # Same exit contract as --audit: 0 clean, 1 completed-with-findings, 3 cannot tell.
+    # The stop gate reasons about these codes, so a crash must never look like "clean".
+    [ -f "$TREE" ] || exit 0          # no tree: not our repo, stay quiet
+    [ -f "$INSTALL_SH" ] || exit 0
+    HOOKS_DIR="$REPO_DIR/claude/hooks" TREE="$TREE" INSTALL_SH="$INSTALL_SH" python3 - <<'PY'
+import json, os, re, sys
+try:
+    hooks_dir = os.environ["HOOKS_DIR"]
+    t = json.load(open(os.environ["TREE"]))
+    if not isinstance(t, dict):
+        raise ValueError("browser-tree.json is not an object")
+    # A tree with NO "hook_data" key has not adopted this registry at all - an older
+    # checkout, or a synthetic fixture built to exercise the .sh sweep. Auditing it
+    # would report every wiring table in claude/hooks/ as unmanaged, which is noise,
+    # and noise is what trains people to ignore a guard. Stay quiet.
+    #
+    # This is NOT a way to silently disarm the guard in THIS repo: deleting the key
+    # here turns test-hook-data-parity.sh red on its "real tree declares hook_data" row.
+    if "hook_data" not in t:
+        sys.exit(0)
+    hook_data = t.get("hook_data") or {}
+    excluded = set(t.get("hook_data_excluded") or {})
+    src = open(os.environ["INSTALL_SH"]).read()
+
+    # Every companion the registry claims, flattened to a set.
+    registered = {}
+    for owner, files in hook_data.items():
+        for f in files or []:
+            registered[f] = owner
+
+    on_disk = sorted(f for f in os.listdir(hooks_dir) if f.endswith(".json"))
+    bad = []
+    # Direction 1: a data file on disk that is neither registered nor excluded.
+    for f in on_disk:
+        if f in excluded or f in registered:
+            continue
+        bad.append("UNMANAGED DATA: %s (no owning hook in browser-tree.json "
+                   '"hook_data", and not listed in "hook_data_excluded")' % f)
+    # Direction 2: registered, but install.sh never names it - so it never ships.
+    for f, owner in sorted(registered.items()):
+        if not re.search(r'(?<![\w-])' + re.escape(f) + r'(?![\w-])', src):
+            bad.append("UNDEPLOYED DATA: %s (owned by %s, but install.sh never "
+                       "names it - the hook ships without its companion)" % (f, owner))
+    # Direction 3: registered but missing from disk - the installer would warn or
+    # silently skip, and the owning hook fails open.
+    for f, owner in sorted(registered.items()):
+        if not os.path.exists(os.path.join(hooks_dir, f)):
+            bad.append("MISSING DATA: %s (owned by %s, registered but not on disk)"
+                       % (f, owner))
+    # Direction 4: the owning hook itself must exist, or the entry is stale.
+    for owner in sorted(hook_data):
+        if not os.path.exists(os.path.join(hooks_dir, owner)):
+            bad.append("STALE DATA OWNER: %s is in hook_data but the hook file is gone"
+                       % owner)
+except Exception:
+    sys.exit(3)
+for line in bad:
+    print(line)
+sys.exit(1 if bad else 0)
+PY
+    exit $?
+    ;;
+  --audit-skills)
+    # SKILLS are the other class install.sh enumerates by hand. There is no glob: every
+    # skill dir is named explicitly (safe_cp / cp -r / ln -sf / copy_bundled_skill), so a
+    # new skill directory ships to NO other machine until someone edits install.sh.
+    # Measured 2026-07-27: 18 skill dirs on disk, 16 deployed - `consolidate` and
+    # `tilt-lab` had zero mentions in install.sh.
+    #
+    # Contrast with claude/agents/*.md, which IS deployed by a glob and therefore cannot
+    # drift; that is why agents get no audit mode here.
+    [ -f "$INSTALL_SH" ] || exit 0
+    [ -d "$REPO_DIR/claude/skills" ] || exit 0
+    SKILLS_DIR="$REPO_DIR/claude/skills" INSTALL_SH="$INSTALL_SH" python3 - <<'PY'
+import os, re, sys
+try:
+    d = os.environ["SKILLS_DIR"]
+    src = open(os.environ["INSTALL_SH"]).read()
+    names = sorted(n for n in os.listdir(d) if os.path.isdir(os.path.join(d, n)))
+    # Deployed if install.sh names the skill in a path or as a copy_bundled_skill arg.
+    bad = [n for n in names
+           if not re.search(r'claude/skills/' + re.escape(n) + r'(?![\w-])', src)
+           and not re.search(r'copy_bundled_skill\s+"?' + re.escape(n) + r'(?![\w-])', src)]
+except Exception:
+    sys.exit(3)
+for n in bad:
+    print("UNMANAGED SKILL: %s (claude/skills/%s exists but install.sh never "
+          "deploys it - it ships to no other machine)" % (n, n))
 sys.exit(1 if bad else 0)
 PY
     exit $?

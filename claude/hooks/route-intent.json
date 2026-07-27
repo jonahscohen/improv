@@ -4,7 +4,11 @@
     "fire_rule": "Fires only on a high-confidence tier match, outside cooldown, on a prompt longer than min_prompt_chars, with no exempt pattern matching. Silence is the default.",
     "tie_break": "A prompt matching several tiers resolves to the MOST capable matched tier, in escalation_order. Routing too low produces work that must be redone.",
     "pattern_syntax": "Values are regex fragments, matched case-insensitively against the scrubbed prompt (code fences, inline backticks, URLs, and XML bodies removed).",
-    "imperative_shape": "A bare verb (\\brefactor\\b) fires on discussion as readily as on instruction - 'do not refactor it', 'i hate the redesign we shipped', 'should we refactor this'. Verbs in the opus_executor tier therefore require an IMPERATIVE shape: the verb sits at a clause boundary (string start, sentence punctuation, or after and/then/now/also/next), optionally behind a 'can you' / 'please' softener, AND takes a determiner-led object. Note the softeners are INSIDE the optional group rather than boundary tokens of their own - as boundary tokens, 'please' matched mid-clause and let 'should we please refactor the parser' through. Keep any new bare verb to the same shape; this is the most expensive tier to route to by mistake.",
+    "imperative_shape": "A bare verb (\\brefactor\\b) fires on discussion as readily as on instruction - 'do not refactor it', 'i hate the redesign we shipped', 'should we refactor this'. Verbs that take a determiner-led object therefore require an IMPERATIVE shape: the verb sits at a clause boundary (string start, sentence punctuation, or after and/then/now/also/next), optionally behind an opener/softener, AND takes a determiner-led object. Note the softeners are INSIDE the optional group rather than boundary tokens of their own - as boundary tokens, 'please' matched mid-clause and let 'should we please refactor the parser' through.",
+    "opener_group_rule": "The openers (i/we, want you to, need you to, need to, would like you to, can/could/would/will you, please) are VERB PHRASES that occur anywhere in a sentence, NOT clause markers like and/then/now/also/next. They must therefore sit INSIDE an optional prefix group that is itself preceded by a real clause boundary - never as members of the boundary alternation. Adding them to the boundary alternation was measured 2026-07-27 to route seven deliberation prompts ('do we need to refactor this...', 'i dont think we need to...', 'the issue title says lets...') to the most expensive tier, and that widening was reverted. Any new opener goes in this group, and ships with adversarial negatives BUILT FROM ITS OWN TOKENS.",
+    "identifier_slot": "An identifier slot is at most four whitespace-separated tokens ([a-z0-9_.\\-]{1,30}(?: [a-z0-9_.\\-]{1,30}){0,3}). The older [a-z0-9_.\\- ]{2,40} admitted space and dot without limit, so it bridged whole clauses: 'a stale orphan from a rename - i.e. this skill was renamed to something else' matched the `rename X to` pattern. Do not reintroduce a space inside the character class.",
+    "deictic_objects": "A dispatched subagent receives NONE of the conversation, so a deictic referent cannot be resolved by the agent being nudged. 'what does this actually do' is unroutable by construction, not a narrow lookup. Identifier slots that ARE the referent carry a (?!(?:this|that|it|these|those|they|them|there|here)\\b) guard.",
+    "dispatch_briefs": "A prompt that IS an agent dispatch brief must never route: the recipient is already the delegate, so nudging it to re-delegate is pure noise. Measured 2026-07-27 - 7 of 9 fires on real traffic were briefs, matching sub-steps like '1. first map the routing landscape' and '2. find all 7 pages'. The brief markers live in `exempt`.",
     "bounded_quantifiers": "Every {n,m} here must stay BOUNDED. route-intent.sh scrubs quoted XML with a backreference, which defeats the engine's prefix optimization; an unbounded gap made a 156 KB paste take 14.9s against a 5s timeout."
   },
   "config": {
@@ -12,18 +16,23 @@
     "cooldown_state_file": "~/.claude/.route-intent-cooldown",
     "min_prompt_chars": 40
   },
-  "escalation_order": ["opus_executor", "sonnet_impl", "explore", "quick_answer"],
+  "escalation_order": [
+    "opus_executor",
+    "sonnet_impl",
+    "explore",
+    "quick_answer"
+  ],
   "tiers": {
     "quick_answer": {
       "agent": "quick-answer",
       "model": "haiku",
       "label": "a narrow lookup",
       "patterns": [
-        "where (is|are) [a-z0-9_.\\- ]{2,40} (set|defined|declared|configured)",
-        "what does [a-z0-9_.\\- ]{2,40} (do|return|default to)",
+        "where (is|are) (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}(?: (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}){0,3} (set|defined|declared|configured)",
+        "what does (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}(?: (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}){0,3} (do|return|default to)",
         "which file (owns|holds|defines|contains)",
         "look up (the|what|whether)",
-        "check whether [a-z0-9_.\\- ]{2,40} (is|exists|matches)"
+        "check whether (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}(?: (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}){0,3} (is|exists|matches)"
       ]
     },
     "explore": {
@@ -33,9 +42,13 @@
       "patterns": [
         "find (all|every|each) ",
         "search (the|this|our) (repo|codebase|project)",
-        "list (all|every) [a-z0-9_.\\- ]{2,40}(file|usage|caller|reference)",
-        "trace (how|the|where) [a-z0-9_.\\- ]{2,40} (flows|is used|gets)",
-        "map (out )?(the|all|every) "
+        "list (all|every) [a-z0-9_.\\-]{1,30}(?: [a-z0-9_.\\-]{1,30}){0,3} (file|usage|caller|reference)",
+        "trace (how|the|where) (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}(?: (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}){0,3} (flows|is used|gets)",
+        "map (out )?(the|all|every) ",
+        "(?:(?:^|[.;!?]\\s+|\\n\\s*)(?:(?:(?:i|we)\\s+)?(?:want you to|need you to|need to|would like you to)\\s+)?(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?|(?:^|\\s)(?:and|then|now|also|next)\\s+(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?)(?:run|do) an? analysis (?:on|of)\\s",
+        "(?:(?:^|[.;!?]\\s+|\\n\\s*)(?:(?:(?:i|we)\\s+)?(?:want you to|need you to|need to|would like you to)\\s+)?(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?|(?:^|\\s)(?:and|then|now|also|next)\\s+(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?)scan\\s+(?:the|this|that|these|those|our|its|all|every|a|an|my|your)?\\s*[a-z0-9_.\\-]{2,30}\\s+(?:for|folders|dirs|directories)\\b",
+        "(?:(?:^|[.;!?]\\s+|\\n\\s*)(?:(?:(?:i|we)\\s+)?(?:want you to|need you to|need to|would like you to)\\s+)?(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?)(?:give me|i need|i want|i'd like)\\s+a\\s+(?:breakdown|inventory|rundown|survey)\\s+of\\s",
+        "(?:(?:^|[.;!?]\\s+|\\n\\s*)(?:(?:(?:i|we)\\s+)?(?:want you to|need you to|need to|would like you to)\\s+)?(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?|(?:^|\\s)(?:and|then|now|also|next)\\s+(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?)explore\\s+(?:the|this|our|/|~)"
       ]
     },
     "sonnet_impl": {
@@ -43,11 +56,12 @@
       "model": "sonnet",
       "label": "a well-specified mechanical change",
       "patterns": [
-        "rename [a-z0-9_.\\- ]{2,40} (to|across|everywhere)",
-        "update (all|every) [a-z0-9_.\\- ]{2,40}(reference|import|call site|caller)",
+        "rename (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}(?: (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}){0,3} (to|across|everywhere)",
+        "update (all|every) [a-z0-9_.\\-]{1,30}(?: [a-z0-9_.\\-]{1,30}){0,3} (reference|import|call site|caller)",
         "apply the same (change|fix|pattern) to",
         "add a (test|flag|field|case) (for|to) ",
-        "bump [a-z0-9_.\\- ]{2,40} (to|from) "
+        "bump (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}(?: (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}){0,3} (to|from) ",
+        "(?:(?:^|[.;!?]\\s+|\\n\\s*)(?:(?:(?:i|we)\\s+)?(?:want you to|need you to|need to|would like you to)\\s+)?(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?|(?:^|\\s)(?:and|then|now|also|next)\\s+(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?)modify\\s+(?:the|this|that|these|those|our|its|all|every|a|an|my|your)?\\s*[a-z0-9_.\\-]{2,30}\\s+to\\s"
       ]
     },
     "opus_executor": {
@@ -55,11 +69,12 @@
       "model": "opus",
       "label": "a multi-file build",
       "patterns": [
-        "(?:^|[.;!?\\n]\\s*|\\b(?:and|then|now|also|next)\\s+)(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?refactor\\s+(?:the|this|that|these|those|our|its|all|every|a|an)\\b",
-        "implement (a|the|an) [a-z0-9_.\\- ]{2,40}(layer|module|system|pipeline|engine)",
-        "\\bmigrate\\b [a-z0-9_.\\- ]{2,40} (to|from|onto)",
-        "(?:^|[.;!?\\n]\\s*|\\b(?:and|then|now|also|next)\\s+)(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?redesign\\s+(?:the|this|that|these|those|our|its|all|every|a|an)\\b",
-        "build (a|the|an) [a-z0-9_.\\- ]{2,40}(system|subsystem|pipeline|harness)"
+        "(?:(?:^|[.;!?]\\s+|\\n\\s*)(?:(?:(?:i|we)\\s+)?(?:want you to|need you to|need to|would like you to)\\s+)?(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?|(?:^|\\s)(?:and|then|now|also|next)\\s+(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?)refactor\\s+(?:the|this|that|these|those|our|its|all|every|a|an)\\b",
+        "implement (a|the|an) [a-z0-9_.\\-]{1,30}(?: [a-z0-9_.\\-]{1,30}){0,3} (layer|module|system|pipeline|engine)",
+        "\\bmigrate\\b (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}(?: (?!(?:this|that|it|these|those|they|them|there|here)\\b)[a-z0-9_.\\-]{1,30}){0,3} (to|from|onto)",
+        "(?:(?:^|[.;!?]\\s+|\\n\\s*)(?:(?:(?:i|we)\\s+)?(?:want you to|need you to|need to|would like you to)\\s+)?(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?|(?:^|\\s)(?:and|then|now|also|next)\\s+(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?)redesign\\s+(?:the|this|that|these|those|our|its|all|every|a|an)\\b",
+        "build (a|the|an) [a-z0-9_.\\-]{1,30}(?: [a-z0-9_.\\-]{1,30}){0,3} (system|subsystem|pipeline|harness)",
+        "(?:(?:^|[.;!?]\\s+|\\n\\s*)(?:(?:(?:i|we)\\s+)?(?:want you to|need you to|need to|would like you to)\\s+)?(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?|(?:^|\\s)(?:and|then|now|also|next)\\s+(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?)build me\\s+(?:a|an|the)\\s"
       ]
     }
   },
@@ -68,7 +83,14 @@
     "^\\s*(explain|define|describe|summarize|tell me about)\\b",
     "^\\s*how (do|does|did|would|should)\\b",
     "\\b(what do you think|your thoughts|thoughts on|does that look right|is that right|am i right)\\b",
-    "^\\s*(thanks|thank you|ok|okay|got it|nice|cool|yep|nope)\\b"
+    "^\\s*(thanks|thank you|ok|okay|got it|nice|cool|yep|nope)\\b",
+    "^\\s*you are [\\\"'][^\\\"']{1,40}[\\\"']",
+    "^\\s*you are (?:implementing|doing|reading|building|running|finishing|executing)\\b",
+    "^\\s*teammate\\b[\\s\\S]{0,300}?\\btask:",
+    "^\\s*(?:research|execution|audit|build|eval)\\s+unit\\b",
+    "^\\s*execute unit \\d",
+    "\\bcollaborator is\\b",
+    "^\\s*this session is being continued from a previous conversation"
   ],
   "nudge": "ROUTE CHECK: this prompt reads as {label}. {agent} ({model}) could field it. Dispatch if the work is longer than the dispatch overhead; answer directly if it is not. Your call either way."
 }

@@ -233,6 +233,168 @@ assert_routes "a softened imperative still routes to opus-executor" \
   "can you refactor the parser module across every file that imports it" \
   "opus-executor"
 
+# ---------------------------------------------------------------------------
+# Real-traffic efficacy (measured 2026-07-27 against 627 genuine prompts mined
+# from ~/.claude/projects transcripts). The suite was green while the hook was
+# routing 0.37% of real prompts at 0% recall and 0% precision, so a green suite
+# is not evidence the classifier works. These cases encode the four defects
+# that measurement exposed.
+#
+# THE RULE THESE TESTS EXIST TO ENFORCE: when a matcher is widened, the
+# negatives that matter are the ones built FROM THE TOKENS THE WIDENING ADDED,
+# not the ones already in the suite. A prior widening passed every inherited
+# negative and still reintroduced seven deliberation false positives, because
+# no existing negative happened to contain a newly added token.
+# ---------------------------------------------------------------------------
+
+# Defect A - deictic objects. A dispatched subagent receives NONE of the
+# conversation, so "this"/"that" has no resolvable referent. Not a narrow
+# lookup; unroutable by construction.
+assert_silent "a deictic object is not a narrow lookup" \
+  "in the settings panel of justify, what does this actually do when you click it"
+assert_silent "a deictic subject is not a narrow lookup" \
+  "where is that set exactly, i cannot find it anywhere in the config files"
+
+# Defect B - the identifier slot used to admit space and dot without limit
+# ([a-z0-9_.\- ]{2,40}), so it bridged whole clauses. This exact string was
+# observed routing on real traffic: "rename" and a "to" 30 characters later,
+# with an entire unrelated clause in between.
+assert_silent "an identifier slot does not bridge a clause boundary" \
+  "or a stale orphan from a rename - i.e. this skill was renamed to something else"
+
+# Defect C - dispatch briefs. The recipient of a brief IS the delegate, so
+# nudging it to re-delegate is pure noise. 7 of the 9 fires on real traffic
+# were briefs, matching numbered sub-steps inside them.
+assert_silent "a teammate dispatch brief does not route" \
+  "Teammate on the improv repo. TASK: find all the stale references. Do NOT commit."
+assert_silent "a named-agent dispatch brief does not route" \
+  'You are "stage2bd", finishing Stage 2. Collaborator is Jonah. First map the routing landscape.'
+assert_silent "a research-unit brief does not route" \
+  "RESEARCH unit 8 of the dispatch plan. Map the coupling of each of the six cmux hooks."
+assert_silent "a compaction summary is not a user request" \
+  "This session is being continued from a previous conversation that ran out of context. Summary: find all the callers."
+
+# Defect D - register. The lexicon encoded a formal command register the user
+# never actually types. These six phrasings are verbatim shapes from real
+# transcripts that were silent before.
+assert_routes "a conversational analysis request routes to Explore" \
+  "need you to run an analysis on the four competitor repos and determine the gaps" \
+  "Explore"
+assert_routes "a breakdown request routes to Explore" \
+  "i need a breakdown of all work completed across all projects last week" \
+  "Explore"
+assert_routes "a scan request routes to Explore" \
+  "need to scan project folders for time spent in each project over the past week" \
+  "Explore"
+assert_routes "an explicit explore request routes to Explore" \
+  "Explore /Users/spare3/Documents/Github/improv/sidecoach and report the rules" \
+  "Explore"
+assert_routes "a modify-X-to request routes to sonnet-impl" \
+  "modify generator to support localstorage so it saves entries between reloads" \
+  "sonnet-impl"
+assert_routes "a build-me request routes to opus-executor" \
+  "look at this design file, study all the artboards, and build me a design system" \
+  "opus-executor"
+
+# Defect D adversarial negatives - deliberation, negation and reported speech
+# built from the SAME opener tokens the widening added (i/we, need to, want you
+# to, can you, please) and the SAME verbs (run an analysis, scan, breakdown,
+# explore, modify, build me). The openers are verb phrases, so they must sit
+# inside an optional prefix group behind a real clause boundary, never as
+# boundary tokens of their own.
+assert_silent "deliberating about an analysis does not route" \
+  "do we need to run an analysis on those four repos before the release, or not"
+assert_silent "negated scan intent does not route" \
+  "i dont think we need to scan the project folders for time spent, it is fine"
+assert_silent "an explicit refusal to modify does not route" \
+  "i do not want you to modify the generator to support localstorage; explain first"
+assert_silent "reported speech about a build request does not route" \
+  "the issue title says build me a dashboard for the metrics, but I need triage notes"
+assert_silent "reported speech about exploring does not route" \
+  "the proposal says explore the sidecoach directory next, but I only want risks"
+assert_silent "deliberating about a breakdown does not route" \
+  "do we need a breakdown of every project last week, or can that wait for the retro"
+assert_silent "an open question about exploring does not route" \
+  "should we explore the parser directory or leave it alone until the release ships"
+assert_silent "a rhetorical question about scanning does not route" \
+  "why would i want you to scan the project folders when the report already exists"
+
+# ---------------------------------------------------------------------------
+# Findings from the cross-model (Codex) review of the widening above. Each of
+# these fired on the first version of the fix; the exact strings are kept so a
+# future edit cannot quietly reintroduce them.
+# ---------------------------------------------------------------------------
+
+# An opener is a VERB PHRASE, so after a bare conjunction it reads as continued
+# deliberation, not instruction. Only string-start or sentence punctuation may
+# introduce an opener; the conjunction branch admits softeners alone.
+assert_silent "an opener after a conjunction is not an instruction" \
+  "should we update the parser and need to scan project folders for time spent now"
+assert_silent "an opener after a conjunction inside a negation does not route" \
+  "i do not want this, and need to scan project folders for time spent is wrong"
+assert_silent "a trailing deliberation clause does not route" \
+  "do we need to scan the repo and need a breakdown of the risks before the retro"
+
+# Sentence punctuation only bounds a clause when whitespace follows it.
+# Otherwise a dotted slug manufactures a boundary mid-token.
+assert_silent "a dotted slug is not a clause boundary" \
+  "the issue title says v2.build me a dashboard for metrics, but i need triage notes"
+assert_silent "a dotted path fragment is not a clause boundary" \
+  "the proposal slug is draft.explore /tmp/foo next, but i only want the risks"
+
+# The deictic guard binds every token of an identifier slot, not just the head.
+assert_silent "a deictic in a later slot token still blocks the lookup" \
+  "where is the flag for that configured in this project, i cannot find it"
+assert_silent "a deictic object in a whether-check still blocks the lookup" \
+  "check whether the value for this exists before we change anything at all"
+
+# The brief exemptions must not swallow genuine requests that merely open with
+# brief-like words. A brief marker alone is not enough; a co-marker is required.
+assert_routes "a real request opening with 'you are' still routes" \
+  "You are an expert in this codebase; rename parser to lexer across every call site." \
+  "sonnet-impl"
+assert_routes "a real request mentioning a teammate still routes" \
+  "Teammate asked me to find all the stale references in the hooks; can you do that?" \
+  "Explore"
+
+# --- second cross-model review pass -----------------------------------------
+
+# A conjunction only bounds a clause when whitespace precedes it, or a dotted
+# slug smuggles one in ("v2.then build me ...").
+assert_silent "a dotted slug before a conjunction is not a clause boundary" \
+  "the issue title says v2.then build me a dashboard for metrics, but i need notes"
+assert_silent "a dotted slug before an adverb is not a clause boundary" \
+  "the proposal slug is draft.now scan project folders for time spent, only triage"
+
+# A bare first-person subject is not an opener. Without this, a declarative
+# ("i scan project folders every friday") reads as a command.
+assert_silent "a first-person declarative is not an instruction" \
+  "i scan project folders for time spent every friday before the weekly report"
+assert_silent "a first-person plural declarative is not an instruction" \
+  "we run an analysis on the four repos every friday before the planning meeting"
+
+# "i need"/"i want" live in the breakdown phrase itself, so no boundary rule
+# reaches them; that shape is only accepted at the head of a request.
+assert_silent "a breakdown phrase after a conjunction does not route" \
+  "should we update the parser and i need a breakdown of the risks before the retro"
+
+# The brief exemption keys off a brief HEAD (a named agent or a brief-shaped
+# participle), not off any prompt that happens to say "do not commit".
+assert_routes "a request that merely says do not commit still routes" \
+  "You are right, rename parser to lexer across every call site, but do not commit." \
+  "sonnet-impl"
+
+# The opener group now carries refactor/redesign too - the phrasing the earlier
+# reverted widening was trying to recover. It is safe here only because the
+# openers sit behind a real clause boundary; the eleven deliberation probes
+# above are what hold that down.
+assert_routes "an opener-led refactor routes to opus-executor" \
+  "need to refactor the parser module across every file that imports it today" \
+  "opus-executor"
+assert_routes "a first-person opener-led redesign routes to opus-executor" \
+  "i want you to redesign the settings page so it matches the new flow exactly" \
+  "opus-executor"
+
 # Guard the lexicon's declared order against a silent reorder.
 assert_escalation_order() {
   local got
@@ -527,7 +689,31 @@ assert_block_lacks() {
   fi
 }
 
-assert_block_has "installer deploys route-intent.json"  "$route_deploy_block" "route-intent.json"
+# The lexicon deploy moved OUT of this per-hook block and into the shared
+# hook_data_files()/install_hook_data() table (2026-07-27), because the same
+# silent-fail-open bug had to be fixed a second time for grounding-intent.json.
+# So this is no longer a substring check on the block - it EXECUTES the real
+# functions, which is strictly stronger: it proves the file actually lands, not
+# merely that install.sh mentions its name somewhere.
+route_data_probe() {
+  local sb; sb="$(mktemp -d)"
+  (
+    CLAUDE_DIR="$sb/claude"; REPO_DIR="$REPO_DIR"
+    mkdir -p "$CLAUDE_DIR/hooks"
+    # Real function text, extracted verbatim rather than paraphrased.
+    eval "$(awk '/^hook_data_files\(\) \{/,/^\}/'   "$REPO_DIR/install.sh")"
+    eval "$(awk '/^install_hook_data\(\) \{/,/^\}/' "$REPO_DIR/install.sh")"
+    link_or_copy_data() { ln -sf "$1" "$2"; }
+    install_hook_data "route-intent.sh"
+    [ -e "$CLAUDE_DIR/hooks/route-intent.json" ] && echo LANDED
+  )
+  rm -rf "$sb"
+}
+if [ "$(route_data_probe)" = "LANDED" ]; then
+  pass "installer deploys route-intent.json (via hook_data_files, executed)"
+else
+  fail "installer deploys route-intent.json" "install_hook_data route-intent.sh did not produce the lexicon"
+fi
 assert_block_has "installer deploys the agents roster"  "$route_deploy_block" "claude/agents"
 # The lexicon and roster must follow the SAME symlink-vs-copy decision the hook made.
 # A bare `ln -sf` dangles on every copy-mode install (the throwaway-clone case),
@@ -537,7 +723,17 @@ assert_block_lacks "data files do not deploy via a bare ln -sf" "$route_deploy_b
 
 # cluster_hooks only knows .sh members, so removing the cluster leaves its data
 # files behind unless deactivate_cluster names them explicitly.
-assert_block_has "deactivate_cluster removes the lexicon" "$deactivate_block" "route-intent.json"
+# Removal is now table-driven too: deactivate_cluster loops hook_data_files over each
+# cluster member. Assert the LOOP is there AND that the table still maps this hook -
+# together those are equivalent to the old literal check, and they also cover every
+# other companion rather than just this one.
+assert_block_has "deactivate_cluster removes companion data" "$deactivate_block" "hook_data_files"
+assert_block_has "deactivate_cluster removes it via rm_data_if_ours" "$deactivate_block" "rm_data_if_ours"
+if [ "$(bash -c "eval \"\$(awk '/^hook_data_files\(\) \{/,/^\}/' '$REPO_DIR/install.sh')\"; hook_data_files route-intent.sh")" = "route-intent.json" ]; then
+  pass "hook_data_files maps route-intent.sh -> route-intent.json"
+else
+  fail "hook_data_files maps route-intent.sh -> route-intent.json" "table lookup returned the wrong value"
+fi
 assert_block_has "deactivate_cluster removes the roster"  "$deactivate_block" "claude/agents"
 
 echo ""

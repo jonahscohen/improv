@@ -105,6 +105,25 @@ script then leaked `07 08` as it should, and the new one stayed clean.
 Payload keys still unused by the script: `thinking`, `fast_mode`, `cost`, `version`,
 `output_style`, `exceeds_200k_tokens`.
 
+## Codex gate closure (post-commit addendum)
+
+The 4th confirmatory pass on the `base` fix died without a verdict: MCP transport errors
+against 127.0.0.1:29979 followed by SIGTERM (exit 144). Retried lean per the codex-doctor
+protocol. The retry returned two items, BOTH non-applicable by design - artifacts of a lean
+prompt that asked for exact POSIX `basename` parity without the surrounding context:
+
+1. "Deletes control characters before basename processing." That IS the `clean` sanitiser,
+   the entire defence against ANSI/newline injection into the statusline. Intended.
+2. "No suffix operand support." The statusline only ever takes a one-argument basename;
+   `basename <path> <suffix>` is never called. Not reachable.
+
+Lesson: a leaner retry prompt is cheaper but can strip the context that made the earlier
+passes accurate. Rounds 1-3 (full diff + verified-context) produced 6 real defects; the lean
+round produced 2 false ones. Trim the prose, not the context.
+
+Gate closed on rounds 1-3 plus the differential basename test, which is stronger evidence
+for this one-line change than a review pass.
+
 ## Files touched
 
 - `claude/statusline-command.sh`

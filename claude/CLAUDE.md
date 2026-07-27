@@ -423,6 +423,14 @@ The rules:
 
 The `chrome-tabgroup-{track,clear,stop}.sh` hooks enforce this: track records an open group, clear drops the record when you close it, and the Stop hook blocks ONCE (per open-group burst, after the browser has been idle ~90s) to remind you to close before the session ends. A shell hook cannot close a Chrome tab - only your `tabs_close_mcp` call can - so the hook reminds and you act. The one gap the timer misses is a session that ends within ~90s of its last browser action; this rule is the backstop for that case. Threshold: `CHROME_TABGROUP_IDLE_SECONDS`. Tests: `test-chrome-tabgroup.sh`.
 
+## Teammate Spawn Shape (cmux panes - read BEFORE composing the call)
+
+In a cmux teams session, spawn a teammate by passing a `name` and OMITTING `run_in_background` entirely. That is the shape that produces a real visible pane. Do not pass `run_in_background: true` because the Agent tool's own schema advertises background as the default - that default is correct for ordinary subagents and wrong here, and the guard hook will deny it and cost you a turn.
+
+Measured 2026-07-27 against 465 real Agent calls: 62 passed `true`, and every teammate that actually rendered as a pane was spawned with the key absent. The runtime selects the tmux backend from `name` plus a pane-capable session, never from this flag.
+
+A PreToolUse hook cannot rewrite a tool argument, and an omitted parameter is invisible in the payload, so `agent-teams-guard.sh` can only correct this after the fact - it can never prevent it. This paragraph is the preventive layer; the hook is the backstop. If the session is not pane-capable (`TMUX` and `TMUX_PANE` are not both set) the guard says so plainly and does not deny, because named spawns there register as `in-process` and run invisibly no matter how the call is written. Recorded in session_2026-07-27_background-spawn-preference-defeat.md.
+
 ## Teammate Teardown (cmux subagent lifecycle - MANDATORY)
 
 When a spawned subagent/teammate is absolutely done - its unit accepted, results relayed, stood down, no further tasking - kill it and close its pane. Do not leave idle teammates parked: they emit recurring idle-notification noise into the lead session, hold a cmux pane, and keep a claude.exe process alive. "Available for a fresh dispatch" is not a reason to keep one warm; fresh dispatches get fresh contexts anyway.

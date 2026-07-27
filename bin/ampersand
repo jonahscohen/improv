@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# ============================================================
+# ampersand - the real launcher behind the `ampersand` shell command
+# ============================================================
+# The `ampersand` function written into ~/.zshrc is a THIN SHIM whose only
+# jobs are to locate this repo and hand off to this file. Everything the
+# command actually DOES lives here, in the repo, so it ships through
+# `git pull` and never needs another .zshrc migration.
+#
+# Why that split exists: ~/.zshrc is not managed by this repo (install.sh
+# only appends to it). Before this shim, every behavioural change to
+# `ampersand` had to be re-written into every machine's .zshrc by running
+# install.sh - and the convenient way to run install.sh was the very
+# `ampersand` function that needed fixing. Any machine whose block was
+# stale, path-broken or exec-bit-broken had no easy way out. Keeping the
+# .zshrc side stable and stupid breaks that loop for good.
+#
+# Contract (must not change without bumping the shim version in install.sh):
+#   ampersand                    -> run the installer against this checkout
+#   ampersand --pull             -> git pull --ff-only first, then run it
+#   ampersand <anything else>    -> forwarded verbatim to install.sh
+#
+# NOT `set -e`: a failed `git pull` must NOT stop the installer from running.
+# That short-circuit (`git pull --ff-only && ./install.sh`) is one of the
+# reproduced causes of "I typed ampersand and nothing happened" - a detached
+# HEAD or an unreachable remote silently swallowed the whole command.
+set -uo pipefail
+
+# Resolve the repo from THIS file's location, never from $PWD or a baked path.
+SELF="${BASH_SOURCE[0]}"
+# Follow a symlink chain if someone links this onto their PATH. Bounded: a symlink
+# cycle would otherwise spin here forever, which for a command a human just typed is
+# indistinguishable from a hang.
+_hops=0
+while [ -L "$SELF" ]; do
+  _hops=$((_hops + 1))
+  if [ "$_hops" -gt 32 ]; then
+    printf '[ampersand] symlink loop resolving %s - giving up.\n' "$SELF" >&2
+    exit 1
+  fi
+  _link="$(readlink "$SELF")"
+  case "$_link" in
+    /*) SELF="$_link" ;;
+    *)  SELF="$(cd "$(dirname "$SELF")" && pwd)/$_link" ;;
+  esac
+done
+SELF_DIR="$(cd "$(dirname "$SELF")" && pwd)"
+REPO_DIR="$(cd "$SELF_DIR/.." && pwd)"
+
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+NC='\033[0m'
+warn() { printf "${YELLOW}[ampersand]${NC} %s\n" "$1" >&2; }
+err()  { printf "${RED}[ampersand]${NC} %s\n" "$1" >&2; }
+
+if [ ! -f "$REPO_DIR/install.sh" ]; then
+  err "no install.sh next to $SELF_DIR - this file is not inside an improv checkout."
+  err "Re-install with:"
+  err "  curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash"
+  exit 1
+fi
+
+# Peel off --pull; everything else is the installer's business.
+PULL=0
+ARGS=()
+for _arg in "$@"; do
+  case "$_arg" in
+    --pull) PULL=1 ;;
+    *)      ARGS+=("$_arg") ;;
+  esac
+done
+
+cd "$REPO_DIR" || { err "cannot cd into $REPO_DIR"; exit 1; }
+
+if [ "$PULL" -eq 1 ]; then
+  if ! command -v git >/dev/null 2>&1; then
+    warn "git is not installed - skipping the pull, running the installer you have."
+  elif [ ! -d "$REPO_DIR/.git" ]; then
+    warn "$REPO_DIR is not a git checkout - skipping the pull, running the installer you have."
+  elif ! git pull --ff-only; then
+    # Loud, and then CONTINUE. See the set -e note at the top: the user asked to
+    # run the installer, and a repo that cannot fast-forward is a separate problem
+    # from that request. bootstrap.sh has always behaved this way; this makes the
+    # shell command agree with it.
+    warn "git pull --ff-only failed - continuing with the checkout you already have."
+    warn "Sort the repo out later with:  cd $REPO_DIR && git status"
+  fi
+fi
+
+# ALWAYS through bash, never ./install.sh: the executable bit does not survive
+# every way a repo reaches a second machine (ZIP download, rsync without -p, a
+# copy onto a filesystem with no exec bit), and a `permission denied` here is
+# indistinguishable from "nothing happened" to the person who typed the word.
+exec /bin/bash "$REPO_DIR/install.sh" ${ARGS[@]+"${ARGS[@]}"}

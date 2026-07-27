@@ -111,8 +111,15 @@ EOF
 # inverted the ADVICE, so a decision-only assertion passed it. (Reported live by
 # team-lead: a named lead spawn succeeded but was told "you are a teammate, spawn
 # UNNAMED".)
+#
+# PANES (6th arg, default "yes"): pins AGENT_TEAMS_GUARD_FORCE_PANES so the
+# ambient TMUX of whatever session runs this suite can never decide a case. This
+# matters more than the other pins: a LEAD case run with panes unpinned inherits
+# the runner's TMUX, and a teammate shell has TMUX unset, so every lead deny
+# would silently become the pane-fallback allow. Default "yes" keeps every
+# pre-2026-07-27 case meaning exactly what it meant when it was written.
 _invoke() {
-  local tool="$1" name="$2" bg="$3" ctx="$4" nocmux="${5:-}"
+  local tool="$1" name="$2" bg="$3" ctx="$4" nocmux="${5:-}" panes="${6:-yes}"
   local ps_stub="$TMP/ps-lead" transcript="$TMP/transcript-lead.jsonl"
   local -a extra=("AGENT_TEAMS_GUARD_FORCE_CONTEXT=")
   case "$ctx" in
@@ -126,6 +133,10 @@ _invoke() {
       extra=("AGENT_TEAMS_GUARD_FORCE_CONTEXT=lead" "CLAUDE_CODE_CHILD_SESSION=1")
       transcript="$TMP/transcript-teammate.jsonl"; ps_stub="$TMP/ps-teammate" ;;
   esac
+  # Appended AFTER the case block on purpose: forced-teammate/forced-lead REPLACE
+  # `extra` wholesale, so pinning panes inside the initialiser would be dropped by
+  # exactly the two cases that assert the break-glass override.
+  extra+=("AGENT_TEAMS_GUARD_FORCE_PANES=$panes")
 
   local payload
   payload=$(python3 -c '
@@ -134,8 +145,18 @@ tool, name, bg, transcript = sys.argv[1:5]
 ti = {"subagent_type": "general-purpose", "prompt": "do the thing"}
 if name:
     ti["name"] = name
+# Three DISTINCT payload shapes, because the harness really does send three
+# (dumped from live spawns 2026-07-27):
+#   bg "1"     -> "run_in_background": true
+#   bg "false" -> "run_in_background": false
+#   bg "0"     -> key ABSENT entirely. This is what the model omitting the
+#                 parameter looks like on the wire; the runtime does NOT
+#                 materialise its documented true-default into tool_input, so
+#                 "absent" and "false" are indistinguishable to the hook.
 if bg == "1":
     ti["run_in_background"] = True
+elif bg == "false":
+    ti["run_in_background"] = False
 print(json.dumps({"tool_name": tool, "session_id": "test-atg",
                   "transcript_path": transcript, "tool_input": ti}))' \
     "$tool" "$name" "$bg" "$transcript")
@@ -145,7 +166,7 @@ print(json.dumps({"tool_name": tool, "session_id": "test-atg",
 
   local out rc
   out=$(printf '%s' "$payload" | env -u CLAUDE_CODE_CHILD_SESSION \
-    -u AGENT_TEAMS_GUARD_FORCE_CONTEXT \
+    -u AGENT_TEAMS_GUARD_FORCE_CONTEXT -u TMUX -u TMUX_PANE \
     "${mode[@]}" "AGENT_TEAMS_GUARD_PS=$ps_stub" "${extra[@]}" \
     bash "$GUARD" 2>/dev/null)
   rc=$?
@@ -260,6 +281,151 @@ expect "$A" "named background Agent"             Agent "prod" 1 teammate-script
 expect "$A" "Workflow"                           Workflow ""  0 teammate-script
 
 echo
+echo "run_in_background: the three payload shapes the harness actually sends:"
+# The Agent schema documents background as its DEFAULT, so absence LOOKS like it
+# should mean true. It must not be read that way: in pane-capable session-d883bc0d
+# all four named teammates were spawned with the key ABSENT and all four got real
+# tmux pane ids. Denying the absent shape would deny the only shape proven to
+# produce a pane.
+expect "$A" "named, run_in_background ABSENT (the shape that panes)" Agent "prod" 0     lead
+expect "$A" "named, run_in_background explicitly false"              Agent "prod" false lead
+expect "$D" "named, run_in_background explicitly true"               Agent "prod" 1     lead
+expect_advice "run_in_background key OMITTED" "-" \
+  "the background deny names the exact re-issue shape"               Agent "prod" 1     lead
+
+echo
+echo "PANE FALLBACK (2026-07-27) - a session that cannot make panes:"
+# session-c3ca5a31: the guard denied background telling the spawner to re-issue
+# "for a visible teammate that renders as its own cmux pane", the spawner
+# complied, and the re-issue registered backendType in-process with NO pane. Then
+# it permitted that spawn claiming it "renders as its own visible cmux pane".
+# Both messages were false in the session they fired in. Nothing may DENY here,
+# because no other shape could have succeeded either.
+expect "$A" "unnamed Agent is not denied when panes are impossible"  Agent ""     0 lead "" no
+expect "$A" "named background Agent is not denied either"            Agent "prod" 1 lead "" no
+expect "$A" "Workflow is not denied either"                          Workflow ""  0 lead "" no
+expect "$A" "named foreground Agent still allowed"                   Agent "prod" 0 lead "" no
+expect_advice "PANE FALLBACK" "renders as its own visible cmux pane" \
+  "fallback notice never promises a pane"                            Agent "prod" 0 lead "" no
+expect_advice "relaunch the session with 'cmux claude-teams'" "-" \
+  "fallback notice gives an action that works in-session"            Agent ""     0 lead "" no
+expect_advice "renders as its own visible cmux pane" "PANE FALLBACK" \
+  "a pane-capable lead still gets the pane promise"                  Agent "prod" 0 lead "" yes
+# Ordering: the teammate exemption must win over the pane check, since a teammate
+# legitimately has TMUX unset while still owning a real pane (measured: teammate
+# pid 61831 has no TMUX, tmuxPaneId %3758...).
+expect_advice "Teammate context" "PANE FALLBACK" \
+  "teammate exemption is checked before pane capability"             Agent ""     0 teammate-script "" no
+
+echo
+echo "Pane capability is read from the REAL TMUX vars, and needs BOTH:"
+# The seam is bypassed here so the env predicate itself is under test. Requiring
+# both vars is deliberate: a partial env (the classic case is TMUX_PANE leaking
+# into a child that is no longer inside tmux) must NOT be read as pane-capable,
+# because that re-enables the unactionable denies this whole block prevents.
+# (Codex review, 2026-07-27.)
+env_panes() { # env_panes <TMUX> <TMUX_PANE>
+  printf '{"tool_name":"Agent","session_id":"t","transcript_path":"%s","tool_input":{"subagent_type":"general-purpose","prompt":"x"}}' \
+    "$TMP/transcript-lead.jsonl" \
+  | env -u CLAUDE_CODE_CHILD_SESSION -u AGENT_TEAMS_GUARD_FORCE_PANES \
+      AGENT_TEAMS_GUARD_FORCE_CONTEXT= TMUX="$1" TMUX_PANE="$2" \
+      CMUX_SOCKET_PATH=/tmp/atg-fake.sock CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 \
+      "AGENT_TEAMS_GUARD_PS=$TMP/ps-lead" bash "$GUARD" 2>/dev/null
+}
+expect_env() { # expect_env <want-decision> <label> <TMUX> <TMUX_PANE>
+  local want="$1" label="$2" out got
+  out=$(env_panes "$3" "$4") || { FAIL=$((FAIL+1)); printf "  FAIL  %-58s -> crash\n" "$label"; return; }
+  got=$(printf '%s' "$out" | python3 -c 'import json,sys
+try: d=json.load(sys.stdin)
+except Exception: print("unparseable"); sys.exit(0)
+print((d.get("hookSpecificOutput") or {}).get("permissionDecision","allow"))')
+  if [ "$got" = "$want" ]; then PASS=$((PASS+1)); printf "  ok    %-58s -> %s\n" "$label" "$got"
+  else FAIL=$((FAIL+1)); printf "  FAIL  %-58s -> %s (wanted %s)\n" "$label" "$got" "$want"; fi
+}
+expect_env "$D" "both TMUX and TMUX_PANE set -> gates enforced" "/tmp/s,1,2" "%42"
+expect_env "$A" "TMUX only (partial env) -> advise, never deny"  "/tmp/s,1,2" ""
+expect_env "$A" "TMUX_PANE only (stale leak) -> advise, never deny" ""        "%42"
+expect_env "$A" "neither set -> advise, never deny"              ""           ""
+
+echo
+echo "A broken guard must fail SOFT but never QUIET (guarantee #3):"
+# Under set -euo pipefail an assignment inherits its command substitution's exit
+# status, so unparseable stdin used to abort the hook and emit NOTHING - the one
+# outcome that can be misread as a silent allow. (Codex review, 2026-07-27.)
+for label in "malformed JSON on stdin" "empty stdin"; do
+  case "$label" in
+    "malformed JSON on stdin") STDIN='{"tool_name": "Agent", BROKEN' ;;
+    *)                         STDIN='' ;;
+  esac
+  # ps MUST be pinned to the lead stub. Without it the real ps runs, and when this
+  # suite is executed from inside a real teammate the ancestor walk finds
+  # --agent-id and takes the teammate exemption before the parse-failure branch is
+  # ever reached - the case would then silently test nothing. (Caught doing exactly
+  # that while writing these two cases.)
+  OUT=$(printf '%s' "$STDIN" | env -u CLAUDE_CODE_CHILD_SESSION -u TMUX -u TMUX_PANE \
+    AGENT_TEAMS_GUARD_FORCE_CONTEXT= CMUX_SOCKET_PATH=/tmp/atg-fake.sock \
+    CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 "AGENT_TEAMS_GUARD_PS=$TMP/ps-lead" \
+    bash "$GUARD" 2>/dev/null)
+  RC=$?
+  VALID=$(printf '%s' "$OUT" | python3 -c 'import json,sys
+try: json.load(sys.stdin); print("yes")
+except Exception: print("no")')
+  case "$OUT" in *"gates were SKIPPED"*) LOUD=yes ;; *) LOUD=no ;; esac
+  if [ "$RC" -eq 0 ] && [ "$VALID" = yes ] && [ "$LOUD" = yes ]; then
+    PASS=$((PASS+1)); printf "  ok    %-58s -> exit 0, valid JSON, says so\n" "$label"
+  else
+    FAIL=$((FAIL+1)); printf "  FAIL  %-58s -> rc=%s valid=%s loud=%s out=%s\n" "$label" "$RC" "$VALID" "$LOUD" "$OUT"
+  fi
+done
+
+echo
+echo "A guard that cannot EVALUATE a call must fail OPEN, never deny:"
+# Fail-closed regression: tool_name parses as Agent but tool_input is not an
+# object, so the NAME parse returns empty and the missing-name gate denies - a
+# spawn blocked because the guard could not read its own payload. The stated rule
+# is the opposite. (Codex confirmation review, 2026-07-27.)
+for shape in '"a string"' '[1,2,3]' 'null'; do
+  OUT=$(printf '{"tool_name":"Agent","session_id":"t","transcript_path":"%s","tool_input":%s}' \
+      "$TMP/transcript-lead.jsonl" "$shape" \
+    | env -u CLAUDE_CODE_CHILD_SESSION -u TMUX -u TMUX_PANE AGENT_TEAMS_GUARD_FORCE_CONTEXT= \
+      AGENT_TEAMS_GUARD_FORCE_PANES=yes CMUX_SOCKET_PATH=/tmp/atg-fake.sock \
+      CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 "AGENT_TEAMS_GUARD_PS=$TMP/ps-lead" \
+      bash "$GUARD" 2>/dev/null)
+  RC=$?
+  GOT=$(printf '%s' "$OUT" | python3 -c 'import json,sys
+try: d=json.load(sys.stdin)
+except Exception: print("unparseable"); sys.exit(0)
+print((d.get("hookSpecificOutput") or {}).get("permissionDecision","allow"))' 2>/dev/null)
+  if [ "$RC" -eq 0 ] && [ "$GOT" = "allow" ]; then
+    PASS=$((PASS+1)); printf "  ok    %-58s -> allow (exit 0)\n" "tool_input is $shape -> not denied"
+  else
+    FAIL=$((FAIL+1)); printf "  FAIL  %-58s -> rc=%s decision=%s\n" "tool_input is $shape -> not denied" "$RC" "$GOT"
+  fi
+done
+
+# python3 is what every parse AND both emitters run on. Without it the hook used
+# to exit 127 with no stdout - a hook that emits nothing, which is the one
+# outcome guarantee #3 forbids. PATH is stripped to /bin so python3 is genuinely
+# unreachable. Skipped if this box happens to ship /bin/python3.
+if [ -x /bin/python3 ]; then
+  printf "  skip  %-58s -> /bin/python3 exists on this box\n" "python3 unavailable still emits valid JSON"
+else
+  OUT=$(printf '{"tool_name":"Agent","session_id":"t","tool_input":{"prompt":"x"}}' \
+    | env -i PATH=/bin CMUX_SOCKET_PATH=/tmp/atg-fake.sock \
+      CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 /bin/bash "$GUARD" 2>/dev/null)
+  RC=$?
+  VALID=$(printf '%s' "$OUT" | python3 -c 'import json,sys
+try: json.load(sys.stdin); print("yes")
+except Exception: print("no")')
+  case "$OUT" in *"python3 is not on PATH"*) LOUD=yes ;; *) LOUD=no ;; esac
+  if [ "$RC" -eq 0 ] && [ "$VALID" = yes ] && [ "$LOUD" = yes ]; then
+    PASS=$((PASS+1)); printf "  ok    %-58s -> exit 0, valid JSON, says so\n" "python3 unavailable still emits valid JSON"
+  else
+    FAIL=$((FAIL+1)); printf "  FAIL  %-58s -> rc=%s valid=%s loud=%s out=%s\n" "python3 unavailable still emits valid JSON" "$RC" "$VALID" "$LOUD" "$OUT"
+  fi
+fi
+
+echo
 echo "Break-glass override wins over the signals in both directions:"
 expect "$A" "forced teammate over lead signals"  Agent ""     0 forced-teammate
 expect "$D" "forced lead over teammate signals"  Agent ""     0 forced-lead
@@ -280,7 +446,8 @@ for label in "ps binary missing" "transcript path missing"; do
     *)                   T="$TMP/no-such-transcript.jsonl"; P="$TMP/ps-lead" ;;
   esac
   OUT=$(printf '{"tool_name":"Agent","session_id":"t","transcript_path":"%s","tool_input":{"subagent_type":"general-purpose","prompt":"x"}}' "$T" \
-    | env -u CLAUDE_CODE_CHILD_SESSION AGENT_TEAMS_GUARD_FORCE_CONTEXT= \
+    | env -u CLAUDE_CODE_CHILD_SESSION -u TMUX -u TMUX_PANE AGENT_TEAMS_GUARD_FORCE_CONTEXT= \
+      AGENT_TEAMS_GUARD_FORCE_PANES=yes \
       CMUX_SOCKET_PATH=/tmp/atg-fake.sock CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 \
       "AGENT_TEAMS_GUARD_PS=$P" bash "$GUARD" 2>/dev/null)
   RC=$?
@@ -294,8 +461,9 @@ done
 echo
 echo "The teammate pass path explains the shape AND names the firing signal:"
 NOTICE=$(printf '%s' '{"tool_name":"Agent","session_id":"t","transcript_path":"","tool_input":{"subagent_type":"general-purpose","prompt":"x"}}' \
-  | env -u CLAUDE_CODE_CHILD_SESSION CMUX_SOCKET_PATH=/tmp/atg-fake.sock \
+  | env -u CLAUDE_CODE_CHILD_SESSION -u TMUX -u TMUX_PANE CMUX_SOCKET_PATH=/tmp/atg-fake.sock \
     CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 AGENT_TEAMS_GUARD_FORCE_CONTEXT=teammate \
+    AGENT_TEAMS_GUARD_FORCE_PANES=yes \
     bash "$GUARD" 2>/dev/null)
 case "$NOTICE" in
   *"Teammate context (detected via: AGENT_TEAMS_GUARD_FORCE_CONTEXT=teammate)"*"UNNAMED"*"roster is flat"*)

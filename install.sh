@@ -362,7 +362,7 @@ DESCS=(
   "A small one-line addition to your zsh config that fixes a specific issue some setups hit: opening a new terminal and getting 'claude not found in PATH' even though Claude is installed. The fix only activates if your zsh config already loads nvm (Node Version Manager) - on most machines this is a harmless no-op, so it's safe to leave on. If 'claude' already runs fine in fresh terminals on your machine, you can skip this."
   "Adds the 'ampersand' zsh function to your .zshrc. Type 'ampersand' from any terminal to re-launch this installer; type 'ampersand --pull' to pull the latest from GitHub first. Forwards every other flag ('ampersand --preset minimal', 'ampersand --pull --yes'). bootstrap.sh pre-installs this for new users so the curl one-liner is enough."
   "Adds a smart 'Connect to Discord?' prompt to your 'claude' command. Three states: cold (no bot configured) offers the interactive onboarding walkthrough or 'never ask again'; mid (bot configured but no users paired) jumps you to the pairing flow; warm (paired) shows the familiar 5-second connect prompt with default Yes. The walkthrough handles both 'I have a bot, just paste the token' and 'walk me through making a new bot in the Developer Portal'. Skip this if you don't use Discord with Claude. Tokens are stored in macOS Keychain, never in the repo."
-  "Adds local voice-to-text so Claude can answer Discord voice messages and any other audio attachment. Brews whisper-cpp and ffmpeg, downloads the ggml-base.en model (~150 MB) into ~/.cache/whisper, and symlinks bin/transcribe to ~/.claude/transcribe. Local-only (no cloud, no API key). Calls: '~/.claude/transcribe path/to/audio.ogg' prints the transcript on stdout."
+  "Adds local voice-to-text so Claude can answer Discord voice messages and any other audio attachment. Brews whisper-cpp and ffmpeg, downloads the ggml-base.en model (~150 MB) into ~/.cache/whisper, and symlinks claude/transcribe.sh to ~/.claude/transcribe. Local-only (no cloud, no API key). Calls: '~/.claude/transcribe path/to/audio.ogg' prints the transcript on stdout."
   "Gives Claude a voice via OpenAI text-to-speech API. Claude speaks short verbal summaries while keeping code and technical detail as text. Requires your own OpenAI API key stored in macOS Keychain (see docs). Starts muted - enable with voice-on in any terminal. Three mute controls: in-session (mute yourself), terminal alias (voice-on/voice-off), or manual file toggle. Does NOT work without an API key - this is not optional, it is required."
   "Adds the reflect skill and nudge hook. The reflect skill spawns 5 parallel analysis agents against your accumulated .claude/memory/ files to surface patterns, tensions, and gaps nobody explicitly noticed. Triggers naturally from conversation ('what patterns are you seeing?') or via /reflect. A SessionStart hook nudges you when enough new memories have accumulated since the last reflection. No external dependencies."
   "Sidecoach: invisible workflow automation triggered by natural conversation. No slash commands. Instead of slash commands, simply write naturally about your work ('make this feel better', 'design a component', 'review this') and Sidecoach detects your intent and guides you through the appropriate workflow. Daemon launches at session start and monitors messages silently. Provides 14 design/development flows covering polish, review, design, implementation, accessibility, refactoring, and iteration. Each flow returns tailored guidance, checklists (6-14 items), and next steps. Built via SessionStart hook (daemon launcher), PostUserPrompt hook (message intake), and PostResponse hook (result injection). Symlinks hooks into ~/.claude/hooks/ and compiles TypeScript orchestrator + 14 handlers."
@@ -374,7 +374,7 @@ FILES=(
   # config
   "~/.claude/settings.json (JSON merge)\n~/.claude/hooks/bash-guard.sh\n~/.claude/hooks/content-guard.sh\n~/.claude/hooks/memory-approve.sh"
   # memory
-  "~/.claude/CLAUDE.md (memory discipline block)\n~/.claude/settings.json (3 hooks merged)\n~/.claude/startup-check.sh (symlink)"
+  "~/.claude/CLAUDE.md (memory discipline block)\n~/.claude/settings.json (4 hooks merged)\n~/.claude/startup-check.sh (symlink)\n~/.claude/hooks/consolidate-intent.json (nudge lexicon)\n~/.claude/skills/consolidate/SKILL.md"
   # skills
   "~/.claude/skills/tactical-polish/\n~/.claude/skills/component-gallery-reference/\n~/.claude/skills/fontshare-reference/\n~/.claude/skills/motion-reference/\n~/.claude/skills/design-build/\n~/.claude/skills/curate/\n~/.claude/skills/design-references/\n~/.claude/design-references/ (personal catalog directory)\n~/.claude/skills/social-media/\n~/.claude/skills/design-team/\n~/.claude/skills/visual-effects/\n~/.claude/skills/icon-source/"
   # statusline
@@ -490,7 +490,7 @@ PICKS+=(1 1 1 1 1 1 1 1 1 1 1)
 KEYS+=(tilt-lab)
 TITLES+=("tilt-lab visual-effects playground (dev server)")
 DESCS+=("Installs the tilt-lab visual-effects playground (Vite + React + TypeScript) as a runnable dev app. npm-installs its dependencies in <repo>/tilt-lab and symlinks a 'tilt-lab' launcher onto ~/.local/bin so you can start the playground from any shell. Does NOT auto-start a server during install. After installing, run 'tilt-lab' (or 'cd tilt-lab && npm run dev') to serve it at http://localhost:5180. This is an app, not a dotfile - the only thing placed in your home dir is the launcher symlink on PATH.")
-FILES+=("~/.local/bin/tilt-lab (launcher symlink)\n<repo>/tilt-lab/node_modules/ (npm install)")
+FILES+=("~/.local/bin/tilt-lab (launcher symlink)\n<repo>/tilt-lab/node_modules/ (npm install)\n~/.claude/skills/tilt-lab/SKILL.md")
 DIRS+=("$REPO_DIR/tilt-lab")
 PICKS+=(1)
 
@@ -548,7 +548,7 @@ FILES+=(
   "~/.claude/hooks/ (5 safety hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (8 verification hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (4 question-discipline hooks)\n~/.claude/settings.json (wiring)"
-  "~/.claude/hooks/ (7 grounding hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (7 grounding hooks)\n~/.claude/hooks/grounding-intent.json (gate lexicon)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (3 api-drift hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 planning-git hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 surface hooks)\n~/.claude/settings.json (wiring)"
@@ -677,7 +677,16 @@ cluster_hooks() {
   case "$1" in
     safety)              echo "bash-guard.sh content-guard.sh content-guard-stop.sh destructive-ops-guard.sh destructive-confirm-detect.sh" ;;
     verification)        echo "verify-before-done.sh verify-before-done-stop.sh verify-clear.sh verify-manual.sh screenshot-open-mandate.sh screenshot-open-clear.sh second-fix-gate.sh validation-guard.sh" ;;
-    question-discipline) echo "multiple-choice-detect-stop.sh multiple-choice-inject-prompt.sh multiple-choice-enforce.sh question-enforcement.sh" ;;
+    # question-enforcement.sh is deliberately NOT in this list. It is a Stop-shaped hook
+    # (reads stdin, exits 1 to block) that was never wired to any settings event, so it
+    # installed and sat inert on every machine that ever took this cluster. It is
+    # SUPERSEDED, not broken: multiple-choice-detect-stop.sh and
+    # multiple-choice-inject-prompt.sh were created the same day (2026-05-24), are wired
+    # twice each, and are the path CLAUDE.md documents as live. Deploying a dead hook is
+    # worse than not shipping it - it reads as coverage that does not exist. The file
+    # stays in the repo because test-multiple-choice-enforce.sh exercises it; the guard
+    # exempts it by name, with that reason, in hook-registry-guard.sh's _is_excluded.
+    question-discipline) echo "multiple-choice-detect-stop.sh multiple-choice-inject-prompt.sh multiple-choice-enforce.sh" ;;
     grounding)           echo "grounding-gate.sh grounding-guard.sh task-loop-mandate.sh justify-queue-mandate.sh concise-mandate.sh concise-toggle.sh concise-detect-stop.sh" ;;
     api-drift)           echo "api-drift-detector.sh api-drift-stop.sh api-drift-ack.sh" ;;
     planning-git)        echo "plan-consistency-lint.sh push-ahead-check.sh" ;;
@@ -686,6 +695,51 @@ cluster_hooks() {
     agent-routing)       echo "route-intent.sh" ;;
     *)                   echo "" ;;
   esac
+}
+
+# hook_data_files: the companion DATA files a hook needs AT RUNTIME - lexicons and
+# config, never executables. Deploying the .sh alone ships a hook that cannot work.
+#
+# WHY THIS IS A TABLE AND NOT A NAMING CONVENTION: the names do not line up
+# (grounding-gate.sh reads grounding-intent.json, consolidate-nudge.sh reads
+# consolidate-intent.json), so nothing can be derived from the filename.
+#
+# WHY IT MATTERS: every one of these hooks fails open SILENTLY when its companion is
+# absent. route-intent.sh proved it 2026-07-26 (missing lexicon = no routing, forever,
+# with no signal); grounding-gate.sh has the identical shape - `[ -f "$INTENT_FILE" ]
+# || exit 0` - and was measured 2026-07-27 emitting 573 bytes of nudge with its lexicon
+# and 0 without. The hook installs, looks present, and does nothing.
+#
+# Keep in sync with "hook_data" in claude/hooks/browser-tree.json. Drift in EITHER
+# direction is caught by hook-registry-guard.sh --audit-data and by
+# claude/hooks/test-hook-data-parity.sh.
+hook_data_files() {
+  case "$1" in
+    route-intent.sh)      echo "route-intent.json" ;;
+    grounding-gate.sh)    echo "grounding-intent.json" ;;
+    consolidate-nudge.sh) echo "consolidate-intent.json" ;;
+    *)                    echo "" ;;
+  esac
+}
+
+# Deploy every companion data file for one hook. Uses link_or_copy_data (NOT
+# link_or_copy) so the destination is never chmod +x'd - these are JSON, not
+# programs - and so it makes the same symlink-vs-copy choice the hook itself made.
+install_hook_data() {
+  local _h="$1" _d
+  for _d in $(hook_data_files "$_h"); do
+    # Explicit if/else, and an explicit `return 0` below. The old `[ -f ] && cmd` shape
+    # made the FUNCTION return 1 whenever a table entry's source file was missing, and
+    # both callers invoke it as a bare command under `set -e` - so a companion file
+    # that had been renamed or deleted in the repo would abort the whole installer
+    # mid-run. A missing companion is worth a warning, never a dead install.
+    if [ -f "$REPO_DIR/claude/hooks/$_d" ]; then
+      link_or_copy_data "$REPO_DIR/claude/hooks/$_d" "$CLAUDE_DIR/hooks/$_d"
+    else
+      warn "hook data file missing in repo: claude/hooks/$_d (needed by $_h)"
+    fi
+  done
+  return 0
 }
 
 # True if the token (with or without .sh) names a hook in any cluster.
@@ -763,16 +817,19 @@ ensure_real_settings() {
 # Remove a cluster's member hooks: symlinks + their settings.json entries (all
 # events, empty-group cleanup). detect-session-model is shared with fable - left.
 deactivate_cluster() {
-  local name="$1" h
+  local name="$1" h d
   for h in $(cluster_hooks "$name"); do
     rm_hook_if_ours "$h"
+    # Cluster-owned DATA files. cluster_hooks only knows .sh members, so anything a
+    # cluster deploys alongside its hooks leaks unless it is removed explicitly -
+    # deactivate_sidecoach rms its own registries for the same reason. Driven by the
+    # same hook_data_files table as the install side, so the two cannot drift apart.
+    for d in $(hook_data_files "$h"); do
+      rm_data_if_ours "$CLAUDE_DIR/hooks/$d" "$REPO_DIR/claude/hooks/$d"
+    done
   done
-  # Cluster-owned DATA files. cluster_hooks only knows .sh members, so anything a
-  # cluster deploys alongside its hooks leaks unless it is removed explicitly -
-  # deactivate_sidecoach rms its own registries for the same reason.
   if [ "$name" = "agent-routing" ]; then
     local af
-    rm_data_if_ours "$CLAUDE_DIR/hooks/route-intent.json" "$REPO_DIR/claude/hooks/route-intent.json"
     for af in "$REPO_DIR"/claude/agents/*.md; do
       [ -f "$af" ] || continue
       rm_data_if_ours "$CLAUDE_DIR/agents/$(basename "$af")" "$af"
@@ -823,6 +880,9 @@ install_app_hooks() {
     [ -f "$REPO_DIR/claude/hooks/$h" ] || { warn "app hook missing in repo: $h"; continue; }
     chmod +x "$REPO_DIR/claude/hooks/$h"
     link_or_copy "$REPO_DIR/claude/hooks/$h" "$CLAUDE_DIR/hooks/$h"
+    # Same companion-data rule as the cluster loop: consolidate-nudge.sh is an APP
+    # hook, so without this its lexicon would ship on neither path.
+    install_hook_data "$h"
     [ -e "$CLAUDE_DIR/hooks/$h" ] && okh="$okh $h"
   done
   if [ -n "${okh// /}" ] && command -v python3 >/dev/null 2>&1; then
@@ -861,8 +921,14 @@ with open(p,'w') as f: json.dump(d,f,indent=2); f.write('\n')
 # Generic app-hook deactivator (Stage 3): rm_hook_if_ours + strip the EXACT
 # app-wirings.json commands (ownership-aware, empty-group cleanup).
 deactivate_app_hooks() {
-  local h
-  for h in "$@"; do rm_hook_if_ours "$h"; done
+  local h d
+  for h in "$@"; do
+    rm_hook_if_ours "$h"
+    # Companion lexicons/config, same table as the install side (see hook_data_files).
+    for d in $(hook_data_files "$h"); do
+      rm_data_if_ours "$CLAUDE_DIR/hooks/$d" "$REPO_DIR/claude/hooks/$d"
+    done
+  done
   if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
     ensure_real_settings
     NAMES="$*" python3 -c "
@@ -1155,6 +1221,83 @@ CLAUDE_DIR="$HOME/.claude"
 SETTINGS_JSON="$CLAUDE_DIR/settings.json"
 
 # ============================================================
+# ampersand shell-shortcut markers (used by detect_component AND by section 11)
+# ============================================================
+# Defined here, globally, because BOTH the detector at ~line 1290 and the writer
+# in section 11 have to agree on what "the current block" means. When they only
+# agreed by coincidence, a machine carrying a stale block reported ACTIVE, so the
+# component browser never offered to reinstall it and the stale block survived
+# forever. See .claude/memory/session_2026-07-27_ampersand-selfheal.md.
+SHORTCUT_BEGIN="# === improv:shortcuts:begin ==="
+SHORTCUT_END="# === improv:shortcuts:end ==="
+LEGACY_SHORTCUT_BEGIN="# === claude-dotfiles:shortcuts:begin ==="
+LEGACY_SHORTCUT_END="# === claude-dotfiles:shortcuts:end ==="
+# BOTH brand spellings of the pre-marker vanity block. The "Improv" spelling was
+# NEVER written into any .zshrc by any installer: commit c2776619 brand-renamed
+# claude-dotfiles -> Improv across this file and swept up this LEGACY DETECTION
+# STRING with it. Renaming the thing you are trying to RECOGNISE breaks the
+# recogniser, so that migration branch has been dead since 2026-06-08. The
+# claude-dotfiles spelling is the one real machines actually carry.
+LEGACY_VANITY_MARKER="# Improv vanity command: pull latest and re-launch installer"
+LEGACY_VANITY_MARKER_ORIG="# claude-dotfiles vanity command: pull latest and re-launch installer"
+# Bump ONLY when the .zshrc shim itself changes shape. Everything the command
+# actually does lives in bin/ampersand and ships through `git pull`, so this
+# should move approximately never - that is the entire point of the split.
+SHIM_VERSION="1"
+SHIM_MARKER="# improv-shim v$SHIM_VERSION"
+
+# zshrc_block_delete <begin_line> <end_line>
+# Delete EVERY well-formed [begin,end] block from $ZSHRC, addressed by VERIFIED LINE
+# NUMBER. Returns 1 without touching the file if the markers are malformed.
+#
+# This exists because `sed -i.bak '/begin/,/end/d' "$ZSHRC"` destroys a user's shell
+# config in three separate ways, and every site removes its .bak on the very next line
+# so there is no way back. All three were found by cross-model review 2026-07-27:
+#   1. No end marker at all -> the range runs to END OF FILE.
+#   2. Two begins, one end -> deletes from the FIRST begin through the LAST end, taking
+#      every unrelated line between the two blocks with it. A guard that merely proves
+#      "some end exists after some begin" does NOT catch this.
+#   3. Unanchored regex -> a marker quoted inside a comment or a string counts as a real
+#      boundary. Matching here is WHOLE-LINE, after trimming trailing whitespace and CR
+#      so CRLF files and hand-edited trailing spaces still match.
+# Deleting every well-formed block (not just the first) is also what makes duplicates
+# converge: the caller appends exactly one fresh block afterwards.
+zshrc_block_delete() {
+  local b="$1" e="$2" plan
+  [ -f "$ZSHRC" ] || return 0
+  plan="$(awk -v b="$b" -v e="$e" '
+    { line = $0; sub(/[ \t\r]+$/, "", line) }
+    line == b {
+      if (open) { bad = 1; exit }
+      open = 1; start = NR; next
+    }
+    line == e {
+      if (open) { printf "%d,%dd;", start, NR; open = 0 }
+      next
+    }
+    END { if (open || bad) exit 1 }
+  ' "$ZSHRC")" || return 1
+  [ -n "$plan" ] || return 0
+  # sed line addresses refer to INPUT lines, so multiple ranges in one script are safe
+  # and need no renumbering.
+  sed -i.bak "$plan" "$ZSHRC"
+  rm -f "$ZSHRC.bak"
+  return 0
+}
+
+# Guard for EVERY marker-range delete against ~/.zshrc. `sed '/begin/,/end/d'` deletes
+# THROUGH END OF FILE when the end pattern never matches - confirmed on BSD sed - and
+# every one of these sites removes its .bak on the very next line, so a hand-edited
+# block with a missing end marker silently takes the rest of the user's shell config
+# with it. Resolve the end BEFORE deleting: no end, no delete.
+# Returns 0 when a closing line was found after the start line, 1 otherwise.
+# NOTE: a zshrc_range_closed() helper used to live here. It proved only that SOME end
+# marker appeared after SOME begin marker, which passes on a .zshrc holding an unclosed
+# block followed by a complete one - and the sed that ran next then deleted from the
+# first begin through the second block's end, taking the user's config in between.
+# zshrc_block_delete supersedes it: it pairs markers and deletes by line number.
+
+# ============================================================
 # TUI
 # ============================================================
 
@@ -1282,7 +1425,14 @@ detect_component() {
     statusline) [ -L "$CLAUDE_DIR/statusline-command.sh" ] && echo active || echo not-installed ;;
     cmux)       [ -L "$HOME/.config/cmux/settings.json" ] && echo active || echo not-installed ;;
     nvm)        grep -Fq "nvm use default --silent" "$ZSHRC" 2>/dev/null && echo active || echo not-installed ;;
-    ampersand)  grep -Fq "# === improv:shortcuts:begin ===" "$ZSHRC" 2>/dev/null && echo active || echo not-installed ;;
+    # ACTIVE means "carries the CURRENT shim", not merely "has our marker". A .zshrc
+    # block from an older installer still has the marker while being unable to launch
+    # anything (baked-path-only lookup, `./install.sh` needing the exec bit, a pull
+    # failure swallowing the whole command). Reporting that ACTIVE is what let stale
+    # blocks live forever: the browser only re-runs the components it is told to
+    # install, so a component that never looks stale is never repaired. Reporting it
+    # not-installed makes the browser offer it, and installing rewrites the block.
+    ampersand)  grep -Fq "$SHIM_MARKER" "$ZSHRC" 2>/dev/null && echo active || echo not-installed ;;
     discord)    grep -Fq "discord-chat-launcher.sh" "$ZSHRC" 2>/dev/null && echo active || echo not-installed ;;
     voice-input) [ -L "$CLAUDE_DIR/transcribe" ] && echo active || echo not-installed ;;
     voice-output) [ -d "$CLAUDE_DIR/voice-output" ] && echo active || echo not-installed ;;
@@ -1532,6 +1682,8 @@ PYCONFIG
 deactivate_memory() {
   deactivate_app_hooks memory-approve.sh memory-nudge.sh memory-compact.sh consolidate-nudge.sh
   [ -L "$CLAUDE_DIR/startup-check.sh" ] && rm -f "$CLAUDE_DIR/startup-check.sh"
+  # The consolidate skill is the action the (now removed) nudge pointed at.
+  rm -rf "$CLAUDE_DIR/skills/consolidate"
   if [ -f "$CLAUDE_DIR/CLAUDE.md" ] && [ ! -L "$CLAUDE_DIR/CLAUDE.md" ] \
       && grep -Fq "<!-- improv:memory-discipline:begin -->" "$CLAUDE_DIR/CLAUDE.md"; then
     sed -i.bak '/<!-- improv:memory-discipline:begin -->/,/<!-- improv:memory-discipline:end -->/d' "$CLAUDE_DIR/CLAUDE.md"
@@ -1615,8 +1767,8 @@ deactivate_voice_output() {
   [ -L "$CLAUDE_DIR/hooks/voice-toggle.sh" ] && rm -f "$CLAUDE_DIR/hooks/voice-toggle.sh"
   [ -L "$CLAUDE_DIR/toggle-voice.sh" ] && rm -f "$CLAUDE_DIR/toggle-voice.sh"
   if [ -f "$ZSHRC" ] && grep -Fq "# === improv:voice-output:begin ===" "$ZSHRC"; then
-    sed -i.bak '/# === improv:voice-output:begin ===/,/# === improv:voice-output:end ===/d' "$ZSHRC"
-    rm -f "$ZSHRC.bak"
+    zshrc_block_delete "# === improv:voice-output:begin ===" "# === improv:voice-output:end ===" \
+      || warn "voice-output block in $ZSHRC is malformed (no closing marker, or two opens) - left in place."
   fi
   # Remove MCP server from ~/.claude.json
   if command -v python3 >/dev/null 2>&1 && [ -f "$HOME/.claude.json" ]; then
@@ -1692,8 +1844,8 @@ deactivate_cmux() {
   [ -L "$CLAUDE_DIR/claude-teams-launcher.sh" ] && rm -f "$CLAUDE_DIR/claude-teams-launcher.sh"
   rm -f "$CLAUDE_DIR/.skip-teams-launcher" "$CLAUDE_DIR/.teams-default-on"
   if [ -f "$ZSHRC" ] && grep -Fq "# === improv:claude-teams:begin ===" "$ZSHRC"; then
-    sed -i.bak '/# === improv:claude-teams:begin ===/,/# === improv:claude-teams:end ===/d' "$ZSHRC"
-    rm -f "$ZSHRC.bak"
+    zshrc_block_delete "# === improv:claude-teams:begin ===" "# === improv:claude-teams:end ===" \
+      || warn "claude-teams block in $ZSHRC is malformed (no closing marker, or two opens) - left in place."
   fi
   # Remove cmux hook symlinks + the teammate tmux-shim dir
   local f
@@ -1729,10 +1881,30 @@ deactivate_nvm() {
 }
 
 deactivate_ampersand() {
-  if [ -f "$ZSHRC" ] && grep -Fq "# === improv:shortcuts:begin ===" "$ZSHRC"; then
-    sed -i.bak '/# === improv:shortcuts:begin ===/,/# === improv:shortcuts:end ===/d' "$ZSHRC"
-    rm -f "$ZSHRC.bak"
-  fi
+  [ -f "$ZSHRC" ] || return 0
+  # Symmetry with the migration chain in section 11: every block shape we have ever
+  # written has to come OUT here, or "uninstall ampersand" silently leaves an older
+  # launcher behind and the user still has a live `ampersand` command afterwards.
+  #
+  # Every delete goes through zshrc_block_delete, which addresses by verified line
+  # number and refuses a malformed block rather than running the range to EOF. The
+  # test harness extracts this function with awk, so it must ALSO source the helper -
+  # test-ampersand-shim.sh asserts `declare -f zshrc_block_delete` after sourcing so
+  # that requirement can never silently regress into a "command not found".
+  local b e
+  for b in "$SHORTCUT_BEGIN" "$LEGACY_SHORTCUT_BEGIN"; do
+    if [ "$b" = "$SHORTCUT_BEGIN" ]; then e="$SHORTCUT_END"; else e="$LEGACY_SHORTCUT_END"; fi
+    grep -Fq "$b" "$ZSHRC" || continue
+    zshrc_block_delete "$b" "$e" \
+      || warn "Shortcut block in $ZSHRC is malformed (no closing marker, or two opens) - leaving it in place."
+  done
+  local m
+  for m in "$LEGACY_VANITY_MARKER_ORIG" "$LEGACY_VANITY_MARKER"; do
+    grep -Fq "$m" "$ZSHRC" || continue
+    # The pre-marker vanity block's range end is a standalone closing brace.
+    zshrc_block_delete "$m" "}" \
+      || warn "Legacy 'yesplease' block in $ZSHRC has no closing '}' on a line of its own - leaving it in place."
+  done
 }
 
 deactivate_reflect() {
@@ -1819,6 +1991,9 @@ deactivate_tilt_lab() {
   # Remove only the PATH launcher. Leave <repo>/tilt-lab/node_modules intact -
   # it's repo-local build state, cheap to keep and expensive to reinstall.
   [ -L "$HOME/.local/bin/tilt-lab" ] && rm -f "$HOME/.local/bin/tilt-lab"
+  # The skill points at a launcher that no longer exists, so it goes too (matches
+  # how the design peer skills each remove their own ~/.claude/skills/ dir).
+  rm -rf "$CLAUDE_DIR/skills/tilt-lab"
 }
 
 deactivate_fable() {
@@ -3827,6 +4002,18 @@ if picked memory; then
   make_symlink "$REPO_DIR/claude/startup-check.sh" "$CLAUDE_DIR/startup-check.sh"
   chmod +x "$REPO_DIR/claude/startup-check.sh"
 
+  # (a2) consolidate skill. Owned by `memory` because its trigger is memory-owned:
+  # consolidate-nudge.sh is installed by `picked memory && install_app_hooks ...` and
+  # hook_owner in browser-tree.json already says "memory". The skill is the ACTION the
+  # nudge tells you to take ("/consolidate"), so shipping the nudge without the skill
+  # advertises a command the machine does not have. Same shape as reflect (nudge hook +
+  # skill in one component).
+  info "Installing consolidate skill..."
+  mkdir -p "$CLAUDE_DIR/skills/consolidate"
+  safe_cp "$REPO_DIR/claude/skills/consolidate/SKILL.md" \
+     "$CLAUDE_DIR/skills/consolidate/SKILL.md"
+  ok "consolidate skill installed"
+
   # (b) CLAUDE.md memory-discipline section append
   MEMORY_BEGIN_MARKER='<!-- improv:memory-discipline:begin -->'
   MEMORY_END_MARKER='<!-- improv:memory-discipline:end -->'
@@ -4337,109 +4524,235 @@ fi
 # ============================================================
 # 11. ampersand shell shortcut (zsh only, idempotent)
 # ============================================================
-# Defines one zsh function in the user's .zshrc:
-#   ampersand          - cd into repo, re-launch installer (no pull)
-#   ampersand --pull   - cd into repo, git pull, re-launch installer (sync + run)
-# Forwards every other arg, so `ampersand --preset minimal` and
-# `ampersand --pull --yes` work.
+# Writes ONE zsh function into ~/.zshrc, and that function is a SHIM: it locates
+# the repo and execs bin/ampersand, which is where the behaviour actually lives.
+#   ampersand          - run the installer against this checkout
+#   ampersand --pull   - sync the repo first, then run it
+# Every other arg is forwarded, so `ampersand --preset minimal`, `--only x` and
+# `--pull --yes` all work.
 #
-# Migration: detects and refreshes any older block format we ever shipped
-# (pre-shortcuts vanity marker, combined yesplease+ampersand block, or the
-# previous ampersand block that still carried a yesplease back-compat alias).
-# All three get rewritten to the current ampersand-only block on next run.
+# WHY A SHIM. ~/.zshrc is not managed by this repo; install.sh only appends to it.
+# So a behavioural change to `ampersand` reaches a machine only when install.sh
+# runs there - and the convenient way to run install.sh is `ampersand`. A machine
+# whose block was stale had no easy way out of that loop. Moving the logic into
+# bin/ampersand means future changes ship through `git pull` and the .zshrc side
+# never has to be migrated again. Reproduction of the failure classes this fixes:
+# .claude/memory/session_2026-07-27_ampersand-selfheal.md
+#
+# Migration: every block format ever shipped is recognised and rebuilt -
+# the claude-dotfiles-era markers, the combined yesplease+ampersand block, the
+# yesplease-alias block, the pre-shim ampersand block, and the pre-marker vanity
+# block (which is swept unconditionally, in BOTH brand spellings). A user-defined
+# `ampersand` carrying none of our markers is still left strictly alone.
 
 if picked ampersand; then
   echo ""
   info "--- 'ampersand' shell shortcut ---"
 
-  SHORTCUT_BEGIN="# === improv:shortcuts:begin ==="
-  SHORTCUT_END="# === improv:shortcuts:end ==="
-  LEGACY_SHORTCUT_BEGIN="# === claude-dotfiles:shortcuts:begin ==="
-  LEGACY_SHORTCUT_END="# === claude-dotfiles:shortcuts:end ==="
-  LEGACY_VANITY_MARKER="# Improv vanity command: pull latest and re-launch installer"
+  # SHORTCUT_BEGIN / SHORTCUT_END / LEGACY_* / SHIM_MARKER are defined globally near
+  # ZSHRC, because detect_component has to agree with this section on what "current"
+  # means. Do not re-declare them here.
+
+  # The shim's entire purpose is handing off to bin/ampersand. A checkout without that
+  # file still gets a working command - the shim falls back to launching install.sh
+  # inline - which is exactly why this has to be said out loud: nothing looks wrong,
+  # while the self-healing property this section exists to provide is absent. Same
+  # silent-degrade shape as the route-intent.json defect.
+  # The chmod is belt-and-braces: the shim goes through `/bin/bash` precisely so the
+  # exec bit cannot matter, but a checkout that arrived by ZIP or by rsync without -p
+  # should still come out of an install run with sane modes.
+  if [ -f "$REPO_DIR/bin/ampersand" ]; then
+    chmod +x "$REPO_DIR/bin/ampersand" 2>/dev/null || true
+  else
+    warn "$REPO_DIR/bin/ampersand is MISSING from this checkout."
+    warn "The shortcut will still work, but by running install.sh directly - future"
+    warn "changes to 'ampersand' will not reach this machine through 'git pull'."
+    warn "Fix with:  cd $REPO_DIR && git pull"
+  fi
+
+  # The block written into ~/.zshrc is a SHIM and nothing more: find the repo, hand
+  # off to bin/ampersand. It is deliberately dumb and deliberately stable, because
+  # ~/.zshrc is the one file this repo cannot reach with `git pull` - every change
+  # made here has to be re-applied by an installer run on every machine, and the
+  # usual way to start an installer run is the very function being changed.
+  # The hint is the one per-machine value baked into the generated zsh. It goes inside a
+  # DOUBLE-QUOTED zsh string, so a repo path containing a backslash, a dollar sign, a
+  # backtick or a quote would either corrupt the .zshrc syntax or be expanded by zsh at
+  # source time. Escape in that order - backslash first, or the later passes re-escape
+  # their own additions. Rare, but the failure mode is a broken shell for every new
+  # terminal, which is not a rare-enough consequence.
+  REPO_DIR_ZQ="${REPO_DIR//\\/\\\\}"
+  REPO_DIR_ZQ="${REPO_DIR_ZQ//\$/\\\$}"
+  REPO_DIR_ZQ="${REPO_DIR_ZQ//\`/\\\`}"
+  REPO_DIR_ZQ="${REPO_DIR_ZQ//\"/\\\"}"
 
   append_shortcuts() {
     cat >> "$ZSHRC" <<EOF
 
 $SHORTCUT_BEGIN
-# 'ampersand' re-launches the installer. 'ampersand --pull' pulls latest first.
+$SHIM_MARKER
+# Thin launcher. The real logic lives in the repo at bin/ampersand, so it updates
+# with 'git pull' and never needs another .zshrc migration.
+#   ampersand                  run the installer
+#   ampersand --pull           sync the repo first, then run it
+#   ampersand --preset minimal any other flag is forwarded to install.sh verbatim
 function ampersand() {
-  local pull=0
-  local rc=0
-  local args=()
-  for arg in "\$@"; do
-    case "\$arg" in
-      --pull) pull=1 ;;
-      *) args+=("\$arg") ;;
-    esac
+  local IMPROV_SHIM_HINT="$REPO_DIR_ZQ"
+  local d repo=""
+  # \$IMPROV_DIR first (same override bootstrap.sh honours), then where the repo was
+  # when this line was written, then the usual clone locations. Searching is the
+  # point: a single baked path is what breaks the moment the repo lives anywhere
+  # else on a second machine.
+  for d in "\${IMPROV_DIR:-}" "\$IMPROV_SHIM_HINT" "\$HOME/Documents/Github/improv" "\$HOME/Github/improv" "\$HOME/Documents/improv" "\$HOME/code/improv" "\$HOME/src/improv" "\$HOME/improv"; do
+    [ -n "\$d" ] || continue
+    # BOTH files, not just install.sh: this loop scans well-known paths under \$HOME, and
+    # a bare install.sh test would happily exec a stranger's installer that happened to
+    # sit at one of them. bootstrap.sh has shipped alongside install.sh since the first
+    # commit, so requiring the pair is a cheap, reliable identity check.
+    if [ -f "\$d/install.sh" ] && [ -f "\$d/bootstrap.sh" ]; then repo="\$d"; break; fi
   done
-  if [[ "\$pull" == "1" ]]; then
-    ( cd "$REPO_DIR" && git pull --ff-only && /bin/bash ./install.sh "\${args[@]}" )
-    rc=\$?
-  else
-    ( cd "$REPO_DIR" && /bin/bash ./install.sh "\${args[@]}" )
-    rc=\$?
+  if [ -z "\$repo" ]; then
+    printf 'ampersand: cannot find the improv repo.\n' >&2
+    printf '  Looked in: \$IMPROV_DIR, %s, and the usual clone paths under \$HOME.\n' "\$IMPROV_SHIM_HINT" >&2
+    printf '  Repo somewhere else?   IMPROV_DIR=/path/to/improv ampersand\n' >&2
+    printf '  Not on this machine?   curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash\n' >&2
+    return 1
   fi
-  return "\$rc"
+  if [ -f "\$repo/bin/ampersand" ]; then
+    /bin/bash "\$repo/bin/ampersand" "\$@"
+    return \$?
+  fi
+  # Checkout predates bin/ampersand (an old revision, or a bisect). Run the installer
+  # directly so the shim still works and '--pull' can fetch a repo that HAS it.
+  local pull=0 a
+  local args=()
+  for a in "\$@"; do
+    if [ "\$a" = "--pull" ]; then pull=1; else args+=("\$a"); fi
+  done
+  ( cd "\$repo" || exit 1
+    if [ "\$pull" = "1" ]; then
+      git pull --ff-only || printf 'ampersand: pull failed - continuing with this checkout.\n' >&2
+    fi
+    /bin/bash ./install.sh "\${args[@]}" )
+  return \$?
 }
 $SHORTCUT_END
 EOF
   }
 
-  # Block is current iff it has the SHORTCUT_BEGIN marker, has --pull in the
-  # function body, runs the installer through bash, AND does NOT carry the deprecated
-  # yesplease alias.
+  # Current iff the block carries the current shim marker. Nothing but
+  # append_shortcuts ever writes that string, so its presence is a COMPLETE answer.
+  # The previous cut inferred "current" from three body details (contains --pull,
+  # contains /bin/bash ./install.sh, lacks `alias yesplease=`), which meant the
+  # freshness test had to be edited in lockstep with the body and silently went
+  # stale whenever someone forgot. A version marker cannot drift from itself.
+  #
+  # "Current" additionally means EXACTLY ONE block. The count is load-bearing, not
+  # cosmetic: zsh executes the whole file, so a .zshrc carrying a current block AND a
+  # stale one runs whichever comes LAST. A check that only asks "does any block carry
+  # the marker" reports everything fine while the stale launcher is the one that
+  # actually runs - which is the original "I typed ampersand and nothing happened"
+  # failure, reintroduced by its own fix. Reporting not-current sends this through the
+  # rebuild branch below, which deletes every block and appends exactly one.
   is_current_format() {
-    local block
-    block="$(awk "/$SHORTCUT_BEGIN/,/$SHORTCUT_END/" "$ZSHRC" 2>/dev/null || true)"
-    printf '%s' "$block" | grep -Fq -- "--pull" || return 1
-    printf '%s' "$block" | grep -Fq "/bin/bash ./install.sh" || return 1
-    printf '%s' "$block" | grep -Fq "alias yesplease=" && return 1
-    return 0
+    local n
+    n="$(awk -v b="$SHORTCUT_BEGIN" '
+      { l = $0; sub(/[ \t\r]+$/, "", l) }
+      l == b { c++ }
+      END { print c + 0 }' "$ZSHRC" 2>/dev/null || echo 0)"
+    [ "$n" = "1" ] || return 1
+    awk -v b="$SHORTCUT_BEGIN" -v e="$SHORTCUT_END" -v m="$SHIM_MARKER" '
+      { l = $0; sub(/[ \t\r]+$/, "", l) }
+      l == b { inb = 1; next }
+      l == e { inb = 0; next }
+      inb && index($0, m) { found = 1 }
+      END { exit(found ? 0 : 1) }
+    ' "$ZSHRC"
+  }
+
+  # The pre-marker vanity block (a `yesplease` function, no `ampersand` at all) is
+  # swept UNCONDITIONALLY instead of being one branch of the chain below. A machine
+  # that already fell through to the plain append while carrying it ends up with BOTH
+  # a working ampersand AND an orphaned yesplease pointing at an April-era path, and
+  # no branch that fires on a present block would ever clean that up. Sweeping first
+  # makes the migration converge from any mixture of block shapes.
+  strip_legacy_vanity() {
+    local m
+    for m in "$LEGACY_VANITY_MARKER_ORIG" "$LEGACY_VANITY_MARKER"; do
+      grep -Fq "$m" "$ZSHRC" 2>/dev/null || continue
+      # The vanity block's range end is a standalone closing brace.
+      if zshrc_block_delete "$m" "}"; then
+        VANITY_STRIPPED=1
+      else
+        warn "Legacy 'yesplease' block in $ZSHRC has no closing '}' on a line of its own."
+        warn "Leaving it in place - deleting it would take everything after it with it."
+        warn "Remove it by hand, then re-run the installer."
+      fi
+    done
   }
 
   if [ -f "$ZSHRC" ]; then
+    VANITY_STRIPPED=0
+    strip_legacy_vanity
+
     if grep -Fq "$SHORTCUT_BEGIN" "$ZSHRC" && is_current_format; then
-      # Current format present. Check baked path.
-      if grep -Fq "cd \"$REPO_DIR\"" "$ZSHRC"; then
+      # Current shim present. The hint line is the only per-machine value in it, so
+      # that is what decides whether it needs refreshing for this checkout.
+      if grep -Fq "IMPROV_SHIM_HINT=\"$REPO_DIR_ZQ\"" "$ZSHRC"; then
         ok "$ZSHRC ('ampersand' already defined for $REPO_DIR)"
-      else
+      elif zshrc_block_delete "$SHORTCUT_BEGIN" "$SHORTCUT_END"; then
         warn "Shortcut in $ZSHRC points at a different repo location. Refreshing to $REPO_DIR."
-        sed -i.bak "/$SHORTCUT_BEGIN/,/$SHORTCUT_END/d" "$ZSHRC"
-        rm -f "$ZSHRC.bak"
         append_shortcuts
         SHORTCUTS_NEW=1
         ok "Refreshed 'ampersand' in $ZSHRC -> $REPO_DIR"
+      else
+        warn "Shortcut block in $ZSHRC is malformed (no closing marker, or two opens) - leaving it alone."
+        warn "Rewriting it would delete everything after it. Restore '$SHORTCUT_END' or remove the block by hand, then re-run."
       fi
     elif grep -Fq "$SHORTCUT_BEGIN" "$ZSHRC"; then
-      # Older format with our marker (combined block, or current-with-deprecated-alias).
-      # Sed-replace the whole range with the current format.
-      sed -i.bak "/$SHORTCUT_BEGIN/,/$SHORTCUT_END/d" "$ZSHRC"
-      rm -f "$ZSHRC.bak"
-      append_shortcuts
-      SHORTCUTS_NEW=1
-      ok "Refreshed 'ampersand' in $ZSHRC (cleaned up legacy block)"
+      # Our marker, older body: the combined yesplease+ampersand block, the
+      # yesplease-alias block, or any pre-shim ampersand. Replace the whole range.
+      # zshrc_block_delete removes EVERY well-formed block, so a .zshrc carrying a
+      # current one plus a stale one converges here to exactly one.
+      if zshrc_block_delete "$SHORTCUT_BEGIN" "$SHORTCUT_END"; then
+        append_shortcuts
+        SHORTCUTS_NEW=1
+        ok "Refreshed 'ampersand' in $ZSHRC (rebuilt a stale block)"
+      else
+        warn "Stale shortcut block in $ZSHRC is malformed (no closing marker, or two opens) - leaving it alone."
+        warn "Rewriting it would delete everything after it. Restore '$SHORTCUT_END' or remove the block by hand, then re-run."
+      fi
+    # DEFENSIVE-ONLY, and deliberately kept. `migrate_legacy_markers` runs in the main
+    # install flow BEFORE this section and rewrites `=== claude-dotfiles:` to `=== improv:`
+    # throughout ~/.zshrc, so on any normal run a claude-dotfiles-era block has already
+    # become an improv-marked one and is rebuilt by the branch above (verified: a Form C
+    # .zshrc reports "rebuilt a stale block", not "migrated"). This branch is what catches
+    # the paths that skip that pre-pass, and removing it would make those silently fall
+    # through to the user-defined-ampersand guard and never be migrated at all.
     elif grep -Fq "$LEGACY_SHORTCUT_BEGIN" "$ZSHRC"; then
       # Legacy marker from the old claude-dotfiles name. It is ours, so migrate it instead
       # of treating it as a user-defined ampersand and leaving a stale launcher behind.
-      sed -i.bak "/$LEGACY_SHORTCUT_BEGIN/,/$LEGACY_SHORTCUT_END/d" "$ZSHRC"
-      rm -f "$ZSHRC.bak"
-      append_shortcuts
-      SHORTCUTS_NEW=1
-      ok "Migrated $ZSHRC to current 'ampersand' format"
-    elif grep -Fq "$LEGACY_VANITY_MARKER" "$ZSHRC"; then
-      # Pre-marker format. Sed-replace through to the next standalone closing brace.
-      sed -i.bak "/$LEGACY_VANITY_MARKER/,/^}$/d" "$ZSHRC"
-      rm -f "$ZSHRC.bak"
-      append_shortcuts
-      SHORTCUTS_NEW=1
-      ok "Migrated $ZSHRC to current 'ampersand' format"
+      if zshrc_block_delete "$LEGACY_SHORTCUT_BEGIN" "$LEGACY_SHORTCUT_END"; then
+        append_shortcuts
+        SHORTCUTS_NEW=1
+        ok "Migrated $ZSHRC to current 'ampersand' format"
+      else
+        warn "Legacy shortcut block in $ZSHRC is malformed (no closing marker, or two opens) - leaving it alone."
+        warn "Rewriting it would delete everything after it. Remove the block by hand, then re-run."
+      fi
     elif grep -Eq '^(function[[:space:]]+ampersand|alias[[:space:]]+ampersand=)' "$ZSHRC"; then
       warn "$ZSHRC already defines 'ampersand' without our marker - leaving it alone."
     else
       append_shortcuts
       SHORTCUTS_NEW=1
       ok "Added 'ampersand' shortcut to $ZSHRC"
+    fi
+
+    # Explicit `if`, not `[ ... ] && ok ...`: as the final statement of this block
+    # under `set -e`, a bare test that evaluates false would make the enclosing
+    # construct's status non-zero.
+    if [ "$VANITY_STRIPPED" = "1" ]; then
+      ok "Removed the legacy 'yesplease' block from $ZSHRC"
     fi
   else
     warn "$ZSHRC not found - skipping shell shortcut (zsh only)."
@@ -4915,14 +5228,12 @@ if [ "$_cluster_any" = 1 ] || [ -n "${HOOK_ON// /}" ]; then
       chmod +x "$REPO_DIR/claude/hooks/detect-session-model.sh"
       link_or_copy "$REPO_DIR/claude/hooks/detect-session-model.sh" "$CLAUDE_DIR/hooks/detect-session-model.sh"
     fi
+    # Companion lexicons/config for THIS hook (route-intent.json, grounding-intent.json,
+    # ...). Table-driven now rather than one special case per hook, because the same
+    # silent-fail-open bug reached main twice: once for route-intent.json (2026-07-26)
+    # and once for grounding-intent.json, which was never deployed at all.
+    install_hook_data "$_h"
     if [ "$_h" = "route-intent.sh" ]; then
-      # route-intent.json is DATA, not an executable, so it goes through
-      # link_or_copy_data - which makes the SAME symlink-vs-copy decision the hook
-      # itself just made. A bare `ln -sf` here dangled on every copy-mode install
-      # (the throwaway-clone case), and WITHOUT the lexicon the hook fails open
-      # silently: missing lexicon = no routing, forever, with no signal.
-      [ -f "$REPO_DIR/claude/hooks/route-intent.json" ] && \
-        link_or_copy_data "$REPO_DIR/claude/hooks/route-intent.json" "$CLAUDE_DIR/hooks/route-intent.json"
       # The roster the nudges name (quick-answer/sonnet-impl/opus-executor) must
       # exist in the GLOBAL agents dir for Agent(subagent_type: ...) to resolve
       # it from any project, not just this repo. link_or_copy_data backs up a
@@ -5067,6 +5378,16 @@ if picked tilt-lab; then
   else
     warn "npm not found - install Node, then run 'cd tilt-lab && npm install'."
   fi
+
+  # tilt-lab skill. Owned by the tilt-lab component (KEYS+=(tilt-lab)) because the
+  # skill exists to drive THIS app: it documents the launcher and the export flow, and
+  # is useless without the dev server this block installs. Without it a fresh machine
+  # gets the app but Claude has no /tilt-lab surface to reach it through.
+  info "Installing tilt-lab skill..."
+  mkdir -p "$CLAUDE_DIR/skills/tilt-lab"
+  safe_cp "$REPO_DIR/claude/skills/tilt-lab/SKILL.md" \
+     "$CLAUDE_DIR/skills/tilt-lab/SKILL.md"
+  ok "tilt-lab skill installed"
 
   # Launcher symlink on PATH (mirrors the sidecoach CLI idiom).
   chmod +x "$REPO_DIR/bin/tilt-lab-launcher.sh"
