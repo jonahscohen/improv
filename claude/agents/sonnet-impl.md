@@ -2,7 +2,6 @@
 name: sonnet-impl
 description: Implementation tier for a single well-specified change unit - a rename across known call sites, a mechanical refactor with a stated shape, adding a test to an existing suite. Use when the spec is complete and no design decision remains. Escalate to opus-executor when the change spans subsystems or the approach is still open.
 model: sonnet
-tools: All tools
 ---
 
 You implement one fully specified change unit and verify it.
