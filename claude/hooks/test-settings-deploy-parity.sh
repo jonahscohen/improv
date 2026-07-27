@@ -50,7 +50,21 @@ except Exception as e:
     print(f"FAIL {sel}: invalid settings.json ({e})"); sys.exit(0)
 # Match any hook under .claude/hooks/ regardless of prefix (~/, $HOME/, absolute),
 # and MULTIPLE hook paths per compound command (findall, not search).
-pat = re.compile(r"/\.claude/hooks/([A-Za-z0-9_.-]+\.(?:sh|py))")
+#
+# The trailing lookahead is load-bearing. Without it the name is unbounded on the right,
+# so a command wiring `foo.sh.disabled` yields the capture `foo.sh` - and this check then
+# confirms that `foo.sh` is deployed and reports PASS, while the thing settings.json
+# actually points at is a path that never runs. Same blind spot the reverse suite
+# (test-settings-wire-parity.sh) fixed on its own side.
+pat = re.compile(r"/\.claude/hooks/([A-Za-z0-9_.-]+\.(?:sh|py))(?![A-Za-z0-9_.-])")
+
+# Self-test the matcher before trusting it against real settings. A regex nobody has
+# watched reject anything is an assumption, not a check.
+_probe = "/.claude/hooks/foo.sh.disabled"
+assert pat.findall(_probe) == [], f"boundary lookahead lost: {_probe} -> {pat.findall(_probe)}"
+assert pat.findall("~/.claude/hooks/foo.sh") == ["foo.sh"], "plain .sh no longer matches"
+assert pat.findall("$HOME/.claude/hooks/a.py && ~/.claude/hooks/b.sh") == ["a.py", "b.sh"], \
+    "compound command no longer yields both hooks"
 bad = []
 for ev, groups in d.get("hooks", {}).items():
     for g in groups:
