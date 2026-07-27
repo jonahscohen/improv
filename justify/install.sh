@@ -83,15 +83,51 @@ if [ -z "$BIN_DIR" ]; then
   mkdir -p "${HOME}/.local/bin"
   BIN_DIR="${HOME}/.local/bin"
 fi
-ln -sf "$JUSTIFY_DIR/init.sh" "$BIN_DIR/justify-init"
-ln -sf "$JUSTIFY_DIR/remove.sh" "$BIN_DIR/justify-remove"
-ln -sf "$JUSTIFY_DIR/justify-watch.sh" "$BIN_DIR/justify-watch"
-ln -sf "$JUSTIFY_DIR/justify-done.sh" "$BIN_DIR/justify-done"
-ln -sf "$JUSTIFY_DIR/justify-serve.sh" "$BIN_DIR/justify-serve"
-ln -sf "$JUSTIFY_DIR/justify-watch-arm.sh" "$BIN_DIR/justify-watch-arm"
-ln -sf "$JUSTIFY_DIR/justify-watch-disarm.sh" "$BIN_DIR/justify-watch-disarm"
-ln -sf "$JUSTIFY_DIR/justify-worker.sh" "$BIN_DIR/justify-worker"
-echo "Installed justify-init, justify-remove, justify-watch, justify-done, justify-serve, justify-watch-arm, justify-watch-disarm, justify-worker to $BIN_DIR"
+
+# Guard: a run with $HOME redirected into a temp tree (sandboxed installers,
+# dry-runs, CI) would plant symlinks into a SHARED bin pointing at a directory
+# macOS reaps hours later. The links survive, their targets do not, and every
+# justify-done call becomes "command not found" - which surfaces to the user as
+# a Justify panel hung on "Working..." forever while the source edits land
+# silently. Observed 2026-07-16: eight of ten shims dead this way.
+case "$JUSTIFY_DIR" in
+  /var/folders/*|/tmp/*|"${TMPDIR:-/nonexistent}"*)
+    case "$BIN_DIR" in
+      "$JUSTIFY_DIR"*) ;;
+      *)
+        echo "ERROR: HOME is a temp tree ($HOME) but $BIN_DIR is a shared bin." >&2
+        echo "       Refusing to plant shims whose targets will be reaped." >&2
+        echo "       Re-run with a real HOME, or set BIN_DIR inside the temp tree." >&2
+        exit 1
+        ;;
+    esac
+    ;;
+esac
+
+ln -sfn "$JUSTIFY_DIR/init.sh" "$BIN_DIR/justify-init"
+ln -sfn "$JUSTIFY_DIR/remove.sh" "$BIN_DIR/justify-remove"
+ln -sfn "$JUSTIFY_DIR/justify-watch.sh" "$BIN_DIR/justify-watch"
+ln -sfn "$JUSTIFY_DIR/justify-done.sh" "$BIN_DIR/justify-done"
+ln -sfn "$JUSTIFY_DIR/justify-serve.sh" "$BIN_DIR/justify-serve"
+ln -sfn "$JUSTIFY_DIR/justify-watch-arm.sh" "$BIN_DIR/justify-watch-arm"
+ln -sfn "$JUSTIFY_DIR/justify-watch-disarm.sh" "$BIN_DIR/justify-watch-disarm"
+ln -sfn "$JUSTIFY_DIR/justify-worker.sh" "$BIN_DIR/justify-worker"
+
+# Falsify the install rather than trusting it: `-e` follows the link, so a
+# dangling shim fails here instead of at the moment a queued prompt needs it.
+shim_failures=0
+for shim in justify-init justify-remove justify-watch justify-done \
+            justify-serve justify-watch-arm justify-watch-disarm justify-worker; do
+  if [ ! -e "$BIN_DIR/$shim" ]; then
+    echo "ERROR: $BIN_DIR/$shim does not resolve to an existing file" >&2
+    shim_failures=$((shim_failures + 1))
+  fi
+done
+if [ "$shim_failures" -gt 0 ]; then
+  echo "ERROR: $shim_failures justify shim(s) are dangling. Install aborted." >&2
+  exit 1
+fi
+echo "Installed justify-init, justify-remove, justify-watch, justify-done, justify-serve, justify-watch-arm, justify-watch-disarm, justify-worker to $BIN_DIR (all verified resolvable)"
 
 # launchd KeepAlive agent (macOS): make the daemon itself durable. Placement only
 # - activation is the user's choice (see claude/docs/justify-daemon-launchd.md).

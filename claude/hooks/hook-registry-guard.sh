@@ -261,11 +261,35 @@ try:
             continue
         bad.append("UNMANAGED DATA: %s (no owning hook in browser-tree.json "
                    '"hook_data", and not listed in "hook_data_excluded")' % f)
-    # Direction 2: registered, but install.sh never names it - so it never ships.
+    # Direction 2: registered, but install.sh never DEPLOYS it - so it never ships.
+    #
+    # "Named anywhere in install.sh" is far too weak to mean deployed. These filenames
+    # ALSO appear in comments and in the DESCS[]/FILES[] strings the component browser
+    # shows the user - route-intent.json is in that UI text right now - so a companion
+    # could be registered, described to the user, and never copied, with this row green
+    # the whole time. Stripping comments was not enough either: the UI strings are code.
+    #
+    # Look at DEPLOY SITES only: the hook_data_files() table, and any line that actually
+    # copies or links a file. Everything else is prose about deployment, not deployment.
+    m_tbl = re.search(r'^hook_data_files\(\)\s*\{(.*?)^\}', src, re.S | re.M)
+    deploy_src = m_tbl.group(1) if m_tbl else ""
+    deploy_src += "\n" + "\n".join(
+        ln for ln in src.split("\n")
+        if re.search(r'\b(link_or_copy_data|link_or_copy|make_symlink|safe_cp|cp)\b', ln)
+        and not re.match(r'\s*#', ln))
+    # A component may ship its companions through its OWN loop instead of the table -
+    # sidecoach does, naming its registries on a `for registry in ...` line. That is
+    # real deployment, so those owners are checked against all non-comment code rather
+    # than against deploy-verb lines. It is declared in the tree, not inferred, and the
+    # same declaration drives test-hook-data-parity.sh - one exemption, honoured twice.
+    bespoke = set(t.get("hook_data_bespoke") or {})
+    code_src = "\n".join(re.sub(r'(^|\s)#.*$', r'\1', ln) for ln in src.split("\n"))
     for f, owner in sorted(registered.items()):
-        if not re.search(r'(?<![\w-])' + re.escape(f) + r'(?![\w-])', src):
-            bad.append("UNDEPLOYED DATA: %s (owned by %s, but install.sh never "
-                       "names it - the hook ships without its companion)" % (f, owner))
+        haystack = code_src if owner in bespoke else deploy_src
+        if not re.search(r'(?<![\w-])' + re.escape(f) + r'(?![\w-])', haystack):
+            bad.append("UNDEPLOYED DATA: %s (owned by %s, but no deploy site in "
+                       "install.sh names it - the hook ships without its companion. "
+                       "UI text and comments do not count as deployment)" % (f, owner))
     # Direction 3: registered but missing from disk - the installer would warn or
     # silently skip, and the owning hook fails open.
     for f, owner in sorted(registered.items()):

@@ -188,6 +188,21 @@ function ampersand() {
 }
 EOF
       ;;
+    USER_OWN_POSIX)  # not ours, POSIX form - the shape the guard used to miss entirely
+      cat >> "$rc" <<'EOF'
+ampersand() {
+  echo "my own posix thing"
+}
+EOF
+      ;;
+    A_vanity_commented)  # vanity block whose closing brace carries a trailing comment
+      cat >> "$rc" <<EOF
+# claude-dotfiles vanity command: pull latest and re-launch installer
+function yesplease() {
+  ( cd "$p" && git pull --ff-only && ./install.sh "\$@" )
+} # end yesplease
+EOF
+      ;;
   esac
 }
 
@@ -394,6 +409,12 @@ part3() {
     # suite goes red with "block still present" and points at the installer instead of at
     # its own harness. Cost an investigation once; hence the declare -f assertion below.
     awk '/^zshrc_block_delete\(\) \{/,/^\}/' "$INSTALLER"
+    # detect_component's ampersand arm calls this, and it is GLOBAL now - it used to be
+    # a local function inside section 11, which is exactly how the detector and the
+    # rebuild chain ended up with two different definitions of "current". Omitting it
+    # degrades the same silent way zshrc_block_delete does, so it gets the same
+    # declare -f assertion below.
+    awk '/^is_current_format\(\) \{/,/^\}/' "$INSTALLER"
     awk '/^detect_component\(\) \{/,/^\}/' "$INSTALLER"
     awk '/^deactivate_ampersand\(\) \{/,/^\}/' "$INSTALLER"
     # install.sh's real logger, which the helper's failure path calls.
@@ -406,6 +427,12 @@ part3() {
     ok "extract carries zshrc_block_delete (deactivate_ampersand depends on it)"
   else
     bad "extract carries zshrc_block_delete (deactivate_ampersand depends on it)" \
+        "add it to the awk extraction above"
+  fi
+  if bash -c "source '$lib'; declare -f is_current_format >/dev/null"; then
+    ok "extract carries is_current_format (detect_component depends on it)"
+  else
+    bad "extract carries is_current_format (detect_component depends on it)" \
         "add it to the awk extraction above"
   fi
 
@@ -432,6 +459,137 @@ part3() {
     assert_lacks "$h/.zshrc" "function yesplease"  "deactivate: $form -> yesplease function gone"
     assert_has   "$h/.zshrc" "BYSTANDER"           "deactivate: $form -> unrelated lines survive"
   done
+}
+
+# ============================================================
+# PART 5 - the four cross-model review findings, folded
+# ============================================================
+# Each case here reproduces a defect that shipped in 14145511 and was caught by Codex
+# afterwards. All four end in the SAME user-visible failure the shim exists to prevent
+# (a .zshrc that looks fine and launches nothing) or in destroyed user config, so each
+# is asserted directly rather than through the migration matrix above.
+part5() {
+  echo "-- folded review findings (symlinked zshrc, commented brace, POSIX fn, drifted detector) --"
+  local h repo lib state canary='export CANARY_MUST_SURVIVE=1'
+
+  # --- 1. sed -i cannot edit a non-regular file -----------------------------------
+  # A symlinked ~/.zshrc is an ordinary dotfiles setup, and BSD sed refuses it outright:
+  # "in-place editing only works for regular files". zshrc_block_delete used to return 0
+  # anyway, so the caller appended a second block and reported success - leaving TWO
+  # definitions, with zsh running the stale one that comes last.
+  h="$(newcase sym_dup)"; repo="$TMPROOT/repo_sym_dup"; mkrepo "$repo" --with-bin
+  mkdir -p "$h/dotfiles"; : > "$h/dotfiles/zshrc"
+  seed "$h/dotfiles/zshrc" G_prebin "/nonexistent/old/path/improv"
+  printf '%s\n' "$canary" >> "$h/dotfiles/zshrc"
+  rm -f "$h/.zshrc"; ln -s "$h/dotfiles/zshrc" "$h/.zshrc"
+  run_install "$h" "$repo"
+  assert_count "$h/dotfiles/zshrc" "# === improv:shortcuts:begin ===" 1 \
+    "symlinked .zshrc -> never ends up with two blocks"
+  assert_has "$h/dotfiles/zshrc" "$canary" "symlinked .zshrc -> user config survives"
+  [ -L "$h/.zshrc" ] && ok "symlinked .zshrc -> still a symlink afterwards" \
+                     || bad "symlinked .zshrc -> still a symlink afterwards" "the link was replaced by a regular file"
+  # Failing SAFELY is not the bar. A symlinked ~/.zshrc is one of the most common
+  # dotfiles setups, so refusing to ever repair those machines just relocates the bug.
+  assert_has "$h/dotfiles/zshrc" "# improv-shim v1" \
+    "symlinked .zshrc -> the stale block is actually REPAIRED, not just left alone"
+  assert_lacks "$h/dotfiles/zshrc" "/nonexistent/old/path/improv" \
+    "symlinked .zshrc -> stale baked path is gone"
+
+  # The installer must not touch a .bak the USER owns. `sed -i.bak` wrote and then
+  # deleted "$ZSHRC.bak" - a path this code does not own - so anyone keeping a hand-made
+  # ~/.zshrc.bak had it silently destroyed by an install, and a failed edit could
+  # "restore" from that unrelated file. The primitive now works from its own snapshot
+  # in $TMPDIR and writes back through the path, creating no sibling backup at all.
+  h="$(newcase user_bak)"; repo="$TMPROOT/repo_user_bak"; mkrepo "$repo" --with-bin
+  seed "$h/.zshrc" G_prebin "/nonexistent/old/path/improv"
+  printf 'PRECIOUS USER BACKUP\n' > "$h/.zshrc.bak"
+  run_install "$h" "$repo"
+  assert_has "$h/.zshrc.bak" "PRECIOUS USER BACKUP" \
+    "a user's own ~/.zshrc.bak is never touched"
+  assert_has "$h/.zshrc" "# improv-shim v1" \
+    "...and the block was still rebuilt while leaving it alone"
+
+  # --- 2. an AMBIGUOUS closing brace is refused, never guessed at ------------------
+  # A regex end-mode was added on 2026-07-27 so `} # end yesplease` would close the
+  # vanity block, on the reasoning that a looser end match "can only close earlier, so
+  # it strictly shrinks what gets deleted". That reasoning was WRONG - it cannot close
+  # later, but it turns a REFUSAL into a DELETE, and exact matching had deleted nothing.
+  # It was reverted the same day. These cases lock the safe behaviour in.
+  #
+  # 2a. The shape that made it data loss: a vanity block whose own `}` was lost to a
+  # hand edit, the user's config below it, and a LATER commented brace that belongs to
+  # the user. The loose matcher deleted everything from the marker through `} # end
+  # myfunc`, destroying an export and an unrelated function. Exact matching refuses.
+  h="$(newcase vanity_ambiguous)"; repo="$TMPROOT/repo_vanity_ambiguous"; mkrepo "$repo" --with-bin
+  cat >> "$h/.zshrc" <<'EOF'
+# claude-dotfiles vanity command: pull latest and re-launch installer
+function yesplease() {
+  ( cd /x && ./install.sh "$@" )
+export IRREPLACEABLE=1
+myfunc() {
+  echo hi
+} # end myfunc
+export ALSO_MINE=2
+EOF
+  run_install "$h" "$repo"
+  assert_has "$h/.zshrc" "IRREPLACEABLE"  "unclosed vanity + later commented brace -> user export survives"
+  assert_has "$h/.zshrc" "myfunc"         "unclosed vanity + later commented brace -> user function survives"
+  assert_has "$h/.zshrc" "ALSO_MINE"      "unclosed vanity + later commented brace -> trailing config survives"
+  assert_in  "$(cat "$h/install.out")" "no closing '}'" \
+    "unclosed vanity + later commented brace -> refused and explained"
+
+  # 2b. A vanity block CLOSED by a commented brace is also refused, not guessed at.
+  # Leaving it in place is the correct answer: the installer cannot tell that brace from
+  # the user's, and a warning the user can act on beats a delete they cannot undo.
+  h="$(newcase vanity_commented)"; repo="$TMPROOT/repo_vanity_commented"; mkrepo "$repo" --with-bin
+  seed "$h/.zshrc" A_vanity_commented "/nonexistent/old/path/improv"
+  printf '%s\n' "$canary" >> "$h/.zshrc"
+  cat >> "$h/.zshrc" <<'EOF'
+my_own_function() {
+  echo mine
+}
+EOF
+  run_install "$h" "$repo"
+  assert_has "$h/.zshrc" "$canary"         "commented '}' -> user config survives"
+  assert_has "$h/.zshrc" "my_own_function" "commented '}' -> unrelated function survives"
+  assert_has "$h/.zshrc" "function yesplease" \
+    "commented '}' -> ambiguous block left in place rather than guessed at"
+
+  # --- 3. the POSIX function form is a user-owned ampersand too --------------------
+  # The guard matched only `function ampersand` and `alias ampersand=`, so a user's own
+  # `ampersand() { ... }` read as absent and our block was appended after it.
+  h="$(newcase userown_posix)"; repo="$TMPROOT/repo_userown_posix"; mkrepo "$repo" --with-bin
+  seed "$h/.zshrc" USER_OWN_POSIX ""
+  run_install "$h" "$repo"
+  assert_lacks "$h/.zshrc" "# improv-shim v1"     "POSIX-form user ampersand -> no shim appended"
+  assert_has   "$h/.zshrc" "my own posix thing"   "POSIX-form user ampersand -> left intact"
+  assert_in    "$(cat "$h/install.out")" "already defines 'ampersand'" \
+    "POSIX-form user ampersand -> the refusal is explained"
+
+  # --- 4. detector and rebuild chain must share one definition of "current" --------
+  # zsh runs the whole file, so a current block FOLLOWED BY a stale one runs the stale
+  # one. detect_component's bare marker grep called that active, so the browser never
+  # offered the repair and the stale block survived forever.
+  lib="$TMPROOT/extracted_p5.sh"
+  {
+    awk '/^SHORTCUT_BEGIN=/,/^SHIM_MARKER=/' "$INSTALLER"
+    awk '/^zshrc_block_delete\(\) \{/,/^\}/' "$INSTALLER"
+    awk '/^is_current_format\(\) \{/,/^\}/' "$INSTALLER"
+    awk '/^detect_component\(\) \{/,/^\}/' "$INSTALLER"
+    printf 'warn() { printf "warn: %%s\\n" "$1" >&2; }\n'
+  } > "$lib"
+  h="$(newcase det_current_then_stale)"; repo="$TMPROOT/repo_det_p5"; mkrepo "$repo" --with-bin
+  run_install "$h" "$repo"                                    # writes the current shim
+  seed "$h/.zshrc" G_prebin "/nonexistent/old/path/improv"    # stale block appended AFTER it
+  state="$(ZSHRC="$h/.zshrc" CLAUDE_DIR="$h/.claude" REPO_DIR="$repo" bash -c "source '$lib'; detect_component ampersand")"
+  assert_eq "$state" "not-installed" \
+    "current block followed by a stale one -> not-installed (the stale one is what zsh runs)"
+
+  # And the repair the detector now makes possible actually converges.
+  run_install "$h" "$repo"
+  assert_count "$h/.zshrc" "# === improv:shortcuts:begin ===" 1 \
+    "current+stale -> a re-run collapses it to exactly one block"
+  assert_has "$h/.zshrc" "# improv-shim v1" "current+stale -> the survivor is the current shim"
 }
 
 # ============================================================
@@ -468,6 +626,12 @@ part4() {
     # suite goes red with "block still present" and points at the installer instead of at
     # its own harness. Cost an investigation once; hence the declare -f assertion below.
     awk '/^zshrc_block_delete\(\) \{/,/^\}/' "$INSTALLER"
+    # detect_component's ampersand arm calls this, and it is GLOBAL now - it used to be
+    # a local function inside section 11, which is exactly how the detector and the
+    # rebuild chain ended up with two different definitions of "current". Omitting it
+    # degrades the same silent way zshrc_block_delete does, so it gets the same
+    # declare -f assertion below.
+    awk '/^is_current_format\(\) \{/,/^\}/' "$INSTALLER"
     awk '/^detect_component\(\) \{/,/^\}/' "$INSTALLER"
     awk '/^deactivate_ampersand\(\) \{/,/^\}/' "$INSTALLER"
     # install.sh's real logger, which the helper's failure path calls.
@@ -527,6 +691,42 @@ part4() {
 }
 
 # ============================================================
+# PART 6 - is_current_format, unit-tested against hand-built .zshrc shapes
+# ============================================================
+# The whole migration chain and detect_component both branch on this one predicate, so
+# a wrong answer here is either a machine that never gets repaired or a machine that
+# gets rewritten every run. The end-marker row is the reason this part exists: a block
+# with a begin, the shim marker and NO end used to report "current", so section 11
+# skipped the repair - while every delete and the entire deactivate path would refuse
+# that same block as malformed. Healthy-looking, unrepairable, un-uninstallable.
+part6() {
+  echo "-- is_current_format agrees with what zsh actually runs --"
+  local lib="$TMPROOT/extracted6.sh" f res
+  {
+    awk '/^SHORTCUT_BEGIN=/,/^SHIM_MARKER=/' "$INSTALLER"
+    awk '/^is_current_format\(\) \{/,/^\}/' "$INSTALLER"
+  } > "$lib"
+  bash -c "source '$lib'; declare -f is_current_format >/dev/null" \
+    && ok "extraction: is_current_format is defined" \
+    || bad "extraction: is_current_format is defined"
+
+  local B='# === improv:shortcuts:begin ===' E='# === improv:shortcuts:end ===' M='# improv-shim v1'
+  shape() { # <label> <file body> <want: active|not-installed>
+    f="$TMPROOT/shape.zshrc"; printf '%b' "$2" > "$f"
+    if ZSHRC="$f" bash -c "source '$lib'; is_current_format"; then res=active; else res=not-installed; fi
+    assert_eq "$res" "$3" "is_current_format: $1"
+  }
+  shape "empty .zshrc"                     ""                               not-installed
+  shape "one well-formed current block"    "$B\n$M\nf(){ :; }\n$E\n"         active
+  shape "current block with NO end marker" "$B\n$M\nf(){ :; }\n"             not-installed
+  shape "block carrying no shim marker"    "$B\nold\n$E\n"                   not-installed
+  shape "current THEN stale (zsh runs the stale one)" "$B\n$M\n$E\n$B\nold\n$E\n" not-installed
+  shape "stale THEN current"               "$B\nold\n$E\n$B\n$M\n$E\n"       not-installed
+  shape "shim marker OUTSIDE the block"    "$B\n$E\n$M\n"                    not-installed
+  shape "markers with trailing whitespace" "$B   \n$M\n$E  \n"               active
+}
+
+# ============================================================
 # Negative control
 # ============================================================
 # Re-runs PART 1 and PART 2 against install.sh AS OF HEAD, with no bin/ampersand.
@@ -543,6 +743,7 @@ if [ "${1:-}" = "--negative-control" ]; then
   BIN_AMPERSAND=""
   part1
   part2
+  part5
   echo ""
   echo "pre-fix results: $PASS passed, $FAIL failed"
   if [ "$FAIL" -eq 0 ]; then
@@ -557,6 +758,8 @@ part1
 part2
 part3
 part4
+part5
+part6
 
 echo ""
 echo "$PASS passed, $FAIL failed"

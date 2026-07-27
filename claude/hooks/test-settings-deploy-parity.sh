@@ -30,6 +30,39 @@ SELECTIONS=(config "config,cmux" "config,fable" "config,reflect" "config,voice-o
 [ "${PARITY_FULL:-0}" = 1 ] && SELECTIONS+=("config,sidecoach" "config,justify")
 
 fail=0
+
+# ---------------------------------------------------------------------------
+# Matcher self-test. Runs ONCE, and its exit code actually counts.
+# ---------------------------------------------------------------------------
+# This deliberately does NOT live inside the per-selection python below: that one runs
+# in a captured "$(...)" whose exit code is discarded (only stdout starting with FAIL
+# sets fail=1), so an assert there prints a traceback and the suite still exits 0. A
+# check that cannot fail the suite is decorative. Verified by removing the boundary and
+# watching THIS row go red.
+if python3 - <<'PY'
+import re, sys
+pat = re.compile(r"/\.claude/hooks/([A-Za-z0-9_.-]+\.(?:sh|py))(?![A-Za-z0-9_.-])")
+cases = [
+    # A wiring that points at a path which never runs must yield NOTHING. Unbounded,
+    # this returns ["foo.sh"], so the suite confirms foo.sh is deployed and says PASS
+    # while settings.json actually references foo.sh.disabled.
+    ("~/.claude/hooks/foo.sh.disabled", []),
+    ("~/.claude/hooks/foo.sh", ["foo.sh"]),
+    ("$HOME/.claude/hooks/a.py && ~/.claude/hooks/b.sh", ["a.py", "b.sh"]),
+    ("/Users/x/.claude/hooks/c-d_e.sh", ["c-d_e.sh"]),
+]
+bad = [(s, pat.findall(s), want) for s, want in cases if pat.findall(s) != want]
+for s, got, want in bad:
+    print(f"  matcher self-test: {s!r} -> {got}, want {want}")
+sys.exit(1 if bad else 0)
+PY
+then
+  echo "PASS matcher self-test (hook-path regex is bounded on the right)"
+else
+  echo "FAIL matcher self-test - the hook-path regex is wrong; every row below is untrustworthy"
+  fail=1
+fi
+
 for sel in "${SELECTIONS[@]}"; do
   SB="$(mktemp -d)"
   HOME="$SB" bash "$INSTALL" --only "$sel" >/dev/null 2>&1
@@ -57,14 +90,6 @@ except Exception as e:
 # actually points at is a path that never runs. Same blind spot the reverse suite
 # (test-settings-wire-parity.sh) fixed on its own side.
 pat = re.compile(r"/\.claude/hooks/([A-Za-z0-9_.-]+\.(?:sh|py))(?![A-Za-z0-9_.-])")
-
-# Self-test the matcher before trusting it against real settings. A regex nobody has
-# watched reject anything is an assumption, not a check.
-_probe = "/.claude/hooks/foo.sh.disabled"
-assert pat.findall(_probe) == [], f"boundary lookahead lost: {_probe} -> {pat.findall(_probe)}"
-assert pat.findall("~/.claude/hooks/foo.sh") == ["foo.sh"], "plain .sh no longer matches"
-assert pat.findall("$HOME/.claude/hooks/a.py && ~/.claude/hooks/b.sh") == ["a.py", "b.sh"], \
-    "compound command no longer yields both hooks"
 bad = []
 for ev, groups in d.get("hooks", {}).items():
     for g in groups:

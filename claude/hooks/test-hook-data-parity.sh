@@ -228,7 +228,10 @@ JSON
   printf '#!/usr/bin/env bash\nexit 0\n' > "$SB/claude/hooks/demo-hook.sh"
   echo '{}' > "$SB/claude/hooks/demo-intent.json"
   echo '{}' > "$SB/claude/hooks/app-wirings.json"
-  printf 'picked demo && install_app_hooks demo-hook.sh\n# demo-intent.json\n' > "$SB/install.sh"
+  # The clean baseline deploys the companion with a REAL code line, not a comment.
+  # It used to be `# demo-intent.json`, which meant the M2 control only proved the guard
+  # noticed a deleted COMMENT - it never proved the guard can tell deploy code from prose.
+  printf 'picked demo && install_app_hooks demo-hook.sh\nlink_or_copy_data "$R/demo-intent.json" "$C/demo-intent.json"\n' > "$SB/install.sh"
 }
 
 write_fixture
@@ -244,7 +247,7 @@ out="$("$SGUARD" --audit-data 2>&1)"; rc=$?
 rm -f "$SB/claude/hooks/zz-orphan.json"
 
 # M2 - registered, but install.sh stops naming it (the route-intent.json bug).
-printf 'picked demo && install_app_hooks demo-hook.sh\n' > "$SB/install.sh"
+printf 'picked demo && install_app_hooks demo-hook.sh\n# demo-intent.json is deployed elsewhere\n' > "$SB/install.sh"
 out="$("$SGUARD" --audit-data 2>&1)"; rc=$?
 [ "$rc" = "1" ] && printf '%s' "$out" | grep -q "UNDEPLOYED DATA: demo-intent.json" \
   && ok "M2 registered but undeployed -> UNDEPLOYED DATA (rc=1)" \
@@ -290,7 +293,7 @@ rm -f "$SB/claude/hooks/browser-tree.json"
 # get classified as noise, and be ignored - which is the same outcome as not having it.
 write_fixture
 printf '#!/usr/bin/env bash\nexit 0\n' > "$SB/claude/hooks/plain-hook.sh"
-printf 'picked demo && install_app_hooks demo-hook.sh plain-hook.sh\n# demo-intent.json\n' > "$SB/install.sh"
+printf 'picked demo && install_app_hooks demo-hook.sh plain-hook.sh\nlink_or_copy_data "$R/demo-intent.json" "$C/demo-intent.json"\n' > "$SB/install.sh"
 out="$("$SGUARD" --audit-data 2>&1)"; rc=$?
 [ "$rc" = "0" ] && [ -z "$(printf '%s' "$out" | grep -i 'plain-hook')" ] \
   && ok "M8 companion-less hook stays green (no phantom data file demanded)" \

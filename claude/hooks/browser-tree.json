@@ -251,7 +251,7 @@
         {
           "key": "question-discipline",
           "kind": "hooks",
-          "tag": "the 4 question-discipline hooks",
+          "tag": "the 3 question-discipline hooks",
           "desc": "The 4 hooks in the question-discipline cluster.",
           "hooks": [
             "multiple-choice-detect-stop",

@@ -547,7 +547,7 @@ DESCS+=(
 FILES+=(
   "~/.claude/hooks/ (5 safety hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (8 verification hooks)\n~/.claude/settings.json (wiring)"
-  "~/.claude/hooks/ (4 question-discipline hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (3 question-discipline hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (7 grounding hooks)\n~/.claude/hooks/grounding-intent.json (gate lexicon)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (3 api-drift hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 planning-git hooks)\n~/.claude/settings.json (wiring)"
@@ -1262,11 +1262,80 @@ SHIM_MARKER="# improv-shim v$SHIM_VERSION"
 #      so CRLF files and hand-edited trailing spaces still match.
 # Deleting every well-formed block (not just the first) is also what makes duplicates
 # converge: the caller appends exactly one fresh block afterwards.
+# END MATCHING IS WHOLE-LINE EQUALITY, DELIBERATELY. A regex end-mode was added here
+# on 2026-07-27 so that a hand-edited `} # end yesplease` would still close the vanity
+# block, on the reasoning that regex matching can only close the range EARLIER and so
+# "strictly shrinks what gets deleted". THAT REASONING WAS WRONG and the mode was
+# reverted the same day.
+#
+# It cannot close later, but it converts a REFUSAL into a DELETE, so the deleted set is
+# not a subset of what exact matching removed - exact matching removed NOTHING. Given a
+# vanity block whose own `}` was lost to a hand edit, followed by the user's config and
+# any later `} # end myfunc`, exact mode returned 1 and touched nothing while regex mode
+# returned 0 and deleted everything in between. Reproduced: `export IRREPLACEABLE=1` and
+# an unrelated `myfunc` destroyed.
+#
+# The premise of that fix - that people hand-edit these blocks - is exactly why the
+# refusal was load-bearing. A commented closing brace can belong to the USER. Refusing
+# and warning is the correct answer to an ambiguous end marker; guessing is not.
 zshrc_block_delete() {
-  local b="$1" e="$2" plan
+  # EXACT CONTRACT, so nobody has to guess at the edges:
+  #   returns 0 and deletes  - every begin in the file is closed by a later end
+  #   returns 0 and does not delete - no begin present at all (nothing to do)
+  #   returns 1 and does not touch the file - a begin is still open at EOF, or a second
+  #                            begin appears before the first was closed
+  # An end marker with no open begin before it (a stray, or one left behind by a hand
+  # edit) is IGNORED, not refused: callers only reach here when a begin exists, and a
+  # leading orphan end followed by a well-formed block is still a well-formed block.
+  # That is deliberately narrower than "refuses all malformed input" - it refuses the
+  # shapes that could delete the wrong lines, which is the property that matters.
+  # Optional third argument: the maximum number of lines a block may span before the
+  # end marker is treated as NOT BELONGING TO IT. 0 or absent means unbounded.
+  #
+  # This exists for the vanity block, whose end marker is a bare `}` - a line the USER
+  # may well have too. Marker-pair deletes need no bound because `# === improv:...:end
+  # ===` cannot plausibly be the user's. Reproduced on the unbounded version, a vanity
+  # block whose own `}` was lost to a hand edit swallowed everything down to the next
+  # `}` in the file: an `export` and an entire unrelated function destroyed, leaving
+  # only the line after the user's closing brace.
+  #
+  # The vanity block is a CLOSED historical set - every form ever written is 4 lines
+  # (marker, `function yesplease() {`, one body line, `}`), a span of 3, and no new ones
+  # are produced. The bound is 4: that shape plus one line of slack. It was first set to
+  # 12, then 6, and BOTH still deleted a user's function whose brace sat just inside the
+  # window - caught by a bounded-vs-unbounded differential test, not by reading. Do not
+  # widen it without re-running that test.
+  #
+  # A bound can only ever turn a DELETE into a REFUSAL - it never widens the deleted
+  # set. That direction is the whole point, and it is asserted by test rather than
+  # assumed: an earlier change here claimed a safety invariant that turned out to be
+  # false in exactly this spot.
+  local b="$1" e="$2" maxspan="${3:-0}" plan snap out
   [ -f "$ZSHRC" ] || return 0
-  plan="$(awk -v b="$b" -v e="$e" '
+
+  # WORK FROM A SNAPSHOT, AND WRITE BACK THROUGH THE PATH.
+  #
+  # Three defects are closed by this shape, all found by cross-model review:
+  #  1. `sed -i.bak` names its backup "$ZSHRC.bak" - a path this function does not own.
+  #     On success it deleted whatever was there, which for anyone who keeps a hand-made
+  #     ~/.zshrc.bak means the installer silently destroyed their backup; on failure it
+  #     could "restore" from that stale unrelated file.
+  #  2. The delete plan is a list of LINE NUMBERS computed by awk. Reading the file a
+  #     second time for sed meant those numbers could be applied to different content.
+  #     Planning and applying against one snapshot makes that impossible.
+  #  3. `sed -i` refuses a non-regular file, so a symlinked ~/.zshrc - one of the most
+  #     common dotfiles setups - could never be repaired. Redirecting onto "$ZSHRC"
+  #     follows the link, keeps the user's symlink and the original inode, and needs no
+  #     link-resolution loop (which had its own hop-limit fallthrough bug).
+  snap="$(mktemp "${TMPDIR:-/tmp}/improv-zshrc-snap.XXXXXX")" || return 1
+  out="$(mktemp "${TMPDIR:-/tmp}/improv-zshrc-out.XXXXXX")" || { rm -f "$snap"; return 1; }
+  if ! cat "$ZSHRC" > "$snap"; then rm -f "$snap" "$out"; return 1; fi
+
+  plan="$(awk -v b="$b" -v e="$e" -v maxspan="$maxspan" '
     { line = $0; sub(/[ \t\r]+$/, "", line) }
+    # Checked FIRST, and before the begin rule can set open on this same line, so an
+    # over-long block is refused rather than closed by a distant stranger.
+    open && maxspan > 0 && NR - start > maxspan { bad = 1; exit }
     line == b {
       if (open) { bad = 1; exit }
       open = 1; start = NR; next
@@ -1276,13 +1345,49 @@ zshrc_block_delete() {
       next
     }
     END { if (open || bad) exit 1 }
-  ' "$ZSHRC")" || return 1
-  [ -n "$plan" ] || return 0
-  # sed line addresses refer to INPUT lines, so multiple ranges in one script are safe
-  # and need no renumbering.
-  sed -i.bak "$plan" "$ZSHRC"
-  rm -f "$ZSHRC.bak"
+  ' "$snap")" || { rm -f "$snap" "$out"; return 1; }
+
+  if [ -z "$plan" ]; then rm -f "$snap" "$out"; return 0; fi
+
+  # sed line addresses refer to INPUT lines, so several ranges in one script are safe
+  # and need no renumbering - and the input here is the same snapshot awk planned from.
+  if ! sed "$plan" "$snap" > "$out"; then rm -f "$snap" "$out"; return 1; fi
+  if ! cat "$out" > "$ZSHRC"; then rm -f "$snap" "$out"; return 1; fi
+  rm -f "$snap" "$out"
   return 0
+}
+
+# is_current_format - does $ZSHRC carry EXACTLY ONE shortcut block, and does that
+# block carry the current shim marker?
+#
+# Global scope on purpose: detect_component and section 11's rebuild chain must agree
+# on the word "current". They previously did not - detect_component ran a bare grep
+# for the marker while section 11 applied the stricter rule below - so a .zshrc with a
+# current block FOLLOWED BY a stale one reported ACTIVE, the browser never offered the
+# repair, and zsh kept running the stale block that comes last. Two definitions of one
+# word is how that survives; there is now only one.
+#
+# The count is the load-bearing half. zsh executes the whole file, so "some block has
+# the marker" is not the question - "the block that wins is the current one" is.
+is_current_format() {
+  # One pass, three conditions, because they are one question: exactly one begin, a
+  # matching end for it, and the shim marker INSIDE that pair.
+  #
+  # The end marker is not decoration. Without it, a .zshrc holding one begin, the shim
+  # marker and NO end reported current, so section 11 skipped the repair entirely - and
+  # every later delete and the whole deactivate path would then refuse that block as
+  # malformed. The machine would sit there reporting healthy while being unrepairable
+  # and un-uninstallable. "Current" has to mean "well-formed", or it means nothing.
+  awk -v b="$SHORTCUT_BEGIN" -v e="$SHORTCUT_END" -v m="$SHIM_MARKER" '
+    { l = $0; sub(/[ \t\r]+$/, "", l) }
+    l == b {
+      if (open || begins) { begins = 2; exit }   # a second begin, or one still open
+      open = 1; begins = 1; next
+    }
+    l == e { if (open) { open = 0; closed = 1 } next }
+    open && index($0, m) { found = 1 }
+    END { exit((begins == 1 && closed && found && !open) ? 0 : 1) }
+  ' "$ZSHRC" 2>/dev/null
 }
 
 # Guard for EVERY marker-range delete against ~/.zshrc. `sed '/begin/,/end/d'` deletes
@@ -1432,7 +1537,10 @@ detect_component() {
     # blocks live forever: the browser only re-runs the components it is told to
     # install, so a component that never looks stale is never repaired. Reporting it
     # not-installed makes the browser offer it, and installing rewrites the block.
-    ampersand)  grep -Fq "$SHIM_MARKER" "$ZSHRC" 2>/dev/null && echo active || echo not-installed ;;
+    # is_current_format, NOT a bare marker grep: the same predicate section 11 uses to
+    # decide whether to rebuild. A marker grep answers "a current block exists
+    # somewhere", which is true even when a stale block sits after it and wins.
+    ampersand)  is_current_format && echo active || echo not-installed ;;
     discord)    grep -Fq "discord-chat-launcher.sh" "$ZSHRC" 2>/dev/null && echo active || echo not-installed ;;
     voice-input) [ -L "$CLAUDE_DIR/transcribe" ] && echo active || echo not-installed ;;
     voice-output) [ -d "$CLAUDE_DIR/voice-output" ] && echo active || echo not-installed ;;
@@ -1901,8 +2009,12 @@ deactivate_ampersand() {
   local m
   for m in "$LEGACY_VANITY_MARKER_ORIG" "$LEGACY_VANITY_MARKER"; do
     grep -Fq "$m" "$ZSHRC" || continue
-    # The pre-marker vanity block's range end is a standalone closing brace.
-    zshrc_block_delete "$m" "}" \
+    # A BARE standalone closing brace, and nothing looser. Same end pattern
+    # strip_legacy_vanity uses - both sites delete the same block shape, so a difference
+    # between them is a bug waiting to happen. A commented closer (`} # end yesplease`)
+    # deliberately does NOT match: it may be the USER's brace, and guessing there
+    # destroys their config. See the reverted regex-mode note on zshrc_block_delete.
+    zshrc_block_delete "$m" "}" 4 \
       || warn "Legacy 'yesplease' block in $ZSHRC has no closing '}' on a line of its own - leaving it in place."
   done
 }
@@ -4640,35 +4752,9 @@ $SHORTCUT_END
 EOF
   }
 
-  # Current iff the block carries the current shim marker. Nothing but
-  # append_shortcuts ever writes that string, so its presence is a COMPLETE answer.
-  # The previous cut inferred "current" from three body details (contains --pull,
-  # contains /bin/bash ./install.sh, lacks `alias yesplease=`), which meant the
-  # freshness test had to be edited in lockstep with the body and silently went
-  # stale whenever someone forgot. A version marker cannot drift from itself.
-  #
-  # "Current" additionally means EXACTLY ONE block. The count is load-bearing, not
-  # cosmetic: zsh executes the whole file, so a .zshrc carrying a current block AND a
-  # stale one runs whichever comes LAST. A check that only asks "does any block carry
-  # the marker" reports everything fine while the stale launcher is the one that
-  # actually runs - which is the original "I typed ampersand and nothing happened"
-  # failure, reintroduced by its own fix. Reporting not-current sends this through the
-  # rebuild branch below, which deletes every block and appends exactly one.
-  is_current_format() {
-    local n
-    n="$(awk -v b="$SHORTCUT_BEGIN" '
-      { l = $0; sub(/[ \t\r]+$/, "", l) }
-      l == b { c++ }
-      END { print c + 0 }' "$ZSHRC" 2>/dev/null || echo 0)"
-    [ "$n" = "1" ] || return 1
-    awk -v b="$SHORTCUT_BEGIN" -v e="$SHORTCUT_END" -v m="$SHIM_MARKER" '
-      { l = $0; sub(/[ \t\r]+$/, "", l) }
-      l == b { inb = 1; next }
-      l == e { inb = 0; next }
-      inb && index($0, m) { found = 1 }
-      END { exit(found ? 0 : 1) }
-    ' "$ZSHRC"
-  }
+  # is_current_format is defined at global scope, next to zshrc_block_delete, so that
+  # detect_component uses the SAME predicate this section does. It used to be a local
+  # function here, which is precisely how the two definitions of "current" drifted.
 
   # The pre-marker vanity block (a `yesplease` function, no `ampersand` at all) is
   # swept UNCONDITIONALLY instead of being one branch of the chain below. A machine
@@ -4680,8 +4766,12 @@ EOF
     local m
     for m in "$LEGACY_VANITY_MARKER_ORIG" "$LEGACY_VANITY_MARKER"; do
       grep -Fq "$m" "$ZSHRC" 2>/dev/null || continue
-      # The vanity block's range end is a standalone closing brace.
-      if zshrc_block_delete "$m" "}"; then
+      # The vanity block's range end is a BARE standalone closing brace. A commented
+      # closer (`} # end yesplease`) deliberately does not match: it may belong to the
+      # USER, and a 2026-07-27 change that accepted it was reverted the same day for
+      # destroying an `export` and an unrelated function that sat between the two braces.
+      # An ambiguous end marker earns a refusal and a warning, never a guess.
+      if zshrc_block_delete "$m" "}" 4; then
         VANITY_STRIPPED=1
       else
         warn "Legacy 'yesplease' block in $ZSHRC has no closing '}' on a line of its own."
@@ -4730,6 +4820,20 @@ EOF
     # the paths that skip that pre-pass, and removing it would make those silently fall
     # through to the user-defined-ampersand guard and never be migrated at all.
     elif grep -Fq "$LEGACY_SHORTCUT_BEGIN" "$ZSHRC"; then
+      # DEFENSIVE ONLY - this branch cannot fire in a normal run, and that is deliberate.
+      # A brand pre-pass earlier in this same script (`sed -E 's/(=== |<!-- )claude-
+      # dotfiles:/\1improv:/g'`, search for it near the dotfile-rename step) rewrites the
+      # marker on the user's .zshrc BEFORE section 11 ever looks at it, so a Form C/D/E
+      # machine arrives here already carrying `improv:` markers and is handled by the
+      # branch above. Verified with `bash -x` on a Form C fixture: the branch that fires
+      # prints "rebuilt a stale block", never "Migrated".
+      #
+      # It is kept because it is the correct handler if the pre-pass is ever reordered,
+      # scoped differently, or removed - and because deleting it would make the pre-pass
+      # silently load-bearing for a migration nobody would remember it was doing. Do NOT
+      # "fix" this branch by making it reachable; if it starts firing, the pre-pass
+      # changed and THAT is the thing to look at.
+      #
       # Legacy marker from the old claude-dotfiles name. It is ours, so migrate it instead
       # of treating it as a user-defined ampersand and leaving a stale launcher behind.
       if zshrc_block_delete "$LEGACY_SHORTCUT_BEGIN" "$LEGACY_SHORTCUT_END"; then
@@ -4740,7 +4844,13 @@ EOF
         warn "Legacy shortcut block in $ZSHRC is malformed (no closing marker, or two opens) - leaving it alone."
         warn "Rewriting it would delete everything after it. Remove the block by hand, then re-run."
       fi
-    elif grep -Eq '^(function[[:space:]]+ampersand|alias[[:space:]]+ampersand=)' "$ZSHRC"; then
+    # All three ways zsh can define a command, not just the two we happened to write.
+    # `ampersand() { ... }` - POSIX function syntax, and the most common form a user
+    # would hand-roll - matched NEITHER previous alternative, so someone else's own
+    # `ampersand` was treated as absent and our block was appended after it, silently
+    # clobbering their command. Leading whitespace is tolerated; a comment mentioning
+    # ampersand still cannot match, because `#` is not one of these keywords.
+    elif grep -Eq '^[[:space:]]*(function[[:space:]]+ampersand([[:space:]]|\(|\{|$)|ampersand[[:space:]]*\(\)|alias[[:space:]]+ampersand=)' "$ZSHRC"; then
       warn "$ZSHRC already defines 'ampersand' without our marker - leaving it alone."
     else
       append_shortcuts
