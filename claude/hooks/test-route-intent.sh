@@ -65,6 +65,47 @@ assert_agent_tools "quick-answer is read-only" quick-answer.md "Read, Grep, Glob
 assert_agent_no_tools "sonnet-impl grants all tools via omitted key"   sonnet-impl.md
 assert_agent_no_tools "opus-executor grants all tools via omitted key" opus-executor.md
 
+run_hook() {
+  local prompt="$1" input
+  input=$(python3 -c 'import json,sys; print(json.dumps({"prompt": sys.argv[1]}))' "$prompt")
+  echo "$input" | bash "$HOOK" 2>/dev/null
+}
+
+# Assert the hook fires and names the expected agent.
+assert_routes() {
+  local label="$1" prompt="$2" expected_agent="$3" out
+  out=$(run_hook "$prompt")
+  if echo "$out" | grep -qF "$expected_agent"; then
+    pass "$label"
+  else
+    fail "$label" "expected agent '$expected_agent', got: ${out:-<silent>}"
+  fi
+}
+
+# Assert the hook produces no output at all.
+assert_silent() {
+  local label="$1" prompt="$2" out
+  out=$(run_hook "$prompt")
+  if [ -z "$out" ]; then
+    pass "$label"
+  else
+    fail "$label" "expected silence, got: $out"
+  fi
+}
+
+assert_routes "lookup routes to quick-answer" \
+  "where is the cooldown seconds value set for the sidecoach intent hook" \
+  "quick-answer"
+assert_routes "sweep routes to Explore" \
+  "find all the callers of detect-session-model across the hooks directory" \
+  "Explore"
+assert_routes "mechanical edit routes to sonnet-impl" \
+  "rename the helper touch_cooldown to mark_cooldown across every hook that uses it" \
+  "sonnet-impl"
+assert_routes "build routes to opus-executor" \
+  "implement a new caching layer for the flow handler results" \
+  "opus-executor"
+
 echo ""
 echo "============================================================"
 echo "RESULTS: $PASS passed, $FAIL failed"

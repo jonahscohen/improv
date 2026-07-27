@@ -1,0 +1,66 @@
+{
+  "_meta": {
+    "purpose": "Prompt-shape registry for route-intent.sh. Names one candidate agent from the roster so the session model can dispatch instead of doing mechanical work inline.",
+    "fire_rule": "Fires only on a high-confidence tier match, outside cooldown, on a prompt longer than min_prompt_chars, with no exempt pattern matching. Silence is the default.",
+    "tie_break": "A prompt matching several tiers resolves to the MOST capable matched tier, in escalation_order. Routing too low produces work that must be redone.",
+    "pattern_syntax": "Values are regex fragments, matched case-insensitively against the scrubbed prompt (code fences, inline backticks, URLs, and XML bodies removed)."
+  },
+  "config": {
+    "cooldown_seconds": 900,
+    "cooldown_state_file": "~/.claude/.route-intent-cooldown",
+    "min_prompt_chars": 40
+  },
+  "escalation_order": ["opus_executor", "sonnet_impl", "explore", "quick_answer"],
+  "tiers": {
+    "quick_answer": {
+      "agent": "quick-answer",
+      "model": "haiku",
+      "label": "a narrow lookup",
+      "patterns": [
+        "where (is|are) [a-z0-9_.\\- ]{2,40} (set|defined|declared|configured)",
+        "what does [a-z0-9_.\\- ]{2,40} (do|return|default to)",
+        "which file (owns|holds|defines|contains)",
+        "look up (the|what|whether)",
+        "check whether [a-z0-9_.\\- ]{2,40} (is|exists|matches)"
+      ]
+    },
+    "explore": {
+      "agent": "Explore",
+      "model": "built-in",
+      "label": "a read-only sweep",
+      "patterns": [
+        "find (all|every|each) ",
+        "search (the|this|our) (repo|codebase|project)",
+        "list (all|every) [a-z0-9_.\\- ]{2,40}(file|usage|caller|reference)",
+        "trace (how|the|where) [a-z0-9_.\\- ]{2,40} (flows|is used|gets)",
+        "map (out )?(the|all|every) "
+      ]
+    },
+    "sonnet_impl": {
+      "agent": "sonnet-impl",
+      "model": "sonnet",
+      "label": "a well-specified mechanical change",
+      "patterns": [
+        "rename [a-z0-9_.\\- ]{2,40} (to|across|everywhere)",
+        "update (all|every) [a-z0-9_.\\- ]{2,40}(reference|import|call site|caller)",
+        "apply the same (change|fix|pattern) to",
+        "add a (test|flag|field|case) (for|to) ",
+        "bump [a-z0-9_.\\- ]{2,40} (to|from) "
+      ]
+    },
+    "opus_executor": {
+      "agent": "opus-executor",
+      "model": "opus",
+      "label": "a multi-file build",
+      "patterns": [
+        "\\brefactor\\b",
+        "implement (a|the|an) [a-z0-9_.\\- ]{2,40}(layer|module|system|pipeline|engine)",
+        "\\bmigrate\\b [a-z0-9_.\\- ]{2,40} (to|from|onto)",
+        "\\bredesign\\b",
+        "build (a|the|an) [a-z0-9_.\\- ]{2,40}(system|subsystem|pipeline|harness)"
+      ]
+    }
+  },
+  "exempt": [],
+  "nudge": "ROUTE CHECK: this prompt reads as {label}. {agent} ({model}) could field it. Dispatch if the work is longer than the dispatch overhead; answer directly if it is not. Your call either way."
+}
