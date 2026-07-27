@@ -1312,3 +1312,9 @@
 
 <!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
 - [Agent routing Task 2 SHIPPED - route-intent.json (4-tier lexicon) + route-intent.sh (fail-open bash+python3 classifier), TDD RED 6/10…](session_2026-07-26_agent-routing-task2-classifier.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 2 complete - route-intent classifier + lexicon live at 036839b1, 10/10, all four tiers verified routing real prompts; briefs are snap…](session_2026-07-26_agent-routing-task2.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 3 SHIPPED - route-intent.sh scrubs code fences/backticks/URLs/XML then gates on min_prompt_chars then exempt patterns; ex…](session_2026-07-26_agent-routing-task3-suppression.md)

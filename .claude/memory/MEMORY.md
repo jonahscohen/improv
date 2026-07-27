@@ -111,4 +111,3 @@
 - [** ACTIVE ** project-drift-detector WIRED into a real fail-closed CLI (not committed; dist NOT rebuilt) - bin/sidecoach-drift.js (NEW) reads a project'…](session_2026-07-25_drift-detector-wired.md)
 - [** ACTIVE ** Taste Tier-2 revisit - 1 REAL fix (oversized-h1 H1_VW_RATIO 0.11->0.09, Rreal 0->0.167, precision held, beats oracle), 3 NAMED-UNFIXABLE h…](session_2026-07-25_taste-revisit-honest.md)
 - [RULE: a negative assertion (asserting absence) proves nothing by passing - inject the defect and watch it fail, then restore and check byte…](session_2026-07-26_assertion-polarity-mutation-test.md)
-- [Agent routing Task 2 complete - route-intent classifier + lexicon live at 036839b1, 10/10, all four tiers verified routing real prompts; briefs are snapshots so re-stage after any plan edit](session_2026-07-26_agent-routing-task2.md)
