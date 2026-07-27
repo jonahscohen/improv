@@ -232,6 +232,24 @@ assert_routes "an imperative refactor still routes to opus-executor" \
 assert_routes "a softened imperative still routes to opus-executor" \
   "can you refactor the parser module across every file that imports it" \
   "opus-executor"
+# The clause-boundary alternation started as sentence punctuation plus and/then/now/
+# also/next, which is how a boundary looks in WRITTEN prose but not in how people
+# actually open an instruction. All four below were silent on a real multi-file
+# refactor request, every one of them well past the length gate. "we need to" firing
+# while "should we" stays silent above is the pair that keeps this honest: the added
+# tokens commit to an action, they do not open a deliberation.
+assert_routes "a want-you-to imperative routes to opus-executor" \
+  "i want you to refactor the parser module across every call site" \
+  "opus-executor"
+assert_routes "a lets imperative routes to opus-executor" \
+  "lets refactor the parser module across every call site in the repo" \
+  "opus-executor"
+assert_routes "a need-to imperative routes to opus-executor" \
+  "we need to refactor the parser module across every call site" \
+  "opus-executor"
+assert_routes "a time-to imperative routes to opus-executor" \
+  "time to refactor the parser module across every call site now" \
+  "opus-executor"
 
 # Guard the lexicon's declared order against a silent reorder.
 assert_escalation_order() {

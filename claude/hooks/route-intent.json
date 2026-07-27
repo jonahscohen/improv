@@ -55,10 +55,10 @@
       "model": "opus",
       "label": "a multi-file build",
       "patterns": [
-        "(?:^|[.;!?\\n]\\s*|\\b(?:and|then|now|also|next)\\s+)(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?refactor\\s+(?:the|this|that|these|those|our|its|all|every|a|an)\\b",
+        "(?:^|[.;!?\\n]\\s*|\\b(?:and|then|now|also|next|want you to|need to|lets|let us|time to)\\s+)(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?refactor\\s+(?:the|this|that|these|those|our|its|all|every|a|an)\\b",
         "implement (a|the|an) [a-z0-9_.\\- ]{2,40}(layer|module|system|pipeline|engine)",
         "\\bmigrate\\b [a-z0-9_.\\- ]{2,40} (to|from|onto)",
-        "(?:^|[.;!?\\n]\\s*|\\b(?:and|then|now|also|next)\\s+)(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?redesign\\s+(?:the|this|that|these|those|our|its|all|every|a|an)\\b",
+        "(?:^|[.;!?\\n]\\s*|\\b(?:and|then|now|also|next|want you to|need to|lets|let us|time to)\\s+)(?:(?:can|could|would|will) you\\s+)?(?:please\\s+)?redesign\\s+(?:the|this|that|these|those|our|its|all|every|a|an)\\b",
         "build (a|the|an) [a-z0-9_.\\- ]{2,40}(system|subsystem|pipeline|harness)"
       ]
     }
