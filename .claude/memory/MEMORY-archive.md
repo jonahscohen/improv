@@ -1351,3 +1351,10 @@
 - [Agent routing RE-REVIEW CLEAN - all 11 findings addressed and mutation-tested, none of the 21 new assertions vacuous; ready to merge](session_2026-07-27_agent-routing-rereview-clean.md)
 - [Imperative recall gap confirmed - "i want you to / lets / we need to / time to refactor" miss the opus tier; one-line lexicon fix, non-block…](session_2026-07-27_imperative-recall-gap-confirmed.md)
 - [RULE: mutation-testing fail-open code - NEUTER the behavior (never-matching regex), never DELETE the line; a crashed fail-open program is si…](session_2026-07-27_mutation-testing-fail-open-code.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [DECISION: imperative-recall widening REJECTED - "want you to|need to|lets" are verb phrases not clause markers, so \\b anchors nothing; 7 negat…](session_2026-07-27_imperative-widening-rejected.md)
+- [Teammate teardown fallback when shutdown_request is ignored - identify by --agent-id, kill the pid, cmux reaps the pane itself; guard…](session_2026-07-27_teammate-teardown-kill-vs-cooperative.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [** SUPERSEDED ** Statusline led line 1 with the active model + version; replaced by the two-line layout above…](session_2026-07-27_statusline-model-segment.md)

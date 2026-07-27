@@ -1,3 +1,4 @@
+- [** ACTIVE ** Statusline two-line layout - line 1 project/dir/branch no separators, line 2 "model Opus 5, xhigh" + green usage percentages; rewrit…](session_2026-07-27_statusline-two-line-layout.md)
 - [** ACTIVE ** Agent-routing Minor follow-ups - recovered five natural imperative openers (want you to / need to / lets / let us / time to) on t…](session_2026-07-27_agent-routing-minor-followups.md)
 - [** ACTIVE ** Agent-routing FINAL REVIEW fix wave - all 10 findings folded in one pass: browser-tree registration (2 suites red -> green), quadratic XM…](session_2026-07-26_agent-routing-fixwave.md)
 - [** ACTIVE ** Task 7 Codex-review fix - installer never deployed route-intent.json/agents roster (fresh installs silently non-functional); also…](session_2026-07-26_agent-routing-task7-codex-fix.md)
@@ -115,5 +116,3 @@
 - [** ACTIVE ** Gap-analysis VISUAL ARTIFACT built + verified (coverage-console dashboard, both themes, gaps-only filter tested via real Playwright…](session_2026-07-25_gap-analysis-artifact-build.md)
 - [** ACTIVE ** project-drift-detector WIRED into a real fail-closed CLI (not committed; dist NOT rebuilt) - bin/sidecoach-drift.js (NEW) reads a project'…](session_2026-07-25_drift-detector-wired.md)
 - [** ACTIVE ** Taste Tier-2 revisit - 1 REAL fix (oversized-h1 H1_VW_RATIO 0.11->0.09, Rreal 0->0.167, precision held, beats oracle), 3 NAMED-UNFIXABLE h…](session_2026-07-25_taste-revisit-honest.md)
-- [DECISION: imperative-recall widening REJECTED - "want you to|need to|lets" are verb phrases not clause markers, so \\b anchors nothing; 7 negations routed to the opus tier. Gap kept deliberately](session_2026-07-27_imperative-widening-rejected.md)
-- [Teammate teardown fallback when shutdown_request is ignored - identify by --agent-id, kill the pid, cmux reaps the pane itself; guard hard-blocks closing a LIVE pane with no override](session_2026-07-27_teammate-teardown-kill-vs-cooperative.md)
