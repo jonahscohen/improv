@@ -1,6 +1,7 @@
 ---
-name: route-intent has no catastrophic backtracking; latency is flat 60-85ms on adversarial input
-description: Timed the live hook against five adversarial prompts including 200KB of repeated tier-matching text. Worst case 84ms versus 67ms baseline, so the bounded quantifiers hold and there is no regex DoS on the user's own session.
+name: route-intent TIER patterns have no catastrophic backtracking (INCOMPLETE - missed the scrub layer)
+description: Timed the live hook on 200KB of repeated tier-matching text; tier patterns are flat 60-85ms. But this probe never tested the XML scrub, which IS quadratic (14.9s at 156KB). Scope-limited conclusion, see the correction below.
+superseded_by: session_2026-07-26_final-review-findings.md
 type: reference
 relates_to: [session_2026-07-26_lexicon-type-validation-gap.md, session_2026-07-26_agent-routing-tasks67-live.md]
 author_human: Jonah
@@ -10,7 +11,20 @@ verified: timed ~/.claude/hooks/route-intent.sh directly on 5 adversarial inputs
 confidence: high
 ---
 
-# route-intent latency probe
+# route-intent latency probe (SCOPE-LIMITED - read the correction first)
+
+**CORRECTION (same day):** this probe's headline conclusion was too broad. It
+measured the TIER PATTERNS and they are fine. It never measured the XML SCRUB
+at `route-intent.sh:66`, which is quadratic on unclosed markup: 14.9 seconds on
+a 156KB `<br>` paste against a 5-second hook timeout. The final review caught
+what this probe missed. See
+[[session_2026-07-26_final-review-findings]].
+
+Why it was missed: the adversarial inputs below are all repeated
+TIER-MATCHING text, because that is the layer I was thinking about. A probe
+only tests the threat model you build inputs for. Enumerate the regex
+constructs first, then craft an input per construct - "I tried big inputs" is
+not the same as "I tried the input this specific regex is bad at."
 
 The hook runs on EVERY prompt, so a pathological regex would be a denial of
 service on the user's own session. Measured rather than assumed.
