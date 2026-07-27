@@ -106,6 +106,21 @@ assert_routes "build routes to opus-executor" \
   "implement a new caching layer for the flow handler results" \
   "opus-executor"
 
+assert_silent "short prompt is answered inline, not routed" \
+  "where is X set"
+assert_silent "informational framing does not route" \
+  "what is the difference between a hook and a skill in this harness, explain it"
+assert_silent "pattern inside a code fence does not route" \
+  'here is the snippet I mean:
+```
+rename foo to bar across every call site in the repo
+```
+does that look right to you or not'
+assert_silent "pattern inside inline backticks does not route" \
+  'the docs literally say `find all the callers` which I think is wrong, is it'
+assert_silent "pattern inside a URL does not route" \
+  "see https://example.com/docs/find-all-the-callers-guide for the writeup please"
+
 echo ""
 echo "============================================================"
 echo "RESULTS: $PASS passed, $FAIL failed"

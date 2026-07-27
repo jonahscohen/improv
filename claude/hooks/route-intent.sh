@@ -56,7 +56,35 @@ try:
     if not tiers or not order or not template:
         sys.exit(0)
 
-    text = prompt.lower()
+    # Strip regions whose contents are quoted material, not instructions. A
+    # pattern appearing inside a code fence, inline backticks, a URL, or an
+    # XML body is being discussed, not requested.
+    scrubbed = re.sub(r"```.*?```", " ", prompt, flags=re.S)
+    scrubbed = re.sub(r"~~~.*?~~~", " ", scrubbed, flags=re.S)
+    scrubbed = re.sub(r"`[^`]*`", " ", scrubbed)
+    scrubbed = re.sub(r"https?://\S+", " ", scrubbed)
+    scrubbed = re.sub(r"<([a-zA-Z][\w-]*)\b[^>]*>.*?</\1>", " ", scrubbed, flags=re.S)
+
+    text = scrubbed.lower().strip()
+
+    # Below this length the answer is cheaper than the dispatch. Routing here
+    # would cost the lead a Task call plus a report read to save nothing.
+    cfg = lex.get("config", {})
+    try:
+        min_chars = int(cfg.get("min_prompt_chars", 40))
+    except Exception:
+        min_chars = 40
+    if len(text) < min_chars:
+        sys.exit(0)
+
+    # An informational or conversational framing is a question to answer, not
+    # work to delegate.
+    for pat in lex.get("exempt", []):
+        try:
+            if re.search(pat, text, re.I):
+                sys.exit(0)
+        except re.error:
+            continue
 
     # Match in escalation order and take the first hit, so a prompt matching
     # several tiers resolves to the most capable one.
