@@ -115,3 +115,5 @@
 - [** ACTIVE ** project-drift-detector WIRED into a real fail-closed CLI (not committed; dist NOT rebuilt) - bin/sidecoach-drift.js (NEW) reads a project'…](session_2026-07-25_drift-detector-wired.md)
 - [** ACTIVE ** Taste Tier-2 revisit - 1 REAL fix (oversized-h1 H1_VW_RATIO 0.11->0.09, Rreal 0->0.167, precision held, beats oracle), 3 NAMED-UNFIXABLE h…](session_2026-07-25_taste-revisit-honest.md)
 - [RULE: mutation-testing fail-open code - NEUTER the behavior (never-matching regex), never DELETE the line; a crashed fail-open program is silent, which looks exactly like the feature working](session_2026-07-27_mutation-testing-fail-open-code.md)
+- [Agent routing RE-REVIEW CLEAN - all 11 findings addressed and mutation-tested, none of the 21 new assertions vacuous; ready to merge](session_2026-07-27_agent-routing-rereview-clean.md)
+- [Imperative recall gap confirmed - "i want you to / lets / we need to / time to refactor" miss the opus tier; one-line lexicon fix, non-blocking](session_2026-07-27_imperative-recall-gap-confirmed.md)
