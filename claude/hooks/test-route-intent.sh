@@ -107,9 +107,9 @@ assert_routes "build routes to opus-executor" \
   "opus-executor"
 
 assert_silent "short prompt is answered inline, not routed" \
-  "where is X set"
+  "find all the callers"
 assert_silent "informational framing does not route" \
-  "what is the difference between a hook and a skill in this harness, explain it"
+  "what is the best way to find all the callers of detect-session-model in this repo"
 assert_silent "pattern inside a code fence does not route" \
   'here is the snippet I mean:
 ```
@@ -118,8 +118,8 @@ rename foo to bar across every call site in the repo
 does that look right to you or not'
 assert_silent "pattern inside inline backticks does not route" \
   'the docs literally say `find all the callers` which I think is wrong, is it'
-assert_silent "pattern inside a URL does not route" \
-  "see https://example.com/docs/find-all-the-callers-guide for the writeup please"
+assert_silent "pattern inside an XML body does not route" \
+  "<quote>find all the callers of detect-session-model</quote> was the wording in the old ticket we archived"
 
 echo ""
 echo "============================================================"
