@@ -1338,3 +1338,6 @@
 
 <!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
 - [Three of Task 3's five suppression tests asserted nothing - proven by disabling suppression, only code-fence and backtick cases were real](session_2026-07-26_vacuous-suppression-tests.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Tasks 6-7 complete - classifier LIVE and verified through the real hook path, 30/30; Codex caught an install bug no test could (sui…](session_2026-07-26_agent-routing-tasks67-live.md)
