@@ -47,16 +47,19 @@ reason) before trusting the test.
 GREEN (first attempt): implementing exactly the brief's code caused a
 **real regression** - 16 passed, 5 failed, with every pre-existing
 `assert_routes` test suddenly silent. Root cause, confirmed via
-`stat`/`date` against the live `~/.claude/.route-intent-cooldown` file:
-this hook is already wired live in this session (dogfooding), so the real
-cooldown file already held a timestamp from seconds earlier. The first
-`run_hook` call in the suite (using the real default file/900s window,
-since it takes no env override) re-touched that same real file, and every
-subsequent plain `run_hook` call in the same execution then fell inside
-that 900-second window and went silent - not because of a code defect, but
-because the pre-existing 18 assertions and the new cooldown assertions all
-share process-global default state (a single real file, keyed by nothing
-else) once cooldown exists.
+`stat`/`date` against the live `~/.claude/.route-intent-cooldown` file: the
+real cooldown file already held a timestamp from seconds earlier.
+CORRECTION (per team lead, post-report): the hook was never wired live in
+this session - the warm timestamp came from the team lead's own manual
+probes against the real default path, not from a live dogfooded hook. The
+mechanism is unchanged: the first `run_hook` call in the suite (using the
+real default file/900s window, since it takes no env override) re-touched
+that same real file, and every subsequent plain `run_hook` call in the
+same execution then fell inside that 900-second window and went silent -
+not because of a code defect, but because the pre-existing 18 assertions
+and the new cooldown assertions all share process-global default state (a
+single real file, keyed by nothing else) once cooldown exists, and that
+file was not empty when this test run started.
 
 Fix: added a small isolation block at the top of
 `test-route-intent.sh` (not a helper redefinition) that exports a
