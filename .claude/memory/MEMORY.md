@@ -114,3 +114,4 @@
 - [** ACTIVE ** project-drift-detector WIRED into a real fail-closed CLI (not committed; dist NOT rebuilt) - bin/sidecoach-drift.js (NEW) reads a project'…](session_2026-07-25_drift-detector-wired.md)
 - [** ACTIVE ** Taste Tier-2 revisit - 1 REAL fix (oversized-h1 H1_VW_RATIO 0.11->0.09, Rreal 0->0.167, precision held, beats oracle), 3 NAMED-UNFIXABLE h…](session_2026-07-25_taste-revisit-honest.md)
 - [FINDING: a string `patterns` value in route-intent.json iterates char-by-char and hijacks routing to the most expensive tier - type-check before iterating](session_2026-07-26_lexicon-type-validation-gap.md)
+- [route-intent latency: flat 60-85ms on adversarial input incl 200KB, no catastrophic backtracking - bounded quantifiers must stay bounded in future lexicon edits](session_2026-07-26_route-intent-latency-probe.md)
