@@ -1,3 +1,4 @@
+- [** ACTIVE ** Agent-routing Task 6 (fail-open hardening) - 21->28 passing, no code changes needed. Mutation-proved 6/7 assertions real; whitespace-p…](session_2026-07-26_agent-routing-task6.md)
 - [** ACTIVE ** Concise-mode STOP GATE - concise-detect-stop.sh blocks once on a post-conclusion tangent (named opener lexicon) or a list past 5 items at one…](session_2026-07-26_concise-stop-gate.md)
 - [** ACTIVE ** Teammate spawn DEADLOCK fixed in agent-teams-guard.sh - hook demanded a `name` on every Agent spawn while the runtime for…](session_2026-07-26_teammate-spawn-hook-contradiction-fix.md)
 - [** ACTIVE REFERENCE ** Sidecoach evaluation review ARTIFACT published (flows + tokens dashboard, verified in both themes): https://claude.ai/code/art…](session_2026-07-26_eval-findings-artifact.md)
@@ -110,5 +111,3 @@
 - [** ACTIVE ** Gap-analysis VISUAL ARTIFACT built + verified (coverage-console dashboard, both themes, gaps-only filter tested via real Playwright…](session_2026-07-25_gap-analysis-artifact-build.md)
 - [** ACTIVE ** project-drift-detector WIRED into a real fail-closed CLI (not committed; dist NOT rebuilt) - bin/sidecoach-drift.js (NEW) reads a project'…](session_2026-07-25_drift-detector-wired.md)
 - [** ACTIVE ** Taste Tier-2 revisit - 1 REAL fix (oversized-h1 H1_VW_RATIO 0.11->0.09, Rreal 0->0.167, precision held, beats oracle), 3 NAMED-UNFIXABLE h…](session_2026-07-25_taste-revisit-honest.md)
-- [Three of Task 3's five suppression tests asserted nothing - proven by disabling suppression, only code-fence and backtick cases were real](session_2026-07-26_vacuous-suppression-tests.md)
-- [Agent routing Tasks 4-5 verified - tie-break locked 486ba80e, cooldown 1c8db6fc, 21/21; mutation proved the test-isolation export does NOT mask the cooldown defect (20/21 when gate neutered)](session_2026-07-26_agent-routing-task45-verified.md)

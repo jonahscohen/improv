@@ -178,6 +178,42 @@ z2=$(echo '{"prompt":"find all the callers of make_symlink in the installer scri
 if [ -n "$z1" ] && [ -n "$z2" ]; then pass "cooldown 0 disables suppression"; else fail "cooldown 0 disables suppression" "z1=${z1:-<silent>} z2=${z2:-<silent>}"; fi
 rm -f "$cd_file"
 
+# The hook sits in the prompt path. No input may make it fail loudly, emit
+# junk, or return non-zero - any of those would break every turn.
+assert_failopen() {
+  local label="$1" stdin_payload="$2" out rc
+  out=$(printf '%s' "$stdin_payload" | bash "$HOOK" 2>/dev/null); rc=$?
+  if [ "$rc" -eq 0 ] && [ -z "$out" ]; then
+    pass "$label"
+  else
+    fail "$label" "rc=$rc out=${out:-<empty>}"
+  fi
+}
+
+assert_failopen "malformed json exits 0 silently"   'not json at all {{{'
+assert_failopen "empty stdin exits 0 silently"      ''
+assert_failopen "null prompt exits 0 silently"      '{"prompt": null}'
+assert_failopen "array payload exits 0 silently"    '[1,2,3]'
+assert_failopen "whitespace prompt exits 0 silently" '{"prompt": "     "}'
+
+# A corrupt lexicon must degrade to silence, never to an error.
+bad_lex=$(mktemp -t routelex); echo '{ this is not valid json' > "$bad_lex"
+out=$(echo '{"prompt":"find all the callers of detect-session-model in the hooks dir"}' | ROUTE_INTENT_LEXICON="$bad_lex" bash "$HOOK" 2>/dev/null); rc=$?
+if [ "$rc" -eq 0 ] && [ -z "$out" ]; then pass "corrupt lexicon exits 0 silently"; else fail "corrupt lexicon exits 0 silently" "rc=$rc out=$out"; fi
+rm -f "$bad_lex"
+
+# A lexicon with an invalid regex must skip that pattern, not crash.
+bad_re=$(mktemp -t routelex2)
+python3 -c '
+import json
+lex = json.load(open("'"$HOOK_DIR"'/route-intent.json"))
+lex["tiers"]["explore"]["patterns"] = ["([unclosed", "find (all|every|each) "]
+json.dump(lex, open("'"$bad_re"'", "w"))
+'
+out=$(echo '{"prompt":"find all the callers of detect-session-model in the hooks dir"}' | ROUTE_INTENT_LEXICON="$bad_re" ROUTE_INTENT_COOLDOWN=0 bash "$HOOK" 2>/dev/null); rc=$?
+if [ "$rc" -eq 0 ] && echo "$out" | grep -qF "Explore"; then pass "invalid regex is skipped, valid one still matches"; else fail "invalid regex is skipped, valid one still matches" "rc=$rc out=${out:-<silent>}"; fi
+rm -f "$bad_re"
+
 echo ""
 echo "============================================================"
 echo "RESULTS: $PASS passed, $FAIL failed"
