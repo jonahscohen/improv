@@ -1329,3 +1329,6 @@
 
 <!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
 - [Agent routing Task 4 complete - escalate-up tie-break regression-locked (3 assertions incl. direct escalation_order check), no production code changed,…](session_2026-07-26_agent-routing-task4.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 5 complete - route-intent cooldown shipped, real TDD RED-then-GREEN, caught+fixed a live-hook/test-isolation regression, 21/21](session_2026-07-26_agent-routing-task5.md)

@@ -8,6 +8,18 @@ REPO_DIR="$(cd "$HOOK_DIR/../.." && pwd)"
 HOOK="$HOOK_DIR/route-intent.sh"
 AGENTS_DIR="$REPO_DIR/claude/agents"
 
+# Every assertion in this file that does not explicitly opt into cooldown
+# (i.e. everything using the plain run_hook helper) must not be silenced by
+# real cooldown state left over from prior runs of this suite, or from the
+# live hook firing on real prompts during this same session. Isolate those
+# calls onto a throwaway file with cooldown disabled; the cooldown-specific
+# tests below override ROUTE_INTENT_COOLDOWN_FILE/ROUTE_INTENT_COOLDOWN per
+# invocation, which takes precedence over this exported default.
+export ROUTE_INTENT_COOLDOWN_FILE="$(mktemp -t routeintent-default)"
+rm -f "$ROUTE_INTENT_COOLDOWN_FILE"
+export ROUTE_INTENT_COOLDOWN=0
+trap 'rm -f "$ROUTE_INTENT_COOLDOWN_FILE"' EXIT
+
 PASS=0
 FAIL=0
 FAIL_LABELS=()
@@ -141,6 +153,30 @@ assert_escalation_order() {
   fi
 }
 assert_escalation_order
+
+# Cooldown: a second nudge inside the window must stay silent, so an active
+# build does not get re-nagged on every prompt.
+cd_file=$(mktemp -t routeintent)
+rm -f "$cd_file"
+
+run_hook_cd() {
+  local prompt="$1" input
+  input=$(python3 -c 'import json,sys; print(json.dumps({"prompt": sys.argv[1]}))' "$prompt")
+  echo "$input" | ROUTE_INTENT_COOLDOWN_FILE="$cd_file" ROUTE_INTENT_COOLDOWN=900 bash "$HOOK" 2>/dev/null
+}
+
+first=$(run_hook_cd "find all the callers of detect-session-model in the hooks directory")
+second=$(run_hook_cd "find all the callers of make_symlink in the installer script")
+
+if [ -n "$first" ]; then pass "first nudge fires"; else fail "first nudge fires" "got silence"; fi
+if [ -z "$second" ]; then pass "second nudge suppressed by cooldown"; else fail "second nudge suppressed by cooldown" "got: $second"; fi
+
+# A zero-second window disables cooldown entirely.
+rm -f "$cd_file"
+z1=$(echo '{"prompt":"find all the callers of detect-session-model in the hooks directory"}' | ROUTE_INTENT_COOLDOWN_FILE="$cd_file" ROUTE_INTENT_COOLDOWN=0 bash "$HOOK" 2>/dev/null)
+z2=$(echo '{"prompt":"find all the callers of make_symlink in the installer script"}' | ROUTE_INTENT_COOLDOWN_FILE="$cd_file" ROUTE_INTENT_COOLDOWN=0 bash "$HOOK" 2>/dev/null)
+if [ -n "$z1" ] && [ -n "$z2" ]; then pass "cooldown 0 disables suppression"; else fail "cooldown 0 disables suppression" "z1=${z1:-<silent>} z2=${z2:-<silent>}"; fi
+rm -f "$cd_file"
 
 echo ""
 echo "============================================================"

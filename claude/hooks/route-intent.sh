@@ -77,6 +77,38 @@ try:
     if len(text) < min_chars:
         sys.exit(0)
 
+    import time
+
+    cooldown_file = os.environ.get("ROUTE_INTENT_COOLDOWN_FILE") or os.path.expanduser(
+        cfg.get("cooldown_state_file", "~/.claude/.route-intent-cooldown")
+    )
+    try:
+        cooldown_seconds = int(
+            os.environ.get("ROUTE_INTENT_COOLDOWN", cfg.get("cooldown_seconds", 900))
+        )
+    except Exception:
+        cooldown_seconds = 900
+
+    def in_cooldown():
+        if cooldown_seconds <= 0:
+            return False
+        try:
+            with open(cooldown_file, "r", encoding="utf-8") as fh:
+                return (time.time() - float(fh.read().strip())) < cooldown_seconds
+        except Exception:
+            # No state file, or an unreadable one, means not in cooldown.
+            return False
+
+    def touch_cooldown():
+        try:
+            with open(cooldown_file, "w", encoding="utf-8") as fh:
+                fh.write(str(time.time()))
+        except Exception:
+            pass
+
+    if in_cooldown():
+        sys.exit(0)
+
     # An informational or conversational framing is a question to answer, not
     # work to delegate.
     for pat in lex.get("exempt", []):
@@ -99,6 +131,7 @@ try:
                              .replace("{label}", tier.get("label", key))
                              .replace("{agent}", tier.get("agent", key))
                              .replace("{model}", tier.get("model", "")))
+                    touch_cooldown()
                     print(json.dumps({"hookSpecificOutput": {
                         "hookEventName": "UserPromptSubmit",
                         "additionalContext": nudge,
