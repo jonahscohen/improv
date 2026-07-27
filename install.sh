@@ -474,7 +474,7 @@ PICKS+=(0)
 # they live in HOOK_ON / HOOK_OFF and install via the standalone-hooks pass.
 # cluster_hooks() is the membership source of truth. Default-on but removable.
 # ============================================================
-KEYS+=(safety verification question-discipline grounding api-drift planning-git surface model-routing)
+KEYS+=(safety verification question-discipline grounding api-drift planning-git surface model-routing agent-routing)
 TITLES+=(
   "Safety guards (bash/content/destructive)"
   "Verification discipline (verify-before-done)"
@@ -484,6 +484,7 @@ TITLES+=(
   "Planning + git hygiene"
   "Surface presentation (rich vs text)"
   "Model routing (cost control)"
+  "Agent routing (cheaper-agent nudge)"
 )
 DESCS+=(
   "Safety guards: block forbidden bash commands, forbidden file content (emojis, emdashes, AI-attribution), and destructive infra ops. The core guardrails - default on, removable."
@@ -494,6 +495,7 @@ DESCS+=(
   "Planning + git hygiene: plan-doc consistency lint (dispatch ownership + sequencing) plus a surfacing of committed-but-unpushed work at session start."
   "Surface presentation: detect the Claude Code surface (rich vs text-only) and enforce presenting data visually on rich surfaces."
   "Model routing: govern which model runs which tool (cost control). Installs detect-session-model alongside."
+  "Agent routing: classify each prompt's work shape and name a cheaper roster agent that could field it. Advisory only - the session model decides every dispatch and can decline. Installs route-intent.sh + route-intent.json and the ~/.claude/agents/ roster."
 )
 FILES+=(
   "~/.claude/hooks/ (5 safety hooks)\n~/.claude/settings.json (wiring)"
@@ -504,9 +506,10 @@ FILES+=(
   "~/.claude/hooks/ (2 planning-git hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 surface hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/model-router-guard.sh + detect-session-model.sh\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/route-intent.sh + route-intent.json\n~/.claude/agents/ (3 roster files)\n~/.claude/settings.json (wiring)"
 )
-DIRS+=("" "" "" "" "" "" "" "")
-PICKS+=(1 1 1 1 1 1 1 1)
+DIRS+=("" "" "" "" "" "" "" "" "")
+PICKS+=(1 1 1 1 1 1 1 1 1)
 
 # App components (Stage 3) - hook-owning apps. Their hooks wire from app-wirings.json
 # in section 16e. Default-off, opt-in.
@@ -599,7 +602,7 @@ set_all() {
 }
 
 # --- Stage 2: QA-hook cluster membership + per-hook selection state ---
-CLUSTER_KEYS=(safety verification question-discipline grounding api-drift planning-git surface model-routing)
+CLUSTER_KEYS=(safety verification question-discipline grounding api-drift planning-git surface model-routing agent-routing)
 HOOK_ON=""   # scripts explicitly requested via --only <hook>
 # Seed from a DEDICATED sentinel (not the bare HOOK_OFF env) so the returning-flow
 # cluster drill-in can pass deselections into a recursive --only, WITHOUT a user's
@@ -633,6 +636,7 @@ cluster_hooks() {
     planning-git)        echo "plan-consistency-lint.sh push-ahead-check.sh" ;;
     surface)             echo "claude-surface.sh surface-visual-gate.sh" ;;
     model-routing)       echo "model-router-guard.sh" ;;
+    agent-routing)       echo "route-intent.sh" ;;
     *)                   echo "" ;;
   esac
 }
@@ -979,10 +983,10 @@ EOF
   'skills' is also valid: it takes the whole design-pipeline bundle at once, where
   the skill keys above take just one (e.g. --only icon-source).
   'config' installs CORE only (permissions/plugins/statusline + startup-check + hud).
-  Hooks in the 8 QA clusters (safety, verification, question-discipline, grounding,
-  api-drift, planning-git, surface, model-routing) are individually --only-able too,
-  e.g. --only bash-guard. Other components' hooks are toggled in the browser, not
-  by --only.
+  Hooks in the 9 QA clusters (safety, verification, question-discipline, grounding,
+  api-drift, planning-git, surface, model-routing, agent-routing) are individually
+  --only-able too, e.g. --only bash-guard. Other components' hooks are toggled in
+  the browser, not by --only.
 EOF
 }
 
@@ -1219,7 +1223,7 @@ detect_component() {
     design-team)       [ -d "$CLAUDE_DIR/skills/design-team" ] && echo active || echo not-installed ;;
     visual-effects)    [ -d "$CLAUDE_DIR/skills/visual-effects" ] && echo active || echo not-installed ;;
     icon-source)       [ -d "$CLAUDE_DIR/skills/icon-source" ] && echo active || echo not-installed ;;
-    safety|verification|question-discipline|grounding|api-drift|planning-git|surface|model-routing) cluster_detect "$key" ;;
+    safety|verification|question-discipline|grounding|api-drift|planning-git|surface|model-routing|agent-routing) cluster_detect "$key" ;;
     clickup)    is_our_hook block-clickup-writes.sh && echo active || echo not-installed ;;
     visualizer) is_our_hook visualizer-guard.sh && echo active || echo not-installed ;;
     codex)      { is_our_hook codex-failure-watcher.sh || is_our_hook codex-rescue-guard.sh; } && echo active || echo not-installed ;;
@@ -1786,7 +1790,7 @@ deactivate_component() {
     statusline) deactivate_statusline ;;
     cmux)       deactivate_cmux ;;
     fable)      deactivate_fable ;;
-    safety|verification|question-discipline|grounding|api-drift|planning-git|surface|model-routing) deactivate_cluster "$1" ;;
+    safety|verification|question-discipline|grounding|api-drift|planning-git|surface|model-routing|agent-routing) deactivate_cluster "$1" ;;
     clickup)    deactivate_clickup ;;
     visualizer) deactivate_visualizer ;;
     codex)      deactivate_codex ;;
@@ -3617,8 +3621,9 @@ if picked config; then
   # by their own components and are intentionally excluded here. detect-session-model
   # is a shared library (model-router-guard + fable-orchestrator-guard exec it).
   # Stage 2 dissolved the QA suite into selectable clusters (safety, verification,
-  # question-discipline, grounding, api-drift, planning-git, surface, model-routing)
-  # - those hooks + detect-session-model now deploy+wire via the cluster pass, NOT
+  # question-discipline, grounding, api-drift, planning-git, surface, model-routing,
+  # agent-routing) - those hooks + detect-session-model now deploy+wire via the
+  # cluster pass, NOT
   # here. What remains is the app-owned residue that Stage 3 will move to its apps
   # (memory / cmux / voice / clickup / justify / visualizer / codex).
   # Stage 3: config is now CORE-ONLY. Every APP hook moved to its component (section

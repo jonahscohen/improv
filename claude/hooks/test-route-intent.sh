@@ -214,6 +214,30 @@ out=$(echo '{"prompt":"find all the callers of detect-session-model in the hooks
 if [ "$rc" -eq 0 ] && echo "$out" | grep -qF "Explore"; then pass "invalid regex is skipped, valid one still matches"; else fail "invalid regex is skipped, valid one still matches" "rc=$rc out=${out:-<silent>}"; fi
 rm -f "$bad_re"
 
+# The hook must be registered in cluster-wirings.json so `install.sh` can
+# deploy it on a fresh machine, not just on the machine that authored it.
+assert_wired() {
+  local label="$1"
+  if python3 -c '
+import json,sys
+w = json.load(open("'"$HOOK_DIR"'/cluster-wirings.json"))
+entry = w.get("route-intent.sh")
+sys.exit(0 if entry and any(e.get("event")=="UserPromptSubmit" or "UserPromptSubmit" in json.dumps(e) for e in (entry if isinstance(entry,list) else [entry])) else 1)
+' 2>/dev/null; then
+    pass "$label"
+  else
+    fail "$label" "route-intent.sh missing or not UserPromptSubmit in cluster-wirings.json"
+  fi
+}
+assert_wired "route-intent.sh is wired in cluster-wirings.json"
+
+# The installer must know the cluster.
+if grep -q 'agent-routing' "$REPO_DIR/install.sh"; then
+  pass "installer knows the agent-routing cluster"
+else
+  fail "installer knows the agent-routing cluster" "no 'agent-routing' key in install.sh"
+fi
+
 echo ""
 echo "============================================================"
 echo "RESULTS: $PASS passed, $FAIL failed"
