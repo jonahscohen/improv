@@ -1,6 +1,6 @@
 ---
 name: ampersand self-heal - reproduced root cause of "ampersand does nothing" on a pulled machine
-description: Six historical .zshrc block forms enumerated from git history and reproduced in a sandbox. Three distinct silent/hard failure classes found, plus a DEAD migration branch (LEGACY_VANITY_MARKER was brand-renamed in c2776619 to a string no installer ever wrote).
+description: Six historical .zshrc block forms enumerated from git history and reproduced in a sandbox. Four failure classes found, plus a DEAD migration branch (LEGACY_VANITY_MARKER was brand-renamed in c2776619 to a string no installer ever wrote). Fixed with a thin .zshrc shim over a new repo-owned bin/ampersand; 98 tests green with a 25-assertion negative control; update path verified E2E and works. INCOMPLETE - Codex found 4 real defects and the lead called stand-down before any were folded. NOT COMMITTED.
 type: project
 relates_to: [decision_installer_bucket_browser.md, session_2026-07-23_unmanaged-hooks-packaged.md]
 author_human: Jonah
@@ -184,6 +184,47 @@ No regressions: test-check-updates, test-component-browser (139), test-installer
 test-install-hook-deploy, test-browser-render (146), test-apply-pending, test-app-hook-offlist,
 test-settings-deploy-parity, test-hook-registry (52) all green. `bash -n` clean on install.sh,
 `bin/ampersand`, and the new suite; the EMITTED shim additionally passes `zsh -n`.
+
+## Codex cross-model review - 4 REAL DEFECTS, ALL STILL OPEN (stand-down before folding)
+
+codex-cli 0.142.5, run against a diff scoped to the ampersand hunks plus `bin/ampersand`.
+It cleared the two things I most doubted (the emitted shim parses under zsh; the
+`${ARGS[@]+"${ARGS[@]}"}` forwarding preserves empty and space-containing args - both verified
+by Codex with live shell probes, not by inspection) and then found four defects.
+
+**The lead issued a shutdown_request while I was reproducing finding 4. NONE of these are
+folded.** They are the first work for whoever picks this brief up.
+
+1. **`zshrc_block_delete` reports success after `sed` fails** (install.sh ~1274). If `~/.zshrc`
+   is a SYMLINK, BSD `sed -i` fails ("in-place editing only works for regular files"). Every
+   caller uses `if zshrc_block_delete ...` or `... || warn`, which disables errexit inside the
+   function, so it runs on to `return 0`. The caller then appends a fresh shim and reports
+   success while the stale block was never removed - producing exactly the duplicate-definition
+   state that finding 4 then mis-reports as healthy. Symlinked `.zshrc` is common in dotfiles
+   setups, so this is not exotic.
+2. **The vanity delete can still eat unrelated user config** (install.sh ~4675 and ~1896). The
+   end pattern is a line of exactly `}`. A block closed with `} # end yesplease` does not match,
+   so the delete skips it and runs on to the NEXT bare `}` in the file - taking any `export` and
+   any user function in between. The closed-range guard added earlier stops the run-to-EOF case
+   but NOT this one: it confirms *some* later `}` exists, which is precisely what makes this
+   fire. Needs brace-depth tracking or a refusal when the marker's own block is not cleanly
+   delimited.
+3. **The user-owned `ampersand` guard misses ordinary zsh syntax** (install.sh ~4727). It
+   matches `^function ampersand` and `^alias ampersand=` only. A user who wrote
+   `ampersand() { ... }` - the more common form - has no marker, falls through to the final
+   `else`, and gets our block appended AFTER theirs. In zsh the later definition wins, so their
+   own command is silently clobbered. This one predates my change but the appended block makes
+   the consequence worse.
+4. **`detect_component ampersand` is still "marker anywhere"** (install.sh ~1426). MY defect,
+   and the same class as the bug I set out to fix. `is_current_format` (section 11) correctly
+   requires EXACTLY ONE begin marker with the shim marker inside it; the detector is a bare
+   `grep -Fq "$SHIM_MARKER"`. So a `.zshrc` with a current shim followed by a stale block
+   reports `active` while zsh actually uses the later, broken definition - and the browser never
+   offers the repair. The fix is to hoist `is_current_format` to global scope next to the
+   markers and have BOTH call it, which also removes the duplication that let them diverge.
+   Note for whoever does it: `test-ampersand-shim.sh` builds its harness by awk-extracting
+   `detect_component`, so the extraction and the `declare -f` assertion in part 3 must grow to
+   include `is_current_format` (same trap as `zshrc_block_delete`).
 
 ## Self-analysis - three things that went wrong
 
