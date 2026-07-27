@@ -316,6 +316,15 @@
      ]
     },
     {
+     "key": "agent-routing",
+     "kind": "hooks",
+     "tag": "the 1 agent-routing hooks",
+     "desc": "The 1 hooks in the agent-routing cluster.",
+     "hooks": [
+      "route-intent"
+     ]
+    },
+    {
      "key": "fable",
      "kind": "hooks",
      "tag": "orchestrator-only guard",
@@ -532,6 +541,7 @@
   "claude-surface": "Detects the Claude Code surface (rich vs text).",
   "surface-visual-gate": "Nudges visual output on rich surfaces.",
   "model-router-guard": "Routes behavior by the session model.",
+  "route-intent": "Reads each prompt's work shape and names one cheaper roster agent that could field it - advisory only, never dispatches.",
   "resume-toggle": "Flips cmux auto-resume from a chat command.",
   "teammate-relay-stop": "Stops a teammate idling with an unsent report.",
   "sidecoach-preamble": "Injects PRODUCT.md + DESIGN.md into every session.",
@@ -590,6 +600,7 @@
   "claude-surface": "surface",
   "surface-visual-gate": "surface",
   "model-router-guard": "model-routing",
+  "route-intent": "agent-routing",
   "fable-orchestrator-guard": "fable",
   "codex-failure-watcher": "codex",
   "codex-rescue-guard": "codex",

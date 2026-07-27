@@ -168,6 +168,53 @@ link_or_copy() {
 }
 
 # ------------------------------------------------------------
+# link_or_copy_data: the same symlink-vs-copy decision as link_or_copy, for a DATA
+# file a component owns (a lexicon, a registry, an agent definition).
+#
+# Data files are READ, never exec'd, so the exec bit is not load-bearing and both
+# the source chmod and the destination chmod are skipped.
+#
+# Why this exists rather than a bare `ln -sf`: hook_deploy_mode returns `copy` for a
+# repo in a temp location, which is exactly the documented
+# `git clone /tmp/improv && ./install.sh && rm -rf /tmp/improv` case. A hook
+# deployed as a copy survives that, but a bare `ln -sf` data file becomes a
+# DANGLING symlink the moment the clone is deleted. route-intent.sh then hits
+# `[ -f "$LEXICON" ] || exit 0` forever, and Agent(subagent_type: quick-answer)
+# cannot resolve - silently and permanently.
+#
+# Ownership-aware: backup_if_exists preserves a user's own real same-named file
+# (their ~/.claude/agents/quick-answer.md) before it is replaced.
+link_or_copy_data() {
+  local src="$1" dst="$2"
+
+  if [ ! -f "$src" ]; then
+    err "data source missing: $src"
+    return 1
+  fi
+
+  mkdir -p "$(dirname "$dst")"
+
+  if [ "$(hook_deploy_mode)" = "symlink" ]; then
+    if [ -L "$dst" ] && [ "$(readlink "$dst")" = "$src" ]; then
+      return 0                       # already linked correctly - do not churn it
+    fi
+    if declare -f backup_if_exists >/dev/null 2>&1; then
+      backup_if_exists "$dst"
+    fi
+    rm -f "$dst"
+    ln -s "$src" "$dst"
+  else
+    # Back up a DIFFERENT real file before overwriting, but do not churn our own
+    # byte-identical re-install.
+    if [ -e "$dst" ] && ! cmp -s "$dst" "$src" 2>/dev/null && declare -f backup_if_exists >/dev/null 2>&1; then
+      backup_if_exists "$dst"
+    fi
+    rm -f "$dst"                     # clears a stale symlink, so nothing dangles
+    cp "$src" "$dst"
+  fi
+}
+
+# ------------------------------------------------------------
 # prune_broken_skill_symlinks: remove DEAD skill symlinks under ~/.claude/skills.
 #
 # A skill deployed as a symlink into this repo dangles the moment the repo stops
@@ -474,7 +521,7 @@ PICKS+=(0)
 # they live in HOOK_ON / HOOK_OFF and install via the standalone-hooks pass.
 # cluster_hooks() is the membership source of truth. Default-on but removable.
 # ============================================================
-KEYS+=(safety verification question-discipline grounding api-drift planning-git surface model-routing)
+KEYS+=(safety verification question-discipline grounding api-drift planning-git surface model-routing agent-routing)
 TITLES+=(
   "Safety guards (bash/content/destructive)"
   "Verification discipline (verify-before-done)"
@@ -484,6 +531,7 @@ TITLES+=(
   "Planning + git hygiene"
   "Surface presentation (rich vs text)"
   "Model routing (cost control)"
+  "Agent routing (cheaper-agent nudge)"
 )
 DESCS+=(
   "Safety guards: block forbidden bash commands, forbidden file content (emojis, emdashes, AI-attribution), and destructive infra ops. The core guardrails - default on, removable."
@@ -494,6 +542,7 @@ DESCS+=(
   "Planning + git hygiene: plan-doc consistency lint (dispatch ownership + sequencing) plus a surfacing of committed-but-unpushed work at session start."
   "Surface presentation: detect the Claude Code surface (rich vs text-only) and enforce presenting data visually on rich surfaces."
   "Model routing: govern which model runs which tool (cost control). Installs detect-session-model alongside."
+  "Agent routing: classify each prompt's work shape and name a cheaper roster agent that could field it. Advisory only - the session model decides every dispatch and can decline. Installs route-intent.sh + route-intent.json and the ~/.claude/agents/ roster."
 )
 FILES+=(
   "~/.claude/hooks/ (5 safety hooks)\n~/.claude/settings.json (wiring)"
@@ -504,9 +553,10 @@ FILES+=(
   "~/.claude/hooks/ (2 planning-git hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 surface hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/model-router-guard.sh + detect-session-model.sh\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/route-intent.sh + route-intent.json\n~/.claude/agents/ (3 roster files)\n~/.claude/settings.json (wiring)"
 )
-DIRS+=("" "" "" "" "" "" "" "")
-PICKS+=(1 1 1 1 1 1 1 1)
+DIRS+=("" "" "" "" "" "" "" "" "")
+PICKS+=(1 1 1 1 1 1 1 1 1)
 
 # App components (Stage 3) - hook-owning apps. Their hooks wire from app-wirings.json
 # in section 16e. Default-off, opt-in.
@@ -599,7 +649,7 @@ set_all() {
 }
 
 # --- Stage 2: QA-hook cluster membership + per-hook selection state ---
-CLUSTER_KEYS=(safety verification question-discipline grounding api-drift planning-git surface model-routing)
+CLUSTER_KEYS=(safety verification question-discipline grounding api-drift planning-git surface model-routing agent-routing)
 HOOK_ON=""   # scripts explicitly requested via --only <hook>
 # Seed from a DEDICATED sentinel (not the bare HOOK_OFF env) so the returning-flow
 # cluster drill-in can pass deselections into a recursive --only, WITHOUT a user's
@@ -633,6 +683,7 @@ cluster_hooks() {
     planning-git)        echo "plan-consistency-lint.sh push-ahead-check.sh" ;;
     surface)             echo "claude-surface.sh surface-visual-gate.sh" ;;
     model-routing)       echo "model-router-guard.sh" ;;
+    agent-routing)       echo "route-intent.sh" ;;
     *)                   echo "" ;;
   esac
 }
@@ -677,6 +728,30 @@ rm_hook_if_ours() {
   return 0
 }
 
+# rm_data_if_ours <deployed-path> <repo-source-path>
+# The data-file counterpart of rm_hook_if_ours, and it uses is_our_hook's exact
+# ownership rule: a symlink pointing INTO the current $REPO_DIR (dangling ones
+# included, so a file the repo has since stopped shipping is still cleaned up), or a
+# copy byte-identical to the repo source. A user's own different same-named file is
+# left intact.
+#
+# What this deliberately does NOT remove: a symlink pointing somewhere OTHER than the
+# current $REPO_DIR - for instance one left by an install run from a clone that has
+# since been deleted. That target is indistinguishable from a link the user made into
+# their own dotfiles, and guessing wrong deletes their file. is_our_hook has made the
+# same trade since it was written; this matches it rather than inventing a second rule.
+#
+# Best-effort: ALWAYS returns 0, so callers inside `set -e` loops do not abort on a
+# missing file.
+rm_data_if_ours() {
+  local dst="$1" src="$2"
+  if { [ -L "$dst" ] && [[ "$(readlink "$dst")" == "$REPO_DIR/"* ]]; } \
+     || { [ -f "$dst" ] && [ -f "$src" ] && cmp -s "$dst" "$src"; }; then
+    rm -f "$dst"
+  fi
+  return 0
+}
+
 # If settings.json is a legacy symlink into the repo, convert to a real file before
 # mutating it (else edits would hit the repo's source settings).
 ensure_real_settings() {
@@ -692,6 +767,17 @@ deactivate_cluster() {
   for h in $(cluster_hooks "$name"); do
     rm_hook_if_ours "$h"
   done
+  # Cluster-owned DATA files. cluster_hooks only knows .sh members, so anything a
+  # cluster deploys alongside its hooks leaks unless it is removed explicitly -
+  # deactivate_sidecoach rms its own registries for the same reason.
+  if [ "$name" = "agent-routing" ]; then
+    local af
+    rm_data_if_ours "$CLAUDE_DIR/hooks/route-intent.json" "$REPO_DIR/claude/hooks/route-intent.json"
+    for af in "$REPO_DIR"/claude/agents/*.md; do
+      [ -f "$af" ] || continue
+      rm_data_if_ours "$CLAUDE_DIR/agents/$(basename "$af")" "$af"
+    done
+  fi
   if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
     ensure_real_settings
     NAMES="$(cluster_hooks "$name")" python3 -c "
@@ -979,10 +1065,10 @@ EOF
   'skills' is also valid: it takes the whole design-pipeline bundle at once, where
   the skill keys above take just one (e.g. --only icon-source).
   'config' installs CORE only (permissions/plugins/statusline + startup-check + hud).
-  Hooks in the 8 QA clusters (safety, verification, question-discipline, grounding,
-  api-drift, planning-git, surface, model-routing) are individually --only-able too,
-  e.g. --only bash-guard. Other components' hooks are toggled in the browser, not
-  by --only.
+  Hooks in the 9 QA clusters (safety, verification, question-discipline, grounding,
+  api-drift, planning-git, surface, model-routing, agent-routing) are individually
+  --only-able too, e.g. --only bash-guard. Other components' hooks are toggled in
+  the browser, not by --only.
 EOF
 }
 
@@ -1219,7 +1305,7 @@ detect_component() {
     design-team)       [ -d "$CLAUDE_DIR/skills/design-team" ] && echo active || echo not-installed ;;
     visual-effects)    [ -d "$CLAUDE_DIR/skills/visual-effects" ] && echo active || echo not-installed ;;
     icon-source)       [ -d "$CLAUDE_DIR/skills/icon-source" ] && echo active || echo not-installed ;;
-    safety|verification|question-discipline|grounding|api-drift|planning-git|surface|model-routing) cluster_detect "$key" ;;
+    safety|verification|question-discipline|grounding|api-drift|planning-git|surface|model-routing|agent-routing) cluster_detect "$key" ;;
     clickup)    is_our_hook block-clickup-writes.sh && echo active || echo not-installed ;;
     visualizer) is_our_hook visualizer-guard.sh && echo active || echo not-installed ;;
     codex)      { is_our_hook codex-failure-watcher.sh || is_our_hook codex-rescue-guard.sh; } && echo active || echo not-installed ;;
@@ -1786,7 +1872,7 @@ deactivate_component() {
     statusline) deactivate_statusline ;;
     cmux)       deactivate_cmux ;;
     fable)      deactivate_fable ;;
-    safety|verification|question-discipline|grounding|api-drift|planning-git|surface|model-routing) deactivate_cluster "$1" ;;
+    safety|verification|question-discipline|grounding|api-drift|planning-git|surface|model-routing|agent-routing) deactivate_cluster "$1" ;;
     clickup)    deactivate_clickup ;;
     visualizer) deactivate_visualizer ;;
     codex)      deactivate_codex ;;
@@ -3617,8 +3703,9 @@ if picked config; then
   # by their own components and are intentionally excluded here. detect-session-model
   # is a shared library (model-router-guard + fable-orchestrator-guard exec it).
   # Stage 2 dissolved the QA suite into selectable clusters (safety, verification,
-  # question-discipline, grounding, api-drift, planning-git, surface, model-routing)
-  # - those hooks + detect-session-model now deploy+wire via the cluster pass, NOT
+  # question-discipline, grounding, api-drift, planning-git, surface, model-routing,
+  # agent-routing) - those hooks + detect-session-model now deploy+wire via the
+  # cluster pass, NOT
   # here. What remains is the app-owned residue that Stage 3 will move to its apps
   # (memory / cmux / voice / clickup / justify / visualizer / codex).
   # Stage 3: config is now CORE-ONLY. Every APP hook moved to its component (section
@@ -4827,6 +4914,23 @@ if [ "$_cluster_any" = 1 ] || [ -n "${HOOK_ON// /}" ]; then
     if [ "$_h" = "model-router-guard.sh" ]; then
       chmod +x "$REPO_DIR/claude/hooks/detect-session-model.sh"
       link_or_copy "$REPO_DIR/claude/hooks/detect-session-model.sh" "$CLAUDE_DIR/hooks/detect-session-model.sh"
+    fi
+    if [ "$_h" = "route-intent.sh" ]; then
+      # route-intent.json is DATA, not an executable, so it goes through
+      # link_or_copy_data - which makes the SAME symlink-vs-copy decision the hook
+      # itself just made. A bare `ln -sf` here dangled on every copy-mode install
+      # (the throwaway-clone case), and WITHOUT the lexicon the hook fails open
+      # silently: missing lexicon = no routing, forever, with no signal.
+      [ -f "$REPO_DIR/claude/hooks/route-intent.json" ] && \
+        link_or_copy_data "$REPO_DIR/claude/hooks/route-intent.json" "$CLAUDE_DIR/hooks/route-intent.json"
+      # The roster the nudges name (quick-answer/sonnet-impl/opus-executor) must
+      # exist in the GLOBAL agents dir for Agent(subagent_type: ...) to resolve
+      # it from any project, not just this repo. link_or_copy_data backs up a
+      # user's own same-named agent file before replacing it.
+      mkdir -p "$CLAUDE_DIR/agents"
+      for _af in "$REPO_DIR"/claude/agents/*.md; do
+        [ -f "$_af" ] && link_or_copy_data "$_af" "$CLAUDE_DIR/agents/$(basename "$_af")"
+      done
     fi
   done
 

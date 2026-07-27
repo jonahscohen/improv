@@ -102,6 +102,9 @@ assert_agent_model() {
 # Assert an agent file declares an exact `tools:` line in its frontmatter.
 assert_agent_tools() {
   local label="$1" file="$2" expected="$3"
+  if [ ! -f "$AGENTS_DIR/$file" ]; then
+    fail "$label" "missing $AGENTS_DIR/$file"; return
+  fi
   local got
   got=$(awk '/^---$/{n++; next} n==1 && /^tools:/{sub(/^tools:[[:space:]]*/,""); print; exit}' "$AGENTS_DIR/$file")
   if [ "$got" = "$expected" ]; then
@@ -111,10 +114,29 @@ assert_agent_tools() {
   fi
 }
 
+# Assert an agent file declares NO tools: key. Omitting the key is the ONLY way
+# to grant an agent every tool - there is no "all tools" sentinel value. The
+# harness DISPLAYS "All tools" for an absent key, which is easy to mistake for
+# something you should write into the file. Writing it yields two bogus tool
+# names and a toolless agent, so this assertion exists to catch that.
+assert_agent_no_tools() {
+  local label="$1" file="$2"
+  if [ ! -f "$AGENTS_DIR/$file" ]; then
+    fail "$label" "missing $AGENTS_DIR/$file"; return
+  fi
+  if awk '/^---$/{n++; next} n==1 && /^tools:/{found=1} END{exit !found}' "$AGENTS_DIR/$file"; then
+    fail "$label" "has a tools: key; omit it to grant all tools"
+  else
+    pass "$label"
+  fi
+}
+
 assert_agent_model "quick-answer is haiku"   quick-answer.md  haiku
 assert_agent_model "sonnet-impl is sonnet"   sonnet-impl.md   sonnet
 assert_agent_model "opus-executor is opus"   opus-executor.md opus
 assert_agent_tools "quick-answer is read-only" quick-answer.md "Read, Grep, Glob"
+assert_agent_no_tools "sonnet-impl grants all tools via omitted key"   sonnet-impl.md
+assert_agent_no_tools "opus-executor grants all tools via omitted key" opus-executor.md
 
 echo ""
 echo "============================================================"
@@ -134,7 +156,7 @@ exit 0
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `bash claude/hooks/test-route-intent.sh`
-Expected: FAIL, 4 failures, "missing .../quick-answer.md"
+Expected: FAIL, 6 failures, "missing .../quick-answer.md"
 
 - [ ] **Step 3: Create the roster directory and the haiku tier**
 
@@ -171,7 +193,6 @@ Create `claude/agents/sonnet-impl.md`:
 name: sonnet-impl
 description: Implementation tier for a single well-specified change unit - a rename across known call sites, a mechanical refactor with a stated shape, adding a test to an existing suite. Use when the spec is complete and no design decision remains. Escalate to opus-executor when the change spans subsystems or the approach is still open.
 model: sonnet
-tools: All tools
 ---
 
 You implement one fully specified change unit and verify it.
@@ -198,7 +219,7 @@ definitions take precedence and removing it is out of scope.
 - [ ] **Step 6: Run test to verify it passes**
 
 Run: `bash claude/hooks/test-route-intent.sh`
-Expected: PASS, "RESULTS: 4 passed, 0 failed"
+Expected: PASS, "RESULTS: 6 passed, 0 failed"
 
 - [ ] **Step 7: Link the roster into the live harness**
 
@@ -462,7 +483,7 @@ chmod +x claude/hooks/route-intent.sh
 bash claude/hooks/test-route-intent.sh
 ```
 
-Expected: PASS, "RESULTS: 8 passed, 0 failed"
+Expected: PASS, "RESULTS: 10 passed, 0 failed"
 
 - [ ] **Step 6: Commit**
 
@@ -492,10 +513,16 @@ prompt shape. Advisory only - it cannot dispatch or block."
 Append before the RESULTS block:
 
 ```bash
+# Every prompt below MUST match a tier pattern, so that removing the
+# suppression rule makes the assertion FAIL. A "must stay silent" test whose
+# prompt never matched anything passes with or without the code under test and
+# proves nothing. Each prompt also isolates ONE rule: the second is
+# deliberately over min_prompt_chars so the length gate cannot be what
+# silences it.
 assert_silent "short prompt is answered inline, not routed" \
-  "where is X set"
+  "find all the callers"
 assert_silent "informational framing does not route" \
-  "what is the difference between a hook and a skill in this harness, explain it"
+  "what is the best way to find all the callers of detect-session-model in this repo"
 assert_silent "pattern inside a code fence does not route" \
   'here is the snippet I mean:
 ```
@@ -504,8 +531,11 @@ rename foo to bar across every call site in the repo
 does that look right to you or not'
 assert_silent "pattern inside inline backticks does not route" \
   'the docs literally say `find all the callers` which I think is wrong, is it'
-assert_silent "pattern inside a URL does not route" \
-  "see https://example.com/docs/find-all-the-callers-guide for the writeup please"
+# NOT a URL case: every tier pattern requires literal spaces and URLs contain
+# none, so no URL can exercise the URL scrub. The XML-body scrub is testable
+# and otherwise has zero coverage, so it takes this slot.
+assert_silent "pattern inside an XML body does not route" \
+  "<quote>find all the callers of detect-session-model</quote> was the wording in the old ticket we archived"
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -566,7 +596,7 @@ In `claude/hooks/route-intent.sh`, replace the line `    text = prompt.lower()` 
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `bash claude/hooks/test-route-intent.sh`
-Expected: PASS, "RESULTS: 13 passed, 0 failed"
+Expected: PASS, "RESULTS: 15 passed, 0 failed"
 
 - [ ] **Step 6: Commit**
 
@@ -624,7 +654,7 @@ assert_escalation_order
 - [ ] **Step 2: Run test to verify it passes immediately**
 
 Run: `bash claude/hooks/test-route-intent.sh`
-Expected: PASS, "RESULTS: 16 passed, 0 failed"
+Expected: PASS, "RESULTS: 18 passed, 0 failed"
 
 If any of the three fails, the Task 2 loop is iterating the wrong order.
 Fix `escalation_order` in `route-intent.json` to
@@ -737,7 +767,7 @@ Then, in the match loop, add `touch_cooldown()` immediately before the
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `bash claude/hooks/test-route-intent.sh`
-Expected: PASS, "RESULTS: 19 passed, 0 failed"
+Expected: PASS, "RESULTS: 21 passed, 0 failed"
 
 - [ ] **Step 5: Commit**
 
@@ -805,7 +835,7 @@ rm -f "$bad_re"
 - [ ] **Step 2: Run test to verify**
 
 Run: `bash claude/hooks/test-route-intent.sh`
-Expected: PASS, "RESULTS: 26 passed, 0 failed"
+Expected: PASS, "RESULTS: 30 passed, 0 failed"
 
 If "corrupt lexicon" fails, the `json.load` call is outside the outer `try`.
 Move it inside. If "invalid regex" fails, the `re.error` catch is missing from
@@ -951,7 +981,7 @@ ln -sfn "$PWD/claude/hooks/route-intent.json" ~/.claude/hooks/route-intent.json
 - [ ] **Step 8: Run the full suite**
 
 Run: `bash claude/hooks/test-route-intent.sh`
-Expected: PASS, "RESULTS: 28 passed, 0 failed"
+Expected: PASS, "RESULTS: 30 passed, 0 failed"
 
 - [ ] **Step 9: Commit**
 

@@ -1293,3 +1293,61 @@
 
 <!-- archived 2026-07-25 (moved from MEMORY.md to stay under load budget) -->
 - [** RULING ** FlowDomainIntegrator (flow-domain-integration.ts) SUPERSEDED - recommend DELETE, not wire. Domain rules already reach flows two live ways w/o it: ~12 handlers import SHARED_DESIGN_LAWS directly (pre-exec), and orchestrator getValidatorsForFlow->compositionEngine.validateMultipleDomains writes result.validationResults (post-exec, CONSUMED by convergence-loop:179 + build-report-aggregator:140/201, surfaced to result.message, halts composites). Integrator only enumerates rules into UNREAD metadata (executionMetadata.enhancedContext.domainValidations / context.metadata.flowDomains); validates nothing. ZERO source importers; its dep flow-domain-mapping.ts dead too. Wiring would be BROKEN not just redundant: FLOW_DOMAIN_MATRIX covers only flowA-flowJ (10 of 26 flows) so 16 return []; and it keys 'uxWriting' while design-laws exposes 'writing' -> getSharedLawsForDomain returns undefined, silently dropping the writing laws. Deepens phase2-deadcode's zero-importer flag. Verified: grep + tsc exit 0 + foreground Codex AGREE. No code changed, delete flagged for lead - DECISION (2026-07-25)](decision_2026-07-25_flow-domain-integration-superseded.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing PLAN (8 TDD tasks, nothing implemented) - roster/classifier/suppression/tie-break/cooldown/fail-open/wiring, plus model-routing cluster rem…](session_2026-07-26_agent-routing-plan.md)
+- [Agent routing EXECUTION started (branch agent-routing off 160eeed3, SDD Tasks 1-7, Task 8 excluded) - baseline green 128/128](session_2026-07-26_agent-routing-execution.md)
+- [model-router-guard LIVE registrations removed (surgical; repo-side 8-site refactor still deferred to Task 8) - it blocked the SDD dispatch b…](session_2026-07-26_model-router-guard-live-removal.md)
+- [REFERENCE Sidecoach 20 validators catalog - complete factual list (A-X) from source, not 12…](session_2026-07-26_sidecoach-20-validators-catalog.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 1 SHIPPED - roster (quick-answer haiku, sonnet-impl sonnet, opus-executor global copy) + test-route-intent.sh harness, TDD RED…](session_2026-07-26_agent-routing-task1-roster.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 1 fix round 1 - removed bogus "tools: All tools" from sonnet-impl.md (omit key = all tools), fixed awk leak in assert_agen…](session_2026-07-26_agent-routing-task1-fix-round1.md)
+- [Agent routing DESIGN (spec only, not implemented) - Jonah reversed the 2026-06-11 no-routing rule; 4-tier global roster (haiku quick-answer / Explore /…](session_2026-07-26_agent-routing-design.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [RULE: grant an agent all tools by OMITTING the tools key - "All tools" is a display string, not a value; writing it yields two bogus tool names…](session_2026-07-26_agent-tools-frontmatter-rule.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 2 SHIPPED - route-intent.json (4-tier lexicon) + route-intent.sh (fail-open bash+python3 classifier), TDD RED 6/10…](session_2026-07-26_agent-routing-task2-classifier.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 2 complete - route-intent classifier + lexicon live at 036839b1, 10/10, all four tiers verified routing real prompts; briefs are snap…](session_2026-07-26_agent-routing-task2.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 3 SHIPPED - route-intent.sh scrubs code fences/backticks/URLs/XML then gates on min_prompt_chars then exempt patterns; ex…](session_2026-07-26_agent-routing-task3-suppression.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Replacement suppression assertions pre-validated before dispatch - all three fire with suppression removed, XML-scrub branch now covered](session_2026-07-26_replacement-assertions-validated.md)
+- [Agent routing Task 3 FIX SHIPPED - vacuous suppression assertions replaced with mutation-verified ones, route-intent.sh/json untouched,…](session_2026-07-26_agent-routing-task3-suppression-fix.md)
+- [RULE: a negative assertion (asserting absence) proves nothing by passing - inject the defect and watch it fail, then restore and check byte…](session_2026-07-26_assertion-polarity-mutation-test.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 3 complete - suppression live (scrub/length/exempt), 15/15; 3 vacuous assertions replaced with mutation-verified ones and the PLAN co…](session_2026-07-26_agent-routing-task3.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 4 complete - escalate-up tie-break regression-locked (3 assertions incl. direct escalation_order check), no production code changed,…](session_2026-07-26_agent-routing-task4.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 5 complete - route-intent cooldown shipped, real TDD RED-then-GREEN, caught+fixed a live-hook/test-isolation regression, 21/21](session_2026-07-26_agent-routing-task5.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Tasks 4-5 verified - tie-break locked 486ba80e, cooldown 1c8db6fc, 21/21; mutation proved the test-isolation export does NOT mas…](session_2026-07-26_agent-routing-task45-verified.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Three of Task 3's five suppression tests asserted nothing - proven by disabling suppression, only code-fence and backtick cases were real](session_2026-07-26_vacuous-suppression-tests.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Tasks 6-7 complete - classifier LIVE and verified through the real hook path, 30/30; Codex caught an install bug no test could (sui…](session_2026-07-26_agent-routing-tasks67-live.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [FINDING: a string `patterns` value in route-intent.json iterates char-by-char and hijacks routing to the most expensive tier - type-check before…](session_2026-07-26_lexicon-type-validation-gap.md)
+- [FINAL REVIEW: 1 Critical (route-intent unregistered in browser-tree.json - 2 repo suites red, cluster unreachable from default installer) + 5 Importan…](session_2026-07-26_final-review-findings.md)
+- [route-intent latency: flat 60-85ms on adversarial input incl 200KB, no catastrophic backtracking - bounded quantifiers must stay bounded in futur…](session_2026-07-26_route-intent-latency-probe.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing RE-REVIEW CLEAN - all 11 findings addressed and mutation-tested, none of the 21 new assertions vacuous; ready to merge](session_2026-07-27_agent-routing-rereview-clean.md)
+- [Imperative recall gap confirmed - "i want you to / lets / we need to / time to refactor" miss the opus tier; one-line lexicon fix, non-block…](session_2026-07-27_imperative-recall-gap-confirmed.md)
+- [RULE: mutation-testing fail-open code - NEUTER the behavior (never-matching regex), never DELETE the line; a crashed fail-open program is si…](session_2026-07-27_mutation-testing-fail-open-code.md)
