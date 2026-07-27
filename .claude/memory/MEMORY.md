@@ -1,4 +1,4 @@
-- [** ACTIVE ** Concise-mode STOP GATE - concise-detect-stop.sh blocks once on a post-conclusion tangent (named opener lexicon) or a list past 5 items at one level; ruleset rules 3/4/7 tightened; length gates rejected](session_2026-07-26_concise-stop-gate.md)
+- [** ACTIVE ** Concise-mode STOP GATE - concise-detect-stop.sh blocks once on a post-conclusion tangent (named opener lexicon) or a list past 5 items at one…](session_2026-07-26_concise-stop-gate.md)
 - [** ACTIVE ** Teammate spawn DEADLOCK fixed in agent-teams-guard.sh - hook demanded a `name` on every Agent spawn while the runtime for…](session_2026-07-26_teammate-spawn-hook-contradiction-fix.md)
 - [** ACTIVE REFERENCE ** Sidecoach evaluation review ARTIFACT published (flows + tokens dashboard, verified in both themes): https://claude.ai/code/art…](session_2026-07-26_eval-findings-artifact.md)
 - [** ACTIVE ** Flow-redundancy evaluation (analysis only, Codex-reviewed): 26 flows reconcile with 20 handler files (aggregates, no gap). REAL BUG…](session_2026-07-26_flow-redundancy-evaluation.md)
@@ -111,3 +111,4 @@
 - [** ACTIVE ** Gap-analysis VISUAL ARTIFACT built + verified (coverage-console dashboard, both themes, gaps-only filter tested via real Playwright…](session_2026-07-25_gap-analysis-artifact-build.md)
 - [** ACTIVE ** project-drift-detector WIRED into a real fail-closed CLI (not committed; dist NOT rebuilt) - bin/sidecoach-drift.js (NEW) reads a project'…](session_2026-07-25_drift-detector-wired.md)
 - [** ACTIVE ** Taste Tier-2 revisit - 1 REAL fix (oversized-h1 H1_VW_RATIO 0.11->0.09, Rreal 0->0.167, precision held, beats oracle), 3 NAMED-UNFIXABLE h…](session_2026-07-25_taste-revisit-honest.md)
+- [Agent routing DESIGN (spec only, not implemented) - Jonah reversed the 2026-06-11 no-routing rule; 4-tier global roster (haiku quick-answer / Explore / sonnet-impl / opus-executor) + shell classifier hook, lead decides each dispatch](session_2026-07-26_agent-routing-design.md)
