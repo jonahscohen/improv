@@ -1332,3 +1332,9 @@
 
 <!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
 - [Agent routing Task 5 complete - route-intent cooldown shipped, real TDD RED-then-GREEN, caught+fixed a live-hook/test-isolation regression, 21/21](session_2026-07-26_agent-routing-task5.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Tasks 4-5 verified - tie-break locked 486ba80e, cooldown 1c8db6fc, 21/21; mutation proved the test-isolation export does NOT mas…](session_2026-07-26_agent-routing-task45-verified.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Three of Task 3's five suppression tests asserted nothing - proven by disabling suppression, only code-fence and backtick cases were real](session_2026-07-26_vacuous-suppression-tests.md)
