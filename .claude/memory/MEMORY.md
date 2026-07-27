@@ -111,3 +111,4 @@
 - [** ACTIVE ** project-drift-detector WIRED into a real fail-closed CLI (not committed; dist NOT rebuilt) - bin/sidecoach-drift.js (NEW) reads a project'…](session_2026-07-25_drift-detector-wired.md)
 - [** ACTIVE ** Taste Tier-2 revisit - 1 REAL fix (oversized-h1 H1_VW_RATIO 0.11->0.09, Rreal 0->0.167, precision held, beats oracle), 3 NAMED-UNFIXABLE h…](session_2026-07-25_taste-revisit-honest.md)
 - [Three of Task 3's five suppression tests asserted nothing - proven by disabling suppression, only code-fence and backtick cases were real](session_2026-07-26_vacuous-suppression-tests.md)
+- [Agent routing Task 3 complete - suppression live (scrub/length/exempt), 15/15; 3 vacuous assertions replaced with mutation-verified ones and the PLAN corrected so the defect cannot be re-transcribed](session_2026-07-26_agent-routing-task3.md)

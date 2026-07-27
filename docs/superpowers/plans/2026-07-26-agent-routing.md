@@ -513,10 +513,16 @@ prompt shape. Advisory only - it cannot dispatch or block."
 Append before the RESULTS block:
 
 ```bash
+# Every prompt below MUST match a tier pattern, so that removing the
+# suppression rule makes the assertion FAIL. A "must stay silent" test whose
+# prompt never matched anything passes with or without the code under test and
+# proves nothing. Each prompt also isolates ONE rule: the second is
+# deliberately over min_prompt_chars so the length gate cannot be what
+# silences it.
 assert_silent "short prompt is answered inline, not routed" \
-  "where is X set"
+  "find all the callers"
 assert_silent "informational framing does not route" \
-  "what is the difference between a hook and a skill in this harness, explain it"
+  "what is the best way to find all the callers of detect-session-model in this repo"
 assert_silent "pattern inside a code fence does not route" \
   'here is the snippet I mean:
 ```
@@ -525,8 +531,11 @@ rename foo to bar across every call site in the repo
 does that look right to you or not'
 assert_silent "pattern inside inline backticks does not route" \
   'the docs literally say `find all the callers` which I think is wrong, is it'
-assert_silent "pattern inside a URL does not route" \
-  "see https://example.com/docs/find-all-the-callers-guide for the writeup please"
+# NOT a URL case: every tier pattern requires literal spaces and URLs contain
+# none, so no URL can exercise the URL scrub. The XML-body scrub is testable
+# and otherwise has zero coverage, so it takes this slot.
+assert_silent "pattern inside an XML body does not route" \
+  "<quote>find all the callers of detect-session-model</quote> was the wording in the old ticket we archived"
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
