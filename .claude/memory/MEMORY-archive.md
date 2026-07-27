@@ -1323,3 +1323,9 @@
 - [Replacement suppression assertions pre-validated before dispatch - all three fire with suppression removed, XML-scrub branch now covered](session_2026-07-26_replacement-assertions-validated.md)
 - [Agent routing Task 3 FIX SHIPPED - vacuous suppression assertions replaced with mutation-verified ones, route-intent.sh/json untouched,…](session_2026-07-26_agent-routing-task3-suppression-fix.md)
 - [RULE: a negative assertion (asserting absence) proves nothing by passing - inject the defect and watch it fail, then restore and check byte…](session_2026-07-26_assertion-polarity-mutation-test.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 3 complete - suppression live (scrub/length/exempt), 15/15; 3 vacuous assertions replaced with mutation-verified ones and the PLAN co…](session_2026-07-26_agent-routing-task3.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [Agent routing Task 4 complete - escalate-up tie-break regression-locked (3 assertions incl. direct escalation_order check), no production code changed,…](session_2026-07-26_agent-routing-task4.md)

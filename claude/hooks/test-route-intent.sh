@@ -121,6 +121,27 @@ assert_silent "pattern inside inline backticks does not route" \
 assert_silent "pattern inside an XML body does not route" \
   "<quote>find all the callers of detect-session-model</quote> was the wording in the old ticket we archived"
 
+# A prompt matching BOTH sonnet_impl and opus_executor must resolve to the
+# more capable tier. Routing too low produces work that has to be redone.
+assert_routes "multi-tier prompt escalates to opus-executor" \
+  "refactor the flow handler and update every reference to the old name" \
+  "opus-executor"
+assert_routes "sweep plus lookup escalates to Explore" \
+  "find all the places where the cooldown value is set and tell me which file owns it" \
+  "Explore"
+
+# Guard the lexicon's declared order against a silent reorder.
+assert_escalation_order() {
+  local got
+  got=$(python3 -c 'import json;print(",".join(json.load(open("'"$HOOK_DIR"'/route-intent.json"))["escalation_order"]))')
+  if [ "$got" = "opus_executor,sonnet_impl,explore,quick_answer" ]; then
+    pass "escalation_order is most-capable-first"
+  else
+    fail "escalation_order is most-capable-first" "got: $got"
+  fi
+}
+assert_escalation_order
+
 echo ""
 echo "============================================================"
 echo "RESULTS: $PASS passed, $FAIL failed"
