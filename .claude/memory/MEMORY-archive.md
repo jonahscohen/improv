@@ -1341,3 +1341,8 @@
 
 <!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
 - [Agent routing Tasks 6-7 complete - classifier LIVE and verified through the real hook path, 30/30; Codex caught an install bug no test could (sui…](session_2026-07-26_agent-routing-tasks67-live.md)
+
+<!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
+- [FINDING: a string `patterns` value in route-intent.json iterates char-by-char and hijacks routing to the most expensive tier - type-check before…](session_2026-07-26_lexicon-type-validation-gap.md)
+- [FINAL REVIEW: 1 Critical (route-intent unregistered in browser-tree.json - 2 repo suites red, cluster unreachable from default installer) + 5 Importan…](session_2026-07-26_final-review-findings.md)
+- [route-intent latency: flat 60-85ms on adversarial input incl 200KB, no catastrophic backtracking - bounded quantifiers must stay bounded in futur…](session_2026-07-26_route-intent-latency-probe.md)
