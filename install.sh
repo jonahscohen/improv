@@ -444,6 +444,238 @@ link_or_copy_data() {
 }
 
 # ------------------------------------------------------------
+# install_bundled_skill: deploy one repo skill directory into ~/.claude/skills.
+#
+# WHY IT ROUTES THROUGH link_or_copy_data. It used to call safe_cp, so every skill
+# landed as a REAL FILE frozen at whatever it was on install day. Measured 2026-07-28:
+# every installed skill except sidecoach was such a copy, and every one of them had
+# drifted from its repo source. Editing a SKILL.md changed nothing the model reads
+# until install.sh was re-run - the same failure that froze justify-source-guard.sh at
+# a dead path for a month. Hooks were fixed by routing them through the deploy-mode
+# decision; skills now use the identical primitive, so a dev checkout gets links and an
+# edit is live immediately.
+#
+# IT DOES NOT FORCE SYMLINKS, and must not. hook_deploy_mode still decides, and it
+# returns `copy` for a repo in a temp location - the documented
+# `git clone /tmp/improv && ./install.sh && rm -rf /tmp/improv` case, where a link
+# would dangle into a deleted clone. A copy install is legitimate; what was missing was
+# any way to tell a correct copy from a silently stale one. That is verify_installed_skills
+# below, not a link.
+#
+# EVERY FILE THE SOURCE OWNS is deployed, recursively. The old function copied only
+# SKILL.md unless a caller passed an opt-in recursion flag, so `--only motion-reference`
+# silently skipped VOCABULARY.md while the bundle path installed it - the two paths
+# disagreed about what the skill even was. There is now one rule: the repo directory is
+# the manifest. A second argument is a usage error rather than a silently ignored one.
+#
+# Records each deployed name in SKILLS_DEPLOYED so the end-of-install check verifies
+# exactly what THIS run deployed, and never fails a run over a component it was not
+# asked to install.
+SKILLS_DEPLOYED=()
+
+# Skills whose INSTALLED form is intentionally NOT byte-identical to the repo source.
+# lotus/install.sh rewrites the __LOTUS_SRC__ placeholder to the vendored path at install
+# time, so a HEALTHY lotus install differs from its source by design and a byte compare
+# would report STALE forever. A check that fires on a correct machine is one people learn
+# to ignore, which costs more than the check was ever worth. Space-separated names.
+VERIFY_SKILLS_EXEMPT="lotus"
+
+install_bundled_skill() {
+  local _ibs_name="${1:-}" _ibs_rel _ibs_f _ibs_rc=0 _ibs_n=0 _ibs_list
+  if [ -z "$_ibs_name" ] || [ "$#" -gt 1 ]; then
+    err "install_bundled_skill: usage: install_bundled_skill <skill-name>"
+    err "install_bundled_skill: the recursion flag is gone - the source directory is the manifest"
+    return 2
+  fi
+  local _ibs_src="$REPO_DIR/claude/skills/$_ibs_name"
+  local _ibs_dst="${CLAUDE_DIR:-$HOME/.claude}/skills/$_ibs_name"
+
+  if [ ! -d "$_ibs_src" ]; then
+    warn "skills/$_ibs_name source missing in repo - skipping"
+    return 0
+  fi
+
+  mkdir -p "$_ibs_dst"
+  # THE WALK'S OWN EXIT STATUS IS LOAD-BEARING and a bare `done < <(find ...)` throws it
+  # away: an unreadable source directory, or one that changes under the walk, makes find
+  # exit non-zero after listing a SUBSET, and the loop would then deploy that subset and
+  # report success. Collect to a temp file so the status can be read, then iterate it.
+  _ibs_list="$(mktemp "${TMPDIR:-/tmp}/improv-skill-XXXXXX")" || {
+    err "skills/$_ibs_name: could not create a temp file for the source walk"
+    return 1
+  }
+  # -print0 / read -d '': a NEWLINE in a filename would otherwise be read as a record
+  # separator and split one real path into two paths that do not exist.
+  find "$_ibs_src" ! -name '.DS_Store' -type f -print0 > "$_ibs_list" 2>/dev/null || {
+    rm -f "$_ibs_list"
+    err "skills/$_ibs_name: could not read the source tree at $_ibs_src"
+    return 1
+  }
+  # Redirected from a FILE, not a pipe: the loop must run in THIS shell or the failure
+  # count, the deployed count and the SKILLS_DEPLOYED append would all be discarded
+  # with the subshell.
+  while IFS= read -r -d '' _ibs_f; do
+    _ibs_rel="${_ibs_f#"$_ibs_src"/}"
+    # `|| { ...; continue; }` rather than a bare mkdir: under `set -e` a failing mkdir
+    # would abort the whole installer HERE, before the temp file below is removed. Every
+    # exit from this loop must reach the cleanup.
+    mkdir -p "$_ibs_dst/$(dirname "$_ibs_rel")" || {
+      err "skills/$_ibs_name: could not create $_ibs_dst/$(dirname "$_ibs_rel")"
+      _ibs_rc=1
+      continue
+    }
+    link_or_copy_data "$_ibs_src/$_ibs_rel" "$_ibs_dst/$_ibs_rel" || _ibs_rc=1
+    _ibs_n=$((_ibs_n + 1))
+  done < "$_ibs_list"
+  rm -f "$_ibs_list"
+
+  if [ "$_ibs_rc" -ne 0 ]; then
+    err "skills/$_ibs_name: one or more files failed to deploy"
+    return 1
+  fi
+  # A source directory that exists but holds no files would otherwise print
+  # "skills/x installed", record x as deployed, and satisfy the end-of-install verify
+  # by checking nothing. Silent success having written nothing is the loudest failure
+  # this installer has shipped before; it does not get to happen here.
+  if [ "$_ibs_n" -eq 0 ]; then
+    err "skills/$_ibs_name: source directory $_ibs_src contains no files - nothing deployed"
+    return 1
+  fi
+  SKILLS_DEPLOYED+=("$_ibs_name")
+  ok "skills/$_ibs_name installed"
+  return 0
+}
+
+# ------------------------------------------------------------
+# verify_installed_skills: prove that what is INSTALLED under ~/.claude/skills still
+# matches what the repo says it should be.
+#
+# THIS IS THE PART THAT MATTERS. A copy-mode install is legitimate. A copy-mode
+# install whose copies have silently drifted from source is not, and before this
+# function nothing anywhere could tell the difference - the installer printed
+# "installed" either way, the test suite stayed green, and thirteen skill edits sat
+# inert on disk while the session that made them believed they had shipped.
+#
+# Exit codes, distinct per failure class:
+#   0  clean - every checked file is present and identical to its repo source
+#   1  drift - at least one file is MISSING, DANGLING, or STALE
+#   2  usage - the caller asked for something that cannot be checked
+#
+# SCOPE, stated exactly, because a check that fails on things it was never asked about
+# gets muted and then it protects nothing:
+#   - With NO arguments it sweeps every repo skill that is ALSO installed. A skill the
+#     user never picked is skipped, not failed - components are a la carte.
+#   - With arguments it checks exactly those, and an un-installed one IS a failure,
+#     because naming it means it was expected.
+#   - An installed skill with no repo source (justify, deployed by another component)
+#     is not this installer's business and is ignored.
+#   - An EXTRA installed file the repo does not own is not drift. The repo directory is
+#     the manifest of what must be there, not of what may be there.
+verify_installed_skills() {
+  local _vs_root="${CLAUDE_DIR:-$HOME/.claude}/skills"
+  local _vs_srcroot="$REPO_DIR/claude/skills"
+  local _vs_bad=0 _vs_checked=0 _vs_skills=0
+  local _vs_name _vs_src _vs_dst _vs_rel _vs_inst _vs_srcf _vs_f _vs_list
+  # An ARRAY, not a space-joined string. A string would word-split a skill directory
+  # whose name contains a space into two names that are each "unknown", turning a real
+  # drift report into a usage error about a skill nobody named.
+  local _vs_names=()
+
+  if [ ! -d "$_vs_srcroot" ]; then
+    err "verify-skills: no skill sources at $_vs_srcroot"
+    return 2
+  fi
+  # A root that EXISTS but cannot be listed would make every `[ -d ... ]` probe below
+  # fail, the sweep would select zero skills, and the summary would report
+  # "0 skill(s), 0 file(s) match" as CLEAN. Reporting clean having examined nothing is
+  # the exact failure this function exists to prevent, so it is an error here.
+  if [ -d "$_vs_root" ] && [ ! -x "$_vs_root" ]; then
+    err "verify-skills: installed skills root is not traversable: $_vs_root"
+    return 1
+  fi
+
+  if [ "$#" -gt 0 ]; then
+    for _vs_name in "$@"; do
+      if [ ! -d "$_vs_srcroot/$_vs_name" ]; then
+        err "verify-skills: unknown skill '$_vs_name' - no source at $_vs_srcroot/$_vs_name"
+        return 2
+      fi
+      case " $VERIFY_SKILLS_EXEMPT " in
+        *" $_vs_name "*)
+          info "verify-skills: $_vs_name is templated at install time - exempt from the byte compare"
+          continue
+          ;;
+      esac
+      _vs_names+=("$_vs_name")
+    done
+  else
+    for _vs_src in "$_vs_srcroot"/*/; do
+      [ -d "$_vs_src" ] || continue
+      _vs_name="$(basename "$_vs_src")"
+      [ -d "$_vs_root/$_vs_name" ] || continue   # not installed - not drift
+      case " $VERIFY_SKILLS_EXEMPT " in
+        *" $_vs_name "*) continue ;;              # templated on purpose - see the list
+      esac
+      _vs_names+=("$_vs_name")
+    done
+  fi
+
+  # The guarded expansion is required: under `set -u`, bash 3.2 treats "${arr[@]}" on
+  # an EMPTY array as an unbound variable and aborts the installer.
+  for _vs_name in ${_vs_names[@]+"${_vs_names[@]}"}; do
+    _vs_src="$_vs_srcroot/$_vs_name"
+    _vs_dst="$_vs_root/$_vs_name"
+    _vs_skills=$((_vs_skills + 1))
+    if [ ! -d "$_vs_dst" ]; then
+      err "verify-skills: $_vs_name is NOT INSTALLED (expected $_vs_dst)"
+      _vs_bad=$((_vs_bad + 1))
+      continue
+    fi
+    # Same reason as install_bundled_skill: process substitution discards find's exit
+    # status, so an unreadable skill directory would yield an empty walk, zero problems
+    # and a CLEAN verdict for files it never looked at. A verifier that reports clean
+    # having checked nothing is worse than no verifier at all.
+    _vs_list="$(mktemp "${TMPDIR:-/tmp}/improv-verify-XXXXXX")" || {
+      err "verify-skills: could not create a temp file for the source walk"
+      return 1
+    }
+    if ! find "$_vs_src" ! -name '.DS_Store' -type f -print0 > "$_vs_list" 2>/dev/null; then
+      rm -f "$_vs_list"
+      err "verify-skills: $_vs_name - could not read the source tree at $_vs_src"
+      _vs_bad=$((_vs_bad + 1))
+      continue
+    fi
+    while IFS= read -r -d '' _vs_f; do
+      _vs_rel="${_vs_f#"$_vs_src"/}"
+      _vs_inst="$_vs_dst/$_vs_rel"
+      _vs_srcf="$_vs_src/$_vs_rel"
+      _vs_checked=$((_vs_checked + 1))
+      # -e follows the link, so a dangling symlink is caught here and named as such
+      # rather than being reported as a plain missing file.
+      if [ -L "$_vs_inst" ] && [ ! -e "$_vs_inst" ]; then
+        err "verify-skills: $_vs_name/$_vs_rel is a DANGLING symlink -> $(readlink "$_vs_inst")"
+        _vs_bad=$((_vs_bad + 1))
+      elif [ ! -e "$_vs_inst" ]; then
+        err "verify-skills: $_vs_name/$_vs_rel is MISSING from $_vs_dst"
+        _vs_bad=$((_vs_bad + 1))
+      elif ! cmp -s "$_vs_inst" "$_vs_srcf"; then
+        err "verify-skills: $_vs_name/$_vs_rel is STALE - the installed copy differs from the repo source"
+        _vs_bad=$((_vs_bad + 1))
+      fi
+    done < "$_vs_list"
+    rm -f "$_vs_list"
+  done
+
+  if [ "$_vs_bad" -gt 0 ]; then
+    err "verify-skills: $_vs_bad problem(s) across $_vs_skills skill(s) - what is installed is NOT what the repo says"
+    err "verify-skills: re-run ./install.sh (or ./install.sh --only <component>) to redeploy them"
+    return 1
+  fi
+  ok "verify-skills: $_vs_skills skill(s), $_vs_checked file(s) match their repo source"
+  return 0
+}
+
+# ------------------------------------------------------------
 # prune_broken_skill_symlinks: remove DEAD repo-owned symlinks from the directories this
 # installer deploys links into - ~/.claude/skills AND ~/.claude/hooks.
 #
@@ -466,11 +698,61 @@ link_or_copy_data() {
 # and give it fixtures in the suite - the safety rules are re-proven per directory there,
 # not assumed to carry over.
 #
+# DELETION IS EARNED BY EVIDENCE, NOT INFERRED FROM LOCATION (2026-07-28). The rule used to be
+# "the target path is somewhere under $REPO_DIR". That is LOCATION, and location is not
+# ownership. It made two wrong deletions possible, both live, both now covered by
+# fixtures in the suite:
+#
+#   1. A link the USER made that happens to point into this checkout was deleted. Nothing
+#      about "under the repo root" says this installer put it there.
+#   2. A target absent only for a MOMENT was read as retired. An unstaged deletion or a
+#      stash, a mid-rebase, a branch switch or partial checkout, a submodule working tree
+#      - each makes a file vanish from disk while it is not retired at all.
+#
+# The replacement requires two independent pieces of evidence, neither of which needs the
+# installer to have recorded anything at deploy time (so this works on machines installed
+# long before this change). STATED EXACTLY, because overclaiming here is the same sin as
+# the defect: this does not prove WHO created the link. It proves the link is
+# indistinguishable from installer output AND that the repo really did retire the path.
+#
+#   SHAPE. The link must match the deploy shape exactly: its parent is one of the two
+#   directories below, the target's canonical PARENT equals that directory's ONE
+#   corresponding repo source dir, and the target's basename equals the link's. Every
+#   symlink this installer creates into ~/.claude/{skills,hooks} has that shape, so a
+#   link pointing anywhere else under the repo is provably not ours.
+#
+#   GIT PROVENANCE. The repo's own history answers what this repo actually shipped and
+#   whether the path is retired or merely absent. A candidate is pruned only when the
+#   path is absent from HEAD's tree AND absent from the index AND present at some commit
+#   reachable from HEAD. A user's untracked file, a path that never existed in the
+#   CHECKED-OUT history, and a path inside a submodule all fail the third test.
+#
+#   RETIREMENT IS JUDGED AGAINST THE CHECKED-OUT HISTORY, deliberately. A path this
+#   branch shipped and deleted is retired HERE even if some other branch still carries
+#   it; the link is genuinely dead in this checkout and a re-install restores it. Asking
+#   every ref instead would make retirement nearly unprovable, because stale branches
+#   keep old paths alive forever, and the prune would never remove anything real.
+#
+# CHOSEN OVER a deploy-time manifest or marker (both put to cross-model review): a
+# manifest needs instrumenting ~8 deploy call sites, and would leave every already
+# installed machine with no manifest and therefore a permanently inert prune.
+#
+# THE RESIDUAL, stated rather than buried: a user who hand-creates a link with EXACTLY the
+# installer's shape, pointing at a path this repo shipped and later deleted, is
+# indistinguishable from our own output inside our own namespace and IS removed. Only a
+# deploy-time manifest separates those two. A second accepted trade: if a whole source
+# directory (claude/hooks or claude/skills) is removed from the checkout, nothing under
+# the matching ~/.claude directory can be proven and dead links survive - reported out
+# loud, never silently.
+#
 # HARD SAFETY RULES (all enforced, none optional):
 #   - Symlinks only. A real file or real directory is never touched.
 #   - Broken only. A link whose target still EXISTS (a live skill) is never touched.
-#   - Repo-owned only. A link whose resolved target is OUTSIDE $REPO_DIR is never
-#     touched - that is someone else's link, not part of our deploy footprint.
+#   - Deploy shape only. Target parent must equal the repo source dir for that prune
+#     directory, and the basenames must match.
+#   - Git-proven retirement only. Absent from HEAD, absent from the index, present in
+#     history reachable from HEAD. Any git query that FAILS is treated as "cannot tell"
+#     and skips the link - a broken repo must never read as a retirement.
 #   - Direct children of skills/ only - exactly where install.sh deploys skills.
 #   - DRY RUN by default. It prints what it WOULD remove and mutates nothing. A real
 #     removal happens only in "apply" mode, which the CLI reaches only via the
@@ -478,17 +760,27 @@ link_or_copy_data() {
 #     --yes / --only / --preset install never invokes this, so it never mutates
 #     ~/.claude on its own.
 #
+# EVERY UNPROVABLE CASE SKIPS OR REFUSES. There is no branch here that deletes on a
+# guess, because the failure this replaces was a safety step that reported success.
+#
 # Args:  $1 = mode: "dryrun" (default) or "apply".
-# Reads: $HOME (-> ~/.claude/skills) and $REPO_DIR (the footprint boundary).
+# Reads: $HOME (-> the prune dirs) and $REPO_DIR (the deploy source and git oracle).
 # Returns: 0 on success; 5 if $REPO_DIR cannot be resolved (footprint unknown -
 #          refuse to prune rather than guess); 6 if an apply-mode removal fails;
 #          7 if a prune directory exists but cannot be listed (reporting a directory
-#          clean when it was never examined is the one answer worse than an error).
+#          clean when it was never examined is the one answer worse than an error);
+#          8 if $REPO_DIR is not the root of a git work tree with a resolvable HEAD
+#          (ownership is unprovable without history); 9 if the repo is mid-operation
+#          (rebase/merge/cherry-pick/revert/bisect), where an absent file proves nothing.
 prune_broken_skill_symlinks() {
   local mode="${1:-dryrun}"
-  # Every directory this installer deploys repo symlinks into. Skills stays FIRST so the
-  # suite's read-only-home case still hits it and still returns 6.
+  # Parallel arrays: the directory this installer deploys links INTO, and the ONE
+  # directory in the repo those links are allowed to point at. Skills stays FIRST so the
+  # suite's read-only-home case still hits it and still returns 6. A third deploy
+  # directory gets an entry in BOTH arrays and its own fixtures in the suite - the
+  # safety rules are re-proven per directory there, never assumed to carry over.
   local prune_dirs=("$HOME/.claude/skills" "$HOME/.claude/hooks")
+  local prune_srcs=("claude/skills"        "claude/hooks")
 
   # The footprint boundary. If the repo path cannot be canonicalized we cannot
   # PROVE a target lives inside it, so we prune nothing and say so. Guessing the
@@ -499,9 +791,44 @@ prune_broken_skill_symlinks() {
     return 5
   fi
 
-  local found=0 removed=0 scanned=0
-  local dir link tgt tgt_abs tgt_dir tgt_base canon_dir canon inside
-  for dir in "${prune_dirs[@]}"; do
+  # --- the provenance oracle must exist before anything is a candidate -------------
+  # No git, no history, no way to tell a retirement from a file that was never here.
+  # This is a hard refusal rather than a warn-and-continue: exit 0 from a deletion gate
+  # reads as "checked, and clean", which is the exact false report this function exists
+  # to stop making.
+  local top top_canon
+  if ! top="$(git -C "$repo_canon" rev-parse --show-toplevel 2>/dev/null)" || [ -z "$top" ]; then
+    err "prune: $repo_canon is not a git work tree - ownership is unprovable, refusing to prune"
+    return 8
+  fi
+  # The repo must be the ROOT of that work tree. If REPO_DIR is merely nested inside
+  # some other checkout, every path query below would be answered by the WRONG repo.
+  if ! top_canon="$(cd "$top" 2>/dev/null && pwd -P)" || [ "$top_canon" != "$repo_canon" ]; then
+    err "prune: $repo_canon is not the root of its git work tree (root is ${top_canon:-$top}) - refusing to prune"
+    return 8
+  fi
+  if ! git -C "$repo_canon" rev-parse --verify --quiet HEAD >/dev/null 2>&1; then
+    err "prune: $repo_canon has no resolvable HEAD - ownership is unprovable, refusing to prune"
+    return 8
+  fi
+  # Mid-operation: the working tree is a transient state and an absent file proves
+  # nothing about retirement. Resolved through `rev-parse --git-path` rather than a
+  # hard-coded .git/, so a linked worktree (where .git is a FILE and the real dir lives
+  # elsewhere) is detected too.
+  local _marker _marker_path
+  for _marker in rebase-merge rebase-apply MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD BISECT_LOG sequencer; do
+    _marker_path="$(cd "$repo_canon" 2>/dev/null && git rev-parse --git-path "$_marker" 2>/dev/null)"
+    if [ -n "$_marker_path" ] && (cd "$repo_canon" 2>/dev/null && [ -e "$_marker_path" ]); then
+      err "prune: $repo_canon is mid-operation ($_marker present) - an absent file is not proof of retirement, refusing to prune"
+      return 9
+    fi
+  done
+
+  local found=0 removed=0 scanned=0 unprovable=0
+  local _prune_nl=$'\n'   # a literal newline, for the path-safety check below
+  local i dir src_abs src_canon link link_base tgt tgt_abs tgt_dir tgt_base canon_dir rel out _recheck _tgt_len _tgt_bytes
+  for i in "${!prune_dirs[@]}"; do
+   dir="${prune_dirs[$i]}"
    if [ ! -d "$dir" ]; then continue; fi
    # AN UNREADABLE DIRECTORY MUST NOT LOOK CLEAN. `-d` is true for a directory we cannot
    # list, the glob then fails to enumerate, the literal "dir/*" is skipped as a
@@ -513,6 +840,15 @@ prune_broken_skill_symlinks() {
      return 7
    fi
    scanned=$((scanned + 1))
+   # The ONE directory in the repo that links in $dir are allowed to point at. If it
+   # cannot be canonicalized it cannot be compared against, so nothing in this directory
+   # is provable and the whole directory is skipped OUT LOUD - never silently.
+   src_abs="$repo_canon/${prune_srcs[$i]}"
+   if ! src_canon="$(cd "$src_abs" 2>/dev/null && pwd -P)"; then
+     warn "prune: $src_abs does not exist - no link in $dir can be proven ours, skipping it"
+     unprovable=$((unprovable + 1))
+     continue
+   fi
    for link in "$dir"/*; do
     # Symlinks only. Skips real dirs/files AND the un-expanded glob when the dir is
     # empty (that literal is neither a symlink nor extant).
@@ -520,7 +856,52 @@ prune_broken_skill_symlinks() {
     # Broken only. -e follows the link, so a live target makes this true -> skip.
     if [ -e "$link" ]; then continue; fi
 
-    tgt="$(readlink "$link")" || continue
+    # READ THE TARGET, THEN PROVE THE READ WAS LOSSLESS.
+    # A plain tgt="$(readlink "$link")" strips every trailing newline, so a link pointing
+    # at "retired-hook.sh\n" reads back as "retired-hook.sh" - a DIFFERENT path - and is
+    # then measured against that other path's history and deleted. Worse, readlink itself
+    # cannot express the difference: its output ends in exactly one newline whether the
+    # target has one or not, so the terminator and a real trailing newline are the same
+    # byte. There is no way to recover the distinction from the output alone.
+    #
+    # So it is not recovered, it is DETECTED. A symlink's st_size IS the byte length of
+    # its stored target, so comparing that against what we read catches any discrepancy -
+    # a swallowed trailing newline above all - and a link we cannot read exactly is a
+    # "cannot tell", never a candidate. The sentinel X marks the true end of the output so
+    # the one newline removed is only ever the terminator.
+    tgt="$(readlink "$link" && printf X)"
+    case "$tgt" in
+      *X) tgt="${tgt%X}"; tgt="${tgt%"$_prune_nl"}" ;;
+      *)  warn "prune: cannot read the target of $link - leaving it alone"
+          unprovable=$((unprovable + 1)); continue ;;
+    esac
+    # GNU form FIRST, and the result is validated as digits before it is trusted. `-f` is
+    # "format" on BSD stat but "filesystem" on GNU stat, so probing BSD-first can SUCCEED
+    # on GNU and hand back filesystem output that is not a length at all - which would fail
+    # the compare for every link and quietly render the prune inert.
+    # `|| _x=""` on every probe, deliberately: install.sh runs under `set -e`, and a bare
+    # assignment from a failing command substitution ABORTS THE WHOLE INSTALLER. The BSD
+    # box fails `stat -c` by design, so without this the first broken link found would kill
+    # the run. The test suite disables `set -e` when it sources this file, so only the
+    # CLI-driven row can ever catch that - which is exactly how it was caught.
+    _tgt_len="$(stat -c %s "$link" 2>/dev/null)" || _tgt_len=""
+    case "$_tgt_len" in
+      ''|*[!0-9]*) _tgt_len="$(stat -f %z "$link" 2>/dev/null)" || _tgt_len="" ;;
+    esac
+    # BYTES on both sides. st_size is a byte count, while ${#tgt} counts CHARACTERS in a
+    # multibyte locale, so a single non-ASCII byte anywhere in the path - a repo checked
+    # out under an accented directory name, a non-ASCII username - would make the two
+    # disagree forever and refuse a perfectly good link on every run.
+    _tgt_bytes="$(printf '%s' "$tgt" | wc -c | tr -d '[:space:]')" || _tgt_bytes=""
+    case "$_tgt_len$_tgt_bytes" in
+      ''|*[!0-9]*)
+        warn "prune: cannot measure the stored target of $link - leaving it alone"
+        unprovable=$((unprovable + 1)); continue ;;
+    esac
+    if [ "$_tgt_len" != "$_tgt_bytes" ]; then
+      warn "prune: the target of $link does not read back byte-for-byte - leaving it alone"
+      unprovable=$((unprovable + 1)); continue
+    fi
     # Resolve to an absolute path (install writes absolute targets, but be safe).
     case "$tgt" in
       /*) tgt_abs="$tgt" ;;
@@ -530,28 +911,87 @@ prune_broken_skill_symlinks() {
     # this broken link's ULTIMATE residence cannot be proven in-repo (the next hop can
     # point anywhere - e.g. an in-repo proxy that itself points outside), so fail SAFE
     # and skip. We only prune when the immediate target is a real, non-symlink path
-    # whose parent canonicalizes inside the repo.
-    if [ -L "$tgt_abs" ]; then continue; fi
-    tgt_dir="$(dirname "$tgt_abs")"
-    tgt_base="$(basename "$tgt_abs")"
+    # sitting directly in the repo source directory.
+    if [ -L "$tgt_abs" ]; then unprovable=$((unprovable + 1)); continue; fi
 
-    # "Inside repo?" The leaf is gone, so canonicalize the PARENT (physical, which
-    # also collapses /tmp -> /private/tmp the way $REPO_DIR already is) and re-append
-    # the leaf. If the parent CANNOT be canonicalized (its subtree is gone too) we
-    # cannot PROVE the target resolves inside the repo - a lexical prefix match is not
-    # proof, because an intermediate symlink on the vanished path could have pointed
-    # out of the repo - so we fail SAFE and skip it. Only a canonically-proven in-repo
-    # target is ever pruned.
-    inside=0
-    if canon_dir="$(cd "$tgt_dir" 2>/dev/null && pwd -P)"; then
-      canon="$canon_dir/$tgt_base"
-      case "$canon" in "$repo_canon"/*) inside=1 ;; esac
+    # A NEWLINE ANYWHERE IN THESE PATHS IS A "CANNOT TELL", NOT A CANDIDATE.
+    # `$(...)` strips trailing newlines, so a link named "foo.sh\n" would compare equal to
+    # "foo.sh" and then be measured against the history of "claude/hooks/foo.sh" - a
+    # DIFFERENT path. If that other path happened to be retired, a user link this repo
+    # never shipped would be deleted on evidence gathered about something else. The
+    # installer never creates such a name, so refusing costs nothing.
+    case "$link$tgt$tgt_abs" in
+      *"$_prune_nl"*)
+        warn "prune: $link or its target contains a newline - cannot prove it, leaving it alone"
+        unprovable=$((unprovable + 1)); continue ;;
+    esac
+    # Parameter expansion, NOT dirname/basename: it is exact, and no command substitution
+    # means nothing can be silently trimmed on the way through.
+    tgt_dir="${tgt_abs%/*}"; [ -n "$tgt_dir" ] || tgt_dir="/"
+    tgt_base="${tgt_abs##*/}"
+    link_base="${link##*/}"
+
+    # SHAPE. The leaf is gone, so canonicalize the PARENT (physical, which also collapses
+    # /tmp -> /private/tmp the way $REPO_DIR already is). It must be the source directory
+    # ITSELF - not merely somewhere beneath the repo root - and the basenames must match,
+    # because that is the only shape this installer ever writes. If the parent cannot be
+    # canonicalized at all (its subtree is gone too) nothing can be compared and the link
+    # is left alone. A lexical prefix match is never accepted as proof: an intermediate
+    # symlink on the vanished path could have pointed anywhere.
+    if ! canon_dir="$(cd "$tgt_dir" 2>/dev/null && pwd -P)"; then
+      unprovable=$((unprovable + 1)); continue
     fi
-    if [ "$inside" != "1" ]; then continue; fi
+    if [ "$canon_dir" != "$src_canon" ]; then continue; fi
+    if [ "$tgt_base" != "$link_base" ]; then continue; fi
 
-    found=$((found + 1))
+    # GIT PROVENANCE. rel is built from the PROVEN shape, never by string surgery on the
+    # target path. --literal-pathspecs so a name containing pathspec magic or a glob is
+    # matched as the literal path it is.
+    rel="${prune_srcs[$i]}/$tgt_base"
+
+    # (a) Still in the checked-out commit? Then it is not retired and the absence on disk
+    #     is a working-tree state - a partial or sparse checkout, an interrupted one.
+    #     A git command that FAILS is "cannot tell", never "absent".
+    if ! out="$(git -C "$repo_canon" --literal-pathspecs ls-tree HEAD -- "$rel" 2>/dev/null)"; then
+      warn "prune: cannot read HEAD for $rel - leaving $link alone"
+      unprovable=$((unprovable + 1)); continue
+    fi
+    if [ -n "$out" ]; then continue; fi
+    # (b) Still in the index? Then the file is under an unstaged deletion or a stashed
+    #     change. Absent from disk, absolutely not retired.
+    if ! out="$(git -C "$repo_canon" --literal-pathspecs ls-files -- "$rel" 2>/dev/null)"; then
+      warn "prune: cannot read the index for $rel - leaving $link alone"
+      unprovable=$((unprovable + 1)); continue
+    fi
+    if [ -n "$out" ]; then continue; fi
+    # (c) Did this repo EVER ship it, reachable from HEAD? Empty means the path is not
+    #     part of this history at all: a user's own untracked file, a path that lives
+    #     only on another branch, or a path belonging to a submodule's history rather
+    #     than this one. None of those are ours to delete.
+    #     --full-history because the question is existence, not a readable log: default
+    #     history simplification can drop the commit that carried a path through a merge.
+    if ! out="$(git -C "$repo_canon" --literal-pathspecs rev-list --full-history --max-count=1 HEAD -- "$rel" 2>/dev/null)"; then
+      warn "prune: cannot read history for $rel - leaving $link alone"
+      unprovable=$((unprovable + 1)); continue
+    fi
+    if [ -z "$out" ]; then continue; fi
+
     if [ "$mode" = "apply" ]; then
-      if rm -f "$link"; then
+      # Re-prove the classification immediately before the unlink. Everything above was
+      # measured on an earlier read of the filesystem; if the path is no longer a broken
+      # symlink, something replaced it and this removal is not the one that was proven.
+      # THE TARGET IS RE-READ TOO, not just the link type: swapping one broken symlink for
+      # a broken symlink to a DIFFERENT, unproven target leaves every -L/-e test true, so
+      # a type-only recheck would still delete on evidence gathered about another path.
+      _recheck="$(readlink "$link" && printf X)"
+      _recheck="${_recheck%X}"; _recheck="${_recheck%"$_prune_nl"}"
+      if [ ! -L "$link" ] || [ -e "$link" ] || [ "$_recheck" != "$tgt" ]; then
+        warn "prune: $link changed underneath the scan - leaving it alone"
+        unprovable=$((unprovable + 1))
+        continue
+      fi
+      found=$((found + 1))
+      if rm -f -- "$link"; then
         removed=$((removed + 1))
         ok "prune: removed dead link $link -> $tgt"
       else
@@ -559,15 +999,24 @@ prune_broken_skill_symlinks() {
         return 6
       fi
     else
+      found=$((found + 1))
       warn "prune: would remove dead link $link -> $tgt"
     fi
    done
   done
 
+  # NO CLEAN LINE IF ANYTHING WENT UNPROVEN. "no dead links" and "removed N" both read as
+  # "this directory is now in a known good state". That is only true when every candidate
+  # was decided. A skipped directory, a newline path, a failed git query and a link that
+  # changed mid-scan all leave something undecided, and each one is counted so the summary
+  # has to say so - a run that examined nothing must never look like a run that found
+  # nothing.
   if [ "$scanned" -eq 0 ]; then
     info "prune: none of ${prune_dirs[*]} exist - nothing to prune"
+  elif [ "$unprovable" -gt 0 ]; then
+    warn "prune: $found removable, $removed removed, and $unprovable link(s) or directories LEFT UNDECIDED because ownership could not be proven - this is not a clean report"
   elif [ "$found" -eq 0 ]; then
-    info "prune: no dead repo-sourced links under ${prune_dirs[*]}"
+    info "prune: no dead repo-deployed links under ${prune_dirs[*]}"
   elif [ "$mode" = "apply" ]; then
     ok "prune: removed $removed dead link(s)"
   else
@@ -1467,6 +1916,9 @@ Usage:
   ./install.sh --prune-skills   List dead repo symlinks under ~/.claude/{skills,hooks} (dry run), then exit
   ./install.sh --prune-skills-apply
                                 Remove those dead skill symlinks (explicit approval)
+  ./install.sh --verify-skills [NAME...]
+                                Check installed skills against their repo source, then
+                                exit. 0 clean, 1 missing-or-stale, 2 usage
   ./install.sh --help           Show this help
 
 Components (for --only KEYS):
@@ -1525,6 +1977,16 @@ while [[ $# -gt 0 ]]; do
     --browser)      shift ;;
     --prune-skills)       PRUNE_SKILLS=dryrun; shift ;;
     --prune-skills-apply) PRUNE_SKILLS=apply;  shift ;;
+    # Optional trailing skill names, e.g. `--verify-skills sidecoach tactical-polish`.
+    # Only bare words are consumed, so a following flag still reaches this parser
+    # instead of being swallowed as a skill name and reported as "unknown skill".
+    --verify-skills)
+      VERIFY_SKILLS=1; shift
+      VERIFY_SKILL_NAMES=()
+      while [ "$#" -gt 0 ] && [ "${1#-}" = "$1" ]; do
+        VERIFY_SKILL_NAMES+=("$1"); shift
+      done
+      ;;
     --help|-h)      print_help; exit 0 ;;
     --personal)     shift ;;  # already consumed in pre-pass, just shift past it
     *)              err "Unknown flag: $1"; print_help; exit 2 ;;
@@ -1542,6 +2004,17 @@ if [ -n "${PRUNE_SKILLS:-}" ]; then
   _prune_mode="$PRUNE_SKILLS"
   if [ "${DRY_RUN:-0}" = "1" ]; then _prune_mode=dryrun; fi
   prune_broken_skill_symlinks "$_prune_mode"
+  exit $?
+fi
+
+# Standalone maintenance action: report whether what is installed under
+# ~/.claude/skills still matches this repo, then exit without running the installer.
+# READ-ONLY - it never writes, so it is safe to run at any time, including against a
+# machine mid-drift when the whole question is what changed before anything overwrites it.
+#
+# Exits with verify_installed_skills' own code: 0 clean, 1 missing-or-stale, 2 usage.
+if [ "${VERIFY_SKILLS:-0}" = "1" ]; then
+  verify_installed_skills ${VERIFY_SKILL_NAMES[@]+"${VERIFY_SKILL_NAMES[@]}"}
   exit $?
 fi
 
@@ -2493,7 +2966,10 @@ deactivate_skills() {
   [ -d "$CLAUDE_DIR/skills/motion-reference" ] && rm -rf "$CLAUDE_DIR/skills/motion-reference"
   [ -d "$CLAUDE_DIR/skills/design-build" ] && rm -rf "$CLAUDE_DIR/skills/design-build"
   [ -d "$CLAUDE_DIR/skills/curate" ] && rm -rf "$CLAUDE_DIR/skills/curate"
-  [ -d "$CLAUDE_DIR/skills/design-references" ] && rm -rf "$CLAUDE_DIR/skills/design-references"
+  # Trailing conditional again - this one ends the whole function.
+  if [ -d "$CLAUDE_DIR/skills/design-references" ]; then
+    rm -rf "$CLAUDE_DIR/skills/design-references"
+  fi
   # NOTE: ~/.claude/design-references/ is the user's personal catalog (data, not code).
   # Deactivation removes the SKILLS but preserves the catalog so the user does not lose curated references.
 }
@@ -2631,7 +3107,10 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 }
 
 deactivate_statusline() {
-  [ -L "$CLAUDE_DIR/statusline-command.sh" ] && rm -f "$CLAUDE_DIR/statusline-command.sh"
+  # Same trailing-conditional defect as deactivate_design_skill.
+  if [ -L "$CLAUDE_DIR/statusline-command.sh" ]; then
+    rm -f "$CLAUDE_DIR/statusline-command.sh"
+  fi
 }
 
 deactivate_cmux() {
@@ -2765,7 +3244,11 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 }
 
 deactivate_task_list() {
-  [ -d "$CLAUDE_DIR/skills/task-list" ] && rm -rf "$CLAUDE_DIR/skills/task-list"
+  # See deactivate_design_skill: a trailing `[ -d ] && rm` reports "already gone" as
+  # failure and aborts the remaining plan.
+  if [ -d "$CLAUDE_DIR/skills/task-list" ]; then
+    rm -rf "$CLAUDE_DIR/skills/task-list"
+  fi
 }
 
 deactivate_sidecoach() {
@@ -2846,7 +3329,16 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 # design-references deliberately preserves the user's ~/.claude/design-references/ catalog.
 deactivate_design_skill() {
   local dir="$1"
-  [ -d "$CLAUDE_DIR/skills/$dir" ] && rm -rf "$CLAUDE_DIR/skills/$dir"
+  # `if`, NOT `[ -d X ] && rm -rf X`. As the LAST command of the function, that idiom
+  # returns 1 whenever the directory is already absent - "nothing to remove" reported as
+  # failure. deactivate_component captures this status directly (`_dc_rc=$?`) and
+  # apply_pending treats a non-zero deactivate as a failed component and ABORTS THE REST
+  # OF THE PLAN, so a user removing several components silently lost every one after the
+  # first already-absent skill. An `if` with a false condition is 0, and still propagates
+  # a genuine rm failure when the branch runs.
+  if [ -d "$CLAUDE_DIR/skills/$dir" ]; then
+    rm -rf "$CLAUDE_DIR/skills/$dir"
+  fi
 }
 
 # 2026-06 rename migration (improv -> improv): pre-rename installs wrote
@@ -2950,7 +3442,15 @@ deactivate_component() {
     tilt-lab)   deactivate_tilt_lab ;;
     justify) deactivate_justify ;;
     lotus)   deactivate_lotus ;;
-    tactical-polish)   deactivate_design_skill tactical-polish; for _legacy in "$CLAUDE_DIR"/skills/*interfaces*; do [ -e "$_legacy" ] && rm -rf "$_legacy"; done ;;
+    tactical-polish)   deactivate_design_skill tactical-polish
+                       # The legacy-dir sweep runs SECOND, so its status is the arm's
+                       # status. With `[ -e ] && rm` the unmatched glob left 1 here and
+                       # aborted the plan even on a successful removal - this arm failed
+                       # on every machine that never had the legacy directory, which is
+                       # all of them.
+                       for _legacy in "$CLAUDE_DIR"/skills/*interfaces*; do
+                         if [ -e "$_legacy" ]; then rm -rf "$_legacy"; fi
+                       done ;;
     component-gallery) deactivate_design_skill component-gallery-reference ;;
     fontshare)         deactivate_design_skill fontshare-reference ;;
     motion)            deactivate_design_skill motion-reference ;;
@@ -4952,10 +5452,7 @@ if picked memory; then
   # advertises a command the machine does not have. Same shape as reflect (nudge hook +
   # skill in one component).
   info "Installing consolidate skill..."
-  mkdir -p "$CLAUDE_DIR/skills/consolidate"
-  safe_cp "$REPO_DIR/claude/skills/consolidate/SKILL.md" \
-     "$CLAUDE_DIR/skills/consolidate/SKILL.md"
-  ok "consolidate skill installed"
+  install_bundled_skill consolidate
 
   # (b) CLAUDE.md memory-discipline section append
   MEMORY_BEGIN_MARKER='<!-- improv:memory-discipline:begin -->'
@@ -5135,57 +5632,17 @@ fi
 if picked skills; then
   echo ""
   info "--- Anthropic Skills ---"
-  # Bundled skill: tactical-polish (shipped with dotfiles, no npx needed)
-  info "Installing tactical-polish (tactical UI polish)..."
-  mkdir -p "$CLAUDE_DIR/skills/tactical-polish"
-  for tp_file in SKILL.md typography.md surfaces.md animations.md performance.md motion-review.md; do
-    safe_cp "$REPO_DIR/claude/skills/tactical-polish/$tp_file" \
-       "$CLAUDE_DIR/skills/tactical-polish/$tp_file"
+  # Every skill below goes through install_bundled_skill, which routes each file
+  # through link_or_copy_data (the hook deploy-mode decision) instead of a frozen
+  # safe_cp, and treats the repo source directory as the manifest of what the skill
+  # contains. These blocks used to hand-roll a copy each, which is how the a la carte
+  # path ended up installing a DIFFERENT set of files than the bundle path for the
+  # same skill.
+  for _skill in tactical-polish component-gallery-reference fontshare-reference \
+                motion-reference design-build curate design-references \
+                social-media design-team visual-effects icon-source voice-output; do
+    install_bundled_skill "$_skill"
   done
-  ok "tactical-polish installed"
-
-  # Bundled skill: component-gallery-reference (shipped with dotfiles, no npx needed)
-  info "Installing component-gallery-reference (UI component research via component.gallery)..."
-  mkdir -p "$CLAUDE_DIR/skills/component-gallery-reference"
-  safe_cp "$REPO_DIR/claude/skills/component-gallery-reference/SKILL.md" \
-     "$CLAUDE_DIR/skills/component-gallery-reference/SKILL.md"
-  ok "component-gallery-reference installed"
-
-  # Bundled skill: fontshare-reference (shipped with dotfiles, no npx needed)
-  info "Installing fontshare-reference (typeface research via fontshare.com)..."
-  mkdir -p "$CLAUDE_DIR/skills/fontshare-reference"
-  safe_cp "$REPO_DIR/claude/skills/fontshare-reference/SKILL.md" \
-     "$CLAUDE_DIR/skills/fontshare-reference/SKILL.md"
-  ok "fontshare-reference installed"
-
-  # Bundled skill: motion-reference (canonical GSAP + Lenis patterns)
-  info "Installing motion-reference (GSAP + Lenis animation/scroll patterns)..."
-  mkdir -p "$CLAUDE_DIR/skills/motion-reference"
-  safe_cp "$REPO_DIR/claude/skills/motion-reference/SKILL.md" \
-     "$CLAUDE_DIR/skills/motion-reference/SKILL.md"
-  safe_cp "$REPO_DIR/claude/skills/motion-reference/VOCABULARY.md" \
-     "$CLAUDE_DIR/skills/motion-reference/VOCABULARY.md"
-  ok "motion-reference installed"
-
-  # Bundled skill: design-build (the design pipeline orchestrator)
-  info "Installing design-build (the design pipeline orchestrator - /design-build runs the full sequence)..."
-  mkdir -p "$CLAUDE_DIR/skills/design-build"
-  safe_cp "$REPO_DIR/claude/skills/design-build/SKILL.md" \
-     "$CLAUDE_DIR/skills/design-build/SKILL.md"
-  ok "design-build installed"
-
-  # Bundled skill pair: curate + design-references (personal design-reference catalog system)
-  info "Installing curate (design-reference capture wizard)..."
-  mkdir -p "$CLAUDE_DIR/skills/curate"
-  safe_cp "$REPO_DIR/claude/skills/curate/SKILL.md" \
-     "$CLAUDE_DIR/skills/curate/SKILL.md"
-  ok "curate installed"
-
-  info "Installing design-references (auto-consult personal catalog on UI builds)..."
-  mkdir -p "$CLAUDE_DIR/skills/design-references"
-  safe_cp "$REPO_DIR/claude/skills/design-references/SKILL.md" \
-     "$CLAUDE_DIR/skills/design-references/SKILL.md"
-  ok "design-references installed"
 
   # Seed the catalog directory + vocabulary file (only if not already present - preserve user data)
   if [ ! -d "$CLAUDE_DIR/design-references" ]; then
@@ -5216,39 +5673,6 @@ VOCABEOF
     ok "design-references catalog already exists - leaving user data intact"
   fi
 
-  # Bundled skill: social-media (platform specs for 13 social platforms)
-  info "Installing social-media (social platform specs + safe zones)..."
-  mkdir -p "$CLAUDE_DIR/skills/social-media"
-  safe_cp "$REPO_DIR/claude/skills/social-media/SKILL.md" \
-     "$CLAUDE_DIR/skills/social-media/SKILL.md"
-  ok "social-media installed"
-
-  # Bundled skill: design-team (multi-agent design sprints)
-  info "Installing design-team (multi-agent design sprints + CD review)..."
-  mkdir -p "$CLAUDE_DIR/skills/design-team"
-  safe_cp "$REPO_DIR/claude/skills/design-team/SKILL.md" \
-     "$CLAUDE_DIR/skills/design-team/SKILL.md"
-  ok "design-team installed"
-
-  # Bundled skill: visual-effects (shaders + FX, recursive copy for subdirectories)
-  info "Installing visual-effects (14 shaders + 25 FX + post-processing)..."
-  mkdir -p "$CLAUDE_DIR/skills/visual-effects"
-  cp -r "$REPO_DIR/claude/skills/visual-effects/" "$CLAUDE_DIR/skills/visual-effects/"
-  ok "visual-effects installed"
-
-  # Bundled skill: icon-source (8-library icon selection protocol)
-  info "Installing icon-source (8 libraries, selection protocol)..."
-  mkdir -p "$CLAUDE_DIR/skills/icon-source"
-  safe_cp "$REPO_DIR/claude/skills/icon-source/SKILL.md" \
-     "$CLAUDE_DIR/skills/icon-source/SKILL.md"
-  ok "icon-source installed"
-
-  # Bundled skill: voice-output (behavioral guidance for TTS)
-  info "Installing voice-output (TTS behavioral guidance)..."
-  mkdir -p "$CLAUDE_DIR/skills/voice-output"
-  safe_cp "$REPO_DIR/claude/skills/voice-output/SKILL.md" \
-     "$CLAUDE_DIR/skills/voice-output/SKILL.md"
-  ok "voice-output installed"
 fi
 
 # ============================================================
@@ -5258,32 +5682,17 @@ fi
 # without taking the whole pipeline. These share their source with the
 # `skills` bundle above; installing both is idempotent (same file copied).
 
-# Helper: copy one bundled skill dir into ~/.claude/skills/. Pass a second arg
-# of 1 to recurse (visual-effects ships subdirectories of shader source).
-install_bundled_skill() {
-  local name="$1" recursive="${2:-0}"
-  if [ ! -d "$REPO_DIR/claude/skills/$name" ]; then
-    warn "skills/$name source missing in repo - skipping"
-    return 0
-  fi
-  mkdir -p "$CLAUDE_DIR/skills/$name"
-  if [ "$recursive" = "1" ]; then
-    cp -r "$REPO_DIR/claude/skills/$name/." "$CLAUDE_DIR/skills/$name/"
-  else
-    safe_cp "$REPO_DIR/claude/skills/$name/SKILL.md" "$CLAUDE_DIR/skills/$name/SKILL.md"
-  fi
-  ok "skills/$name installed"
-}
+# install_bundled_skill now lives in the sourceable library region near the top of
+# this file, beside the link_or_copy_data primitive it routes through. It moved there
+# so claude/hooks/test-install-skill-deploy.sh can source and exercise it without
+# running the installer body, and so both the bundle and the a la carte paths call the
+# SAME deployment code - they had drifted into two copies that disagreed about which
+# files a skill even contains.
 
 if picked tactical-polish; then
   echo ""
   info "--- tactical-polish (a la carte) ---"
-  mkdir -p "$CLAUDE_DIR/skills/tactical-polish"
-  for tp_file in SKILL.md typography.md surfaces.md animations.md performance.md motion-review.md; do
-    safe_cp "$REPO_DIR/claude/skills/tactical-polish/$tp_file" \
-       "$CLAUDE_DIR/skills/tactical-polish/$tp_file"
-  done
-  ok "tactical-polish installed"
+  install_bundled_skill tactical-polish
 fi
 
 picked component-gallery && { echo ""; info "--- component-gallery-reference (a la carte) ---"; install_bundled_skill component-gallery-reference; }
@@ -5293,7 +5702,7 @@ picked design-build      && { echo ""; info "--- design-build (a la carte) ---";
 picked curate            && { echo ""; info "--- curate (a la carte) ---"; install_bundled_skill curate; }
 picked social-media      && { echo ""; info "--- social-media (a la carte) ---"; install_bundled_skill social-media; }
 picked design-team       && { echo ""; info "--- design-team (a la carte) ---"; install_bundled_skill design-team; }
-picked visual-effects    && { echo ""; info "--- visual-effects (a la carte) ---"; install_bundled_skill visual-effects 1; }
+picked visual-effects    && { echo ""; info "--- visual-effects (a la carte) ---"; install_bundled_skill visual-effects; }
 picked icon-source       && { echo ""; info "--- icon-source (a la carte) ---"; install_bundled_skill icon-source; }
 
 if picked design-references; then
@@ -5969,10 +6378,7 @@ if picked reflect; then
 
   # Skill file
   info "Installing reflect skill..."
-  mkdir -p "$CLAUDE_DIR/skills/reflect"
-  safe_cp "$REPO_DIR/claude/skills/reflect/SKILL.md" \
-     "$CLAUDE_DIR/skills/reflect/SKILL.md"
-  ok "reflect skill installed"
+  install_bundled_skill reflect
 
   # reflect-nudge deploys + wires via install_app_hooks (see the `picked reflect &&` line in
   # the app-hook pass). Its SessionStart command keeps the SESSION_CWD="$(pwd)" prefix -
@@ -6055,10 +6461,7 @@ fi
 
 if picked task-list; then
   info "Installing /task-list skill..."
-  mkdir -p "$CLAUDE_DIR/skills/task-list"
-  safe_cp "$REPO_DIR/claude/skills/task-list/SKILL.md" \
-     "$CLAUDE_DIR/skills/task-list/SKILL.md"
-  ok "/task-list skill installed"
+  install_bundled_skill task-list
 fi
 
 # ============================================================
@@ -6067,8 +6470,18 @@ fi
 
 if picked justify; then
   info "Installing Justify..."
-  bash "$REPO_DIR/justify/install.sh"
-  ok "Justify installed"
+  # ROUTED THROUGH THE LEDGER, not left bare. The delegated installer now treats a
+  # failed build as FATAL rather than warning and carrying on, which is correct - it
+  # used to register an MCP server whose entrypoint the build had not produced and
+  # then exit 0. But a bare call means that fatal exit aborts this whole run under
+  # `set -e`, killing every component queued after it. Recording instead keeps the
+  # run going, marks justify failed rather than installed, and the end-of-run check
+  # turns it into a non-zero exit.
+  if bash "$REPO_DIR/justify/install.sh"; then
+    ok "Justify installed"
+  else
+    record_component_failure justify "justify/install.sh exited non-zero - see above."
+  fi
 fi
 
 # ============================================================
@@ -6077,8 +6490,14 @@ fi
 
 if picked lotus; then
   info "Installing Lotus..."
-  bash "$REPO_DIR/lotus/install.sh"
-  ok "Lotus installed"
+  # Same shape and same reason as the justify dispatch above: the delegated installer
+  # now fails fatally on a broken build instead of warning, so a bare call would abort
+  # every component queued after it.
+  if bash "$REPO_DIR/lotus/install.sh"; then
+    ok "Lotus installed"
+  else
+    record_component_failure lotus "lotus/install.sh exited non-zero - see above."
+  fi
 fi
 
 # ============================================================
@@ -6096,9 +6515,11 @@ if picked sidecoach; then
   (cd "$REPO_DIR/sidecoach" && npm install --silent && npm run build) \
     || warn "Sidecoach build failed - run 'cd sidecoach && npm run build' manually"
 
-  mkdir -p "$HOME/.claude/skills/sidecoach"
-  ln -sf "$REPO_DIR/claude/skills/sidecoach/SKILL.md" \
-         "$HOME/.claude/skills/sidecoach/SKILL.md"
+  # Was a bare `ln -sf` of SKILL.md ALONE. Two defects: it ignored hook_deploy_mode, so a
+  # throwaway clone got a link that dangled the moment the clone was deleted; and the repo
+  # source also owns CHEATSHEET.md, which never deployed - a correctly-installed sidecoach
+  # was missing a file it ships. Flagged by Codex.
+  install_bundled_skill sidecoach
 
   # Sidecoach's 7 hooks deploy + wire via install_app_hooks (see the `picked sidecoach &&`
   # line in the app-hook pass). The 7th, sidecoach-detect, ships OPT-IN via the default-off
@@ -6410,10 +6831,7 @@ if picked tilt-lab; then
   # is useless without the dev server this block installs. Without it a fresh machine
   # gets the app but Claude has no /tilt-lab surface to reach it through.
   info "Installing tilt-lab skill..."
-  mkdir -p "$CLAUDE_DIR/skills/tilt-lab"
-  safe_cp "$REPO_DIR/claude/skills/tilt-lab/SKILL.md" \
-     "$CLAUDE_DIR/skills/tilt-lab/SKILL.md"
-  ok "tilt-lab skill installed"
+  install_bundled_skill tilt-lab
 
   # Launcher symlink on PATH (mirrors the sidecoach CLI idiom).
   chmod +x "$REPO_DIR/bin/tilt-lab-launcher.sh"
@@ -6612,6 +7030,31 @@ for k in "${KEYS[@]}"; do
   state_set "$k" "$s"
 done
 state_record_sha
+
+# ============================================================
+# Final-minus-one: prove the skills this run deployed actually landed.
+# ============================================================
+# The installer printed "skills/x installed" for every skill whether the bytes on disk
+# ended up matching the repo or not, because nothing ever read them back. On 2026-07-28
+# that gap was measured: every installed skill except sidecoach had drifted from its
+# source, six of them to content matching no commit in the repo's history, and a green
+# test suite said nothing about it.
+#
+# SCOPED TO WHAT THIS RUN DEPLOYED, deliberately. A no-argument sweep would fail a
+# `--only brain` run over a stale component it was never asked to touch, which is how a
+# check earns a reputation for crying wolf and gets ignored. Auditing everything on the
+# machine is what `--verify-skills` is for.
+#
+# Routed through record_component_failure so a drifted deploy flows into the same
+# ledger as every other partial failure and the run exits non-zero below.
+if [ "${#SKILLS_DEPLOYED[@]}" -gt 0 ]; then
+  echo ""
+  info "--- verifying deployed skills ---"
+  if ! verify_installed_skills "${SKILLS_DEPLOYED[@]}"; then
+    record_component_failure skills \
+      "deployed skills do not match their repo source - see the verify-skills errors above"
+  fi
+fi
 
 # ============================================================
 # Final: a run that could not fully apply a component exits non-zero.
