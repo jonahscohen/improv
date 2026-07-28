@@ -196,21 +196,78 @@ sys.exit(0 if isinstance(t.get('hook_data'),dict) and t['hook_data']
 [ "$rc" = "0" ] && ok "real repo: --audit still exits 0" || bad "real repo: --audit exits $rc"
 
 # Each specific companion that regressed before is deployed AND owned.
-for f in route-intent.json grounding-intent.json consolidate-intent.json; do
-  grep -q "$f" "$INSTALL" \
-    && ok "install.sh deploys $f" || bad "install.sh does not name $f"
+#
+# THESE SIX DEPLOY ROWS WERE VACUOUS UNTIL 2026-07-28. Both loops used
+# `grep -q "$name" install.sh`, which asks only whether a STRING occurs anywhere in a
+# 7000-line file. Every one of these names also appears in a DESCS UI paragraph and in
+# prose comments, so the rows were satisfied by text that deploys nothing. Measured:
+# deleting `route-intent.sh) echo "route-intent.json" ;;` from hook_data_files() - the
+# ONLY executable reference to route-intent.json in install.sh - left "install.sh
+# deploys route-intent.json" PASSing, while the table row two sections up correctly
+# went red. A comment-satisfiable check on the exact defect class this suite exists
+# for is worse than no check: it reads as coverage.
+#
+# Both halves now run executable code instead of matching text.
+#
+# COMPANIONS: run the REAL install_hook_data() into a throwaway sandbox and require
+# the file to LAND. Strictly stronger than any substring - it proves the deploy loop
+# produces the file, not that the installer mentions its name somewhere.
+data_lands() {  # $1 = owning hook, $2 = companion file expected on disk
+  local sb; sb="$(mktemp -d)" || { echo "FATAL: mktemp -d failed - refusing to use an unset path" >&2; exit 2; }
+  (
+    CLAUDE_DIR="$sb/claude"; REPO_DIR="$REPO"
+    mkdir -p "$CLAUDE_DIR/hooks"
+    # Real function text, extracted verbatim rather than paraphrased, so this
+    # breaks when the real deploy code changes.
+    eval "$(awk '/^hook_data_files\(\) \{/,/^\}/'   "$INSTALL")"
+    eval "$(awk '/^install_hook_data\(\) \{/,/^\}/' "$INSTALL")"
+    link_or_copy_data() { ln -sf "$1" "$2"; }
+    warn() { :; }
+    install_hook_data "$1"
+    [ -e "$CLAUDE_DIR/hooks/$2" ] && echo LANDED
+  )
+  rm -rf "$sb"
+}
+
+# HOOKS: build the set the installer actually deploys, by EXECUTING cluster_hooks()
+# over every cluster arm and by scraping install_app_hooks argument lists from
+# COMMENT-STRIPPED source. Prose can no longer satisfy either path.
+installer_deploys_hook() {  # $1 = hook filename
+  local h="$1" fn names c
+  fn="$(awk '/^cluster_hooks\(\) \{/,/^\}/' "$INSTALL")"
+  [ -n "$fn" ] || return 2
+  names="$(printf '%s' "$fn" | sed -n 's/^[[:space:]]*\([a-z0-9|-]*\))[[:space:]]*echo.*/\1/p' | tr '|' '\n')"
+  for c in $names; do
+    case " $(bash -c "$fn"$'\n'"cluster_hooks $c" 2>/dev/null) " in
+      *" $h "*) return 0 ;;
+    esac
+  done
+  sed 's/[[:space:]]#.*$//; /^[[:space:]]*#/d' "$INSTALL" \
+    | grep -F 'install_app_hooks' | tr ' ' '\n' | grep -qxF "$h" && return 0
+  return 1
+}
+
+for pair in route-intent.sh:route-intent.json \
+            grounding-gate.sh:grounding-intent.json \
+            consolidate-nudge.sh:consolidate-intent.json; do
+  h="${pair%%:*}"; f="${pair##*:}"
+  [ "$(data_lands "$h" "$f")" = "LANDED" ] \
+    && ok "install.sh actually deploys $f (install_hook_data executed)" \
+    || bad "install_hook_data $h did not produce $f"
   python3 -c "
 import json,sys
 t=json.load(open('$TREE'))
 own=[k for k,v in (t.get('hook_data') or {}).items() if '$f' in (v or [])]
 sys.exit(0 if own else 1)" \
     && ok "$f has an owning hook in the registry" || bad "$f has no owning hook"
-done
-
-# The consuming hooks must themselves still be deployed - a companion with no hook
-# is as dead as a hook with no companion.
-for h in route-intent.sh grounding-gate.sh consolidate-nudge.sh; do
-  grep -q "$h" "$INSTALL" && ok "install.sh deploys $h" || bad "install.sh does not name $h"
+  # The consuming hook must itself still be deployed - a companion with no hook
+  # is as dead as a hook with no companion.
+  installer_deploys_hook "$h"
+  case $? in
+    0) ok "install.sh actually deploys $h (deploy lists executed/scraped)" ;;
+    2) bad "could not extract cluster_hooks() from install.sh - $h is unverifiable" ;;
+    *) bad "$h is in no cluster_hooks arm and no install_app_hooks list" ;;
+  esac
 done
 
 # ---------------------------------------------------------------------------

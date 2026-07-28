@@ -219,17 +219,37 @@ assert_routes "sweep plus lookup escalates to Explore" \
 # two BARE word matches (\brefactor\b, \bredesign\b) that fired on any mention of the
 # word - including a negation, a past-tense complaint, and an open question. Those
 # verbs now require an IMPERATIVE shape: the verb at a clause boundary AND a
-# determiner-led object. These three cases hit no exempt pattern, so silence here can
-# only come from the pattern shape itself.
+# determiner-led object.
+#
+# WHICH MECHANISM ACTUALLY HOLDS EACH ROW (measured 2026-07-28, not assumed). This
+# comment used to claim "silence here can only come from the pattern shape itself"
+# for all three rows. That was false for two of them, and it is the exact
+# mechanism-fiction this suite elsewhere warns about: revert the verbs to the bare
+# \brefactor\b / \bredesign\b form and only ONE of the three goes red. The other two
+# carry a deliberation marker ("do not", "should we") and are held by
+# suppress.deliberation_markers, so they stay green under that revert. They are
+# DOUBLE-COVERED - real regression rows for real prompts, but not evidence about the
+# pattern shape. Each row below says which mutation turns it red.
+#
+# bare-verb revert ONLY (no deliberation marker present, so the shape is the sole
+# mechanism). This row and the redesign row are the pattern-shape evidence.
+assert_silent "shape: a bare refactor mention with no determiner does not route" \
+  "the ticket mentions refactor work across the parser but i only want triage notes today"
+# double-covered: needs BOTH the bare-verb revert AND the markers removed.
 assert_silent "a negated refactor mention does not route" \
   "do not refactor it, just explain why the current shape is so slow to run"
+# bare-verb revert ONLY.
 assert_silent "a past-tense redesign complaint does not route" \
   "i hate the redesign we shipped last quarter and it still bothers me today"
+# double-covered: needs BOTH the bare-verb revert AND the markers removed.
 assert_silent "deliberating about a refactor does not route" \
   "should we refactor this or leave it alone until the next release cycle"
 # A softener ("please", "can you") is NOT a clause boundary of its own. Treating it as
 # one let a deliberation through: "should we please refactor..." matched on `please`
 # sitting mid-clause. The softeners are inside the optional group instead.
+# Double-covered: "should we" is also a deliberation marker, so promoting the softener
+# back to a boundary token alone does NOT turn this row red. It is a future-widening
+# guard on the softener, not evidence about the shipped boundary alternation.
 assert_silent "a softener does not make a deliberation imperative" \
   "should we please refactor the parser module or wait until the next cycle"
 # ...while a real instruction still reaches the tier, including mid-sentence and
@@ -286,6 +306,10 @@ assert_silent "a named-agent dispatch brief does not route" \
   'You are "stage2bd", finishing Stage 2. Collaborator is Jonah. First map the routing landscape.'
 assert_silent "a research-unit brief does not route" \
   "RESEARCH unit 8 of the dispatch plan. Map the coupling of each of the six cmux hooks."
+# DOUBLE, and deliberately so: a compaction summary is matched by BOTH the
+# `envelope_exempt` anchor and the prose `exempt` list, so emptying either one alone
+# leaves this row green. Only removing both turns it red. Belt and braces on the
+# highest-volume envelope, not evidence about either mechanism on its own.
 assert_silent "a compaction summary is not a user request" \
   "This session is being continued from a previous conversation that ran out of context. Summary: find all the callers."
 
@@ -317,20 +341,47 @@ assert_routes "a build-me request routes to opus-executor" \
 # explore, modify, build me). The openers are verb phrases, so they must sit
 # inside an optional prefix group behind a real clause boundary, never as
 # boundary tokens of their own.
+#
+# MECHANISM AUDIT (measured 2026-07-28, per-row mutation). These rows do NOT all
+# prove the boundary rule the paragraph above describes. Three shapes are present
+# and they are not interchangeable:
+#   BOUNDARY  strip the imperative prefix group and the row goes red. Real evidence
+#             about the shipped pattern shape. (the two reported-speech rows and the
+#             rhetorical-question row below)
+#   WIDENING  green under every revert of the SHIPPED lexicon; only goes red if the
+#             openers are promoted INTO the boundary alternation, which is the
+#             widening that was measured and reverted on 2026-07-27. A guard against
+#             re-landing that, not evidence about what shipped. Labelled as such.
+#   DOUBLE    held by suppress.deliberation_markers AND by the boundary rule, so
+#             neither revert alone turns it red. Real regression rows, weak evidence.
+# Do not read a green row here as proof the boundary rule works; read the label.
+# WIDENING: only the opener-as-boundary-token widening turns this red.
 assert_silent "deliberating about an analysis does not route" \
   "do we need to run an analysis on those four repos before the release, or not"
+# DOUBLE: "dont" is also a deliberation marker, so neither revert alone turns it red.
 assert_silent "negated scan intent does not route" \
   "i dont think we need to scan the project folders for time spent, it is fine"
+# DOUBLE: "do not" is also a deliberation marker.
 assert_silent "an explicit refusal to modify does not route" \
   "i do not want you to modify the generator to support localstorage; explain first"
+# BOUNDARY: strip the imperative prefix group and these two go red.
 assert_silent "reported speech about a build request does not route" \
   "the issue title says build me a dashboard for the metrics, but I need triage notes"
 assert_silent "reported speech about exploring does not route" \
   "the proposal says explore the sidecoach directory next, but I only want risks"
+# REPAIRED 2026-07-28 - this row was VACUOUS. Its prompt was "do we need a breakdown
+# of every project last week...", and the breakdown matcher requires one of
+# `give me|i need|i want|i'd like` before "a breakdown of". "we need" is in none of
+# them, so the prompt matched NOTHING in any lexicon state: guards on, guards off,
+# patterns reverted. It could not fail for the reason it names. Rebuilt from the
+# matcher's OWN tokens ("i need a breakdown of") behind a deliberation, so removing
+# suppress.deliberation_markers now turns it red.
 assert_silent "deliberating about a breakdown does not route" \
-  "do we need a breakdown of every project last week, or can that wait for the retro"
+  "do we need this at all; i need a breakdown of every project last week before the retro"
+# DOUBLE: "should we" is also a deliberation marker.
 assert_silent "an open question about exploring does not route" \
   "should we explore the parser directory or leave it alone until the release ships"
+# BOUNDARY: strip the imperative prefix group and this goes red.
 assert_silent "a rhetorical question about scanning does not route" \
   "why would i want you to scan the project folders when the report already exists"
 
@@ -343,12 +394,23 @@ assert_silent "a rhetorical question about scanning does not route" \
 # An opener is a VERB PHRASE, so after a bare conjunction it reads as continued
 # deliberation, not instruction. Only string-start or sentence punctuation may
 # introduce an opener; the conjunction branch admits softeners alone.
+# DOUBLE, both rows: each also carries a deliberation marker ("should we", "do not"),
+# so neither the boundary revert nor the marker removal alone turns them red. They
+# are regression rows for two strings that really fired, not evidence that the
+# conjunction branch is what holds them.
 assert_silent "an opener after a conjunction is not an instruction" \
   "should we update the parser and need to scan project folders for time spent now"
 assert_silent "an opener after a conjunction inside a negation does not route" \
   "i do not want this, and need to scan project folders for time spent is wrong"
+# REPAIRED 2026-07-28 - this row was VACUOUS. Its prompt was "do we need to scan the
+# repo and need a breakdown of the risks...". The scan matcher needs
+# `for|folders|dirs|directories` after its object ("scan the repo and" supplies none),
+# and the breakdown matcher needs "i need", not a bare "need". Neither could fire in
+# ANY lexicon state, so the row asserted silence that nothing produced. Rebuilt on the
+# scan matcher's conjunction branch, which does fire here, so the deliberation marker
+# is what holds it and removing the markers turns it red.
 assert_silent "a trailing deliberation clause does not route" \
-  "do we need to scan the repo and need a breakdown of the risks before the retro"
+  "do we need a cleanup pass and scan the project folders for time spent before the retro"
 
 # Sentence punctuation only bounds a clause when whitespace follows it.
 # Otherwise a dotted slug manufactures a boundary mid-token.
@@ -390,8 +452,13 @@ assert_silent "a first-person plural declarative is not an instruction" \
 
 # "i need"/"i want" live in the breakdown phrase itself, so no boundary rule
 # reaches them; that shape is only accepted at the head of a request.
+# REPAIRED 2026-07-28 - the prompt opened "should we update the parser and ...", and
+# "should we" is a deliberation marker, so the row stayed green under the boundary
+# revert it was named for: the marker was doing the work. The opener is dropped so
+# the head-of-request rule is now the SOLE mechanism, and stripping the imperative
+# prefix group turns this red.
 assert_silent "a breakdown phrase after a conjunction does not route" \
-  "should we update the parser and i need a breakdown of the risks before the retro"
+  "update the parser and i need a breakdown of the risks before the retro today"
 
 # The brief exemption keys off a brief HEAD (a named agent or a brief-shaped
 # participle), not off any prompt that happens to say "do not commit".

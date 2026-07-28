@@ -85,9 +85,6 @@ UNWIRED_BY_DESIGN_JSON='{
   "beats-reflect-weekly.sh": [
     "Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist"
   ],
-  "multiple-choice-enforce.sh": [
-    ".claude/hooks/multiple-choice-detect-stop.sh"
-  ],
   "codex-review.py": [
     ".claude/hooks/codex-rescue-guard.sh",
     ".claude/hooks/node-path-default.sh"
@@ -97,10 +94,34 @@ UNWIRED_BY_DESIGN_JSON='{
 #                           fable-orchestrator-guard.sh. Never wired standalone.
 # beats-reflect-weekly.sh   launchd-scheduled from
 #                           com.yesand.beats-reflect-weekly.plist, not event-driven.
-# multiple-choice-enforce.sh  the detection twin invoked by
-#                           multiple-choice-detect-stop.sh, which is the wired one.
-# codex-review.py           a CLI invoked by codex-rescue-guard.sh, node-path-default.sh
-#                           and the opus-executor agent. Not an event hook.
+# multiple-choice-enforce.sh  NO LONGER LISTED, and its absence is the fix rather than a
+#                           gap. It claimed to be the detection twin invoked by
+#                           multiple-choice-detect-stop.sh; measured 2026-07-28 that claim
+#                           was FALSE - detect-stop carries a byte-identical INLINE copy of
+#                           the detection block ("keep the two copies byte-identical") and
+#                           execs nothing. An entry here would have been a second exemption
+#                           papering over the first. install.sh stopped DEPLOYING it
+#                           instead, so there is nothing left to exempt: a hook that does
+#                           not ship needs no unwired-by-design licence. Same disposition
+#                           as question-enforcement.sh.
+# codex-review.py           a CLI invoked by a human or an agent at a prompt. The two
+#                           hooks named below only MENTION it in comments and in a
+#                           guidance string; neither execs it.
+
+# WHAT KIND OF REACHABILITY EACH ENTRY CLAIMS. These are different claims and a single
+# grep cannot tell them apart, which is how a false one survived:
+#   exec     some executable line in this repo runs it. Provable, and PROVEN below
+#            against COMMENT-STRIPPED source.
+#   launchd  a launchd plist names it in an element, not in an XML comment.
+#   cli      invoked by a human or an agent at a prompt, never by repo code. NOT
+#            grep-provable by construction, so it is accepted on its declaration and
+#            printed as the weaker claim it is. This kind is a place a dead hook could
+#            hide, so it is spelled out rather than blended into the others.
+REACHER_KIND_JSON='{
+  "detect-session-model.sh": "exec",
+  "beats-reflect-weekly.sh": "launchd",
+  "codex-review.py": "cli"
+}'
 
 SELECTIONS=(config "config,cmux" "config,fable" "config,reflect" "config,voice-output"
   "config,safety" "config,verification" "config,question-discipline" "config,grounding"
@@ -143,9 +164,13 @@ except Exception as e:
 # A ZERO-ITERATION SWEEP IS NOT A PASS. This used to read
 #     deployed = [...] if os.path.isdir(hd) else []
 # so a sandbox whose hooks directory was never created inspected nothing, found no
-# orphans, and printed PASS - a green result that asserted precisely nothing. Measured
-# 2026-07-28: all nine selections deploy a hooks dir holding between 1 and 8 hook
-# files, so both "no directory" and "directory with no hooks" mean the install did not
+# orphans, and printed PASS - a green result that asserted precisely nothing. Re-measured
+# 2026-07-28 against the CURRENT selection list (the previous note said "all nine
+# selections", which was stale - there are 21): every selection deploys a hooks dir
+# holding between 1 and 9 hook files, the floor being `bash-guard` at 1. The
+# per-selection lines below now print that count, so a future shrink toward zero shows
+# up in the output instead of passing quietly. Both "no directory" and "directory with
+# no hooks" therefore mean the install did not
 # happen, not that it was clean. Both are CANNOT-TELL, like a missing settings.json.
 if not os.path.isdir(hd):
     print(f"CANNOT-TELL {sel}: no hooks directory produced, so nothing was inspected")
@@ -158,6 +183,17 @@ except OSError as e:
 if not deployed:
     print(f"CANNOT-TELL {sel}: hooks directory holds no .sh/.py, so nothing was inspected")
     sys.exit(3)
+
+# Record HOW MANY files this sweep inspected, so a shrink toward zero is visible in
+# the output rather than silent. The count goes to a sidecar file rather than stdout
+# because the negative controls in section 1 assert stdout is EMPTY on a clean run,
+# and a count line would break them. The comment for row 10 already promised this
+# counting; until 2026-07-28 nothing actually emitted it.
+try:
+    with open(os.path.join(sb, ".inspected"), "w") as fh:
+        fh.write(str(len(deployed)))
+except OSError:
+    pass
 
 # Same pattern as the forward twin: any prefix (~/, $HOME/, absolute), and
 # MULTIPLE hook paths per compound command.
@@ -360,16 +396,90 @@ out="$(_check_sandbox "$SB0" "control" 2>&1)"; rc=$?
 # reachable by anything - documentation describes intent, it does not execute. Letting
 # a doc mention satisfy this check would make the allowlist exactly the hiding place
 # the comment above says it must not be.
+# THIS LOOP WAS VACUOUS UNTIL 2026-07-28. It was a bare `grep -rl -- "$h"`, so any
+# COMMENT mentioning the hook satisfied it - including the comments in this very file
+# and the ones in multiple-choice-detect-stop.sh that describe the twin rather than
+# invoke it. Two of the four entries were justified by nothing but prose, which is
+# precisely the hiding place the header above says this allowlist must never become.
+# The header already stated the rule ("documentation describes intent, it does not
+# execute"); the code simply did not implement it. It does now.
+#
+# A false claim here is NOT a broken checker - the checker is fine and the finding is
+# real. So these failures are recorded as PARITY findings (exit 1, section 3 still
+# runs), not as self-test failures (exit 2, which would halt the sweep).
+claim_fail=0
+claim_fail_names=""
+
+# Strip shell comments so a sentence ABOUT a hook cannot pass as a call TO it.
+_code_only() { sed 's/[[:space:]]#.*$//; /^[[:space:]]*#/d' "$1"; }
+
 for h in $(printf '%s' "$UNWIRED_BY_DESIGN_JSON" | python3 -c 'import json,sys; print(" ".join(json.load(sys.stdin)))'); do
-  refs="$(grep -rl -- "$h" \
-            "$REPO_DIR/claude/hooks" "$REPO_DIR/claude/launchd" \
-            "$REPO_DIR/claude/agents" 2>/dev/null \
-          | grep -v "/hooks/$h\$" | grep -v "/test-" || true)"
-  if [ -n "$refs" ]; then
-    ok "allowlist justified: $h is reached by $(printf '%s' "$refs" | head -1 | xargs basename)"
-  else
-    bad "allowlist entry $h is referenced by NOTHING executable - it is dead, not 'unwired by design'"
-  fi
+  kind="$(printf '%s' "$REACHER_KIND_JSON" \
+          | python3 -c "import json,sys; print(json.load(sys.stdin).get('$h',''))")"
+  case "$kind" in
+    exec)
+      # THE DECLARED REACHERS, each checked on its OWN contents - not a global scan.
+      # Codex review 2026-07-28: an earlier cut asked only whether SOME non-comment
+      # line anywhere under claude/hooks named the helper. That is a different claim
+      # from the one the map makes. `_check_sandbox` suppresses a helper per selection
+      # based on THESE paths, so a stale or wrong path could keep suppressing an
+      # orphan while some unrelated hook supplied the global hit. Ask the map's own
+      # question: does the file this entry NAMES actually run it.
+      #
+      # Comment-stripped, and only executable source. claude/agents is deliberately
+      # unreachable from here: those are markdown, where `#` opens a HEADING rather
+      # than a comment and ordinary prose carries no marker at all, so a sentence
+      # ABOUT a hook would satisfy kind=exec and reopen the prose-proves-reachability
+      # hole this loop exists to close. A hook named only in an agent file is invoked
+      # by an agent - that is what kind=cli is for; declare it there and take the
+      # weaker claim.
+      #
+      # while-read over a process substitution, not `for f in $(...)`: an unquoted
+      # command substitution word-splits, so a checkout path containing a space would
+      # split into fragments. A process substitution is not a pipe, so `hit` survives.
+      hit=""
+      while IFS= read -r p; do
+        [ -n "$p" ] || continue
+        case "$p" in
+          .claude/hooks/*) src="$REPO_DIR/claude/hooks/${p#.claude/hooks/}" ;;
+          *) continue ;;
+        esac
+        [ -f "$src" ] || continue
+        if _code_only "$src" | grep -qF -- "$h"; then hit="$src"; break; fi
+      done < <(printf '%s' "$UNWIRED_BY_DESIGN_JSON" \
+               | python3 -c "import json,sys; [print(p) for p in json.load(sys.stdin).get('$h', [])]")
+      if [ -n "$hit" ]; then
+        ok "allowlist justified (exec): $h is run by $(basename "$hit")"
+      else
+        echo "FAIL allowlist entry $h claims kind=exec but none of its DECLARED reachers runs it (non-comment)"
+        claim_fail=1; claim_fail_names="$claim_fail_names $h"
+      fi ;;
+    launchd)
+      # Same rule as exec: the DECLARED plist, checked on its own contents, and the
+      # name must sit in an <string> ELEMENT rather than an XML comment. (The old
+      # `grep -rl ... | while read` form also lost `hit` to the pipe's subshell.)
+      hit=""
+      while IFS= read -r p; do
+        [ -n "$p" ] || continue
+        case "$p" in
+          Library/LaunchAgents/*) src="$REPO_DIR/claude/launchd/${p#Library/LaunchAgents/}" ;;
+          *) continue ;;
+        esac
+        [ -f "$src" ] || continue
+        if grep -q "<string>[^<]*$h" "$src"; then hit="$src"; break; fi
+      done < <(printf '%s' "$UNWIRED_BY_DESIGN_JSON" \
+               | python3 -c "import json,sys; [print(p) for p in json.load(sys.stdin).get('$h', [])]")
+      if [ -n "$hit" ]; then
+        ok "allowlist justified (launchd): $h is named in an element of $(basename "$hit")"
+      else
+        echo "FAIL allowlist entry $h claims kind=launchd but its declared plist does not name it in an element"
+        claim_fail=1; claim_fail_names="$claim_fail_names $h"
+      fi ;;
+    cli)
+      ok "allowlist DECLARED (cli, not grep-provable): $h is invoked by a human or an agent, not by repo code" ;;
+    *)
+      bad "allowlist entry $h has no declared reacher kind - add one to REACHER_KIND_JSON" ;;
+  esac
 done
 
 # Every declared reacher path must be one the installer can actually produce. A typo
@@ -427,8 +537,9 @@ for sel in "${SELECTIONS[@]}"; do
     cannot_tell=1; cannot_tell_names="$cannot_tell_names $sel"; rm -rf "$SB"; continue
   fi
   out="$(_check_sandbox "$SB" "$sel")"; crc=$?
+  n="$(cat "$SB/.inspected" 2>/dev/null || echo '?')"
   case "$crc" in
-    0) echo "PASS $sel" ;;
+    0) echo "PASS $sel ($n hooks inspected)" ;;
     1) echo "$out"; real_fail=1 ;;
     *) echo "$out"; cannot_tell=1; cannot_tell_names="$cannot_tell_names $sel" ;;
   esac
@@ -447,6 +558,22 @@ if [ "$cannot_tell" = 1 ]; then
   echo "COVERAGE INCOMPLETE - these selections produced no readable install:"
   echo "  ${cannot_tell_names# }"
   echo "  Results above are a statement about the selections that DID run."
+fi
+
+if [ "$claim_fail" = 1 ]; then
+  echo ""
+  echo "ALLOWLIST CLAIM FALSE - these entries name a reacher that does not reach them:"
+  echo "  ${claim_fail_names# }"
+  cat <<'EOF'
+  Each is DEPLOYED by install.sh, wired to no event, and reached by no executable
+  line - the entry in UNWIRED_BY_DESIGN is the only thing keeping it out of the
+  per-selection findings below, and it is not true. This is the same deployed-and-
+  inert shape as question-enforcement.sh, which sat dead for two months behind
+  exactly this kind of unvalidated exemption.
+  Fix in install.sh (NOT here): either wire it in cluster-wirings.json, or drop it
+  from its cluster_hooks list so a fresh machine stops carrying a dead file.
+EOF
+  real_fail=1
 fi
 
 if [ "$real_fail" = 1 ]; then

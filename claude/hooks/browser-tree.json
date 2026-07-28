@@ -147,13 +147,13 @@
       "key": "Design Tools",
       "section": "more",
       "tag": "design skills + Figma",
-      "desc": "Supporting design tooling - the design-pipeline skills and the Figma fidelity guard.",
+      "desc": "Supporting design tooling - the design skills and the Figma fidelity guard.",
       "members": [
         {
           "key": "Skills",
           "kind": "group",
-          "tag": "11 design-pipeline skills",
-          "desc": "The design-pipeline skills the model can select for UI work - type, motion, icons, references, components, and more.",
+          "tag": "9 design skills",
+          "desc": "The design skills the model can select for UI work - type, motion, icons, references, components, and more.",
           "members": [
             {
               "key": "tactical-polish",
@@ -172,15 +172,7 @@
               "kind": "leaf"
             },
             {
-              "key": "design-build",
-              "kind": "leaf"
-            },
-            {
               "key": "curate",
-              "kind": "leaf"
-            },
-            {
-              "key": "design-references",
               "kind": "leaf"
             },
             {
@@ -251,12 +243,11 @@
         {
           "key": "question-discipline",
           "kind": "hooks",
-          "tag": "the 3 question-discipline hooks",
-          "desc": "The 4 hooks in the question-discipline cluster.",
+          "tag": "the 2 question-discipline hooks",
+          "desc": "The 2 hooks in the question-discipline cluster.",
           "hooks": [
             "multiple-choice-detect-stop",
-            "multiple-choice-inject-prompt",
-            "multiple-choice-enforce"
+            "multiple-choice-inject-prompt"
           ]
         },
         {
@@ -523,7 +514,6 @@
     "validation-guard": "Blocks DOM-introspection shortcuts during validation.",
     "multiple-choice-detect-stop": "Flags plain-text questions at stop time.",
     "multiple-choice-inject-prompt": "Injects the ask-through-the-tool reminder.",
-    "multiple-choice-enforce": "Detects option lists that should use the picker.",
     "grounding-gate": "Requires grounding claims in real evidence.",
     "grounding-guard": "Checks claims against real sources.",
     "task-loop-mandate": "Re-injects the rule to finish the task list you were handed.",
@@ -581,7 +571,6 @@
     "validation-guard": "verification",
     "multiple-choice-detect-stop": "question-discipline",
     "multiple-choice-inject-prompt": "question-discipline",
-    "multiple-choice-enforce": "question-discipline",
     "grounding-gate": "grounding",
     "grounding-guard": "grounding",
     "task-loop-mandate": "grounding",

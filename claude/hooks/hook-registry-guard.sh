@@ -89,6 +89,26 @@ INSTALL_SH="$REPO_DIR/install.sh"
 _is_excluded() {
   case "$1" in
     test-*|*-lib) return 0 ;;
+    # NOT EXEMPTING zz-* HERE, and the reason is worth recording because it is the
+    # obvious fix and it is wrong (tried and reverted 2026-07-28).
+    #
+    # The suites create throwaway zz-* hooks - zz-registry-fixture, zz-orphan,
+    # zz-broken, zz-never-packaged-xyz, zz-syntax-broken, zz-syntax-fine,
+    # zz-apostrophe - and this sweep reads the live directory, so a concurrent suite
+    # run makes it catch another process's in-flight fixture and report it as a real
+    # unpackaged hook. Exempting the prefix looks like the clean answer.
+    #
+    # It is not available: test-hook-registry.sh writes those fixtures into the REAL
+    # claude/hooks/ and asserts the guard FLAGS them. Exempting zz-* turned 9 of its
+    # rows red (67/9), because the prefix that identifies a transient is the same
+    # prefix that identifies the suite's detection fixture. No name rule can separate
+    # them - they are the same files.
+    #
+    # What IS closed: the re-stat before reporting in --audit, which covers the case
+    # actually observed live (the gate named a path that no longer existed). What is
+    # NOT closed: a fixture present for the whole scan is indistinguishable from a real
+    # unpackaged hook, and the durable fix for that is in the SUITE - it should build
+    # its fixtures in a sandbox repo copy rather than mutating the live tree.
   esac
   # NOT EVENT HOOKS. Each lives in claude/hooks/ and ends in .sh, but none is wired to a
   # Claude Code event, so none has a toggle to own. Each entry states WHY, because an
@@ -111,6 +131,15 @@ _is_excluded() {
     # because test-multiple-choice-enforce.sh still exercises it - delete that coverage
     # and this file should go too, along with this exemption.
     question-enforcement) return 0 ;;
+    # RETIRED, SUPERSEDED - the same shape as the entry above, found the same day. The
+    # DETECTION TWIN of multiple-choice-detect-stop.sh, whose allowlist exemption claimed
+    # it was "invoked by multiple-choice-detect-stop.sh". Measured 2026-07-28: FALSE.
+    # detect-stop carries a byte-identical INLINE copy of the detection block and execs
+    # nothing, so this file was deployed, wired to nothing, and called by nobody. install.sh
+    # no longer deploys it. It stays on disk ONLY because test-multiple-choice-enforce.sh
+    # exercises it - delete that coverage and this file should go too, along with this
+    # exemption.
+    multiple-choice-enforce) return 0 ;;
     # CORE, BASE-WIRED: config-owned and shipped in the base claude/settings.json
     # (install.sh's deactivate_config calls it "config-owned (core, base-wired)"). It is
     # what makes the Bash tool honor the nvm default, so it is not individually
@@ -222,6 +251,29 @@ try:
            if n not in pinned
            and not (n in in_tree
                     and re.search(r'(?<![\w-])' + re.escape(n) + r'\.sh(?![\w-])', src))]
+    # RE-STAT BEFORE REPORTING (2026-07-28). The shell glob that built NAMES and this
+    # report are not atomic, and several agents run suites concurrently in this repo.
+    # test-hook-registry.sh creates and deletes its own fixture hooks inside a run, so
+    # this sweep caught another process's in-flight temporary file and reported
+    # `zz-registry-fixture` as a real unpackaged hook - blocking a Stop gate over a
+    # path that no longer existed. A file that is already gone cannot be an unpackaged
+    # hook, so a vanished candidate is dropped rather than named.
+    #
+    # Deliberately a RE-STAT and not a name-pattern exclusion: guessing which names are
+    # "fixtures" would hide a real hook that someone named badly. Existence at report
+    # time is the honest question.
+    #
+    # The churn is reported on STDERR so it is visible to a human without polluting
+    # stdout, which callers parse as the findings channel and which must stay empty on
+    # a clean run.
+    hooks_dir = os.path.join(os.path.dirname(os.environ["TREE"]))
+    vanished = [n for n in bad
+                if not os.path.exists(os.path.join(hooks_dir, n + ".sh"))]
+    if vanished:
+        sys.stderr.write(
+            "note: %d candidate(s) vanished during the scan and were not reported "
+            "(concurrent run?): %s\n" % (len(vanished), ", ".join(sorted(vanished))))
+    bad = [n for n in bad if n not in set(vanished)]
 except Exception:
     # ANYTHING that stops the audit COMPLETING is "I cannot tell" - a torn read mid-write,
     # a tree that parses but is the wrong shape, install.sh vanishing between the shell's
@@ -329,13 +381,33 @@ PY
     ;;
   --audit-skills)
     # SKILLS are the other class install.sh enumerates by hand. There is no glob: every
-    # skill dir is named explicitly (safe_cp / cp -r / ln -sf / copy_bundled_skill), so a
-    # new skill directory ships to NO other machine until someone edits install.sh.
+    # skill dir is named explicitly, so a new skill directory ships to NO other machine
+    # until someone edits install.sh.
     # Measured 2026-07-27: 18 skill dirs on disk, 16 deployed - `consolidate` and
     # `tilt-lab` had zero mentions in install.sh.
     #
     # Contrast with claude/agents/*.md, which IS deployed by a glob and therefore cannot
     # drift; that is why agents get no audit mode here.
+    #
+    # THIS CHECK SILENTLY ROTTED THROUGH A RENAME (fixed 2026-07-28). It matched
+    # `copy_bundled_skill <name>`, and that function has not existed for some time - it
+    # is `install_bundled_skill` now, with ZERO occurrences of the old name in
+    # install.sh. Nothing was watching the coupling between this regex and the
+    # installer's actual API, so the branch was dead and no test noticed.
+    #
+    # The consequence was worse than a dead branch, because the modern bundle path is a
+    # LOOP PASSING A VARIABLE:
+    #     for _skill in tactical-polish ... voice-output; do install_bundled_skill "$_skill"; done
+    # which this check missed on BOTH counts - wrong function name, and a variable
+    # rather than a literal. Any skill deployed only through that loop was reported as
+    # never deployed. It did exactly that for `sidecoach` and `voice-output`, both of
+    # which ARE deployed, and an agent nearly added a redundant deploy line to satisfy
+    # a blind check.
+    #
+    # So this now resolves the shapes it CAN prove, and says CANNOT TELL for the rest
+    # rather than manufacturing a confident finding. A false negative dressed as a
+    # finding is worse than an admitted gap - the same distinction --audit already
+    # draws with its exit 3.
     [ -f "$INSTALL_SH" ] || exit 0
     [ -d "$REPO_DIR/claude/skills" ] || exit 0
     SKILLS_DIR="$REPO_DIR/claude/skills" INSTALL_SH="$INSTALL_SH" python3 - <<'PY'
@@ -344,11 +416,116 @@ try:
     d = os.environ["SKILLS_DIR"]
     src = open(os.environ["INSTALL_SH"]).read()
     names = sorted(n for n in os.listdir(d) if os.path.isdir(os.path.join(d, n)))
-    # Deployed if install.sh names the skill in a path or as a copy_bundled_skill arg.
+
+    # Join backslash line continuations first: the bundle loop's word list spans three
+    # physical lines, and an unjoined scan sees only its first third.
+    joined = re.sub(r'\\\n[ \t]*', ' ', src)
+    # Comments do not deploy anything. Mirrors the deploy_src/code_only treatment the
+    # data audit above already uses, so a commented-out call cannot read as shipping.
+    code = "\n".join(re.sub(r'(^|\s)#.*$', r'\1', ln) for ln in joined.split("\n"))
+
+    deployed = set()
+    unresolved = []
+
+    # Every `for VAR in <words>` header WITH ITS POSITION. A variable argument then
+    # resolves against the NEAREST PRECEDING header for its own name, not against the
+    # first one anywhere in the file (Codex review 2026-07-28): reusing a loop variable
+    # in two loops otherwise resolved a call against the wrong word list and invented
+    # deployed entries.
+    def _body_end(start):
+        # Where this loop's body ends, by balancing do/done from the header. Needed
+        # because "nearest preceding header" alone does not prove the call is INSIDE
+        # the loop (Codex review 2026-07-28): a call after `done` would otherwise
+        # resolve to that loop's whole word list, while the shell would use only
+        # whatever the variable held at that point.
+        depth = 0
+        for tm in re.finditer(r'(?<![\w-])(do|done)(?![\w-])', code[start:]):
+            if tm.group(1) == "do":
+                depth += 1
+            else:
+                depth -= 1
+                if depth == 0:
+                    return start + tm.end()
+        return len(code)
+
+    headers = [(m.start(), m.group(1), m.group(2), _body_end(m.start()))
+               for m in re.finditer(
+                   r'(?<![\w-])for\s+([A-Za-z_][A-Za-z0-9_]*)\s+in\s+([^\n;]*?)\s*(?:;|\n)\s*do',
+                   code)]
+
+    # The argument must be EXACTLY a bare variable reference to be resolvable. Anything
+    # composed ("${_skill}-extra", "$(cmd)", "pre$x") is not statically knowable and
+    # must fall through to CANNOT TELL. The capture below deliberately does not exclude
+    # `}`, because stopping at it truncated "${_skill}-extra" to "${_skill" and then
+    # resolved it as the bare variable - silently dropping the suffix and marking the
+    # loop's words deployed when nothing of the sort had been proven.
+    # Balanced forms only: `$name` or `${name}`. `$name}` and `${name` are composed
+    # text, not a bare reference, and must not resolve (Codex review 2026-07-28).
+    SIMPLE_VAR = re.compile(r'^(?:\$([A-Za-z_][A-Za-z0-9_]*)|\$\{([A-Za-z_][A-Za-z0-9_]*)\})$')
+
+    for call in re.finditer(r'(?<![\w-])install_bundled_skill\s+([^\s;)&|]+)', code):
+        raw = call.group(1)
+        # SINGLE QUOTES SUPPRESS EXPANSION. `install_bundled_skill '$_skill'` passes the
+        # literal characters "$_skill", so treating it as a variable would mark a whole
+        # loop word list deployed on the strength of an argument that names none of it -
+        # a false "deployed", which HIDES an unpackaged skill rather than inventing one.
+        if raw.startswith("'"):
+            deployed.add(raw.strip("'"))
+            continue
+        arg = raw.strip('"')
+        if "$" not in arg:
+            deployed.add(arg)
+            continue
+        sv = SIMPLE_VAR.match(arg)
+        if not sv:
+            unresolved.append(arg)
+            continue
+        var = sv.group(1) or sv.group(2)
+        prior = [h for h in headers
+                 if h[1] == var and h[0] < call.start() < h[3]]
+        if not prior:
+            unresolved.append(arg)
+            continue
+        words = prior[-1][2].split()
+        # A word list that is itself computed (an array expansion, a substitution) is
+        # not statically knowable. Say so instead of guessing.
+        if any(("$" in w) or ("`" in w) for w in words):
+            unresolved.append(arg)
+        else:
+            deployed.update(words)
+
+    # KNOWN RESIDUAL, stated rather than hidden (Codex review 2026-07-28, Medium).
+    # This path fallback matches `claude/skills/<name>` anywhere in non-comment code,
+    # which includes installer UI strings (the FILES+=(...) manifests). A skill
+    # mentioned ONLY in such a string would read as deployed.
+    #
+    # It is kept because the path form is a REAL deploy shape here, not a legacy one:
+    # `lotus` ships through `_vd_src="$REPO_DIR/claude/skills/lotus/SKILL.md"` and is
+    # covered by nothing else, so requiring a deploy verb would report a live skill as
+    # unpackaged - the exact false accusation this whole repair exists to end.
+    #
+    # The severity is asymmetric and that is why this residual is acceptable while the
+    # earlier one was not: this direction can only MISS a finding (a false negative),
+    # whereas the copy_bundled_skill drift MANUFACTURED findings against skills that
+    # ship fine, which is what nearly drove a wrong fix into install.sh.
     bad = [n for n in names
-           if not re.search(r'claude/skills/' + re.escape(n) + r'(?![\w-])', src)
-           and not re.search(r'copy_bundled_skill\s+"?' + re.escape(n) + r'(?![\w-])', src)]
+           if n not in deployed
+           and not re.search(r'claude/skills/' + re.escape(n) + r'(?![\w-])', code)]
+
+    # RE-STAT BEFORE REPORTING. The listdir above and this report are not atomic, and
+    # several agents run suites concurrently in this repo. A directory that has already
+    # vanished cannot be an unpackaged skill.
+    bad = [n for n in bad if os.path.isdir(os.path.join(d, n))]
 except Exception:
+    sys.exit(3)
+
+# An unresolvable call means the deploy set is INCOMPLETE, so "not in deployed" stops
+# being evidence of anything. Report the gap, name nothing, exit 3.
+if unresolved and bad:
+    print("CANNOT TELL (skills): install.sh calls install_bundled_skill with an "
+          "argument this check cannot resolve statically (%s), so the deployed set is "
+          "incomplete and these skills cannot be judged: %s"
+          % (", ".join(sorted(set(unresolved))), ", ".join(bad)))
     sys.exit(3)
 for n in bad:
     print("UNMANAGED SKILL: %s (claude/skills/%s exists but install.sh never "
