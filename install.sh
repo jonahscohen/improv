@@ -50,6 +50,47 @@ warn()  { printf "${YELLOW}[warn]${NC}  %s\n" "$1"; }
 err()   { printf "${RED}[error]${NC} %s\n" "$1"; }
 log()   { printf "${CYAN}[info]${NC}  %s\n" "$1"; }  # alias for info (used by sidecoach block)
 
+# ------------------------------------------------------------
+# Partial-component failure ledger.
+#
+# A FAILED EDIT TO A USER-OWNED FILE IS NOT A WARNING. Three sites used to print one and
+# carry on: deactivate_discord, deactivate_nvm and the memory-discipline block refresh.
+# A read-only ~/.zshrc therefore produced "[warn] Could not remove the nvm activation
+# lines" followed by "Installation complete." and exit 0, with `nvm use default --silent`
+# still running in every new shell. The user is told the component came out; it did not.
+# Same shape for a malformed memory block: the refresh is skipped and the run still
+# reports success, so the stale block survives an upgrade unnoticed.
+#
+# WHY A LEDGER RATHER THAN `return 1` AT THE SITE. These sites sit inside deactivate
+# functions reached from a `case` arm under `set -euo pipefail`; a bare non-zero there
+# would abort the whole installer mid-undo and leave a component half-removed, which is
+# worse than the state we are fixing. So the site RECORDS and keeps going, the component's
+# own function returns non-zero at its end (apply_pending checks that and preserves
+# pending), and the end of the run turns any recorded failure into a non-zero exit.
+#
+# Two independent consumers, and both are needed: apply_pending (browser-lib.sh) only sees
+# the per-component return value, while a plain `--only <x> --yes` install never goes
+# through apply_pending and only has the end-of-run check.
+PARTIAL_FAILURES=""
+
+# Set by ensure_real_settings when ~/.claude/settings.json is a repo symlink it could not
+# convert, and read by deactivate_component. Initialized here so `set -u` is satisfied on
+# every path, including an install run that never reaches a deactivate.
+SETTINGS_UNSAFE=0
+
+record_component_failure() {
+  local component="$1"; shift
+  local msg="$component: $*"
+  if [ -n "$PARTIAL_FAILURES" ]; then
+    PARTIAL_FAILURES="$PARTIAL_FAILURES
+  - $msg"
+  else
+    PARTIAL_FAILURES="  - $msg"
+  fi
+  warn "$*"
+  return 0
+}
+
 # Bucket-browser accessor library (pure functions over claude/hooks/browser-tree.json).
 # Sourcing only defines functions - browser_load is invoked later, inside the browser
 # flow, never at top level. Guarded so a missing file never aborts the installer.
@@ -59,11 +100,199 @@ else
   warn "browser-lib.sh not found - bucket browser accessors unavailable"
 fi
 
-# Copy from repo to ~/.claude, clearing any pre-existing destination first.
-# Without this, an old install that symlinked the destination back to the same
-# source file would cause `cp` to bail with "are identical (not copied)" under
-# `set -e`. Use everywhere we copy a tracked file from $REPO_DIR into the user dir.
-safe_cp() { rm -f "$2"; cp "$1" "$2"; }
+# repo_symlink_points_into_repo <path>
+#
+# THE ONE ANSWER TO "IS THIS DEPLOYED PATH A SYMLINK INTO OUR OWN CHECKOUT?"
+#
+# Every ownership check in this file used to ask it as a raw string compare on readlink
+# output: [[ "$(readlink "$X")" == "$REPO_DIR/"* ]]. That is only correct for an ABSOLUTE
+# link. A relative one - `../Documents/Github/improv/claude/CLAUDE.md`, which is exactly
+# what a hand-made dotfiles link looks like - never matches the prefix, so the path was
+# treated as the USER's file and followed. On the ~/.claude/CLAUDE.md sites that meant the
+# assembled brain/memory block was appended straight back into claude/CLAUDE.md, the
+# payload source: output overwriting input, silently, rc=0. Reproduced against a staged
+# repo copy - the payload went 186 -> 318 lines in a single `--only memory` run through a
+# relative link, with the absolute-link migration sitting right there unfired.
+#
+# The resolution below already existed in this file, inside migrate_legacy_markers, with a
+# comment stating it resolves "so a relative link cannot slip past" - while twelve other
+# sites went on string-matching. A rule enforced in one place out of thirteen is not a
+# rule. This is now that single implementation and every site calls it.
+#
+# HOW IT RESOLVES: readlink, prepend the link's own dirname when the target is relative,
+# then `cd ... && pwd -P` the target's PARENT and $REPO_DIR so both sides are physical.
+# Resolving the parent rather than the target itself is deliberate - it works for a
+# DANGLING link (a file the repo has stopped shipping still counts as ours) and it does not
+# collapse a final path component that is itself a symlink. pwd -P on both sides also means
+# a $REPO_DIR reached through a symlinked ancestor still matches.
+#
+# Returns 0 only for: an existing symlink whose target resolves to $REPO_DIR itself or to
+# something beneath it. Anything else - not a symlink, unreadable link, unresolvable
+# parent, a link into the user's own dotfiles - returns 1 and is left alone.
+# COST MATTERS HERE - this is a hot path, not a once-per-run check. is_our_hook calls it
+# for every hook of every cluster, and the TUI browser re-probes on each render, so it runs
+# hundreds of times in an interactive session. The straightforward implementation - fork
+# `dirname`, `basename`, and two `cd ... && pwd -P` subshells on every call - measured
+# 3813ms per 300 calls against 713ms for the raw string compare it replaced. That 5.3x sat
+# in the path a keystroke-sensitive TUI renders through, and it was not theoretical:
+# test-browser-render.sh went from a 240s pass to a 443s WATCHDOG HANG on the naive version
+# (gum lost keystrokes before entering raw mode), and back to a 240s pass once this was
+# made cheap. Measure this function again if you change it.
+#
+# IT IS FAST WITHOUT A SHORTCUT, WHICH IS THE POINT. An earlier attempt used a "fast path"
+# that accepted any absolute target textually under $REPO_DIR and skipped resolution.
+# Independent review killed it: `$REPO_DIR/../elsewhere` is textually under $REPO_DIR and
+# physically outside it, so the shortcut returned "ours" for a path full resolution
+# rejects - and these callers DELETE and MATERIALIZE based on that answer. A shortcut that
+# disagrees with the resolution it is shortcutting is not an optimization, it is a second
+# implementation, which is the exact thing this function exists to abolish. Every call now
+# takes the same single path.
+#
+# The speed comes from removing forks rather than removing work:
+#   - dirname/basename are done with parameter expansion, not two subprocesses.
+#   - The physical $REPO_DIR is resolved once and memoized, keyed on $REPO_DIR itself so a
+#     caller that changes it (the test harnesses do) gets a correct answer, not a stale one.
+#   - The target's parent directory is memoized the same way, keyed on the literal path
+#     string. Calls cluster hard - probing sixty hooks means sixty targets sharing one
+#     parent - so this collapses sixty `cd` subshells into one while resolving exactly what
+#     the uncached version would.
+# Net cost per call is one `readlink`, plus a `cd` only on a cache miss.
+#
+# Both caches are keyed on the string they were computed from, so they cannot answer for a
+# different input; the only staleness they can carry is a directory that is physically
+# MOVED mid-run, which nothing in this installer does to the repo or its hook dirs.
+#
+# The cache variables are read with `${...:-}` defaults because this function is
+# awk-extracted into standalone test libs that run under `set -u`, where a bare reference
+# to an unset global is a fatal error rather than an empty string.
+repo_symlink_points_into_repo() {
+  local _link="$1" _target _dir _base _parent _resolved
+  [ -L "$_link" ] || return 1
+  _target="$(readlink "$_link")" || return 1
+
+  # Relative target: resolve against the LINK's own directory, which is what makes a
+  # relative link impossible to slip past. Split with parameter expansion, not `dirname`.
+  case "$_target" in
+    /*) : ;;
+    *)  _dir="${_link%/*}"; [ "$_dir" = "$_link" ] && _dir="."
+        _target="$_dir/$_target" ;;
+  esac
+
+  if [ "${IMPROV_REPO_PHYS_KEY:-__improv_unset__}" != "${REPO_DIR:-}" ]; then
+    IMPROV_REPO_PHYS_KEY="${REPO_DIR:-}"
+    IMPROV_REPO_PHYS="$(cd "${REPO_DIR:-/nonexistent}" 2>/dev/null && pwd -P)" || IMPROV_REPO_PHYS=""
+  fi
+  [ -n "${IMPROV_REPO_PHYS:-}" ] || return 1
+
+  _dir="${_target%/*}"; [ "$_dir" = "$_target" ] && _dir="."
+  [ -n "$_dir" ] || _dir="/"
+  _base="${_target##*/}"
+
+  if [ "${IMPROV_LINKDIR_KEY:-__improv_unset__}" != "$_dir" ]; then
+    IMPROV_LINKDIR_KEY="$_dir"
+    IMPROV_LINKDIR_PHYS="$(cd "$_dir" 2>/dev/null && pwd -P)" || IMPROV_LINKDIR_PHYS=""
+  fi
+  _parent="${IMPROV_LINKDIR_PHYS:-}"
+  [ -n "$_parent" ] || return 1
+
+  _resolved="$_parent/$_base"
+  [ "$_resolved" = "$IMPROV_REPO_PHYS" ] && return 0
+  case "$_resolved" in "$IMPROV_REPO_PHYS"/*) return 0 ;; esac
+  return 1
+}
+
+# safe_cp <source> <destination>
+#
+# Copy a tracked file from $REPO_DIR into the user dir. PROVE THE SOURCE COPIES BEFORE
+# TOUCHING THE DESTINATION.
+#
+# The previous body was `rm -f "$2"; cp "$1" "$2"` - destination deleted first, source
+# never checked. On a checkout missing that source (a partial clone, a file this branch
+# does not ship, a permissions oddity) `--only memory` DELETED the user's existing
+# ~/.claude/skills/consolidate/SKILL.md and then aborted under `set -e`, leaving them worse
+# off than before they ran it. The destructive step ran unconditionally; the step that
+# could fail ran second. That ordering is the whole bug.
+#
+# THE `rm -f` WAS NOT DECORATION and its reason survives here. An old install could
+# symlink the destination BACK to this same source file, and plain `cp` then bails with
+# "are identical (not copied)". Writing to a temp file first and renaming it over the
+# destination handles that case without a pre-delete: the rename replaces the SYMLINK, so
+# the source is never opened for writing through its own destination.
+#
+# A DESTINATION SYMLINK IS REPLACED, NOT FOLLOWED. These destinations are installer-owned
+# artifacts under ~/.claude/skills - a copy of a repo file, not a user document - so
+# `mv` over the link is correct and is what makes the identical-file case work at all.
+# That is the opposite of the ~/.claude/CLAUDE.md rule, where the user's link IS the thing
+# to preserve; different files, different contracts.
+#
+# Returns non-zero WITHOUT having modified the destination if the source is missing or
+# unreadable, the destination directory does not exist, or the temp copy fails. Callers
+# run under `set -e`, so a non-zero return aborts the install rather than continuing on a
+# half-applied component.
+# materialize_repo_symlink <path> - turn a symlink that points into $REPO_DIR into a real
+# file holding the same content, in place, without ever using a predictable sidecar name.
+#
+# Four sites open-coded this as `cp -L "$p" "$p.migrated"; rm -f "$p"; mv "$p.migrated" "$p"`
+# (and two more with `.mig`). That is the `.bak` hazard this session has been removing
+# everywhere else, wearing a different suffix: `$p.migrated` is a path the installer does
+# not own, so the `cp` DESTROYS a user's own file parked there and, if that sidecar happens
+# to be a symlink, writes through it to somewhere else entirely. The `rm` before the `mv`
+# adds a window where the user has no file at all. Flagged by independent review as the same
+# class as the defect the rest of this diff exists to fix - which it is.
+#
+# mktemp beside the target, copy, then a single rename over the link. No predictable name,
+# no delete-before-write, and the destination only ever changes if the copy succeeded.
+# Returns non-zero WITHOUT having touched the path if any step fails.
+materialize_repo_symlink() {
+  local p="$1" dir base tmp
+  dir="$(dirname "$p")"
+  base="$(basename "$p")"
+  tmp="$(mktemp "$dir/.${base}.XXXXXX")" || return 1
+  if ! cp -L "$p" "$tmp"; then rm -f "$tmp"; return 1; fi
+  if ! mv -f "$tmp" "$p"; then rm -f "$tmp"; return 1; fi
+  return 0
+}
+
+safe_cp() {
+  local src="$1" dst="$2" dst_dir dst_base tmp
+  if [ ! -f "$src" ] || [ ! -r "$src" ]; then
+    err "safe_cp: source is not a readable regular file: $src"
+    return 1
+  fi
+  dst_dir="$(dirname "$dst")"
+  dst_base="$(basename "$dst")"
+  if [ ! -d "$dst_dir" ]; then
+    err "safe_cp: destination directory does not exist: $dst_dir"
+    return 1
+  fi
+  # `-d` WITHOUT an `-L` exemption, deliberately. A destination that is a SYMLINK TO a
+  # directory tests true for -d and true for -L, and `mv tmp <symlink-to-dir>` does not
+  # replace the link - it moves the temp file INSIDE the directory, leaving the requested
+  # destination untouched while this function returns 0. Silent success with nothing
+  # written is the worst outcome available here. Refuse both shapes. Flagged by
+  # independent review.
+  if [ -d "$dst" ]; then
+    err "safe_cp: destination is a directory (or a symlink to one): $dst"
+    return 1
+  fi
+  tmp="$(mktemp "$dst_dir/.${dst_base}.XXXXXX")" || {
+    err "safe_cp: could not create a temp file beside $dst"
+    return 1
+  }
+  if ! cp "$src" "$tmp"; then
+    rm -f "$tmp"
+    err "safe_cp: could not copy $src"
+    return 1
+  fi
+  # `mv` over a symlink replaces the LINK, never writes through it. One rename covers the
+  # regular-file, symlink and nothing-there cases identically.
+  if ! mv -f "$tmp" "$dst"; then
+    rm -f "$tmp"
+    err "safe_cp: could not move the staged copy into place at $dst"
+    return 1
+  fi
+  return 0
+}
 
 # ------------------------------------------------------------
 # link_or_copy: how a HOOK reaches ~/.claude/hooks.
@@ -785,7 +1014,7 @@ is_cluster_hook() {
 # repo source. A user's different same-named file returns false.
 is_our_hook() {
   local h="$CLAUDE_DIR/hooks/$1" src="$REPO_DIR/claude/hooks/$1"
-  { [ -L "$h" ] && [[ "$(readlink "$h")" == "$REPO_DIR/"* ]]; } && return 0
+  repo_symlink_points_into_repo "$h" && return 0
   [ -f "$h" ] && [ -f "$src" ] && cmp -s "$h" "$src" && return 0
   return 1
 }
@@ -828,7 +1057,7 @@ rm_hook_if_ours() {
 # missing file.
 rm_data_if_ours() {
   local dst="$1" src="$2"
-  if { [ -L "$dst" ] && [[ "$(readlink "$dst")" == "$REPO_DIR/"* ]]; } \
+  if repo_symlink_points_into_repo "$dst" \
      || { [ -f "$dst" ] && [ -f "$src" ] && cmp -s "$dst" "$src"; }; then
     rm -f "$dst"
   fi
@@ -837,10 +1066,83 @@ rm_data_if_ours() {
 
 # If settings.json is a legacy symlink into the repo, convert to a real file before
 # mutating it (else edits would hit the repo's source settings).
+#
+# RETURNS NON-ZERO IF THE CONVERSION FAILED, AND EVERY CALLER MUST RESPECT THAT. A warn
+# here followed by the caller's JSON merge is not a degraded success, it is the cycle this
+# whole unit exists to close: the merge opens the path with "w", follows the link, and
+# truncates the REPO's own settings.json. "Could not convert it, carrying on" is the one
+# response that turns a failed safety step into the damage it was preventing. Caught by
+# independent review after an earlier version of this repair made exactly that mistake.
+#
+# A DANGLING repo link is REMOVED rather than converted. There is nothing to preserve
+# (the target does not exist), and leaving it in place is the dangerous option: the very
+# next `[ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"` sees `-f` as false, the
+# redirection FOLLOWS the link, and the installer creates a settings.json inside the repo.
+# Dropping a dangling link that points into our own checkout matches rm_data_if_ours, which
+# has always treated dangling repo links as ours to clean up.
+#
+# On failure it records into the partial-failure ledger AND sets SETTINGS_UNSAFE, because
+# the two consumers need different signals: the install paths are caught by the end-of-run
+# ledger check, while the deactivate paths exit through apply_pending long before that and
+# are caught by deactivate_component turning SETTINGS_UNSAFE into a non-zero return. Without
+# the second one, a deactivate whose settings strip was skipped would still be recorded
+# "inactive" with its wiring still live - the exact "reported success while wrong" shape
+# this session has been removing. Both were pointed out by independent review.
 ensure_real_settings() {
-  if [ -L "$SETTINGS_JSON" ] && [[ "$(readlink "$SETTINGS_JSON")" == "$REPO_DIR/"* ]]; then
-    cp -L "$SETTINGS_JSON" "$SETTINGS_JSON.mig" && rm -f "$SETTINGS_JSON" && mv "$SETTINGS_JSON.mig" "$SETTINGS_JSON"
+  if repo_symlink_points_into_repo "$SETTINGS_JSON"; then
+    if [ -e "$SETTINGS_JSON" ]; then
+      if ! materialize_repo_symlink "$SETTINGS_JSON"; then
+        settings_write_failed config "Could not convert the repo-symlinked $SETTINGS_JSON to a real file - refusing to edit it, because writing through that link would rewrite the repo's own settings.json."
+        return 1
+      fi
+    else
+      # The rm's STATUS IS CHECKED. If it fails the link is still there, and the very next
+      # `echo '{}' > "$SETTINGS_JSON"` in ensure_settings_seed would follow it and create a
+      # settings.json inside the checkout - the thing this branch exists to prevent.
+      # Returning 0 after a failed rm hands the caller a false all-clear.
+      warn "Removing a dangling $SETTINGS_JSON symlink into the repo (writing through it would create settings.json inside the checkout)."
+      if ! rm -f "$SETTINGS_JSON"; then
+        settings_write_failed config "Could not remove the dangling repo symlink at $SETTINGS_JSON - refusing to write through it."
+        return 1
+      fi
+    fi
   fi
+  return 0
+}
+
+# settings_write_failed <component> <detail> - one call for "a settings.json edit did not
+# happen", feeding BOTH consumers.
+#
+# SETTINGS_UNSAFE alone was not enough and that was a real gap: it is read only by
+# deactivate_component, so a failed settings write on an INSTALL path set a flag nobody
+# ever looked at and the run still ended "Installation complete." The ledger alone was not
+# enough either, because the deactivate path exits through apply_pending long before the
+# end-of-run ledger check. Every settings writer now reports through here so whichever
+# consumer is live for that path sees it. Independent review found each half separately.
+settings_write_failed() {
+  SETTINGS_UNSAFE=1
+  record_component_failure "$1" "$2"
+}
+
+# ensure_settings_seed - make $SETTINGS_JSON safe to write, THEN create it if missing.
+#
+# Replaces the bare `[ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"` that five
+# component sections open-coded. That line is a write, and it was unguarded: on a dangling
+# repo symlink it created the file inside the checkout, and it ran BEFORE the guarded
+# install_app_hooks pass that was supposed to protect it.
+# The seed's own status is REPORTED, not discarded. An unconditional `return 0` here made a
+# failed `echo '{}' >` (read-only dir, full disk) look like success, so every caller's
+# ok-flag stayed 1 and the section carried on writing to a settings.json that was never
+# created. Flagged by independent review.
+ensure_settings_seed() {
+  ensure_real_settings || return 1
+  if [ ! -f "$SETTINGS_JSON" ]; then
+    if ! echo '{}' > "$SETTINGS_JSON"; then
+      settings_write_failed config "could not create $SETTINGS_JSON - no settings edits were applied."
+      return 1
+    fi
+  fi
+  return 0
 }
 
 # Remove a cluster's member hooks: symlinks + their settings.json entries (all
@@ -864,8 +1166,9 @@ deactivate_cluster() {
       rm_data_if_ours "$CLAUDE_DIR/agents/$(basename "$af")" "$af"
     done
   fi
-  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
-    ensure_real_settings
+  # ensure_real_settings returning non-zero means the path is STILL a repo symlink, and
+  # the merge below would write straight through it into the repo's settings.json. Skip.
+  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ] && ensure_real_settings; then
     NAMES="$(cluster_hooks "$name")" python3 -c "
 import json, os
 p = '$SETTINGS_JSON'
@@ -883,7 +1186,7 @@ for ev in list(hooks.keys()):
     if ng: hooks[ev] = ng
     else: del hooks[ev]
 with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-"
+" || settings_write_failed clusters "settings.json edit FAILED - its hook entries were NOT removed."
   fi
 }
 
@@ -891,8 +1194,20 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 # app-wirings.json. Standalone-safe. A component block calls this to own its hooks.
 install_app_hooks() {
   mkdir -p "$CLAUDE_DIR/hooks"
-  ensure_real_settings
-  [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
+  # A failed conversion means every write below would land in the repo's own settings.json.
+  #
+  # RETURNS 0, NOT 1, AND THAT IS DELIBERATE. Every call site is a bare
+  # `picked <x> && install_app_hooks ...` at top level, so under `set -e` a non-zero return
+  # from the last command of that && list EXITS THE INSTALLER on the spot - skipping the
+  # remaining components, the state-file write, and the very ledger summary that is
+  # supposed to report this. An earlier version of this guard did return 1 and introduced
+  # exactly that abort; independent review caught it. The ledger is the reporting channel:
+  # record, skip this component's wiring, let the run finish, and let the end-of-run check
+  # turn it into a non-zero exit.
+  if ! ensure_settings_seed; then
+    record_component_failure config "hook wiring SKIPPED - $SETTINGS_JSON is a symlink into the repo that could not be converted."
+    return 0
+  fi
   # Honor the per-hook off-list (HOOK_OFF, seeded from _AMPERSAND_HOOK_OFF), mirroring
   # the QA-hook cluster pass: split the requested hooks into KEEP (deploy + wire) and
   # DROP (reconcile-remove). HOOK_OFF entries are hook FILENAMES WITH .sh; an entry
@@ -906,7 +1221,11 @@ install_app_hooks() {
   done
   local okh=""
   for h in $keep; do
-    [ -f "$REPO_DIR/claude/hooks/$h" ] || { warn "app hook missing in repo: $h"; continue; }
+    # Recorded, not merely warned: a hook the repo cannot supply means this component
+    # finishes with wiring it was asked for and does not have, and a bare warn let that
+    # land inside an otherwise successful run. Flagged by independent review.
+    [ -f "$REPO_DIR/claude/hooks/$h" ] \
+      || { record_component_failure config "app hook missing in repo: $h - it was NOT deployed or wired."; continue; }
     chmod +x "$REPO_DIR/claude/hooks/$h"
     link_or_copy "$REPO_DIR/claude/hooks/$h" "$CLAUDE_DIR/hooks/$h"
     # Same companion-data rule as the cluster loop: consolidate-nudge.sh is an APP
@@ -935,7 +1254,7 @@ for s,entries in wir.items():
     if s in okh:
         for e in entries: add(e['event'], e.get('matcher'), e['hook'])
 with open(p,'w') as f: json.dump(d,f,indent=2); f.write('\n')
-"
+" || settings_write_failed app-hooks "Could not wire app-hook entries into settings.json - the hooks are on disk but NOT wired."
   fi
   # Reconcile: any requested hook that is off-listed gets removed (its deployed file
   # + its EXACT app-wirings.json commands), so re-running --only <comp> with a hook
@@ -958,8 +1277,8 @@ deactivate_app_hooks() {
       rm_data_if_ours "$CLAUDE_DIR/hooks/$d" "$REPO_DIR/claude/hooks/$d"
     done
   done
-  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
-    ensure_real_settings
+  # Same guard as the cluster strip: no conversion, no write.
+  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ] && ensure_real_settings; then
     NAMES="$*" python3 -c "
 import json, os
 p='$SETTINGS_JSON'; wp='$REPO_DIR/claude/hooks/app-wirings.json'
@@ -975,7 +1294,7 @@ for ev in list(hooks.keys()):
     if ng: hooks[ev]=ng
     else: del hooks[ev]
 with open(p,'w') as f: json.dump(d,f,indent=2); f.write('\n')
-"
+" || settings_write_failed app-hooks "settings.json edit FAILED - its hook entries were NOT removed."
   fi
 }
 
@@ -1550,19 +1869,65 @@ safe_sed_apply() {
 # refresh or to uninstall, on every machine, forever. Found by driving the real installer
 # twice in a row - the mirror-based test that preceded it could not see this at all.
 #
-# Stripping is lossless for a reader: these are installer bookkeeping comments, not
-# content. It also fixes the source contamination's symptom without editing the source,
-# which matters because that path is the user's live ~/.claude/CLAUDE.md on this machine.
+# IT IS NOW A VALIDATOR, NOT A STRIPPER, AND THE RENAME IS THE POINT.
+#
+# Silently deleting the offending lines fixed the nested-marker breakage and hid its
+# cause. The payload sources are documentation; a line that legitimately DOCUMENTS one of
+# these markers - which is exactly what a file explaining the installer's own block format
+# would contain - vanished from the installed output with no diagnostic, and the run
+# printed "Installation complete." Nobody can tell a stripped line from a line that was
+# never written. Worse, the strip meant a genuinely contaminated source (a payload with an
+# install's own block written back into it, the cycle this session closed) installed
+# CLEANLY forever instead of being reported once.
+#
+# So: refuse. A payload source carrying a standalone block marker is a repo defect, and
+# the installer names the file and the line and stops rather than papering over it.
+#
+# VALIDATION-ONLY IS SAFE FOR THIS REPO RIGHT NOW, and that was checked rather than
+# assumed: claude/CLAUDE.md is a clean 184-line payload again (the committed marker pair
+# it once carried at 134/443 was removed when the source was restored), claude/RULES.md no
+# longer carries the capital-I `<!-- Improv:rules:begin -->` it drifted into, and
+# claude/memory-discipline-section.md no longer wraps itself. The match stays
+# CASE-INSENSITIVE for exactly that history: marker case has varied across the
+# claude-dotfiles -> Improv -> improv renames, and a lowercase-only check let the capital-I
+# spelling through once already. Trailing whitespace is tolerated because an editor can add
+# it invisibly to a line whose entire content is an HTML comment.
+#
+# CONTRACT: reads stdin, writes it to stdout unchanged, returns 0. On a hit it writes
+# NOTHING to stdout, names the file and line on stderr, and returns 1 - callers must check
+# and must not emit their begin/end markers around an empty payload.
 strip_block_markers() {
-  # CASE-INSENSITIVE on purpose. claude/RULES.md carried `<!-- Improv:rules:begin -->`
-  # with a capital I, so a fixed-string lowercase filter let that marker leak straight
-  # through into the assembled block - which is the nested-marker breakage this guard
-  # exists to prevent, reintroduced by a single letter. Marker case has varied across
-  # the claude-dotfiles -> Improv -> improv rename passes, so match the SHAPE, not one
-  # spelling of it. Also tolerates trailing whitespace, which an editor can add
-  # invisibly to a line whose entire content is an HTML comment.
-  grep -viE '^[[:space:]]*<!--[[:space:]]*improv:(brain|rules|local|memory-discipline):(begin|end)[[:space:]]*-->[[:space:]]*$' \
-    || true
+  local _label="${1:-payload source}" _tmp _hit
+  _tmp="$(mktemp "${TMPDIR:-/tmp}/improv-payload.XXXXXX")" || {
+    printf 'improv: could not create a temp file to validate %s\n' "$_label" >&2
+    return 1
+  }
+  if ! cat > "$_tmp"; then
+    rm -f "$_tmp"
+    printf 'improv: could not read %s for marker validation\n' "$_label" >&2
+    return 1
+  fi
+  # No pipe into `head`. Under `set -o pipefail` a `grep | head -1` can report the
+  # pipeline as failed via SIGPIPE the moment head closes the stream, which would blank a
+  # REAL hit and turn this validator back into a silent pass. Take all matches, keep the
+  # first line with parameter expansion.
+  _hit="$(grep -inE '^[[:space:]]*<!--[[:space:]]*improv:(brain|rules|local|memory-discipline):(begin|end)[[:space:]]*-->[[:space:]]*$' \
+    "$_tmp")" || _hit=""
+  _hit="${_hit%%$'\n'*}"
+  if [ -n "$_hit" ]; then
+    rm -f "$_tmp"
+    printf 'improv: %s contains a reserved standalone block marker at line %s\n' "$_label" "$_hit" >&2
+    printf 'improv: the installer owns those marker lines - a payload source must not contain one.\n' >&2
+    printf 'improv: remove it, or indent it so it is no longer a standalone marker line.\n' >&2
+    return 1
+  fi
+  # The temp is removed on BOTH outcomes. `cat "$_tmp"; rm -f "$_tmp"` leaks the file if the
+  # cat fails (a full pipe buffer, a closed reader) because `set -e` leaves before the rm.
+  # Capture the status, always clean up, then report.
+  local _rc=0
+  cat "$_tmp" || _rc=1
+  rm -f "$_tmp"
+  return "$_rc"
 }
 
 # is_current_format - does $ZSHRC carry EXACTLY ONE shortcut block, and does that
@@ -1888,7 +2253,7 @@ deactivate_brain() {
       rm -f "$CLAUDE_DIR/CLAUDE.md"
     fi
   fi
-  if [ -L "$CLAUDE_DIR/CLAUDE.md" ] && [[ "$(readlink "$CLAUDE_DIR/CLAUDE.md")" == "$REPO_DIR/"* ]]; then
+  if repo_symlink_points_into_repo "$CLAUDE_DIR/CLAUDE.md"; then
     rm -f "$CLAUDE_DIR/CLAUDE.md"
   fi
 }
@@ -1912,8 +2277,8 @@ deactivate_config() {
   # symlinks + wires it too). Do NOT remove it on config deactivate, or an active
   # memory install would be left wiring a missing loader.
   # hud.sh is config-unique (the config-core marker + read-only viewer)
-  [ -L "$CLAUDE_DIR/hud.sh" ] && [[ "$(readlink "$CLAUDE_DIR/hud.sh")" == "$REPO_DIR/"* ]] && rm -f "$CLAUDE_DIR/hud.sh"
-  if [ -L "$CLAUDE_DIR/settings.json" ] && [[ "$(readlink "$CLAUDE_DIR/settings.json")" == "$REPO_DIR/"* ]]; then
+  repo_symlink_points_into_repo "$CLAUDE_DIR/hud.sh" && rm -f "$CLAUDE_DIR/hud.sh"
+  if repo_symlink_points_into_repo "$CLAUDE_DIR/settings.json"; then
     rm -f "$CLAUDE_DIR/settings.json"
   fi
   if [ -f "$CLAUDE_DIR/settings.json" ] && [ ! -L "$CLAUDE_DIR/settings.json" ]; then
@@ -2002,24 +2367,86 @@ PYCONFIG
 }
 
 deactivate_memory() {
+  local _rc=0 _md="$CLAUDE_DIR/CLAUDE.md"
   deactivate_app_hooks memory-approve.sh memory-nudge.sh memory-compact.sh consolidate-nudge.sh
   [ -L "$CLAUDE_DIR/startup-check.sh" ] && rm -f "$CLAUDE_DIR/startup-check.sh"
   # The consolidate skill is the action the (now removed) nudge pointed at.
   rm -rf "$CLAUDE_DIR/skills/consolidate"
-  if [ -f "$CLAUDE_DIR/CLAUDE.md" ] && [ ! -L "$CLAUDE_DIR/CLAUDE.md" ] \
-      && grep -Fq "<!-- improv:memory-discipline:begin -->" "$CLAUDE_DIR/CLAUDE.md"; then
-    safe_block_delete "$CLAUDE_DIR/CLAUDE.md" \
+
+  # A REPO-POINTING ~/.claude/CLAUDE.md IS MATERIALIZED FIRST, NOT DELETED AND NOT FOLLOWED.
+  #
+  # This whole branch was missing. The block delete below is gated on `[ ! -L ]` - correct
+  # in itself, since following a repo link would rewrite claude/CLAUDE.md, our own payload
+  # source - but nothing handled the link, so on a legacy machine `memory` deactivated to
+  # completion with the memory-discipline instructions still fully live in the file Claude
+  # actually reads. The component reported gone and was not gone.
+  #
+  # WHY NOT JUST `rm` THE LINK, WHICH IS WHAT deactivate_brain DOES. Because the two
+  # components own different things, and this is the one place where getting it wrong
+  # damages the user. `brain` owns ~/.claude/CLAUDE.md as a whole in the legacy shape - the
+  # link IS the brain install, so removing it removes exactly what brain put there.
+  # `memory` owns ONE marker block inside that file. Deleting the link would take the
+  # brain block, the user's own global rules and anything else in there with it, to
+  # uninstall a section. So: convert the link to a real file (identical content, the same
+  # migration section 11 performs on the install path), then delete only our block. The
+  # user keeps every other byte, and the repo's payload source is never written through.
+  #
+  # ONLY IF OUR BLOCK IS ACTUALLY IN THERE. Converting a link the user still wants, to
+  # remove a block that was never present, is a gratuitous change to their setup.
+  #
+  # THE TEST IS CASE-INSENSITIVE, and that is not cosmetic. The pre-repair installer wrote
+  # a capital-I `<!-- Improv:memory-discipline:begin -->` block - the install path still
+  # carries an explicit branch to clean those up - so a lowercase-only test here would
+  # leave a legacy machine's symlink unmaterialized, the delete below skipped by its
+  # `[ ! -L ]` guard, and the memory instructions fully live after an uninstall. That is
+  # the exact defect this branch exists to close, reintroduced by one letter of case.
+  # Caught by independent review.
+  if repo_symlink_points_into_repo "$_md" \
+     && grep -qiE '<!--[[:space:]]*improv:memory-discipline:begin[[:space:]]*-->' "$_md" 2>/dev/null; then
+    # Uses the shared primitive rather than its own mktemp/cp/mv, so there is exactly ONE
+    # implementation of "materialize a repo symlink" in this file. A hand-rolled second copy
+    # here was flagged by independent review - the same "a rule enforced in one place out of
+    # several is not a rule" problem that produced the twelve divergent ownership checks.
+    if materialize_repo_symlink "$_md"; then
+      warn "Converted the legacy symlinked $_md to a real file so the memory block can be removed."
+    else
+      record_component_failure memory "Could not convert the repo-symlinked $_md to a real file - the memory-discipline block is STILL ACTIVE."
+      _rc=1
+    fi
+  fi
+
+  if [ -f "$_md" ] && [ ! -L "$_md" ] \
+      && grep -Fq "<!-- improv:memory-discipline:begin -->" "$_md"; then
+    safe_block_delete "$_md" \
       "<!-- improv:memory-discipline:begin -->" "<!-- improv:memory-discipline:end -->" \
-      || warn "memory-discipline block in $CLAUDE_DIR/CLAUDE.md is malformed - left in place."
+      || { record_component_failure memory "memory-discipline block in $_md is malformed - left in place."; _rc=1; }
+  fi
+
+  # The capital-I block the pre-repair installer wrote. The INSTALL path has always cleaned
+  # these up; deactivate never did, so a legacy machine could uninstall memory and keep the
+  # instructions. An uninstall has to remove every shape this component has ever written,
+  # or it is not an uninstall.
+  if [ -f "$_md" ] && [ ! -L "$_md" ] \
+      && grep -Fq '<!-- Improv:memory-discipline:begin -->' "$_md"; then
+    safe_block_delete "$_md" \
+      '<!-- Improv:memory-discipline:begin -->' '<!-- Improv:memory-discipline:end -->' \
+      || { record_component_failure memory "legacy memory-discipline block in $_md is malformed - left in place."; _rc=1; }
   fi
   if [ -f "$CLAUDE_DIR/settings.json" ] && [ ! -L "$CLAUDE_DIR/settings.json" ]; then
     python3 - <<'PY'
-import json, os
+import json, os, sys
 path = os.path.expanduser("~/.claude/settings.json")
+# "No file" is nothing to do. "There IS a file and I could not read or parse it" is a
+# FAILURE, and lumping the two together as SystemExit(0) is what let a malformed or
+# unreadable settings.json report a clean memory deactivate with every hook still wired.
+# Distinct exit codes so the shell can tell them apart. Flagged by independent review.
+if not os.path.exists(path):
+    raise SystemExit(0)
 try:
     with open(path) as f: d = json.load(f)
-except Exception:
-    raise SystemExit(0)
+except Exception as exc:
+    sys.stderr.write("improv: cannot read %s (%s) - memory hook entries NOT removed\n" % (path, exc))
+    raise SystemExit(3)
 hooks = d.get("hooks", {})
 LOADER = "startup-check.sh"
 PRECOMPACT_MARK = "PreCompact: flushing pending memory"
@@ -2039,7 +2466,18 @@ with open(path, "w") as f:
     json.dump(d, f, indent=2)
     f.write("\n")
 PY
+    # Status CHECKED, like every other settings writer. errexit is disabled all the way
+    # down this call chain (apply_pending tests deactivate_component's status), so an
+    # unchecked python failure here fell straight through to the `return "$_rc"` below and
+    # reported a clean deactivate with the memory hooks still wired. Independent review
+    # found this one still bare after its seven siblings had been fixed.
+    if [ $? -ne 0 ]; then
+      settings_write_failed memory "settings.json edit FAILED - the memory hook entries were NOT removed."
+      _rc=1
+    fi
   fi
+  # apply_pending checks this. A component that could not fully come out is not inactive.
+  return "$_rc"
 }
 
 deactivate_skills() {
@@ -2061,7 +2499,7 @@ deactivate_skills() {
 }
 
 deactivate_voice() {
-  if [ -L "$CLAUDE_DIR/transcribe" ] && [[ "$(readlink "$CLAUDE_DIR/transcribe")" == "$REPO_DIR/"* ]]; then
+  if repo_symlink_points_into_repo "$CLAUDE_DIR/transcribe"; then
     rm -f "$CLAUDE_DIR/transcribe"
   fi
 }
@@ -2092,15 +2530,22 @@ deactivate_discord() {
       # `source` line points at, so every new shell would open with a "no such file or
       # directory" error - a worse state than not having deactivated at all. Leave both
       # halves in place and say so; a failed deactivate that changed nothing is the only
-      # coherent outcome. Returns 0 because callers reach here through a `case` arm under
-      # `set -e` and a component's undo must not abort the whole installer.
-      warn "Could not edit $ZSHRC - leaving the discord-chat-launcher lines AND the scripts they source in place."
-      return 0
+      # coherent outcome.
+      #
+      # RETURNS NON-ZERO NOW, and that is the fix. It used to `return 0` on the reasoning
+      # that a component's undo must not abort the installer under `set -e` - true, but it
+      # made "I changed nothing" indistinguishable from "I removed the component". The
+      # user was told discord came out while the launcher still sourced on every new
+      # shell. The ledger keeps the run going (nothing here aborts) and the non-zero
+      # return is what apply_pending checks, so it preserves pending and reports the
+      # failure instead of recording the component inactive.
+      record_component_failure discord "Could not edit $ZSHRC - leaving the discord-chat-launcher lines AND the scripts they source in place."
+      return 1
     fi
   fi
   local f
   for f in discord-chat-launcher.sh discord-onboard.sh discord-setup.sh; do
-    if [ -L "$CLAUDE_DIR/$f" ] && [[ "$(readlink "$CLAUDE_DIR/$f")" == "$REPO_DIR/"* ]]; then
+    if repo_symlink_points_into_repo "$CLAUDE_DIR/$f"; then
       rm -f "$CLAUDE_DIR/$f"
     fi
   done
@@ -2131,7 +2576,9 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 "
   fi
   # Remove voice-mandate hook from settings.json SessionStart + PostCompact
-  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
+  # ensure_real_settings guards the write: a repo-pointing settings.json that could not be
+  # converted must NOT be edited, because `open(p, "w")` follows the link into the repo.
+  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ] && ensure_real_settings; then
     python3 -c "
 import json
 p = '$SETTINGS_JSON'
@@ -2147,7 +2594,7 @@ for entry in hooks.get('UserPromptSubmit', []):
     hl = entry.get('hooks', [])
     entry['hooks'] = [h for h in hl if h.get('command') != VTOGGLE_CMD]
 with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-"
+" || settings_write_failed voice-output "settings.json edit FAILED - its hook entries were NOT removed."
   fi
 }
 
@@ -2206,7 +2653,9 @@ deactivate_cmux() {
   rm -f "$CLAUDE_DIR/.no-auto-resume"
   [ -L "$CLAUDE_DIR/cmux" ] && rm -f "$CLAUDE_DIR/cmux"
   # Remove ALL cmux hooks from settings.json (strip by basename across every event)
-  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
+  # ensure_real_settings guards the write: a repo-pointing settings.json that could not be
+  # converted must NOT be edited, because `open(p, "w")` follows the link into the repo.
+  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ] && ensure_real_settings; then
     python3 -c "
 import json
 p = '$SETTINGS_JSON'
@@ -2219,7 +2668,7 @@ for ev in list(hooks.keys()):
     hooks[ev] = [g for g in hooks[ev] if g.get('hooks')]
     if not hooks[ev]: del hooks[ev]
 with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-"
+" || settings_write_failed cmux "settings.json edit FAILED - its hook entries were NOT removed."
   fi
 }
 
@@ -2235,8 +2684,15 @@ deactivate_nvm() {
     # The cost is that detect_component's looser grep then keeps reporting active - a
     # visible wrong state, which is the better failure than deleting a line we did not
     # write. Trailing whitespace is tolerated; nothing else is.
-    safe_sed_apply "$ZSHRC" '/^# Auto-activate nvm default so claude\/node\/npm are on PATH in new shells[[:space:]]*$/d; /^nvm use default --silent 2>\/dev\/null[[:space:]]*$/d' \
-      || warn "Could not remove the nvm activation lines from $ZSHRC - left in place."
+    #
+    # A FAILED EDIT HERE IS A FAILED DEACTIVATE, NOT A WARNING. A read-only ~/.zshrc used
+    # to produce a warn line, "Installation complete." and exit 0 while
+    # `nvm use default --silent` went on running in every new shell. The component was
+    # reported gone and was still live. Record it and return non-zero.
+    if ! safe_sed_apply "$ZSHRC" '/^# Auto-activate nvm default so claude\/node\/npm are on PATH in new shells[[:space:]]*$/d; /^nvm use default --silent 2>\/dev\/null[[:space:]]*$/d'; then
+      record_component_failure nvm "Could not remove the nvm activation lines from $ZSHRC - left in place."
+      return 1
+    fi
   fi
 }
 
@@ -2279,7 +2735,9 @@ deactivate_reflect() {
   # dangling link and still exits 0 when the path is absent.
   rm -f "$CLAUDE_DIR/hooks/reflect-nudge.sh"
   # Strip reflect-nudge from settings.json SessionStart (block-wired now).
-  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
+  # ensure_real_settings guards the write: a repo-pointing settings.json that could not be
+  # converted must NOT be edited, because `open(p, "w")` follows the link into the repo.
+  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ] && ensure_real_settings; then
     python3 -c "
 import json
 p = '$SETTINGS_JSON'
@@ -2291,7 +2749,7 @@ if 'SessionStart' in hooks:
     hooks['SessionStart'] = [g for g in hooks['SessionStart'] if g.get('hooks')]
     if not hooks['SessionStart']: del hooks['SessionStart']
 with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-"
+" || settings_write_failed reflect "settings.json edit FAILED - its hook entries were NOT removed."
   fi
   [ -f "$CLAUDE_DIR/last-reflect-timestamp" ] && rm -f "$CLAUDE_DIR/last-reflect-timestamp"
   # Scheduled weekly reflect (T-0045): unload the user agent if loaded, then
@@ -2319,7 +2777,9 @@ deactivate_sidecoach() {
   [ -L "$HOME/.local/bin/sidecoach" ] && rm -f "$HOME/.local/bin/sidecoach"
   [ -L "$HOME/.local/bin/sidecoach-monitor" ] && rm -f "$HOME/.local/bin/sidecoach-monitor"
   # Remove sidecoach hook entries from settings.json
-  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
+  # ensure_real_settings guards the write: a repo-pointing settings.json that could not be
+  # converted must NOT be edited, because `open(p, "w")` follows the link into the repo.
+  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ] && ensure_real_settings; then
     python3 -c "
 import json
 p = '$SETTINGS_JSON'
@@ -2337,7 +2797,7 @@ for event in ['SessionStart', 'UserPromptSubmit', 'Stop', 'PostCompact', 'PostTo
     elif event in hooks:
         del hooks[event]
 with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-"
+" || settings_write_failed sidecoach "settings.json edit FAILED - its hook entries were NOT removed."
   fi
   # Remove the sidecoach MCP server registration from ~/.claude.json
   if command -v python3 >/dev/null 2>&1 && [ -f "$HOME/.claude.json" ]; then
@@ -2364,7 +2824,9 @@ deactivate_fable() {
   # Remove the guard symlink + its PreToolUse wiring. Leave detect-session-model
   # (shared with the base model-router-guard).
   rm -f "$CLAUDE_DIR/hooks/fable-orchestrator-guard.sh"
-  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ]; then
+  # ensure_real_settings guards the write: a repo-pointing settings.json that could not be
+  # converted must NOT be edited, because `open(p, "w")` follows the link into the repo.
+  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ] && ensure_real_settings; then
     python3 -c "
 import json
 p = '$SETTINGS_JSON'
@@ -2376,7 +2838,7 @@ if 'PreToolUse' in hooks:
     hooks['PreToolUse'] = [g for g in hooks['PreToolUse'] if g.get('hooks')]
     if not hooks['PreToolUse']: del hooks['PreToolUse']
 with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-"
+" || settings_write_failed fable "settings.json edit FAILED - its hook entries were NOT removed."
   fi
 }
 
@@ -2410,15 +2872,25 @@ migrate_legacy_markers() {
     # A link to the user's OWN dotfiles is followed, as everywhere else: they chose it,
     # and it is their file. Only links into $REPO_DIR are skipped. The target is resolved
     # rather than string-matched on `readlink` output so a relative link cannot slip past.
+    #
+    # The resolution USED to be written out inline right here, and this comment was the
+    # only place in the file that said a relative link must not slip past - while twelve
+    # other ownership checks went on doing the raw string compare that lets one through.
+    # It now calls the shared repo_symlink_points_into_repo, which is that same
+    # resolution and the only copy of it.
+    #
+    # FAIL CLOSED IF THE SYMBOL IS MISSING. test-userfile-safe-edit.sh awk-extracts this
+    # function into a standalone lib, so a helper it does not also extract degrades into
+    # "command not found" (exit 127) - which reads as "not ours" and would make this loop
+    # FOLLOW a repo link and rewrite our own payload source. That exact degradation has
+    # already cost this repo one investigation (see the note on safe_block_delete). An
+    # unresolvable ownership question is answered by leaving the file alone.
     if [ -L "$f" ]; then
-      local _t _d _repo
-      _t="$(readlink "$f")"
-      case "$_t" in /*) : ;; *) _t="$(dirname "$f")/$_t" ;; esac
-      _d="$(cd "$(dirname "$_t")" 2>/dev/null && pwd -P)" || _d=""
-      _repo="$(cd "${REPO_DIR:-/nonexistent}" 2>/dev/null && pwd -P)" || _repo=""
-      if [ -n "$_d" ] && [ -n "$_repo" ] && { [ "$_d" = "$_repo" ] || case "$_d/" in "$_repo"/*) true ;; *) false ;; esac; }; then
+      if ! declare -f repo_symlink_points_into_repo >/dev/null 2>&1; then
+        warn "repo_symlink_points_into_repo is not defined - skipping marker migration for the symlink $f"
         continue
       fi
+      repo_symlink_points_into_repo "$f" && continue
     fi
     if grep -q "claude-dotfiles:" "$f" 2>/dev/null; then
       # Two BRE substitutions rather than one ERE alternation: the primitive runs the
@@ -2436,6 +2908,22 @@ migrate_legacy_markers() {
 }
 
 deactivate_component() {
+  # A COMPONENT WHOSE SETTINGS STRIP WAS SKIPPED IS NOT DEACTIVATED, AND THIS IS WHERE THAT
+  # IS ENFORCED, ONCE, FOR ALL OF THEM.
+  #
+  # The per-component settings strips are guarded with `&& ensure_real_settings`, so an
+  # unconvertible repo symlink can no longer be written through - but a guard that merely
+  # SKIPS is silent, and every one of those functions still returned 0. apply_pending reads
+  # that 0, clears pending, and records the component "inactive" while its hook wiring is
+  # still live in settings.json. Safe and wrong is still wrong, and it is the same failure
+  # shape as the warn-and-succeed defect this unit was opened to fix. Independent review
+  # named it.
+  #
+  # Doing it here rather than in each deactivate function is deliberate: it is one edit
+  # instead of seven, it cannot be forgotten by a component added later, and the flag is
+  # reset per call so one component's failure cannot be attributed to the next.
+  local _dc_rc=0
+  SETTINGS_UNSAFE=0
   migrate_legacy_markers
   case "$1" in
     brain)      deactivate_brain ;;
@@ -2474,6 +2962,9 @@ deactivate_component() {
     visual-effects)    deactivate_design_skill visual-effects ;;
     icon-source)       deactivate_design_skill icon-source ;;
   esac
+  _dc_rc=$?
+  if [ "${SETTINGS_UNSAFE:-0}" = 1 ]; then _dc_rc=1; fi
+  return "$_dc_rc"
 }
 
 
@@ -4199,15 +4690,32 @@ if picked brain; then
   LOCAL_END='<!-- improv:local:end -->'
   TARGET_MD="$CLAUDE_DIR/CLAUDE.md"
 
-  # Legacy migration: if CLAUDE.md is a symlink to our repo, convert to real file
-  if [ -L "$TARGET_MD" ] && [[ "$(readlink "$TARGET_MD")" == "$REPO_DIR/"* ]]; then
-    warn "Migrating legacy symlinked CLAUDE.md to a real file..."
-    cp -L "$TARGET_MD" "$TARGET_MD.migrated"
-    rm -f "$TARGET_MD"
-    mv "$TARGET_MD.migrated" "$TARGET_MD"
+  # VALIDATE THE PAYLOAD BEFORE TOUCHING ANYTHING AT ALL - before the symlink migration,
+  # before the `touch`, and before any delete.
+  #
+  # The first pass at this moved validation ahead of the DELETE, which was not far enough:
+  # the migration and the `touch` still ran first, so a refusal reported "left exactly as it
+  # was" over a file whose symlink had already been converted to a regular file, or which
+  # had just been created. Independent review caught the gap between the message and the
+  # truth. Nothing about building this payload depends on the target, so it goes first and
+  # the claim becomes accurate.
+  brain_block_ok=1
+  if ! brain_payload="$({ cat "$REPO_DIR/claude/RULES.md"; printf '\n'; cat "$REPO_DIR/claude/CLAUDE.md"; } \
+      | strip_block_markers "claude/RULES.md + claude/CLAUDE.md")"; then
+    record_component_failure brain "payload source carries a reserved block marker (see above) - $TARGET_MD was left exactly as it was."
+    brain_block_ok=0
   fi
 
-  [ -f "$TARGET_MD" ] || touch "$TARGET_MD"
+  # Legacy migration: if CLAUDE.md is a symlink to our repo, convert to real file
+  if [ "$brain_block_ok" = 1 ] && repo_symlink_points_into_repo "$TARGET_MD"; then
+    warn "Migrating legacy symlinked CLAUDE.md to a real file..."
+    materialize_repo_symlink "$TARGET_MD" \
+      || { record_component_failure brain "Could not convert the repo-symlinked $TARGET_MD to a real file - refusing to write through it into our own payload source."; brain_block_ok=0; }
+  fi
+
+  if [ "$brain_block_ok" = 1 ]; then
+    [ -f "$TARGET_MD" ] || touch "$TARGET_MD"
+  fi
 
   # Remove old block if present (so re-runs pick up content changes)
   # Unlike the deactivate sites there is deliberately NO `[ ! -L ]` guard here. The
@@ -4223,22 +4731,31 @@ if picked brain; then
   # refuses too - so the user cannot uninstall ANY copy. Measured by independent review at
   # 1 -> 4 begin markers over three runs. The old delete-to-EOF was destructive but
   # self-healing on the next run; this shape never heals, so it has to stop instead.
-  brain_block_ok=1
-  if grep -Fq "$BRAIN_BEGIN" "$TARGET_MD" 2>/dev/null; then
+  # The payload was validated and captured at the top of this section, before the migration
+  # and the touch, so by here a refusal has already suppressed everything below it.
+  if [ "$brain_block_ok" = 1 ] && grep -Fq "$BRAIN_BEGIN" "$TARGET_MD" 2>/dev/null; then
     safe_block_delete "$TARGET_MD" "$BRAIN_BEGIN" "$BRAIN_END" \
       || { warn "brain block in $TARGET_MD is malformed (no closing marker, or two opens) - NOT refreshing it. Fix or remove that block, then re-run."; brain_block_ok=0; }
   fi
 
-  # Also handle legacy marker from the old claude component
-  if grep -Fq "<!-- improv:rules:begin -->" "$TARGET_MD" 2>/dev/null; then
+  # Also handle legacy marker from the old claude component.
+  #
+  # A REFUSED LEGACY DELETE SUPPRESSES THE APPEND TOO. This used to warn and fall through,
+  # which appended a fresh brain block while leaving the malformed legacy block in place -
+  # so the file ended up with two begin markers, after which every future run's canonical
+  # delete refuses and the user can no longer refresh OR uninstall either copy. That is the
+  # same unbounded, never-heals shape documented above, reached through the legacy branch;
+  # the memory section already guarded against it and this one did not. Flagged by
+  # independent review.
+  if [ "$brain_block_ok" = 1 ] && grep -Fq "<!-- improv:rules:begin -->" "$TARGET_MD" 2>/dev/null; then
     safe_block_delete "$TARGET_MD" "<!-- improv:rules:begin -->" "<!-- improv:rules:end -->" \
-      || warn "legacy rules block in $TARGET_MD is malformed - left in place."
+      || { warn "legacy rules block in $TARGET_MD is malformed - left in place, and NOT appending a fresh block over it. Fix or remove that block, then re-run."; brain_block_ok=0; }
   fi
 
   if [ "$brain_block_ok" = 1 ]; then
     {
       printf '\n%s\n' "$BRAIN_BEGIN"
-      { cat "$REPO_DIR/claude/RULES.md"; printf '\n'; cat "$REPO_DIR/claude/CLAUDE.md"; } | strip_block_markers
+      printf '%s\n' "$brain_payload"
       printf '\n%s\n' "$BRAIN_END"
     } >> "$TARGET_MD"
     ok "Team rules + workflow appended to $TARGET_MD (marker-guarded)"
@@ -4247,14 +4764,19 @@ if picked brain; then
   # CLAUDE.local.md personal overrides in their own marker block
   if [ -f "$REPO_DIR/claude/CLAUDE.local.md" ]; then
     local_block_ok=1
-    if grep -Fq "$LOCAL_BEGIN" "$TARGET_MD" 2>/dev/null; then
+    # Validate first, delete second - same ordering rule as the brain block above.
+    if ! local_payload="$(strip_block_markers "claude/CLAUDE.local.md" < "$REPO_DIR/claude/CLAUDE.local.md")"; then
+      record_component_failure brain "claude/CLAUDE.local.md carries a reserved block marker (see above) - the existing local-overrides block in $TARGET_MD was left exactly as it was."
+      local_block_ok=0
+    fi
+    if [ "$local_block_ok" = 1 ] && grep -Fq "$LOCAL_BEGIN" "$TARGET_MD" 2>/dev/null; then
       safe_block_delete "$TARGET_MD" "$LOCAL_BEGIN" "$LOCAL_END" \
         || { warn "local-overrides block in $TARGET_MD is malformed - NOT refreshing it. Fix or remove that block, then re-run."; local_block_ok=0; }
     fi
     if [ "$local_block_ok" = 1 ]; then
       {
         printf '\n%s\n' "$LOCAL_BEGIN"
-        strip_block_markers < "$REPO_DIR/claude/CLAUDE.local.md"
+        printf '%s\n' "$local_payload"
         printf '\n%s\n' "$LOCAL_END"
       } >> "$TARGET_MD"
       info "Appended CLAUDE.local.md (personal overrides, marker-guarded)"
@@ -4273,15 +4795,17 @@ if picked config; then
 
   USER_SETTINGS="$CLAUDE_DIR/settings.json"
 
-  # Legacy migration: if settings.json is a symlink to our repo, convert to real file
-  if [ -L "$USER_SETTINGS" ] && [[ "$(readlink "$USER_SETTINGS")" == "$REPO_DIR/"* ]]; then
-    warn "Migrating legacy symlinked settings.json to a real file..."
-    cp -L "$USER_SETTINGS" "$USER_SETTINGS.migrated"
-    rm -f "$USER_SETTINGS"
-    mv "$USER_SETTINGS.migrated" "$USER_SETTINGS"
-  fi
-
-  [ -f "$USER_SETTINGS" ] || echo '{}' > "$USER_SETTINGS"
+  # Legacy migration: if settings.json is a symlink to our repo, convert to real file.
+  #
+  # A FAILED CONVERSION MUST STOP THE SECTION, not just record it. Everything below opens
+  # this path for writing; following an unconverted repo link would rewrite the repo's own
+  # settings.json - output overwriting input, the same cycle the CLAUDE.md path had.
+  # ONE implementation of "make settings.json safe, then seed it". This section used to
+  # open-code the repo-symlink handling, which meant it did not get ensure_real_settings'
+  # dangling-link rule and would leave a dangling repo link in place after failing to
+  # convert it. $USER_SETTINGS and $SETTINGS_JSON are the same path.
+  config_settings_ok=1
+  ensure_settings_seed || config_settings_ok=0
 
   # Copy hook scripts. This is the full guard/QA/enforcement suite that our
   # claude/settings.json wires into PreToolUse / Stop / UserPromptSubmit /
@@ -4321,8 +4845,10 @@ if picked config; then
   chmod +x "$CLAUDE_DIR/startup-check.sh"
   ok "startup-check.sh"
 
-  # JSON-merge our entries into settings.json
-  if command -v python3 >/dev/null 2>&1; then
+  # JSON-merge our entries into settings.json.
+  # Gated on config_settings_ok: an unconverted repo symlink here means this merge would
+  # open and rewrite the REPO's settings.json through the link.
+  if [ "$config_settings_ok" = 1 ] && command -v python3 >/dev/null 2>&1; then
     python3 - "$USER_SETTINGS" "$REPO_DIR/claude/settings.json" <<'PYMERGE'
 import json, sys
 
@@ -4381,6 +4907,8 @@ with open(user_path, "w") as f:
     f.write("\n")
 PYMERGE
     ok "Hooks, plugins, permissions merged into $USER_SETTINGS"
+  elif [ "$config_settings_ok" != 1 ]; then
+    warn "settings.json merge skipped - see the conversion failure above."
   else
     warn "python3 not found - cannot merge settings.json. Install python3 and re-run."
   fi
@@ -4434,27 +4962,104 @@ if picked memory; then
   MEMORY_END_MARKER='<!-- improv:memory-discipline:end -->'
   USER_CLAUDE_MD="$CLAUDE_DIR/CLAUDE.md"
 
-  if [ -f "$USER_CLAUDE_MD" ] && grep -Fq "$MEMORY_BEGIN_MARKER" "$USER_CLAUDE_MD"; then
-    ok "$USER_CLAUDE_MD already contains the Memory Discipline section"
-  else
-    if [ ! -e "$USER_CLAUDE_MD" ]; then
-      info "$USER_CLAUDE_MD does not exist - creating with just the Memory Discipline section"
-      touch "$USER_CLAUDE_MD"
-    else
-      info "Appending Memory Discipline section to $USER_CLAUDE_MD"
-    fi
-    { printf '\n'; cat "$REPO_DIR/claude/memory-discipline-section.md"; } >> "$USER_CLAUDE_MD"
-    ok "Memory Discipline section added to $USER_CLAUDE_MD"
+  # THE INSTALLER OWNS THE MARKERS, NOT THE PAYLOAD. This block used to `cat` the source
+  # verbatim and emit no markers of its own, which only worked because
+  # claude/memory-discipline-section.md wrapped ITSELF in
+  # `<!-- Improv:memory-discipline:begin -->` - capital I, the same drift that bit
+  # claude/RULES.md. The presence check below is a lowercase fixed string, so it never
+  # matched the capital-I marker the installer had just written, and EVERY re-run appended
+  # another full copy: measured 1 -> 2 -> 3 blocks and 120 -> 240 -> 360 lines over three
+  # consecutive runs, each exiting 0 and printing "Installation complete". That is the
+  # unbounded, never-heals shape the brain block's comment above warns about, reached here
+  # by a single letter of case. It stayed invisible on an existing machine because an older
+  # install had already written LOWERCASE markers there, so the guard matched and the
+  # append was skipped - the bug only fires on a machine installing fresh.
+  #
+  # Now this mirrors the brain path exactly: delete any existing block, then emit the
+  # canonical lowercase markers around a payload piped through strip_block_markers. That
+  # also makes the section REFRESHABLE - the old skip-if-present branch meant content
+  # changes in the source could never reach a machine that already had the block.
+  memory_block_ok=1
+
+  # Validated and captured BEFORE the migration and the touch, not merely before the
+  # delete - same ordering rule and same reason as the brain section.
+  if ! memory_payload="$(strip_block_markers "claude/memory-discipline-section.md" \
+      < "$REPO_DIR/claude/memory-discipline-section.md")"; then
+    record_component_failure memory "claude/memory-discipline-section.md carries a reserved block marker (see above) - $USER_CLAUDE_MD was left exactly as it was."
+    memory_block_ok=0
+  fi
+
+  # THE SYMLINK MIGRATION IS THE WHOLE POINT OF THIS REPAIR, AND IT WAS MISSING HERE.
+  # safe_block_delete and `>>` both FOLLOW a symlink, deliberately - that is how a user
+  # who symlinks ~/.claude/CLAUDE.md into their own dotfiles keeps their inode. But on a
+  # machine still in the legacy state, where that path points into THIS repo, following
+  # it writes the assembled block straight back into claude/CLAUDE.md - the payload
+  # source. Output overwrites input: the exact cycle this unit exists to close, reachable
+  # by `install.sh --only memory` because the migration lived only in the brain section
+  # and never ran when brain was not picked. Reproduced against a throwaway repo copy:
+  # claude/CLAUDE.md went from 184 to 316 lines in a single --only memory run.
+  # safe_block_delete's own header calls this hazard out and notes the DEACTIVATE paths
+  # keep `[ ! -L ]` guards for it; the install path had no equivalent until now.
+  if [ "$memory_block_ok" = 1 ] && repo_symlink_points_into_repo "$USER_CLAUDE_MD"; then
+    warn "Migrating legacy symlinked CLAUDE.md to a real file..."
+    materialize_repo_symlink "$USER_CLAUDE_MD" \
+      || { record_component_failure memory "Could not convert the repo-symlinked $USER_CLAUDE_MD to a real file - refusing to write through it into our own payload source."; memory_block_ok=0; }
+  fi
+
+  if [ "$memory_block_ok" = 1 ]; then
+    [ -e "$USER_CLAUDE_MD" ] || touch "$USER_CLAUDE_MD"
+  fi
+
+  if [ "$memory_block_ok" = 1 ] && grep -Fq "$MEMORY_BEGIN_MARKER" "$USER_CLAUDE_MD" 2>/dev/null; then
+    safe_block_delete "$USER_CLAUDE_MD" "$MEMORY_BEGIN_MARKER" "$MEMORY_END_MARKER" \
+      || { record_component_failure memory "memory-discipline block in $USER_CLAUDE_MD is malformed (no closing marker, or two opens) - NOT refreshing it. Fix or remove that block, then re-run."; memory_block_ok=0; }
+  fi
+
+  # Legacy capital-I block written by the pre-repair installer. Without this a machine that
+  # installed from the drifted source keeps that stale copy forever and gains a second,
+  # correct one below - the duplication this repair exists to end.
+  #
+  # A REFUSED LEGACY DELETE MUST SUPPRESS THE APPEND TOO. Warning and appending anyway
+  # leaves the malformed legacy block in place AND adds a fresh one, so the file ends up
+  # with two begin markers - after which the canonical delete above refuses on every
+  # future run and the user can no longer uninstall or refresh EITHER copy. That is the
+  # same unbounded, never-heals shape the brain block documents, and it is why this sets
+  # memory_block_ok=0 rather than only warning.
+  # Recorded, not merely warned: a refused legacy delete leaves the STALE capital-I block
+  # installed and suppresses the refresh, so the component did not fully apply. Warning
+  # about that and then exiting 0 is the same "reported success while wrong" shape the
+  # ledger exists to end, and this site was the last one still doing it.
+  if [ "$memory_block_ok" = 1 ] && grep -Fq '<!-- Improv:memory-discipline:begin -->' "$USER_CLAUDE_MD" 2>/dev/null; then
+    safe_block_delete "$USER_CLAUDE_MD" \
+      '<!-- Improv:memory-discipline:begin -->' '<!-- Improv:memory-discipline:end -->' \
+      || { record_component_failure memory "legacy memory-discipline block in $USER_CLAUDE_MD is malformed - NOT refreshing it. Fix or remove that block, then re-run."; memory_block_ok=0; }
+  fi
+
+  if [ "$memory_block_ok" = 1 ]; then
+    {
+      printf '\n%s\n' "$MEMORY_BEGIN_MARKER"
+      printf '%s\n' "$memory_payload"
+      printf '\n%s\n' "$MEMORY_END_MARKER"
+    } >> "$USER_CLAUDE_MD"
+    ok "Memory Discipline section written to $USER_CLAUDE_MD (marker-guarded)"
   fi
 
   # (c) settings.json hook JSON-merge (Python: stdlib only)
   USER_SETTINGS="$CLAUDE_DIR/settings.json"
-  if [ ! -e "$USER_SETTINGS" ]; then
-    info "$USER_SETTINGS does not exist - creating with just the memory hooks"
-    echo '{}' > "$USER_SETTINGS"
-  fi
 
-  if command -v python3 >/dev/null 2>&1; then
+  # SAME SYMLINK RULE AS THE CLAUDE.md HALF OF THIS SECTION, which it did not have. The
+  # merge below ends in `open(path, "w")`, which FOLLOWS a symlink - so on a legacy machine
+  # where ~/.claude/settings.json points into the repo, `--only memory` rewrote the repo's
+  # own settings.json. Identical in shape to the CLAUDE.md cycle this unit was opened to
+  # close, one subsection away from it, and it survived three review rounds because the
+  # attention was all on the markdown path. The seed below is gated too: `echo '{}' >` on a
+  # DANGLING repo symlink creates the repo file.
+  # Same single implementation as the config section - ensure_settings_seed carries the
+  # dangling-repo-link rule this site used to be missing.
+  memory_settings_ok=1
+  ensure_settings_seed || memory_settings_ok=0
+
+  if [ "$memory_settings_ok" = 1 ] && command -v python3 >/dev/null 2>&1; then
     if [ ! -L "$USER_SETTINGS" ]; then
       backup_if_exists "$USER_SETTINGS"
     fi
@@ -4751,7 +5356,8 @@ if picked cmux; then
   # Standalone-safe: reachable via `--only cmux` without config, so ensure the
   # hooks dir + settings.json exist before wiring into them.
   mkdir -p "$CLAUDE_DIR/hooks"
-  [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
+  ensure_settings_seed \
+    || record_component_failure config "settings.json could not be made safe to write - see above."
 
   CMUX_CONFIG_DIR="$HOME/.config/cmux"
   mkdir -p "$CMUX_CONFIG_DIR"
@@ -5246,7 +5852,8 @@ if picked voice-output; then
 
   # Standalone-safe: reachable via `--only voice-output` without config.
   mkdir -p "$CLAUDE_DIR/hooks"
-  [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
+  ensure_settings_seed \
+    || record_component_failure config "settings.json could not be made safe to write - see above."
 
   # Copy MCP server
   mkdir -p "$CLAUDE_DIR/voice-output"
@@ -5483,7 +6090,8 @@ if picked sidecoach; then
 
   # Standalone-safe: reachable via `--only sidecoach` without config.
   mkdir -p "$CLAUDE_DIR/hooks"
-  [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
+  ensure_settings_seed \
+    || record_component_failure config "settings.json could not be made safe to write - see above."
 
   (cd "$REPO_DIR/sidecoach" && npm install --silent && npm run build) \
     || warn "Sidecoach build failed - run 'cd sidecoach && npm run build' manually"
@@ -5538,7 +6146,10 @@ if picked sidecoach; then
   # entry here and letting the app-hook pass (which runs LATER) re-add exactly the ones that
   # survive HOOK_OFF keeps re-runs idempotent regardless of the old path form - and means an
   # off-listed hook is stripped here and simply never re-added.
-  if command -v python3 >/dev/null 2>&1; then
+  #
+  # ensure_real_settings guards the write, same as every other settings writer: an
+  # unconverted repo symlink here would put this normalization into the repo's settings.
+  if command -v python3 >/dev/null 2>&1 && ensure_real_settings; then
     python3 -c "
 import json
 p = '$SETTINGS_JSON'
@@ -5550,7 +6161,7 @@ for ev in list(hooks.keys()):
     hooks[ev] = [g for g in hooks[ev] if g.get('hooks')]
     if not hooks[ev]: del hooks[ev]
 with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-" || warn "Could not normalize stale Sidecoach wirings - check settings.json manually"
+" || settings_write_failed sidecoach "Could not normalize stale Sidecoach wirings in settings.json - stale entries may survive this run."
   fi
 
   # The sidecoach MCP server was RETIRED (Jonah 2026-07-24, reversing the 2026-07-15
@@ -5583,7 +6194,8 @@ if picked fable; then
 
   # Standalone-safe: reachable via `--only fable` without config.
   mkdir -p "$CLAUDE_DIR/hooks"
-  [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
+  ensure_settings_seed \
+    || record_component_failure config "settings.json could not be made safe to write - see above."
 
   # detect-session-model.sh is a shared DEPENDENCY, not a wired hook of its own (config
   # also deploys it for the model-router, but `--only fable` must be self-sufficient).
@@ -5614,10 +6226,8 @@ if [ "$_cluster_any" = 1 ] || [ -n "${HOOK_ON// /}" ]; then
   mkdir -p "$CLAUDE_DIR/hooks"
   # Legacy migration: if settings.json is a symlink into the repo, convert to a real
   # file first (else we would write through the symlink into the repo's settings).
-  if [ -L "$SETTINGS_JSON" ] && [[ "$(readlink "$SETTINGS_JSON")" == "$REPO_DIR/"* ]]; then
-    cp -L "$SETTINGS_JSON" "$SETTINGS_JSON.mig" && rm -f "$SETTINGS_JSON" && mv "$SETTINGS_JSON.mig" "$SETTINGS_JSON"
-  fi
-  [ -f "$SETTINGS_JSON" ] || echo '{}' > "$SETTINGS_JSON"
+  cluster_settings_ok=1
+  ensure_settings_seed || cluster_settings_ok=0
 
   # Build the effective hook set (space-delimited, deduped).
   _eff=""
@@ -5667,7 +6277,9 @@ if [ "$_cluster_any" = 1 ] || [ -n "${HOOK_ON// /}" ]; then
   _eff="$_eff_ok"
 
   # Wire each effective hook's entries verbatim from cluster-wirings.json.
-  if command -v python3 >/dev/null 2>&1; then
+  # Gated on cluster_settings_ok - an unconverted repo symlink means this write lands in
+  # the repo's own settings.json.
+  if [ "$cluster_settings_ok" = 1 ] && command -v python3 >/dev/null 2>&1; then
     EFF="$_eff" python3 -c "
 import json, os
 p = '$SETTINGS_JSON'
@@ -5694,7 +6306,8 @@ for script, entries in wir.items():
         for e in entries:
             add(e['event'], e.get('matcher'), e['hook'])
 with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
-" && ok "QA-hook clusters wired (from cluster-wirings.json)" || warn "Could not wire cluster hooks"
+" && ok "QA-hook clusters wired (from cluster-wirings.json)" \
+      || settings_write_failed clusters "Could not wire the QA-hook cluster entries into settings.json - the hooks are on disk but NOT wired."
   fi
 
   # Reconcile: remove (a) any picked-cluster member now in HOOK_OFF (so re-running
@@ -5711,7 +6324,7 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
   done
   if [ -n "${_remove// /}" ]; then
     for _h in $_remove; do rm_hook_if_ours "$_h"; done
-    if command -v python3 >/dev/null 2>&1; then
+    if [ "$cluster_settings_ok" = 1 ] && command -v python3 >/dev/null 2>&1; then
       RM="$_remove" python3 -c "
 import json, os
 p = '$SETTINGS_JSON'
@@ -5825,7 +6438,16 @@ if [ -z "${_AMPERSAND_NO_SUMMARY:-}" ]; then
 
 echo ""
 echo "============================================"
-printf "${GREEN}Installation complete.${NC}\n"
+# THE BANNER MUST NOT CONTRADICT THE EXIT CODE. The run already exits 1 at the bottom of
+# this file when the partial-failure ledger is non-empty, but the banner printed first -
+# so a user (and every log tail) saw "Installation complete." in green and then, pages
+# later, a non-zero status. The headline is what people read. Flagged by independent
+# review. Same information, told once, in the right direction.
+if [ -n "$PARTIAL_FAILURES" ]; then
+  printf "${RED}Installation did NOT fully complete.${NC}\n"
+else
+  printf "${GREEN}Installation complete.${NC}\n"
+fi
 echo "============================================"
 echo ""
 
@@ -5990,3 +6612,29 @@ for k in "${KEYS[@]}"; do
   state_set "$k" "$s"
 done
 state_record_sha
+
+# ============================================================
+# Final: a run that could not fully apply a component exits non-zero.
+# ============================================================
+# "Installation complete." plus exit 0 used to be printed over the top of a component
+# that had demonstrably not been applied or removed - a read-only ~/.zshrc, a malformed
+# marker block, a payload source carrying a reserved marker. Each of those printed a
+# warning and then reported success, which is the one outcome that makes a warning
+# useless: nothing downstream, and no human skimming the tail of the log, can tell the
+# run apart from a clean one.
+#
+# THIS RUNS LAST ON PURPOSE. Everything above still executes, so a single failed
+# component does not abort the other twenty and leave the machine half-installed. The
+# state file is written first, too, so the recorded state matches what is actually on
+# disk regardless of how this run exits.
+#
+# The deactivate path does NOT reach here - apply_pending exits earlier - which is why
+# the failing deactivate functions also return non-zero to their caller. Two consumers,
+# one ledger.
+if [ -n "$PARTIAL_FAILURES" ]; then
+  echo ""
+  err "This run did NOT fully apply every component:"
+  printf '%s\n' "$PARTIAL_FAILURES" >&2
+  err "Nothing else was aborted - fix the items above and re-run."
+  exit 1
+fi
