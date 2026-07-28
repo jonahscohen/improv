@@ -115,11 +115,48 @@ trap cleanup EXIT
 
 SKILLS="$TMPHOME/.claude/skills"
 mkdir -p "$SKILLS"
-mkdir -p "$FIXREPO/claude/skills"
+
+# THE FIXTURE REPO IS A REAL GIT REPO, AND IT HAS TO BE.
+# Ownership is proven from the repo's own history: a link is removable only when its
+# target path is absent from HEAD, absent from the index, and present at some commit
+# reachable from HEAD. A bare mktemp directory can prove none of that, so against a
+# non-git fixture EVERY "this dead link IS removed" row below would pass vacuously -
+# nothing would ever be removable and the suite would be green while measuring nothing.
+git_fixture() {  # <dir> - a git repo with a deterministic identity, no user config
+  git init -q -b main "$1" >/dev/null 2>&1 || return 1
+  git -C "$1" config user.email prune-fixture@example.invalid
+  git -C "$1" config user.name  prune-fixture
+  git -C "$1" config commit.gpgsign false
+}
+git_commit() { git -C "$1" add -A >/dev/null 2>&1; git -C "$1" commit -q -m "$2" >/dev/null 2>&1; }
+
+git_fixture "$FIXREPO" || { echo "FATAL: cannot create the git fixture repo"; exit 1; }
+mkdir -p "$FIXREPO/claude/skills/live-skill" "$FIXREPO/claude/skills/gone-skill" \
+         "$FIXREPO/claude/skills/improv"     "$FIXREPO/claude/skills/gone-again" \
+         "$FIXREPO/claude/skills/ro-gone"    "$FIXREPO/claude/hooks"
+printf 'x\n'    > "$FIXREPO/claude/skills/live-skill/SKILL.md"
+printf 'gone\n' > "$FIXREPO/claude/skills/gone-skill/SKILL.md"
+printf 'imp\n'  > "$FIXREPO/claude/skills/improv/SKILL.md"
+printf 'ga\n'   > "$FIXREPO/claude/skills/gone-again/SKILL.md"
+printf 'rg\n'   > "$FIXREPO/claude/skills/ro-gone/SKILL.md"
+printf 'live\n' > "$FIXREPO/claude/hooks/live-hook.sh"
+printf 'ret\n'  > "$FIXREPO/claude/hooks/retired.json"
+printf 'rg\n'   > "$FIXREPO/claude/hooks/ro-gone.sh"
+printf 'hg\n'   > "$FIXREPO/claude/hooks/hidden-gone.sh"
+printf 'ng\n'   > "$FIXREPO/claude/hooks/nested-gone.sh"
+git_commit "$FIXREPO" "ship every fixture path"
+# THE RETIREMENT. Exactly the paths whose links must be removable, deleted by a later
+# commit - the real shape of a retirement, and the only shape the prune accepts as proof.
+# live-skill and live-hook.sh deliberately stay, so claude/skills and claude/hooks both
+# survive as directories (a vanished source directory is a different, separately covered
+# skip reason and would make these rows vacuous).
+git -C "$FIXREPO" rm -q -r \
+  claude/skills/gone-skill claude/skills/improv claude/skills/gone-again \
+  claude/skills/ro-gone claude/hooks/retired.json claude/hooks/ro-gone.sh \
+  claude/hooks/hidden-gone.sh claude/hooks/nested-gone.sh >/dev/null 2>&1
+git_commit "$FIXREPO" "retire them"
 
 # A LIVE repo-sourced skill (target exists) - must be LEFT ALONE.
-mkdir -p "$FIXREPO/claude/skills/live-skill"
-printf 'x\n' > "$FIXREPO/claude/skills/live-skill/SKILL.md"
 ln -s "$FIXREPO/claude/skills/live-skill" "$SKILLS/live-skill"
 
 # A BROKEN repo-sourced skill (target missing, its parent dir still exists) - must be
@@ -279,15 +316,31 @@ echo "===== a global --dry-run forces the prune to dry-run (dry-run beats apply)
 # Drives the real installer CLI: --dry-run together with --prune-skills-apply must
 # NOT destroy - the global dry-run wins. REPO_DIR inside install.sh resolves to the
 # real repo root, so the planted candidate points at a missing path under it.
+#
+# THE PROBE POINTS AT A GENUINELY RETIRED REAL PATH, and it has to. An invented path like
+# __prune_dryrun_probe_missing__ was never tracked by this repo, so under a prune that
+# proves ownership from git history it survives whether or not dry-run works - the row
+# would be green with the dry-run guard ripped out. claude/hooks/sidecoach-modes.json is
+# the real 2026-07-28 retirement: shipped, then deleted. It is a true removal candidate,
+# so dry-run is the ONLY thing that can save it.
 DR_HOME=$(mktemp -d) || exit 1
-mkdir -p "$DR_HOME/.claude/skills"
-ln -s "$REPO_ROOT/claude/skills/__prune_dryrun_probe_missing__" "$DR_HOME/.claude/skills/__prune_dryrun_probe__"
-HOME="$DR_HOME" bash "$INSTALL_SH" --dry-run --prune-skills-apply >/dev/null 2>&1
+DR_LINK="$DR_HOME/.claude/hooks/sidecoach-modes.json"
+mkdir -p "$DR_HOME/.claude/hooks"
+ln -s "$REPO_ROOT/claude/hooks/sidecoach-modes.json" "$DR_LINK"
+DR_OUT=$(HOME="$DR_HOME" bash "$INSTALL_SH" --dry-run --prune-skills-apply 2>&1)
 DR_RC=$?
-if [ "$DR_RC" -eq 0 ] && [ -L "$DR_HOME/.claude/skills/__prune_dryrun_probe__" ]; then
-  pass "--dry-run --prune-skills-apply exits 0 and removes NOTHING (dry-run wins over apply)"
+# ANCHOR FIRST. If the run did not IDENTIFY the probe as a removal candidate, the link
+# surviving proves nothing about dry-run, and this row must say so rather than pass.
+if printf '%s' "$DR_OUT" | grep -q "would remove dead link $DR_LINK"; then
+  if [ "$DR_RC" -eq 0 ] && [ -L "$DR_LINK" ]; then
+    pass "--dry-run --prune-skills-apply identifies a real candidate and removes NOTHING"
+  else
+    fail "--dry-run --prune-skills-apply must not mutate" \
+         "rc=$DR_RC link=$([ -L "$DR_LINK" ] && echo present || echo GONE)"
+  fi
 else
-  fail "--dry-run --prune-skills-apply must not mutate" "rc=$DR_RC link=$([ -L "$DR_HOME/.claude/skills/__prune_dryrun_probe__" ] && echo present || echo gone)"
+  fail "--dry-run probe anchor: the run must identify the retired path as a candidate" \
+       "it did not, so a surviving link would prove nothing about dry-run. rc=$DR_RC"
 fi
 rm -rf "$DR_HOME"
 
@@ -341,8 +394,7 @@ echo "============================================================"
 # directory - cross-model review showed a hooks-specific mutation that ignored dry-run
 # kept the suite green. A rule that holds in one directory is not evidence about another.
 HOOKS="$TMPHOME/.claude/hooks"
-mkdir -p "$HOOKS" "$FIXREPO/claude/hooks"
-printf 'live\n' > "$FIXREPO/claude/hooks/live-hook.sh"
+mkdir -p "$HOOKS"
 ln -s "$FIXREPO/claude/hooks/live-hook.sh" "$HOOKS/live-hook.sh"          # live  -> KEEP
 ln -s "$FIXREPO/claude/hooks/retired.json" "$HOOKS/retired.json"          # dead  -> PRUNE
 ln -s "$OUTSIDE/real.md" "$HOOKS/external-live.sh"                        # live  -> KEEP
@@ -351,8 +403,13 @@ printf 'real\n' > "$HOOKS/real-file.sh"                                   # real
 # A dead repo-owned link NESTED one level down. Direct-children-only means this must
 # survive: a recursive prune would reach into a subdirectory this installer never
 # deploys into. Asserted here because the parent-dir check alone cannot see it.
+#
+# THE LINK NAME MATCHES ITS TARGET'S BASENAME ON PURPOSE. Named anything else it would
+# also be skipped by the basename half of the shape check, and the row would pass without
+# direct-children-only being what saved it. Named this way, depth is the ONLY thing
+# standing between it and removal - which is exactly the rule under test.
 mkdir -p "$HOOKS/__pycache__"
-ln -s "$FIXREPO/claude/hooks/nested-gone.sh" "$HOOKS/__pycache__/nested.sh"
+ln -s "$FIXREPO/claude/hooks/nested-gone.sh" "$HOOKS/__pycache__/nested-gone.sh"
 
 echo "===== hooks: DRY RUN removes nothing ====="
 # Proven BEFORE the apply below. Without this row a hooks-specific bug that ignored mode
@@ -386,7 +443,7 @@ for n in live-hook.sh external-live.sh external-broken.sh real-file.sh __pycache
     fail "hooks prune: leaves $n alone" "it was removed"; HOOK_KEEP=false
   fi
 done
-if [ ! -L "$HOOKS/__pycache__/nested.sh" ]; then
+if [ ! -L "$HOOKS/__pycache__/nested-gone.sh" ]; then
   fail "hooks prune: direct children only" "it reached into a subdirectory"; HOOK_KEEP=false
 fi
 $HOOK_KEEP && pass "hooks prune: live, foreign, real, nested and directory entries all left alone"
@@ -425,6 +482,415 @@ else
   fail "prune: an unreadable directory returns 7 instead of reporting clean" "rc=$H7_RC"
 fi
 rm -rf "$H7"
+
+echo ""
+echo "============================================================"
+echo "OWNERSHIP MUST BE PROVEN, NOT INFERRED FROM LOCATION"
+echo "============================================================"
+# The prune used to accept "the target path is somewhere under $REPO_DIR" as proof that
+# THIS INSTALLER deployed the link. That is location, not ownership, and it makes two
+# wrong deletions possible. Both are exercised below against a REAL git fixture repo,
+# because the proof this needs - what this repo actually shipped, and whether a missing
+# path is retired or merely absent for a moment - only exists in git.
+#
+#   MODE 1  a link the USER made that happens to point into this checkout is deleted.
+#   MODE 2  a target that is absent only TEMPORARILY (an unstaged deletion / stash, a
+#           mid-rebase, a branch switch or partial checkout, a submodule working tree)
+#           reads as retired and the link is deleted.
+#
+# Every row below plants a link that the OLD rule deletes and the correct rule keeps,
+# plus CONTROL rows proving a genuinely retired link is still removed. A suite where the
+# safe rows pass because nothing is ever pruned proves nothing, so the controls are not
+# optional.
+#
+# MUTATION COVERAGE, stated so nobody has to assume it. 23 mutations were run against the
+# prune, one per safety property, each confirming its anchor applied before any verdict was
+# believed. 16 are caught by a row here. The 7 that are not, and why:
+#
+#   - ONE is the order of the two `stat` probes, which only matters on GNU stat (where -f
+#     means filesystem, not format). This suite runs on macOS, where either order works, so
+#     no row here can observe it. Called out rather than counted as covered.
+#
+#   - FOUR are equivalent mutants of the trailing-newline defence. That whole class is
+#     decided by ONE load-bearing guard: the stored-target byte-length check, which is
+#     caught (by "an ordinary link pointing at a NEWLINE-suffixed target survives").
+#     With it in place, reverting the sentinel read, the parameter-expansion basenames, or
+#     the explicit newline refusal changes no outcome, because the length check refuses
+#     first. They are kept as depth, not claimed as separately tested.
+#   - TWO are the halves of the pre-unlink re-check (link still a broken symlink, target
+#     still the one that was proven). They guard a link being replaced BETWEEN
+#     classification and removal, and a single-threaded suite cannot stage that race
+#     deterministically. Kept as depth, deliberately not claimed as tested.
+#
+# The first mutation run of this suite reported 15 of 15 caught and was WRONG: the mutant
+# installer was written to a temp dir, and install.sh derives REPO_DIR from its own
+# location, so every CLI-driven row went red for that reason alone and manufactured a
+# CAUGHT for mutations nothing actually detected. Mutants now run from the repo root. A
+# mutation harness can lie in the flattering direction too.
+
+# --- fixture A: a repo on main, one real retirement in its history ------------------
+# git_fixture / git_commit are defined with the main fixture repo above.
+GREPO=$(mktemp -d) || exit 1
+GHOME=$(mktemp -d) || exit 1
+git_fixture "$GREPO" || { echo "FATAL: cannot create a git fixture repo"; exit 1; }
+mkdir -p "$GREPO/claude/hooks" "$GREPO/claude/skills/retired-skill" "$GREPO/notes" \
+         "$GREPO/sub/claude/hooks" "$GREPO/claude/skills/kept-skill"
+printf 'retired\n' > "$GREPO/claude/hooks/retired-hook.sh"
+printf 'kept\n'    > "$GREPO/claude/hooks/kept-hook.sh"
+printf 'stashed\n' > "$GREPO/claude/hooks/stashed-hook.sh"
+printf 'res\n'     > "$GREPO/claude/hooks/resurrected.sh"
+printf 'moved\n'   > "$GREPO/claude/hooks/moved-hook.sh"
+printf 'nl\n'      > "$GREPO/claude/hooks/nl-hook.sh"
+printf 'sd\n'      > "$GREPO/claude/hooks/staged-delete.sh"
+printf 'x\n'       > "$GREPO/claude/skills/retired-skill/SKILL.md"
+# kept-skill exists only so `git rm -r retired-skill` does not take the now-empty
+# claude/skills DIRECTORY with it. A vanished source directory is a different (already
+# covered) skip reason, and it would make the retired-skill control row vacuous.
+printf 'k\n'       > "$GREPO/claude/skills/kept-skill/SKILL.md"
+git_commit "$GREPO" base
+git -C "$GREPO" rm -q -r claude/hooks/retired-hook.sh claude/hooks/resurrected.sh \
+  claude/hooks/moved-hook.sh claude/hooks/nl-hook.sh claude/skills/retired-skill >/dev/null 2>&1
+git_commit "$GREPO" retire
+# A deletion that is STAGED BUT NOT COMMITTED: gone from the index and from disk, still
+# present in HEAD. Nothing is retired until it is committed, and the HEAD check is the
+# only one of the three that can say so - the index no longer has it and history does.
+git -C "$GREPO" rm -q claude/hooks/staged-delete.sh >/dev/null 2>&1
+# A path being RE-INTRODUCED: staged back into the index, not yet committed, and not on
+# disk this instant. Absent from HEAD and present in history, so the index check is the
+# ONLY one of the three that can save it - which is what makes it worth a row.
+printf 'res\n' > "$GREPO/claude/hooks/resurrected.sh"
+git -C "$GREPO" add claude/hooks/resurrected.sh >/dev/null 2>&1
+rm -f "$GREPO/claude/hooks/resurrected.sh"
+# A gitlink at sub/ makes it a real submodule to git; its working tree is checked out at a
+# commit that does not contain the file the link points at.
+GHEAD=$(git -C "$GREPO" rev-parse HEAD)
+git -C "$GREPO" update-index --add --cacheinfo "160000,$GHEAD,sub" >/dev/null 2>&1
+# An unstaged deletion: tracked in HEAD and in the index, gone from the working tree.
+# This is what a stash of a deletion, and a checkout interrupted midway, both look like.
+rm -f "$GREPO/claude/hooks/stashed-hook.sh"
+
+mkdir -p "$GHOME/.claude/hooks" "$GHOME/.claude/skills"
+GH="$GHOME/.claude/hooks"
+GS="$GHOME/.claude/skills"
+ln -s "$GREPO/claude/hooks/retired-hook.sh" "$GH/retired-hook.sh"   # CONTROL -> prune
+ln -s "$GREPO/claude/skills/retired-skill"  "$GS/retired-skill"     # CONTROL -> prune
+ln -s "$GREPO/claude/hooks/jonahs-own.sh"   "$GH/jonahs-own.sh"     # MODE 1 -> keep
+ln -s "$GREPO/notes/scratch.sh"             "$GH/scratch.sh"        # MODE 1 -> keep
+ln -s "$GREPO/claude/hooks/stashed-hook.sh" "$GH/stashed-hook.sh"   # MODE 2 -> keep
+ln -s "$GREPO/sub/claude/hooks/sub-hook.sh" "$GH/sub-hook.sh"       # MODE 2 -> keep
+ln -s "$GREPO/claude/hooks/resurrected.sh"  "$GH/resurrected.sh"    # MODE 2 -> keep
+# A user's ALIAS: a link whose own name differs from the target's basename, pointing at a
+# genuinely retired path. Provenance alone would clear it for deletion, so the basename
+# half of the shape check is the only thing that saves it.
+ln -s "$GREPO/claude/hooks/retired-hook.sh" "$GH/my-alias.sh"       # MODE 1 -> keep
+ln -s "$GREPO/claude/hooks/staged-delete.sh" "$GH/staged-delete.sh" # MODE 2 -> keep
+# A user's own copy kept OUTSIDE the deploy directory, under a name this repo really did
+# retire under claude/hooks. Provenance alone clears it for deletion, because provenance
+# is asked about the deploy path; only the parent-equality half of the shape check knows
+# the target does not live where this installer deploys from.
+ln -s "$GREPO/notes/moved-hook.sh"          "$GH/moved-hook.sh"     # MODE 1 -> keep
+# A link whose NAME ends in a newline, pointing at a newline-suffixed target, while the
+# newline-STRIPPED path (claude/hooks/retired-hook.sh) is genuinely retired. Command
+# substitution eats trailing newlines, so a prune that reaches for $(basename ...) matches
+# this against a DIFFERENT path's history and deletes a link the repo never shipped.
+NL_LINK="$GH/retired-hook.sh$(printf '\nX')"; NL_LINK="${NL_LINK%X}"
+NL_TGT="$GREPO/claude/hooks/retired-hook.sh$(printf '\nX')"; NL_TGT="${NL_TGT%X}"
+ln -s "$NL_TGT" "$NL_LINK"                                          # MODE 1 -> keep
+# THE ASYMMETRIC CASE, and the one that actually bites: an ORDINARY link name pointing at a
+# target whose name ends in a newline, where the newline-STRIPPED path IS retired. The row
+# above is caught by the link name alone, so it cannot see this; `readlink` in a command
+# substitution eats the target's newline before any guard runs, and the link is then judged
+# against a different path's history. Found by cross-model review of the first fix.
+NL2_TGT="$GREPO/claude/hooks/nl-hook.sh$(printf '\nX')"; NL2_TGT="${NL2_TGT%X}"
+ln -s "$NL2_TGT" "$GH/nl-hook.sh"                                   # MODE 1 -> keep
+
+echo "===== a repo mid-rebase refuses to prune at all ====="
+# During a rebase, merge, cherry-pick or bisect the working tree is a transient state and
+# an absent file proves nothing. Run BEFORE the apply below, so a run that ignores the
+# marker is caught here rather than hidden by the apply that follows.
+GITDIR=$(git -C "$GREPO" rev-parse --absolute-git-dir)
+mkdir -p "$GITDIR/rebase-merge"
+HOME="$GHOME" REPO_DIR="$GREPO" prune_broken_skill_symlinks apply >/dev/null 2>&1
+REBASE_RC=$?
+rmdir "$GITDIR/rebase-merge"
+if [ "$REBASE_RC" -eq 9 ] && [ -L "$GH/retired-hook.sh" ]; then
+  pass "mid-rebase: prune refuses with 9 and removes nothing (not even a retired link)"
+else
+  fail "mid-rebase: prune refuses with 9 and removes nothing" \
+       "rc=$REBASE_RC retired-hook=$([ -L "$GH/retired-hook.sh" ] && echo present || echo GONE)"
+fi
+
+echo "===== apply on a git checkout: retired links go, everything else stays ====="
+HOME="$GHOME" REPO_DIR="$GREPO" prune_broken_skill_symlinks apply >/dev/null 2>&1
+G_RC=$?
+if [ "$G_RC" -eq 0 ]; then
+  pass "git-backed apply exits 0"
+else
+  fail "git-backed apply exits 0" "rc=$G_RC"
+fi
+# CONTROLS - the prune must still do its job, or every row below is vacuous.
+if [ ! -e "$GH/retired-hook.sh" ] && [ ! -L "$GH/retired-hook.sh" ]; then
+  pass "CONTROL: a genuinely retired hook link is still removed"
+else
+  fail "CONTROL: a genuinely retired hook link is still removed" "it survived - the rows below prove nothing"
+fi
+if [ ! -e "$GS/retired-skill" ] && [ ! -L "$GS/retired-skill" ]; then
+  pass "CONTROL: a genuinely retired skill link is still removed"
+else
+  fail "CONTROL: a genuinely retired skill link is still removed" "it survived - the rows below prove nothing"
+fi
+# MODE 1: the user's own links.
+if [ -L "$GH/jonahs-own.sh" ]; then
+  pass "MODE 1: a user's own link to an UNTRACKED path in the checkout survives"
+else
+  fail "MODE 1: a user's own link to an UNTRACKED path in the checkout survives" \
+       "deleted a link this repo never shipped - location was read as ownership"
+fi
+if [ -L "$GH/scratch.sh" ]; then
+  pass "MODE 1: a user's own link into a NON-deploy directory of the repo survives"
+else
+  fail "MODE 1: a user's own link into a NON-deploy directory of the repo survives" \
+       "deleted a link outside the installer's deploy footprint"
+fi
+# MODE 2: absence that is not retirement.
+if [ -L "$GH/stashed-hook.sh" ]; then
+  pass "MODE 2: a target absent only from the WORKING TREE (stash / partial checkout) survives"
+else
+  fail "MODE 2: a target absent only from the WORKING TREE survives" \
+       "a file still tracked in HEAD and the index was treated as retired"
+fi
+if [ -L "$GH/sub-hook.sh" ]; then
+  # NAMED FOR WHAT IT PROVES. Cross-model review pointed out this row is saved by the
+  # shape check (the target's parent is $GREPO/sub/claude/hooks, not the deploy source
+  # dir), not by the submodule-history argument the old label claimed. The provenance
+  # rule has its own rows: the untracked link and the branch-switch link.
+  pass "MODE 2: a target inside a SUBMODULE working tree survives (outside the deploy source dir)"
+else
+  fail "MODE 2: a target inside a SUBMODULE working tree survives" \
+       "a path under a submodule is not in the installer's deploy footprint"
+fi
+if [ -L "$NL_LINK" ]; then
+  pass "MODE 1: a link whose name ends in a NEWLINE survives (no path is silently trimmed)"
+else
+  fail "MODE 1: a link whose name ends in a NEWLINE survives" \
+       "a trailing newline was trimmed and the link was judged against another path's history"
+fi
+if [ -L "$GH/nl-hook.sh" ]; then
+  pass "MODE 1: an ordinary link pointing at a NEWLINE-suffixed target survives"
+else
+  fail "MODE 1: an ordinary link pointing at a NEWLINE-suffixed target survives" \
+       "readlink's trailing newline was eaten and the link was judged against another path's history"
+fi
+if [ -L "$GH/resurrected.sh" ]; then
+  pass "MODE 2: a path staged back into the INDEX but not yet on disk survives"
+else
+  fail "MODE 2: a path staged back into the INDEX but not yet on disk survives" \
+       "a re-introduction in progress was read as a retirement"
+fi
+if [ -L "$GH/my-alias.sh" ]; then
+  pass "MODE 1: a user's ALIAS link (name differs from the target's) survives"
+else
+  fail "MODE 1: a user's ALIAS link (name differs from the target's) survives" \
+       "a link that does not match the installer's deploy shape was deleted"
+fi
+if [ -L "$GH/staged-delete.sh" ]; then
+  pass "MODE 2: a deletion STAGED but not committed survives (still present in HEAD)"
+else
+  fail "MODE 2: a deletion STAGED but not committed survives" \
+       "an uncommitted staged deletion was treated as a retirement"
+fi
+if [ -L "$GH/moved-hook.sh" ]; then
+  pass "MODE 1: a link into a non-deploy directory survives even when the deploy path IS retired"
+else
+  fail "MODE 1: a link into a non-deploy directory survives even when the deploy path IS retired" \
+       "the target's parent was not checked against the deploy source directory"
+fi
+
+# --- fixture B: a checkout parked on an older branch --------------------------------
+echo "===== a branch that predates a file must not read that file as retired ====="
+BREPO=$(mktemp -d) || exit 1
+BHOME=$(mktemp -d) || exit 1
+git_fixture "$BREPO" || { echo "FATAL: cannot create the branch fixture repo"; exit 1; }
+mkdir -p "$BREPO/claude/hooks"
+printf 'kept\n'   > "$BREPO/claude/hooks/kept.sh"
+printf 'doomed\n' > "$BREPO/claude/hooks/doomed.sh"
+git_commit "$BREPO" base
+git -C "$BREPO" rm -q claude/hooks/doomed.sh >/dev/null 2>&1
+git_commit "$BREPO" "retire doomed.sh"
+git -C "$BREPO" branch old >/dev/null 2>&1          # `old` sits at the retirement commit
+printf 'later\n' > "$BREPO/claude/hooks/added-later.sh"
+git_commit "$BREPO" "add added-later.sh"
+git -C "$BREPO" checkout -q old >/dev/null 2>&1     # park the checkout BEFORE that commit
+rm -f "$BREPO/claude/hooks/added-later.sh"          # the checkout removes it from disk
+mkdir -p "$BHOME/.claude/hooks"
+ln -s "$BREPO/claude/hooks/added-later.sh" "$BHOME/.claude/hooks/added-later.sh"  # keep
+ln -s "$BREPO/claude/hooks/doomed.sh"      "$BHOME/.claude/hooks/doomed.sh"       # prune
+HOME="$BHOME" REPO_DIR="$BREPO" prune_broken_skill_symlinks apply >/dev/null 2>&1
+B_RC=$?
+if [ "$B_RC" -eq 0 ] && [ ! -e "$BHOME/.claude/hooks/doomed.sh" ] && [ ! -L "$BHOME/.claude/hooks/doomed.sh" ]; then
+  pass "CONTROL: on the old branch, a link retired in THAT history is still removed"
+else
+  fail "CONTROL: on the old branch, a link retired in THAT history is still removed" \
+       "rc=$B_RC - the row below proves nothing"
+fi
+if [ -L "$BHOME/.claude/hooks/added-later.sh" ]; then
+  pass "MODE 2: a path that never existed in this branch's history survives (partial checkout)"
+else
+  fail "MODE 2: a path that never existed in this branch's history survives" \
+       "a branch switch was read as a retirement"
+fi
+rm -rf "$BREPO" "$BHOME"
+
+echo "===== a git query that FAILS must not be read as 'the path is absent' ====="
+# The three provenance queries are read for emptiness. If a failing git command is allowed
+# to return empty, a BROKEN REPO reads as a retirement and the link is deleted - the same
+# fail-open shape as the defect this whole section exists to close. A corrupted index makes
+# `ls-files` exit non-zero while HEAD and history still answer fine, so the candidate is
+# otherwise fully qualified for removal and only the rc check can save it.
+CREPO=$(mktemp -d) || exit 1
+CHOME=$(mktemp -d) || exit 1
+git_fixture "$CREPO" || { echo "FATAL: cannot create the corrupt-index fixture"; exit 1; }
+mkdir -p "$CREPO/claude/hooks"
+printf 'kept\n' > "$CREPO/claude/hooks/kept.sh"
+printf 'doomed\n' > "$CREPO/claude/hooks/doomed.sh"
+git_commit "$CREPO" base
+git -C "$CREPO" rm -q claude/hooks/doomed.sh >/dev/null 2>&1
+git_commit "$CREPO" "retire doomed.sh"
+mkdir -p "$CHOME/.claude/hooks"
+ln -s "$CREPO/claude/hooks/doomed.sh" "$CHOME/.claude/hooks/doomed.sh"
+# ANCHOR: with the index intact this link IS removed. Without that proof, its survival
+# after the corruption would say nothing about the rc check.
+CANCHOR_HOME=$(mktemp -d) || exit 1
+mkdir -p "$CANCHOR_HOME/.claude/hooks"
+ln -s "$CREPO/claude/hooks/doomed.sh" "$CANCHOR_HOME/.claude/hooks/doomed.sh"
+HOME="$CANCHOR_HOME" REPO_DIR="$CREPO" prune_broken_skill_symlinks apply >/dev/null 2>&1
+CANCHOR_GONE=$([ -e "$CANCHOR_HOME/.claude/hooks/doomed.sh" ] || [ -L "$CANCHOR_HOME/.claude/hooks/doomed.sh" ] && echo no || echo yes)
+rm -rf "$CANCHOR_HOME"
+printf 'GARBAGE-NOT-AN-INDEX' > "$(git -C "$CREPO" rev-parse --absolute-git-dir)/index"
+C_OUT=$(HOME="$CHOME" REPO_DIR="$CREPO" prune_broken_skill_symlinks apply 2>&1)
+C_RC=$?
+if [ "$CANCHOR_GONE" != "yes" ]; then
+  fail "corrupt-index anchor: the same link IS removed when the index is readable" \
+       "it was not, so the row below proves nothing about the rc check"
+elif [ -L "$CHOME/.claude/hooks/doomed.sh" ]; then
+  pass "a failing git query leaves the link alone instead of reading it as absent (rc=$C_RC)"
+else
+  fail "a failing git query leaves the link alone" \
+       "a broken repo was read as a retirement and the link was deleted (rc=$C_RC)"
+fi
+# NOT DELETING IS ONLY HALF OF IT. A run that decided nothing must not REPORT like a run
+# that found nothing - "no dead repo-deployed links" after skipping every candidate is the
+# same false all-clear this whole change exists to stop.
+if printf '%s' "$C_OUT" | grep -q "LEFT UNDECIDED"; then
+  pass "a run that could not decide says so instead of reporting the directory clean"
+else
+  fail "a run that could not decide says so instead of reporting the directory clean" \
+       "output was: $(printf '%s' "$C_OUT" | tr '\n' ' ' | cut -c1-200)"
+fi
+rm -rf "$CREPO" "$CHOME"
+
+echo "===== a checkout that is not a git work tree refuses to prune ====="
+# No git, no provenance. The prune cannot tell a retirement from a file that was never
+# here, so it must remove nothing and say why.
+NGREPO=$(mktemp -d) || exit 1
+NGHOME=$(mktemp -d) || exit 1
+mkdir -p "$NGREPO/claude/hooks" "$NGHOME/.claude/hooks"
+ln -s "$NGREPO/claude/hooks/whatever.sh" "$NGHOME/.claude/hooks/whatever.sh"
+HOME="$NGHOME" REPO_DIR="$NGREPO" prune_broken_skill_symlinks apply >/dev/null 2>&1
+NG_RC=$?
+if [ "$NG_RC" -eq 8 ] && [ -L "$NGHOME/.claude/hooks/whatever.sh" ]; then
+  pass "not a git work tree: returns 8 and prunes nothing"
+else
+  fail "not a git work tree: returns 8 and prunes nothing" \
+       "rc=$NG_RC link=$([ -L "$NGHOME/.claude/hooks/whatever.sh" ] && echo present || echo GONE)"
+fi
+rm -rf "$NGREPO" "$NGHOME"
+
+echo "===== an UNDECIDED candidate must poison the clean report, not just survive ====="
+# The multi-hop and vanished-parent skips are correct - both are unprovable, both leave the
+# link alone. But leaving a link alone and then printing "no dead repo-deployed links" is
+# still a false all-clear: the run did not examine those candidates, it gave up on them.
+# Every "cannot tell" has to reach the summary. Cross-model review found three skips that
+# were silent about it.
+UD_REPO=$(mktemp -d) || exit 1
+UD_HOME=$(mktemp -d) || exit 1
+git_fixture "$UD_REPO" || { echo "FATAL: cannot create the undecided fixture"; exit 1; }
+mkdir -p "$UD_REPO/claude/hooks"
+printf 'kept\n' > "$UD_REPO/claude/hooks/kept.sh"
+git_commit "$UD_REPO" base
+mkdir -p "$UD_HOME/.claude/hooks"
+# multi-hop: an in-repo proxy that is itself a symlink pointing outside
+ln -s /nonexistent/outside/ultimate "$UD_REPO/claude/hooks/proxy.sh"
+ln -s "$UD_REPO/claude/hooks/proxy.sh" "$UD_HOME/.claude/hooks/proxy.sh"
+# vanished parent: the target's whole subtree is gone, so nothing can be canonicalized
+ln -s "$UD_REPO/claude/gone-subtree/deep.sh" "$UD_HOME/.claude/hooks/deep.sh"
+UD_OUT=$(HOME="$UD_HOME" REPO_DIR="$UD_REPO" prune_broken_skill_symlinks dryrun 2>&1)
+UD_RC=$?
+UD_SURVIVED=yes
+for n in proxy.sh deep.sh; do [ -L "$UD_HOME/.claude/hooks/$n" ] || UD_SURVIVED=no; done
+if [ "$UD_SURVIVED" != yes ]; then
+  fail "undecided candidates survive AND poison the clean report" "one of them was removed"
+elif printf '%s' "$UD_OUT" | grep -q "no dead repo-deployed links"; then
+  fail "undecided candidates survive AND poison the clean report" \
+       "the summary claimed the directory was clean after giving up on 2 candidates"
+elif printf '%s' "$UD_OUT" | grep -q "LEFT UNDECIDED"; then
+  pass "undecided candidates survive AND the summary refuses to call the directory clean"
+else
+  fail "undecided candidates survive AND poison the clean report" \
+       "rc=$UD_RC output: $(printf '%s' "$UD_OUT" | tr '\n' ' ' | cut -c1-200)"
+fi
+rm -rf "$UD_REPO" "$UD_HOME"
+
+echo "===== a BARE repo has no work tree, so it refuses to prune ====="
+# A bare repo resolves HEAD perfectly well - the HEAD check alone would wave it through.
+# It has no work tree, so there is no deploy source directory to compare a target against
+# and nothing about the installer's footprint can be proven. Only the work-tree check
+# catches this shape, which is why it gets its own row.
+BARESRC=$(mktemp -d) || exit 1
+BAREHOME=$(mktemp -d) || exit 1
+git_fixture "$BARESRC" || { echo "FATAL: cannot create the bare-repo fixture source"; exit 1; }
+mkdir -p "$BARESRC/claude/hooks"
+printf 'seed\n' > "$BARESRC/claude/hooks/seed.sh"
+git_commit "$BARESRC" seed
+BAREREPO=$(mktemp -d) || exit 1
+rm -rf "$BAREREPO"
+git clone -q --bare "$BARESRC" "$BAREREPO" >/dev/null 2>&1
+mkdir -p "$BAREHOME/.claude/hooks"
+ln -s "$BAREREPO/claude/hooks/seed.sh" "$BAREHOME/.claude/hooks/seed.sh"
+HOME="$BAREHOME" REPO_DIR="$BAREREPO" prune_broken_skill_symlinks apply >/dev/null 2>&1
+BARE_RC=$?
+if [ "$BARE_RC" -eq 8 ] && [ -L "$BAREHOME/.claude/hooks/seed.sh" ]; then
+  pass "a bare repo (HEAD resolves, no work tree) returns 8 and prunes nothing"
+else
+  fail "a bare repo (HEAD resolves, no work tree) returns 8 and prunes nothing" \
+       "rc=$BARE_RC link=$([ -L "$BAREHOME/.claude/hooks/seed.sh" ] && echo present || echo GONE)"
+fi
+rm -rf "$BARESRC" "$BAREREPO" "$BAREHOME"
+
+echo "===== a REPO_DIR nested inside someone else's checkout refuses to prune ====="
+# `rev-parse` succeeds from any directory inside a work tree, so a REPO_DIR that is merely
+# NESTED in some other checkout would answer every history query from the WRONG repo - and
+# a path that repo never had reads as "never shipped" or, worse, as retired. REPO_DIR must
+# be the work tree ROOT or nothing can be proven about it.
+OUTER=$(mktemp -d) || exit 1
+NSHOME=$(mktemp -d) || exit 1
+git_fixture "$OUTER" || { echo "FATAL: cannot create the nested fixture"; exit 1; }
+printf 'seed\n' > "$OUTER/seed.txt"
+git_commit "$OUTER" seed
+mkdir -p "$OUTER/inner/claude/hooks" "$NSHOME/.claude/hooks"
+ln -s "$OUTER/inner/claude/hooks/whatever.sh" "$NSHOME/.claude/hooks/whatever.sh"
+HOME="$NSHOME" REPO_DIR="$OUTER/inner" prune_broken_skill_symlinks apply >/dev/null 2>&1
+NS_RC=$?
+if [ "$NS_RC" -eq 8 ] && [ -L "$NSHOME/.claude/hooks/whatever.sh" ]; then
+  pass "a REPO_DIR that is not its work tree ROOT returns 8 and prunes nothing"
+else
+  fail "a REPO_DIR that is not its work tree ROOT returns 8 and prunes nothing" \
+       "rc=$NS_RC link=$([ -L "$NSHOME/.claude/hooks/whatever.sh" ] && echo present || echo GONE)"
+fi
+rm -rf "$OUTER" "$NSHOME"
+rm -rf "$GREPO" "$GHOME"
+
+echo ""
 echo "RESULTS: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
   echo ""
