@@ -33,6 +33,22 @@ import json
 import os
 import re
 import sys
+import unicodedata
+
+
+def _strip_lead_invisible(s):
+    """Drop leading whitespace and Unicode FORMAT characters.
+
+    A hardcoded list was the first cut and Codex found the hole: it covered BOM and
+    the common zero-widths but not U+200E LRM (or any other Cf character), so one
+    invisible byte still defeated every ^\\s* anchor and let an envelope through.
+    Category Cf is the whole class; Zs catches exotic spaces.
+    """
+    i = 0
+    while i < len(s) and (s[i].isspace() or unicodedata.category(s[i]) in ("Cf", "Zs")):
+        i += 1
+    return s[i:]
+
 
 try:
     raw = os.environ.get("PROMPT_RAW", "")
@@ -62,6 +78,34 @@ try:
 
     with open(os.environ["LEXICON_PATH"], "r", encoding="utf-8") as fh:
         lex = json.load(fh)
+
+    # AGENT/SYSTEM ENVELOPES, checked FIRST and against the RAW prompt.
+    #
+    # A teammate brief, a task notification, a system reminder and an injected
+    # skill body all arrive on UserPromptSubmit looking exactly like a prompt, and
+    # they carry imperative prose that matches these tiers. Nudging them to
+    # delegate is noise squared: the recipient already IS the delegate. Measured
+    # 2026-07-28 with _tests/measure-hook-corpus.py over 4021 real prompts - 22
+    # routed, and 11 of the 22 were envelopes.
+    #
+    # RAW, not scrubbed, for the same reason grounding-gate.sh does it: the XML
+    # scrub below deletes tag bodies, so the <task-notification> marker would be
+    # gone before it could be matched. Leading BOM/zero-width characters are
+    # stripped because they are not \s and would defeat every ^\s* anchor.
+    #
+    # The isinstance guard is load-bearing exactly as it is on `exempt` below: a
+    # STRING here would iterate characters, and "^" matches every prompt.
+    env_exempt = lex.get("envelope_exempt", [])
+    if isinstance(env_exempt, list):
+        probe = _strip_lead_invisible(prompt)
+        for pat in env_exempt:
+            if not isinstance(pat, str) or not pat:
+                continue
+            try:
+                if re.search(pat, probe, re.I):
+                    sys.exit(0)
+            except re.error:
+                continue
 
     tiers = lex.get("tiers", {})
     order = lex.get("escalation_order", [])
@@ -144,8 +188,81 @@ try:
         except re.error:
             continue
 
+    # --- STRUCTURAL SUPPRESSION (2026-07-28) -------------------------------
+    # The imperative shape anchors the verb to a clause boundary, but a
+    # SEMICOLON is one of those boundaries and the conjunction branch accepts
+    # any preceding whitespace, so deliberating prose reached a tier:
+    #   "i wonder if we should; refactor the parser or leave it alone"
+    #   "do not proceed; refactor the router is exactly what we must avoid"
+    # Reproduced 2026-07-28: 12 of 12 deliberation/negation probes routed. This
+    # is the same false-positive class that forced a revert earlier that day; it
+    # had been relocated into the boundary alternation, not fixed.
+    #
+    # Two guards, because the signal sits on both sides of the verb:
+    #   LOOKBEHIND - a negation/deliberation marker anywhere between the start of
+    #     the SENTENCE and the match. A sentence splits on . ! ? and newline
+    #     ONLY - never on ";", which is the whole point: the deliberation in
+    #     "i wonder if we should" governs the clause after the semicolon.
+    #   NOMINAL - the matched verb phrase is the SUBJECT of a copula ("refactor
+    #     the router IS exactly what we must avoid"), which makes it a noun
+    #     phrase rather than an instruction.
+    #
+    # WINDOW SCOPING, twice corrected. It runs from the start of the sentence to
+    # the start of the match, with one special case:
+    #   - If the PATTERN consumed a sentence boundary as its own prefix
+    #     (". build me a design system"), the previous sentence is not this
+    #     clause's context and the window is empty. Without that, "i wonder how
+    #     long this takes. build me a design system" - a genuine request after
+    #     unrelated musing - was silenced.
+    #   - Measuring from m.END() was the first attempt at that and Codex broke it:
+    #     a sentence-looking period INSIDE the matched text ("migrate api. client
+    #     to") reset the start past m.start(), collapsing the window and losing
+    #     the deliberation in "i wonder if we should; migrate api. client to v2".
+    # Asking whether the match BEGINS with a boundary is the narrow question that
+    # actually wanted answering.
+    sup = lex.get("suppress", {})
+    if not isinstance(sup, dict):
+        sup = {}
+    markers = sup.get("deliberation_markers", [])
+    if not isinstance(markers, list):
+        markers = []
+    nominal = sup.get("nominal_subject", "")
+    if not isinstance(nominal, str):
+        nominal = ""
+
+    _SENT = re.compile(r"[.!?]\s+|\n")
+
+    def _sentence_start(pos):
+        start = 0
+        for sm in _SENT.finditer(text, 0, pos):
+            start = sm.end()
+        return start
+
+    def suppressed(m):
+        if _SENT.match(text, m.start()):
+            window = ""
+        else:
+            window = text[_sentence_start(m.start()):m.start()]
+        for mp in markers:
+            if not isinstance(mp, str) or not mp:
+                continue
+            try:
+                if re.search(mp, window, re.I):
+                    return True
+            except re.error:
+                continue
+        if nominal:
+            try:
+                if re.match(nominal, text[m.end():m.end() + 200], re.I):
+                    return True
+            except re.error:
+                pass
+        return False
+
     # Match in escalation order and take the first hit, so a prompt matching
-    # several tiers resolves to the most capable one.
+    # several tiers resolves to the most capable one. Every occurrence is
+    # considered, not just the first: a prompt that deliberates and THEN
+    # instructs still routes on the instruction.
     for key in order:
         tier = tiers.get(key)
         if not isinstance(tier, dict):
@@ -155,7 +272,7 @@ try:
             continue
         for pat in patterns:
             try:
-                if re.search(pat, text, re.I):
+                if any(not suppressed(m) for m in re.finditer(pat, text, re.I)):
                     nudge = (template
                              .replace("{label}", tier.get("label", key))
                              .replace("{agent}", tier.get("agent", key))

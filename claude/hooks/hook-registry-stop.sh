@@ -66,6 +66,43 @@ GUARD="$REPO_DIR/claude/hooks/hook-registry-guard.sh"
 # flag: clearing an arm we cannot re-derive would be worse than staying silent.
 [ -f "$REPO_DIR/claude/hooks/browser-tree.json" ] || exit 0
 
+# EVERY sweep below is a python3 pass. With no python3 the guard can never answer, so
+# this gate returns 0 on every stop forever - which is indistinguishable from "the repo
+# is clean" and is precisely the silent pass the gate exists to prevent. A transient
+# unreadable answer is handled further down by simply not clearing; a PERMANENTLY inert
+# gate is worth saying out loud, once, through the same block-once ack.
+#
+# The probe RUNS python3 rather than just resolving the name. A pyenv/asdf shim with
+# no version installed answers `command -v` happily and then exits 127 on every call,
+# which the sweep below would read as a transient cannot-tell and pass silently
+# forever - the exact silent pass this block exists to prevent (Codex review).
+#
+# The ack key carries the repo AND the current flag contents, so it means "I already
+# said this, about this state". A constant key would acknowledge "no python3" once per
+# $HOME and then stay quiet when a NEW unpackaged hook armed the flag later.
+if ! python3 -c "pass" >/dev/null 2>&1; then
+  if command -v python3 >/dev/null 2>&1; then
+    py_why="python3 is on PATH but cannot execute (a shim with no installed version?)"
+  else
+    py_why="python3 is not on PATH"
+  fi
+  py_key="$(printf 'PY3-UNUSABLE:%s:%s' "$REPO_DIR" "$(cat "$FLAG" 2>/dev/null)")"
+  if [ -f "$ACKED" ] && [ "$(cat "$ACKED" 2>/dev/null)" = "$py_key" ]; then
+    exit 0
+  fi
+  mkdir -p "$(dirname "$ACKED")"
+  printf '%s' "$py_key" > "$ACKED"
+  {
+    echo "BLOCKED: the hook-registry gate cannot run - $py_why."
+    echo "Every sweep it performs (unpackaged hooks, unpackaged hook DATA files,"
+    echo "undeployed skills) is a python3 pass, so with no interpreter this gate"
+    echo "silently returns clean on every stop and an unpackaged hook ships unnoticed."
+    echo "Install a working python3, then stop again to get a real answer."
+    echo "Deliberately running without it? Say so plainly and stop again - blocks once."
+  } >&2
+  exit 2
+fi
+
 # THE SWEEP. Disk-derived and unconditional - no longer gated on the flag existing, which
 # is what let three hooks through. --audit is a single python3 pass over claude/hooks/,
 # ~0.05s, and it applies the same exclusions as the write-time path.
@@ -89,17 +126,35 @@ still="$(printf '%s\n' "$audit" | sed -n 's/^UNMANAGED: //p' | sort -u)"
 # rc with no parseable names is self-contradictory and is likewise ignored.
 # ONE invocation per mode. Every finding line is "<LABEL>: <name> (<why>)", so strip the
 # label and the parenthetical to get a bare name list, exactly like the hook sweep above.
-_extra() {   # $1 = guard mode
+#
+# "Cannot tell" is NOT "clean", and this function used to erase the difference: every
+# non-1 rc returned an empty string, which the branch below then read as "nothing
+# unpackaged" and answered with `rm -f "$FLAG" "$ACKED"`. So an audit that could not
+# PARSE cleared a live block and exited 0 - the exact inversion the paragraph above
+# claims to prevent. The unknown modes are now tracked by name and suppress the clear.
+#
+# Results come back through a global rather than a command substitution: `$(...)` runs
+# in a subshell, so an `unknown` set inside one would evaporate on return.
+unknown=""
+_extra_out=""
+_extra() {   # $1 = guard mode; sets _extra_out, appends to $unknown when it cannot tell
   local out rc
   out="$("$GUARD" "$1" 2>/dev/null)"; rc=$?
-  [ "$rc" = "1" ] || return 0        # 0 clean, 3 cannot tell -> contribute nothing
-  printf '%s\n' "$out" \
+  _extra_out=""
+  case "$rc" in
+    0) return 0 ;;                        # completed, found nothing
+    1) ;;                                 # completed, found some
+    *) unknown="$unknown $1"; return 0 ;; # could not tell - never "clean"
+  esac
+  _extra_out="$(printf '%s\n' "$out" \
     | sed -n 's/^[A-Z][A-Z ]*: //p' \
     | sed 's/ (.*$//' \
-    | sed '/^$/d' | sort -u
+    | sed '/^$/d' | sort -u)"
+  # rc 1 with nothing parseable is self-contradictory, exactly as for --audit above.
+  [ -n "$_extra_out" ] || unknown="$unknown $1"
 }
-data_bad="$(_extra --audit-data)"
-skills_bad="$(_extra --audit-skills)"
+_extra --audit-data;   data_bad="$_extra_out"
+_extra --audit-skills; skills_bad="$_extra_out"
 
 # rc 1 means "completed, and found some". Zero parsed names CONTRADICTS that, so the
 # audit did not really complete - and believing it would clear a live arm on the strength
@@ -108,9 +163,20 @@ if [ "$audit_rc" = "1" ] && [ -z "$still" ]; then
   exit 0
 fi
 
-# Nothing unpackaged in ANY of the three classes - clear and let the session end.
-if [ -z "$still" ] && [ -z "$data_bad" ] && [ -z "$skills_bad" ]; then
+# Nothing unpackaged in ANY of the three classes AND every sweep actually completed -
+# clear and let the session end. An INCOMPLETE sweep is not a clean bill of health, so
+# it never reaches this branch.
+if [ -z "$still" ] && [ -z "$data_bad" ] && [ -z "$skills_bad" ] && [ -z "$unknown" ]; then
   rm -f "$FLAG" "$ACKED"
+  exit 0
+fi
+
+# A sweep that could not tell, with no findings anywhere else: leave FLAG and ACKED
+# exactly as they are and stay silent. Deliberately NOT a block - a torn read while
+# another session rewrites the tree is transient, and blocking a stop on a transient
+# trains the reader to ignore this gate. The permanent version of this failure (no
+# python3 at all) is the loud one, handled at the top.
+if [ -z "$still" ] && [ -z "$data_bad" ] && [ -z "$skills_bad" ]; then
   exit 0
 fi
 
@@ -120,7 +186,10 @@ fi
 mkdir -p "$(dirname "$FLAG")"
 if [ -n "$still" ]; then printf '%s\n' "$still" > "$FLAG"; else rm -f "$FLAG"; fi
 
-acked_key="$(printf 'H:%s\nD:%s\nS:%s\n' "$still" "$data_bad" "$skills_bad")"
+# Reaching here means the hook sweep COMPLETED (the two paths above return on any other
+# answer), so an empty $still really is "no unpackaged hooks" and clearing FLAG is safe.
+# $unknown joins the ack key so a partial answer and a full one are not the same state.
+acked_key="$(printf 'H:%s\nD:%s\nS:%s\nU:%s\n' "$still" "$data_bad" "$skills_bad" "$unknown")"
 
 # Already blocked once for exactly this set - let the session end.
 if [ -f "$ACKED" ] && [ "$(cat "$ACKED" 2>/dev/null)" = "$acked_key" ]; then
@@ -163,6 +232,14 @@ printf '%s' "$acked_key" > "$ACKED"
     echo "Add a deploy line to the owning component's install block, following the reflect"
     echo "precedent (mkdir -p \"\$CLAUDE_DIR/skills/<n>\" + safe_cp of its SKILL.md), and"
     echo "name it in that component's FILES entry."
+    echo ""
+  fi
+  if [ -n "$unknown" ]; then
+    echo "PARTIAL ANSWER: these sweeps could not complete, so the list above is not the"
+    echo "whole picture -$unknown"
+    for _m in $unknown; do
+      echo "  re-run: /bin/bash claude/hooks/hook-registry-guard.sh $_m"
+    done
     echo ""
   fi
   echo "Deliberately leaving it unpackaged? Say so plainly and stop again - this blocks once."

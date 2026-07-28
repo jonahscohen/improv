@@ -99,6 +99,57 @@ rm -f "$REPO_DIR/claude/hooks/zz-registry-fixture.sh"
 [ "$rc" = "0" ] && ok "deleted hook stops blocking" || bad "deleted hook stops blocking (rc=$rc)"
 [ -f "$FLAG" ] && bad "deleted hook clears flag" || ok "deleted hook clears flag"
 
+# --- SYNTAX GATE (2026-07-28) -----------------------------------------------------
+# A hook in claude/hooks/ is symlinked live into ~/.claude/hooks/, so a half-written
+# edit is in production the instant it is saved. A stray apostrophe closed a
+# `python3 -c '...'` block 184 lines early, and because that hook runs on PostToolUse
+# Bash, every Bash call in every session on this machine failed until it was restored.
+# The guard checked whether a hook was PACKAGED but never whether it PARSED.
+#
+# Driven against a SYNTHETIC repo so these rows assert the GATE, never this repo's
+# tidiness (same reasoning as the sandbox block below).
+SYN="$(mktemp -d)" || { echo "FATAL: mktemp -d failed"; exit 2; }
+mkdir -p "$SYN/claude/hooks"
+synpay(){ printf '{"tool_input":{"file_path":"%s"}}' "$1"; }
+
+printf '#!/bin/bash\nif [ x ; then\n' > "$SYN/claude/hooks/zz-syntax-broken.sh"
+out="$(synpay "$SYN/claude/hooks/zz-syntax-broken.sh" | "$GUARD" 2>&1)"; rc=$?
+[ "$rc" = "2" ] && ok "a hook that does not parse is blocked" || bad "unparseable hook blocked (rc=$rc)"
+case "$out" in *"does not parse"*) ok "the block names the defect" ;; *) bad "block names the defect" ;; esac
+case "$out" in *"symlinked live"*) ok "the block explains why it is already in production" ;; *) bad "block explains symlink urgency" ;; esac
+case "$out" in *"heredoc"*) ok "the block names the durable fix (quoted heredoc)" ;; *) bad "block names the durable fix" ;; esac
+
+# The ACTUAL 2026-07-28 defect, reconstructed: an apostrophe inside a character class
+# closing the single-quoted python3 -c block early.
+cat > "$SYN/claude/hooks/zz-apostrophe.sh" <<'OUTER'
+#!/bin/bash
+printf '%s' "$1" | python3 -c '
+import re
+m = re.match(r"""(['"]?)(x)\1""", "x")
+'
+OUTER
+synpay "$SYN/claude/hooks/zz-apostrophe.sh" | "$GUARD" >/dev/null 2>&1; rc=$?
+[ "$rc" = "2" ] && ok "the real apostrophe-closes-python3 defect is caught" || bad "apostrophe defect caught (rc=$rc)"
+
+printf 'def f(\n' > "$SYN/claude/hooks/zz-broken.py"
+synpay "$SYN/claude/hooks/zz-broken.py" | "$GUARD" >/dev/null 2>&1; rc=$?
+[ "$rc" = "2" ] && ok "a .py hook that does not parse is blocked too" || bad "unparseable .py blocked (rc=$rc)"
+
+# ...and a VALID file must not be touched by the syntax gate, or the gate is noise.
+printf '#!/bin/bash\nexit 0\n' > "$SYN/claude/hooks/zz-syntax-fine.sh"
+out="$(synpay "$SYN/claude/hooks/zz-syntax-fine.sh" | "$GUARD" 2>&1)"; rc=$?
+[ "$rc" != "2" ] && ok "a valid hook is not blocked by the syntax gate" || bad "syntax gate misfires on valid hook"
+case "$out" in *"does not parse"*) bad "syntax gate misfires on valid hook" ;; *) ok "syntax gate stays silent on a valid hook" ;; esac
+rm -rf "$SYN"
+
+# Every hook actually in this repo parses. This is the row that would have gone red
+# while the machine was broken.
+_syn_bad=0
+for _f in "$REPO_DIR"/claude/hooks/*.sh; do
+  bash -n "$_f" 2>/dev/null || { _syn_bad=$((_syn_bad+1)); echo "   unparseable: $_f"; }
+done
+[ "$_syn_bad" = "0" ] && ok "every hook in claude/hooks/ parses" || bad "$_syn_bad hook(s) in claude/hooks/ do not parse"
+
 # --- audit mode -------------------------------------------------------------------
 # Same lesson as --check above: these used to assert the audit was DIRTY (naming
 # voice-mandate), so packaging voice-mandate turned them red. The audit is now driven
@@ -129,7 +180,7 @@ rm -f "$REPO_DIR/claude/hooks/zz-registry-fixture.sh"
 # These rows run against a SYNTHETIC repo with its own $HOME, so they assert the GATE and
 # never this repo's tidiness. A row that goes red merely because the real tree is
 # momentarily dirty is a row that trains you to ignore the suite.
-SB="$(mktemp -d)"
+SB="$(mktemp -d)" || { echo "FATAL: mktemp -d failed - refusing to use an unset path" >&2; exit 2; }
 sbhome="$SB/home"; sbrepo="$SB/repo"; sbother="$SB/other"
 mkdir -p "$sbhome/.claude" "$sbrepo/claude/hooks" "$sbother/claude/hooks"
 cp "$GUARD" "$STOP" "$sbrepo/claude/hooks/"
@@ -227,6 +278,84 @@ HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbg" --audit >/dev/null 2>&1;
 HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbs" >/dev/null 2>&1
 [ -f "$sbflag" ] && ok "wrong-shaped tree leaves the arm intact" || bad "wrong-shaped tree leaves the arm intact"
 cp "$SB/tree.bak" "$sbtree"; rm -f "$sbrepo/claude/hooks/sb-unpackaged.sh"
+
+# THE OTHER TWO SWEEPS HAD NO SUCH PROTECTION (2026-07-28). --audit's rc 3 was handled
+# above, but _extra() collapsed every non-1 rc into "contributed nothing", so a data or
+# skills audit that CANNOT TELL was indistinguishable from one that found nothing - and
+# the very next branch does `rm -f "$FLAG" "$ACKED"` on that empty result. An unparseable
+# audit therefore cleared a live block and exited 0, the exact inversion the comment
+# directly above _extra claims to prevent.
+#
+# Driven with a STUB guard so the "cannot tell" is unambiguous and not a side effect of
+# some other fixture. Each mode is failed on its own, because they are read separately.
+sbclear
+cp "$sbg" "$SB/guard.bak"
+for mode in --audit-data --audit-skills; do
+  cat > "$sbg" <<STUB
+#!/usr/bin/env bash
+# stub: every sweep is clean EXCEPT $mode, which cannot tell (rc 3)
+case "\${1:-}" in
+  "$mode") exit 3 ;;
+  --audit|--audit-data|--audit-skills) exit 0 ;;
+esac
+exit 0
+STUB
+  chmod +x "$sbg"
+  printf 'sb-live-arm\n' > "$sbflag"; rm -f "$sback"
+  out="$(HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" bash "$sbs" 2>&1)"; rc=$?
+  [ -f "$sbflag" ] \
+    && ok "$mode 'cannot tell' leaves a live arm intact" \
+    || bad "$mode 'cannot tell' cleared a live arm (rc=$rc out=$out)"
+  [ -f "$sback" ] \
+    && bad "$mode 'cannot tell' wrote an ack it cannot justify" \
+    || ok "$mode 'cannot tell' does not ack a block it never proved"
+  # Deliberately NOT a block: a torn read is transient, and the --audit rows above
+  # already fix that contract. Blocking on a transient trains you to ignore the gate.
+  [ "$rc" = "0" ] \
+    && ok "$mode 'cannot tell' does not block on a transient" \
+    || bad "$mode 'cannot tell' blocked on a transient (rc=$rc out=$out)"
+done
+cp "$SB/guard.bak" "$sbg"; chmod +x "$sbg"; sbclear
+
+# PERMANENTLY inert is a different animal from transiently unreadable. With no python3
+# on PATH every sweep fails forever, so the gate can never block and never will - it
+# just returns 0 on every stop, which is indistinguishable from "the repo is clean".
+# That one is worth saying out loud, once.
+NOPY="$SB/nopy"; mkdir -p "$NOPY"
+for b in sed sort cat mkdir rm basename dirname readlink chmod grep printf; do
+  src="$(command -v "$b")" && ln -sf "$src" "$NOPY/$b"
+done
+command -v python3 >/dev/null && [ ! -e "$NOPY/python3" ] \
+  && ok "nopy precondition: python3 exists but is off the probe PATH" \
+  || bad "nopy precondition: python3 exists but is off the probe PATH"
+printf 'sb-live-arm\n' > "$sbflag"; rm -f "$sback"
+out="$(HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" PATH="$NOPY" /bin/bash "$sbs" 2>&1)"; rc=$?
+[ -f "$sbflag" ] && ok "no python3: a live arm survives" || bad "no python3: a live arm was cleared (rc=$rc)"
+[ "$rc" = "2" ] && ok "no python3: the gate says so instead of passing silently" || bad "no python3: gate passed silently (rc=$rc out=$out)"
+case "$out" in *python3*) ok "no python3: the message names the missing interpreter" ;; *) bad "no python3: message names the interpreter (out=$out)" ;; esac
+out="$(HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" PATH="$NOPY" /bin/bash "$sbs" 2>&1)"; rc=$?
+[ "$rc" = "0" ] && ok "no python3: still blocks only once" || bad "no python3: blocks more than once (rc=$rc)"
+
+# CROSS-MODEL REVIEW (Codex, 2026-07-28): a CONSTANT ack key acknowledged "no python3"
+# once per $HOME, so a NEW unpackaged hook arming the flag later was never reported.
+# The key carries the flag contents, so a changed live state speaks again.
+printf 'sb-live-arm\nsb-newly-armed\n' > "$sbflag"
+out="$(HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" PATH="$NOPY" /bin/bash "$sbs" 2>&1)"; rc=$?
+[ "$rc" = "2" ] && ok "no python3: a NEW live arm is reported despite the earlier ack" || bad "no python3: new arm silently swallowed (rc=$rc)"
+
+# ...and a python3 that RESOLVES but cannot run (an empty version shim) is the same
+# class: command -v succeeds, every sweep exits 127, and the gate used to pass silently.
+BROKEN="$SB/brokenpy"; mkdir -p "$BROKEN"
+for b in sed sort cat mkdir rm basename dirname readlink chmod grep printf; do
+  src="$(command -v "$b")" && ln -sf "$src" "$BROKEN/$b"
+done
+printf '#!/bin/sh\nexit 127\n' > "$BROKEN/python3"; chmod +x "$BROKEN/python3"
+printf 'sb-live-arm\n' > "$sbflag"; rm -f "$sback"
+out="$(HOME="$sbhome" CLAUDE_PROJECT_DIR="$sbrepo" PATH="$BROKEN" /bin/bash "$sbs" 2>&1)"; rc=$?
+[ "$rc" = "2" ] && ok "a python3 that resolves but cannot run blocks loudly" || bad "broken python3 shim passed silently (rc=$rc out=$out)"
+case "$out" in *"cannot execute"*) ok "the message distinguishes a broken shim from a missing binary" ;; *) bad "broken-shim message (out=$out)" ;; esac
+[ -f "$sbflag" ] && ok "broken python3 shim leaves a live arm intact" || bad "broken python3 shim cleared a live arm"
+sbclear
 
 # The batch audit and the per-name --check are two implementations of one question. They
 # are asserted equal here so the fast path cannot quietly drift from _is_managed.

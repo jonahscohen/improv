@@ -20,6 +20,14 @@
 # teaches people to ignore it.
 
 set -uo pipefail
+
+# python3 is this suite's only measuring instrument: every payload, every fixture and
+# every assertion below is built with it. Without it the suite would not fail loudly -
+# it would skip silently and still print a green summary, which is worse than no suite.
+command -v python3 >/dev/null 2>&1 || {
+  echo "FATAL: python3 not found - this suite cannot verify anything without it." >&2
+  exit 2
+}
 REPO="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 GUARD="$REPO/claude/hooks/hook-registry-guard.sh"
 TREE="$REPO/claude/hooks/browser-tree.json"
@@ -128,7 +136,7 @@ fi
 # it, so nothing tested it. A default arm that echoed anything but the empty string
 # would make install_hook_data try to deploy a file named after the hook, for every
 # hook in the repo. Extract the real function and run it.
-TBL="$(mktemp)"
+TBL="$(mktemp)" || { echo "FATAL: mktemp failed - refusing to use an unset path" >&2; exit 2; }
 awk '/^hook_data_files\(\) \{/,/^\}/' "$INSTALL" > "$TBL"
 if [ -s "$TBL" ]; then
   ok "hook_data_files() extracts cleanly from install.sh"
@@ -210,7 +218,7 @@ done
 # Runs against $TMPDIR with its own tree + install.sh so a row can never go red
 # merely because the real working tree is momentarily dirty.
 # ---------------------------------------------------------------------------
-SB="$(mktemp -d)"
+SB="$(mktemp -d)" || { echo "FATAL: mktemp -d failed - refusing to use an unset path" >&2; exit 2; }
 mkdir -p "$SB/claude/hooks"
 cp "$GUARD" "$SB/claude/hooks/"; chmod +x "$SB/claude/hooks/hook-registry-guard.sh"
 SGUARD="$SB/claude/hooks/hook-registry-guard.sh"

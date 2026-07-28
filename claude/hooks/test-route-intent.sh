@@ -4,6 +4,14 @@
 # Exits non-zero if any test fails.
 
 HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# python3 is this suite's only measuring instrument: every payload, every fixture and
+# every assertion below is built with it. Without it the suite would not fail loudly -
+# it would skip silently and still print a green summary, which is worse than no suite.
+command -v python3 >/dev/null 2>&1 || {
+  echo "FATAL: python3 not found - this suite cannot verify anything without it." >&2
+  exit 2
+}
 REPO_DIR="$(cd "$HOOK_DIR/../.." && pwd)"
 HOOK="$HOOK_DIR/route-intent.sh"
 AGENTS_DIR="$REPO_DIR/claude/agents"
@@ -15,7 +23,7 @@ AGENTS_DIR="$REPO_DIR/claude/agents"
 # calls onto a throwaway file with cooldown disabled; the cooldown-specific
 # tests below override ROUTE_INTENT_COOLDOWN_FILE/ROUTE_INTENT_COOLDOWN per
 # invocation, which takes precedence over this exported default.
-export ROUTE_INTENT_COOLDOWN_FILE="$(mktemp -t routeintent-default)"
+export ROUTE_INTENT_COOLDOWN_FILE="$(mktemp -t routeintent-default)" || { echo "FATAL: mktemp failed - refusing to use an unset path" >&2; exit 2; }
 rm -f "$ROUTE_INTENT_COOLDOWN_FILE"
 export ROUTE_INTENT_COOLDOWN=0
 trap 'rm -f "$ROUTE_INTENT_COOLDOWN_FILE"' EXIT
@@ -102,7 +110,8 @@ HOOK_OUT=""; HOOK_ERR=""; HOOK_RC=0; HOOK_OUT_BYTES=0; HOOK_ERR_BYTES=0
 run_hook_raw() {
   local stdin_payload="$1"; shift
   local outfile errfile
-  outfile=$(mktemp -t routeintent-out); errfile=$(mktemp -t routeintent-err)
+  outfile=$(mktemp -t routeintent-out) || { echo "FATAL: mktemp failed - refusing to use an unset path" >&2; exit 2; }
+  errfile=$(mktemp -t routeintent-err) || { echo "FATAL: mktemp failed - refusing to use an unset path" >&2; exit 2; }
   printf '%s' "$stdin_payload" | env "$@" bash "$HOOK" >"$outfile" 2>"$errfile"; HOOK_RC=$?
   HOOK_OUT=$(cat "$outfile"); HOOK_ERR=$(cat "$errfile")
   HOOK_OUT_BYTES=$(wc -c < "$outfile" | tr -d ' ')
@@ -234,7 +243,13 @@ assert_routes "a softened imperative still routes to opus-executor" \
   "opus-executor"
 
 # ---------------------------------------------------------------------------
-# Real-traffic efficacy (measured 2026-07-27 against 627 genuine prompts mined
+# Real-traffic efficacy. The original "0% -> 22.2% recall over 627 prompts" claim
+# is STRUCK: recall needs a labelled should-have-routed set, nothing of the kind was
+# ever committed, and the labels came from the same agent that chose the split.
+# What IS re-derivable, with `measure-hook-corpus.py --route`, is the fire rate and
+# the envelope/genuine split - 2026-07-28 over 4021 real prompts: 22 routed, 11 of
+# them envelopes; after the envelope exemption, 10 routed, 0 envelopes.
+# (original note, kept for provenance: measured 2026-07-27 against 627 prompts mined
 # from ~/.claude/projects transcripts). The suite was green while the hook was
 # routing 0.37% of real prompts at 0% recall and 0% precision, so a green suite
 # is not evidence the classifier works. These cases encode the four defects
@@ -395,6 +410,130 @@ assert_routes "a first-person opener-led redesign routes to opus-executor" \
   "i want you to redesign the settings page so it matches the new flow exactly" \
   "opus-executor"
 
+# ---------------------------------------------------------------------------
+# MID-SENTENCE DELIBERATION AND NEGATION (2026-07-28).
+#
+# The imperative shape anchored the verb to a clause boundary, but a SEMICOLON
+# counts as one and the conjunction branch accepts any preceding whitespace, so
+# ordinary deliberating prose reached the most expensive tier. Reproduced by the
+# lead: "i wonder if we should; refactor the parser or leave it alone?" and
+# "do not proceed; refactor the router is exactly what we must avoid." both
+# routed. This is the same false-positive class that forced a revert earlier the
+# same day - it had been relocated, not fixed.
+#
+# Two structural guards close it:
+#   LOOKBEHIND - a negation/deliberation marker between the start of the SENTENCE
+#                (split on . ! ? and newline only, NOT on ;) and the match.
+#   NOMINAL    - the matched verb phrase is the SUBJECT of a copula
+#                ("refactor the router IS exactly what we must avoid"), which is
+#                a noun phrase, not an instruction.
+#
+# EVERY case below is labelled with the guard that UNIQUELY catches it, and that
+# claim is mutation-proved: disable one guard and exactly its own group fails.
+# The first draft of this block was not written that way - 8 of 12 cases carried
+# both a marker AND a copula, so either guard alone kept them green and the
+# labels were fiction. That is the vacuous-assertion shape this repo keeps
+# finding; a test named for a mechanism must fail when that mechanism is removed.
+# The two prompts the lead reproduced by hand are kept verbatim as regression
+# rows even though they trip both guards, and are labelled as such rather than
+# claiming a mechanism.
+
+# -- the two hand-reproduced prompts (both guards apply; kept verbatim) --------
+assert_silent "reproduced: a semicolon does not launder a deliberation" \
+  "i wonder if we should; refactor the parser or leave it alone for now"
+assert_silent "reproduced: a semicolon does not launder an explicit negation" \
+  "do not proceed; refactor the router is exactly what we must avoid here"
+
+# -- LOOKBEHIND only: a marker before the match, no copula after it ------------
+assert_silent "lookbehind: a hedged plan is not an instruction" \
+  "i am not sure yet; redesign the settings page before the holidays begin"
+assert_silent "lookbehind: an explicit refusal survives a semicolon" \
+  "we must avoid churn; refactor the parser module across every call site"
+assert_silent "lookbehind: a maybe is not an instruction" \
+  "maybe later; build me a dashboard for the quarterly metrics review"
+assert_silent "lookbehind: a cannot-do report is not an instruction" \
+  "we cannot ship that; modify generator to support localstorage for the demo"
+assert_silent "lookbehind: a rather-than comparison is not an instruction" \
+  "rather than that; scan the repo for dead code and report back to me"
+assert_silent "lookbehind: an instead-of comparison is not an instruction" \
+  "instead of a rewrite; explore the hooks directory and summarize the flow"
+assert_silent "lookbehind: a wondering clause survives a conjunction" \
+  "i wonder about the cost and refactor the parser module later this quarter"
+assert_silent "lookbehind: a never-do rule is not an instruction" \
+  "we never merge on fridays; migrate parser to lexer across the whole repo"
+
+# -- NOMINAL only: no marker before the match, a copula after it ---------------
+assert_silent "nominal: a gerund subject before a copula is not an instruction" \
+  "the team argued and refactor the parser module is the wrong call here"
+assert_silent "nominal: a past-tense copula tail is not an instruction" \
+  "we reviewed the options and redesign the settings page was always a stretch"
+assert_silent "nominal: a reported decision is not an instruction" \
+  "the ticket says; refactor the router is exactly what the team decided on"
+assert_silent "nominal: a scoping statement is not an instruction" \
+  "the roadmap says; build me a design system is a next-quarter item now"
+
+# The guards must not silence the imperatives they sit next to. Each of these
+# carries a marker token in the SAME prompt, positioned so a sloppy prompt-wide
+# scan would swallow it: after the match, or in a previous sentence.
+assert_routes "a negation AFTER the imperative still routes" \
+  "refactor the parser module across every file, but do not touch the tests" \
+  "opus-executor"
+assert_routes "a negation in a PREVIOUS sentence still routes" \
+  "i was not sure about this yesterday. refactor the parser module today please" \
+  "opus-executor"
+assert_routes "a deliberation in a previous sentence still routes" \
+  "i wonder how long this takes. build me a design system for the marketing site" \
+  "opus-executor"
+
+# ---------------------------------------------------------------------------
+# AGENT/SYSTEM ENVELOPES MUST NEVER ROUTE (2026-07-28, measured not reasoned).
+#
+# `python3 claude/hooks/_tests/measure-hook-corpus.py --route` over 4021 real
+# prompts: 22 routed, and ELEVEN of those 22 were envelopes - a task-notification
+# body, a teammate brief, an injected skill body. Half of everything this hook
+# said was spent on prompts no human wrote, and nudging a delegate to re-delegate
+# is pure noise: the recipient IS the subagent.
+#
+# The prose-shaped brief markers in `exempt` never covered these, because an
+# envelope is structural. Matched against the RAW prompt for the same reason
+# grounding-gate does it: the scrub strips XML bodies, so a <task-notification>
+# marker is gone before `exempt` could ever see it.
+ENV_BODY="find all the callers of detect-session-model across the hooks directory"
+
+assert_routes "control: the envelope BODY routes on its own" "$ENV_BODY" "Explore"
+
+assert_silent "a bare teammate-message envelope does not route" \
+  "<teammate-message teammate_id=\"team-lead\" color=\"green\"> $ENV_BODY"
+assert_silent "a relayed teammate-message envelope does not route" \
+  "Another Claude session sent a message: <teammate-message teammate_id=\"x\"> $ENV_BODY"
+assert_silent "a task-notification envelope does not route" \
+  "<task-notification> <task-id>a409fb</task-id> <status>completed</status> $ENV_BODY"
+assert_silent "a system-reminder envelope does not route" \
+  "<system-reminder> As you answer, use this context: $ENV_BODY"
+assert_silent "an injected skill body does not route" \
+  "Base directory for this skill: /Users/x/.claude/skills/icon-source
+
+# Icon Source
+
+$ENV_BODY"
+assert_silent "a BOM does not smuggle an envelope past the anchor" \
+  "$(printf '\xef\xbb\xbf')<task-notification> $ENV_BODY"
+
+# Tightness, same rule as the grounding gate: the exemption keys on a STRUCTURAL
+# marker, so a lookalike tag and ordinary prose must both still route.
+assert_routes "tightness: a lookalike teammate tag still routes" \
+  "<teammate-messages-digest> $ENV_BODY" "Explore"
+assert_routes "tightness: prose about a task notification still routes" \
+  "the task notification said it finished, so now $ENV_BODY" "Explore"
+
+# CROSS-MODEL REVIEW ROUND 2 (Codex, 2026-07-28).
+assert_silent "a dotted object inside the match does not collapse the lookbehind" \
+  "i wonder if we should; migrate api. client to v2 or leave it alone for now"
+assert_routes "tightness: the skill marker needs a PATH, not just the phrase" \
+  "Base directory for this skill: $ENV_BODY" "Explore"
+assert_silent "a left-to-right mark does not smuggle an envelope past the anchor" \
+  "$(printf '\xe2\x80\x8e')<task-notification> $ENV_BODY"
+
 # Guard the lexicon's declared order against a silent reorder.
 assert_escalation_order() {
   local got
@@ -409,7 +548,7 @@ assert_escalation_order
 
 # Cooldown: a second nudge inside the window must stay silent, so an active
 # build does not get re-nagged on every prompt.
-cd_file=$(mktemp -t routeintent)
+cd_file=$(mktemp -t routeintent) || { echo "FATAL: mktemp failed - refusing to use an unset path" >&2; exit 2; }
 rm -f "$cd_file"
 
 run_hook_cd() {
@@ -467,7 +606,8 @@ assert_failopen "paste past ARG_MAX is silent on BOTH streams" \
   "$(python3 -c 'import json; print(json.dumps({"prompt": "please refactor the flow handler " + "x"*1200000}))')"
 
 # A corrupt lexicon must degrade to silence, never to an error.
-bad_lex=$(mktemp -t routelex); echo '{ this is not valid json' > "$bad_lex"
+bad_lex=$(mktemp -t routelex) || { echo "FATAL: mktemp failed - refusing to use an unset path" >&2; exit 2; }
+echo '{ this is not valid json' > "$bad_lex"
 run_hook_raw '{"prompt":"find all the callers of detect-session-model in the hooks dir"}' \
   ROUTE_INTENT_LEXICON="$bad_lex"
 if [ "$HOOK_RC" -eq 0 ] && hook_wrote_nothing; then
@@ -478,7 +618,7 @@ fi
 rm -f "$bad_lex"
 
 # A lexicon with an invalid regex must skip that pattern, not crash.
-bad_re=$(mktemp -t routelex2)
+bad_re=$(mktemp -t routelex2) || { echo "FATAL: mktemp failed - refusing to use an unset path" >&2; exit 2; }
 python3 -c '
 import json
 lex = json.load(open("'"$HOOK_DIR"'/route-intent.json"))
@@ -503,7 +643,7 @@ rm -f "$bad_re"
 # ---------------------------------------------------------------------------
 assert_type_guard() {
   local label="$1" mutation="$2" expect="$3" lex
-  lex=$(mktemp -t routetype)
+  lex=$(mktemp -t routetype) || { echo "FATAL: mktemp failed - refusing to use an unset path" >&2; exit 2; }
   MUT="$mutation" OUT="$lex" python3 -c '
 import json, os
 lex = json.load(open("'"$HOOK_DIR"'/route-intent.json"))
@@ -696,7 +836,7 @@ assert_block_lacks() {
 # functions, which is strictly stronger: it proves the file actually lands, not
 # merely that install.sh mentions its name somewhere.
 route_data_probe() {
-  local sb; sb="$(mktemp -d)"
+  local sb; sb="$(mktemp -d)" || { echo "FATAL: mktemp -d failed - refusing to use an unset path" >&2; exit 2; }
   (
     CLAUDE_DIR="$sb/claude"; REPO_DIR="$REPO_DIR"
     mkdir -p "$CLAUDE_DIR/hooks"

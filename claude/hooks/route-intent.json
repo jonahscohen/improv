@@ -9,7 +9,8 @@
     "identifier_slot": "An identifier slot is at most four whitespace-separated tokens ([a-z0-9_.\\-]{1,30}(?: [a-z0-9_.\\-]{1,30}){0,3}). The older [a-z0-9_.\\- ]{2,40} admitted space and dot without limit, so it bridged whole clauses: 'a stale orphan from a rename - i.e. this skill was renamed to something else' matched the `rename X to` pattern. Do not reintroduce a space inside the character class.",
     "deictic_objects": "A dispatched subagent receives NONE of the conversation, so a deictic referent cannot be resolved by the agent being nudged. 'what does this actually do' is unroutable by construction, not a narrow lookup. Identifier slots that ARE the referent carry a (?!(?:this|that|it|these|those|they|them|there|here)\\b) guard.",
     "dispatch_briefs": "A prompt that IS an agent dispatch brief must never route: the recipient is already the delegate, so nudging it to re-delegate is pure noise. Measured 2026-07-27 - 7 of 9 fires on real traffic were briefs, matching sub-steps like '1. first map the routing landscape' and '2. find all 7 pages'. The brief markers live in `exempt`.",
-    "bounded_quantifiers": "Every {n,m} here must stay BOUNDED. route-intent.sh scrubs quoted XML with a backreference, which defeats the engine's prefix optimization; an unbounded gap made a 156 KB paste take 14.9s against a 5s timeout."
+    "bounded_quantifiers": "Every {n,m} here must stay BOUNDED. route-intent.sh scrubs quoted XML with a backreference, which defeats the engine's prefix optimization; an unbounded gap made a 156 KB paste take 14.9s against a 5s timeout.",
+    "suppression": "A clause boundary is necessary but NOT sufficient for an imperative reading. A semicolon is a boundary, so 'i wonder if we should; refactor the parser' satisfied the shape and routed; so did 'do not proceed; refactor the router is exactly what we must avoid'. Reproduced 2026-07-28 - 12 of 12 deliberation/negation probes routed, the same false-positive class that forced a revert earlier that day, relocated into the boundary alternation rather than fixed. `suppress.deliberation_markers` is scanned over the text from the start of the SENTENCE (split on . ! ? and newline ONLY, never on ;) up to the match, so a hedge or a refusal governs the clause that follows it. `suppress.nominal_subject` rejects a verb phrase that is the SUBJECT of a copula, which is a noun phrase and not an instruction. Markers are checked BEFORE the match only, so 'refactor the parser module, but do not touch the tests' still routes; the window collapses to empty when the pattern consumes its own sentence boundary, so a request after unrelated musing still routes."
   },
   "config": {
     "cooldown_seconds": 900,
@@ -78,6 +79,44 @@
       ]
     }
   },
+  "suppress": {
+    "deliberation_markers": [
+      "\\b(?:i|we)\\s+wonder\\b",
+      "\\bwondering\\b",
+      "\\b(?:do|does|did|is|are|was|were|should|would|could|can|will|must|may|might|has|have|had)\\s*n[o']?t\\b",
+      "\\bcan'?t\\b",
+      "\\bwon'?t\\b",
+      "\\bnot\\s+sure\\b",
+      "\\bunsure\\b",
+      "\\bnever\\b",
+      "\\bavoid\\b",
+      "\\binstead\\s+of\\b",
+      "\\brather\\s+than\\b",
+      "\\bmaybe\\b",
+      "\\bperhaps\\b",
+      "\\bshould\\s+(?:we|i)\\b",
+      "\\bdo\\s+(?:we|i)\\s+need\\b",
+      "\\bwhat\\s+if\\b",
+      "\\bis\\s+it\\s+worth\\b",
+      "\\bthinking\\s+about\\b",
+      "\\bconsidering\\b",
+      "\\bdebating\\b",
+      "\\bno\\s+need\\b",
+      "\\bout\\s+of\\s+scope\\b",
+      "\\bhold\\s+off\\b",
+      "\\bon\\s+hold\\b"
+    ],
+    "nominal_subject": "^\\s*(?!(?:while|when|if|because|after|before|that|which|who|whom|whose|so|but|and|or|then|than|you|we|i|it|they|he|she|there|here|to|for|with|from|in|on|at|by|as|until|unless|since|though|although|across|about|into|over|under|per)\\b)[a-z0-9_.\\-]{1,30}(?:\\s+(?!(?:while|when|if|because|after|before|that|which|who|whom|whose|so|but|and|or|then|than|you|we|i|it|they|he|she|there|here|to|for|with|from|in|on|at|by|as|until|unless|since|though|although|across|about|into|over|under|per)\\b)[a-z0-9_.\\-]{1,30}){0,3}\\s+(?:is|are|was|were|isn'?t|aren'?t|wasn'?t|weren'?t|would|will|may|might|seems|sounds|feels|means|remains|becomes)\\b",
+    "_nominal_note": "The noun-phrase run may not cross a subordinator, pronoun or preposition. Without that guard 'refactor the parser module while you ARE in there' - a genuine imperative - read as a copula subject and was silenced, because the run walked four tokens to reach 'are' inside a subordinate clause."
+  },
+  "envelope_exempt": [
+    "^\\s*another claude session sent a message:\\s*<teammate-message(?:>|\\s)",
+    "^\\s*<teammate-message(?:>|\\s)",
+    "^\\s*<task-notification(?:>|\\s)",
+    "^\\s*<system-reminder(?:>|\\s)",
+    "^\\s*base directory for this skill:\\s*[~/][^\\s]*\\s",
+    "^\\s*this session is being continued from a previous conversation that ran out of context\\.[\\s\\S]{0,2000}?\\bsummary:"
+  ],
   "exempt": [
     "^\\s*(what|which|who|when)\\s+(is|are|was|were)\\b",
     "^\\s*(explain|define|describe|summarize|tell me about)\\b",

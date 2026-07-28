@@ -10,11 +10,19 @@
 # Uses temp arm/cooldown files (env overrides) so the real flag is untouched.
 
 HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# python3 is this suite's only measuring instrument: every payload, every fixture and
+# every assertion below is built with it. Without it the suite would not fail loudly -
+# it would skip silently and still print a green summary, which is worse than no suite.
+command -v python3 >/dev/null 2>&1 || {
+  echo "FATAL: python3 not found - this suite cannot verify anything without it." >&2
+  exit 2
+}
 GATE="$HOOK_DIR/grounding-gate.sh"
 GUARD="$HOOK_DIR/grounding-guard.sh"
 PASS=0; FAIL=0; FAILS=()
 
-TMP=$(mktemp -d /tmp/grounding-test-XXXX)
+TMP=$(mktemp -d /tmp/grounding-test-XXXX) || { echo "FATAL: mktemp -d failed - refusing to use an unset path" >&2; exit 2; }
 ARM="$TMP/armed"; COOL="$TMP/cool"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -57,8 +65,10 @@ out=$(gate "why isn't the watch loop firing")
 
 # ---- GATE: agent/system envelopes must never arm (2026-07-28 live-traffic audit) ----
 # Each string below is a VERBATIM head of a real prompt that fired the gate before
-# the `exempt` list landed. Measured: 121 of 1231 envelopes fired (9.83%) versus 13
-# of 671 genuine prompts (1.94%), an inverted signal. Removing "exempt" from
+# the `exempt` list landed. Re-derive the rate with
+# `python3 claude/hooks/_tests/measure-hook-corpus.py --gate` rather than trusting a
+# number in a comment; the previous 9.83%-vs-1.94% claim had no committed corpus and
+# has been struck. Removing "exempt" from
 # grounding-intent.json turns all three of these red.
 # Each case is a VERBATIM real envelope head followed by BODY. BODY is asserted
 # below to arm on its own, so these three cannot pass vacuously: with `exempt`
@@ -101,6 +111,92 @@ out=$(gate "This session is being continued from a previous conversation I paste
 rm -f "$ARM" "$COOL"
 out=$(gate "<task-notification-example> $BODY")
 [ -f "$ARM" ] && ok "tightness: a lookalike task-notification tag still arms" || no "tightness tasknotif lookalike" "$out"
+
+# ---- BOTH DIRECTIONS OF THE EXEMPT LIST (2026-07-28 repair) ----------------
+# The exempt list had three patterns and four defects, two per direction.
+#
+# TOO NARROW (an envelope arms the gate):
+#   1. <system-reminder> was never listed at all, though it is the single most
+#      common system envelope on UserPromptSubmit.
+#   2. A BOM or zero-width character at the head is not \s, so one invisible
+#      byte defeated every ^\s* anchor and the envelope armed.
+# TOO WIDE (a genuine prompt is silenced - a fail-CLOSED hole in a gate):
+#   3. <teammate-message\b matched <teammate-message-example>, because \b ends a
+#      word at a hyphen. task-notification already used the tight (?:>|\s) form;
+#      the two are now consistent.
+#   4. The continuation exemption keyed on the canonical SENTENCE alone, so any
+#      genuine question that opened with it was silenced. It now also requires
+#      the structural "Summary:" section that a real continuation always carries
+#      (verified against ~/.claude/projects transcripts, where the real form is
+#      "...ran out of context. The summary below covers the earlier portion of
+#      the conversation. Summary: 1. Primary Request and Intent").
+rm -f "$ARM" "$COOL"
+out=$(gate "<system-reminder> As you answer the user's questions, you can use the following context: $BODY")
+[ -z "$out" ] && [ ! -f "$ARM" ] && ok "gate stays silent on a system-reminder envelope" || no "gate system-reminder suppression" "$out"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "$(printf '\xef\xbb\xbf')<task-notification> <task-id>a409fb</task-id> $BODY")
+[ -z "$out" ] && [ ! -f "$ARM" ] && ok "a BOM does not smuggle a task-notification past the anchor" || no "BOM-prefixed envelope suppression" "$out"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "$(printf '\xe2\x80\x8b')Another Claude session sent a message: <teammate-message teammate_id=\"x\"> $BODY")
+[ -z "$out" ] && [ ! -f "$ARM" ] && ok "a zero-width space does not smuggle a teammate envelope past the anchor" || no "ZWSP-prefixed envelope suppression" "$out"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "Another Claude session sent a message: <teammate-message-example> $BODY")
+[ -f "$ARM" ] && ok "tightness: a lookalike teammate-message tag still arms" || no "tightness teammate lookalike" "$out"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "<system-reminder-example> $BODY")
+[ -f "$ARM" ] && ok "tightness: a lookalike system-reminder tag still arms" || no "tightness system-reminder lookalike" "$out"
+
+# TWO MORE ENVELOPE SHAPES, found by measuring instead of reasoning
+# (_tests/measure-hook-corpus.py over ~/.claude/projects, 2026-07-28).
+# The exempt list only ever covered a teammate relay behind the prose head
+# "Another Claude session sent a message:". Real traffic delivers the tag on its
+# own far more often: of 207 gate fires across 4019 real prompts, 124 were a BARE
+# <teammate-message ...> head and 34 were a skill body injected as a prompt. That
+# is 158 of 207 - three quarters of everything this gate said - spent on envelopes
+# no human wrote. Both markers below are STRUCTURAL (a literal tag, and the
+# literal skill-injection preamble plus its path), per the standing rule that a
+# prose-only head must never silence a prompt.
+rm -f "$ARM" "$COOL"
+out=$(gate "<teammate-message teammate_id=\"team-lead\" color=\"green\"> $BODY")
+[ -z "$out" ] && [ ! -f "$ARM" ] && ok "gate stays silent on a BARE teammate-message envelope" || no "bare teammate envelope suppression" "$out"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "Base directory for this skill: /Users/x/.claude/skills/icon-source
+
+# Icon Source
+
+$BODY")
+[ -z "$out" ] && [ ! -f "$ARM" ] && ok "gate stays silent on an injected skill body" || no "skill-injection suppression" "$out"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "<teammate-messages-digest> $BODY")
+[ -f "$ARM" ] && ok "tightness: a bare lookalike teammate tag still arms" || no "tightness bare teammate lookalike" "$out"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "the base directory for this skill is wrong, and $BODY")
+[ -f "$ARM" ] && ok "tightness: prose about a skill base directory still arms" || no "tightness skill prose" "$out"
+
+# CROSS-MODEL REVIEW ROUND 2 (Codex, 2026-07-28). Two holes in the fixes above:
+#   - "base directory for this skill:" plus any non-space silenced a REAL question
+#     that happened to open with those words. The marker now requires the actual
+#     injected shape: the phrase followed by a PATH.
+#   - the invisible-character strip was a hand-picked list, so U+200E LRM (and every
+#     other Cf character it did not name) still defeated the ^\s* anchor.
+rm -f "$ARM" "$COOL"
+out=$(gate "Base directory for this skill: $BODY")
+[ -f "$ARM" ] && ok "tightness: the skill marker needs a PATH, not just the phrase" || no "tightness skill marker needs a path" "$out"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "$(printf '\xe2\x80\x8e')<task-notification> <task-id>a409fb</task-id> $BODY")
+[ -z "$out" ] && [ ! -f "$ARM" ] && ok "a left-to-right mark does not smuggle an envelope past the anchor" || no "LRM-prefixed envelope suppression" "$out"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "This session is being continued from a previous conversation that ran out of context. $BODY")
+[ -f "$ARM" ] && ok "tightness: the continuation sentence alone does not silence a real question" || no "tightness continuation without summary" "$out"
 
 # A malformed lexicon must FAIL OPEN, never silently disarm the gate. If "exempt"
 # is a STRING, a char-wise loop would match "^" against every prompt and take

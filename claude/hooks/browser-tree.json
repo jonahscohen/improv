@@ -153,7 +153,7 @@
           "key": "Skills",
           "kind": "group",
           "tag": "11 design-pipeline skills",
-          "desc": "The design skills that auto-trigger during UI work - type, motion, icons, references, components, and more.",
+          "desc": "The design-pipeline skills the model can select for UI work - type, motion, icons, references, components, and more.",
           "members": [
             {
               "key": "tactical-polish",
@@ -544,7 +544,7 @@
     "teammate-relay-stop": "Stops a teammate idling with an unsent report.",
     "sidecoach-preamble": "Injects PRODUCT.md + DESIGN.md into every session.",
     "sidecoach-postuserp": "Sends your prompt to the sidecoach daemon.",
-    "sidecoach-taste-gate": "Reviews UI files the moment they are written.",
+    "sidecoach-taste-gate": "Reviews .html/.css the moment they are written, but only inside a project that has a DESIGN.md; the taste validator runs on .html, the anti-pattern ban sweep on both.",
     "sidecoach-postresponse": "Folds sidecoach daemon results into the reply.",
     "sidecoach-detect": "Scans each UI file you write with the real detect engine and reports findings - advisory, never blocks, and off by default (opt-in; the per-edit browser scan adds a few seconds).",
     "voice-mandate": "Decides each session whether the speak tool is allowed, based on install and mute state.",

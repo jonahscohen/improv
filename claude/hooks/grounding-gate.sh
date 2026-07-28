@@ -22,7 +22,22 @@ INTENT_FILE="$HOOK_DIR/grounding-intent.json"
 INPUT="$(cat)"
 
 INTENT_FILE_PATH="$INTENT_FILE" PROMPT_RAW="$INPUT" python3 <<'PYEOF'
-import json, os, re, sys, time
+import json, os, re, sys, time, unicodedata
+
+
+def _strip_lead_invisible(s):
+    """Drop leading whitespace and Unicode FORMAT characters.
+
+    A hardcoded list was the first cut and Codex found the hole: it covered BOM and
+    the common zero-widths but not U+200E LRM (or any other Cf character), so one
+    invisible byte still defeated every ^\\s* anchor and let an envelope through.
+    Category Cf is the whole class; Zs catches exotic spaces.
+    """
+    i = 0
+    while i < len(s) and (s[i].isspace() or unicodedata.category(s[i]) in ("Cf", "Zs")):
+        i += 1
+    return s[i:]
+
 
 intent_file = os.environ.get("INTENT_FILE_PATH", "")
 raw = os.environ.get("PROMPT_RAW", "")
@@ -55,20 +70,34 @@ except Exception:
 # relay, a task notification and a context-continuation summary all arrive on
 # UserPromptSubmit exactly like a real prompt, and they carry diagnostic prose
 # ("HALTED: second agent is doing...") that matches the lexicon. Measured
-# 2026-07-28: the gate fired on 121 of 1231 envelopes (9.83%) versus 13 of 671
-# genuine prompts (1.94%) - 5x more likely to speak where it must stay silent.
+# RE-DERIVE THIS, DO NOT TRUST IT:
+#   python3 claude/hooks/_tests/measure-hook-corpus.py --gate
+# The earlier "9.83% of envelopes vs 1.94% of genuine" line was struck: it named a
+# corpus and a split that were never committed, so nobody could re-run it. The
+# harness above walks ~/.claude/projects, splits prompts by a predicate committed
+# in that file, and prints the fire rate per class. Run 2026-07-28 over 4019 real
+# prompts: 124 of 1975 envelopes fired (6.28%) BEFORE the bare <teammate-message
+# and skill-injection markers were added, and 0 of 1975 (0.00%) after.
 # Checked against the RAW prompt on purpose: sanitize() strips <...> tags, which
 # would erase the <task-notification> marker before it could ever be matched.
 # The isinstance(list) check is load-bearing, not defensive noise: a JSON typo
 # turning "exempt" into a STRING would make this loop iterate CHARACTERS, and the
 # first one ("^") matches every prompt - silently taking the gate to zero recall.
+#
+# Every exempt pattern is head-anchored with ^\s*, and a BOM or a zero-width
+# character is NOT \s - so a single invisible byte at the head defeated the anchor
+# and the envelope armed anyway. Strip those (and ordinary leading whitespace)
+# into a separate probe string; the exempt scan runs on the probe, everything
+# downstream still sees the untouched prompt.
+_envelope_probe = _strip_lead_invisible(prompt)
+
 _exempt = intent.get("exempt", [])
 if isinstance(_exempt, list):
     for _pat in _exempt:
         if not isinstance(_pat, str) or not _pat:
             continue
         try:
-            if re.search(_pat, prompt, re.IGNORECASE):
+            if re.search(_pat, _envelope_probe, re.IGNORECASE):
                 sys.exit(0)
         except re.error:
             continue

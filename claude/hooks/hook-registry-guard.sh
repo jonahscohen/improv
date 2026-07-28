@@ -174,6 +174,24 @@ Write the description yourself. Do not ship a placeholder into a browser humans 
 EOF
 }
 
+# EVERY answer this guard gives comes out of a python3 pass. Without an interpreter the
+# heredocs below exit 127, which the audit contract does not define - and the caller
+# (hook-registry-stop.sh) previously read any non-1 code from --audit-data/--audit-skills
+# as "contributed nothing", i.e. clean. Missing python3 is squarely "I cannot tell", so
+# say that in the contract's own vocabulary (exit 3) rather than leaking a shell code.
+# The live PostToolUse path below fails open at 0 instead: it is an advisory write-time
+# nudge, and the stop gate is where the loud version of this belongs.
+if ! command -v python3 >/dev/null 2>&1; then
+  case "${1:-}" in
+    --audit|--audit-data|--audit-skills)
+      echo "CANNOT-TELL: python3 is not on PATH, so this audit cannot run" >&2
+      exit 3
+      ;;
+    --check) exit 0 ;;
+    *) exit 0 ;;
+  esac
+fi
+
 case "${1:-}" in
   --audit)
     # ONE python3 pass over every candidate, not one per hook file. hook-registry-stop.sh
@@ -362,6 +380,48 @@ except Exception: print(''); raise SystemExit
 ti=d.get('tool_input') or {}
 print(ti.get('file_path') or ti.get('notebook_path') or '')
 " 2>/dev/null)"
+
+# SYNTAX GATE - runs FIRST, and on every hook file including tests and libs.
+#
+# A hook in claude/hooks/ is SYMLINKED live into ~/.claude/hooks/, so it has no
+# staging area: a half-written edit is in production the instant it is saved. On
+# 2026-07-28 a stray apostrophe inside a `python3 -c '...'` block closed the quote 184
+# lines early, and because the broken file was a PostToolUse Bash hook, EVERY Bash call
+# in EVERY session on this machine started failing. Three sibling agents hit it
+# independently. Worse for the measurement: a broken hook emits an identical shell
+# error for every input, so a probe reading "any output" as a fire sees 100% fire rate
+# in BOTH directions - the failure actively manufactures wrong efficacy numbers.
+#
+# Nothing gated it. The registry guard checked whether a hook was PACKAGED but never
+# whether it PARSED. Now it does, before anything else, and blocks loudly.
+case "$path" in
+  */claude/hooks/*.sh|*/claude/hooks/*.py)
+    if [ -f "$path" ]; then
+      _syn=""
+      case "$path" in
+        *.sh) _syn="$(bash -n "$path" 2>&1)" || _bad=1 ;;
+        *.py) _syn="$(python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$path" 2>&1)" || _bad=1 ;;
+      esac
+      if [ "${_bad:-0}" = "1" ]; then
+        {
+          echo "BLOCKED: $(basename "$path") does not parse. It is symlinked live into"
+          echo "~/.claude/hooks/, so this broken file is ALREADY the hook the harness runs -"
+          echo "if it is wired to Bash or UserPromptSubmit, every call in every session on"
+          echo "this machine is failing right now. Fix it or restore it immediately."
+          echo ""
+          printf '%s\n' "$_syn" | head -5
+          echo ""
+          echo "Mid-rewrite on a symlinked hook: edit a scratch copy and mv it into place"
+          echo "once it parses, so a partial edit is never live. For an embedded python"
+          echo "block prefer a QUOTED heredoc (python3 <<'PY' ... PY) over python3 -c '...':"
+          echo "the heredoc body is opaque to the shell, so an apostrophe in the python"
+          echo "source cannot terminate it."
+        } >&2
+        exit 2
+      fi
+    fi
+    ;;
+esac
 
 case "$path" in
   */claude/hooks/*.sh) ;;

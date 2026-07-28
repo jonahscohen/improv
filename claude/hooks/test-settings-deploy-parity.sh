@@ -64,7 +64,7 @@ else
 fi
 
 for sel in "${SELECTIONS[@]}"; do
-  SB="$(mktemp -d)"
+  SB="$(mktemp -d)" || { echo "FATAL: mktemp -d failed - refusing to use an unset path" >&2; exit 2; }
   HOME="$SB" bash "$INSTALL" --only "$sel" >/dev/null 2>&1
   rc=$?
   if [ "$rc" != 0 ]; then
@@ -91,12 +91,21 @@ except Exception as e:
 # (test-settings-wire-parity.sh) fixed on its own side.
 pat = re.compile(r"/\.claude/hooks/([A-Za-z0-9_.-]+\.(?:sh|py))(?![A-Za-z0-9_.-])")
 bad = []
+seen = 0
 for ev, groups in d.get("hooks", {}).items():
     for g in groups:
         for h in g.get("hooks", []):
             for name in pat.findall(h.get("command", "")):
+                seen += 1
                 if not os.path.exists(os.path.join(sb, ".claude", "hooks", name)):
                     bad.append(name)
+# A SWEEP THAT INSPECTED NOTHING IS NOT A PASS. A settings.json with "hooks": {} or
+# with no hook commands walked zero iterations, found zero missing files, and printed
+# PASS - a green row asserting nothing (Codex review 2026-07-28). Every selection here
+# wires at least one hook, so zero wired hooks means the install did not happen.
+if seen == 0:
+    print(f"FAIL {sel}: settings.json wires NO hooks at all, so nothing was inspected")
+    sys.exit(0)
 if bad:
     print(f"FAIL {sel}: wired but NOT deployed -> {sorted(set(bad))}")
 else:

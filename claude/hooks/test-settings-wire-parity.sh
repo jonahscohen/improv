@@ -38,6 +38,14 @@
 # real-repo side effects). The run says so out loud. PARITY_FULL=1 includes them.
 set -u
 
+# python3 is this suite's only measuring instrument: every payload, every fixture and
+# every assertion below is built with it. Without it the suite would not fail loudly -
+# it would skip silently and still print a green summary, which is worse than no suite.
+command -v python3 >/dev/null 2>&1 || {
+  echo "FATAL: python3 not found - this suite cannot verify anything without it." >&2
+  exit 2
+}
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INSTALL="$REPO_DIR/install.sh"
 
@@ -132,11 +140,23 @@ except Exception as e:
 # from this sweep - hiding a second defect behind the one being hunted. Companion DATA
 # files (route-intent.json, grounding-intent.json) have neither extension and are
 # correctly never wired, which is why they are not swept.
+# A ZERO-ITERATION SWEEP IS NOT A PASS. This used to read
+#     deployed = [...] if os.path.isdir(hd) else []
+# so a sandbox whose hooks directory was never created inspected nothing, found no
+# orphans, and printed PASS - a green result that asserted precisely nothing. Measured
+# 2026-07-28: all nine selections deploy a hooks dir holding between 1 and 8 hook
+# files, so both "no directory" and "directory with no hooks" mean the install did not
+# happen, not that it was clean. Both are CANNOT-TELL, like a missing settings.json.
+if not os.path.isdir(hd):
+    print(f"CANNOT-TELL {sel}: no hooks directory produced, so nothing was inspected")
+    sys.exit(3)
 try:
-    deployed = sorted(f for f in os.listdir(hd) if f.endswith((".sh", ".py"))) \
-        if os.path.isdir(hd) else []
+    deployed = sorted(f for f in os.listdir(hd) if f.endswith((".sh", ".py")))
 except OSError as e:
     print(f"CANNOT-TELL {sel}: hooks dir unreadable ({e})")
+    sys.exit(3)
+if not deployed:
+    print(f"CANNOT-TELL {sel}: hooks directory holds no .sh/.py, so nothing was inspected")
     sys.exit(3)
 
 # Same pattern as the forward twin: any prefix (~/, $HOME/, absolute), and
@@ -186,7 +206,7 @@ PY
 # Prove the checker can go red, and that its allowlist does not swallow everything.
 # One sandbox install, reused for every row.
 
-SB0="$(mktemp -d)"
+SB0="$(mktemp -d)" || { echo "FATAL: mktemp -d failed - refusing to use an unset path" >&2; exit 2; }
 trap 'rm -rf "$SB0"' EXIT
 HOME="$SB0" bash "$INSTALL" --only "config,grounding" >/dev/null 2>&1
 if [ ! -f "$SB0/.claude/settings.json" ]; then
@@ -296,6 +316,40 @@ else
 fi
 mv "$SB0/.claude/settings.json.hidden" "$SB0/.claude/settings.json"
 
+# Rows 8-9: A SWEEP THAT INSPECTS NOTHING IS NOT A PASS (2026-07-28).
+# `deployed = [...] if os.path.isdir(hd) else []` meant a sandbox whose hooks
+# directory was never created iterated zero times, found zero orphans, and printed
+# PASS for that selection. Every one of the nine selections is measured to deploy a
+# hooks dir with at least one .sh - so zero files is never a legitimate answer, it is
+# an install that did not happen. It has to read as CANNOT-TELL, the same as a missing
+# settings.json one row above.
+mv "$SB0/.claude/hooks" "$SB0/.claude/hooks.hidden"
+out="$(_check_sandbox "$SB0" "control")"; rc=$?
+if [ "$rc" = 3 ] && printf '%s' "$out" | grep -q "CANNOT-TELL"; then
+  ok "missing hooks dir reports cannot-tell (exit 3), not a vacuous pass"
+else
+  bad "missing hooks dir should be exit 3 (rc=$rc, out=$out)"
+fi
+mv "$SB0/.claude/hooks.hidden" "$SB0/.claude/hooks"
+
+mkdir -p "$SB0/.claude/hooks.hidden"
+mv "$SB0/.claude/hooks" "$SB0/.claude/hooks.real"
+mv "$SB0/.claude/hooks.hidden" "$SB0/.claude/hooks"
+out="$(_check_sandbox "$SB0" "control")"; rc=$?
+if [ "$rc" = 3 ] && printf '%s' "$out" | grep -q "CANNOT-TELL"; then
+  ok "empty hooks dir reports cannot-tell (exit 3), not a vacuous pass"
+else
+  bad "empty hooks dir should be exit 3 (rc=$rc, out=$out)"
+fi
+rmdir "$SB0/.claude/hooks"
+mv "$SB0/.claude/hooks.real" "$SB0/.claude/hooks"
+
+# Row 10: and the sweep must still count what it inspected, so a future shrink to
+# near-zero is visible rather than silent.
+out="$(_check_sandbox "$SB0" "control" 2>&1)"; rc=$?
+[ "$rc" = 0 ] && ok "restored sandbox is clean again after the two doctored rows" \
+              || bad "sandbox not restored (rc=$rc, out=$out)"
+
 # ==================================================================
 # SECTION 2 - every allowlist entry must justify itself
 # ==================================================================
@@ -365,7 +419,7 @@ real_fail=0
 cannot_tell=0
 cannot_tell_names=""
 for sel in "${SELECTIONS[@]}"; do
-  SB="$(mktemp -d)"
+  SB="$(mktemp -d)" || { echo "FATAL: mktemp -d failed - refusing to use an unset path" >&2; exit 2; }
   HOME="$SB" bash "$INSTALL" --only "$sel" >/dev/null 2>&1
   rc=$?
   if [ "$rc" != 0 ]; then
