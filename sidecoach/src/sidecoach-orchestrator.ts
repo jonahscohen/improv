@@ -1766,9 +1766,18 @@ export class FlowExecutionEngine {
     // NEVER reported as clean: success:false, NO BuildReport (Codex P1).
     if (audit.verdict === 'inconclusive') {
       const partial = audit.rendered; // a lens DID run, just not all of them
-      const headline = partial
-        ? `Rendered audit of ${audit.renderUrl} is INCONCLUSIVE: a detection lens did not run, so the page cannot be certified clean.`
-        : `Rendered audit could not run: ${audit.renderUrl} did not render. This is INCONCLUSIVE, not clean.`;
+      // A page that NAVIGATED but produced an empty shell is a third case, and calling it "did not render"
+      // sends the user to the wrong fix (Codex review F15). The navigation succeeded; the app never painted -
+      // typically a JS app whose bundle is cross-origin (blocked by the same-origin subresource policy) or
+      // which mounts after our snapshot. Name that, and point at the remedy.
+      const emptyShell = !partial && audit.unavailableReasons.some(
+        (r) => r.includes('rendered document is empty') || r.includes('probe failed'),
+      );
+      const headline = emptyShell
+        ? `Rendered audit of ${audit.renderUrl} is INCONCLUSIVE: the page navigated but painted nothing this engine can judge (an empty app shell - the bundle is cross-origin/blocked, or the app mounts after the snapshot). NOT clean. Audit a server-rendered URL, or a build whose scripts are same-origin.`
+        : partial
+          ? `Rendered audit of ${audit.renderUrl} is INCONCLUSIVE: a detection lens did not run, so the page cannot be certified clean.`
+          : `Rendered audit could not run: ${audit.renderUrl} did not render. This is INCONCLUSIVE, not clean.`;
       const flowResult = {
         flowId: 'flowK_multi_lens_audit' as FlowId,
         flowName: 'rendered audit',

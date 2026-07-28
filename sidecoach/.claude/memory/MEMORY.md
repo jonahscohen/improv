@@ -1,5 +1,6 @@
 # Beats moved to the repo root
 
+- [Sidecoach Session](session_2026-07-28_sidecoach.md) - design decisions, rules applied, metrics
 - [Sidecoach Session](session_2026-07-26_sidecoach.md) - design decisions, rules applied, metrics
 This directory is no longer a beats corpus. All 37 session beats that lived here were
 migrated to the canonical project-root record on 2026-07-24:

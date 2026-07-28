@@ -103,6 +103,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/page-quality-checks.test.ts', required: true },               // Stage 2 convergence: cherry-picked DOM-evidence Tier-2 keepers (img/text/dark/chart/button)
   { rel: 'src/__tests__/validator-integration.test.ts', required: true },             // Stage 2 convergence: registry-facade migration contract tripwire (Extended===22, Polish+Extended===46, honest Flow J display)
   { rel: 'src/__tests__/audit-rendered.test.ts', required: true },                    // /sidecoach audit <url> rendered read path: url detect, severity mapping, FAIL-CLOSED inconclusive-not-clean
+  { rel: 'src/__tests__/empty-render-guard.test.ts', required: true },                // FAIL-CLOSED: a JS-app shell that renders empty is inconclusive, never "clean" (measured live 2026-07-28)
   { rel: 'src/__tests__/detect-cli.test.ts', required: true },                        // Stage 3a bin/sidecoach-detect.js: fail-closed verdict matrix + exit-code classes + dispatch e2e
   { rel: 'src/__tests__/palette-recipe.test.ts', required: true },                     // Stage 2a bin/sidecoach-palette.js: OKLCH ramps, fail-closed WCAG gate (shipping scanner), DESIGN.md emit
   { rel: 'src/__tests__/direction-roll.test.ts', required: true },                     // Stage 2c bin/sidecoach-roll.js: outside-ranking deck roll - determinism, unsigned-seed domain, exclusion re-roll, full-sweep no-repeat + exhaustion
