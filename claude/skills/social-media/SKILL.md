@@ -1,6 +1,6 @@
 ---
 name: social-media
-description: Platform-specific sizing, safe zones, typography rules, and content best practices for 13 social media platforms. Auto-triggers on platform names (Instagram, YouTube, TikTok, Twitter, X, LinkedIn, Threads, Bluesky, Discord, GitHub, Dribbble, Behance, Product Hunt, Substack) and social content keywords (social post, thumbnail, story, reel, carousel, banner, cover image, OG image, open graph, social preview, profile picture, avatar, header image). Provides constraints and validation - the spec sheet, not the paintbrush.
+description: Platform-specific sizing, safe zones, typography rules, and content best practices for 13 social media platforms. Invoke this skill when the task involves platform names (Instagram, YouTube, TikTok, Twitter, X, LinkedIn, Threads, Bluesky, Discord, GitHub, Dribbble, Behance, Product Hunt, Substack) and social content keywords (social post, thumbnail, story, reel, carousel, banner, cover image, OG image, open graph, social preview, profile picture, avatar, header image). Provides constraints and validation - the spec sheet, not the paintbrush.
 ---
 
 # Social Media Design

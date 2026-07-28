@@ -1,6 +1,6 @@
 ---
 name: tactical-polish
-description: Design engineering principles for making interfaces feel polished. Use when building UI components, reviewing frontend code, implementing animations, hover states, shadows, borders, typography, micro-interactions, enter/exit animations, or any visual detail work. Triggers on UI polish, design details, "make it feel better", "feels off", stagger animations, border radius, optical alignment, font smoothing, tabular numbers, image outlines, box shadows. Also owns motion REVIEW: "review this animation", "does this motion feel right", animation audits of a diff - see motion-review.md.
+description: Design engineering principles for making interfaces feel polished. Use when building UI components, reviewing frontend code, implementing animations, hover states, shadows, borders, typography, micro-interactions, enter/exit animations, or any visual detail work. Invoke this skill when the task involves UI polish, design details, "make it feel better", "feels off", stagger animations, border radius, optical alignment, font smoothing, tabular numbers, image outlines, box shadows. Also owns motion REVIEW: "review this animation", "does this motion feel right", animation audits of a diff - see motion-review.md.
 ---
 
 # Tactical Polish - details that make interfaces feel better

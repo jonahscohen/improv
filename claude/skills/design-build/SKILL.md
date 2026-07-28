@@ -1,18 +1,18 @@
 ---
 name: design-build
-description: Run the full design pipeline as ONE orchestrated build, not as 6 hopefully-auto-triggering skills. Triggers ONLY on explicit invocation - `/design-build`, `/design-build <feature>`, "run the design pipeline for X", "design-build this", "kickoff a design build", "walk the pipeline on X", "run the full design pipeline". DO NOT auto-trigger on generic UI keywords like "build a button" or "add a hover state" - those are too narrow. This skill is the orchestrator that explicitly invokes the design pipeline's layers (strategy, research, typography, references, motion, icons, tactical polish, QA triad) in sequence with gate checkpoints, addressing the empirical finding from 2026-05-20 that the individual skills did not auto-trigger reliably on real builds and the QA triad never fired without orchestration.
+description: Run the full design pipeline as ONE orchestrated build, not as 6 skills the model may or may not select on its own. Invoke this skill ONLY on explicit invocation - `/design-build`, `/design-build <feature>`, "run the design pipeline for X", "design-build this", "kickoff a design build", "walk the pipeline on X", "run the full design pipeline". Do NOT reach for it on generic UI keywords like "build a button" or "add a hover state" - those are too narrow. This skill is the orchestrator that explicitly invokes the design pipeline's layers (strategy, research, typography, references, motion, icons, tactical polish, QA triad) in sequence with gate checkpoints, preserving the empirical finding from 2026-05-20 (recorded then as auto-trigger failure) that the individual skills were not selected reliably on real builds and the QA triad never ran without orchestration.
 ---
 
 # Design Build (the pipeline orchestrator)
 
-A single skill that runs the design pipeline as ONE coordinated build. The other design skills (`component-gallery-reference`, `fontshare-reference`, `design-references`, `motion-reference`, `icon-source`, `tactical-polish`) are READ AND APPLIED by this skill, not auto-triggered alongside it.
+A single skill that runs the design pipeline as ONE coordinated build. The other design skills (`component-gallery-reference`, `fontshare-reference`, `design-references`, `motion-reference`, `icon-source`, `tactical-polish`) are READ AND APPLIED by this skill, not left to description-based selection alongside it.
 
 ## Why this skill exists
 
 The 2026-05-20 marketing-site build was the first time the design pipeline ran on a real UI task. The retrospective surfaced two structural problems:
 
-1. **Auto-triggering by description keywords didn't fire reliably.** `component-gallery-reference`, `design-references`, and `icon-source` never auto-triggered during the build. `tactical-polish` only fired because the agent had read it recently.
-2. **The QA triad (`/sidecoach audit + critique + polish`) never ran.** It's documented as "runs at QA time" in CLAUDE.md but there's no mechanism that actually invokes it.
+1. **Description-based skill selection, called "auto-triggering" in the 2026-05-20 retrospective, did not happen reliably.** `component-gallery-reference`, `design-references`, and `icon-source` were never selected from their frontmatter descriptions during the build. `tactical-polish` only ran because the agent had read it recently.
+2. **The QA triad (`/sidecoach audit + critique + polish`) never ran.** CLAUDE.md requires it, but it is a manual or orchestrated step, not an automatic one. The only live automatic coverage is `sidecoach-taste-gate.sh`: on `.html`/`.css` writes under a directory containing DESIGN.md it runs the anti-pattern ban sweep, and on an edited `.html` (plus the project's `styles.css` when present) it also runs the taste validator. That is a SUBSET of `/sidecoach audit`. Nothing invokes `/sidecoach critique` or `/sidecoach polish`, and audit coverage outside a DESIGN.md project stays manual.
 
 `design-build` solves both by being a single, explicit orchestrator: the agent runs this skill, the skill walks all the phases, the QA triad is mandatory at the end.
 
@@ -171,7 +171,7 @@ If running, read `icon-source` skill protocol:
 
 ### Phase 7: Build (tactical-polish applied DURING construction)
 
-Generate the code. While generating, apply `tactical-polish`'s 14 rules as a build-time checklist, NOT as a separate post-pass:
+Generate the code. While generating, apply `tactical-polish`'s 16 rules as a build-time checklist, NOT as a separate post-pass:
 
 ```
 - Concentric border radius (outer = inner + padding)
@@ -194,7 +194,7 @@ Generate the code. While generating, apply `tactical-polish`'s 14 rules as a bui
 
 These should land NATURALLY in the code, not as a post-pass cleanup.
 
-### Phase 8: QA triad (MANDATORY - the part that never fired before)
+### Phase 8: QA triad (MANDATORY - the part nothing else runs for you)
 
 Before reporting the build done, run:
 
@@ -245,16 +245,16 @@ This is the second mandatory checkpoint. The first was after strategy. Everythin
 ## Failure modes to expect (from the 2026-05-20 retrospective)
 
 - **Skipping the QA triad.** This skill exists partly to prevent that. If you're tempted to skip Phase 8 because "the site looks fine," DO NOT. The triad's whole purpose is catching what the eye misses. Run it.
-- **Letting auto-trigger replace orchestration.** The other design skills' auto-triggers don't fire reliably. Don't assume `component-gallery-reference` will fire just because you mentioned a button. Read it explicitly in Phase 2.
+- **Letting description-based selection replace orchestration.** The other design skills are not selected reliably from their descriptions during real builds. Don't assume `component-gallery-reference` will fire just because you mentioned a button. Read it explicitly in Phase 2.
 - **`data-reveal opacity:0` patterns that break silently.** Use the inverted progressive enhancement: items visible by default, hidden only when JS confirms via a `.js` class. Validated in the 2026-05-20 marketing-site build.
 - **CDN ESM imports.** Use `esm.sh` for ES modules, not `cdn.skypack.dev` - skypack failed silently on `lenis` in the marketing-site build.
 - **Lenis + verification conflict.** Lenis hijacks native scroll. If you're verifying via cmux's scroll command, temporarily disable Lenis via a feature flag, verify, re-enable. Or click nav links (which use lenis.scrollTo).
 
 ## Integration with the rest of the design stack
 
-This skill orchestrates. The others (component-gallery-reference, fontshare-reference, design-references, motion-reference, icon-source, tactical-polish) are READ AND APPLIED by this orchestrator, not auto-fired alongside it.
+This skill orchestrates. The others (component-gallery-reference, fontshare-reference, design-references, motion-reference, icon-source, tactical-polish) are READ AND APPLIED by this orchestrator, not left to description-based selection alongside it.
 
-The other skills CAN still fire on direct invocation - e.g. "/curate this reference", "use fontshare-reference for this typeface decision". They are individual tools. `design-build` is the pipeline.
+The other skills CAN still be invoked directly - e.g. "/curate this reference", "use fontshare-reference for this typeface decision". They are individual tools. `design-build` is the pipeline.
 
 `/sidecoach` commands (teach, document, audit, critique, polish) are CALLED by this skill at the appropriate phases. Sidecoach's other commands (craft, shape, animate, colorize, harden, etc.) can be invoked directly outside this skill.
 

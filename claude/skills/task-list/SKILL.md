@@ -1,6 +1,6 @@
 ---
 name: task-list
-description: Manage a forward-looking TASKS.md. Triggers on `/task-list <verb>` where verb is add, list, done, edit, remove, block, unblock, or show. Project-aware - operates on the current project repo's own TASKS.md, falling back to the global dotfiles TASKS.md when inside the dotfiles repo or no repo. Forward-looking layer above sprint memory.
+description: Manage a forward-looking TASKS.md. Invoke this skill when the task involves `/task-list <verb>` where verb is add, list, done, edit, remove, block, unblock, or show. Project-aware - operates on the current project repo's own TASKS.md, falling back to the global dotfiles TASKS.md when inside the dotfiles repo or no repo. Forward-looking layer above sprint memory.
 ---
 
 # /task-list skill

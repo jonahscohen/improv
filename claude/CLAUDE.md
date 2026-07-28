@@ -29,7 +29,7 @@ Scope (revised 2026-07-12 - this REVOKES the 2026-05-26 binary carve-out):
 
 ## Design Work and Sidecoach (MANDATORY for UI tasks)
 
-The `/sidecoach` skill is the front door for every design or QA task. It auto-triggers on design verbs and owns its own command list, routing tables, design-stack diagram, and detailed QA gate protocol. Load the skill for any UI work - do not improvise routing.
+The `/sidecoach` skill is the front door for every design or QA task. Its frontmatter description helps the model select it for design work; separately, the live `sidecoach-keyword.sh` hook injects a context nudge on matching prompt keywords. Neither is the Skill tool firing itself - a hook can inject context but cannot call a tool, so the skill still loads only when you invoke it. It owns its own command list, routing tables, design-stack diagram, and detailed QA gate protocol. Load the skill for any UI work - do not improvise routing.
 
 **Default evaluation gate (front-end/design intent).** Sidecoach is part of the default evaluation for ALL front-end work, not just when a verb is typed. The `sidecoach-keyword.sh` UserPromptSubmit hook watches for natural front-end/design requests (via the tunable `sidecoach-intent.json` lexicon) and injects a one-line self-question: would a sidecoach flow or mode produce a stronger result here? Treat that injection as a real prompt to yourself - for substantive UI work (a new component, page, layout, redesign, or visual/UX/motion/typography pass) evaluate sidecoach before hand-coding; for genuinely trivial edits (one-line CSS, a copy change, a single prop) skip it and proceed. The hook deliberately stays silent on trivial tweaks and during an active build (cooldown), so when it does fire, take it seriously. Even when the hook does not fire, keep the question live for any front-end task. The trigger lexicon and cooldown live in `claude/hooks/sidecoach-intent.json` and are yours to tune.
 
@@ -39,12 +39,14 @@ The `/sidecoach` skill is the front door for every design or QA task. It auto-tr
 
 **Diagnosing or critiquing existing UI IS a sidecoach audit - run it, do not eyeball it.** When asked to look at, review, diagnose, or critique an existing page or component ("what's wrong with this page", "how does this look", "this feels off, take a look", "is the copy real or fluff"), that request IS `/sidecoach audit <target>` (plus `/sidecoach critique <target>` for the design-judgment layer). Run it as the FIRST step, before forming or stating an opinion - not after a build, not only when there is a change to verify. The audit renders the page and runs the detection engine: objective defects (contrast, heading order, broken images, justified text) and taste defects (marketing-buzzword, tiny-text, nested-cards, anti-pattern bans) that a freeform human read provably misses. Running audit when nothing is being built is NOT "dressing up an opinion as a formal pass" - the freeform eyeball read is the opinion; the audit is the measurement. A diagnosis is not "upstream of" sidecoach; it IS sidecoach's primary read path. Reaching for Chrome or a screenshot to hand-critique a page instead of running the audit is the exact failure this rule exists to prevent. (Recorded 2026-06-26 after a session reasoned its way out of an audit on a pure-diagnosis request because the only framing it had was the post-build gate below.)
 
-**QA gate before reporting done** (the other use of the same tools) on any substantive UI change:
+**QA gate before reporting done** (the other use of the same tools; a required manual or orchestrated step, not something that fires on its own) on any substantive UI change:
 1. `/sidecoach audit <target>` - address all Critical and High findings
 2. `/sidecoach critique <target>` - address anything above "minor"
 3. `/sidecoach polish <target>` - final alignment, must run last
-4. `tactical-polish` 16-point checklist - auto-triggers on UI keywords; manually invoke `/tactical-polish` if it doesn't fire. Record changes in its before/after table format grouped by principle.
+4. `tactical-polish` 16-point checklist - invoke `/tactical-polish` for substantive UI detail work. Record changes in its before/after table format grouped by principle.
 5. If DESIGN.md exists: `npx @google/design.md lint DESIGN.md` with zero findings.
+
+Mechanical coverage that actually exists today: `sidecoach-taste-gate.sh` (PostToolUse) fires on every `.html`/`.css` write under a directory containing DESIGN.md. It runs the 6 anti-pattern ban sweep on both, and the taste validator only on an edited `.html` (plus the project's `styles.css` when present) - a CSS-only edit gets the ban sweep alone. That is a SUBSET of `/sidecoach audit`. `/sidecoach critique`, `/sidecoach polish`, and `/sidecoach audit` outside a DESIGN.md project have no hook behind them - you run them or they do not happen. `sidecoach-detect.sh` is opt-in and not registered by default.
 
 Trivial copy tweaks or named-token swaps can skip the gate. Substantive aesthetic work cannot. "I'll skip polish because it probably looks fine" is not a valid judgment.
 
@@ -54,7 +56,7 @@ Trivial copy tweaks or named-token swaps can skip the gate. Substantive aestheti
 
 ## Design Peer Skills
 
-Four independent design skills sit alongside Sidecoach, each auto-triggering on its own keywords and reading PRODUCT.md + DESIGN.md:
+Four independent design skills sit alongside Sidecoach. Their frontmatter descriptions help the model select them for matching work, but no hook calls the Skill tool - selection is yours to make. Each reads PRODUCT.md + DESIGN.md:
 
 - **`/social-media`** - platform-specific sizing, safe zones, and content rules for 13 platforms (Instagram, YouTube, TikTok, X, LinkedIn, Threads, Bluesky, Discord, GitHub, Dribbble, Behance, Product Hunt, Substack).
 - **`/design-team`** - multi-agent design sprints with 16 roles across 4 phases (research, build, CD review, revise). Use for full pages, campaigns, multi-section builds; not single components.

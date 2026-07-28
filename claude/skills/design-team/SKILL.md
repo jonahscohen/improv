@@ -1,6 +1,6 @@
 ---
 name: design-team
-description: Orchestrate multi-agent design sprints with specialized roles, creative director review, and persistent team state. Use when the user wants a design sprint, collaborative design session, multi-section layout, landing page build, campaign creation, or any task that benefits from multiple specialized perspectives working in parallel. Triggers on "design team", "design sprint", "creative director", "multi-agent design", "collaborative design", "team design", "design review", "CD review", and when a task is complex enough to warrant research + build + review phases (e.g., full landing pages, multi-page sites, campaign assets, design system creation).
+description: Orchestrate multi-agent design sprints with specialized roles, creative director review, and persistent team state. Use when the user wants a design sprint, collaborative design session, multi-section layout, landing page build, campaign creation, or any task that benefits from multiple specialized perspectives working in parallel. Invoke this skill when the task involves "design team", "design sprint", "creative director", "multi-agent design", "collaborative design", "team design", "design review", "CD review", and when a task is complex enough to warrant research + build + review phases (e.g., full landing pages, multi-page sites, campaign assets, design system creation).
 ---
 
 # Design Team

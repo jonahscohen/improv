@@ -1,6 +1,6 @@
 ---
 name: lotus
-description: Connect Lotus (Jonah's AI Figma plugin, formerly Chiaroscuro) to Claude Code and get it driving Figma. /lotus opens Figma, confirms the Lotus MCP bridge (port 9527) is up, walks the one-time plugin connect, and verifies with a live tool call. Also triggers on "start lotus", "launch lotus", "connect lotus", "open lotus", "fire up lotus", "lotus".
+description: Connect Lotus (Jonah's AI Figma plugin, formerly Chiaroscuro) to Claude Code and get it driving Figma. /lotus opens Figma, confirms the Lotus MCP bridge (port 9527) is up, walks the one-time plugin connect, and verifies with a live tool call. Also invoke this skill when the task involves "start lotus", "launch lotus", "connect lotus", "open lotus", "fire up lotus", "lotus".
 ---
 
 # Lotus (/lotus)

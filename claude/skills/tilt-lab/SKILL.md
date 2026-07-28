@@ -1,6 +1,6 @@
 ---
 name: tilt-lab
-description: Launch the tilt-lab visual-effects workbench and wire its exports into a build. Use when the user wants to open tilt-lab, audition or explore shader/visual effects, or add an animated/shader background to a hero, banner, or section. Auto-triggers on "open tiltlab", "open tilt lab", "open tilt-lab", "spin up tiltlab", "launch tilt lab", "build a tilt", "shader wizard", "audition a shader", "explore shaders", "shader background", "tilt a hero", "tilt-lab export", and when the user pastes a tilt-lab/stack config or embed snippet to retrofit. tilt-lab is the local playground for browsing ~25 effects, stacking + tuning them live, and exporting a paste-anywhere web-component package.
+description: Launch the tilt-lab visual-effects workbench and wire its exports into a build. Use when the user wants to open tilt-lab, audition or explore shader/visual effects, or add an animated/shader background to a hero, banner, or section. Invoke this skill when the task involves "open tiltlab", "open tilt lab", "open tilt-lab", "spin up tiltlab", "launch tilt lab", "build a tilt", "shader wizard", "audition a shader", "explore shaders", "shader background", "tilt a hero", "tilt-lab export", and when the user pastes a tilt-lab/stack config or embed snippet to retrofit. tilt-lab is the local playground for browsing ~25 effects, stacking + tuning them live, and exporting a paste-anywhere web-component package.
 ---
 
 # tilt-lab

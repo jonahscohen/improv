@@ -1,6 +1,6 @@
 ---
 name: icon-source
-description: Find, select, and source icons from the approved 8-library pool with a rigorous selection protocol. Auto-triggers on "icon", "icon for", "find an icon", "which icon", "animated icon", "icon library", "svg icon", plus library names (Heroicons, Lucide, Tabler, Bootstrap Icons, Phosphor, Material Symbols, Lucide Animated, Heroicons Animated). Use when the agent needs any icon during a build - enforces one-library-per-project consistency, verbatim path sourcing, and animated-vs-static selection criteria.
+description: Find, select, and source icons from the approved 8-library pool with a rigorous selection protocol. Invoke this skill when the task involves "icon", "icon for", "find an icon", "which icon", "animated icon", "icon library", "svg icon", plus library names (Heroicons, Lucide, Tabler, Bootstrap Icons, Phosphor, Material Symbols, Lucide Animated, Heroicons Animated). Use when the agent needs any icon during a build - enforces one-library-per-project consistency, verbatim path sourcing, and animated-vs-static selection criteria.
 ---
 
 # Icon Source

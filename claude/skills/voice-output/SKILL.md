@@ -1,6 +1,6 @@
 ---
 name: voice-output
-description: Behavioral guidance for Claude's voice output. When voice is enabled, speak only short verbal summaries (1-2 sentences). Never speak code, file paths, diffs, or structured output. Use judgment about when voice adds value. This skill does NOT auto-trigger - it provides standing behavioral rules that apply whenever the voice-output MCP server is available.
+description: Behavioral guidance for Claude's voice output. When voice is enabled, speak only short verbal summaries (1-2 sentences). Never speak code, file paths, diffs, or structured output. Use judgment about when voice adds value. This skill has no keyword invocation list - it provides standing behavioral rules that apply whenever the voice-output MCP server is available.
 ---
 
 # Voice Output

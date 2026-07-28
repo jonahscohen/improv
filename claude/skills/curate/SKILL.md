@@ -1,6 +1,6 @@
 ---
 name: curate
-description: Capture a one-off design reference into the personal `~/.claude/design-references/` catalog. Triggers on `/curate`, "save this reference", "curate this pattern", "add to references", "remember this UI / pattern", "save this UI", and when the user pastes a URL or attaches a screenshot WITH explicit save intent (do not trigger on every URL paste). Walks an interactive 5-step wizard via the AskUserQuestion tool: source -> auto-tag proposal -> why-interesting -> slug -> save. Writes `~/.claude/design-references/<slug>/ref.md` with YAML frontmatter (title, category, patterns, feel, source, url, screenshot, saved date) and a body explaining what is worth remembering. Strict Category vocabulary lives at `~/.claude/design-references/_vocab/categories.txt`; Pattern and Feel are free-form. Capture flow is conversational - propose, let user approve or edit at every step.
+description: Capture a one-off design reference into the personal `~/.claude/design-references/` catalog. Invoke this skill when the task involves `/curate`, "save this reference", "curate this pattern", "add to references", "remember this UI / pattern", "save this UI", and when the user pastes a URL or attaches a screenshot WITH explicit save intent (do not trigger on every URL paste). Walks an interactive 5-step wizard via the AskUserQuestion tool: source -> auto-tag proposal -> why-interesting -> slug -> save. Writes `~/.claude/design-references/<slug>/ref.md` with YAML frontmatter (title, category, patterns, feel, source, url, screenshot, saved date) and a body explaining what is worth remembering. Strict Category vocabulary lives at `~/.claude/design-references/_vocab/categories.txt`; Pattern and Feel are free-form. Capture flow is conversational - propose, let user approve or edit at every step.
 ---
 
 # Curate (design reference capture)
@@ -125,7 +125,7 @@ Report what was saved with the folder path:
 
 ## Anti-patterns to avoid
 
-- Do not auto-trigger on every URL or screenshot in chat. The user must explicitly signal save intent.
+- Do not invoke this skill on every URL or screenshot in chat. The user must explicitly signal save intent.
 - Do not invent new Category values silently. The strict vocab is the load-bearing axis for retrieval; surface every "no fit" case to the user and let them approve adding a new category.
 - Do not propose Pattern or Feel tags that are obvious synonyms of tags the catalog already uses. If existing references use `snappy`, do not propose `crisp` or `tight` for a similar feel - reuse `snappy`. Run a quick grep against the catalog before finalizing.
 - Do not save references with empty bodies. The "why interesting" paragraph is what makes the reference useful later; push once more for an observation before accepting a TODO placeholder.

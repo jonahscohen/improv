@@ -1,6 +1,6 @@
 ---
 name: design-references
-description: Consult the personal design-reference catalog at `~/.claude/design-references/` when building UI. Auto-triggers on UI build tasks (building a sidebar, list, table, command palette, animation, page transition, empty state, loading state, micro-interaction, layout, dashboard, feed), brand-voice-driven typography, "how does <company> do X", "what should this feel like", inspiration lookup, pattern lookup. Greps the catalog for matching category/pattern/feel tags against the task context and against PRODUCT.md voice words if present. Surfaces 0-5 most-relevant references with title, why-interesting body, source URL, and screenshot path. Stays SILENT if no good matches - the catalog is the user's curated eye for one-off patterns that public catalogs (component.gallery, fontshare) under-index, and noisy surfacing destroys trust in it. Use even when the user does not mention references explicitly - if a build maps to anything in the catalog, surface it.
+description: Consult the personal design-reference catalog at `~/.claude/design-references/` when building UI. Invoke this skill when the task involves UI build tasks (building a sidebar, list, table, command palette, animation, page transition, empty state, loading state, micro-interaction, layout, dashboard, feed), brand-voice-driven typography, "how does <company> do X", "what should this feel like", inspiration lookup, pattern lookup. Greps the catalog for matching category/pattern/feel tags against the task context and against PRODUCT.md voice words if present. Surfaces 0-5 most-relevant references with title, why-interesting body, source URL, and screenshot path. Stays SILENT if no good matches - the catalog is the user's curated eye for one-off patterns that public catalogs (component.gallery, fontshare) under-index, and noisy surfacing destroys trust in it. Use even when the user does not mention references explicitly - if a build maps to anything in the catalog, surface it.
 ---
 
 # Design References (catalog consultation)
@@ -13,7 +13,7 @@ The catalog is the user's eye - patterns they saw in the wild that no public ind
 
 ## When to invoke
 
-Auto-trigger on:
+Invoke this skill when the task involves:
 
 - Building a UI component, layout, animation, page section, or interactive feature
 - "What should X feel like?", "how do <company> do Y?", "I want this to feel <adjective>"
@@ -135,5 +135,5 @@ When all three trigger on the same task, the order of application is:
 
 - Do not surface every reference in the catalog. Top 0-5 by relevance, or silence.
 - Do not surface a reference whose body contains a TODO or "describe later" placeholder.
-- Do not auto-trigger on backend or non-UI tasks just because the user mentioned a UI-adjacent word.
+- Do not invoke this skill on backend or non-UI tasks just because the user mentioned a UI-adjacent word.
 - Do not let this skill override component-gallery-reference's accessibility guidance. The catalog captures aesthetic patterns; a11y semantics come from the gallery.

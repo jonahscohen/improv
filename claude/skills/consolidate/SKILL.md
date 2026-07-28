@@ -2,7 +2,7 @@
 name: consolidate
 description: >
   Merge a redundant cluster of beats on one topic into ONE canonical beat,
-  superseding (never deleting) the originals. Triggers on: "/consolidate",
+  superseding (never deleting) the originals. Invoke this skill when the task involves: "/consolidate",
   "/consolidate <topic>", "consolidate the beats", "consolidate the <topic>
   beats", "merge these beats", "merge the <topic> memories", "collapse the
   <topic> cluster", and when a SessionStart consolidate-nudge flags an

@@ -1,6 +1,6 @@
 ---
 name: visual-effects
-description: Generative shader backgrounds and transformative FX post-processing effects. Two modes - generative (create backgrounds/textures from nothing) and transformative (apply effects to existing images/elements). Ships actual shader source code as canonical reference implementations. Auto-triggers on "shader", "gradient background", "animated background", "fluid", "glass effect", "halftone", "ASCII art", "dither", "glitch", "particles", "generative", "procedural", "visual effect", "post-processing", "texture", "noise", "mesh gradient", "fractal", "swarm", "voronoi", "chrome", "liquid metal", "fireworks", "dot grid", "pulsar", "spiral", "black hole".
+description: Generative shader backgrounds and transformative FX post-processing effects. Two modes - generative (create backgrounds/textures from nothing) and transformative (apply effects to existing images/elements). Ships actual shader source code as canonical reference implementations. Invoke this skill when the task involves "shader", "gradient background", "animated background", "fluid", "glass effect", "halftone", "ASCII art", "dither", "glitch", "particles", "generative", "procedural", "visual effect", "post-processing", "texture", "noise", "mesh gradient", "fractal", "swarm", "voronoi", "chrome", "liquid metal", "fireworks", "dot grid", "pulsar", "spiral", "black hole".
 ---
 
 # Visual Effects

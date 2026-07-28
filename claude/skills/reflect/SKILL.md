@@ -1,7 +1,7 @@
 ---
 name: reflect
 description: >
-  Multi-agent memory corpus analysis. Triggers on: "reflect", "what patterns",
+  Multi-agent memory corpus analysis. Invoke this skill when the task involves: "reflect", "what patterns",
   "what are we missing", "anything feel off", "what's emerging", "deep reflect",
   "analyze our memories", "what do you see across our work", "reflect on",
   "reflect across everything", "what themes", "what contradictions",
