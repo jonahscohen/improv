@@ -69,9 +69,24 @@ import { BuildReport, computeVerdict, passRateToLetter, SeverityCounts, FindingE
 import { generateBuildReport, renderBuildReportMarkdown } from './build-report-aggregator';
 import { assemblePanelModel, laneStepToPanelModel } from './panel-model';
 import { renderSidecoachPanel } from './panel-renderer';
-import { runRenderedAudit, looksLikeUrl, RenderedAuditResult } from './audit-rendered';
+import {
+  runRenderedAudit,
+  looksLikeUrl,
+  resolveAuditTarget,
+  RenderedAuditResult,
+  RenderableAuditTarget,
+  UnrenderableAuditTarget,
+  AuditTargetResolution,
+} from './audit-rendered';
 import { CheckpointStore, SidecoachCheckpoint } from './checkpoint-store';
 import { getVerbEntry, VerbCommandEntry } from './verb-command-registry';
+
+// Flows whose SUCCESS asserts that a real page was rendered and measured. Only these carry a
+// `rendered` claim into flow history, so only these can be disqualified as a prerequisite for
+// having scanned nothing (Codex review 2026-07-28, High). Kept as an explicit set rather than
+// marking the whole chain: a flow that never claimed to render a page must not be invalidated
+// just because it ran alongside an audit that could not.
+const PAGE_SCANNING_FLOWS = new Set<string>(['flowK_multi_lens_audit']);
 
 // Flows that produce HTML output and must clear the taste gate before declaring success.
 // craft / clone-match / layout / polish families. Post-T-0015 cull: legacy flowN_* IDs gone;
@@ -83,6 +98,136 @@ const HTML_PRODUCING_FLOWS = new Set<string>([
   'flowR_layout_optimization',
   'flowZ_design_component',
 ]);
+
+/**
+ * Validation failures worth SHOWING THE USER: a real failure, from a validator that measured
+ * the user's artifact. A 'flow-output' validator inspected the FLOW'S OWN guidance text, so its
+ * failure is a handler self-check the user cannot act on. Surfacing it is how
+ * `Validation warnings: [performance] has_optimization_guidance` appeared on every single run,
+ * for every target, in flowResults[].message - the same leak the build report already suppresses
+ * for findings and grades (Codex review 2026-07-28, Medium).
+ */
+function userFacingValidationFailures<T extends { status: string; measures?: string }>(validations: T[]): T[] {
+  return validations.filter((v) => v.status !== 'pass' && v.measures === 'artifact');
+}
+
+/**
+ * A target a verb was given but did NOT scan. Structurally a superset of
+ * UnrenderableAuditTarget, so the audit path assigns into it unchanged, while the
+ * non-audit path can also describe a target that WAS renderable and simply was not
+ * rendered - a case with no UnrenderableTargetKind to name it.
+ */
+type UnscannedTarget = {
+  kind: string;
+  target: string;
+  /** user-facing: WHY nothing was scanned */
+  reason: string;
+  /** user-facing: what to do instead */
+  remedy: string;
+};
+
+/**
+ * Does this target NAME A PAGE, as opposed to naming an ordinary file or describing work?
+ *
+ * This predicate is the whole safety/regression boundary for the 19 non-audit verbs. Too narrow
+ * and a verb keeps implying it measured a page it never opened; too wide and it swallows targets
+ * those verbs legitimately take, which is the exact over-capture regression a previous Codex
+ * review caught on this unit.
+ *
+ * TRUE for exactly two things:
+ *   - a target that RESOLVES RENDERABLE (a real .html file, a directory with an entry document,
+ *     or a URL) - the page demonstrably exists and this verb is not going to look at it;
+ *   - a path that NAMES an .html/.htm/.xhtml document, even a missing one - naming a document
+ *     is an unambiguous claim about a page.
+ *
+ * FALSE for everything else, and each exclusion is deliberate (Codex review 2026-07-28):
+ *   - prose descriptions ("a login page") and bare component names - these are work to do;
+ *   - an ordinary existing file that is not a document. `/sidecoach extract Button.tsx` and
+ *     `/sidecoach document PRODUCT.md` take a filename as their REAL subject, and answering
+ *     them with "NO PAGE WAS RENDERED, run audit instead" would be nonsense. An earlier draft
+ *     captured `unsupported-file` and `no-entry-document` and did exactly that.
+ *
+ * The extension test runs against the path with any ?query and #fragment stripped: `page.html`
+ * and `page.html?v=2` are the same claim about the same page, and matching only the bare form
+ * left a hole where `/sidecoach critique index.html?x=1` still produced a confident chain grade.
+ *
+ * The extension list is DELIBERATELY WIDER than the renderer's. `resolveAuditTarget` only knows
+ * how to render html/htm/xhtml, but this predicate answers a different question - "is the user
+ * talking about a page?" - and `.shtml`/`.xht` unambiguously are (Codex review 2026-07-28,
+ * Medium: `/sidecoach critique page.shtml` still produced a confident chain grade because the
+ * two lists were assumed to be the same list). Naming a page we cannot render must suppress the
+ * claim, not wave it through.
+ */
+const PAGE_SHAPED_EXT_RE = /\.(html?|xhtml|shtml|xht)$/i;
+
+function isPageShapedTarget(resolved: AuditTargetResolution, target: string): boolean {
+  if (resolved.renderable) return true;
+  const withoutQuery = String(target).split(/[?#]/)[0];
+  return PAGE_SHAPED_EXT_RE.test(withoutQuery);
+}
+
+/**
+ * The `audit` block for a result that was handed a page and did not scan it. One builder, so
+ * every path reports the fact in the SAME shape - which is what lets the human surfaces key on
+ * an explicit `audit.rendered === false` instead of guessing from a missing BuildReport.
+ */
+function unscannedAuditSummary(t: UnscannedTarget) {
+  return {
+    renderUrl: null,
+    lenses: {
+      objective: { available: false, findings: 0, reason: t.reason },
+      subjective: { available: false, findings: 0, reason: t.reason },
+    },
+    verdict: 'inconclusive',
+    totalFindings: 0,
+    byRule: [],
+    topFixes: [],
+    rendered: false,
+    unavailableReasons: [t.reason],
+    unrenderableTarget: { kind: t.kind, target: t.target, reason: t.reason },
+  };
+}
+
+/** The loud line that must lead any result which was handed a page and did not scan it. */
+function notRenderedNoticeFor(t: UnscannedTarget): string {
+  return `NO PAGE WAS RENDERED. ${t.reason} This is project/guidance output, NOT a rendered audit of that target, and nothing below is a measurement of a page. ${t.remedy}`;
+}
+
+/**
+ * Setup commands (`teach`, `document`) return BEFORE the target guard, so a page-shaped target
+ * handed to one of them used to produce a result with no BuildReport and no audit block at all -
+ * and the executive report then printed "Checks passed. 0 findings." for it (Codex review
+ * 2026-07-28, High: `/sidecoach document index.html`). This resolves such a target so those
+ * paths can carry the same explicit rendered:false signal every other path carries. Returns null
+ * for a normal setup invocation, which must stay completely untouched.
+ */
+function unscannedTargetForEarlyCommand(
+  command: string,
+  target: string | undefined,
+  cwd: string,
+): UnscannedTarget | null {
+  const raw = (target ?? '').trim();
+  if (!raw) return null;
+  const resolved = resolveAuditTarget(raw, { cwd });
+  if (!isPageShapedTarget(resolved, raw)) return null;
+  return unscannedPageTarget(command, raw, resolved);
+}
+
+/** Describe a page-shaped target that THIS verb does not render, and point at the one that does. */
+function unscannedPageTarget(
+  command: string,
+  target: string,
+  resolved: AuditTargetResolution,
+): UnscannedTarget {
+  return {
+    kind: resolved.renderable ? `not-rendered-by-${command}` : resolved.kind,
+    target,
+    reason: resolved.renderable
+      ? `"${target}" is a renderable page, but the "${command}" verb does not render or measure its target - only /sidecoach audit does.`
+      : resolved.reason,
+    remedy: `Run "/sidecoach audit ${target}" for a measured scan of that page, then re-run "/sidecoach ${command} ${target}" for its guidance.`,
+  };
+}
 
 export class FlowExecutionEngine {
   private intentDetector: IntentDetector;
@@ -158,7 +303,7 @@ export class FlowExecutionEngine {
     }
   }
 
-  private recordFlowWithMemory(result: FlowExecutionResult): void {
+  private recordFlowWithMemory(result: FlowExecutionResult, rendered?: boolean): void {
     const flowHistory = getFlowHistory();
     const entry: any = {
       flowId: result.flowId,
@@ -170,6 +315,14 @@ export class FlowExecutionEngine {
       artifacts: result.artifacts,
       error: result.error,
     };
+
+    // Persist the RENDERING CLAIM so a later prerequisite check can tell an audit that
+    // measured a page from one that measured nothing (Codex review 2026-07-28, High).
+    // Only written when the caller actually makes a claim - left undefined otherwise, which
+    // is what keeps every non-audit flow and all pre-existing history untouched.
+    if (typeof rendered === 'boolean') {
+      entry.rendered = rendered;
+    }
 
     // Merge memory data if present
     if (result.memory) {
@@ -299,7 +452,7 @@ export class FlowExecutionEngine {
               result.validationResults = [...(result.validationResults || []), ...validations];
 
               // Log validation failures as warnings (soft-fail mode)
-              const failedValidations = validations.filter(v => v.status !== 'pass');
+              const failedValidations = userFacingValidationFailures(validations);
               if (failedValidations.length > 0) {
                 const warningMsg = failedValidations
                   .map(v => `[${v.domain}] ${v.failedRules.join(', ')}`)
@@ -713,14 +866,20 @@ export class FlowExecutionEngine {
           selectedText: context.selectedText,
           metadata: context.metadata,
         });
+        // A page-shaped target handed to a SETUP command still has to say it scanned nothing.
+        // These commands return before the target guard below, so without this they produced a
+        // result with no BuildReport AND no audit block, and the executive report printed
+        // "Checks passed. 0 findings." for it (Codex review 2026-07-28).
+        const teachUnscanned = unscannedTargetForEarlyCommand('teach', commandMatch.target, context.projectPath || process.cwd());
         return {
           success: true,
-          message: result.message,
+          message: teachUnscanned ? `${notRenderedNoticeFor(teachUnscanned)}\n\n${result.message}` : result.message,
           detectedFlow: null,
           flowResults: [result],
-          guidance: result.guidance,
+          guidance: teachUnscanned ? [notRenderedNoticeFor(teachUnscanned), ...(result.guidance || [])] : result.guidance,
           checklist: result.checklist,
           artifacts: result.artifacts,
+          ...(teachUnscanned ? { audit: unscannedAuditSummary(teachUnscanned) } : {}),
         };
       }
 
@@ -740,14 +899,20 @@ export class FlowExecutionEngine {
           ...(result.guidance || []),
           ...(docGuidanceAppend || []),
         ];
+        // Same as `teach` above: `/sidecoach document index.html` names a page this command does
+        // not scan, and used to reach the human as "Checks passed. 0 findings." (Codex High).
+        const docUnscanned = unscannedTargetForEarlyCommand('document', commandMatch.target, context.projectPath || process.cwd());
         return {
           success: result.status === 'success',
-          message: result.message,
+          message: docUnscanned ? `${notRenderedNoticeFor(docUnscanned)}\n\n${result.message}` : result.message,
           detectedFlow: null,
           flowResults: [result],
-          guidance: docGuidance.length > 0 ? docGuidance : undefined,
+          guidance: docUnscanned
+            ? [notRenderedNoticeFor(docUnscanned), ...docGuidance]
+            : (docGuidance.length > 0 ? docGuidance : undefined),
           checklist: result.checklist,
           artifacts: result.artifacts,
+          ...(docUnscanned ? { audit: unscannedAuditSummary(docUnscanned) } : {}),
         };
       }
 
@@ -875,6 +1040,18 @@ export class FlowExecutionEngine {
         return this.runCompositeLoop(compositeFlow, executionContext, [], 0, utterance);
       }
 
+      // Set when a verb was handed a target it did NOT scan but still runs the documented
+      // chain. The chain result is annotated with this so a project-level or guidance-level
+      // answer is never mistaken for a rendered page audit.
+      //
+      // Widened from UnrenderableAuditTarget to a structural type (2026-07-28, Codex CRITICAL
+      // item 2): a NON-audit verb can be handed a perfectly RENDERABLE page it simply does not
+      // render, and that case has no UnrenderableTargetKind to name it. The four fields below
+      // are exactly what the notice, the guidance and result.audit.unrenderableTarget consume,
+      // and UnrenderableAuditTarget is structurally assignable to it, so the audit path is
+      // unchanged.
+      let unrenderedAuditTarget: UnscannedTarget | null = null;
+
       // `/sidecoach audit <url>`: the rendered diagnosis READ PATH. A standalone audit
       // of a live URL renders the page and runs the proven detection engine directly
       // (objective a11y + subjective taste, the same scanRenderedLive the eval measures),
@@ -882,12 +1059,67 @@ export class FlowExecutionEngine {
       // build prerequisite (the "diagnosis IS an audit" rule), and the old chain routed
       // to a guidance-only flowK that never rendered and reported a FALSE 'clean'. This
       // path is FAIL-CLOSED: a render failure is reported inconclusive, never clean.
-      if (commandMatch.command === 'audit' && looksLikeUrl(commandMatch.target)) {
+      //
+      // 2026-07-28: this gate was `looksLikeUrl(target)`, so ONLY a URL rendered. A file,
+      // path or directory target fell through to the guidance chain below and produced a
+      // confident grade for a page that was never scanned - byte-identical output for a
+      // 0-byte file and a page with a skipped heading, 6px text, 1.03:1 contrast and a
+      // broken image. The gate is now "a target was given", and resolveAuditTarget decides
+      // between rendering it and saying plainly that it cannot be rendered.
+      //
+      // A target-less `/sidecoach audit` is deliberately NOT captured here: with no target
+      // there is no page to render and nothing is being claimed about one, so it keeps its
+      // flow-chain behaviour.
+      //
+      // 2026-07-28 (Codex CRITICAL, item 2): runRenderedAudit had exactly ONE call site and it
+      // was gated on `command === 'audit'`. The other 19 verbs parsed their target into
+      // metadata.commandTarget, NO handler consumed it, and the verb answered with the same
+      // canned chain output it produces for no target at all - so `/sidecoach critique
+      // catastrophic.html` still reported a confident verdict and letter grade for a page
+      // nothing had opened. The originally measured defect was that ALL 20 verbs did this; the
+      // previous unit repaired exactly one of them.
+      //
+      // THE CHOICE (Codex-designed, option C of three). Rendering stays owned by `audit`, and
+      // the unscanned-target suppression is generalized to every verb. Rejected: routing
+      // critique/polish/harden/optimize into the rendered path, because that path is an EARLY
+      // RETURN that bypasses the verb's flow chain - `/sidecoach polish page.html` would stop
+      // emitting tactical-polish guidance altogether and return raw a11y findings instead,
+      // trading a safety defect for a capability regression. Also rejected: render-and-chain,
+      // which is the right eventual shape but a larger result-model change than a repair
+      // carries. C closes the hole on all 20 verbs without altering any verb's output shape.
+      if ((commandMatch.target ?? '').trim()) {
         // Ground B of default-typeface reads the committed family from THIS project's DESIGN.md, so the audit
         // must be scoped to the same project root the rest of the chain uses (context.projectPath || cwd),
         // never a blind process.cwd() that could belong to an unrelated project (Stage 4b Codex High).
-        const audit = await runRenderedAudit(commandMatch.target as string, { projectPath: context.projectPath || process.cwd() });
-        return this.toRenderedAuditResult(audit, commandMatch.command);
+        const projectPath = context.projectPath || process.cwd();
+        const resolved = resolveAuditTarget(commandMatch.target, { cwd: projectPath });
+
+        if (commandMatch.command === 'audit') {
+          if (resolved.renderable) {
+            const audit = await runRenderedAudit(resolved.renderUrl, { projectPath });
+            return this.toRenderedAuditResult(audit, commandMatch.command, resolved);
+          }
+          // A target that NAMES a document which does not exist is a broken path, not a
+          // project audit. Fail loud: answering a typo'd page path with generic project
+          // guidance hides the mistake (Codex review 2026-07-28 F1 carve-out).
+          if (resolved.kind === 'missing' && /\.(html?|xhtml)$/i.test(commandMatch.target as string)) {
+            return this.toUnrenderableAuditResult(resolved, commandMatch.command);
+          }
+          // Everything else - a project directory, PRODUCT.md, a component NAME - keeps the
+          // documented chain (`/sidecoach audit <project>` reaches flowK's drift lens, SKILL.md
+          // line 171). Codex review 2026-07-28 (High): capturing ALL targets here regressed
+          // those documented shapes to errors. The chain still runs; what changes is that the
+          // result now SAYS no page was rendered, so a project-level answer can never be read
+          // as a rendered page audit. That, not the error, is the property that matters.
+          unrenderedAuditTarget = resolved;
+        } else if (commandMatch.command && isPageShapedTarget(resolved, commandMatch.target as string)) {
+          // A NON-audit verb pointed at a page. It does not render, so it must not imply it
+          // measured anything. FAIL CLOSED - but not as an error wall: the chain still runs and
+          // still produces the verb's guidance, and the notice names the one command that does
+          // scan. The narrow predicate is what keeps `/sidecoach craft a login page` (a prose
+          // description of work to do, not a page to read) completely untouched.
+          unrenderedAuditTarget = unscannedPageTarget(commandMatch.command, commandMatch.target as string, resolved);
+        }
       }
 
       // Route to command's flow chain
@@ -1000,7 +1232,7 @@ export class FlowExecutionEngine {
                 // had them survive. Overwriting here would drop them before BuildReport reads them.
                 result.validationResults = [...(result.validationResults || []), ...validations];
 
-                const failedValidations = validations.filter(v => v.status !== 'pass');
+                const failedValidations = userFacingValidationFailures(validations);
                 if (failedValidations.length > 0) {
                   const warningMsg = failedValidations
                     .map(v => `[${v.domain}] ${v.failedRules.join(', ')}`)
@@ -1022,7 +1254,16 @@ export class FlowExecutionEngine {
             }
 
             this.runTasteValidationGate(flowId, executionContext, result);
-            this.recordFlowWithMemory(result);
+            // Record the RENDERING CLAIM for the one flow that makes one. When a page-shaped
+            // target went unscanned, flowK_multi_lens_audit is persisted with rendered:false so
+            // flowL_design_critique and flowN_rapid_iteration_refined - which take flowK as an
+            // optional prerequisite - cannot later treat this as a completed audit (Codex High).
+            // Deliberately narrow: marking every flow in the chain would disqualify prerequisites
+            // that never claimed to render anything.
+            this.recordFlowWithMemory(
+              result,
+              unrenderedAuditTarget && PAGE_SCANNING_FLOWS.has(String(flowId)) ? false : undefined,
+            );
             flowResults.push(result);
             if (!detectedFlow) {
               detectedFlow = {
@@ -1095,14 +1336,73 @@ export class FlowExecutionEngine {
         process.stderr.write(`[sidecoach] BuildReport generation failed (chain): ${(err as Error).message}\n`);
       }
 
+      // An `audit` whose target could not be rendered still runs the chain (the documented
+      // `/sidecoach audit <project>` shape), but it must never READ as a rendered page audit.
+      // The notice goes FIRST in guidance and into the message, and `audit.rendered` is false,
+      // so no surface can present this as "we looked at the page".
+      const notRenderedNotice = unrenderedAuditTarget
+        ? `NO PAGE WAS RENDERED. ${unrenderedAuditTarget.reason} This is project/guidance output, NOT a rendered audit of that target, and nothing below is a measurement of a page. ${unrenderedAuditTarget.remedy}`
+        : null;
+
       return {
         success: flowResults.some((r) => r.status === 'success'),
-        message: `Executed ${commandMatch.command} flow chain (${flowResults.filter((r) => r.status === 'success').length}/${flowResults.length} flows successful)`,
+        message: notRenderedNotice
+          ? `${notRenderedNotice}\n\nExecuted ${commandMatch.command} flow chain (${flowResults.filter((r) => r.status === 'success').length}/${flowResults.length} flows successful)`
+          : `Executed ${commandMatch.command} flow chain (${flowResults.filter((r) => r.status === 'success').length}/${flowResults.length} flows successful)`,
         detectedFlow,
         flowResults,
-        guidance: chainGuidance.length > 0 ? chainGuidance : undefined,
-        buildReport: chainBuildReport,
-        panel: renderSidecoachPanel(assemblePanelModel({ flowResults, report: chainBuildReport, confidence: detectedFlow?.confidence })),
+        guidance: notRenderedNotice
+          ? [notRenderedNotice, ...chainGuidance]
+          : (chainGuidance.length > 0 ? chainGuidance : undefined),
+        // NO BUILD REPORT when an audit target could not be rendered. The chain's guidance
+        // still flows (that is the documented `/sidecoach audit <project>` value), but the
+        // report carries an overall VERDICT and LETTER GRADE, and for `/sidecoach audit .`
+        // that read `verdict: clean, overallGrade: A` about a page nothing had opened. A
+        // confident grade for an unscanned target is the defect this whole unit exists to
+        // remove; a loud notice next to a grade of A does not cancel the grade.
+        buildReport: unrenderedAuditTarget ? undefined : chainBuildReport,
+        ...(unrenderedAuditTarget
+          ? {
+              audit: {
+                renderUrl: null,
+                lenses: {
+                  objective: { available: false, findings: 0, reason: unrenderedAuditTarget.reason },
+                  subjective: { available: false, findings: 0, reason: unrenderedAuditTarget.reason },
+                },
+                verdict: 'inconclusive',
+                totalFindings: 0,
+                byRule: [],
+                topFixes: [],
+                rendered: false,
+                unavailableReasons: [unrenderedAuditTarget.reason],
+                unrenderableTarget: {
+                  kind: unrenderedAuditTarget.kind,
+                  target: unrenderedAuditTarget.target,
+                  reason: unrenderedAuditTarget.reason,
+                },
+              },
+            }
+          : {}),
+        // ...AND NOT INTO THE PANEL EITHER. Codex review 2026-07-28 (CRITICAL): suppressing
+        // `buildReport` above while still handing the UNSUPPRESSED chainBuildReport to
+        // assemblePanelModel left the exact defect this unit exists to remove fully intact on
+        // the surface a human actually looks at. panel-model copies report.verdict and
+        // report.overallGrade, panel-renderer prints them, and `/sidecoach audit .` printed
+        //     verdict  clean - grade A - 0 findings
+        // with three green gates while audit.rendered was false. The markdown surface said
+        // "inconclusive" and the panel said grade A.
+        //
+        // Passing no report makes assemblePanelModel set partial=true, omit verdict/grade/
+        // findings entirely, and render the gates as PENDING rather than passed - which is an
+        // honest reading of a run that measured nothing. The panel is kept (not omitted) so the
+        // route and chain context a reader needs are still there; what goes away is the claim.
+        panel: renderSidecoachPanel(assemblePanelModel({
+          flowResults,
+          report: unrenderedAuditTarget ? undefined : chainBuildReport,
+          confidence: detectedFlow?.confidence,
+          // Say it, do not merely omit the verdict (Codex review 2026-07-28, item (d)).
+          notice: unrenderedAuditTarget ? 'NO PAGE WAS RENDERED - nothing below is a measurement of a page.' : undefined,
+        })),
       };
     }
 
@@ -1486,7 +1786,7 @@ export class FlowExecutionEngine {
         result.validationResults = [...(result.validationResults || []), ...validations];
 
         // Log any validation failures as warnings (soft-fail mode)
-        const failedValidations = validations.filter(v => v.status !== 'pass');
+        const failedValidations = userFacingValidationFailures(validations);
         if (failedValidations.length > 0) {
           const warningMsg = failedValidations
             .map(v => `[${v.domain}] ${v.failedRules.join(', ')}`)
@@ -1697,7 +1997,56 @@ export class FlowExecutionEngine {
   // Shape a rendered audit into a SidecoachResult with an HONEST verdict. FAIL-CLOSED:
   // when the page did not render (audit did not run) the result is success:false with
   // NO clean buildReport - a non-execution is never reported as 'clean'.
-  private toRenderedAuditResult(audit: RenderedAuditResult, command: string): SidecoachResult {
+  // A target that cannot be rendered is an ERROR, not a grade. The old behaviour - fall
+  // through to the guidance chain and emit a confident B for a page nobody looked at - is
+  // strictly worse than saying so: it is indistinguishable from a real clean result.
+  // success:false (exit 1 at the CLI), and NO BuildReport, matching the inconclusive
+  // discipline in toRenderedAuditResult.
+  private toUnrenderableAuditResult(resolved: UnrenderableAuditTarget, command: string): SidecoachResult {
+    const headline = `Rendered audit could not run: ${resolved.reason} NOTHING WAS SCANNED - this is an error, not a clean result.`;
+    const flowResult = {
+      flowId: 'flowK_multi_lens_audit' as FlowId,
+      flowName: 'rendered audit',
+      status: 'error',
+      message: headline,
+      guidance: [resolved.remedy],
+      checklist: [],
+      error: `unrenderable-target:${resolved.kind}`,
+    } as FlowExecutionResult;
+    return {
+      success: false,
+      message: headline,
+      detectedFlow: { flowId: 'flowK_multi_lens_audit' as FlowId, flowName: 'rendered audit', confidence: 1.0 },
+      flowResults: [flowResult],
+      guidance: [
+        headline,
+        resolved.remedy,
+        'Do NOT treat this as a pass. No page was rendered, so no claim is being made about one.',
+      ],
+      audit: {
+        renderUrl: null,
+        // Both lenses report unavailable with the reason: the existing fail-closed
+        // vocabulary already says "this did not run", which is exactly what happened.
+        lenses: {
+          objective: { available: false, findings: 0, reason: resolved.reason },
+          subjective: { available: false, findings: 0, reason: resolved.reason },
+        },
+        verdict: 'inconclusive',
+        totalFindings: 0,
+        byRule: [],
+        topFixes: [],
+        rendered: false,
+        unavailableReasons: [resolved.reason],
+        unrenderableTarget: { kind: resolved.kind, target: resolved.target, reason: resolved.reason },
+      },
+    };
+  }
+
+  private toRenderedAuditResult(
+    audit: RenderedAuditResult,
+    command: string,
+    resolved?: RenderableAuditTarget
+  ): SidecoachResult {
     const findingLines = audit.findings.map(
       (f) => `[${f.severity}] ${f.lens}/${f.rule}${f.selector ? ` @ ${f.selector}` : ''}${f.detail ? ` - ${f.detail}` : ''}`
     );
@@ -1759,6 +2108,11 @@ export class FlowExecutionEngine {
       // carried so the report can flag PARTIAL coverage (a lens that did not run) and
       // distinguish "page did not render at all" from "one lens failed" (Codex P1).
       rendered: audit.rendered, unavailableReasons: audit.unavailableReasons,
+      // Which document was actually rendered. Matters most for a DIRECTORY target, where
+      // the engine picked an entry document (index.html) the user did not name - the report
+      // must never leave ambiguity about what was scanned.
+      targetKind: resolved?.kind,
+      renderedDocument: resolved?.resolvedPath,
     };
 
     // INCONCLUSIVE covers BOTH no-render (no lens ran) AND a partial scan (one lens
@@ -1840,7 +2194,9 @@ export class FlowExecutionEngine {
     // The early-return rendered path skips the normal chain bookkeeping, so record the
     // synthesized result to memory here (the advertised audit "memory entry" + so later
     // history-based checks see that an audit ran). Best-effort: never fail the audit on it.
-    try { this.recordFlowWithMemory(flowResult); } catch { /* memory is best-effort */ }
+    // `audit.rendered` is the real measurement, so the history entry carries it verbatim: this
+    // is the entry that legitimately satisfies a downstream prerequisite (Codex High, item 3).
+    try { this.recordFlowWithMemory(flowResult, audit.rendered); } catch { /* memory is best-effort */ }
     return {
       success: true,
       message: `Rendered audit of ${audit.renderUrl}: ${verdict} (${total} finding(s): ${counts.blocking} blocking, ${counts.warning} warning).`,
@@ -1985,7 +2341,9 @@ export interface SidecoachResult {
   // Structured audit summary for the staged-progress panel (present.js renders the
   // render -> a11y -> taste -> verdict stages from this). Set by the rendered-audit path.
   audit?: {
-    renderUrl: string;
+    // null ONLY when the target could not be resolved to anything renderable, in which
+    // case unrenderableTarget below explains why and every lens is reported unavailable.
+    renderUrl: string | null;
     lenses: {
       objective: { available: boolean; findings: number; reason?: string };
       subjective: { available: boolean; findings: number; reason?: string };
@@ -2000,6 +2358,12 @@ export interface SidecoachResult {
     // Coverage: rendered = at least one lens scanned; unavailableReasons = per-lens failures.
     rendered: boolean;
     unavailableReasons: string[];
+    // How the target resolved, and which document was actually rendered. Present for
+    // file/directory targets so a directory audit never hides which entry document it read.
+    targetKind?: 'url' | 'file' | 'directory';
+    renderedDocument?: string;
+    // Present ONLY when the target could not be rendered at all.
+    unrenderableTarget?: { kind: string; target: string; reason: string };
   };
 }
 

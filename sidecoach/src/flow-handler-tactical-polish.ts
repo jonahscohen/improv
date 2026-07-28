@@ -5,7 +5,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { BaseFlowHandler, FlowExecutionContext, FlowExecutionResult, ChecklistItem } from './flow-handler';
-import { FlowMemoryBuilder } from './flow-memory-schema';
+import { FlowMemoryBuilder, countMetricStatus } from './flow-memory-schema';
 import { ExtendedDomainValidator, DomainCheckContext, DomainValidationReport } from './extended-domain-validator';
 import { PolishStandardValidator } from './polish-standard-validator';
 import { scanForLinguisticBans, findingsToGuidance, linguisticBanToValidationResult, LinguisticBanReport, LinguisticFinding } from './linguistic-ban-validator';
@@ -364,12 +364,16 @@ export class FlowJTacticalPolishHandler extends BaseFlowHandler {
         .addDecision('Validation strategy', `${totalRules}-rule framework: ${polishReport.totalRules}-point Polish + ${extendedReport.totalRules}-rule registry-backed Domain Validator`)
         .addMetric('total-rules', totalRules, 'pass')
         .addMetric('passed-rules', totalPassed, 'pass', totalRules)
-        .addMetric('violation-count', totalViolations, 'warning')
+        // Status DERIVED from the value. Hard-coded 'warning' emitted a "violation-count = 0"
+        // warning finding on a run with zero violations - a finding that fires precisely when
+        // nothing is wrong. The three metrics below already derived it this way; countMetricStatus
+        // is that same rule, named once. linguistic-p1-slop-words keeps its own threshold (2).
+        .addMetric('violation-count', totalViolations, countMetricStatus(totalViolations))
         .addMetric('pass-rate-percent', parseFloat(combinedPassRate), 'pass')
-        .addMetric('linguistic-p0-templates', linguisticP0, linguisticP0 === 0 ? 'pass' : 'fail')
+        .addMetric('linguistic-p0-templates', linguisticP0, countMetricStatus(linguisticP0, 'fail'))
         .addMetric('linguistic-p1-slop-words', linguisticP1, linguisticP1 <= 2 ? 'pass' : 'warning')
-        .addMetric('absolute-ban-p0', banP0, banP0 === 0 ? 'pass' : 'fail')
-        .addMetric('absolute-ban-p1', banP1, banP1 === 0 ? 'pass' : 'warning')
+        .addMetric('absolute-ban-p0', banP0, countMetricStatus(banP0, 'fail'))
+        .addMetric('absolute-ban-p1', banP1, countMetricStatus(banP1))
         .addValidation('Tactical polish checklist', 'pass', '16 principles documented')
         .addValidation('Extended domain validation', 'pass', `${extendedReport.totalRules} rules across ${ExtendedDomainValidator.getDomains().length} finding-classes`)
         .addValidation('Linguistic ban scan', linguisticP0 === 0 ? 'pass' : 'fail', `${linguisticScan.totalFindings.length} findings across ${linguisticScan.perFile.size} files`)

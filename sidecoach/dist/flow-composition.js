@@ -133,6 +133,7 @@ class FlowCompositionEngine {
             passedRules,
             failedRules,
             message: `Domain validation: ${passedRules.length}/${validator.rules.length} rules passed`,
+            measures: validator.measures,
         };
     }
     /**
@@ -156,8 +157,20 @@ class FlowCompositionEngine {
     /**
      * Create a domain validator with rules
      */
-    static createDomainValidator(domain, rules, failOnFirstError = false) {
-        return { domain, rules, failOnFirstError };
+    static createDomainValidator(domain, rules, failOnFirstError = false, measures = 'flow-output') {
+        // Defaults to 'flow-output' deliberately: a validator that has not declared it
+        // measures the user's artifact must not be able to emit findings ABOUT that artifact.
+        // Fail-quiet in the user's report is the safe direction here; the loud direction
+        // (a fabricated blocking finding) is the defect this parameter exists to prevent.
+        //
+        // This default is now CONSISTENT with the consumer rather than in tension with it
+        // (Codex review 2026-07-28, item 7). Previously the factory defaulted to 'flow-output'
+        // while the aggregator suppressed only an EXPLICIT 'flow-output', so a factory-built
+        // validator that omitted the flag was silently suppressed and a hand-built result that
+        // omitted it reported - the same "declares nothing" input got opposite treatment
+        // depending on its construction path. Both ends now agree: unspecified means flow-output,
+        // and only an explicit 'artifact' reaches the user.
+        return { domain, rules, failOnFirstError, measures };
     }
     /**
      * Inject flow result into execution context metadata

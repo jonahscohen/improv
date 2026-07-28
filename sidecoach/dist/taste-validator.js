@@ -367,6 +367,9 @@ function toValidationResult(violations) {
         message: violations.length === 0
             ? 'No taste violations'
             : violations.map(v => `[${v.ruleId}] ${v.message}`).join('; '),
+        // Taste violations come from scanning the user's real HTML/CSS, so they are findings about
+        // the artifact and must survive the self-check suppression (Codex review 2026-07-28, item 7).
+        measures: 'artifact',
     };
 }
 if (require.main === module) {

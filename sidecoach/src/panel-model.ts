@@ -30,6 +30,12 @@ export interface SidecoachPanelModel {
   grade?: LetterGrade;
   findings?: number; // blocking + warning count (info excluded, matching the report)
   partial: boolean; // true = in-progress snapshot (some rows still pending)
+  // Loud, unmissable line printed ABOVE everything when this run measured nothing.
+  // Codex review 2026-07-28 (d): dropping the verdict stopped the panel ASSERTING a false
+  // clean, but a reader still saw a full checklist of [done] phases including "multi-lens
+  // audit" with no hint that no page was opened, so a clean read was still INFERABLE. The
+  // notice removes the inference.
+  notice?: string;
 }
 
 // The three QA gates the panel shows, matched against BuildReport findings by a
@@ -63,6 +69,8 @@ export interface AssemblePanelInput {
   partial?: boolean;
   /** Whether the QA gates have executed; when false (and no report), gates render as pending. */
   ranGates?: boolean;
+  /** Loud line printed above the card when this run measured nothing (see model.notice). */
+  notice?: string;
 }
 
 export function assemblePanelModel(input: AssemblePanelInput): SidecoachPanelModel {
@@ -113,6 +121,7 @@ export function assemblePanelModel(input: AssemblePanelInput): SidecoachPanelMod
     grade: report?.overallGrade,
     findings,
     partial: input.partial ?? !report,
+    notice: input.notice,
   };
 }
 

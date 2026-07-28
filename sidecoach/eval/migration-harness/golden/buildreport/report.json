@@ -6,30 +6,16 @@
   ],
   "verdict": "blocked",
   "severityCounts": {
-    "blocking": 6,
+    "blocking": 4,
     "warning": 1,
     "info": 0
   },
   "overallGrade": "F",
-  "overallPassRate": 50.8,
+  "overallPassRate": 34.93333333333333,
   "domainGrades": [
-    {
-      "domain": "accessibility",
-      "passRate": 100,
-      "letter": "A",
-      "rulesPassed": 1,
-      "rulesTotal": 1
-    },
     {
       "domain": "color",
       "passRate": 3.2,
-      "letter": "F",
-      "rulesPassed": 0,
-      "rulesTotal": 1
-    },
-    {
-      "domain": "performance",
-      "passRate": 33.33333333333333,
       "letter": "F",
       "rulesPassed": 0,
       "rulesTotal": 1
@@ -70,20 +56,6 @@
       "flowId": "flowK_multi_lens_audit",
       "rule": "gate:design-tokens-exist",
       "message": "no DESIGN.md"
-    },
-    {
-      "severity": "blocking",
-      "source": "flowK_multi_lens_audit",
-      "flowId": "flowK_multi_lens_audit",
-      "rule": "performance:p2",
-      "message": "perf issues"
-    },
-    {
-      "severity": "blocking",
-      "source": "flowK_multi_lens_audit",
-      "flowId": "flowK_multi_lens_audit",
-      "rule": "performance:p3",
-      "message": "perf issues"
     },
     {
       "severity": "warning",

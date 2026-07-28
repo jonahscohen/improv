@@ -60,6 +60,7 @@ export declare function linguisticBanToValidationResult(report: LinguisticBanRep
     passedRules: string[];
     failedRules: string[];
     message: string;
+    measures: 'artifact';
 };
 /**
  * Convenience function for flow handlers: returns ready-to-append guidance lines

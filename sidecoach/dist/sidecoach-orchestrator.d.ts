@@ -51,6 +51,7 @@ export declare class FlowExecutionEngine {
      */
     getHandlers(): ReadonlyMap<FlowId, FlowHandler>;
     private laneDeps;
+    private toUnrenderableAuditResult;
     private toRenderedAuditResult;
     startLane(laneId: string, target: string, context: {
         projectPath?: string;
@@ -101,7 +102,7 @@ export interface SidecoachResult {
         interviewLabel: string;
     };
     audit?: {
-        renderUrl: string;
+        renderUrl: string | null;
         lenses: {
             objective: {
                 available: boolean;
@@ -130,6 +131,13 @@ export interface SidecoachResult {
         }[];
         rendered: boolean;
         unavailableReasons: string[];
+        targetKind?: 'url' | 'file' | 'directory';
+        renderedDocument?: string;
+        unrenderableTarget?: {
+            kind: string;
+            target: string;
+            reason: string;
+        };
     };
 }
 export declare function createExecutionEngine(): FlowExecutionEngine;

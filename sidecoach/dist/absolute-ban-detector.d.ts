@@ -67,6 +67,7 @@ export declare function absoluteBanToValidationResult(report: AbsoluteBanReport)
     passedRules: string[];
     failedRules: string[];
     message: string;
+    measures: 'artifact';
 };
 export declare function banFindingsToGuidance(report: AbsoluteBanReport): string[];
 //# sourceMappingURL=absolute-ban-detector.d.ts.map

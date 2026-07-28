@@ -21,6 +21,7 @@ export interface SidecoachPanelModel {
     grade?: LetterGrade;
     findings?: number;
     partial: boolean;
+    notice?: string;
 }
 export declare function shortFlowLabel(flowName: string, flowId: string): string;
 export interface AssemblePanelInput {
@@ -35,6 +36,8 @@ export interface AssemblePanelInput {
     partial?: boolean;
     /** Whether the QA gates have executed; when false (and no report), gates render as pending. */
     ranGates?: boolean;
+    /** Loud line printed above the card when this run measured nothing (see model.notice). */
+    notice?: string;
 }
 export declare function assemblePanelModel(input: AssemblePanelInput): SidecoachPanelModel;
 export interface LaneStepLike {

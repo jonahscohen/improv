@@ -113,10 +113,17 @@ async function executeFlow(utterance) {
     // the same string because the Stop/PostResponse hook (claude/hooks/sidecoach-postresponse.sh)
     // still reads result.renderedPanel to surface daemon output - aliasing keeps that path
     // showing the executive report instead of the dead panel.
-    const { renderExecutiveReport } = require('./sidecoach-present');
+    const { renderExecutiveReport, stripFlowOutputSelfChecks } = require('./sidecoach-present');
     const executiveReport = renderExecutiveReport(result, utterance);
     if (process.argv.includes('--json')) {
-      console.log(JSON.stringify({ ...result, renderedReport: executiveReport, renderedPanel: executiveReport }, null, 2));
+      // SANITIZED. Codex review 2026-07-28 (High): `--json` used to spread the raw result, so a
+      // flow's self-check leaked out verbatim as `failedRules: ['has_optimization_guidance']` -
+      // a rule that asks whether the flow's OWN guidance mentions "optimize", presented to a
+      // consumer as a failed rule about the user's design. `--json` is a human-facing surface
+      // (it is what the documented `sidecoach-monitor ... --json` invocation prints), so it gets
+      // the same suppression the panel and the BuildReport get.
+      const safe = stripFlowOutputSelfChecks(result);
+      console.log(JSON.stringify({ ...safe, renderedReport: executiveReport, renderedPanel: executiveReport }, null, 2));
     } else {
       console.log(executiveReport);
     }

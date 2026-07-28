@@ -65,10 +65,43 @@ export interface ValidationRule {
   validate: (result: FlowExecutionResult) => boolean;
 }
 
+/**
+ * WHAT a domain validator actually looks at. This is the difference between a finding
+ * about the USER'S PAGE and a flow grading its own homework.
+ *
+ * - 'artifact'    - inspects the thing the user asked about (rendered page, source, tokens).
+ *                   Its results are real findings and belong in the user's report.
+ * - 'flow-output' - inspects the FLOW'S OWN result text (result.guidance / result.checklist):
+ *                   "did my handler emit guidance mentioning 'optimize'?". That is a handler
+ *                   self-consistency invariant, useful internally, and NOT a defect in the
+ *                   user's design. Measured 2026-07-28: `performance:has_optimization_guidance`
+ *                   was emitted as a BLOCKING finding on every run - including for a 0-byte
+ *                   file - because a self-check leaked into the user-facing findings list.
+ *                   The report shipped "resolve the performance:has optimization guidance
+ *                   issue on the affected element" when there was no affected element.
+ *
+ * THE AGGREGATOR IS AN ALLOWLIST: a domain reaches the user's findings and grades ONLY on an
+ * explicit 'artifact'. Unset means flow-output.
+ *
+ * Corrected 2026-07-28 (Codex item 7). This block previously documented the opposite - "the
+ * aggregator suppresses ONLY on an explicit 'flow-output'; unset keeps the pre-existing
+ * behaviour" - with the safety said to live in the createDomainValidator factory default. That
+ * split made the discriminator unsafe in BOTH directions at once: a FACTORY-built validator
+ * that omitted the flag was silently suppressed (a false negative), while a HAND-BUILT result
+ * that omitted it reported (a false positive waiting to happen). The same "declares nothing"
+ * input got opposite treatment depending only on its construction path.
+ *
+ * Both ends now agree, and the five validators that genuinely scan the user's content
+ * (claudemd-mandate, polish-standard, linguistic-ban, absolute-ban, taste) declare
+ * `measures: 'artifact'` at their source rather than relying on an implicit default.
+ */
+export type DomainMeasures = 'artifact' | 'flow-output';
+
 export interface DomainValidator {
   domain: string;
   rules: ValidationRule[];
   failOnFirstError?: boolean; // stop validation on first failure
+  measures?: DomainMeasures;
 }
 
 export interface ValidationResult {
@@ -77,6 +110,8 @@ export interface ValidationResult {
   passedRules: string[];
   failedRules: string[];
   message: string;
+  /** carried through so downstream reporting can tell a real finding from a self-check */
+  measures?: DomainMeasures;
 }
 
 export interface DomainValidationConfig {
@@ -220,6 +255,7 @@ export class FlowCompositionEngine {
       passedRules,
       failedRules,
       message: `Domain validation: ${passedRules.length}/${validator.rules.length} rules passed`,
+      measures: validator.measures,
     };
   }
 
@@ -254,9 +290,22 @@ export class FlowCompositionEngine {
   static createDomainValidator(
     domain: string,
     rules: ValidationRule[],
-    failOnFirstError: boolean = false
+    failOnFirstError: boolean = false,
+    measures: DomainMeasures = 'flow-output'
   ): DomainValidator {
-    return { domain, rules, failOnFirstError };
+    // Defaults to 'flow-output' deliberately: a validator that has not declared it
+    // measures the user's artifact must not be able to emit findings ABOUT that artifact.
+    // Fail-quiet in the user's report is the safe direction here; the loud direction
+    // (a fabricated blocking finding) is the defect this parameter exists to prevent.
+    //
+    // This default is now CONSISTENT with the consumer rather than in tension with it
+    // (Codex review 2026-07-28, item 7). Previously the factory defaulted to 'flow-output'
+    // while the aggregator suppressed only an EXPLICIT 'flow-output', so a factory-built
+    // validator that omitted the flag was silently suppressed and a hand-built result that
+    // omitted it reported - the same "declares nothing" input got opposite treatment
+    // depending on its construction path. Both ends now agree: unspecified means flow-output,
+    // and only an explicit 'artifact' reaches the user.
+    return { domain, rules, failOnFirstError, measures };
   }
 
   /**

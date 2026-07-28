@@ -193,6 +193,9 @@ class PolishStandardValidator {
             passedRules: report.results.filter(r => r.passed).map(r => `rule-${r.ruleId}`),
             failedRules: failed.map(r => `rule-${r.ruleId}`),
             message: report.summary,
+            // Measures the user's artifact against the 24 polish rules - a real finding, not a
+            // self-check (Codex review 2026-07-28, item 7).
+            measures: 'artifact',
         };
     }
 }

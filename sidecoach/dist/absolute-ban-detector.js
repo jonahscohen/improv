@@ -333,6 +333,9 @@ function absoluteBanToValidationResult(report) {
         passedRules,
         failedRules,
         message: report.summary,
+        // Bans are detected in the user's real output, so these are artifact findings and must
+        // survive the self-check suppression (Codex review 2026-07-28, item 7).
+        measures: 'artifact',
     };
 }
 function banFindingsToGuidance(report) {

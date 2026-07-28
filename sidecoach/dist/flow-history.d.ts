@@ -33,6 +33,23 @@ export interface FlowHistoryEntry {
     error?: string;
     laneLogicalKey?: string;
     fencingToken?: number;
+    /**
+     * Did this flow actually RENDER and measure a page?
+     *
+     * Codex review 2026-07-28 (High): without this, `/sidecoach audit PRODUCT.md` recorded
+     * flowK_multi_lens_audit with status 'success' and nothing downstream could tell that the
+     * audit had opened no page. flowL_design_critique and flowN_rapid_iteration_refined take
+     * flowK as an optional prerequisite under minSuccessfulPrerequisites, so an audit that
+     * scanned nothing silently satisfied a later flow's precondition.
+     *
+     * THREE-STATE ON PURPOSE. `true` = a page was rendered and measured. `false` = this flow
+     * made a rendering claim and it did not happen. `undefined` = no rendering claim is being
+     * made, which is the correct and unchanged state for every flow that is not an audit and
+     * for all history written before this field existed. Only an explicit `false` disqualifies
+     * a prerequisite; treating `undefined` as false would have retroactively invalidated every
+     * entry in existing on-disk history.
+     */
+    rendered?: boolean;
 }
 export interface FlowHistoryUpsertOutcome {
     status: 'written' | 'noop' | 'rejected';

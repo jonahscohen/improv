@@ -64,6 +64,7 @@ function assemblePanelModel(input) {
         grade: report?.overallGrade,
         findings,
         partial: input.partial ?? !report,
+        notice: input.notice,
     };
 }
 function laneStepToPanelModel(step) {

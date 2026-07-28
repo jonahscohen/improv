@@ -146,6 +146,24 @@ function findingsFromResult(result) {
             // Skip pass results - only emit findings for fail/partial.
             if (vr.status === 'pass')
                 continue;
+            // ONLY a validator that explicitly declares it measured the user's ARTIFACT may emit a
+            // finding. A 'flow-output' validator inspected the FLOW'S OWN guidance text, not the
+            // user's page - that is how `performance:has_optimization_guidance` became a permanent
+            // BLOCKING finding on every run, identical for a 0-byte file and a catastrophically
+            // broken page (measured 2026-07-28). A self-check is not a defect in the user's design.
+            //
+            // ALLOWLIST, NOT DENYLIST (Codex review 2026-07-28, item 7). This was
+            // `if (vr.measures === 'flow-output') continue`, which made the discriminator unsafe in
+            // BOTH directions: createDomainValidator DEFAULTS measures to 'flow-output', so a
+            // factory-built validator that forgot the flag had its real findings silently dropped,
+            // while a hand-built result left the field undefined and reported anyway. What an
+            // undeclared validator got depended entirely on how it was constructed - the worst
+            // possible property for a safety discriminator. Now: unspecified means flow-output, and
+            // a validator reaches the user's report only by SAYING it measured the artifact. The
+            // five validators that really do scan the user's work (claudemd-mandate, polish-standard,
+            // taste, anti-patterns, copy) declare `measures: 'artifact'` at their source.
+            if (vr.measures !== 'artifact')
+                continue;
             // Round 2 fix: severity scales with actual pass rate, not just the
             // adapter's status flag. Pre-fix, an adapter returning 'fail' marked
             // every individual failed rule as 'blocking', so even 86.4% pass
@@ -201,6 +219,12 @@ function domainGradesFromResults(results, thresholds) {
         if (Array.isArray(vrs)) {
             for (const vr of vrs) {
                 if (!vr || typeof vr.domain !== 'string')
+                    continue;
+                // Same allowlist as findingsFromResult: a domain that only measured the flow's own
+                // guidance text cannot contribute a GRADE about the user's work. This is what made
+                // `performance` a constant F and pinned the overall grade to a per-verb constant.
+                // Unspecified means flow-output - see the reasoning at the findings site above.
+                if (vr.measures !== 'artifact')
                     continue;
                 const passedCount = Array.isArray(vr.passedRules) ? vr.passedRules.length : 0;
                 const failedCount = Array.isArray(vr.failedRules) ? vr.failedRules.length : 0;

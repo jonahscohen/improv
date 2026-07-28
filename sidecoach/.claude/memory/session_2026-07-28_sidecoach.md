@@ -10,27 +10,165 @@ metadata:
 
 # Sidecoach Session - 2026-07-28
 
-Execution summary: 15 flows executed
+Execution summary: 16 flows executed
 
 ## Flow Execution Order
 
-1. **Brand/PRODUCT.md Verification** (flowA_brand_verify) - [OK]
-2. **Component Research (component.gallery)** (flowB_component_research) - [OK]
-3. **Design System Tokens (DESIGN.md)** (flowF_design_tokens) - [SKIP]
-4. **Font Research (fontshare.com)** (flowC_font_research) - [OK]
-5. **Reference/Inspiration Search** (flowD_reference_inspiration) - [OK]
-6. **Motion Pattern Library (GSAP/Lenis)** (flowE_motion_patterns) - [OK]
-7. **Component Implementation** (flowG_component_implementation) - [OK]
-8. **Accessibility Compliance (WCAG 2.1 AA)** (flowI_accessibility) - [OK]
-9. **Responsive Design Validation** (flowM_responsive_validation) - [OK]
-10. **16-Point Tactical Polish** (flowJ_tactical_polish) - [OK]
-11. **Multi-Lens Audit (5 dimensions)** (flowK_multi_lens_audit) - [OK]
+1. **Multi-Lens Audit (5 dimensions)** (flowK_multi_lens_audit) - [OK]
+2. **Component Implementation** (flowG_component_implementation) - [OK]
+3. **16-Point Tactical Polish** (flowJ_tactical_polish) - [OK]
+4. **Accessibility Compliance (WCAG 2.1 AA)** (flowI_accessibility) - [OK]
+5. **Design Critique (Nielsen heuristics)** (flowL_design_critique) - [OK]
+6. **Responsive Design Validation** (flowM_responsive_validation) - [OK]
+7. **Brand/PRODUCT.md Verification** (flowA_brand_verify) - [OK]
+8. **Component Research (component.gallery)** (flowB_component_research) - [OK]
+9. **Font Research (fontshare.com)** (flowC_font_research) - [OK]
+10. **Reference/Inspiration Search** (flowD_reference_inspiration) - [OK]
+11. **Motion Pattern Library (GSAP/Lenis)** (flowE_motion_patterns) - [OK]
 12. **Motion Integration (GSAP/Lenis)** (flowH_motion_integration) - [OK]
-13. **All-Seven QA Pipeline** (flowV_all_seven_qa) - [OK]
-14. **Design Critique (Nielsen heuristics)** (flowL_design_critique) - [OK]
-15. **Rapid Iteration (Token-based)** (flowN_rapid_iteration_refined) - [OK]
+13. **Curate Design References** (flowU_curate) - [OK]
+14. **Design System Tokens (DESIGN.md)** (flowF_design_tokens) - [SKIP]
+15. **All-Seven QA Pipeline** (flowV_all_seven_qa) - [OK]
+16. **Rapid Iteration (Token-based)** (flowN_rapid_iteration_refined) - [OK]
 
 ## Detailed Flow Records
+
+### Multi-Lens Audit (5 dimensions) (flowK_multi_lens_audit)
+Status: success
+
+Running 5-dimension technical audit (28-rule anti-pattern detection included)
+
+**Guidance:**
+- Dimension 1: Accessibility (WCAG compliance, semantic HTML, keyboard nav)
+- Dimension 2: Performance (bundle size, Lighthouse scores, Core Web Vitals)
+- Dimension 3: Theming (color system consistency, CSS variable usage, dark mode)
+- Dimension 4: Responsive (breakpoints, touch targets, viewport behavior)
+- Dimension 5: Anti-patterns (hardcoded values, dead code, deprecated APIs)
+- Address all Critical and High findings; document trade-offs for Medium
+
+
+### Component Implementation (flowG_component_implementation)
+Status: success
+
+Component implementation: button with 8 interaction states + semantic copy validated
+
+**Rules Applied:**
+- interaction: 8 interactive states required: Default, Hover, Focus, Active, Disabled, Loading, Error, Success, Focus rings via :focus-visible (keyboard only), 2-3px, high contrast 3:1+, offset 2px, Placeholders ≠ labels; always use visible <label>, Validate on blur not keystroke (exception: password strength real-time), Skeleton screens > spinners for perceived performance, <dialog> native or `inert` attribute for focus trapping in modals, Popover API for tooltips/dropdowns/light-dismiss overlays, Undo > Confirm for destructive actions
+- writing: Button labels: specific verb + object ("Save changes" not "OK"), Destructive actions name the destruction ("Delete 5 items" not "Proceed"), Error messages: what happened, why, how to fix (don't blame user), Empty states are onboarding: acknowledge, explain value, provide action, Voice constant, tone adapts to moment (success: celebratory, error: empathetic), Never humor for errors (users frustrated, be helpful not cute), Icon buttons need aria-label for screen readers, Avoid redundant copy and filler words; every word earns its place
+
+**Decisions:**
+- Component semantic HTML structure
+
+**Metrics:**
+- component-states-implemented: 8 (pass)
+- forms-domain-validation: 16 (pass)
+- aria-labels-count: 7 (pass)
+- keyboard-nav-count: 7 (pass)
+- semantic-copy-count: 3 (pass)
+
+
+### 16-Point Tactical Polish (flowJ_tactical_polish)
+Status: success
+
+Tactical Polish: 46-rule matrix 42/46 pass. Linguistic ban: 0 P0 + 2 P1. Absolute ban: 0 P0 + 0 P1 across 2 files.
+
+**Rules Applied:**
+- polish: Scale on press: scale(0.96) for tactile feedback, Concentric border radius: outer = inner + padding (e.g. button 8px + 4px padding = 12px container), Shadows use rgba(0,0,0,0.1) or surface tint, never rgb/hsl (preserves theme), Avoid transition: all; specify individual properties, Minimum 40x40px hit targets (mobile-friendly), Optical alignment: visual center differs from geometric center for circles/icons, text-wrap: balance on headings (prevents widows), font-smoothing: antialiased on light text, auto on dark, Icon state changes via opacity+scale+blur (no visibility toggling), Image borders: rgba(0,0,0,0.1) or subtle tint, never colored
+
+**Decisions:**
+- Validation strategy
+
+**Metrics:**
+- total-rules: 46 (pass)
+- passed-rules: 42 (pass)
+- violation-count: 4 (warning)
+- pass-rate-percent: 91.3 (pass)
+- linguistic-p0-templates: 0 (pass)
+- linguistic-p1-slop-words: 2 (pass)
+- absolute-ban-p0: 0 (pass)
+- absolute-ban-p1: 0 (pass)
+
+
+### Accessibility Compliance (WCAG 2.1 AA) (flowI_accessibility)
+Status: success
+
+WCAG 2.1 AA accessibility validation: 7 domains + screen reader testing plan
+
+**Rules Applied:**
+- color: 1.4.3 Contrast (Minimum), 1.4.11 Non-text Contrast, 2.4.7 Focus Visible
+- typography: 1.4.8 Visual Presentation, 1.4.4 Resize text, 3.3.1 Error Identification
+- spatial: 2.5.5 Target Size (Enhanced), 2.4.3 Focus Order, 1.3.5 Identify Input Purpose
+- motion: 2.3.3 Animation from Interactions, 2.3.2 Animation from Interactions, 2.4.7 Focus Visible
+- interaction: 2.4.3 Focus Order, 2.4.7 Focus Visible, 3.3.1 Error Identification, 3.3.4 Error Prevention
+- responsive: 1.3.4 Orientation, 1.4.10 Reflow, 2.5.7 Dragging Movements
+- writing: 2.4.2 Page Titled, 2.4.6 Headings and Labels, 3.2.4 Consistent Identification, 3.3.2 Labels or Instructions
+
+**Decisions:**
+- WCAG Compliance Level
+
+**Metrics:**
+- wcag-domains-audited: 7 (pass)
+- domains-pass: 0 (pass)
+- screen-reader-tools: 3 (pass)
+
+
+### Design Critique (Nielsen heuristics) (flowL_design_critique)
+Status: success
+
+Independent design critique with 12-rule framework and project-specific personas
+
+**Guidance:**
+- Nielsen 10 Usability Heuristics: visibility, match with real world, user control, consistency, error prevention, recognition vs recall, flexibility, aesthetic, error recovery, help & documentation
+- AI-slop detection: generated copy, template language, lack of personality, generic imagery
+- Cognitive load: information density, task complexity, decision fatigue
+- Emotional journey: does the design support the brand personality and user emotion targets?
+- This is an independent review - use fresh eyes and question every design choice
+- ---
+- 12-Rule Critique Framework:
+- Visual Hierarchy (weight: 1): Can user identify primary, secondary, groupings at a glance?
+- Cognitive Load (weight: 1): Information chunked appropriately, decision density manageable?
+- Visual Weight Distribution (weight: 0.8): Does 60-30-10 rule apply correctly?
+- Color Strategy Commitment (weight: 0.8): Is palette commitment level intentional and consistent?
+- Typography Consistency (weight: 0.8): Does typography follow modular scale rules?
+- Interaction Affordances (weight: 1): Are interactive elements clearly discoverable?
+- Emotional Journey (weight: 0.9): Does design match brand tone and context?
+- Nielsen Heuristics (weight: 1): User control, feedback, standards, error prevention present?
+- Accessibility Inclusion (weight: 1): WCAG + usability for diverse users (not just compliance)?
+- Perceived Performance (weight: 0.7): Feels fast through feedback, optimistic UI, skeleton screens?
+- Copy Precision (weight: 0.8): Every word earns its place, no filler or redundancy?
+- Register Alignment (weight: 1): Design laws for register (brand/product) applied correctly?
+- ---
+- Project-Specific Personas Extracted from PRODUCT.md:
+- Review this design through the lens of these project personas:
+
+- **Alex** (Power User): Goals Work efficiently, Master all features, Customize everything. Frustrations: Limited options, Slow workflows, Over-simplification. Tech comfort: high. Accessibility: none specified.
+- **Jordan** (Designer): Goals Create beautiful work, Collaborate seamlessly, Stay on brand. Frustrations: Clunky interfaces, Misaligned pixels, Communication gaps. Tech comfort: medium. Accessibility: Color contrast verification.
+- **Sam** (Manager): Goals Get results fast, Monitor team progress, Reduce friction. Frustrations: Overhead, Hidden information, Missed deadlines. Tech comfort: low. Accessibility: Clear status indicators, Readable text.
+- **Riley** (Developer): Goals Write clean code, Ship quickly, Fix bugs fast. Frustrations: Poor documentation, API inconsistency, Performance issues. Tech comfort: high. Accessibility: none specified.
+- **Casey** (New User): Goals Understand basics, Get help when stuck, Build confidence. Frustrations: Steep learning curve, Jargon, Unhelpful errors. Tech comfort: low. Accessibility: Clear labels, Context help, Readable fonts.
+
+For each persona, assess whether the design serves their goals and accommodates their frustrations and accessibility needs.
+
+
+### Responsive Design Validation (flowM_responsive_validation)
+Status: success
+
+Responsive Validation: Bencium 5-tier breakpoints + 44x44 hit area + 39k chars canonical reference loaded
+
+**Rules Applied:**
+- breakpoints: XS 0-479px, SM 480-767px, MD 768-1023px, LG 1024-1439px, XL 1440px+
+- hit-targets: minimum 44x44px (WCAG 2.5.5 enhanced), no overlap between targets, extend via pseudo-element when visual is smaller
+- anti-patterns: desktop-first CSS, display:none on mobile without alternative, 100vh on iOS without svh/dvh fallback, hover-only interactions, modal larger than smallest viewport
+- ios-fixes: svh/dvh/lvh instead of vh, env(safe-area-inset-*), real Safari testing not DevTools
+
+**Decisions:**
+- Hit area floor
+- Breakpoint strategy
+
+**Metrics:**
+- breakpoints-tested: 5 (pass)
+- hit-target-minimum-px: 44 (pass)
+
 
 ### Brand/PRODUCT.md Verification (flowA_brand_verify)
 Status: success
@@ -69,15 +207,6 @@ Component research: 0 patterns analyzed with 8 interaction rules + 8 writing rul
 - component-patterns-analyzed: 0 (pass)
 - interaction-states-covered: 8 (pass)
 - wcag-validation-pass: 0 (pass)
-
-
-### Design System Tokens (DESIGN.md) (flowF_design_tokens)
-Status: skipped
-
-Validation failed: 1 blocking issue
-
-**Guidance:**
-- [blocking] DESIGN.md not found - required for implementation flows - Run `/sidecoach document` to extract current design system
 
 
 ### Font Research (fontshare.com) (flowC_font_research)
@@ -132,114 +261,10 @@ Motion patterns: 2 easing curves researched with motion domain rules + 6 reduced
 - reduced-motion-strategies: 6 (pass)
 
 
-### Component Implementation (flowG_component_implementation)
-Status: success
-
-Component implementation: button with 8 interaction states + semantic copy validated
-
-**Rules Applied:**
-- interaction: 8 interactive states required: Default, Hover, Focus, Active, Disabled, Loading, Error, Success, Focus rings via :focus-visible (keyboard only), 2-3px, high contrast 3:1+, offset 2px, Placeholders ≠ labels; always use visible <label>, Validate on blur not keystroke (exception: password strength real-time), Skeleton screens > spinners for perceived performance, <dialog> native or `inert` attribute for focus trapping in modals, Popover API for tooltips/dropdowns/light-dismiss overlays, Undo > Confirm for destructive actions
-- writing: Button labels: specific verb + object ("Save changes" not "OK"), Destructive actions name the destruction ("Delete 5 items" not "Proceed"), Error messages: what happened, why, how to fix (don't blame user), Empty states are onboarding: acknowledge, explain value, provide action, Voice constant, tone adapts to moment (success: celebratory, error: empathetic), Never humor for errors (users frustrated, be helpful not cute), Icon buttons need aria-label for screen readers, Avoid redundant copy and filler words; every word earns its place
-
-**Decisions:**
-- Component semantic HTML structure
-
-**Metrics:**
-- component-states-implemented: 8 (pass)
-- forms-domain-validation: 16 (pass)
-- aria-labels-count: 7 (pass)
-- keyboard-nav-count: 7 (pass)
-- semantic-copy-count: 3 (pass)
-
-
-### Accessibility Compliance (WCAG 2.1 AA) (flowI_accessibility)
-Status: success
-
-WCAG 2.1 AA accessibility validation: 7 domains + screen reader testing plan
-
-**Rules Applied:**
-- color: 1.4.3 Contrast (Minimum), 1.4.11 Non-text Contrast, 2.4.7 Focus Visible
-- typography: 1.4.8 Visual Presentation, 1.4.4 Resize text, 3.3.1 Error Identification
-- spatial: 2.5.5 Target Size (Enhanced), 2.4.3 Focus Order, 1.3.5 Identify Input Purpose
-- motion: 2.3.3 Animation from Interactions, 2.3.2 Animation from Interactions, 2.4.7 Focus Visible
-- interaction: 2.4.3 Focus Order, 2.4.7 Focus Visible, 3.3.1 Error Identification, 3.3.4 Error Prevention
-- responsive: 1.3.4 Orientation, 1.4.10 Reflow, 2.5.7 Dragging Movements
-- writing: 2.4.2 Page Titled, 2.4.6 Headings and Labels, 3.2.4 Consistent Identification, 3.3.2 Labels or Instructions
-
-**Decisions:**
-- WCAG Compliance Level
-
-**Metrics:**
-- wcag-domains-audited: 7 (pass)
-- domains-pass: 0 (pass)
-- domains-needs-testing: 7 (warning)
-- screen-reader-tools: 3 (pass)
-
-
-### Responsive Design Validation (flowM_responsive_validation)
-Status: success
-
-Responsive Validation: Bencium 5-tier breakpoints + 44x44 hit area + 39k chars canonical reference loaded
-
-**Rules Applied:**
-- breakpoints: XS 0-479px, SM 480-767px, MD 768-1023px, LG 1024-1439px, XL 1440px+
-- hit-targets: minimum 44x44px (WCAG 2.5.5 enhanced), no overlap between targets, extend via pseudo-element when visual is smaller
-- anti-patterns: desktop-first CSS, display:none on mobile without alternative, 100vh on iOS without svh/dvh fallback, hover-only interactions, modal larger than smallest viewport
-- ios-fixes: svh/dvh/lvh instead of vh, env(safe-area-inset-*), real Safari testing not DevTools
-
-**Decisions:**
-- Hit area floor
-- Breakpoint strategy
-
-**Metrics:**
-- breakpoints-tested: 5 (pass)
-- hit-target-minimum-px: 44 (pass)
-
-
-### 16-Point Tactical Polish (flowJ_tactical_polish)
-Status: success
-
-Tactical Polish: 46-rule matrix 42/46 pass. Linguistic ban: 0 P0 + 2 P1. Absolute ban: 0 P0 + 0 P1 across 2 files.
-
-**Rules Applied:**
-- polish: Scale on press: scale(0.96) for tactile feedback, Concentric border radius: outer = inner + padding (e.g. button 8px + 4px padding = 12px container), Shadows use rgba(0,0,0,0.1) or surface tint, never rgb/hsl (preserves theme), Avoid transition: all; specify individual properties, Minimum 40x40px hit targets (mobile-friendly), Optical alignment: visual center differs from geometric center for circles/icons, text-wrap: balance on headings (prevents widows), font-smoothing: antialiased on light text, auto on dark, Icon state changes via opacity+scale+blur (no visibility toggling), Image borders: rgba(0,0,0,0.1) or subtle tint, never colored
-
-**Decisions:**
-- Validation strategy
-
-**Metrics:**
-- total-rules: 46 (pass)
-- passed-rules: 42 (pass)
-- violation-count: 4 (warning)
-- pass-rate-percent: 91.3 (pass)
-- linguistic-p0-templates: 0 (pass)
-- linguistic-p1-slop-words: 2 (pass)
-- absolute-ban-p0: 0 (pass)
-- absolute-ban-p1: 0 (pass)
-
-
-### Multi-Lens Audit (5 dimensions) (flowK_multi_lens_audit)
-Status: success
-
-Running 5-dimension technical audit (28-rule anti-pattern detection included)
-
-Validation warnings: [performance] has_optimization_guidance
-
-**Guidance:**
-- Dimension 1: Accessibility (WCAG compliance, semantic HTML, keyboard nav)
-- Dimension 2: Performance (bundle size, Lighthouse scores, Core Web Vitals)
-- Dimension 3: Theming (color system consistency, CSS variable usage, dark mode)
-- Dimension 4: Responsive (breakpoints, touch targets, viewport behavior)
-- Dimension 5: Anti-patterns (hardcoded values, dead code, deprecated APIs)
-- Address all Critical and High findings; document trade-offs for Medium
-
-
 ### Motion Integration (GSAP/Lenis) (flowH_motion_integration)
 Status: success
 
 Motion integration: 6 templates for restrained intensity, exponential easing validated
-
-Validation warnings: [semantic] has_semantic_guidance
 
 **Rules Applied:**
 - motion: Duration rule: 100-150ms feedback, 200-300ms state changes, 300-500ms layout, 500-800ms entrance, Exit animations: 75% of enter duration, Easing curves: ease-out for entrance, ease-in for exit, ease-in-out for toggle, Only exponential easing: ease-out-quart, quint, expo (no bounce/elastic), Never animate CSS layout properties (width, height, top, left, margin), Stagger with CSS custom properties: animation-delay: calc(var(--i) * 50ms), Reduced motion support required: @media prefers-reduced-motion with fade alternative, Will-change only when animation imminent (:hover, .animating state)
@@ -254,53 +279,37 @@ Validation warnings: [semantic] has_semantic_guidance
 - reduced-motion-support: 6 (pass)
 
 
+### Curate Design References (flowU_curate)
+Status: success
+
+Curate workflow initialized - design reference library
+
+**Rules Applied:**
+- curation: criteria definition, source identification, screenshot capture, metadata tagging, collection organization, playbook creation, team sharing
+
+**Decisions:**
+- Curation strategy
+
+**Metrics:**
+- reference-quality-score: 0 (pass)
+
+
+### Design System Tokens (DESIGN.md) (flowF_design_tokens)
+Status: skipped
+
+Validation failed: 1 blocking issue
+
+**Guidance:**
+- [blocking] DESIGN.md not found - required for implementation flows - Run `/sidecoach document` to extract current design system
+
+
 ### All-Seven QA Pipeline (flowV_all_seven_qa)
 Status: success
 
 All-Seven QA workflow - end-to-end manual QA checklist
 
-Validation warnings: [design_system] has_design_rationale; [semantic] has_semantic_guidance, has_implementation_details
-
 **Decisions:**
 - QA strategy
-
-
-### Design Critique (Nielsen heuristics) (flowL_design_critique)
-Status: success
-
-Independent design critique with 12-rule framework and project-specific personas
-
-**Guidance:**
-- Nielsen 10 Usability Heuristics: visibility, match with real world, user control, consistency, error prevention, recognition vs recall, flexibility, aesthetic, error recovery, help & documentation
-- AI-slop detection: generated copy, template language, lack of personality, generic imagery
-- Cognitive load: information density, task complexity, decision fatigue
-- Emotional journey: does the design support the brand personality and user emotion targets?
-- This is an independent review - use fresh eyes and question every design choice
-- ---
-- 12-Rule Critique Framework:
-- Visual Hierarchy (weight: 1): Can user identify primary, secondary, groupings at a glance?
-- Cognitive Load (weight: 1): Information chunked appropriately, decision density manageable?
-- Visual Weight Distribution (weight: 0.8): Does 60-30-10 rule apply correctly?
-- Color Strategy Commitment (weight: 0.8): Is palette commitment level intentional and consistent?
-- Typography Consistency (weight: 0.8): Does typography follow modular scale rules?
-- Interaction Affordances (weight: 1): Are interactive elements clearly discoverable?
-- Emotional Journey (weight: 0.9): Does design match brand tone and context?
-- Nielsen Heuristics (weight: 1): User control, feedback, standards, error prevention present?
-- Accessibility Inclusion (weight: 1): WCAG + usability for diverse users (not just compliance)?
-- Perceived Performance (weight: 0.7): Feels fast through feedback, optimistic UI, skeleton screens?
-- Copy Precision (weight: 0.8): Every word earns its place, no filler or redundancy?
-- Register Alignment (weight: 1): Design laws for register (brand/product) applied correctly?
-- ---
-- Project-Specific Personas Extracted from PRODUCT.md:
-- Review this design through the lens of these project personas:
-
-- **Alex** (Power User): Goals Work efficiently, Master all features, Customize everything. Frustrations: Limited options, Slow workflows, Over-simplification. Tech comfort: high. Accessibility: none specified.
-- **Jordan** (Designer): Goals Create beautiful work, Collaborate seamlessly, Stay on brand. Frustrations: Clunky interfaces, Misaligned pixels, Communication gaps. Tech comfort: medium. Accessibility: Color contrast verification.
-- **Sam** (Manager): Goals Get results fast, Monitor team progress, Reduce friction. Frustrations: Overhead, Hidden information, Missed deadlines. Tech comfort: low. Accessibility: Clear status indicators, Readable text.
-- **Riley** (Developer): Goals Write clean code, Ship quickly, Fix bugs fast. Frustrations: Poor documentation, API inconsistency, Performance issues. Tech comfort: high. Accessibility: none specified.
-- **Casey** (New User): Goals Understand basics, Get help when stuck, Build confidence. Frustrations: Steep learning curve, Jargon, Unhelpful errors. Tech comfort: low. Accessibility: Clear labels, Context help, Readable fonts.
-
-For each persona, assess whether the design serves their goals and accommodates their frustrations and accessibility needs.
 
 
 ### Rapid Iteration (Token-based) (flowN_rapid_iteration_refined)
@@ -319,13 +328,23 @@ Rapid iteration with token-based variations
 
 ## Session Summary
 
-- Total flows: 15
-- Successful: 14
+- Total flows: 16
+- Successful: 15
 - Errors: 0
 - Skipped: 1
 
 ## All Design Decisions
 
+- Component semantic HTML structure
+  - Why: <button role="button" aria-label="..."> with BEM naming convention
+- Validation strategy
+  - Why: 46-rule framework: 24-point Polish + 22-rule registry-backed Domain Validator
+- WCAG Compliance Level
+  - Why: WCAG 2.1 Level AA - comprehensive accessibility validation across all 7 design domains
+- Hit area floor
+  - Why: 44x44px (WCAG 2.5.5 enhanced), overriding the older 40x40 floor
+- Breakpoint strategy
+  - Why: Bencium 5-tier (XS/SM/MD/LG/XL) with content-driven adjustments, mobile-first CSS
 - Selected  register
   - Why: Design SERVES the product
 - Selected design approach: undefined
@@ -336,23 +355,33 @@ Rapid iteration with token-based variations
   - Why: Filtered oversaturated/AI-slop references (genericityScore < 0.6)
 - Motion intensity: playful
   - Why: Playful/ambitious motion for brand register with Professional, technical, restrained, plainspoken. personality
-- Component semantic HTML structure
-  - Why: <button role="button" aria-label="..."> with BEM naming convention
-- WCAG Compliance Level
-  - Why: WCAG 2.1 Level AA - comprehensive accessibility validation across all 7 design domains
-- Hit area floor
-  - Why: 44x44px (WCAG 2.5.5 enhanced), overriding the older 40x40 floor
-- Breakpoint strategy
-  - Why: Bencium 5-tier (XS/SM/MD/LG/XL) with content-driven adjustments, mobile-first CSS
-- Validation strategy
-  - Why: 46-rule framework: 24-point Polish + 22-rule registry-backed Domain Validator
 - Motion intensity: restrained
   - Why: 6 animation templates (entrance/feedback/state-change/scroll/exit) with restrained intensity timing and exponential easing
+- Curation strategy
+  - Why: Domain-based reference library with pattern/anti-pattern categorization
 - QA strategy
   - Why: Manual testing across browsers/devices/accessibility with stakeholder sign-off
 
 ## All Measurements
 
+- component-states-implemented: 8 (target: 8) = pass
+- forms-domain-validation: 16 (target: 16) = pass
+- aria-labels-count: 7 (target: 8) = pass
+- keyboard-nav-count: 7 (target: 7) = pass
+- semantic-copy-count: 3 (target: 3) = pass
+- total-rules: 46 = pass
+- passed-rules: 42 (target: 46) = pass
+- violation-count: 4 = warning
+- pass-rate-percent: 91.3 = pass
+- linguistic-p0-templates: 0 = pass
+- linguistic-p1-slop-words: 2 = pass
+- absolute-ban-p0: 0 = pass
+- absolute-ban-p1: 0 = pass
+- wcag-domains-audited: 7 (target: 7) = pass
+- domains-pass: 0 (target: 7) = pass
+- screen-reader-tools: 3 (target: 3) = pass
+- breakpoints-tested: 5 = pass
+- hit-target-minimum-px: 44 = pass
 - design-domains-cached: 8 (target: 7) = pass
 - component-patterns-analyzed: 0 = pass
 - interaction-states-covered: 8 = pass
@@ -366,36 +395,18 @@ Rapid iteration with token-based variations
 - motion-patterns-validated: 4 = pass
 - exponential-easing-pass: 2 (target: 4) = pass
 - reduced-motion-strategies: 6 (target: 6) = pass
-- component-states-implemented: 8 (target: 8) = pass
-- forms-domain-validation: 16 (target: 16) = pass
-- aria-labels-count: 7 (target: 8) = pass
-- keyboard-nav-count: 7 (target: 7) = pass
-- semantic-copy-count: 3 (target: 3) = pass
-- wcag-domains-audited: 7 (target: 7) = pass
-- domains-pass: 0 (target: 7) = pass
-- domains-needs-testing: 7 (target: 7) = warning
-- screen-reader-tools: 3 (target: 3) = pass
-- breakpoints-tested: 5 = pass
-- hit-target-minimum-px: 44 = pass
-- total-rules: 46 = pass
-- passed-rules: 42 (target: 46) = pass
-- violation-count: 4 = warning
-- pass-rate-percent: 91.3 = pass
-- linguistic-p0-templates: 0 = pass
-- linguistic-p1-slop-words: 2 = pass
-- absolute-ban-p0: 0 = pass
-- absolute-ban-p1: 0 = pass
 - animation-templates-created: 6 (target: 5) = pass
 - duration-compliant: 6 (target: 6) = pass
 - easing-exponential-only: 6 (target: 6) = pass
 - reduced-motion-support: 6 (target: 6) = pass
+- reference-quality-score: 0 = pass
 
 ## Validation Issues
 
 **Warnings (4):**
-- Pre-flight checks
-- Exponential-only easing - 2/4 pass
 - ARIA labels implemented - 7/8
 - Responsive validation - Mandatory verification requires render at 375/768/1024 and measure - cannot pass on documentation alone
+- Pre-flight checks
+- Exponential-only easing - 2/4 pass
 
-Recorded: 2026-07-28T05:44:13.969Z
+Recorded: 2026-07-28T12:13:08.485Z

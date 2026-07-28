@@ -84,6 +84,27 @@ export interface FlowMemoryEntry {
 }
 
 /**
+ * Status for a metric that COUNTS PROBLEMS: it reports a problem only when there are some.
+ *
+ * Named and shared because hard-coding the status is how a metric becomes a permanent
+ * finding. Measured 2026-07-28: `violation-count` was declared 'warning' unconditionally, so
+ * a run with zero violations still emitted "violation-count = 0" as a warning - a defect
+ * report that fires precisely when nothing is wrong. Its sibling metrics in the same builder
+ * chain already derived their status this way; this makes that rule explicit and testable
+ * instead of re-typed per call site.
+ *
+ * NOT for a metric whose warning threshold is not zero (linguistic-p1-slop-words tolerates 2)
+ * and NOT for a static plan constant (domains-needs-testing is hard-coded at 7 by its own
+ * handler and measures nothing about the target, so it is not a problem count at all).
+ */
+export function countMetricStatus(
+  count: number,
+  severityWhenNonZero: 'warning' | 'fail' = 'warning'
+): 'pass' | 'warning' | 'fail' {
+  return count === 0 ? 'pass' : severityWhenNonZero;
+}
+
+/**
  * Helper to build memory entries from flow execution
  */
 export class FlowMemoryBuilder {
@@ -122,6 +143,10 @@ export class FlowMemoryBuilder {
     status: 'pass' | 'warning' | 'fail',
     target?: number | string
   ): this {
+    // NOTE: `status` is what the build report turns into a FINDING (statusToSeverity maps
+    // warning -> warning, fail -> blocking, pass -> no finding). A caller that hard-codes it
+    // emits that finding on every run regardless of the value. Use countMetricStatus below
+    // for a count-of-problems metric rather than asserting a literal.
     this.entry.metrics.push({ name, value, target, status });
     return this;
   }

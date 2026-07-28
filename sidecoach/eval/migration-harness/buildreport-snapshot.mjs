@@ -27,8 +27,16 @@ const FLOW_RESULTS = [
   {
     flowId: 'flowZ_design_component', flowName: 'Design a New Component', status: 'success',
     validationResults: [
-      { domain: 'accessibility', status: 'pass', passedRules: ['contrast', 'focus-visible', 'aria-names'], failedRules: [], message: 'a11y clean' },
-      { domain: 'taste', status: 'partial', passedRules: ['r1', 'r2'], failedRules: ['r3'], message: 'one taste issue' },
+      // `measures` is DECLARED on every fixture entry as of 2026-07-28. The aggregator became an
+      // ALLOWLIST on an explicit 'artifact' (Codex item 7: the discriminator was previously unsafe
+      // in both directions - a factory-built validator that omitted the flag was silently
+      // suppressed while a hand-built one that omitted it reported). These fixtures predate the
+      // field, so leaving them unset would have quietly reduced this golden to "everything is
+      // suppressed" and stopped it exercising the validationResults path at all. Labelled to
+      // mirror the REAL validators: taste scans the user's content, accessibility/performance are
+      // the factory self-checks.
+      { domain: 'accessibility', status: 'pass', passedRules: ['contrast', 'focus-visible', 'aria-names'], failedRules: [], message: 'a11y clean', measures: 'flow-output' },
+      { domain: 'taste', status: 'partial', passedRules: ['r1', 'r2'], failedRules: ['r3'], message: 'one taste issue', measures: 'artifact' },
     ],
     memory: {
       flowId: 'flowZ_design_component', flowName: 'Design a New Component', timestamp: 'fixed', status: 'success',
@@ -44,7 +52,7 @@ const FLOW_RESULTS = [
   {
     flowId: 'flowK_multi_lens_audit', flowName: 'Multi-Lens Audit', status: 'success',
     validationResults: [
-      { domain: 'performance', status: 'fail', passedRules: ['p1'], failedRules: ['p2', 'p3'], message: 'perf issues' },
+      { domain: 'performance', status: 'fail', passedRules: ['p1'], failedRules: ['p2', 'p3'], message: 'perf issues', measures: 'flow-output' },
     ],
     memory: {
       flowId: 'flowK_multi_lens_audit', flowName: 'Multi-Lens Audit', timestamp: 'fixed', status: 'success',

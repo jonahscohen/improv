@@ -165,14 +165,39 @@ class FlowPrerequisiteValidator {
         if (!deps || deps.prerequisites.length === 0) {
             return { canExecute: true };
         }
+        // A flow counts as a completed prerequisite only if it SUCCEEDED and did not explicitly
+        // record that its rendering claim failed.
+        //
+        // Codex review 2026-07-28 (High): this used to trust `status === 'success'` alone, so
+        // `/sidecoach audit PRODUCT.md` - an audit that opened no page at all - recorded flowK as
+        // a success and then satisfied flowL_design_critique and flowN_rapid_iteration_refined,
+        // both of which take flowK as an optional prerequisite under minSuccessfulPrerequisites.
+        // A downstream flow was building on an "audit" that had measured nothing.
+        //
+        // ONLY an explicit `rendered === false` disqualifies. `undefined` keeps its existing
+        // meaning (no rendering claim was made), so no legacy history entry and no non-audit flow
+        // changes behaviour - fail-closed on unknown would have invalidated every prerequisite
+        // written before the field existed.
+        const scannedNothing = (entry) => entry.rendered === false;
         const completedFlows = new Set(flowHistory
-            .filter((entry) => entry.status === 'success')
+            .filter((entry) => entry.status === 'success' && !scannedNothing(entry))
+            .map((entry) => entry.flowId));
+        // Kept separately so the refusal can SAY that the prerequisite ran but measured nothing,
+        // rather than the misleading "has not been executed".
+        const ranButScannedNothing = new Set(flowHistory
+            .filter((entry) => entry.status === 'success' && scannedNothing(entry))
             .map((entry) => entry.flowId));
         const requiredPrereqs = deps.prerequisites.filter((p) => p.required);
         const optionalPrereqs = deps.prerequisites.filter((p) => !p.required);
         // Check all required prerequisites
         for (const req of requiredPrereqs) {
             if (!completedFlows.has(req.flowId)) {
+                if (ranButScannedNothing.has(req.flowId)) {
+                    return {
+                        canExecute: false,
+                        reason: `Required flow ${req.flowId} ran but RENDERED NOTHING - it scanned no page, so it cannot satisfy this prerequisite. Re-run it against a page that renders.`,
+                    };
+                }
                 return {
                     canExecute: false,
                     reason: req.reasonIfFailed || `Required flow ${req.flowId} has not been executed`,
@@ -183,9 +208,15 @@ class FlowPrerequisiteValidator {
         if (deps.minSuccessfulPrerequisites) {
             const successfulOptional = optionalPrereqs.filter((p) => completedFlows.has(p.flowId)).length;
             if (successfulOptional < deps.minSuccessfulPrerequisites) {
+                const unrenderedOptional = optionalPrereqs
+                    .filter((p) => ranButScannedNothing.has(p.flowId))
+                    .map((p) => p.flowId);
+                const because = unrenderedOptional.length > 0
+                    ? ` (${unrenderedOptional.join(', ')} ran but RENDERED NOTHING, so it does not count)`
+                    : '';
                 return {
                     canExecute: false,
-                    reason: `Need at least ${deps.minSuccessfulPrerequisites} of ${optionalPrereqs.length} optional prerequisites`,
+                    reason: `Need at least ${deps.minSuccessfulPrerequisites} of ${optionalPrereqs.length} optional prerequisites${because}`,
                 };
             }
         }

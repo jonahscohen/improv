@@ -54,6 +54,16 @@ export function renderSidecoachPanel(model: SidecoachPanelModel, opts: PanelRend
   push(`${orange(G.mark)} ${fg('sidecoach')} ${dim(`${G.dot} ${subtitle}`)}`);
   push();
 
+  // NOTICE, first thing after the header. Codex review 2026-07-28 (d): withholding the verdict
+  // stopped the panel from ASSERTING a false clean, but the checklist still showed every phase
+  // [done] - including "multi-lens audit" - so a clean result stayed INFERABLE by a reader who
+  // does not know that a missing verdict means "nothing was measured". Stating it removes the
+  // inference rather than relying on the reader to notice an absence.
+  if (model.notice) {
+    push(orange(model.notice));
+    push();
+  }
+
   // route + flow chain
   const conf = typeof model.confidence === 'number' ? dim(` ${G.dot} conf ${model.confidence.toFixed(2)}`) : '';
   push(`${dim('route')}   ${fg(model.flowName)} ${dim(`${G.dot} ${model.flowId}`)}${conf}`);

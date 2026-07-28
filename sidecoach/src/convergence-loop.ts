@@ -179,6 +179,12 @@ export function extractFindingsFromFlowResult(
   const validationResults = result.validationResults || [];
   for (const vr of validationResults) {
     if (!vr || vr.status === 'pass') continue;
+    // Same rule as the build-report aggregator: a 'flow-output' validator inspected the FLOW'S
+    // OWN guidance text, not the user's artifact, so it is not a finding to converge on. Without
+    // this a loop could iterate forever against `performance:has_optimization_guidance`, which no
+    // edit to the user's page can ever satisfy. This converter currently has no callers; the
+    // guard is here so wiring it up cannot silently reintroduce the 2026-07-28 self-grading defect.
+    if ((vr as { measures?: string }).measures === 'flow-output') continue;
     const failed: string[] = Array.isArray(vr.failedRules) ? vr.failedRules : [];
     for (const ruleId of failed) {
       findings.push({

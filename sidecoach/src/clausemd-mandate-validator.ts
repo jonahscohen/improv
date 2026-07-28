@@ -218,6 +218,24 @@ export class ClaudemdMandateValidator {
       passedRules: [],
       failedRules: allViolations.map(v => `${v.severity}:${v.location}`),
       message: allViolations.map(v => v.suggestion || v.rule).join('; ') || 'No violations',
+      // 'artifact' DESPITE reading result.guidance/message/artifacts/checklist, and the
+      // distinction is deliberate. Codex review 2026-07-28 challenged this label on the grounds
+      // that those fields are flow OUTPUT, so labelling it 'artifact' undercuts the new
+      // discriminator. The answer is what the rules ASK, not which field they read:
+      //
+      //   - `performance:has_optimization_guidance` asks "does my own guidance MENTION the word
+      //     optimize?" - a tautological self-consistency check whose answer is a constant. It
+      //     told the user to "resolve the has optimization guidance issue on the affected
+      //     element" when there was no element. That is the defect the discriminator exists for.
+      //   - the CLAUDE.md mandates ask "does the DELIVERABLE contain a self-credit line, a
+      //     fabricated icon, a banned pattern?" In sidecoach's model the flow's guidance and
+      //     artifacts ARE the deliverable being handed to the user, so a hit is a real defect in
+      //     real content - it varies with the content and it is actionable.
+      //
+      // Suppressing this would silently drop genuine self-credit and fabricated-icon findings,
+      // which is a far worse failure than the one being fixed. Labelled explicitly rather than
+      // riding a default, so the decision is visible at the source.
+      measures: 'artifact',
     };
   }
 

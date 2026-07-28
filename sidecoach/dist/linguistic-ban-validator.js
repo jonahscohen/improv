@@ -178,6 +178,9 @@ function linguisticBanToValidationResult(report) {
         passedRules,
         failedRules,
         message: report.summary,
+        // Rhetorical templates and slop words are found in the user's real copy, so these are
+        // artifact findings and must survive the self-check suppression (Codex 2026-07-28, item 7).
+        measures: 'artifact',
     };
 }
 /**

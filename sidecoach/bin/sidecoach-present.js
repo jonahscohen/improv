@@ -71,6 +71,44 @@ function cleanReason(r) {
   return r.split('\n')[0];
 }
 
+// --- SELF-CHECK SUPPRESSION, SHARED BY EVERY HUMAN SURFACE -------------------------------
+// A ValidationResult declares what it measured. `artifact` means it inspected the USER'S work
+// and its findings are real. Anything else - including an undeclared validator - inspected the
+// FLOW'S OWN output ("does my guidance mention optimize?") and must never reach a human as a
+// gate, a grade, or a failed rule.
+//
+// SAFE BY DEFAULT IN ONE DIRECTION (Codex review 2026-07-28). The predicate is an allowlist on
+// an explicit 'artifact', not a denylist on 'flow-output', because the discriminator used to be
+// unsafe in BOTH directions: the createDomainValidator factory defaulted to 'flow-output' (so a
+// factory-built validator that forgot the flag was silently suppressed) while hand-built results
+// left it undefined (so those still reported). What an undeclared validator got depended on how
+// it happened to be constructed. Now a validator reaches the user only by saying so.
+function measuresArtifact(v) {
+  return !!v && v.measures === 'artifact';
+}
+
+/**
+ * Strip flow-output self-checks out of a result before it is serialized to a human.
+ * Used by bin/sidecoach-monitor.js --json, which previously emitted the raw result including
+ * `failedRules: ['has_optimization_guidance']` - the same leak the panel had, on the machine-
+ * readable surface. Returns a shallow copy; the input is never mutated.
+ */
+function stripFlowOutputSelfChecks(result) {
+  if (!result || typeof result !== 'object') return result;
+  const clean = (list) => (Array.isArray(list) ? list.filter(measuresArtifact) : list);
+  const scrubFlow = (f) => {
+    if (!f || typeof f !== 'object') return f;
+    const out = { ...f };
+    if (Array.isArray(f.validationResults)) out.validationResults = clean(f.validationResults);
+    if (Array.isArray(f.domainValidationResults)) out.domainValidationResults = clean(f.domainValidationResults);
+    return out;
+  };
+  const out = { ...result };
+  if (Array.isArray(result.flowResults)) out.flowResults = result.flowResults.map(scrubFlow);
+  if (Array.isArray(result.validationResults)) out.validationResults = clean(result.validationResults);
+  return out;
+}
+
 // A FINAL audit REPORT (not a process view): verdict headline, findings grouped by category
 // + rule with counts and plain-English descriptions, then concrete priority fixes with the
 // full selector and the metric (never truncated mid-fact). Reads as a conclusion.
@@ -217,9 +255,15 @@ function render(result, utterance) {
         c.dim(done + '/' + checklist.length) + ' ' + c.faint('handed to claude'));
     }
 
-    // gates - what Sidecoach pulled in to validate
+    // gates - what Sidecoach pulled in to validate.
+    // FILTERED to validators that measured the USER'S ARTIFACT. Codex review 2026-07-28 (High):
+    // the `measures` suppression added for BuildReport closed only that one consumer, and this
+    // row pushed EVERY validationResult in with no filter - so `performance` (whose rule asks
+    // "does my own guidance contain the word optimize?") kept printing a per-domain pass/fail
+    // mark to the human on every single run, for every target, including a 0-byte file. A flow
+    // grading its own guidance text is not a gate on the user's design.
     const gates = [];
-    flows.forEach((f) => (f.validationResults || []).forEach((v) => gates.push(v)));
+    flows.forEach((f) => (f.validationResults || []).forEach((v) => { if (measuresArtifact(v)) gates.push(v); }));
     const grades = {};
     (report.domainGrades || []).forEach((g) => { grades[g.domain] = g; });
     if (gates.length) {
@@ -427,6 +471,38 @@ function buildExecutive(result) {
   const grade = report.overallGrade || '';
   const L = [];
 
+  // NOTHING WAS MEASURED is not the same as NOTHING WAS WRONG.
+  //
+  // Codex review 2026-07-28 (High): `const verdict = report.verdict || 'clean'` above synthesizes
+  // a CLEAN verdict out of a MISSING report, and the no-findings block below then prints
+  // "Checks passed. 0 findings." So every code path that deliberately withholds a BuildReport -
+  // an audit whose target never rendered, a verb handed a page it does not scan, and any verb
+  // handled before the target guard - still reached the human as a pass. That is the same
+  // false-clean defect as the panel's `grade A`, one surface over.
+  //
+  // A result that produced no report at all cannot certify anything, so it says so instead.
+  //
+  // WHY THERE IS NO "did we measure a page?" TEST HERE.
+  //
+  // The original defect was real: `/sidecoach document index.html` produced no BuildReport and no
+  // audit block, and this function's `report.verdict || 'clean'` then printed
+  // "Checks passed. 0 findings." for a page nothing had opened (Codex 2026-07-28, High).
+  //
+  // My first two fixes both tried to INFER the answer here from what was missing, and both
+  // over-captured, each in the same way:
+  //   1. `!result.buildReport` swept up `/sidecoach list` and `/sidecoach help`, which execute
+  //      nothing and claim nothing about a page.
+  //   2. `executedFlows > 0 && !result.buildReport` then swept up `/sidecoach document` and
+  //      `/sidecoach teach`, which DO run a handler and legitimately produce no report.
+  //
+  // Absence is not a signal. The fix belongs upstream, and now lives there: EVERY path handed a
+  // page-shaped target attaches an `audit` block with `rendered: false` - including the two setup
+  // commands that return before the target guard, which is what actually closed the original
+  // hole. renderExecutiveReport routes anything carrying `result.audit` to auditExecutive, which
+  // has always reported inconclusive correctly. So a result that reaches THIS function made no
+  // claim about a page, and the clean-pass wording below is the right answer for it.
+  // Asserted end-to-end (not against a synthetic fixture) in flow-target-render.test.ts.
+
   // No findings: name what ran, then a clean pass. (Covers clean builds and routing-only flows.)
   if (!findings.length) {
     const flows = Array.isArray(result.flowResults) ? result.flowResults : [];
@@ -499,4 +575,4 @@ function renderExecutiveReport(result, utterance) {
   return buildExecutive(result);
 }
 
-module.exports = { render, renderExecutiveReport };
+module.exports = { render, renderExecutiveReport, measuresArtifact, stripFlowOutputSelfChecks };

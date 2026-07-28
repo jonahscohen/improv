@@ -158,7 +158,6 @@ class FlowIAccessibilityHandler extends flow_handler_1.BaseFlowHandler {
                 screenReaderTests,
             };
             const passCount = domainAuditResults.filter((d) => d.complianceStatus === 'pass').length;
-            const needsTestingCount = domainAuditResults.filter((d) => d.complianceStatus === 'needs_testing').length;
             const screenReaderToolCount = screenReaderTests.length;
             const memoryBuilder = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())
                 .setSummary(`WCAG 2.1 AA accessibility validation across 7 domains + ${screenReaderToolCount} screen reader testing plans`)
@@ -172,7 +171,16 @@ class FlowIAccessibilityHandler extends flow_handler_1.BaseFlowHandler {
                 .addDecision('WCAG Compliance Level', 'WCAG 2.1 Level AA - comprehensive accessibility validation across all 7 design domains')
                 .addMetric('wcag-domains-audited', domainAuditResults.length, 'pass', 7)
                 .addMetric('domains-pass', passCount, 'pass', domainAuditResults.length)
-                .addMetric('domains-needs-testing', needsTestingCount, 'warning', domainAuditResults.length)
+                // `domains-needs-testing` REMOVED as a metric. Every one of the 7 domains above is
+                // constructed with a hard-coded complianceStatus of 'needs_testing', so the count is
+                // the constant 7 on every run and for every target - it describes this handler's own
+                // manual-testing PLAN and never measures the user's page. As 'warning' it was a
+                // permanent finding reading "domains-needs-testing = 7 (target 7)", a defect report
+                // that fires when a value reaches its target (measured 2026-07-28). Restating it as
+                // 'pass' only moved the lie - calling "7 domains still need testing" a pass is no more
+                // true (Codex review 2026-07-28, Low). A metric is a MEASUREMENT; this is a plan, so it
+                // belongs where the plan already lives: the checklist, the guidance, and
+                // customData['domains-needing-testing'], all of which still carry it.
                 .addMetric('screen-reader-tools', screenReaderToolCount, 'pass', 3)
                 .addValidation('All 7 domains covered', domainAuditResults.length === 7 ? 'pass' : 'warning', `${domainAuditResults.length}/7 domains`)
                 .addValidation('Screen reader testing plan', screenReaderToolCount >= 2 ? 'pass' : 'warning', `${screenReaderToolCount} tools (min 2)`)

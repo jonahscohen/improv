@@ -319,6 +319,7 @@ export function absoluteBanToValidationResult(report: AbsoluteBanReport): {
   passedRules: string[];
   failedRules: string[];
   message: string;
+  measures: 'artifact';
 } {
   const p0 = report.findings.filter((f) => f.severity === 'P0');
   const p1 = report.findings.filter((f) => f.severity === 'P1');
@@ -338,6 +339,9 @@ export function absoluteBanToValidationResult(report: AbsoluteBanReport): {
     passedRules,
     failedRules,
     message: report.summary,
+    // Bans are detected in the user's real output, so these are artifact findings and must
+    // survive the self-check suppression (Codex review 2026-07-28, item 7).
+    measures: 'artifact',
   };
 }
 
