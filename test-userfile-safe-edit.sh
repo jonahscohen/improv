@@ -327,7 +327,17 @@ if [ "$begins" = "1" ]; then
 else
   bad "install: two runs on a well-formed block still converge on one" "$begins markers"
 fi
-if grep -Fq 'Beats Discipline' "$e2eok/.claude/CLAUDE.md" 2>/dev/null \
+# The refreshed block must carry content from BOTH payload sources, because the brain
+# block is `cat RULES.md; cat CLAUDE.md`. Asserting on one string from each is what makes
+# this a refresh check rather than a "something got written" check.
+#
+# This row previously asserted on 'Beats Discipline', which passed only because
+# claude/CLAUDE.md had been overwritten with the ASSEMBLED install output - that string
+# belongs to the memory-discipline component and was never in a brain payload source. The
+# assertion was validating the contamination it should have caught. Anchor a refresh check
+# on strings the payload sources genuinely own, or it certifies the bug.
+if grep -Fq 'Team Rules' "$e2eok/.claude/CLAUDE.md" 2>/dev/null \
+   && grep -Fq 'Question-Asking Protocol' "$e2eok/.claude/CLAUDE.md" 2>/dev/null \
    && ! grep -Fqx 'OLD' "$e2eok/.claude/CLAUDE.md"; then
   ok "install: a well-formed block is actually refreshed"
 else

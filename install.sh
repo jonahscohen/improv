@@ -1554,10 +1554,14 @@ safe_sed_apply() {
 # content. It also fixes the source contamination's symptom without editing the source,
 # which matters because that path is the user's live ~/.claude/CLAUDE.md on this machine.
 strip_block_markers() {
-  grep -vxF \
-    -e '<!-- improv:brain:begin -->' -e '<!-- improv:brain:end -->' \
-    -e '<!-- improv:rules:begin -->' -e '<!-- improv:rules:end -->' \
-    -e '<!-- improv:local:begin -->' -e '<!-- improv:local:end -->' \
+  # CASE-INSENSITIVE on purpose. claude/RULES.md carried `<!-- Improv:rules:begin -->`
+  # with a capital I, so a fixed-string lowercase filter let that marker leak straight
+  # through into the assembled block - which is the nested-marker breakage this guard
+  # exists to prevent, reintroduced by a single letter. Marker case has varied across
+  # the claude-dotfiles -> Improv -> improv rename passes, so match the SHAPE, not one
+  # spelling of it. Also tolerates trailing whitespace, which an editor can add
+  # invisibly to a line whose entire content is an HTML comment.
+  grep -viE '^[[:space:]]*<!--[[:space:]]*improv:(brain|rules|local|memory-discipline):(begin|end)[[:space:]]*-->[[:space:]]*$' \
     || true
 }
 
