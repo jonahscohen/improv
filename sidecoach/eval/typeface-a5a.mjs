@@ -104,7 +104,10 @@ for (const pg of pages) {
   const s = await ourScore(browser, html);
   if (!s) { excluded.push(`${pg.id}: our scorer returned nothing (render fail)`); pg.skip = true; continue; }
   pg.score = s;
-  pg.ours = typefaceFindingFromScore(s, {}) !== null; // the shipping decision, no brand context
+  // Ground A is GATED OFF in product as of 2026-07-28 (its real-page precision is undefined). This harness
+  // MEASURES ground A, so it opts in explicitly - otherwise it would report every ground-A positive as silent
+  // and look like a detector regression rather than a product gate.
+  pg.ours = typefaceFindingFromScore(s, { enableDefaultStackGround: true }) !== null; // no brand context
   const orc = await runOracle(pg.file);
   if (!orc.available) { excluded.push(`${pg.id}: oracle unavailable: ${orc.reason}`); pg.skip = true; continue; }
   pg.oracleRules = [...new Set(orc.findings.map((f) => f.rule).filter(Boolean))];

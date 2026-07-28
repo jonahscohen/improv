@@ -1,8 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.NUM_MARKER_MIN_COUNT = exports.NUM_MARKER_MIN_PX = exports.MARQUEE_MIN_COUNT = exports.MARQUEE_MIN_X_PX = exports.MARQUEE_MIN_X_PCT = exports.IHT_MIN_COUNT = exports.GLOW_MIN_COUNT = exports.GLOW_MIN_AREA = exports.GLOW_BLUR_MIN_PX = exports.DOTGRID_MIN_COUNT = exports.DOTGRID_TILE_MAX_PX = exports.FVO_OVERFLOW_MAX_PX = exports.FVO_OVERFLOW_MIN_PX = exports.FVO_TOP_MAX_PX = exports.FVO_VH_FRAC = exports.TUO_MIN_COUNT = exports.STRIPE_MIN_COUNT = exports.STRIPE_MIN_DIM = exports.TBWS_MIN_COUNT = exports.TBWS_PANEL_MIN_H = exports.TBWS_PANEL_MIN_W = exports.TBWS_RATIO_MIN = exports.TBWS_SPREAD_MIN_PX = exports.TBWS_BORDER_MAX_PX = exports.SUB11_MIN_CHARS = exports.H1_VW_RATIO = exports.ALLCAPS_SHARE_MIN = exports.TRACKING_SHARE_MIN = exports.TYPO_MIN_CONTENT_CHARS = exports.SUB11_MAX_PX = exports.ALLCAPS_MIN_CASED = exports.ALLCAPS_MAX_BODY_PX = exports.ALLCAPS_MIN_RUN_CHARS = exports.TRACKING_EXTREME_EM = exports.DEFAULT_TYPEFACE_GROUND_BRAND_MISMATCH = exports.DEFAULT_TYPEFACE_GROUND_DEFAULT_STACK = exports.TYPEFACE_MIN_CONTENT_CHARS = exports.BRAND_PRESENCE_MIN = exports.DEFAULT_STACK_SHARE = exports.BUZZ_DENSITY_THRESHOLD = exports.SUBJECTIVE_RULES = void 0;
+exports.MARQUEE_MIN_COUNT = exports.MARQUEE_MIN_X_PX = exports.MARQUEE_MIN_X_PCT = exports.IHT_MIN_COUNT = exports.GLOW_MIN_COUNT = exports.GLOW_MIN_AREA = exports.GLOW_BLUR_MIN_PX = exports.DOTGRID_MIN_COUNT = exports.DOTGRID_TILE_MAX_PX = exports.FVO_OVERFLOW_MAX_PX = exports.FVO_OVERFLOW_MIN_PX = exports.FVO_TOP_MAX_PX = exports.FVO_VH_FRAC = exports.TUO_MIN_COUNT = exports.STRIPE_MIN_COUNT = exports.STRIPE_MIN_DIM = exports.TBWS_MIN_COUNT = exports.TBWS_PANEL_MIN_H = exports.TBWS_PANEL_MIN_W = exports.TBWS_RATIO_MIN = exports.TBWS_SPREAD_MIN_PX = exports.TBWS_BORDER_MAX_PX = exports.SUB11_MIN_CHARS = exports.H1_VW_RATIO = exports.ALLCAPS_SHARE_MIN = exports.TRACKING_SHARE_MIN = exports.TYPO_MIN_CONTENT_CHARS = exports.SUB11_MAX_PX = exports.ALLCAPS_MIN_CASED = exports.ALLCAPS_MAX_BODY_PX = exports.ALLCAPS_MIN_RUN_CHARS = exports.TRACKING_EXTREME_EM = exports.DEFAULT_STACK_GROUND_GATED = exports.DEFAULT_TYPEFACE_GROUND_BRAND_MISMATCH = exports.DEFAULT_TYPEFACE_GROUND_DEFAULT_STACK = exports.TYPEFACE_MIN_CONTENT_CHARS = exports.BRAND_PRESENCE_MIN = exports.DEFAULT_STACK_SHARE = exports.BUZZ_DENSITY_THRESHOLD = exports.BUZZ_MIN_DISTINCT_PEAK = exports.SUBJECTIVE_RULES = void 0;
 exports.stripScripts = stripScripts;
 exports.inPageSubjective = inPageSubjective;
+exports.inPageNestedCards = inPageNestedCards;
+exports.nestedCardsFindingFromScore = nestedCardsFindingFromScore;
 exports.inPageBuzzword = inPageBuzzword;
 exports.buzzwordFindingFromScore = buzzwordFindingFromScore;
 exports.inPageTypeface = inPageTypeface;
@@ -45,7 +47,7 @@ exports.SUBJECTIVE_RULES = [
     'thin-border-wide-shadow', 'repeating-stripe-gradients', 'text-under-overlay', 'first-viewport-overflow',
     'decorative-dot-grid', 'soft-radial-glow', 'image-hover-transform',
     // Stage 4d detectable motion/marker classes.
-    'marquee', 'numbered-section-markers',
+    'marquee',
 ];
 function stripScripts(html) {
     return String(html)
@@ -164,65 +166,167 @@ function inPageSubjective() {
     }
     const proportion = contentChars > 0 ? smallChars / contentChars : 0;
     if (contentChars >= MIN_CONTENT_CHARS && proportion >= PROPORTION_MIN) {
-        for (const el of offenders.slice(0, 20)) {
-            const fontPx = Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10;
-            findings.push({ rule: 'tiny-text', severity: 'warning', selector: sel(el), detail: `${fontPx}px (${Math.round(proportion * 100)}% of content text <=${SMALL_PX}px)` });
-        }
+        // ONE finding per page. tiny-text is a PAGE-LEVEL proportion judgment - the threshold is a share of the
+        // page's content text, not a property of any single element - so the previous emission repeated the same
+        // page verdict once per offending element (measured: 20 identical lines carrying the same parenthetical on
+        // a single real page). The page-level finding now carries the offender COUNT and one representative
+        // element, which is the evidence a reader actually needs.
+        const rep = offenders[0];
+        const repPx = Math.round(parseFloat(getComputedStyle(rep).fontSize) * 10) / 10;
+        findings.push({
+            rule: 'tiny-text', severity: 'warning', selector: sel(rep),
+            detail: `${Math.round(proportion * 100)}% of content text <=${SMALL_PX}px across ${offenders.length} element(s) (e.g. ${sel(rep)} at ${repPx}px)`,
+        });
     }
-    // ---- nested-cards: a card-like container holding a meaningfully-smaller card-like container ----
-    // Rubric: "cards inside other cards - layered bordered containers holding sub-containers." A card READS as a
-    // discrete panel: rounded corners + STRONG card treatment (a visible BORDER or a SHADOW) of real panel size,
-    // with children. TIGHTEN (milestone revival): the eval milestone exposed precision 0.27 - the bg-distinct
-    // signal (a tinted background different from the parent) over-fired on INCIDENTAL tinted layout regions that
-    // aren't visually "cards". Per lead, require strong card treatment (border|shadow) for BOTH outer + inner card;
-    // bg-distinct alone no longer qualifies. (Recall cost accepted; precision governs.) KNOWN LIMIT: nesting inside
-    // a product-mockup IMAGE (raster) is DOM-invisible to any DOM detector (hits oracle equally) - never OCR.
-    const CARD_MIN_W = 100, CARD_MIN_H = 60, CARD_RADIUS = 4, INNER_MAX_AREA_FRAC = 0.85;
-    function isCard(el) {
-        const cs = getComputedStyle(el);
-        if (cs.display === 'none' || cs.visibility === 'hidden')
-            return false;
-        const box = el.getBoundingClientRect();
-        if (box.width < CARD_MIN_W || box.height < CARD_MIN_H)
-            return false;
-        if (!el.firstElementChild)
-            return false; // a container, not a leaf
-        const br = Math.max(parseFloat(cs.borderTopLeftRadius) || 0, parseFloat(cs.borderTopRightRadius) || 0, parseFloat(cs.borderBottomLeftRadius) || 0, parseFloat(cs.borderBottomRightRadius) || 0);
-        if (br < CARD_RADIUS)
-            return false;
-        const hasBorder = parseFloat(cs.borderTopWidth) >= 1 && cs.borderTopStyle !== 'none';
-        const hasShadow = !!cs.boxShadow && cs.boxShadow !== 'none';
-        return hasBorder || hasShadow; // strong card treatment only (bg-distinct dropped - it was the over-fire)
-    }
-    const cards = [];
-    for (const el of Array.from(document.body ? document.body.querySelectorAll('*') : []))
-        if (isCard(el))
-            cards.push(el);
-    const cardSet = new Set(cards);
-    let nestedCount = 0;
-    const nestedOuter = [];
-    for (const outer of cards) {
-        const oBox = outer.getBoundingClientRect();
-        const oArea = oBox.width * oBox.height;
-        for (const d of Array.from(outer.querySelectorAll('*'))) {
-            if (!cardSet.has(d))
-                continue;
-            const dBox = d.getBoundingClientRect();
-            if (dBox.width * dBox.height < INNER_MAX_AREA_FRAC * oArea) {
-                nestedCount++;
-                nestedOuter.push(outer);
-                break;
-            }
-        }
-    }
-    if (nestedCount >= 1) {
-        for (const el of nestedOuter.slice(0, 20))
-            findings.push({ rule: 'nested-cards', severity: 'warning', selector: sel(el), detail: `card-in-card (${nestedCount} nested on page)` });
-    }
+    // nested-cards moved to its own single-source scorer (inPageNestedCards + nestedCardsFindingFromScore),
+    // matching the inPageBuzzword / inPageTypeface split, so the calibration harness sweeps the SHIPPING geometry
+    // instead of a reimplementation. It is no longer computed here.
     // marketing-buzzword is computed by the SEPARATE self-contained inPageBuzzword() below (the SINGLE source
     // for the taxonomy + weighted-density math, shared by the production scan AND the calibration harness so the
     // harness measures EXACTLY what ships). Its finding is merged in by the Node render wrappers via the threshold.
     return findings;
+}
+/**
+ * nested-cards: a card-like container holding a meaningfully-smaller card-like container.
+ *
+ * Rubric: "cards inside other cards - layered bordered containers holding sub-containers." A card READS as a
+ * discrete panel: rounded corners + STRONG card treatment (a visible BORDER or a SHADOW) of real panel size,
+ * with children. The bg-distinct signal was dropped earlier (it over-fired on incidental tinted layout regions).
+ *
+ * KNOWN LIMIT: nesting inside a product-mockup IMAGE (raster) is DOM-invisible to any DOM detector - never OCR.
+ *
+ * Returns the SCORE only; the firing thresholds are applied in Node by nestedCardsFindingFromScore, so the
+ * calibration harness sweeps EXACTLY what ships (the inPageBuzzword / buzzwordFindingFromScore contract).
+ */
+/* istanbul ignore next - executes in the browser context (serialized by page.evaluate; must be self-contained) */
+function inPageNestedCards() {
+    const CARD_MIN_W = 100, CARD_MIN_H = 60, CARD_RADIUS = 4, INNER_MAX_AREA_FRAC = 0.85;
+    function sel(el) {
+        const t = el.tagName.toLowerCase();
+        if (el.id)
+            return `${t}#${el.id}`;
+        const cls = (el.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).join('.');
+        return cls ? `${t}.${cls}` : t;
+    }
+    function treatment(el) {
+        const cs = getComputedStyle(el);
+        if (cs.display === 'none' || cs.visibility === 'hidden')
+            return null;
+        const box = el.getBoundingClientRect();
+        if (box.width < CARD_MIN_W || box.height < CARD_MIN_H)
+            return null;
+        if (!el.firstElementChild)
+            return null; // a container, not a leaf
+        const radius = Math.max(parseFloat(cs.borderTopLeftRadius) || 0, parseFloat(cs.borderTopRightRadius) || 0, parseFloat(cs.borderBottomLeftRadius) || 0, parseFloat(cs.borderBottomRightRadius) || 0);
+        if (radius < CARD_RADIUS)
+            return null;
+        const border = parseFloat(cs.borderTopWidth) >= 1 && cs.borderTopStyle !== 'none';
+        const shadow = !!cs.boxShadow && cs.boxShadow !== 'none';
+        if (!border && !shadow)
+            return null; // strong card treatment only
+        return { border, shadow, radius };
+    }
+    const cards = [];
+    for (const el of Array.from(document.body ? document.body.querySelectorAll('*') : [])) {
+        const t = treatment(el);
+        if (t)
+            cards.push({ el, t });
+    }
+    const byEl = new Map();
+    for (const c of cards)
+        byEl.set(c.el, c.t);
+    const viewportWidth = Math.max(1, document.documentElement ? document.documentElement.clientWidth : 1280);
+    const pairs = [];
+    for (const { el: outer, t: ot } of cards) {
+        const oBox = outer.getBoundingClientRect();
+        const oArea = oBox.width * oBox.height;
+        if (!(oArea > 0))
+            continue;
+        // The SMALLEST qualifying inner card is the most card-like evidence (a near-full-size wrapper child is the
+        // weak case), so pick it rather than the first in document order.
+        let best = null;
+        for (const d of Array.from(outer.querySelectorAll('*'))) {
+            if (!byEl.has(d))
+                continue;
+            const dBox = d.getBoundingClientRect();
+            const dArea = dBox.width * dBox.height;
+            if (!(dArea > 0) || dArea >= INNER_MAX_AREA_FRAC * oArea)
+                continue;
+            if (!best || dArea < best.area)
+                best = { el: d, area: dArea };
+        }
+        if (!best)
+            continue;
+        const it = byEl.get(best.el);
+        const iBox = best.el.getBoundingClientRect();
+        pairs.push({
+            outerSelector: sel(outer), innerSelector: sel(best.el),
+            outerW: Math.round(oBox.width), outerH: Math.round(oBox.height),
+            innerW: Math.round(iBox.width), innerH: Math.round(iBox.height),
+            areaFrac: best.area / oArea,
+            outerRadius: ot.radius, innerRadius: it.radius,
+            outerBorder: ot.border, outerShadow: ot.shadow,
+            innerBorder: it.border, innerShadow: it.shadow,
+            outerViewportWidthFrac: oBox.width / viewportWidth,
+        });
+        if (pairs.length >= 200)
+            break;
+    }
+    return { cardCount: cards.length, viewportWidth, pairs };
+}
+// nested-cards operating point: UNCHANGED, and that is a RESULT, not an omission.
+//
+// A retune was attempted on 2026-07-28 and REJECTED by its own held-out measurement. The record, because the
+// next person to look at this will otherwise repeat it:
+//
+//   Attempted guard: an outer box spanning most of the VIEWPORT WIDTH reads as a SECTION or page shell, not a
+//   card, so its nested children are ordinary layout. Best plateau at outerViewportWidthFrac <= 0.80.
+//
+//   | population              | fires | OLD P          | NEW P          |
+//   |-------------------------|-------|----------------|----------------|
+//   | dev (48, 27 pos)        | 10->8 | 0.900 (9/10)   | 0.875 (7/8)    |
+//   | candidates (90, 7 pos)  | 5->2  | 0.400 (2/5)    | 0.500 (1/2)    |
+//   | TUNE (138, 34 pos)      | 15->10| 0.733 (11/15)  | 0.800 (8/10)   |
+//   | HELD-OUT (37, 9 pos)    | 4->2  | 0.750 (3/4)    | 0.500 (1/2)    |
+//
+//   The tuning population said +0.067. The untouched held-out said -0.250: the guard removed TWO true positives
+//   and ZERO false positives there, which is the opposite of what it was for. Direction is inconsistent across
+//   all three corpora (dev down, candidates up, held-out down), which is what noise looks like.
+//
+// WHY NOT PICK A DIFFERENT POINT: the class fires 4 times on the whole held-out corpus. At that denominator a
+// one-page difference moves precision by 0.25, so NO operating point can be validated out of sample here -
+// including the one that ships. The corpus is too small to support a nested-cards retune, and saying that is
+// more useful than a number nobody can defend. To make this class tunable, the corpus needs materially more
+// labeled positives (the 9 in held-out and 7 in candidates are the binding constraint, not the sweep).
+//
+// The 0.85 inner-area cut inside inPageNestedCards is the ONLY geometric filter, exactly as before. Sweeping it
+// to 0.60 changed nothing on all 138 real pages, and requiring BORDER (not shadow) on both boxes lowered
+// precision at every point measured - both recorded here so neither is retried as if it were untested.
+//
+// WHAT DID CHANGE: the detector moved into this single-source score/threshold split (so it is sweepable without
+// a reimplementation), and it now emits ONE page-level finding instead of up to 20. Neither alters WHICH PAGES
+// FIRE - verified page-for-page against the pre-change predicate on all 176 corpus pages by
+// eval/nested-cards-equivalence.mjs.
+//
+// The EVIDENCE PAYLOAD is deliberately NOT claimed identical, and the difference is worth naming: the old code
+// took the FIRST qualifying descendant, this one takes the SMALLEST, because a near-full-size wrapper child is
+// the weakest evidence of a card-in-card. So a finding's selector and detail can differ from the old output even
+// though the fire decision cannot. Pair collection is also capped at 200 per page.
+/** Node-side: turn a nested-cards score into ONE page-level finding (or null). The ONE place the production
+ *  threshold is applied; the calibration harness sweeps the same pairs.
+ *
+ *  ONE FINDING PER PAGE. nested-cards is a PAGE-LEVEL judgment, so the previous emission (one finding per
+ *  offending outer card, capped at 20) restated a single verdict up to 20 times. The count and a representative
+ *  pair carry the same evidence in one line. */
+function nestedCardsFindingFromScore(s) {
+    const pairs = s.pairs || [];
+    if (pairs.length < 1)
+        return null;
+    const rep = pairs[0];
+    return {
+        rule: 'nested-cards', severity: 'warning', selector: rep.outerSelector,
+        detail: `${pairs.length} card-in-card nesting(s) on the page (e.g. ${rep.outerSelector} ${rep.outerW}x${rep.outerH} holding ${rep.innerSelector} ${rep.innerW}x${rep.innerH}, ${Math.round(rep.areaFrac * 100)}% of its area)`,
+    };
 }
 /**
  * marketing-buzzword (v2): the SINGLE SOURCE of the buzzword taxonomy + weighted-density computation, serialized
@@ -246,6 +350,10 @@ function inPageSubjective() {
  */
 /* istanbul ignore next - executes in the browser context (serialized by page.evaluate; must be self-contained) */
 function inPageBuzzword() {
+    // INLINE copy of the exported BUZZ_MIN_DISTINCT_PEAK (an in-page function cannot import; same self-contained
+    // rule as inPageMotionMarker's thresholds). buzzword-gate-vocabulary.test.ts asserts the two stay identical,
+    // so drift is a test failure rather than a silent detector change.
+    const BUZZ_MIN_DISTINCT_PEAK = 2;
     function sel(el) {
         const t = el.tagName.toLowerCase();
         if (el.id)
@@ -370,6 +478,8 @@ function inPageBuzzword() {
     const words = buzzNorm.trim() ? buzzNorm.trim().split(' ').filter(Boolean).length : 0;
     let weighted = 0, distinctTerms = 0, hasStrongOrPeak = false;
     const matched = [];
+    let peakOccurrences = 0, strongOccurrences = 0, mildOccurrences = 0, distinctPeak = 0, distinctStrong = 0;
+    const termCounts = [];
     for (const [key, pat, w] of BUZZ_TAX) {
         // non-consuming lookarounds: counts ALL occurrences (incl. adjacent repeats), unlike a space-consuming match.
         const m = buzzNorm.match(new RegExp('(?<= )(?:' + pat + ')(?= )', 'g'));
@@ -379,10 +489,30 @@ function inPageBuzzword() {
             matched.push(key);
             if (w >= 2)
                 hasStrongOrPeak = true;
+            termCounts.push({ term: key, tier: w, count: m.length });
+            if (w >= 4) {
+                peakOccurrences += m.length;
+                distinctPeak++;
+            }
+            else if (w >= 2) {
+                strongOccurrences += m.length;
+                distinctStrong++;
+            }
+            else {
+                mildOccurrences += m.length;
+            }
         }
     }
     const density = words >= BUZZ_MIN_WORDS ? (weighted / words) * 100 : 0;
-    const qualifies = hasStrongOrPeak; // v3: require >=1 PEAK/STRONG term (pure-MILD = concrete descriptors, not buzzword-leaning)
+    const peakDensity = words >= BUZZ_MIN_WORDS ? (peakOccurrences / words) * 100 : 0;
+    // v4 QUALIFY GATE (precision). v3 required >= 1 STRONG/PEAK term, which any page describing real engineering
+    // clears ("powerful", "transform", "accelerate", "end-to-end" are all ordinary technical vocabulary). The
+    // measured FP set was MDN, Rust, Django, Kubernetes and Vercel docs - every one of them qualified on STRONG
+    // alone. PEAK terms are the ones that CANNOT be used concretely (seamless, revolutionary, world-class,
+    // supercharge, game-changing): a page leaning on marketing language reaches for them, and a page describing
+    // engineering does not. The gate therefore requires PEAK evidence: >= BUZZ_MIN_DISTINCT_PEAK distinct PEAK
+    // terms, i.e. the hype is a REGISTER rather than one stray word in a sentence about latency.
+    const qualifies = distinctPeak >= BUZZ_MIN_DISTINCT_PEAK;
     const effectiveDensity = qualifies ? density : 0;
     let selector;
     for (const el of buzzEls) {
@@ -392,12 +522,31 @@ function inPageBuzzword() {
             break;
         }
     }
-    return { density, effectiveDensity, words, weighted, distinctTerms, hasStrongOrPeak, matched, selector };
+    return {
+        density, effectiveDensity, words, weighted, distinctTerms, hasStrongOrPeak, matched, selector,
+        peakOccurrences, strongOccurrences, mildOccurrences, distinctPeak, distinctStrong, peakDensity, termCounts,
+    };
 }
-// Firing threshold for marketing-buzzword (vacuity-weighted density per 100 content words). Frozen on the
-// register-diverse dev signal + the vacuity principle, NEVER on held-out knowledge (frozen-90 is spent). v3 = 0.75
-// under the PEAK4/STRONG2/MILD0.5 reweight + the >=1 PEAK/STRONG guard -> dev R0.839 / P0.839 (recall held, precision
-// up from 0.806). Calibration sweeps this over inPageBuzzword's effectiveDensity; production applies it here.
+// v4 QUALIFY GATE threshold: distinct PEAK terms required before a page can fire at all. The exported copy; the
+// in-page scorer carries an inline duplicate (it must be self-contained for page.evaluate) and
+// buzzword-gate-vocabulary.test.ts asserts they never drift apart.
+exports.BUZZ_MIN_DISTINCT_PEAK = 2;
+// Firing threshold for marketing-buzzword (vacuity-weighted density per 100 content words). UNCHANGED at 0.75.
+//
+// The 2026-07-28 precision retune deliberately left this number alone and moved the QUALIFY GATE instead
+// (BUZZ_MIN_DISTINCT_PEAK, above). That was a measured choice, not a conservative one. Sweeping the gate against
+// the density threshold on the tuning population (dev 48 + candidates 90, 39 labeled positives) showed the gate
+// carrying the entire precision gain and the threshold carrying almost none: at gate 2, thresholds 0.50 / 0.75 /
+// 1.00 score P 0.750 / 0.800 / 0.800 with recall flat, so the decision rests on a plateau rather than on a fitted
+// number. Higher thresholds do reach P 0.909 at 2.00 - on ONE false positive out of eleven fires, a knife edge of
+// exactly the kind that produced the collapse this retune exists to fix. Dropping the MILD tier out of the
+// numerator entirely was also swept and scores IDENTICALLY once the gate is in place, which is the direct
+// evidence that the gate, not the weighting, is the fix.
+//
+// MEASURED, gate 2 / threshold 0.75, precision first with recall reported honestly:
+//   TUNE     (dev 48 + candidates 90, 39 pos): P 0.600 (33/55) -> 0.800 (12/15), R 0.846 -> 0.308
+//   HELD-OUT (buzzword-heldout 37, 19 pos)   : P 0.783 (18/23) -> 1.000 (8/8),   R 0.947 -> 0.421
+// The held-out was not consulted while choosing the point. Recall roughly halves; that is the accepted trade.
 exports.BUZZ_DENSITY_THRESHOLD = 0.75;
 /** Node-side: turn a buzzword score into a marketing-buzzword finding (or null). The ONE place the production
  * threshold is applied; the calibration harness sweeps the same effectiveDensity. */
@@ -659,15 +808,43 @@ exports.TYPEFACE_MIN_CONTENT_CHARS = 200;
 // Ground tags carried at the head of the finding detail, so a consumer can phrase the right verdict.
 exports.DEFAULT_TYPEFACE_GROUND_DEFAULT_STACK = 'default-stack';
 exports.DEFAULT_TYPEFACE_GROUND_BRAND_MISMATCH = 'brand-mismatch';
+// GROUND A IS GATED OFF (2026-07-28). Its precision on real pages is UNDEFINED, not low - and that distinction
+// is the reason for the gate.
+//
+// What the corpus actually contains for this class:
+//   - The ONLY default-typeface labels anywhere are the 23-page A5a set: 11 synthetic fixtures + 12 real pages.
+//   - All 5 labeled POSITIVES are synthetic fixtures authored alongside the detector (p01-p05). It scores
+//     P 1.000 / R 1.000 on that set, which measures that it can satisfy its own specification.
+//   - All 12 labeled REAL pages are NEGATIVES, and it correctly stays silent on every one (0 fires / 48 on the
+//     whole dev corpus).
+//   - It fires on 31 of 90 candidate pages and 9 of 37 held-out pages. NONE of those 40 pages carries a
+//     default-typeface label. Not one real-page fire has ever been adjudicated.
+//
+// So precision = 0 true positives / 0 labeled fires. There is no number, and the 1.000 above cannot stand in for
+// one: it is carried entirely by fixtures written to exhibit the defect. Shipping ground A means telling users
+// their page has "no chosen typeface" on evidence nobody has checked, on a population (Wikipedia, Hacker News,
+// Bootstrap examples, archived pages, internal docs) where the system stack is frequently a deliberate
+// typographic decision rather than the absence of one.
+//
+// TO UN-GATE: label the default-typeface class on real pages that FIRE - the 40 above are the sampling frame -
+// with an independent labeler, then measure precision on a held-out slice of them. If it clears the precision
+// bar the other taste classes are held to, flip the default. Nothing else un-gates it; another synthetic
+// fixture cannot, because synthetic positives are what produced the unfalsifiable 1.000 in the first place.
+//
+// GROUND B IS UNAFFECTED. It requires a caller-supplied committed family, has its own discriminating dev sweep
+// (0.05-0.40 give P/R 1.000; 0.50 produces the first false positive), and cannot fire unsupervised.
+exports.DEFAULT_STACK_GROUND_GATED = true;
 /** Node-side: turn a typeface score into a default-typeface finding (or null). The ONE place the production
  * thresholds are applied; the calibration harness sweeps the same defaultStackShare. */
 function typefaceFindingFromScore(s, opts = {}) {
     if (s.contentChars < exports.TYPEFACE_MIN_CONTENT_CHARS)
         return null;
     const pct = (x) => `${Math.round(x * 100)}%`;
-    // (A) default stack. `ground:` prefixes the detail so the consuming check can phrase the verdict for the
-    // ground that actually fired instead of always claiming the default-stack story (Codex review P2).
-    if (s.defaultStackShare >= exports.DEFAULT_STACK_SHARE) {
+    // (A) default stack. GATED OFF by default (DEFAULT_STACK_GROUND_GATED) - unmeasured on real pages. `ground:`
+    // prefixes the detail so the consuming check can phrase the verdict for the ground that actually fired instead
+    // of always claiming the default-stack story (Codex review P2).
+    const groundAEnabled = opts.enableDefaultStackGround === true || !exports.DEFAULT_STACK_GROUND_GATED;
+    if (groundAEnabled && s.defaultStackShare >= exports.DEFAULT_STACK_SHARE) {
         const declared = s.declaredFamilies.length ? `; the page loads ${s.declaredFamilies.slice(0, 3).join(', ')} but the content text does not use it` : '';
         return {
             rule: 'default-typeface', severity: 'warning', selector: s.defaultSelector,
@@ -1358,20 +1535,9 @@ function structuralFindingsFromScore(s) {
 exports.MARQUEE_MIN_X_PCT = 50; // translateX delta as a % of the element's box, or...
 exports.MARQUEE_MIN_X_PX = 200; // ...an absolute px delta, either qualifies
 exports.MARQUEE_MIN_COUNT = 1;
-// numbered-section-markers. A prominent (>= NUM_MARKER_MIN_PX, display-scale) standalone decorative numeral -
-// its rendered text (own text OR ::before/::after literal content) is EXACTLY a 1-2 digit numeral. The page fires
-// only when >= NUM_MARKER_MIN_COUNT such markers are ZERO-PADDED (01,02,03 - the reliable decorative signal). Two
-// dev-proven guards: PROMINENCE (>= 32px) clears polygon's small incidental "01..06" (labeled ABSENT), and the
-// ZERO-PADDING requirement clears prominent sequential digits that are not section markers (raycast's rendered
-// keyboard number keys 1-9,0; a gong keypad). The recall cost is real and reported: airtable's markers are CSS
-// counter() pseudo-content (does not serialize to a readable string) and calcom's are not zero-padded, so both
-// labeled-present pages are MISSED - dev recall is honestly low, not hidden.
-exports.NUM_MARKER_MIN_PX = 32;
-exports.NUM_MARKER_MIN_COUNT = 3;
 /* istanbul ignore next - executes in the browser context (serialized by page.evaluate; must be self-contained) */
 function inPageMotionMarker() {
     const MARQUEE_MIN_X_PCT = 50, MARQUEE_MIN_X_PX = 200;
-    const NUM_MARKER_MIN_PX = 32, NUM_MARKER_MIN_COUNT = 3;
     function sel(el) {
         const t = el.tagName.toLowerCase();
         if (el.id)
@@ -1514,17 +1680,12 @@ function inPageMotionMarker() {
                 marqueeSelector = sel(m);
         }
     }
-    // numbered-section-markers candidates: prominent standalone decorative numerals (own text OR ::before/::after
-    // literal-string content). A marker's rendered text is EXACTLY a 1-2 digit numeral.
-    const numRe = /^0?\d{1,2}$/;
-    const markers = [];
-    const markerEls = [];
     const scope = document.body ? [document.body, ...Array.from(document.body.querySelectorAll('*'))] : [];
     for (const el of scope) {
         if (el.namespaceURI === 'http://www.w3.org/2000/svg')
             continue;
         if (!visuallyVisible(el))
-            continue; // gate marquee/blink AND markers on visibility (no hidden-template fires - Codex)
+            continue; // gate marquee on visibility (no hidden-template fires - Codex)
         const cs = getComputedStyle(el);
         // marquee via animation usage (element runs an ENDLESS marquee keyframe - paired by index above).
         const inf = infiniteAnimNames(cs);
@@ -1535,74 +1696,16 @@ function inPageMotionMarker() {
                     marqueeSelector = sel(el);
             }
         }
-        // numbered marker: own text is exactly a numeral, OR a VISIBLE ::before/::after carries a literal-string numeral.
-        const candidates = [];
-        const ot = ownText(el);
-        if (ot)
-            candidates.push({ text: ot, px: parseFloat(cs.fontSize) || 0 });
-        for (const pseudo of ['::before', '::after']) {
-            const pcs = getComputedStyle(el, pseudo);
-            if (pcs.display === 'none' || pcs.visibility === 'hidden')
-                continue; // hidden generated content is not a marker (Codex)
-            const content = (pcs.content || '').trim();
-            const lit = content.match(/^["']([^"']*)["']$/);
-            if (lit)
-                candidates.push({ text: lit[1].trim(), px: parseFloat(pcs.fontSize) || parseFloat(cs.fontSize) || 0 });
-        }
-        for (const c of candidates) {
-            if (c.px >= NUM_MARKER_MIN_PX && numRe.test(c.text)) {
-                markers.push({ value: parseInt(c.text, 10), padded: /^0\d$/.test(c.text) });
-                markerEls.push(el);
-                break;
-            }
-        }
     }
-    // MOTIF test: >= MIN prominent standalone ZERO-PADDED numerals (01,02,03...). The zero-padding is the reliable
-    // decorative-section-marker signal. A bare-sequential branch (1,2,3...) was DROPPED after the dev corpus proved
-    // it false-fires on prominent sequential digits that are NOT section markers - raycast's rendered KEYBOARD
-    // (number keys 1-9,0 at display scale) and a gong keypad both tripped it. Zero-padding is what a designer adds
-    // to make numerals read as a decorative organizing motif, so it is the precision-first signal; the recall cost
-    // (a page that numbers sections 1,2,3 without padding is missed) is accepted and reported.
-    // Require a CONSECUTIVE run (01,02,03...), not merely N scattered zero-padded numbers (Codex): the documented
-    // motif is a section-marker SEQUENCE, so 01,07,99 is not it. Find the longest consecutive-increasing run over the
-    // distinct padded values; fire only when it reaches NUM_MARKER_MIN_COUNT.
-    let numberedMarkerCount = 0;
-    const numberedZeroPadded = true;
-    let numberedSelector;
-    const paddedVals = markers.filter((m) => m.padded).map((m) => m.value);
-    if (paddedVals.length >= NUM_MARKER_MIN_COUNT) {
-        const uniq = Array.from(new Set(paddedVals)).sort((a, b) => a - b);
-        let run = 1, best = 1;
-        for (let i = 1; i < uniq.length; i++) {
-            if (uniq[i] === uniq[i - 1] + 1) {
-                run++;
-                if (run > best)
-                    best = run;
-            }
-            else
-                run = 1;
-        }
-        if (best >= NUM_MARKER_MIN_COUNT) {
-            numberedMarkerCount = best;
-            numberedSelector = markerEls.length ? sel(markerEls[0]) : undefined;
-        }
-    }
-    return {
-        marqueeElementCount, marqueeAnimCount, marqueeSelector,
-        numberedMarkerCount, numberedZeroPadded, numberedSelector,
-    };
+    return { marqueeElementCount, marqueeAnimCount, marqueeSelector };
 }
-/** Node-side: turn a motion/marker score into 0-2 findings (one page-level verdict per firing class). */
+/** Node-side: turn a motion/marker score into 0-1 findings (one page-level verdict per firing class). */
 function motionMarkerFindingsFromScore(s) {
     const out = [];
     const marquees = s.marqueeElementCount + s.marqueeAnimCount;
     if (marquees >= exports.MARQUEE_MIN_COUNT) {
         out.push({ rule: 'marquee', severity: 'warning', selector: s.marqueeSelector,
             detail: `${marquees} marquee(s) (${s.marqueeElementCount} <marquee> element(s), ${s.marqueeAnimCount} infinite horizontal-scroll animation(s))` });
-    }
-    if (s.numberedMarkerCount >= exports.NUM_MARKER_MIN_COUNT) {
-        out.push({ rule: 'numbered-section-markers', severity: 'warning', selector: s.numberedSelector,
-            detail: `${s.numberedMarkerCount} prominent decorative section numerals${s.numberedZeroPadded ? ' (zero-padded 01/02/03 motif)' : ' (sequential run)'}` });
     }
     return out;
 }
@@ -1617,6 +1720,10 @@ async function analyzeHtmlOnBrowserSubjective(browser, html, timeoutMs = 30000, 
         }
         await page.setContent(r.stripScripts ? stripScripts(html) : html, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
         const findings = await page.evaluate(inPageSubjective);
+        // nested-cards via the SAME single-source split: in-page geometry score, Node-side thresholds.
+        const nested = nestedCardsFindingFromScore(await page.evaluate(inPageNestedCards));
+        if (nested)
+            findings.push(nested);
         // marketing-buzzword via the SINGLE-SOURCE score function + Node-side threshold (same path the harness sweeps).
         const buzz = buzzwordFindingFromScore(await page.evaluate(inPageBuzzword));
         if (buzz)
@@ -1629,7 +1736,8 @@ async function analyzeHtmlOnBrowserSubjective(browser, html, timeoutMs = 30000, 
         findings.push(...typographyExtremesFindingsFromScore(await page.evaluate(inPageTypographyExtremes)));
         // Stage 4c structural classes via the SAME split: one in-page score, Node-side thresholds -> 0-7 findings.
         findings.push(...structuralFindingsFromScore(await page.evaluate(inPageStructural)));
-        // Stage 4d motion/marker classes via the SAME split: one in-page score, Node-side thresholds -> 0-2 findings.
+        // Stage 4d motion/marker classes via the SAME split: one in-page score, Node-side thresholds -> 0-1 findings
+        // (numbered-section-markers was removed 2026-07-28; marquee is the only class left in this family).
         findings.push(...motionMarkerFindingsFromScore(await page.evaluate(inPageMotionMarker)));
         return findings;
     }

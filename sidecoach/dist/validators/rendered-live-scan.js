@@ -141,6 +141,10 @@ async function scanRenderedLive(renderUrl, signal, opts = {}) {
         let subjective;
         try {
             const findings = await race(page.evaluate(subjective_rendered_scanner_1.inPageSubjective), 'evaluate');
+            // nested-cards via the SAME single-source split: in-page geometry score, Node-side thresholds.
+            const nested = (0, subjective_rendered_scanner_1.nestedCardsFindingFromScore)(await race(page.evaluate(subjective_rendered_scanner_1.inPageNestedCards), 'evaluate'));
+            if (nested)
+                findings.push(nested);
             // marketing-buzzword via the SINGLE-SOURCE score + Node-side threshold (same code path the eval scan + the
             // calibration harness use, so the live NL workflow surfaces exactly what ships).
             const buzz = (0, subjective_rendered_scanner_1.buzzwordFindingFromScore)(await race(page.evaluate(subjective_rendered_scanner_1.inPageBuzzword), 'evaluate'));
@@ -154,7 +158,8 @@ async function scanRenderedLive(renderUrl, signal, opts = {}) {
             findings.push(...(0, subjective_rendered_scanner_1.typographyExtremesFindingsFromScore)(await race(page.evaluate(subjective_rendered_scanner_1.inPageTypographyExtremes), 'evaluate')));
             // Stage 4c structural classes via the SAME split: one in-page score, Node-side thresholds -> 0-7 findings.
             findings.push(...(0, subjective_rendered_scanner_1.structuralFindingsFromScore)(await race(page.evaluate(subjective_rendered_scanner_1.inPageStructural), 'evaluate')));
-            // Stage 4d motion/marker classes via the SAME split: one in-page score, Node-side thresholds -> 0-3 findings.
+            // Stage 4d motion/marker classes via the SAME split: one in-page score, Node-side thresholds -> 0-1 findings
+            // (numbered-section-markers was removed 2026-07-28; marquee is the only class left in this family).
             findings.push(...(0, subjective_rendered_scanner_1.motionMarkerFindingsFromScore)(await race(page.evaluate(subjective_rendered_scanner_1.inPageMotionMarker), 'evaluate')));
             subjective = { available: true, findings };
         }

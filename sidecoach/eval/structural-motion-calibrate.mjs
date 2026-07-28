@@ -3,7 +3,8 @@
  * Stage 4c/4d calibration harness for the rendered structural + motion/marker classes:
  *   4c: thin-border-wide-shadow, repeating-stripe-gradients, text-under-overlay, first-viewport-overflow,
  *       decorative-dot-grid, soft-radial-glow, image-hover-transform
- *   4d: marquee, numbered-section-markers (blinking-cursor PULLED 2026-07-25)
+ *   4d: marquee (blinking-cursor PULLED 2026-07-25; numbered-section-markers REMOVED 2026-07-28 - inert,
+ *       best reachable precision 0.500; see eval/numbered-markers-removal-evidence.mjs)
  *
  * INTEGRITY (the buzzword/typeface/typography-extremes-calibrate contract): it imports the SHIPPING in-page
  * scorers (inPageStructural + inPageMotionMarker) and the SHIPPING Node-side decision fns
@@ -23,7 +24,8 @@
  *   - POPULATION 1 (dev corpus, 48 externally-sourced real shipped pages) is INDEPENDENT of this rule's author
  *     and carries the PRECISION / false-positive claim - the number that matters for a precision-first class.
  *     ONE class carries a real Codex DEV label (author != labeler, eval/corpus/dev-subjective-labels.json):
- *       numbered-section-markers (present airtable/calcom/raycast, absent 45) -> real dev P AND R.
+ *       numbered-section-markers was the one labeled class here; it is REMOVED, so this harness now measures
+ *       precision only (presumed-negatives on dev) for the classes that remain.
  *     The other NINE classes postdate the 22-class rubric and have NO Codex dev label (like Stage 4a/4b's
  *     oversized-h1/sub-11px-ui). Their dev pages enter as PRESUMED-NEGATIVES (precision only); recall for them
  *     comes from the author fixtures, and that limit is stated rather than papered over.
@@ -71,7 +73,8 @@ const LABELS = path.join(ROOT, 'eval/corpus/dev-subjective-labels.json');
 const stripScripts = (h) => String(h).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<script\b[^>]*\/?>/gi, '');
 
 // ---- the 10 classes: rule name, which raw count field (for the detail table), and whether a Codex dev label
-//      exists. Only numbered-section-markers is labeled; the rest are presumed-negatives on dev (precision only). ----
+//      exists. The one labeled class (numbered-section-markers) was REMOVED 2026-07-28, so every remaining
+//      class here is a presumed-negative on dev - this harness reports PRECISION only. ----
 const CLASSES = [
   { rule: 'thin-border-wide-shadow', family: 'structural', field: 'thinBorderWideShadowCount', labeled: false },
   { rule: 'repeating-stripe-gradients', family: 'structural', field: 'stripeGradientCount', labeled: false },
@@ -81,7 +84,6 @@ const CLASSES = [
   { rule: 'soft-radial-glow', family: 'structural', field: 'radialGlowCount', labeled: false },
   { rule: 'image-hover-transform', family: 'structural', field: 'imageHoverTransformCount', labeled: false },
   { rule: 'marquee', family: 'motion', field: 'marqueeElementCount', labeled: false },
-  { rule: 'numbered-section-markers', family: 'motion', field: 'numberedMarkerCount', labeled: true },
 ];
 
 // SHIPPING firing decision for a page: run BOTH scorers through the SHIPPING decision fns and union the rule set.
@@ -120,7 +122,7 @@ const classOfFixture = (id) => CLASSES.find((c) => id.includes(c.rule))?.rule;
 
 const browser = await chromium.launch({ headless: true });
 
-// ---- POPULATION 1: dev corpus (independent; precision, + real recall for numbered-section-markers) ----
+// ---- POPULATION 1: dev corpus (independent; precision only since the one labeled class was removed) ----
 const devRows = [];
 const devFiles = readdirSync(DEV).filter((x) => x.endsWith('.html')).sort();
 for (const f of devFiles) {

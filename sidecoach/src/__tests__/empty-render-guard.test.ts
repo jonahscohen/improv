@@ -52,7 +52,7 @@ function fakeBrowser(handlers: {
     if (name === 'inPageStructural') {
       return handlers.structural ?? { viewportWidth: 1280, viewportHeight: 800, thinBorderWideShadowCount: 0, tbwsMaxRatio: 0, stripeGradientCount: 0, textUnderOverlayCount: 0, firstViewportOverflowPx: 0, dotGridCount: 0, radialGlowCount: 0, imageHoverTransformCount: 0 };
     }
-    if (name === 'inPageMotionMarker') return { marqueeElementCount: 0, marqueeAnimCount: 0, numberedMarkerCount: 0 };
+    if (name === 'inPageMotionMarker') return { marqueeElementCount: 0, marqueeAnimCount: 0 };
     return [];
   };
   const page = {

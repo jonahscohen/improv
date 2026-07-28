@@ -1,5 +1,5 @@
 import type { Browser } from 'playwright';
-export type SubjectiveRule = 'tiny-text' | 'nested-cards' | 'marketing-buzzword' | 'default-typeface' | 'extreme-negative-tracking' | 'all-caps-body' | 'oversized-h1' | 'sub-11px-ui' | 'thin-border-wide-shadow' | 'repeating-stripe-gradients' | 'text-under-overlay' | 'first-viewport-overflow' | 'decorative-dot-grid' | 'soft-radial-glow' | 'image-hover-transform' | 'marquee' | 'numbered-section-markers';
+export type SubjectiveRule = 'tiny-text' | 'nested-cards' | 'marketing-buzzword' | 'default-typeface' | 'extreme-negative-tracking' | 'all-caps-body' | 'oversized-h1' | 'sub-11px-ui' | 'thin-border-wide-shadow' | 'repeating-stripe-gradients' | 'text-under-overlay' | 'first-viewport-overflow' | 'decorative-dot-grid' | 'soft-radial-glow' | 'image-hover-transform' | 'marquee';
 export interface SubjectiveFinding {
     rule: SubjectiveRule;
     severity: 'warning';
@@ -16,6 +16,47 @@ export type SubjectiveScan = {
 export declare const SUBJECTIVE_RULES: SubjectiveRule[];
 export declare function stripScripts(html: string): string;
 export declare function inPageSubjective(): SubjectiveFinding[];
+export interface NestedCardsPair {
+    outerSelector: string;
+    innerSelector: string;
+    outerW: number;
+    outerH: number;
+    innerW: number;
+    innerH: number;
+    areaFrac: number;
+    outerRadius: number;
+    innerRadius: number;
+    outerBorder: boolean;
+    outerShadow: boolean;
+    innerBorder: boolean;
+    innerShadow: boolean;
+    outerViewportWidthFrac: number;
+}
+export interface NestedCardsScore {
+    cardCount: number;
+    viewportWidth: number;
+    pairs: NestedCardsPair[];
+}
+/**
+ * nested-cards: a card-like container holding a meaningfully-smaller card-like container.
+ *
+ * Rubric: "cards inside other cards - layered bordered containers holding sub-containers." A card READS as a
+ * discrete panel: rounded corners + STRONG card treatment (a visible BORDER or a SHADOW) of real panel size,
+ * with children. The bg-distinct signal was dropped earlier (it over-fired on incidental tinted layout regions).
+ *
+ * KNOWN LIMIT: nesting inside a product-mockup IMAGE (raster) is DOM-invisible to any DOM detector - never OCR.
+ *
+ * Returns the SCORE only; the firing thresholds are applied in Node by nestedCardsFindingFromScore, so the
+ * calibration harness sweeps EXACTLY what ships (the inPageBuzzword / buzzwordFindingFromScore contract).
+ */
+export declare function inPageNestedCards(): NestedCardsScore;
+/** Node-side: turn a nested-cards score into ONE page-level finding (or null). The ONE place the production
+ *  threshold is applied; the calibration harness sweeps the same pairs.
+ *
+ *  ONE FINDING PER PAGE. nested-cards is a PAGE-LEVEL judgment, so the previous emission (one finding per
+ *  offending outer card, capped at 20) restated a single verdict up to 20 times. The count and a representative
+ *  pair carry the same evidence in one line. */
+export declare function nestedCardsFindingFromScore(s: NestedCardsScore): SubjectiveFinding | null;
 export interface BuzzwordScore {
     density: number;
     effectiveDensity: number;
@@ -25,6 +66,17 @@ export interface BuzzwordScore {
     hasStrongOrPeak: boolean;
     matched: string[];
     selector?: string;
+    peakOccurrences: number;
+    strongOccurrences: number;
+    mildOccurrences: number;
+    distinctPeak: number;
+    distinctStrong: number;
+    peakDensity: number;
+    termCounts: {
+        term: string;
+        tier: number;
+        count: number;
+    }[];
 }
 /**
  * marketing-buzzword (v2): the SINGLE SOURCE of the buzzword taxonomy + weighted-density computation, serialized
@@ -47,6 +99,7 @@ export interface BuzzwordScore {
  * with non-consuming lookarounds (counts ALL occurrences incl. adjacent repeats) - linear, ReDoS-safe.
  */
 export declare function inPageBuzzword(): BuzzwordScore;
+export declare const BUZZ_MIN_DISTINCT_PEAK = 2;
 export declare const BUZZ_DENSITY_THRESHOLD = 0.75;
 /** Node-side: turn a buzzword score into a marketing-buzzword finding (or null). The ONE place the production
  * threshold is applied; the calibration harness sweeps the same effectiveDensity. */
@@ -98,10 +151,14 @@ export declare const BRAND_PRESENCE_MIN = 0.25;
 export declare const TYPEFACE_MIN_CONTENT_CHARS = 200;
 export declare const DEFAULT_TYPEFACE_GROUND_DEFAULT_STACK = "default-stack";
 export declare const DEFAULT_TYPEFACE_GROUND_BRAND_MISMATCH = "brand-mismatch";
+export declare const DEFAULT_STACK_GROUND_GATED = true;
 export interface TypefaceFindingOptions {
     /** The brand's committed families (PRODUCT.md / DESIGN.md). Ground (B) is INERT unless this is supplied -
      *  "mismatch to the committed family" is only a defect where a committed family is actually known. */
     brandFamilies?: string[];
+    /** Opt IN to ground (A), the default-system-stack judgment. Default OFF - see DEFAULT_STACK_GROUND_GATED.
+     *  The eval/calibration harnesses set it so the detector stays measurable while it is gated out of product. */
+    enableDefaultStackGround?: boolean;
 }
 /** Node-side: turn a typeface score into a default-typeface finding (or null). The ONE place the production
  * thresholds are applied; the calibration harness sweeps the same defaultStackShare. */
@@ -188,17 +245,12 @@ export interface MotionMarkerScore {
     marqueeElementCount: number;
     marqueeAnimCount: number;
     marqueeSelector?: string;
-    numberedMarkerCount: number;
-    numberedZeroPadded: boolean;
-    numberedSelector?: string;
 }
 export declare const MARQUEE_MIN_X_PCT = 50;
 export declare const MARQUEE_MIN_X_PX = 200;
 export declare const MARQUEE_MIN_COUNT = 1;
-export declare const NUM_MARKER_MIN_PX = 32;
-export declare const NUM_MARKER_MIN_COUNT = 3;
 export declare function inPageMotionMarker(): MotionMarkerScore;
-/** Node-side: turn a motion/marker score into 0-2 findings (one page-level verdict per firing class). */
+/** Node-side: turn a motion/marker score into 0-1 findings (one page-level verdict per firing class). */
 export declare function motionMarkerFindingsFromScore(s: MotionMarkerScore): SubjectiveFinding[];
 export interface RenderOpts {
     stripScripts?: boolean;

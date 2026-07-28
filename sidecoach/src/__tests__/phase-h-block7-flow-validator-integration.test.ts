@@ -91,10 +91,17 @@ function testBlock7a() {
       JSON.stringify(['accessibility', 'semantic']),
   });
 
+  // STALE COUNT CORRECTED 2026-07-28 (Jonah): 4 -> 5. complete_qa_workflow.domains is
+  // [accessibility, performance, design_system, semantic, content_quality]
+  // (flow-domain-validators.ts:275) - "complete" QA means every domain, and there are five.
+  // This file contradicted ITSELF: testBlock7c's 'Complete QA workflow validates all 4
+  // domains' asserts `validations3.length >= 4` and passes with 5, while this line demanded
+  // exactly 4. A single file disagreeing with the product AND with its own later assertion
+  // is a stale expectation, not a product defect.
   results.push({
-    test: 'complete_qa_workflow has all 4 domains',
+    test: 'complete_qa_workflow has all 5 domains',
     passed:
-      COMPOSITE_FLOW_VALIDATIONS.complete_qa_workflow.domains.length === 4 &&
+      COMPOSITE_FLOW_VALIDATIONS.complete_qa_workflow.domains.length === 5 &&
       COMPOSITE_FLOW_VALIDATIONS.complete_qa_workflow.domains.includes('accessibility'),
   });
 
@@ -114,12 +121,28 @@ function testBlock7b() {
   const engine = new FlowCompositionEngine();
   registerFlowDomainValidators(engine);
 
-  // Test 1: Accessibility validator passes with WCAG guidance
-  const result1 = createTestResult('flowI_accessibility', 'success', [
-    'WCAG 2.1 AA compliance:',
-    'Use semantic HTML',
-    'Screen reader testing: VoiceOver',
-  ]);
+  // FIXTURE COMPLETED 2026-07-28 (Jonah) - the assertion is UNCHANGED and still demands 'pass'.
+  //
+  // This case claimed to test that a conforming accessibility result passes, but supplied
+  // `checklist: []`. createAccessibilityValidator has three rules and the third,
+  // has_checklist, requires checklist items (flow-domain-validators.ts:33-39), so the input
+  // could only ever produce 'partial'. The suite was not testing accessibility validation; it
+  // was testing what happens when you leave a required input empty.
+  //
+  // Weakening the assertion to 'partial' would have made it green while making it check less.
+  // Completing the fixture keeps the original, stronger claim and makes the test mean what its
+  // name says. The 'partial' path is separately and deliberately covered by the green gated
+  // phase-h-block4-domain-validators.test.ts.
+  const result1 = createTestResult(
+    'flowI_accessibility',
+    'success',
+    [
+      'WCAG 2.1 AA compliance:',
+      'Use semantic HTML',
+      'Screen reader testing: VoiceOver',
+    ],
+    [{ label: 'Keyboard traversal verified on every interactive control', done: false }],
+  );
   const validations1 = engine.validateMultipleDomains(['accessibility'], result1);
   results.push({
     test: 'Accessibility validator passes with WCAG guidance',
@@ -137,11 +160,25 @@ function testBlock7b() {
     passed: validations2[0]?.status === 'pass',
   });
 
-  // Test 3: Design system validator passes with design tokens
-  const result3 = createTestResult('flowF_design_tokens', 'success', [
-    'Apply design tokens from design.md',
-    'Typography uses design system tokens',
-  ]);
+  // FIXTURE COMPLETED 2026-07-28 (Jonah) - the assertion is UNCHANGED and still demands 'pass'.
+  //
+  // Same defect as Test 1, two rules deep. createDesignSystemValidator has three rules
+  // (flow-domain-validators.ts:82-118): uses_design_tokens, which this input already
+  // satisfied; has_design_rationale, which needs why/rationale/principle/constraint wording;
+  // and validates_coverage, which needs artifacts or checklist items. The original fixture
+  // supplied neither of the last two, so 2 of 3 rules failed and 'pass' was unreachable.
+  // The guidance below now states a RATIONALE rather than only an instruction, which is the
+  // property has_design_rationale exists to check.
+  const result3 = createTestResult(
+    'flowF_design_tokens',
+    'success',
+    [
+      'Apply design tokens from design.md',
+      'Typography uses design system tokens',
+      'Rationale: tokens are the single source of truth, so a hard-coded hex is a drift risk',
+    ],
+    [{ label: 'Every declared token resolves against DESIGN.md', done: false }],
+  );
   const validations3 = engine.validateMultipleDomains(['design_system'], result3);
   results.push({
     test: 'Design system validator passes with design tokens',
@@ -155,9 +192,26 @@ function testBlock7b() {
     'revolutionary game changer',
   ]);
   const validations4 = engine.validateMultipleDomains(['content_quality'], result4);
+  // STALE EXPECTATION CORRECTED 2026-07-28 (Jonah): 'fail' -> 'partial', and the rule-level
+  // assertion added so this tests DETECTION rather than just an aggregate label.
+  //
+  // The slop rule DID fire all along. `status` aggregates as
+  // `failedRules.length === 0 ? pass : failedRules.length === rules.length ? fail : partial`
+  // (flow-composition.ts:250), so 'fail' requires EVERY rule to fail. content_quality has two
+  // rules and has_meaningful_content legitimately passes on this input (three guidance
+  // entries), which makes 'partial' the correct verdict for "one rule caught something".
+  //
+  // That aggregation is pinned by the green gated suite phase-h-block4-domain-validators.test.ts
+  // ('Validate result with mixed pass/fail returns partial status'), and again by
+  // phase-h-block5 and phase-h-block6. Three gated suites against this one file.
+  //
+  // Asserting the failed RULE by name is the stronger check: it would survive a future change
+  // to the aggregation labels and still prove the AI-slop detector fired.
   results.push({
     test: 'Content quality validator detects AI-slop patterns',
-    passed: validations4[0]?.status === 'fail',
+    passed:
+      validations4[0]?.status === 'partial' &&
+      (validations4[0]?.failedRules ?? []).includes('avoids_generic_content'),
   });
 
   // Test 5: Multi-domain validation works
@@ -173,7 +227,14 @@ function testBlock7b() {
   );
   results.push({
     test: 'Multi-domain validation validates all domains',
-    passed: validations5.length >= 3 && validations5.some(v => v.domain === 'accessibility'),
+    // TIGHTENED 2026-07-28 (Jonah, Codex review): was `validations5.length >= 3 && some(accessibility)`,
+    // which passed while SILENTLY DROPPING one of the four requested domains. The test is named
+    // "validates all domains", so it now asserts exact membership of the four it asked for.
+    passed:
+      validations5.length === 4 &&
+      ['accessibility', 'performance', 'design_system', 'semantic'].every(d =>
+        validations5.some(v => v.domain === d),
+      ),
   });
 
   // Test 6: Validation results stored in FlowExecutionResult
@@ -227,9 +288,16 @@ function testBlock7c() {
   ]);
   const workflowDomains3 = COMPOSITE_FLOW_VALIDATIONS.complete_qa_workflow.domains;
   const validations3 = engine.validateMultipleDomains(workflowDomains3, result3);
+  // TIGHTENED 2026-07-28 (Jonah, Codex review): was named "all 4 domains" and asserted
+  // `validations3.length >= 4` against a workflow that declares FIVE. It passed while a domain
+  // went missing, and its stale "4" is the same drift the registration test above carried. It
+  // now asserts one validation per DECLARED domain, keyed off workflowDomains3 itself, so it
+  // tracks the workflow instead of a hardcoded number that can rot again.
   results.push({
-    test: 'Complete QA workflow validates all 4 domains',
-    passed: validations3.length >= 4,
+    test: 'Complete QA workflow validates every declared domain',
+    passed:
+      validations3.length === workflowDomains3.length &&
+      workflowDomains3.every(d => validations3.some(v => v.domain === d)),
   });
 
   // Test 4: Backward compatibility with explicit validation config
@@ -296,11 +364,17 @@ testBlock7d();
 console.log('Phase H Block 7: Flow Validator Integration Tests');
 console.log('================================================\n');
 
+// RANGES CORRECTED 2026-07-28 (Jonah). They were off by one from index 7 onward, so every
+// block after 7a was mislabelled and result index 19 ('All 5 domain validators are
+// registered') was NEVER PRINTED - the suite displayed 19 of its 20 results while its total
+// line correctly said /20. A reporting bug in a test is the same defect class as the runner
+// bug this repair sits under, so it is fixed here rather than left.
+// Actual pushes: 7a=8 (indices 0-7), 7b=6 (8-13), 7c=4 (14-17), 7d=2 (18-19).
 const blocks = [
-  { name: 'Block 7a: Validator Registration', range: [0, 7] },
-  { name: 'Block 7b: Validator Application', range: [7, 13] },
-  { name: 'Block 7c: Composite Flows', range: [13, 17] },
-  { name: 'Block 7d: Coverage Verification', range: [17, 19] },
+  { name: 'Block 7a: Validator Registration', range: [0, 8] },
+  { name: 'Block 7b: Validator Application', range: [8, 14] },
+  { name: 'Block 7c: Composite Flows', range: [14, 18] },
+  { name: 'Block 7d: Coverage Verification', range: [18, 20] },
 ];
 
 blocks.forEach(block => {
@@ -317,3 +391,8 @@ console.log(`\nTotal: ${totalPassed}/${results.length} tests passing`);
 console.log(totalPassed === results.length ? 'Status: PASSED' : 'Status: FAILED');
 
 export {};
+
+// FAIL-LOUD 2026-07-28 (Jonah): this suite used to tally a verdict, print `Status: FAILED`,
+// and then fall off the end of the file, which exits 0 - the exact defect class the runner
+// fix in scripts/run-tests.ts exists to catch. It now propagates its own verdict.
+process.exit(totalPassed === results.length ? 0 : 1);

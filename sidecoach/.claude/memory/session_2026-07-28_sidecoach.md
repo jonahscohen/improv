@@ -409,4 +409,4 @@ Rapid iteration with token-based variations
 - Pre-flight checks
 - Exponential-only easing - 2/4 pass
 
-Recorded: 2026-07-28T12:13:08.485Z
+Recorded: 2026-07-28T20:48:29.708Z

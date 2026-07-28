@@ -26,7 +26,7 @@ import { chromium } from 'playwright';
 import type { Browser } from 'playwright';
 import { inPageObjective } from './objective-rendered-scanner';
 import type { ObjectiveScan } from './objective-rendered-scanner';
-import { inPageSubjective, inPageBuzzword, buzzwordFindingFromScore, inPageTypeface, typefaceFindingFromScore, inPageTypographyExtremes, typographyExtremesFindingsFromScore, inPageStructural, structuralFindingsFromScore, inPageMotionMarker, motionMarkerFindingsFromScore } from './subjective-rendered-scanner';
+import { inPageSubjective, inPageNestedCards, nestedCardsFindingFromScore, inPageBuzzword, buzzwordFindingFromScore, inPageTypeface, typefaceFindingFromScore, inPageTypographyExtremes, typographyExtremesFindingsFromScore, inPageStructural, structuralFindingsFromScore, inPageMotionMarker, motionMarkerFindingsFromScore } from './subjective-rendered-scanner';
 import type { SubjectiveScan, TypefaceFindingOptions } from './subjective-rendered-scanner';
 import { isSubresourceAllowed } from './browser-evidence-collector';
 
@@ -161,6 +161,9 @@ export async function scanRenderedLive(
     let subjective: SubjectiveScan;
     try {
       const findings = await race(page.evaluate(inPageSubjective), 'evaluate');
+      // nested-cards via the SAME single-source split: in-page geometry score, Node-side thresholds.
+      const nested = nestedCardsFindingFromScore(await race(page.evaluate(inPageNestedCards), 'evaluate'));
+      if (nested) findings.push(nested);
       // marketing-buzzword via the SINGLE-SOURCE score + Node-side threshold (same code path the eval scan + the
       // calibration harness use, so the live NL workflow surfaces exactly what ships).
       const buzz = buzzwordFindingFromScore(await race(page.evaluate(inPageBuzzword), 'evaluate'));
@@ -172,7 +175,8 @@ export async function scanRenderedLive(
       findings.push(...typographyExtremesFindingsFromScore(await race(page.evaluate(inPageTypographyExtremes), 'evaluate')));
       // Stage 4c structural classes via the SAME split: one in-page score, Node-side thresholds -> 0-7 findings.
       findings.push(...structuralFindingsFromScore(await race(page.evaluate(inPageStructural), 'evaluate')));
-      // Stage 4d motion/marker classes via the SAME split: one in-page score, Node-side thresholds -> 0-3 findings.
+      // Stage 4d motion/marker classes via the SAME split: one in-page score, Node-side thresholds -> 0-1 findings
+      // (numbered-section-markers was removed 2026-07-28; marquee is the only class left in this family).
       findings.push(...motionMarkerFindingsFromScore(await race(page.evaluate(inPageMotionMarker), 'evaluate')));
       subjective = { available: true, findings };
     }

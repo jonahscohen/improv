@@ -43,8 +43,83 @@ const os = __importStar(require("os"));
 // 'critical'. We assemble the phrase from parts to keep content-guard from
 // blocking the test source itself.
 const SELF_CREDIT_TOKEN = `Generated ${'by'} ` + ['C', 'l', 'a', 'u', 'd', 'e'].join('');
+// ORDER DEPENDENCE, removed 2026-07-28. This suite passed only in a FULL `npm test`
+// run and failed standalone under a fresh HOME - before AND after the changes it was
+// written to prove, so it was never evidence about them.
+//
+// The mechanism: flow history is HOME-scoped (~/.claude/sidecoach-flow-history.json)
+// and shared across suites. composite_qa_workflow's steps are
+//   flowK_multi_lens_audit -> flowL_design_critique -> flowM_responsive_validation
+//   -> flowV_all_seven_qa
+// and step 1, flowK, REQUIRES flowJ_tactical_polish. With cold history the engine
+// records flowK as `error - prerequisites not met` and never calls its handler. T2
+// monkey-patches exactly that handler to inject the self-credit line, so on a cold
+// HOME the violation was never emitted, findings came back empty, the claudemd-mandate
+// grade stayed A and the verdict stayed unblocked - the two things T2 exists to
+// disprove. In a full run an earlier suite happened to warm the history first.
+//
+// Fixed the same way flow-target-render.test.ts fixes it: seed the prerequisites so
+// every step genuinely RUNS in every environment, then guard against the vacuity
+// coming back by asserting the patched step actually SUCCEEDED. flowM needs
+// flowG_component_implementation as well, so both are seeded; flowL is satisfied by
+// flowJ (1 of 2 optional) and flowV is ungated.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { getFlowHistory, resetFlowHistorySingleton } = require('../flow-history');
+// PER-CASE HERMETIC HISTORY (Codex review 2026-07-28, Medium). Seeding alone still
+// left both cases sharing one HOME-scoped store, so T1's run fed T2's prerequisites
+// and a standalone invocation outside scripts/run-tests.ts would write into the
+// developer's real ~/.claude/sidecoach-flow-history.json.
+//
+// Safe to do here, and checked rather than assumed:
+//   - FlowHistory.HISTORY_FILE is a static GETTER over process.env.HOME, so it is
+//     resolved lazily on every access rather than captured at import.
+//   - resetFlowHistorySingleton() is the module's own stated testing affordance for
+//     dropping the cached instance, which is what makes the new HOME take effect.
+//   - scripts/run-tests.ts spawns every suite with execFileSync, so re-pointing HOME
+//     inside this file cannot leak into any neighbouring suite.
+// Tracked so they can be removed on the way out. Without this every successful run
+// leaves a sidecoach-hist-* directory behind in $TMPDIR, which is the same litter the
+// project sandboxes below are already careful to clean up.
+const historySandboxes = [];
+function isolateHistory(tag) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), `sidecoach-hist-${tag}-`));
+    historySandboxes.push(dir);
+    process.env.HOME = dir;
+    resetFlowHistorySingleton();
+    seedPrerequisites();
+}
+function cleanupHistorySandboxes() {
+    for (const dir of historySandboxes) {
+        try {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+        catch {
+            /* best effort - a leftover temp dir must never fail the run */
+        }
+    }
+}
+function seedPrerequisites() {
+    for (const [flowId, flowName, why] of [
+        ['flowJ_tactical_polish', 'tactical polish', 'so flowK_multi_lens_audit (step 1) can execute'],
+        ['flowG_component_implementation', 'component implementation', 'so flowM_responsive_validation (step 3) can execute'],
+    ]) {
+        getFlowHistory().recordFlow({
+            flowId,
+            flowName,
+            status: 'success',
+            message: `seeded by sprint7-buildreport-includes-unstructured ${why}`,
+        });
+    }
+}
+// NON-VACUITY GUARD. Presence is not execution: a step recorded as `error` or
+// `skipped` still appears in flowResults. Only a step that SUCCEEDED ran its handler,
+// and for T2 that handler is the one carrying the violation under test.
+function stepRan(result, flowId) {
+    return (result?.flowResults || []).some((f) => f.flowId === flowId && f.status === 'success');
+}
 async function run() {
     const checks = [];
+    isolateHistory('t1');
     // T1: clean composite run -> buildReport includes claudemd-mandate domain grade with letter A.
     const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecoach-buildreport-'));
     const engine = new sidecoach_orchestrator_1.FlowExecutionEngine();
@@ -53,6 +128,10 @@ async function run() {
         projectContext: { register: 'brand' },
     });
     const buildReport = result.buildReport;
+    checks.push([
+        'T1: flowK_multi_lens_audit actually SUCCEEDED (a grade of A over a chain that never ran proves nothing)',
+        stepRan(result, 'flowK_multi_lens_audit'),
+    ]);
     checks.push(['T1: composite produced a buildReport', !!buildReport]);
     if (buildReport) {
         const claudemd = (buildReport.domainGrades || []).find((g) => g.domain === 'claudemd-mandate');
@@ -71,6 +150,13 @@ async function run() {
     fs.rmSync(sandbox, { recursive: true, force: true });
     // T2: dirty composite run -> buildReport.verdict === 'blocked' AND claudemd-mandate grade is NOT A.
     // Monkey-patch the FIRST step's handler to return a result with a self-credit line (critical violation).
+    // FRESH HISTORY FOR T2 (Codex review 2026-07-28, Medium). Seeding once before T1
+    // left T2's prerequisites partly supplied by T1's own side effects - T1's run records
+    // flowK as successful in the same HOME-scoped store, which would satisfy T2 on its
+    // own. That is order dependence inside the file rather than across files: smaller
+    // than the bug being fixed, but the same bug. T2 now gets its own store and its own
+    // seed, so its preconditions hold whether or not T1 ran and whether or not T1 changes.
+    isolateHistory('t2');
     const sandbox2 = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecoach-buildreport-dirty-'));
     const engine2 = new sidecoach_orchestrator_1.FlowExecutionEngine();
     const handlers = engine2.handlers;
@@ -96,6 +182,13 @@ async function run() {
     if (originalHandler)
         handlers.set(firstStepFlowId, originalHandler);
     const buildReport2 = result2.buildReport;
+    // THE GUARD THAT MAKES T2 MEAN ANYTHING: the patched handler is the only source of
+    // the violation below, and it runs only if this step reached success. Without this,
+    // a cold HOME turns every T2 assertion into a statement about an empty findings list.
+    checks.push([
+        `T2: the monkey-patched step ${firstStepFlowId} actually EXECUTED (status=success)`,
+        stepRan(result2, firstStepFlowId),
+    ]);
     checks.push(['T2: dirty composite produced a buildReport', !!buildReport2]);
     if (buildReport2) {
         const claudemd = (buildReport2.domainGrades || []).find((g) => g.domain === 'claudemd-mandate');
@@ -122,7 +215,8 @@ async function run() {
             allPass = false;
     }
     console.log(allPass ? 'sprint7-buildreport-includes-unstructured PASS' : 'sprint7-buildreport-includes-unstructured FAIL');
+    cleanupHistorySandboxes();
     process.exit(allPass ? 0 : 1);
 }
-run().catch((e) => { console.error(e); process.exit(1); });
+run().catch((e) => { console.error(e); cleanupHistorySandboxes(); process.exit(1); });
 //# sourceMappingURL=sprint7-buildreport-includes-unstructured.test.js.map

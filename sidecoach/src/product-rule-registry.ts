@@ -945,11 +945,6 @@ const RENDERED_RULE_MANIFEST: RenderedManifestEntry[] = [
     severity: 'minor', findingClass: 'polish', registryScope: 'rendered-marquee',
     note: 'a <marquee> element or an infinite horizontal-scroll (CSS marquee) animation; audit-only (A5a pending)',
   },
-  {
-    scannerRule: 'numbered-section-markers', lens: 'subjective', ruleId: null,
-    severity: 'minor', findingClass: 'polish', registryScope: 'rendered-numbered-section-markers',
-    note: 'prominent decorative section numerals (01/02/03) as an organizing motif; audit-only (A5a pending)',
-  },
 ];
 
 export interface RenderedRuleResolution {

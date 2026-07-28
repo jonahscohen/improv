@@ -364,6 +364,42 @@ function exitCodeFor(verdict) {
   return EXIT_FINDINGS;
 }
 
+// Rules whose findings are inherently PER-ELEMENT but read as one page-level defect. A single real page produced
+// 35 `low-contrast` lines carrying the identical "2.91:1 (need 4.5:1)" detail, which buries every other finding
+// in the summary. Collapse them to one line per (lens, rule) carrying the element COUNT, the number of DISTINCT
+// details, and a representative element.
+//
+// WHY THIS IS A DISPLAY-LAYER COLLAPSE AND NOT A SCANNER CHANGE, unlike tiny-text and nested-cards: those two are
+// PAGE-LEVEL judgments (their thresholds are page-wide proportions/counts), so emitting one line per element was
+// restating one verdict N times and the fix belongs in the scanner. A low-contrast element, by contrast, is a
+// genuinely distinct defect with its own measured ratio, and the per-element findings are what the a11y check
+// mapping and evidenceLocations consume. So the evidence stays intact in the scan and the JSON output; only the
+// human-readable summary is collapsed.
+const PAGE_LEVEL_DISPLAY_RULES = new Set(['low-contrast', 'gray-on-color']);
+
+function collapseForDisplay(findings) {
+  const out = [];
+  const groups = new Map();
+  for (const f of findings) {
+    if (!PAGE_LEVEL_DISPLAY_RULES.has(f.rule)) { out.push(f); continue; }
+    const key = `${f.lens}/${f.rule}/${f.severity}`;
+    if (!groups.has(key)) groups.set(key, { first: f, count: 0, details: new Set(), index: out.length });
+    const g = groups.get(key);
+    if (g.count === 0) out.push(null);            // reserve the group's position in finding order
+    g.count++;
+    if (f.detail) g.details.add(f.detail);
+  }
+  for (const g of groups.values()) {
+    const f = g.first;
+    if (g.count === 1) { out[g.index] = f; continue; }
+    const distinct = g.details.size;
+    const detail = `${g.count} element(s)${distinct ? `, ${distinct} distinct measurement(s)` : ''}`
+      + `${f.detail ? ` (e.g. ${f.selector || 'element'} - ${f.detail})` : ''}`;
+    out[g.index] = { ...f, detail };
+  }
+  return out.filter(Boolean);
+}
+
 function printSummary(result) {
   const lines = [];
   lines.push(`sidecoach-detect: ${result.target} (${result.targetKind})`);
@@ -380,7 +416,7 @@ function printSummary(result) {
         : `INCOMPLETE (${l.findings} finding(s), cannot certify clean) - ${l.reason || 'no reason reported'}`;
     lines.push(`  lens ${name}: ${state}`);
   }
-  for (const f of result.findings) {
+  for (const f of collapseForDisplay(result.findings)) {
     const where = f.selector || f.location || '(no location)';
     lines.push(`  [${f.severity}] ${f.lens}/${f.rule} @ ${where}${f.detail ? ` - ${f.detail}` : ''}`);
   }
@@ -497,7 +533,7 @@ async function main() {
 // The fail-closed verdict rule is the load-bearing logic in this file, so it is exported
 // and unit-tested directly rather than only through a subprocess that has to launch a
 // browser. Requiring this module must therefore NOT run a scan.
-module.exports = { decideVerdict, exitCodeFor, EXIT_CLEAN, EXIT_FINDINGS, EXIT_USAGE, EXIT_INCONCLUSIVE };
+module.exports = { decideVerdict, exitCodeFor, collapseForDisplay, EXIT_CLEAN, EXIT_FINDINGS, EXIT_USAGE, EXIT_INCONCLUSIVE };
 
 if (require.main === module) {
   main().catch((err) => {

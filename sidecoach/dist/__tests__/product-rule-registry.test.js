@@ -317,7 +317,7 @@ run();
         'first-viewport-overflow': false, 'decorative-dot-grid': false, 'soft-radial-glow': false,
         'image-hover-transform': false,
         // Stage 4d detectable motion/marker classes - audit-only taste warnings, non-blocking.
-        'marquee': false, 'numbered-section-markers': false,
+        'marquee': false,
     };
     for (const { rule } of scannerRules) {
         const res = (0, product_rule_registry_1.resolveRenderedRule)(rule);
@@ -351,7 +351,7 @@ run();
     for (const r of [
         'thin-border-wide-shadow', 'repeating-stripe-gradients', 'text-under-overlay', 'first-viewport-overflow',
         'decorative-dot-grid', 'soft-radial-glow', 'image-hover-transform',
-        'marquee', 'numbered-section-markers',
+        'marquee',
     ]) {
         const res = (0, product_rule_registry_1.resolveRenderedRule)(r);
         if (res.source !== 'audit-only' || res.ruleId !== null)

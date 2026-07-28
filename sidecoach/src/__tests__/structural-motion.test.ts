@@ -3,7 +3,8 @@
 // OWNED test for the Stage 4c structural + 4d motion/marker rendered SUBJECTIVE classes:
 //   4c: thin-border-wide-shadow, repeating-stripe-gradients, text-under-overlay, first-viewport-overflow,
 //       decorative-dot-grid, soft-radial-glow, image-hover-transform
-//   4d: marquee, numbered-section-markers (blinking-cursor PULLED 2026-07-25)
+//   4d: marquee (blinking-cursor PULLED 2026-07-25; numbered-section-markers REMOVED 2026-07-28 - inert, best
+//       reachable precision 0.500 over 138 real pages, see the scanner's removal note)
 //
 // Two layers (the typography-extremes.test.ts shape):
 //   1. SYNTHETIC-SCORE boundary tests (no browser) - pin each frozen threshold in structuralFindingsFromScore /
@@ -19,14 +20,14 @@ import {
   analyzeHtmlOnBrowserSubjective,
   structuralFindingsFromScore, motionMarkerFindingsFromScore,
   TBWS_MIN_COUNT, STRIPE_MIN_COUNT, TUO_MIN_COUNT, FVO_OVERFLOW_MIN_PX, DOTGRID_MIN_COUNT, GLOW_MIN_COUNT, IHT_MIN_COUNT,
-  MARQUEE_MIN_COUNT, NUM_MARKER_MIN_COUNT,
+  MARQUEE_MIN_COUNT, SUBJECTIVE_RULES,
   type StructuralScore, type MotionMarkerScore, type SubjectiveRule, type SubjectiveFinding,
 } from '../validators/subjective-rendered-scanner';
 
 const MY_RULES: SubjectiveRule[] = [
   'thin-border-wide-shadow', 'repeating-stripe-gradients', 'text-under-overlay', 'first-viewport-overflow',
   'decorative-dot-grid', 'soft-radial-glow', 'image-hover-transform',
-  'marquee', 'numbered-section-markers',
+  'marquee',
 ];
 const failures: string[] = [];
 let asserted = 0;
@@ -46,7 +47,6 @@ const baseStructural = (over: Partial<StructuralScore> = {}): StructuralScore =>
 });
 const baseMotion = (over: Partial<MotionMarkerScore> = {}): MotionMarkerScore => ({
   marqueeElementCount: 0, marqueeAnimCount: 0,
-  numberedMarkerCount: 0, numberedZeroPadded: false,
   ...over,
 });
 const sRules = (s: StructuralScore): Set<string> => new Set(structuralFindingsFromScore(s).map((f: SubjectiveFinding) => f.rule));
@@ -79,8 +79,10 @@ check(!sRules(baseStructural({ imageHoverTransformCount: IHT_MIN_COUNT - 1 })).h
 check(mRules(baseMotion({ marqueeElementCount: MARQUEE_MIN_COUNT })).has('marquee'), 'marquee must fire on a <marquee> element');
 check(mRules(baseMotion({ marqueeAnimCount: MARQUEE_MIN_COUNT })).has('marquee'), 'marquee must fire on a marquee animation');
 check(!mRules(baseMotion({})).has('marquee'), 'marquee must NOT fire with no element and no animation');
-check(mRules(baseMotion({ numberedMarkerCount: NUM_MARKER_MIN_COUNT, numberedZeroPadded: true })).has('numbered-section-markers'), `numbered must fire at count=${NUM_MARKER_MIN_COUNT}`);
-check(!mRules(baseMotion({ numberedMarkerCount: NUM_MARKER_MIN_COUNT - 1 })).has('numbered-section-markers'), 'numbered must NOT fire below its count floor');
+// numbered-section-markers REMOVED 2026-07-28. Asserting its ABSENCE is the live claim now: no score shape may
+// resurrect the rule, and the rule name must be gone from the scanner's own rule list.
+check(!SUBJECTIVE_RULES.includes('numbered-section-markers' as never), 'numbered-section-markers must be gone from SUBJECTIVE_RULES');
+check(mRules(baseMotion({ marqueeElementCount: 5 })).size === 1, 'motion/marker score may emit ONLY marquee now');
 
 // ---- layer 2: browser end-to-end over the on-disk fixtures + the shipped known-good page ---------------------
 const FIX = path.resolve(__dirname, '..', '..', 'eval', 'fixtures', 'structural-motion');

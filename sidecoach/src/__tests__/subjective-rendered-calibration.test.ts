@@ -26,7 +26,7 @@ import path from 'node:path';
 import { analyzeHtmlOnBrowserSubjective, type SubjectiveRule } from '../validators/subjective-rendered-scanner';
 
 const IMPLEMENTED_RULES: SubjectiveRule[] = ['tiny-text', 'nested-cards', 'marketing-buzzword', 'default-typeface'];
-interface Fixture { name: string; html: string; expect: SubjectiveRule | null; note?: string; brand?: string[]; }
+interface Fixture { name: string; html: string; expect: SubjectiveRule | null; note?: string; brand?: string[]; faceGroundA?: boolean; }
 // The inline fixtures below exercise tiny-text / nested-cards / marketing-buzzword, so they declare a nominal
 // CHOSEN family. Without it every one of them would also be a default-typeface positive (an unstyled page
 // computes to the UA default) and the `expect: null` negatives would fail on an unrelated class. The family is
@@ -76,27 +76,35 @@ const FIXTURES: Fixture[] = [
   { name: 'nc/card-with-image-children', expect: null, note: 'a card containing images (media), not nested cards', html: doc(cardBorder('<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" style="width:300px;height:180px;border-radius:8px" alt="">')) },
   { name: 'nc/inner-not-smaller', expect: null, note: 'a card containing a card that is ~the same size (>85% area) - not a layered sub-panel', html: doc(`<div style="width:420px;height:320px;border-radius:12px;border:1px solid #ddd"><div style="width:410px;height:300px;border-radius:10px;border:1px solid #ccc"><p>nearly same size</p></div></div>`) },
   { name: 'nc/single-bordered-card', expect: null, note: 'one bordered card, no nesting', html: doc(cardBorder('<p>just body text and a heading</p>')) },
+  { name: 'nc/fullbleed-section-holding-a-card', expect: 'nested-cards', note: 'THE REJECTED 2026-07-28 GUARD, pinned as a POSITIVE. Suppressing a full-bleed outer box gained precision on the tuning population and LOST it on the untouched held-out (0.750 -> 0.500, removing 2 true positives and 0 false positives), so the guard was not shipped. This page must still fire; a future re-tune that silences it has to bring a fresh held-out measurement.', html: doc(`<section style="width:1280px;height:400px;border-radius:12px;border:1px solid #ddd"><p>Full-bleed section</p><div style="width:300px;height:180px;border-radius:8px;border:1px solid #ccc"><p>A real card inside it</p></div></section>`) },
   { name: 'nc/rounded-section-no-treatment', expect: null, note: 'rounded section containing a rounded sub-block, neither with border/shadow (no card treatment)', html: doc('<section style="width:600px;height:300px;border-radius:12px"><div style="width:300px;height:150px;border-radius:10px"><p>plain rounded blocks</p></div></section>') },
 
   // ---- marketing-buzzword (v2: holistic weighted DENSITY >= 1.0 over content copy) ----
   // PRESENT (buzzword-saturated copy -> high density)
   { name: 'mb/dense-fluff', expect: 'marketing-buzzword', note: 'a buzzword-saturated marketing paragraph (density far above 1.0)', html: doc('<main><h1 style="font-size:56px">The revolutionary, seamless platform</h1><p style="font-size:18px">Our world-class, enterprise-grade, AI-powered solution is purpose-built to supercharge productivity and unlock limitless growth. Effortless, intuitive, and future-proof, it transforms how teams work and delivers best-in-class results. Elevate your workflow with our next-generation, all-in-one toolkit and accelerate innovation across the organization.</p></main>') },
-  { name: 'mb/steady-marketing', expect: 'marketing-buzzword', note: 'realistic marketing copy with a steady drumbeat of buzzwords (density clearly above 1.0)', html: doc(`<main><h1 style="font-size:56px">Modern automation for growing teams</h1><p style="font-size:16px">Acme is the modern platform that helps you streamline operations and scale with confidence. Our powerful, intuitive automation accelerates your work, and customers love how seamless it feels. From startups to enterprises, innovative teams rely on our enterprise-grade, all-in-one solution. ${'Get started in minutes and connect the tools you already use. '.repeat(2)}</p></main>`) },
+  { name: 'mb/steady-marketing', expect: 'marketing-buzzword', note: 'realistic marketing copy with a steady drumbeat of buzzwords, carrying TWO distinct PEAK terms (seamless, effortless) - the v4 gate', html: doc(`<main><h1 style="font-size:56px">Modern automation for growing teams</h1><p style="font-size:16px">Acme is the modern platform that helps you streamline operations and scale with confidence. Our powerful, intuitive automation accelerates your work, and customers love how seamless and effortless it feels. From startups to enterprises, innovative teams rely on our enterprise-grade, all-in-one solution. ${'Get started in minutes and connect the tools you already use. '.repeat(2)}</p></main>`) },
 
   // ABSENT (concrete copy -> low density; or buzzwords excluded by scope)
   { name: 'mb/concrete-zero', expect: null, note: 'concrete technical copy with zero buzzwords -> density 0', html: doc(`<main><h1 style="font-size:56px">Deploy Postgres in thirty seconds</h1><p style="font-size:16px">${CONC.repeat(3)}Daily backups are retained for thirty days and you can restore to any second within that window. Read replicas are available in additional regions.</p></main>`) },
   { name: 'mb/single-stray-buzzword', expect: null, note: 'ONE stray buzzword diluted across substantial concrete copy stays below the density threshold', html: doc(`<main><h1 style="font-size:56px">A modern database for developers</h1><p style="font-size:16px">${CONC.repeat(6)}</p></main>`) },
   { name: 'mb/buzzwords-in-testimonial', expect: null, note: 'TESTIMONIAL exclusion: buzzword-heavy CUSTOMER QUOTE is social proof, excluded; the concrete body keeps density low', html: doc(`<main><h1 style="font-size:56px">Managed Postgres for teams</h1><blockquote class="testimonial" style="font-size:20px">This revolutionary, seamless, world-class platform supercharged our team and unlocked limitless, game-changing, best-in-class results.</blockquote><p style="font-size:16px">${CONC.repeat(3)}</p></main>`) },
+  // THE MEASURED FALSE-POSITIVE MODE (2026-07-28). On the 138-page tuning population the v3 operating point fired
+  // on MDN, Rust, Django, Kubernetes and Vercel docs: ordinary technical vocabulary (robust, scalable, efficient,
+  // optimize, modern, advanced, intelligent) carried the density over the line, and the v3 qualify guard passed
+  // because a page describing real engineering trivially contains ONE strong term. Each of those pages had 0 or 1
+  // distinct PEAK term. This fixture reproduces that shape and pins the v4 gate: >= 2 distinct PEAK terms.
+  { name: 'mb/technical-docs-one-peak-term', expect: null, note: 'V4 GATE: dense technical vocabulary at a density well ABOVE the firing threshold, with exactly ONE distinct PEAK term. This is the class that broke precision on held-out (0.304); it must be clean.', html: doc(`<main><h1 style="font-size:56px">Scaling the scheduler</h1><p style="font-size:16px">The scheduler is a robust, scalable component with an intuitive, flexible API. Advanced users can optimize placement with a comprehensive set of dynamic constraints, and the modern control plane automates rollout so upgrades feel seamless. Intelligent, unified defaults keep the integrated pipeline efficient and performant, and the premium tier adds sophisticated automation for productivity.</p></main>`) },
+  { name: 'mb/two-peak-terms-fires', expect: 'marketing-buzzword', note: 'V4 GATE, the other side: the same register with TWO distinct PEAK terms (seamless, effortless) DOES fire - proving the gate is a threshold on PEAK distinctness and not a blanket suppression', html: doc(`<main><h1 style="font-size:56px">Scaling the scheduler</h1><p style="font-size:16px">The scheduler is a robust, scalable component with an intuitive, flexible API. Advanced users can optimize placement with a comprehensive set of dynamic constraints, and the modern control plane automates rollout so upgrades feel seamless and effortless. Intelligent, unified defaults keep the integrated pipeline efficient and performant, and the premium tier adds sophisticated automation for productivity.</p></main>`) },
   { name: 'mb/buzzwords-peripheral-only', expect: null, note: 'PERIPHERAL exclusion: a buzzword cluster in the footer is chrome, not the page copy => excluded', html: doc(`<main><h1 style="font-size:56px">Managed database for developers</h1><p style="font-size:16px">${CONC.repeat(3)}</p></main><footer style="font-size:18px">Seamless. Powerful. Revolutionary. Supercharge. Effortless. World-class. Unlock. Limitless.</footer>`) },
 
   // ---- default-typeface (Stage 4a). Fixtures live on disk so eval/typeface-calibrate.mjs scores the SAME
   // pages this test asserts on - one fixture set, two consumers, no drift between the sweep and the gate.
   // PRESENT (the content text is not set in a typeface anyone chose)
-  { name: 'dt/unstyled', expect: 'default-typeface', note: 'no font-family anywhere - the page renders in the UA default', html: face('p01-unstyled.html') },
-  { name: 'dt/system-stack', expect: 'default-typeface', note: 'the canonical -apple-system/BlinkMacSystemFont/Segoe UI/Roboto boilerplate - the most common default stack on the web', html: face('p02-system-stack.html') },
-  { name: 'dt/websafe-monoculture', expect: 'default-typeface', note: 'Arial body + Georgia headings + Courier code - the OS-bundled websafe monoculture, i.e. no typeface was bought or chosen', html: face('p03-websafe-monoculture.html') },
-  { name: 'dt/webfont-declared-never-applied', expect: 'default-typeface', note: 'THE RENDERED-ENGINE EDGE: the brand face is loaded via @font-face but no content selector references it, so the content renders on system-ui. A static source read sees the declaration and calls this clean; the rendered read is correct.', html: face('p04-webfont-declared-never-applied.html') },
-  { name: 'dt/tailwind-defaults', expect: 'default-typeface', note: 'untouched utility defaults (ui-sans-serif / ui-monospace) - the framework default, never overridden', html: face('p05-tailwind-defaults.html') },
+  { name: 'dt/unstyled', expect: 'default-typeface', faceGroundA: true, note: 'no font-family anywhere - the page renders in the UA default', html: face('p01-unstyled.html') },
+  { name: 'dt/system-stack', expect: 'default-typeface', faceGroundA: true, note: 'the canonical -apple-system/BlinkMacSystemFont/Segoe UI/Roboto boilerplate - the most common default stack on the web', html: face('p02-system-stack.html') },
+  { name: 'dt/websafe-monoculture', expect: 'default-typeface', faceGroundA: true, note: 'Arial body + Georgia headings + Courier code - the OS-bundled websafe monoculture, i.e. no typeface was bought or chosen', html: face('p03-websafe-monoculture.html') },
+  { name: 'dt/webfont-declared-never-applied', expect: 'default-typeface', faceGroundA: true, note: 'THE RENDERED-ENGINE EDGE: the brand face is loaded via @font-face but no content selector references it, so the content renders on system-ui. A static source read sees the declaration and calls this clean; the rendered read is correct.', html: face('p04-webfont-declared-never-applied.html') },
+  { name: 'dt/tailwind-defaults', expect: 'default-typeface', faceGroundA: true, note: 'untouched utility defaults (ui-sans-serif / ui-monospace) - the framework default, never overridden', html: face('p05-tailwind-defaults.html') },
 
   // ABSENT - precision. Each is a page that HAS chosen a typeface, in a way that is easy to over-fire on.
   { name: 'dt/branded-body', expect: null, note: 'a chosen face throughout', html: face('n01-branded-body.html') },
@@ -110,9 +118,17 @@ const FIXTURES: Fixture[] = [
   { name: 'dt/brand-committed-but-absent', expect: 'default-typeface', brand: ['Verge Serif'], note: 'GROUND B: the same well-typeset page scanned against a DIFFERENT committed family. The page is set in Alluvium Sans, so the committed Verge Serif carries 0% of the content - the brand decision did not land, even though the page is not on a default stack.', html: face('n01-branded-body.html') },
   { name: 'dt/no-brand-supplied-is-inert', expect: null, note: 'the SAME page with NO committed family supplied - ground B must be INERT, not guess at a brand', html: face('n01-branded-body.html') },
 
+  // ---- default-typeface GROUND A GATE (2026-07-28). Ground A is gated OFF by default because its precision on
+  // real pages is UNDEFINED: the only labeled positives anywhere are the five synthetic fixtures above, all 12
+  // labeled REAL pages are negatives it stays silent on, and all 40 of its real-page fires (31/90 candidates,
+  // 9/37 held-out) are unlabeled. Every ground-A positive above therefore asserts against the OPT-IN path; these
+  // two assert the DEFAULT path stays silent, so a regression that quietly re-enables it fails here.
+  { name: 'dt/gated-unstyled-silent-by-default', expect: null, note: 'GATE: the unstyled page - the strongest possible ground-A positive - must emit NOTHING with no opt-in', html: face('p01-unstyled.html') },
+  { name: 'dt/gated-tailwind-defaults-silent-by-default', expect: null, note: 'GATE: untouched framework defaults must emit NOTHING with no opt-in', html: face('p05-tailwind-defaults.html') },
+
   // ---- default-typeface regressions folded from the Codex review ----
   { name: 'dt/quoted-family-containing-comma', expect: null, note: 'CODEX P2: a legal quoted family name that CONTAINS a comma. A naive split(",") reads the lead as "arial" and false-positives on a page that chose a typeface; the quote-aware splitter keeps the name whole.', html: `<!doctype html><html><head><meta charset="utf-8"></head><body style="font-family:'Arial, Sans'"><main><p>${S.repeat(6)}</p></main></body></html>` },
-  { name: 'dt/body-level-text-on-system-stack', expect: 'default-typeface', note: 'CODEX P2: text placed DIRECTLY in <body> with no wrapping element. The walk includes document.body itself, so an unstyled bare page is still counted rather than scoring zero content.', html: `<!doctype html><html><head><meta charset="utf-8"></head><body style="font-family:system-ui,sans-serif">${S.repeat(6)}</body></html>` },
+  { name: 'dt/body-level-text-on-system-stack', expect: 'default-typeface', faceGroundA: true, note: 'CODEX P2: text placed DIRECTLY in <body> with no wrapping element. The walk includes document.body itself, so an unstyled bare page is still counted rather than scoring zero content.', html: `<!doctype html><html><head><meta charset="utf-8"></head><body style="font-family:system-ui,sans-serif">${S.repeat(6)}</body></html>` },
 ];
 
 async function run(): Promise<void> {
@@ -121,7 +137,10 @@ async function run(): Promise<void> {
   const failures: string[] = []; let asserted = 0;
   try {
     for (const f of FIXTURES) {
-      const findings = await analyzeHtmlOnBrowserSubjective(browser, f.html, 30000, {}, f.brand ? { brandFamilies: f.brand } : {});
+      const findings = await analyzeHtmlOnBrowserSubjective(browser, f.html, 30000, {}, {
+        ...(f.brand ? { brandFamilies: f.brand } : {}),
+        ...(f.faceGroundA ? { enableDefaultStackGround: true } : {}),
+      });
       const fired = new Set(findings.map((x) => x.rule));
       if (f.expect === null) {
         asserted++;

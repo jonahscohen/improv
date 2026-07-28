@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { execFileSync } from 'child_process';
+import { spawnSync } from 'child_process';
 
 const SIDECOACH = path.resolve(__dirname, '..');
 
@@ -29,7 +29,36 @@ const SIDECOACH = path.resolve(__dirname, '..');
 // `npm test` therefore builds first (see package.json: `npm run build && ...`, ~5s).
 // Invoking this file directly bypasses that - build first, or these suites check
 // stale output. The ts-node suites above test src/ directly and are unaffected.
-interface Suite { rel: string; cwd?: string; required?: boolean; runner?: 'ts-node' | 'node'; args?: string[]; env?: Record<string, string>; }
+//
+// SELF-REPORTED VERDICTS (added 2026-07-28, Jonah). Exit code alone is NOT a sufficient
+// pass signal here. Many suites in this repo are plain scripts that tally their own
+// results, print `Status: FAILED`, and then fall off the end of the file - which exits 0.
+// The runner counted every one of those as a pass, so `npm test` reported
+// "N suite(s) passed, exit 0" while its own transcript contained the failures.
+// `allowFailureLines` is the escape hatch for the OPPOSITE error. A suite whose
+// legitimate output contains a failure-shaped line (a negative case it is deliberately
+// demonstrating) declares those exact lines here, with a reason. Anything matched that is
+// NOT declared fails the suite, and declared-but-absent ALSO fails, so an allowance cannot
+// rot into a permanently-open hole.
+//
+// WHAT THIS DOES NOT GUARANTEE, stated plainly (Codex review 2026-07-28, finding 4): the
+// reconciliation is exact-text and count-exact, not context-aware. If a real broken path
+// starts emitting the SAME line the allowance was written for, at the same count, the
+// allowance absorbs it. The mitigation is on the suite side - an allowlisted line should
+// carry a case id unique to the negative case, and the suite should separately assert that
+// the negative case actually ran. There are currently ZERO entries in this list, so the
+// only live guarantee is the default-deny one.
+// See scanForFailureVerdicts() below for the matching rules.
+interface AllowedFailureLine { line: string; why: string }
+interface Suite {
+  rel: string;
+  cwd?: string;
+  required?: boolean;
+  runner?: 'ts-node' | 'node';
+  args?: string[];
+  env?: Record<string, string>;
+  allowFailureLines?: AllowedFailureLine[];
+}
 const SUITES: Suite[] = [
   { rel: 'src/intent-detector.test.ts', required: true },                                 // legacy; outside __tests__/ - must not be dropped
   { rel: 'src/__tests__/classifier-parity.test.ts', required: true },                     // engine classifier copy guard (Task 7/8)
@@ -98,6 +127,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/default-typeface-ground-b-wiring.test.ts', required: true }, // Stage 4b: DESIGN.md committed family -> run-validator/audit -> scanner Ground B; fail-closed when no brand declared
   { rel: 'src/__tests__/typography-extremes.test.ts', required: true },              // Stage 4b: 5 typographic-extreme taste classes - threshold boundaries + fixtures + A2 non-regression
   { rel: 'src/__tests__/structural-motion.test.ts', required: true },               // Stage 4c/4d: 7 structural + 3 motion/marker taste classes - threshold boundaries + fixtures + A2 non-regression
+  { rel: 'src/__tests__/taste-precision-gates.test.ts', required: true },           // 2026-07-28 taste-precision retune: buzzword PEAK gate, nested-cards viewport guard, default-typeface ground-A gate, numbered-section-markers removal, page-level dedupe
   { rel: 'src/__tests__/rendered-scan-integration.test.ts', required: true },        // Stage 1 convergence: rendered scanner findings surface through the LIVE run-validator path
   { rel: 'src/__tests__/forms-checks.test.ts', required: true },                      // Stage 2 convergence: absorbed forms-a11y checks (FORMS_016/018/019/002/015)
   { rel: 'src/__tests__/page-quality-checks.test.ts', required: true },               // Stage 2 convergence: cherry-picked DOM-evidence Tier-2 keepers (img/text/dark/chart/button)
@@ -265,9 +295,136 @@ console.log(`run-tests: playwright cache -> ${process.env.PLAYWRIGHT_BROWSERS_PA
 process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecoach-test-home-'));
 console.log(`run-tests: isolated HOME -> ${process.env.HOME}`);
 
+// FAILURE-VERDICT VOCABULARY.
+//
+// Deliberately NARROW. This is not a `grep -i fail` over the transcript - that direction
+// cries wolf, and a gate that cries wolf gets ignored, which lands you back at a false
+// green by a longer road. Three constraints keep it honest:
+//
+//  1. ANCHORED. The marker must open the line (leading whitespace allowed). A failure word
+//     mentioned mid-sentence in prose, a filename, or an assertion label is not a verdict.
+//  2. UPPERCASE verdict token. Every self-reporting suite in this repo prints FAIL / FAILED
+//     in caps. Requiring caps drops ordinary prose ("Status: failed to parse config") out
+//     of scope while still catching every verdict shape the repo actually emits.
+//  3. TALLY lines must be self-describing. `Total: 16/20 tests passing` counts; a bare
+//     `3/10` does not, because plenty of suites print ratios that are not verdicts
+//     (fixtures scanned, rules matched, steps run).
+//
+// Anything this vocabulary cannot see - a suite that fails silently and prints nothing -
+// is still invisible to the runner. That residual gap is real; it is bounded by the fact
+// that a suite printing NO verdict at all also proves nothing to a human reading the log.
+//
+// The FAIL token is matched with an explicit terminator lookahead rather than `\b`.
+// `\b` matches between `L` and `-`, so `FAIL\b` fires on FAIL-CLOSED - a phrase this
+// repo's passing suites use constantly ("FAIL-CLOSED: inconclusive render refused as
+// clean"). That would have been a manufactured red on healthy suites (Codex review
+// 2026-07-28, finding 2).
+const FAIL_TOKEN = String.raw`FAIL(?:ED)?(?=[ \t:,.;!?)\]]|$)`;
+
+const FAILURE_VERDICT_PATTERNS: { name: string; re: RegExp; isFailure?: (m: RegExpMatchArray) => boolean }[] = [
+  // `Status: FAILED`, `Result: FAIL (artifact not found)`, `Verdict: FAIL`
+  { name: 'labelled-verdict', re: new RegExp(String.raw`^[ \t]*(?:Status|Result|Results|Verdict|Outcome)[ \t]*:[ \t]*` + FAIL_TOKEN) },
+  // `FAIL <label>` - the per-check shape ~44 suites in this repo use alongside `PASS <label>`
+  { name: 'leading-fail', re: new RegExp(String.raw`^[ \t]*` + FAIL_TOKEN) },
+  // `<suite-name> FAIL` / `<label>: FAIL` - the trailing single-word verdict shape.
+  // Two branches, and the split is the whole point (Codex review 2026-07-28, fourth pass).
+  // Trailing `!`/`?` are allowed ONLY after a colon, so `checkout-flow: FAIL!` is caught
+  // while the English sentences `negative case should FAIL!` and `does this intentionally
+  // FAIL?` are not. A colon is a label, and a label is what distinguishes a verdict from
+  // a sentence; without one this pattern is the most exposed in the set, so the
+  // whitespace-separated branch stays strictly unpunctuated. A trailing `.` is never
+  // accepted on either branch.
+  { name: 'trailing-fail', re: /[A-Za-z0-9_)\]-](?:[ \t]*:[ \t]*FAIL(?:ED)?[!?]?|[ \t]+FAIL(?:ED)?)[ \t]*$/ },
+  // `[FAIL] <case>` - the bracketed per-case shape. Codex review 2026-07-28 (second pass,
+  // finding 3) caught this as a live hole: `[PASS]` appears 17 times in a full baseline
+  // transcript, so the convention is in use, and a suite that reported only bracketed
+  // per-case verdicts would have exited 0 and read green with nothing matching it.
+  { name: 'bracketed-fail', re: /^[ \t]*\[[ \t]*FAIL(?:ED)?[ \t]*\]/ },
+  // `Total: 16/20 tests passing`, `Results: 8/9 tests passing`, `<name>: 43/43 passed`
+  {
+    name: 'short-tally',
+    re: /^[ \t]*[\w .\/-]*?[ \t]*:?[ \t]*(\d+)[ \t]*\/[ \t]*(\d+)[ \t]+(?:tests?[ \t]+)?(?:pass(?:ed|ing)|ok)\b/,
+    isFailure: (m) => Number(m[1]) < Number(m[2]),
+  },
+  // `Results: 9 passed, 1 failed out of 10 tests`, `TEST RESULTS: 5 passed, 0 failed`.
+  // Codex review 2026-07-28 (finding 1) caught that this repo's most common summary shape
+  // was invisible to the vocabulary above, so a suite emitting only it could still exit 0
+  // and read green.
+  //
+  // The LABEL IS REQUIRED here, unlike short-tally, and that asymmetry is evidence-driven
+  // rather than stylistic. A full baseline transcript contains bare, indented DETAIL lines
+  // inside PASSING tests - phase-h-block4 prints "  1 passed, 2 failed" as the explanatory
+  // message of a green assertion about partial-status aggregation, and phase-h-block5
+  // prints "  2 passed, 1 failed" the same way. A label-free version of this pattern marks
+  // both of those healthy suites red. Requiring a label separates a suite-level verdict
+  // from an assertion's own commentary, which is exactly the line that has to be drawn.
+  //
+  // The label is an EXPLICIT vocabulary rather than "any word plus a colon" (Codex review
+  // 2026-07-28, second pass, finding 2): "any word" re-opens the false red from the other
+  // side, flagging explanatory lines like `Expected: 1 passed, 2 failed`. The colon is
+  // optional so the repo's unpunctuated `TEST RESULTS 9 passed, 1 failed` still matches.
+  {
+    name: 'labelled-passfail-tally',
+    re: /^[ \t]*(?:TEST[ \t]+RESULTS?|RESULTS?|TOTALS?|SUMMARY|TESTS)[ \t]*:?[ \t]*(\d+)[ \t]+pass(?:ed)?[,;]?[ \t]+(\d+)[ \t]+fail(?:ed)?\b/i,
+    isFailure: (m) => Number(m[2]) > 0,
+  },
+];
+
+interface VerdictHit { line: string; pattern: string }
+
+function scanForFailureVerdicts(output: string): VerdictHit[] {
+  const hits: VerdictHit[] = [];
+  for (const raw of output.split('\n')) {
+    // Strip ANSI so a coloured verdict cannot slip past the anchor.
+    // Colon-parameter SGR (`\x1b[38:2::255:0:0m`) is valid ANSI and would otherwise leave
+    // residue in front of the anchor, so `:` is in the parameter class alongside `;`.
+    const line = raw.replace(/\x1b\[[0-9;:]*[A-Za-z]/g, '').replace(/\r$/, '');
+    for (const p of FAILURE_VERDICT_PATTERNS) {
+      const m = line.match(p.re);
+      if (!m) continue;
+      if (p.isFailure && !p.isFailure(m)) continue;
+      hits.push({ line: line.trim(), pattern: p.name });
+      break;  // one hit per line; the first matching pattern names it
+    }
+  }
+  return hits;
+}
+
+// Compare observed verdict lines against the suite's declared allowlist as a MULTISET.
+// Exact-line, both directions:
+//   - an observed line with no matching allowance  -> the suite reported a failure
+//   - a declared line that did not appear          -> the allowance is stale, and a stale
+//                                                     allowance is a hole a future failure
+//                                                     can hide in, so it fails too
+function reconcileVerdicts(hits: VerdictHit[], allowed: AllowedFailureLine[]): string[] {
+  const problems: string[] = [];
+  const remaining = allowed.map((a) => a.line);
+  for (const hit of hits) {
+    const i = remaining.indexOf(hit.line);
+    if (i === -1) problems.push(`UNDECLARED failure verdict [${hit.pattern}]: ${hit.line}`);
+    else remaining.splice(i, 1);
+  }
+  for (const line of remaining) problems.push(`DECLARED failure verdict never appeared (stale allowFailureLines entry): ${line}`);
+  return problems;
+}
+
+// --audit: run everything, report every verdict-line hit per suite, never fail on the scan.
+// This is how the allowlist gets built from observed evidence instead of from guesswork,
+// and how the whole suite list gets swept for the print-a-failure-then-exit-0 shape.
+// --only <substr>: restrict the run to suites whose `rel` contains <substr>.
+const argv = process.argv.slice(2);
+const AUDIT = argv.includes('--audit');
+const ONLY = (() => { const i = argv.indexOf('--only'); return i !== -1 ? argv[i + 1] : undefined; })();
+
+const CAPTURE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecoach-test-capture-'));
+
 let ran = 0;
 let failed = 0;
+const auditReport: { rel: string; exit: number | null; hits: VerdictHit[]; hardFail: boolean }[] = [];
+const failureDetail: string[] = [];
+
 for (const s of SUITES) {
+  if (ONLY && !s.rel.includes(ONLY)) continue;
   const full = path.join(SIDECOACH, s.rel);
   if (!fs.existsSync(full)) {
     if (s.required) {
@@ -282,23 +439,96 @@ for (const s of SUITES) {
   const argSuffix = s.args?.length ? ` ${s.args.join(' ')}` : '';
   process.stdout.write(`-> ${s.rel}${argSuffix}${s.cwd ? ` (cwd ${s.cwd})` : ''}\n`);
   const env = s.env ? { ...process.env, ...s.env } : process.env;
-  const runOnce = (): void => {
-    if (s.runner === 'node') {
-      execFileSync('node', [full, ...(s.args ?? [])], { stdio: 'inherit', cwd, env });
-    } else {
-      execFileSync('npx', ['ts-node', full], { stdio: 'inherit', cwd, env });
+
+  // Child output is captured to a FILE, not to a pipe buffer, then echoed. A pipe would
+  // impose spawnSync's maxBuffer ceiling and silently truncate a chatty suite - and a
+  // truncated transcript is exactly how a verdict line goes missing. The cost is that
+  // output appears when the suite finishes rather than while it runs; the `-> <suite>`
+  // line above still says what is in flight.
+  const runOnce = (attempt: number): { ok: boolean; problems: string[]; hits: VerdictHit[]; exit: number | null } => {
+    const logPath = path.join(CAPTURE_DIR, `${ran}-${attempt}.log`);
+    const fd = fs.openSync(logPath, 'w');
+    let r;
+    try {
+      r = s.runner === 'node'
+        ? spawnSync('node', [full, ...(s.args ?? [])], { stdio: ['ignore', fd, fd], cwd, env })
+        : spawnSync('npx', ['ts-node', full], { stdio: ['ignore', fd, fd], cwd, env });
+    } finally {
+      fs.closeSync(fd);
     }
+    const output = fs.readFileSync(logPath, 'utf8');
+    process.stdout.write(output);
+    if (r.error) {
+      console.error(`run-tests: could not spawn ${s.rel}: ${r.error.message}`);
+      process.exit(3);  // runner-internal, NOT a test verdict - do not let it read as one
+    }
+    const problems: string[] = [];
+    if (r.signal) problems.push(`killed by signal ${r.signal}`);
+    else if (r.status !== 0) problems.push(`exit code ${r.status}`);
+    const hits = scanForFailureVerdicts(output);
+    if (!AUDIT) problems.push(...reconcileVerdicts(hits, s.allowFailureLines ?? []));
+    return { ok: problems.length === 0, problems, hits, exit: r.status };
   };
-  try {
-    runOnce();
-  } catch {
-    // RETRY-ONCE: ts-node can spuriously fail to COMPILE under concurrent load (a TS2304 on a symbol
-    // that resolves fine in isolation - observed while gating 50+ ts-node suites in one run). A transient
-    // flake passes the second attempt; a genuinely-red suite fails BOTH and is still counted, so this
-    // suppresses load-flakes without masking real failures.
-    process.stdout.write(`   (retrying ${s.rel} once after a failure)\n`);
-    try { runOnce(); } catch { failed++; }
+
+  let outcome = runOnce(1);
+  // RETRY-ONCE: ts-node can spuriously fail to COMPILE under concurrent load (a TS2304 on a symbol
+  // that resolves fine in isolation - observed while gating 50+ ts-node suites in one run). A transient
+  // flake passes the second attempt; a genuinely-red suite fails BOTH and is still counted, so this
+  // suppresses load-flakes without masking real failures.
+  //
+  // A SELF-REPORTED VERDICT IS NEVER RETRIED (Codex review 2026-07-28, finding 3). The retry exists
+  // for a spawn/compile flake, which shows up as a non-zero exit. A suite that ran far enough to TALLY
+  // its own results and print a failure has produced evidence, not noise - and re-running it and
+  // accepting a green second attempt would rebuild the exact false green this whole change exists to
+  // remove (a suite that only fails on its first run per fresh state would sail straight through).
+  //
+  // The gate is on raw HITS, not on reconciled problems (Codex second pass, finding 1). Keying it on
+  // `verdictProblems` was wrong in two reachable ways: `--audit` forces that list empty, so the audit
+  // path would happily retry a self-reported failure and then record only the clean second attempt;
+  // and once any suite declares an allowlist, an allowed hit also empties the list. Raw hits are the
+  // honest signal in every mode. The accepted cost: a suite that legitimately prints a negative-case
+  // line AND hits a genuine compile flake gets no retry. That is the safe direction to be wrong in.
+  if (!outcome.ok && outcome.hits.length === 0) {
+    process.stdout.write(`   (retrying ${s.rel} once after a non-zero exit)\n`);
+    outcome = runOnce(2);
+  }
+  if (AUDIT) {
+    auditReport.push({ rel: s.rel, exit: outcome.exit, hits: outcome.hits, hardFail: outcome.problems.length > 0 });
+  } else if (!outcome.ok) {
+    failed++;
+    for (const p of outcome.problems) failureDetail.push(`  ${s.rel}: ${p}`);
   }
 }
-if (failed) { console.error(`run-tests: ${failed} suite(s) failed`); process.exit(1); }
+
+fs.rmSync(CAPTURE_DIR, { recursive: true, force: true });
+
+if (AUDIT) {
+  console.log('\n===== run-tests --audit: self-reported failure verdicts =====');
+  const flagged = auditReport.filter((a) => a.hits.length > 0);
+  for (const a of flagged) {
+    console.log(`${a.rel}  (exit ${a.exit})`);
+    for (const h of a.hits) console.log(`    [${h.pattern}] ${h.line}`);
+  }
+  const greenWhileFailing = flagged.filter((a) => a.exit === 0);
+  console.log(`\naudit: ${auditReport.length} suite(s) run, ${flagged.length} emitted a failure verdict, ${greenWhileFailing.length} of those exited 0 (green-while-failing)`);
+  for (const a of greenWhileFailing) console.log(`  GREEN-WHILE-FAILING: ${a.rel}`);
+  // Audit is a DISCOVERY mode, but it must not become a second way to report a false green
+  // (Codex review 2026-07-28, finding 5). A suite that exited non-zero or died on a signal is
+  // reported here and takes the exit code with it, even though the verdict scan is advisory
+  // in this mode.
+  const hardFails = auditReport.filter((a) => a.hardFail);
+  for (const a of hardFails) console.error(`  HARD FAILURE (exit ${a.exit}): ${a.rel}`);
+  if (hardFails.length || greenWhileFailing.length) {
+    console.error(`audit: ${hardFails.length} hard failure(s), ${greenWhileFailing.length} green-while-failing suite(s)`);
+    process.exit(1);
+  }
+  console.log('audit: no suite reported a failure it did not also exit non-zero for');
+  process.exit(0);
+}
+
+if (failed) {
+  console.error(`run-tests: ${failed} suite(s) failed`);
+  for (const d of failureDetail) console.error(d);
+  process.exit(1);
+}
 console.log(`run-tests: ${ran} suite(s) passed`);

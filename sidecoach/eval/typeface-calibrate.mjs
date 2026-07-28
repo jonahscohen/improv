@@ -131,7 +131,9 @@ for (const f of fixFiles) {
 await browser.close();
 const expectedPages = devFiles.length + fixFiles.length;
 
-const fires = (s) => typefaceFindingFromScore(s, {}) !== null;
+// Ground A is GATED OFF in product as of 2026-07-28. This sweep MEASURES ground A, so it opts in explicitly;
+// without the flag every ground-A positive would read as silent and the sweep would report a false collapse.
+const fires = (s) => typefaceFindingFromScore(s, { enableDefaultStackGround: true }) !== null;
 const pct = (x) => `${(x * 100).toFixed(1)}%`;
 
 console.log('default-typeface CALIBRATION  (source: SHIPPING inPageTypeface + typefaceFindingFromScore)');

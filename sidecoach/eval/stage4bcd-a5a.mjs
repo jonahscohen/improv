@@ -81,7 +81,6 @@ const CLASSES = [
   { name: 'first-viewport-overflow', strict: ['first-viewport-column-overflow'], generous: ['first-viewport-column-overflow', 'clipped-overflow-container', 'body-text-viewport-edge'] },
   { name: 'decorative-dot-grid', strict: ['codex-grid-background'], generous: ['codex-grid-background'] },
   { name: 'soft-radial-glow', strict: ['radial-halo'], generous: ['radial-halo'] },
-  { name: 'numbered-section-markers', strict: ['numbered-section-labels'], generous: ['numbered-section-labels'] },
   { name: 'marquee', strict: ['marquee'], generous: ['marquee'] },
   { name: 'image-hover-transform', strict: ['image-hover-transform'], generous: ['image-hover-transform'] },
 ];
