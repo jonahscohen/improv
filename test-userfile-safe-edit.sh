@@ -532,10 +532,28 @@ e2e_rc=0
 for _ in 1 2 3; do
   HOME="$e2e" bash "$STAGED_INSTALLER" --only brain --yes >"$e2e/out.log" 2>&1 || e2e_rc=$?
 done
-if [ "$e2e_rc" = 0 ]; then
-  ok "install: a malformed block does not fail the install"
+# THE ROW THIS REPLACES ASSERTED EXIT 0, and that was the old asymmetry written down: the
+# identical fixture under `--only memory` exited 1 while `--only brain` exited 0. Measured
+# on 363458ea, same cause (a user-broken marker pair), same suppression, same warning, same
+# remedy - different status. It was an omission, not a contract: two other failure classes
+# in the same brain section already recorded, and the memory section's comment claiming it
+# was "the last one still doing it" was simply wrong about this one.
+#
+# Levelled UP, not down. A refused delete means the brain block was NOT refreshed, so the
+# component did not fully apply, which is exactly what a non-zero exit is for. Downgrading
+# memory to match would have made them agree by deleting the only machine-readable signal
+# that anything went wrong.
+#
+# ANCHORED ON THE LEDGER LINE, not on the number alone. `--only brain --yes` can exit 1 for
+# reasons that have nothing to do with this block, and a bare `[ "$e2e_rc" = 1 ]` would go
+# green on any of them and report a working ledger that never saw this component.
+if [ "$e2e_rc" = 1 ] \
+   && grep -Fq -- 'This run did NOT fully apply every component' "$e2e/out.log" \
+   && grep -Fq -- '- brain: brain block in' "$e2e/out.log"; then
+  ok "install: a malformed block fails the install and names brain in the ledger"
 else
-  bad "install: a malformed block does not fail the install" "installer exited $e2e_rc"
+  bad "install: a malformed block fails the install and names brain in the ledger" \
+      "installer exited $e2e_rc; ledger line $(grep -cF -- '- brain: brain block in' "$e2e/out.log") time(s)"
 fi
 begins="$(grep -c 'improv:brain:begin' "$e2e/.claude/CLAUDE.md" 2>/dev/null || echo 0)"
 if [ "$begins" = "1" ]; then
@@ -565,9 +583,19 @@ fi
 e2eok="$TMPROOT/e2e_wellformed"; mkdir -p "$e2eok/.claude"; : > "$e2eok/.zshrc"
 printf '%s\n' '# my own global rules' \
   '<!-- improv:brain:begin -->' 'OLD' '<!-- improv:brain:end -->' "$TAIL" > "$e2eok/.claude/CLAUDE.md"
+e2eok_rc=0
 for _ in 1 2; do
-  HOME="$e2eok" bash "$STAGED_INSTALLER" --only brain --yes >"$e2eok/out.log" 2>&1 || true
+  HOME="$e2eok" bash "$STAGED_INSTALLER" --only brain --yes >"$e2eok/out.log" 2>&1 || e2eok_rc=$?
 done
+# THE CONTROL FOR THE ROW ABOVE. Making a malformed block fail the run is only correct if a
+# WELL-FORMED one still passes it; without this, "fails the install" would be satisfied by an
+# installer that fails every brain run for any reason.
+if [ "$e2eok_rc" = 0 ]; then
+  ok "install: a well-formed block still exits 0 (the ledger entry is specific, not blanket)"
+else
+  bad "install: a well-formed block still exits 0 (the ledger entry is specific, not blanket)" \
+      "installer exited $e2eok_rc: $(grep -F -- '  - ' "$e2eok/out.log" | head -3 | tr '\n' ';')"
+fi
 begins="$(grep -c 'improv:brain:begin' "$e2eok/.claude/CLAUDE.md" 2>/dev/null || echo 0)"
 if [ "$begins" = "1" ]; then
   ok "install: two runs on a well-formed block still converge on one"
@@ -594,6 +622,163 @@ if grep -Fqx "$TAIL" "$e2eok/.claude/CLAUDE.md"; then
   ok "install: refreshing preserves the user's trailing content"
 else
   bad "install: refreshing preserves the user's trailing content" "the user's content was lost"
+fi
+
+# ---- 6b. the OTHER TWO refusals in the brain section report the same way ----
+# The canonical block above was one of three sites that warned and exited 0. A fix that
+# levelled only the site a test happened to cover would leave the same defect reachable
+# through the legacy marker and through CLAUDE.local.md, which is how this asymmetry
+# survived in the first place.
+
+# The LEGACY marker. Same suppression, same consequence - two begin markers if it appended
+# anyway, after which nothing can refresh or uninstall either copy.
+e2eleg="$TMPROOT/e2e_legacy_malformed"; mkdir -p "$e2eleg/.claude"; : > "$e2eleg/.zshrc"
+printf '%s\n' '# my own global rules' '<!-- improv:rules:begin -->' 'OLDLEGACY' "$TAIL" \
+  > "$e2eleg/.claude/CLAUDE.md"
+leg_size_before="$(wc -c < "$e2eleg/.claude/CLAUDE.md" | tr -d ' ')"
+e2eleg_rc=0
+HOME="$e2eleg" bash "$STAGED_INSTALLER" --only brain --yes >"$e2eleg/out.log" 2>&1 || e2eleg_rc=$?
+# The legacy warning specifically. The canonical refusal message is a near-neighbour of
+# this one, so a looser match would go green on the wrong branch and stop distinguishing
+# the two sites this row exists to separate.
+if [ "$e2eleg_rc" = 1 ] \
+   && grep -Fq -- 'legacy rules block in' "$e2eleg/out.log" \
+   && grep -Fq -- '- brain: legacy rules block in' "$e2eleg/out.log"; then
+  ok "install: a malformed LEGACY rules block fails the install and names brain"
+else
+  bad "install: a malformed LEGACY rules block fails the install and names brain" \
+      "exited $e2eleg_rc: $(grep -iF -- 'malformed' "$e2eleg/out.log" | head -2 | tr '\n' ';')"
+fi
+if [ "$(wc -c < "$e2eleg/.claude/CLAUDE.md" | tr -d ' ')" = "$leg_size_before" ]; then
+  ok "install: a malformed LEGACY rules block still suppresses the append"
+else
+  bad "install: a malformed LEGACY rules block still suppresses the append" \
+      "a fresh block was appended beside the malformed legacy one - two begins, uninstallable"
+fi
+
+# The LOCAL-OVERRIDES block. This path is DEAD ON THIS CHECKOUT - claude/CLAUDE.local.md
+# does not exist, so the whole section is skipped and no fixture built from the shared
+# stage can reach it. It gets its OWN staged repo carrying that file, because the
+# alternative is shipping a fix to a branch no test ever enters. A row that cannot reach
+# its subject is not a row.
+e2eloc_stage="$TMPROOT/stage_local"; mkdir -p "$e2eloc_stage"
+cp "$INSTALLER" "$e2eloc_stage/install.sh"     || { echo "HARNESS: staging install.sh (local) failed" >&2; exit 2; }
+cp -R "$REPO_DIR_REAL/claude" "$e2eloc_stage/" || { echo "HARNESS: staging claude/ (local) failed" >&2; exit 2; }
+printf '%s\n' '# personal overrides' 'LOCAL PAYLOAD LINE' > "$e2eloc_stage/claude/CLAUDE.local.md"
+e2eloc_stage="$(cd "$e2eloc_stage" && pwd)"
+e2eloc="$TMPROOT/e2e_local_malformed"; mkdir -p "$e2eloc/.claude"; : > "$e2eloc/.zshrc"
+# The BRAIN block is well-formed on purpose: this fixture must fail on the local block and
+# nothing else, or the row cannot tell which site produced the exit code.
+printf '%s\n' '# my own global rules' \
+  '<!-- improv:brain:begin -->' 'OLD' '<!-- improv:brain:end -->' \
+  '<!-- improv:local:begin -->' 'OLDLOCAL' "$TAIL" > "$e2eloc/.claude/CLAUDE.md"
+e2eloc_rc=0
+HOME="$e2eloc" bash "$e2eloc_stage/install.sh" --only brain --yes >"$e2eloc/out.log" 2>&1 || e2eloc_rc=$?
+# The brain half must be reported as SUCCEEDING in the same run, which is what proves the
+# exit code came from the local block rather than from the section as a whole.
+if [ "$e2eloc_rc" = 1 ] \
+   && grep -Fq -- '- brain: local-overrides block in' "$e2eloc/out.log" \
+   && grep -Fq -- 'Team rules + workflow appended to' "$e2eloc/out.log"; then
+  ok "install: a malformed LOCAL-OVERRIDES block fails the install and names brain"
+else
+  bad "install: a malformed LOCAL-OVERRIDES block fails the install and names brain" \
+      "exited $e2eloc_rc: $(grep -iF -- 'local' "$e2eloc/out.log" | head -3 | tr '\n' ';')"
+fi
+# AND THE APPEND IS STILL SUPPRESSED. Reporting the failure and appending anyway is a
+# DIFFERENT defect from reporting nothing, and the row above cannot tell them apart: if the
+# product kept record_component_failure but lost `local_block_ok=0`, the exit code and the
+# ledger line would both still be right while a fresh local block landed beside the
+# malformed one - two begin markers, after which neither can be refreshed or removed. The
+# canonical and legacy rows carry this assertion; this one was missing it. Flagged by
+# independent review.
+#
+# Not a byte-size comparison, unlike the canonical row: the well-formed BRAIN block in this
+# same fixture is legitimately refreshed in the same run, so the file is SUPPOSED to change.
+# The marker count and the payload's absence are what isolate the local block.
+loc_begins="$(grep -c 'improv:local:begin' "$e2eloc/.claude/CLAUDE.md" 2>/dev/null || echo 0)"
+if [ "$loc_begins" = "1" ] && ! grep -Fqx 'LOCAL PAYLOAD LINE' "$e2eloc/.claude/CLAUDE.md"; then
+  ok "install: a malformed LOCAL-OVERRIDES block still suppresses the append"
+else
+  bad "install: a malformed LOCAL-OVERRIDES block still suppresses the append" \
+      "$loc_begins begin marker(s) and payload present=$(grep -cFx 'LOCAL PAYLOAD LINE' "$e2eloc/.claude/CLAUDE.md") - a fresh block was appended beside the malformed one"
+fi
+# The control that proves the fixture reached the local section at all.
+#
+# IT CARRIES A WELL-FORMED LOCAL BLOCK, not an absent one. The first version of this row
+# started from a file with no local block, which exercises append-when-absent - a different
+# branch entirely from the delete-and-refresh path the row above refuses inside. It could
+# not have caught a broken well-formed local branch, so it was not a control for that row
+# at all. Flagged by independent review.
+e2elocok="$TMPROOT/e2e_local_wellformed"; mkdir -p "$e2elocok/.claude"; : > "$e2elocok/.zshrc"
+printf '%s\n' '# my own global rules' \
+  '<!-- improv:local:begin -->' 'OLDLOCAL' '<!-- improv:local:end -->' "$TAIL" \
+  > "$e2elocok/.claude/CLAUDE.md"
+e2elocok_rc=0
+HOME="$e2elocok" bash "$e2eloc_stage/install.sh" --only brain --yes >"$e2elocok/out.log" 2>&1 || e2elocok_rc=$?
+# REFRESHED, which is three facts: the run succeeded, the new payload is in, the old
+# content is out, and the block did not duplicate. "The payload is present" alone would be
+# satisfied by an append that left OLDLOCAL and a second begin marker behind.
+locok_begins="$(grep -c 'improv:local:begin' "$e2elocok/.claude/CLAUDE.md" 2>/dev/null || echo 0)"
+if [ "$e2elocok_rc" = 0 ] \
+   && grep -Fqx 'LOCAL PAYLOAD LINE' "$e2elocok/.claude/CLAUDE.md" \
+   && ! grep -Fqx 'OLDLOCAL' "$e2elocok/.claude/CLAUDE.md" \
+   && [ "$locok_begins" = "1" ] \
+   && grep -Fqx "$TAIL" "$e2elocok/.claude/CLAUDE.md"; then
+  ok "install: a well-formed local-overrides block is refreshed in place and exits 0"
+else
+  bad "install: a well-formed local-overrides block is refreshed in place and exits 0" \
+      "exited $e2elocok_rc, $locok_begins begin marker(s) - the row above may never have entered the local section"
+fi
+
+# ---- 6c. THE ASYMMETRY ITSELF ----
+# The finding was not "brain exits 0", it was "brain and memory disagree about the same
+# event". So the row asserts the agreement directly: identical fixture shape, identical
+# breakage, one exit code. Written this way it keeps holding whichever direction a future
+# change moves them in, as long as it moves both.
+e2esym="$TMPROOT/e2e_symmetry"; mkdir -p "$e2esym"
+sym_rc_of() { # $1 = component, $2 = begin marker -> echoes the exit code
+  # SPLIT, not one `local` line. Under `set -u` bash 3.2 does not make an earlier
+  # initializer in the SAME `local` statement visible to a later one, so
+  # `local comp="$1" h="$e2esym/$comp"` aborts with "comp: unbound variable" - which is
+  # exactly how the anchor row above earned its keep on the first run of this section.
+  local comp="$1" marker="$2" rc=0
+  local h="$e2esym/$comp"
+  mkdir -p "$h/.claude"; : > "$h/.zshrc"
+  printf '%s\n' '# my own global rules' "$marker" 'OLD' "$TAIL" > "$h/.claude/CLAUDE.md"
+  HOME="$h" bash "$STAGED_INSTALLER" --only "$comp" --yes >"$h/out.log" 2>&1 || rc=$?
+  printf '%s' "$rc"
+}
+sym_brain="$(sym_rc_of brain '<!-- improv:brain:begin -->')"
+sym_mem="$(sym_rc_of memory '<!-- improv:memory-discipline:begin -->')"
+# ANCHORED ON THE REFUSAL PHRASE, not on the word "malformed". Both the old warn-and-
+# continue shape and the new recorded shape print "malformed", so a bare grep for it is
+# satisfied by the exact behaviour this unit changed and cannot tell the two apart. The
+# refusal sentence is what the suppressing branch prints. Flagged by independent review.
+sym_refused() { grep -Fq -- 'NOT refreshing it' "$1"; }
+if sym_refused "$e2esym/brain/out.log" && sym_refused "$e2esym/memory/out.log"; then
+  ok "install: both fixtures reached their malformed-block refusal"
+else
+  bad "install: both fixtures reached their malformed-block refusal" \
+      "brain=$(grep -cF -- 'NOT refreshing it' "$e2esym/brain/out.log") memory=$(grep -cF -- 'NOT refreshing it' "$e2esym/memory/out.log")"
+fi
+if [ "$sym_brain" = "$sym_mem" ]; then
+  ok "install: a malformed brain block and a malformed memory block exit the same way ($sym_brain)"
+else
+  bad "install: a malformed brain block and a malformed memory block exit the same way" \
+      "brain exited $sym_brain, memory exited $sym_mem - the same user error reports two different outcomes"
+fi
+# AGREEING ON ZERO IS NOT THE OUTCOME THIS UNIT ASKED FOR. Equality alone is satisfied by
+# levelling both DOWN to a warning, which would make the two consistent by deleting the
+# only machine-readable signal that a component did not land. The direction is pinned
+# separately from the agreement so a future change that moves both the wrong way fails
+# HERE, on the contract, rather than passing the symmetry row above.
+if [ "$sym_brain" = "1" ] \
+   && grep -Fq -- '- brain: brain block in' "$e2esym/brain/out.log" \
+   && grep -Fq -- '- memory: memory-discipline block in' "$e2esym/memory/out.log"; then
+  ok "install: and they agree on FAILING - both name their component in the ledger"
+else
+  bad "install: and they agree on FAILING - both name their component in the ledger" \
+      "brain=$sym_brain; brain ledger $(grep -cF -- '- brain: brain block in' "$e2esym/brain/out.log"), memory ledger $(grep -cF -- '- memory: memory-discipline block in' "$e2esym/memory/out.log")"
 fi
 
 # ============================================================

@@ -7,7 +7,7 @@ set -euo pipefail
 #   brain        - Team rules + workflow (appended to CLAUDE.md) - ADDITIVE
 #   config       - Hooks, plugins, permissions (merged into settings.json) - ADDITIVE
 #   memory       - Additive memory subsystem (rules + 3 hooks + startup-check.sh loader)
-#   skills       - Anthropic Skills (tactical-polish + component-gallery-reference + fontshare-reference + curate + design-references + motion-reference + design-build)
+#   skills       - Anthropic Skills (tactical-polish + component-gallery-reference + fontshare-reference + curate + motion-reference)
 #   statusline   - Custom prompt-bar render (~/.claude/statusline-command.sh)
 #   cmux         - cmux settings.json symlink
 #   nvm          - .zshrc auto-activate of nvm default (so claude/node/npm land on PATH)
@@ -473,6 +473,13 @@ link_or_copy_data() {
 # asked to install.
 SKILLS_DEPLOYED=()
 
+# The delegated half of the same ledger. justify and lotus install their own SKILL.md from
+# their own installers, which run as CHILD PROCESSES and so cannot append to the array
+# above. Recorded here, at the parent's dispatch sites, and checked by
+# verify_delegated_skill at the end of the run - see that function for why the names cannot
+# simply be added to SKILLS_DEPLOYED.
+DELEGATED_SKILLS_DEPLOYED=()
+
 # Skills whose INSTALLED form is intentionally NOT byte-identical to the repo source.
 # lotus/install.sh rewrites the __LOTUS_SRC__ placeholder to the vendored path at install
 # time, so a HEALTHY lotus install differs from its source by design and a byte compare
@@ -543,6 +550,116 @@ install_bundled_skill() {
   fi
   SKILLS_DEPLOYED+=("$_ibs_name")
   ok "skills/$_ibs_name installed"
+  return 0
+}
+
+# ------------------------------------------------------------
+# seed_design_reference_catalog: create ~/.claude/design-references/ and its starter
+# vocabulary, once, without ever touching an existing one.
+#
+# WHY THIS IS A FUNCTION NOW. The seeding existed as TWO byte-identical inline heredocs -
+# one in the `skills` bundle block, one inside the `design-references` a la carte block.
+# design-references was retired on 2026-07-28 (0 invocations in two months) and its block
+# went with it, which would have taken one of the two copies and left `--only curate` on a
+# fresh machine installing a skill whose recall mode reads a `_vocab/categories.txt` that
+# nothing would ever create. The capability moved to `curate`; the seeding has to move with
+# it, and two copies of a heredoc that must agree is the drift this repo keeps paying for.
+#
+# THE CATALOG IS USER DATA, NOT CODE. It is seeded only when absent and is never removed by
+# any deactivate path - the same rule the retired block carried, restated here because this
+# is now the only place that states it.
+seed_design_reference_catalog() {
+  local _sdr_dir="${CLAUDE_DIR:-$HOME/.claude}/design-references"
+  local _sdr_vocab="$_sdr_dir/_vocab/categories.txt"
+  # THE VOCABULARY FILE IS THE COMPLETION MARKER, not the directory. Gating on the
+  # directory meant any failure AFTER the mkdir - a full disk at mktemp, a failed write, a
+  # failed rename - left a directory behind that every later run read as "already seeded",
+  # so the vocabulary was never written and never retried. The catalog would sit there
+  # permanently half-built and permanently reported as fine. Flagged by independent review.
+  #
+  # Repairing that case cannot mean re-seeding the catalog: the directory may hold the
+  # user's saved references by then. Only the missing file is written.
+  # AN EXISTING VOCABULARY IS ACCEPTED WITHOUT INSPECTING ITS CONTENT, and that is a
+  # decision, not an oversight - raised by independent review and declined here so it is
+  # not re-raised. The suggestion was to validate the file against the expected list and
+  # rewrite it if it does not match. That would destroy the customization the file exists
+  # to hold: its own header says adding a category is a user decision made through /curate,
+  # so a vocabulary that differs from this default is the NORMAL state of a machine that
+  # has been used, and "repair" would silently narrow it back on every install. The seeding
+  # writes a STARTER vocabulary; it does not own the file afterwards.
+  #
+  # `-f` follows symlinks, deliberately. A user who links this file into their own dotfiles
+  # has made exactly the arrangement this branch should honour - unlike a symlink at a path
+  # under ~/.claude/skills, which the installer owns and must replace rather than follow.
+  # The distinction is ownership: that tree is ours, this file is theirs.
+  if [ -f "$_sdr_vocab" ]; then
+    ok "design-reference catalog already exists - leaving user data intact"
+    return 0
+  fi
+  if [ -d "$_sdr_dir" ]; then
+    info "design-reference catalog exists but its vocabulary is missing - restoring just that file..."
+  else
+    info "Seeding personal design-reference catalog at ~/.claude/design-references/..."
+  fi
+  mkdir -p "$_sdr_dir/_vocab" || {
+    err "could not create $_sdr_dir/_vocab - the catalog was NOT seeded"
+    return 1
+  }
+  # Written to a temp file and renamed, not `cat >` onto the destination: a `cat >` that
+  # fails midway leaves a TRUNCATED vocabulary file, and a half-written strict vocabulary
+  # silently narrows what /curate will accept.
+  local _sdr_tmp
+  _sdr_tmp="$(mktemp "${TMPDIR:-/tmp}/improv-vocab-XXXXXX")" || {
+    err "could not create a temp file for the catalog vocabulary - the catalog was NOT seeded"
+    return 1
+  }
+  # THE WRITE'S STATUS IS CHECKED. Callers use `seed_... || record_component_failure`,
+  # which disables errexit for this whole body, so an unchecked `cat >` that failed partway
+  # would fall straight through to the `mv` and PUBLISH a truncated vocabulary - a silently
+  # narrowed strict list that /curate would then enforce. Flagged by independent review.
+  if ! cat > "$_sdr_tmp" <<'VOCABEOF'
+# Strict Category vocabulary for the design-references catalog.
+# One per line. Lowercase, hyphenated.
+# Adding a new category requires explicit user approval via the `curate` skill.
+
+list
+navigation
+command-palette
+inline-edit
+page-transition
+loading-state
+empty-state
+detail-reveal
+layout-transition
+notification
+data-display
+gesture
+interactive-element
+overlay
+VOCABEOF
+  then
+    rm -f "$_sdr_tmp"
+    err "could not write the catalog vocabulary - the catalog was NOT seeded"
+    return 1
+  fi
+  # A DIRECTORY AT THE DESTINATION IS NOT A MISSING FILE. The `-f` completion check above
+  # is false for a directory, so control reaches here - and `mv file dir/` moves the temp
+  # INSIDE it and exits 0. The function would report a seeded catalog, the vocabulary would
+  # still be missing, and every subsequent run would drop another temp-named file in there.
+  # Refused rather than removed: a directory at that path is something a person or another
+  # tool put there, and deleting it silently is its own surprise. Flagged by independent
+  # review.
+  if [ -e "$_sdr_vocab" ] && [ ! -f "$_sdr_vocab" ]; then
+    rm -f "$_sdr_tmp"
+    err "$_sdr_vocab exists and is not a regular file - refusing to write the catalog vocabulary through it"
+    return 1
+  fi
+  if ! mv "$_sdr_tmp" "$_sdr_vocab"; then
+    rm -f "$_sdr_tmp"
+    err "could not write $_sdr_vocab - the catalog was NOT seeded"
+    return 1
+  fi
+  ok "design-reference catalog seeded (empty - populate via /curate)"
   return 0
 }
 
@@ -672,6 +789,202 @@ verify_installed_skills() {
     return 1
   fi
   ok "verify-skills: $_vs_skills skill(s), $_vs_checked file(s) match their repo source"
+  return 0
+}
+
+# ------------------------------------------------------------
+# verify_delegated_skill: the same "prove it landed" guarantee for the two skills this
+# installer does NOT deploy itself.
+#
+# WHY A SECOND FUNCTION RATHER THAN ONE MORE NAME IN SKILLS_DEPLOYED. That was the obvious
+# fix and it does not work, in two independent ways, both measured before this was written:
+#
+#   1. SKILLS_DEPLOYED is appended in exactly ONE place - install_bundled_skill - and
+#      justify and lotus are installed by `bash "$REPO_DIR/<name>/install.sh"`, a CHILD
+#      PROCESS. A line appending to the array from inside those scripts writes to the
+#      child's copy and is discarded when it exits. The append has to happen here, in the
+#      parent, at the dispatch site.
+#   2. Even done in the parent it would misfire. `verify_installed_skills justify` exits 2
+#      ("unknown skill 'justify' - no source at claude/skills/justify"), because justify's
+#      SKILL.md is a HEREDOC inside justify/install.sh and no repo source exists to compare
+#      against - so the end-of-install gate would record a failure on every successful
+#      install. And `verify_installed_skills lotus` exits 0 having checked NOTHING: lotus is
+#      on VERIFY_SKILLS_EXEMPT, so the named path prints an info line and skips it. Measured:
+#      "verify-skills: 0 skill(s), 0 file(s) match their repo source". One name breaks the
+#      installer, the other buys a green row that examined no bytes.
+#
+# So the check is shaped to how each skill is actually built:
+#
+# Both get the same two-part check: the STRUCTURAL failure classes (missing, dangling,
+# not a regular file, unreadable, empty, placeholder never substituted) and then a REAL
+# BYTE COMPARE against the source RENDERED the way its installer renders it. Only the
+# source differs:
+#
+#   lotus   - the source is a file, claude/skills/lotus/SKILL.md, with __LOTUS_SRC__
+#     replaced by the vendored path. This is the compare VERIFY_SKILLS_EXEMPT gave up on,
+#     and giving up was not necessary: the substitution is deterministic, so the expected
+#     bytes are computable. Run against this machine while writing it, the rendered compare
+#     matched on the path and flagged genuine content drift - the installed lotus SKILL.md
+#     was a month stale and the exemption had been hiding it.
+#   justify - the source is a HEREDOC inside justify/install.sh, so it is extracted from
+#     between the `<< 'SKILLEOF'` line and its terminator, then rendered the same way.
+#
+# THE STRUCTURAL CHECKS ALONE ARE NOT ENOUGH, which is what the first version of this
+# function got wrong and independent review caught. "The placeholder is gone" only proves
+# SOME path was baked in. A SKILL.md left over from an older checkout has no placeholder,
+# is non-empty, is a perfectly good regular file - and is the wrong content, possibly
+# pointing at a directory that no longer exists. Structural checks cannot see any of that,
+# and stopping there would have shipped the same "reports clean without proving the
+# deployed skill is the one from this run" verdict the whole gate exists to eliminate.
+#
+# Exit codes, distinct per failure class, same contract as verify_installed_skills:
+#   0  clean
+#   1  the installed skill is missing, unreadable, empty, un-substituted, or stale
+#   2  usage - called with no name or a name this function has no contract for
+#
+# The per-skill knowledge lives HERE rather than at the call sites so there is one place to
+# read for "what does a correct install of a delegated skill look like".
+verify_delegated_skill() {
+  local _vd_name="${1:-}"
+  local _vd_placeholder="" _vd_src="" _vd_kind="" _vd_baked="" _vd_home="" _vd_inst _vd_rc
+
+  if [ -z "$_vd_name" ] || [ "$#" -gt 1 ]; then
+    err "verify-delegated-skill: usage: verify_delegated_skill <justify|lotus>"
+    return 2
+  fi
+  case "$_vd_name" in
+    justify)
+      _vd_placeholder='__JUSTIFY_SRC__'
+      _vd_src="$REPO_DIR/justify/install.sh"
+      _vd_kind='heredoc'
+      _vd_home="$REPO_DIR/justify"
+      ;;
+    lotus)
+      _vd_placeholder='__LOTUS_SRC__'
+      _vd_src="$REPO_DIR/claude/skills/lotus/SKILL.md"
+      _vd_kind='file'
+      _vd_home="$REPO_DIR/lotus"
+      ;;
+    *)
+      err "verify-delegated-skill: no contract for '$_vd_name' - this function covers only the delegated installers (justify, lotus)"
+      return 2
+      ;;
+  esac
+
+  # EXACTLY WHAT THE DELEGATED INSTALLER BAKES IN. Each computes SCRIPT_DIR as
+  # `cd "$(dirname "$0")" && pwd` and is invoked as `bash "$REPO_DIR/<name>/install.sh"`,
+  # so the value is $REPO_DIR/<name> normalised through `cd && pwd`. Normalising it the
+  # same way here rather than string-joining is what keeps this from reporting drift on a
+  # correct machine over a trailing slash or a `..` segment.
+  _vd_baked="$(cd "$_vd_home" 2>/dev/null && pwd)" || _vd_baked=""
+  if [ -z "$_vd_baked" ]; then
+    err "verify-delegated-skill: $_vd_name - could not resolve $_vd_home, so the expected content cannot be computed"
+    return 1
+  fi
+
+  _vd_inst="${CLAUDE_DIR:-$HOME/.claude}/skills/$_vd_name/SKILL.md"
+
+  # -e follows the link, so the dangling case is named as itself rather than reported as a
+  # plain missing file - the two have different causes and different fixes.
+  if [ -L "$_vd_inst" ] && [ ! -e "$_vd_inst" ]; then
+    err "verify-delegated-skill: $_vd_name/SKILL.md is a DANGLING symlink -> $(readlink "$_vd_inst")"
+    return 1
+  fi
+  if [ ! -e "$_vd_inst" ]; then
+    err "verify-delegated-skill: $_vd_name/SKILL.md is MISSING from $_vd_inst"
+    return 1
+  fi
+  # A DIRECTORY at this path satisfies -e and would then make every read below fail in a
+  # less obvious way.
+  if [ ! -f "$_vd_inst" ]; then
+    err "verify-delegated-skill: $_vd_name/SKILL.md is not a regular file: $_vd_inst"
+    return 1
+  fi
+  if [ ! -r "$_vd_inst" ]; then
+    err "verify-delegated-skill: $_vd_name/SKILL.md is not readable: $_vd_inst"
+    return 1
+  fi
+  # ZERO BYTES IS THE FAILURE THE ATOMIC WRITE EXISTS TO PREVENT, which is exactly why it
+  # is worth reading back: a skill file that is present and empty loads as nothing at all,
+  # and every layer above it reports "installed".
+  if [ ! -s "$_vd_inst" ]; then
+    err "verify-delegated-skill: $_vd_name/SKILL.md is EMPTY - the install wrote a zero-byte skill"
+    return 1
+  fi
+  if grep -Fq "$_vd_placeholder" "$_vd_inst"; then
+    err "verify-delegated-skill: $_vd_name/SKILL.md still contains $_vd_placeholder - the source path was never baked in"
+    return 1
+  fi
+
+  if [ ! -f "$_vd_src" ]; then
+    err "verify-delegated-skill: $_vd_name - the repo source is missing at $_vd_src, so the installed copy cannot be checked"
+    return 1
+  fi
+
+  # THE EXPECTED BYTES, in three stages, each with its own status checked below.
+  #
+  # Stage 1 emits the RAW source. For lotus that is a file; for justify it is the heredoc
+  # that justify/install.sh feeds to atomic_write_from_stdin, extracted between the
+  # `<< 'SKILLEOF'` line and its terminator. The heredoc is single-quoted, so nothing in it
+  # expands at install time and the bytes between those markers are exactly the bytes
+  # written. An extraction that finds no such block exits 3 rather than emitting nothing:
+  # an empty render would compare equal against an empty file and report clean.
+  #
+  # Stage 2 RENDERS WITH awk, NOT sed. The baked value is a filesystem path and can carry
+  # `|`, `&` or a backslash, every one of which is meaningful in a sed replacement - a path
+  # containing `&` would substitute the matched text back in and this check would then
+  # report drift on a correct machine. index()/substr() is a literal replacement with no
+  # metacharacters at all.
+  #
+  # Stage 3 compares. Piped rather than staged through a temp file: the two functions this
+  # repo just fixed for leaking temp logs are one file over, and a verifier that leaks on
+  # its own failure path would be a poor advertisement for the fix.
+  {
+    case "$_vd_kind" in
+      file) cat "$_vd_src" ;;
+      *)
+        awk '
+          index($0, "<< '"'"'SKILLEOF'"'"'") > 0 { inblock = 1; next }
+          inblock && $0 == "SKILLEOF" { inblock = 0; found = 1; next }
+          inblock { print }
+          END { if (!found) exit 3 }
+        ' "$_vd_src"
+        ;;
+    esac
+  } | awk -v ph="$_vd_placeholder" -v val="$_vd_baked" '
+      {
+        line = $0; out = ""
+        while ((i = index(line, ph)) > 0) {
+          out = out substr(line, 1, i - 1) val
+          line = substr(line, i + length(ph))
+        }
+        print out line
+      }
+    ' | cmp -s - "$_vd_inst"
+  # ALL THREE statuses. A `cmp` that matched a stage that DIED - an unreadable source, a
+  # heredoc whose markers moved, a missing awk - compares an empty stream against an empty
+  # file and calls it equal, which is the "clean having checked nothing" verdict this whole
+  # family of functions exists to stop.
+  _vd_rc="${PIPESTATUS[0]}:${PIPESTATUS[1]}:${PIPESTATUS[2]}"
+  case "$_vd_rc" in
+    0:0:0) : ;;
+    0:0:*)
+      err "verify-delegated-skill: $_vd_name/SKILL.md is STALE - it does not match $_vd_src rendered with $_vd_placeholder = $_vd_baked"
+      err "verify-delegated-skill: re-run ./install.sh --only $_vd_name to redeploy it"
+      return 1
+      ;;
+    3:*)
+      err "verify-delegated-skill: $_vd_name - no '<< '\''SKILLEOF'\''' block found in $_vd_src, so the expected skill content could not be extracted"
+      err "verify-delegated-skill: the delegated installer's heredoc markers moved - update verify_delegated_skill to match"
+      return 1
+      ;;
+    *)
+      err "verify-delegated-skill: $_vd_name - could not render $_vd_src for comparison (stage statuses $_vd_rc)"
+      return 1
+      ;;
+  esac
+
+  ok "verify-delegated-skill: $_vd_name/SKILL.md is installed and current"
   return 0
 }
 
@@ -1063,7 +1376,7 @@ DESCS=(
   "ADDITIVE: appends team rules (from RULES.md) and shared workflow (from CLAUDE.md) to your ~/.claude/CLAUDE.md between marker comments. Your existing CLAUDE.md content is preserved above and below the markers. If you have a claude/CLAUDE.local.md for personal overrides, those are appended in their own marker block too. Re-runs detect the markers and skip. Deactivation removes only the marked blocks."
   "ADDITIVE: JSON-merges safety hooks (bash-guard, content-guard, memory-approve), memory-write allow patterns, enabled plugins, and marketplace entries into your existing ~/.claude/settings.json. Does NOT touch your defaultMode, model, or other preferences. Copies hook scripts to ~/.claude/hooks/ alongside any hooks you already have. Deactivation removes only our entries by marker."
   "ADDITIVE memory subsystem: appends our Memory Discipline rules (loading order, per-task updates, file format) to your CLAUDE.md between marker comments, JSON-merges three hooks (SessionStart loader, PreCompact reminder, PostCompact reload) into your settings.json, and symlinks the startup-check.sh loader. Does NOT replace or overwrite anything - all changes are marker-guarded so re-runs are no-ops, and the markers can be removed cleanly if you ever want to undo. Pick this if your team wants to beef up an existing Claude Code with persistent memory capability without losing their config."
-  "Adds skills to ~/.claude/skills/, fully additive. Bundles tactical-polish (tactical UI polish, bundled file), component-gallery-reference (researches component.gallery before building UI components), fontshare-reference (researches fontshare.com before picking typefaces), motion-reference (canonical GSAP + Lenis patterns for animation/scroll/transition work), design-build (the design pipeline orchestrator - one command runs strategy/research/typography/motion/build/QA in sequence with gate checkpoints), and a personal design-reference system: curate (capture wizard via /curate) + design-references (auto-consults your personal catalog of one-off patterns at ~/.claude/design-references/). Does NOT touch your CLAUDE.md, settings.json, hooks, or statusline. Safe to pick standalone if you have your own Claude Code config and just want the skill capability."
+  "Adds skills to ~/.claude/skills/, fully additive. Bundles tactical-polish (tactical UI polish, bundled file), component-gallery-reference (researches component.gallery before building UI components), fontshare-reference (researches fontshare.com before picking typefaces), motion-reference (canonical GSAP + Lenis patterns for animation/scroll/transition work), and curate (capture wizard via /curate, plus the personal catalog of one-off patterns at ~/.claude/design-references/ that it consults on UI builds). Does NOT touch your CLAUDE.md, settings.json, hooks, or statusline. Safe to pick standalone if you have your own Claude Code config and just want the skill capability."
   "Symlinks our statusline-command.sh into ~/.claude/. The settings.json statusLine command is tolerant of a missing script, so unticking this cleanly falls back to no custom statusline (Claude Code's default takes over). Pick this if you like our prompt-bar render; skip if you prefer Claude Code's default or a different statusline you've configured yourself."
   "Settings for cmux, the split-pane terminal that hosts the in-app browser preview Claude uses to verify your UI work. Skip if you don't use cmux."
   "A small one-line addition to your zsh config that fixes a specific issue some setups hit: opening a new terminal and getting 'claude not found in PATH' even though Claude is installed. The fix only activates if your zsh config already loads nvm (Node Version Manager) - on most machines this is a harmless no-op, so it's safe to leave on. If 'claude' already runs fine in fresh terminals on your machine, you can skip this."
@@ -1083,7 +1396,7 @@ FILES=(
   # memory
   "~/.claude/CLAUDE.md (memory discipline block)\n~/.claude/settings.json (4 hooks merged)\n~/.claude/startup-check.sh (symlink)\n~/.claude/hooks/consolidate-intent.json (nudge lexicon)\n~/.claude/skills/consolidate/SKILL.md"
   # skills
-  "~/.claude/skills/tactical-polish/\n~/.claude/skills/component-gallery-reference/\n~/.claude/skills/fontshare-reference/\n~/.claude/skills/motion-reference/\n~/.claude/skills/design-build/\n~/.claude/skills/curate/\n~/.claude/skills/design-references/\n~/.claude/design-references/ (personal catalog directory)\n~/.claude/skills/social-media/\n~/.claude/skills/design-team/\n~/.claude/skills/visual-effects/\n~/.claude/skills/icon-source/"
+  "~/.claude/skills/tactical-polish/\n~/.claude/skills/component-gallery-reference/\n~/.claude/skills/fontshare-reference/\n~/.claude/skills/motion-reference/\n~/.claude/skills/curate/\n~/.claude/design-references/ (personal catalog directory)\n~/.claude/skills/social-media/\n~/.claude/skills/design-team/\n~/.claude/skills/visual-effects/\n~/.claude/skills/icon-source/"
   # statusline
   "~/.claude/statusline-command.sh (symlink)"
   # cmux
@@ -1131,16 +1444,14 @@ PICKS=(1 1 1 1 1 1 1 1 1 1 1 1 1 1)
 # literals above) so the parallel arrays stay aligned by construction.
 # Keys map to ~/.claude/skills/<dir>; the bundle and these share one source.
 # ------------------------------------------------------------
-DESIGN_SKILL_KEYS=(tactical-polish component-gallery fontshare motion design-build curate design-references social-media design-team visual-effects icon-source)
+DESIGN_SKILL_KEYS=(tactical-polish component-gallery fontshare motion curate social-media design-team visual-effects icon-source)
 KEYS+=("${DESIGN_SKILL_KEYS[@]}")
 TITLES+=(
   "Tactical UI polish (tactical-polish)"
   "Component research (component.gallery)"
   "Typeface research (fontshare.com)"
   "GSAP + Lenis motion patterns"
-  "Design pipeline orchestrator (/design-build)"
   "Design-reference capture wizard (/curate)"
-  "Personal design-reference catalog"
   "Social platform specs (13 platforms)"
   "Multi-agent design sprints + CD review"
   "Shaders + FX + post-processing"
@@ -1151,9 +1462,7 @@ DESCS+=(
   "Installs component-gallery-reference into ~/.claude/skills/. Researches component.gallery before building/naming/extracting UI components. Bundled file, no npx. Also part of the 'skills' bundle."
   "Installs fontshare-reference into ~/.claude/skills/. Researches fontshare.com's curated catalog before recommending or implementing typefaces. Bundled file. Also part of the 'skills' bundle."
   "Installs motion-reference into ~/.claude/skills/. Canonical GSAP + Lenis glue patterns for animation, scroll-driven effects, and page transitions. Bundled file. Also part of the 'skills' bundle."
-  "Installs design-build into ~/.claude/skills/. The design pipeline orchestrator - /design-build runs strategy/research/typography/motion/build/QA in sequence with gate checkpoints. Bundled file. Also part of the 'skills' bundle."
-  "Installs curate into ~/.claude/skills/. Interactive 5-step wizard (/curate) that captures one-off design references into your personal catalog at ~/.claude/design-references/. Bundled file. Also part of the 'skills' bundle."
-  "Installs design-references into ~/.claude/skills/ and seeds the personal catalog directory at ~/.claude/design-references/ (with a starter category vocabulary). Auto-consults your curated catalog on UI builds. Deactivation removes the SKILL but preserves your catalog data. Also part of the 'skills' bundle."
+  "Installs curate into ~/.claude/skills/ and seeds the personal catalog directory at ~/.claude/design-references/ (with a starter category vocabulary). Interactive 5-step wizard (/curate) captures one-off references into it, and it is consulted on UI builds. Deactivation removes the SKILL but preserves your catalog data. Bundled file. Also part of the 'skills' bundle."
   "Installs social-media into ~/.claude/skills/. Platform-specific sizing, safe zones, and content rules for 13 social platforms. Bundled file. Also part of the 'skills' bundle."
   "Installs design-team into ~/.claude/skills/. Orchestrates multi-agent design sprints with 16 roles across research/build/CD-review/revise phases. Bundled file. Also part of the 'skills' bundle."
   "Installs visual-effects into ~/.claude/skills/ (recursive - ships 35 files of shader source). 14 generative shader backgrounds + 25 transformative FX + 17 post-process effects. Also part of the 'skills' bundle."
@@ -1164,9 +1473,7 @@ FILES+=(
   "~/.claude/skills/component-gallery-reference/SKILL.md"
   "~/.claude/skills/fontshare-reference/SKILL.md"
   "~/.claude/skills/motion-reference/SKILL.md"
-  "~/.claude/skills/design-build/SKILL.md"
-  "~/.claude/skills/curate/SKILL.md"
-  "~/.claude/skills/design-references/SKILL.md\n~/.claude/design-references/ (personal catalog)"
+  "~/.claude/skills/curate/SKILL.md\n~/.claude/design-references/ (personal catalog)"
   "~/.claude/skills/social-media/SKILL.md"
   "~/.claude/skills/design-team/SKILL.md"
   "~/.claude/skills/visual-effects/ (recursive)"
@@ -1177,15 +1484,13 @@ DIRS+=(
   "$REPO_DIR/claude/skills/component-gallery-reference"
   "$REPO_DIR/claude/skills/fontshare-reference"
   "$REPO_DIR/claude/skills/motion-reference"
-  "$REPO_DIR/claude/skills/design-build"
   "$REPO_DIR/claude/skills/curate"
-  "$REPO_DIR/claude/skills/design-references"
   "$REPO_DIR/claude/skills/social-media"
   "$REPO_DIR/claude/skills/design-team"
   "$REPO_DIR/claude/skills/visual-effects"
   "$REPO_DIR/claude/skills/icon-source"
 )
-PICKS+=(1 1 1 1 1 1 1 1 1 1 1)
+PICKS+=(1 1 1 1 1 1 1 1 1)
 
 # ------------------------------------------------------------
 # Dev apps - a la carte.
@@ -1254,7 +1559,7 @@ DESCS+=(
 FILES+=(
   "~/.claude/hooks/ (5 safety hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (8 verification hooks)\n~/.claude/settings.json (wiring)"
-  "~/.claude/hooks/ (3 question-discipline hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (2 question-discipline hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (7 grounding hooks)\n~/.claude/hooks/grounding-intent.json (gate lexicon)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (3 api-drift hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 planning-git hooks)\n~/.claude/settings.json (wiring)"
@@ -1393,7 +1698,24 @@ cluster_hooks() {
     # worse than not shipping it - it reads as coverage that does not exist. The file
     # stays in the repo because test-multiple-choice-enforce.sh exercises it; the guard
     # exempts it by name, with that reason, in hook-registry-guard.sh's _is_excluded.
-    question-discipline) echo "multiple-choice-detect-stop.sh multiple-choice-inject-prompt.sh multiple-choice-enforce.sh" ;;
+    # multiple-choice-enforce.sh is deliberately NOT in this list either, and it is the
+    # SECOND instance of the shape above rather than a coincidence. It is the detection
+    # TWIN of multiple-choice-detect-stop.sh, and its allowlist exemption claimed it was
+    # "invoked by multiple-choice-detect-stop.sh". Measured 2026-07-28: that claim is
+    # FALSE. detect-stop carries a byte-identical INLINE copy of the detection block - its
+    # own comment says "keep the two copies byte-identical" - and execs nothing. So the
+    # hook was deployed to every machine that took this cluster, wired to no event and
+    # called by no caller, kept alive for months by a prose claim about a caller that
+    # nobody ever executed to check.
+    #
+    # Same disposition as question-enforcement.sh: it stops being DEPLOYED, it stays in
+    # the repo because test-multiple-choice-enforce.sh exercises it, and the guard exempts
+    # it by name with the reason in hook-registry-guard.sh's _is_excluded.
+    #
+    # NOT FIXED HERE: whether two byte-identical copies of a detection block is itself the
+    # defect. It probably is, but deduplicating a live Stop-hook detection block is its own
+    # unit with its own risk, and a half-written Stop hook takes the machine with it.
+    question-discipline) echo "multiple-choice-detect-stop.sh multiple-choice-inject-prompt.sh" ;;
     grounding)           echo "grounding-gate.sh grounding-guard.sh task-loop-mandate.sh justify-queue-mandate.sh concise-mandate.sh concise-toggle.sh concise-detect-stop.sh" ;;
     api-drift)           echo "api-drift-detector.sh api-drift-stop.sh api-drift-ack.sh" ;;
     planning-git)        echo "plan-consistency-lint.sh push-ahead-check.sh" ;;
@@ -2549,6 +2871,137 @@ with open("$STATE_FILE", "w") as f: json.dump(d, f, indent=2)
 PY
 }
 
+# state_forget <key> - drop a component key entirely, rather than marking it inactive.
+# Used only by the retirement sweep: a key for a component that no longer EXISTS should not
+# linger as "inactive" forever, and its absence is what makes the sweep one-shot.
+state_forget() {
+  local key="$1"
+  [ -f "$STATE_FILE" ] || return 0
+  # STAGED AND RENAMED, not written in place. `open(path, "w")` truncates at open, so a
+  # full disk or an interrupt between the truncate and the flush leaves the state file
+  # empty or half-written - and this file is the ONLY provenance oracle the retirement
+  # sweep has. Corrupting it does not merely lose a key, it makes every future ownership
+  # question unanswerable, which turns the sweep permanently into a no-op. Flagged by
+  # independent review.
+  python3 - <<PY
+import json, os, tempfile, time
+try:
+    with open("$STATE_FILE") as f: d = json.load(f)
+except Exception:
+    raise SystemExit(1)
+d.setdefault("components", {}).pop("$key", None)
+d["last_run_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+dst = "$STATE_FILE"
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(dst) or ".", prefix=".dotfiles-state.")
+try:
+    with os.fdopen(fd, "w") as f:
+        json.dump(d, f, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, dst)
+except Exception:
+    try:
+        os.unlink(tmp)
+    except OSError:
+        pass
+    raise SystemExit(1)
+PY
+}
+
+# ------------------------------------------------------------
+# remove_retired_skills: take a retired skill OFF machines that already have it.
+#
+# THE GAP THIS CLOSES, stated plainly because it has now happened twice. When a skill is
+# retired, the obvious edit is to delete its component key, its arrays, its status case and
+# its deactivate line together. Do that and every machine that already installed it keeps
+# it forever: the deactivate line was the ONLY code that could remove the directory, and it
+# was reachable only through the component key that was just deleted. The model goes on
+# loading a skill the repo no longer ships and no future install will ever clear it. That
+# is exactly the `improv` orphan recorded in session_2026-07-26_orphan-improv-skill.md, and
+# design-build / design-references were about to become the second and third.
+#
+# WHY THE EXISTING PRUNE CANNOT DO THIS. prune_broken_skill_symlinks walks the DIRECT
+# CHILDREN of ~/.claude/skills and considers only SYMLINKS whose target is gone. Both
+# retired skills are real DIRECTORIES on a copy-mode machine (verified on this one), so the
+# prune skips them entirely. Today's hardening added hooks/ and swapped location for
+# shape-plus-provenance, but left the symlink-only and direct-children-only rules intact,
+# so the gap survived it.
+#
+# OWNERSHIP IS PROVEN, NOT ASSUMED - the same bar the prune sets, reached by a different
+# oracle. The prune has to INFER retirement from git history, because a dangling link is
+# all it has to go on. This function does not infer anything: RETIRED_SKILLS is a declared
+# list, and the state file records that THIS INSTALLER installed the component. A directory
+# with no state entry is someone else's - most likely the user's own - and is left alone
+# and reported, never removed. That is why this needs no git oracle and still works from a
+# tarball, where the prune correctly refuses.
+#
+# ONE-SHOT: the state key is dropped after a successful removal, so the next run finds no
+# provenance and does nothing. Re-running is safe and silent.
+#
+# Returns 0 always. A retirement sweep that fails the install because a user directory
+# looked unfamiliar would be a worse bargain than the orphan it prevents; every refusal is
+# reported instead.
+RETIRED_SKILLS="design-build design-references"
+
+remove_retired_skills() {
+  local _rr_name _rr_dir _rr_state _rr_any=0
+  local _rr_root="${CLAUDE_DIR:-$HOME/.claude}/skills"
+
+  for _rr_name in $RETIRED_SKILLS; do
+    _rr_dir="$_rr_root/$_rr_name"
+    # -e, not -d: a symlink left by an older link-mode install must be removed too, and a
+    # DANGLING one fails -d while still being a live entry Claude Code tries to load.
+    # `|| _rr_state=""` on EVERY read. state_get returns non-zero when the state file is
+    # unreadable or not valid JSON, and a bare assignment propagates that status - which
+    # under errexit aborts the whole installer from inside a cleanup sweep. Unprovable
+    # ownership must mean "leave it alone", never "stop the install". Flagged by
+    # independent review.
+    if [ ! -e "$_rr_dir" ] && [ ! -L "$_rr_dir" ]; then
+      # Nothing on disk. Still drop any stale key so the state file stops advertising a
+      # component that no longer exists.
+      _rr_state="$(state_get "$_rr_name")" || _rr_state=""
+      # GUARDED, like every other call in this function. remove_retired_skills is invoked
+      # as a BARE top-level command, so errexit is live inside it and an unguarded
+      # state_forget failure would abort the whole installer from a bookkeeping line that
+      # removes nothing. Flagged by independent review.
+      if [ -n "$_rr_state" ]; then
+        state_forget "$_rr_name" \
+          || warn "could not drop the stale state key for retired skill '$_rr_name' - harmless, it will be retried next run"
+      fi
+      continue
+    fi
+
+    _rr_state="$(state_get "$_rr_name")" || _rr_state=""
+    # ACTIVE, not merely non-empty. The state file also carries "inactive" and
+    # "not-installed", and neither says this installer owns what is on disk RIGHT NOW - a
+    # user who deactivated the component and later created their own directory of the same
+    # name would have had it deleted on the strength of a stale key. Ownership is a
+    # positive claim, so it is matched positively. Flagged by independent review.
+    if [ "$_rr_state" != "active" ]; then
+      warn "retired skill '$_rr_name' is present at $_rr_dir but this installer has no record of currently owning it (state: ${_rr_state:-none}) - LEAVING IT ALONE"
+      warn "  if it is yours, nothing to do; if you want it gone: rm -rf \"$_rr_dir\""
+      continue
+    fi
+
+    if rm -rf "$_rr_dir"; then
+      # Same guard, same reason. The removal already succeeded, so a failure to update the
+      # bookkeeping must not undo it or abort the run - the worst case is that the sweep
+      # runs once more and finds nothing to do.
+      state_forget "$_rr_name" \
+        || warn "'$_rr_name' was removed but its state key could not be dropped - harmless, the next run retries"
+      ok "retired skill '$_rr_name' removed (no longer shipped; it was installed by this installer)"
+      _rr_any=1
+    else
+      warn "retired skill '$_rr_name' could not be removed from $_rr_dir - remove it by hand"
+    fi
+  done
+
+  if [ "$_rr_any" = 1 ]; then
+    info "retired skills are removed once; later runs find no record and do nothing"
+  fi
+  return 0
+}
+
 state_record_sha() {
   state_init_if_missing
   local sha
@@ -2602,9 +3055,7 @@ detect_component() {
     component-gallery) [ -d "$CLAUDE_DIR/skills/component-gallery-reference" ] && echo active || echo not-installed ;;
     fontshare)         [ -d "$CLAUDE_DIR/skills/fontshare-reference" ] && echo active || echo not-installed ;;
     motion)            [ -d "$CLAUDE_DIR/skills/motion-reference" ] && echo active || echo not-installed ;;
-    design-build)      [ -d "$CLAUDE_DIR/skills/design-build" ] && echo active || echo not-installed ;;
     curate)            [ -d "$CLAUDE_DIR/skills/curate" ] && echo active || echo not-installed ;;
-    design-references) [ -d "$CLAUDE_DIR/skills/design-references" ] && echo active || echo not-installed ;;
     social-media)      [ -d "$CLAUDE_DIR/skills/social-media" ] && echo active || echo not-installed ;;
     design-team)       [ -d "$CLAUDE_DIR/skills/design-team" ] && echo active || echo not-installed ;;
     visual-effects)    [ -d "$CLAUDE_DIR/skills/visual-effects" ] && echo active || echo not-installed ;;
@@ -2964,14 +3415,22 @@ deactivate_skills() {
   [ -d "$CLAUDE_DIR/skills/component-gallery-reference" ] && rm -rf "$CLAUDE_DIR/skills/component-gallery-reference"
   [ -d "$CLAUDE_DIR/skills/fontshare-reference" ] && rm -rf "$CLAUDE_DIR/skills/fontshare-reference"
   [ -d "$CLAUDE_DIR/skills/motion-reference" ] && rm -rf "$CLAUDE_DIR/skills/motion-reference"
-  [ -d "$CLAUDE_DIR/skills/design-build" ] && rm -rf "$CLAUDE_DIR/skills/design-build"
-  [ -d "$CLAUDE_DIR/skills/curate" ] && rm -rf "$CLAUDE_DIR/skills/curate"
-  # Trailing conditional again - this one ends the whole function.
-  if [ -d "$CLAUDE_DIR/skills/design-references" ]; then
-    rm -rf "$CLAUDE_DIR/skills/design-references"
+  # design-build and design-references were removed here until 2026-07-28. They are RETIRED
+  # now, so this is no longer where they come off: remove_retired_skills does it on every
+  # run, for every machine, whether or not the user ever deactivates the skills bundle.
+  #
+  # THE `if` FORM IS LOAD-BEARING, and deleting the retired lines is what made it matter
+  # here. As the LAST command of a function, `[ -d X ] && rm -rf X` returns 1 whenever X is
+  # already absent - "nothing to remove" reported as failure - and deactivate_component
+  # captures that status directly, so apply_pending treats it as a failed component and
+  # abandons the rest of the plan. The `if` block that used to absorb this was the
+  # design-references one; taking it out would have promoted the curate line into the
+  # trailing position and re-armed a bug this file has already been bitten by twice.
+  if [ -d "$CLAUDE_DIR/skills/curate" ]; then
+    rm -rf "$CLAUDE_DIR/skills/curate"
   fi
   # NOTE: ~/.claude/design-references/ is the user's personal catalog (data, not code).
-  # Deactivation removes the SKILLS but preserves the catalog so the user does not lose curated references.
+  # Deactivation removes the SKILL but preserves the catalog so the user does not lose curated references.
 }
 
 deactivate_voice() {
@@ -3326,7 +3785,8 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 }
 
 # Design peer skills: each removes only its own ~/.claude/skills/ dir.
-# design-references deliberately preserves the user's ~/.claude/design-references/ catalog.
+# `curate` deliberately preserves the user's ~/.claude/design-references/ catalog - it owns
+# the catalog since design-references was retired, and owning it does not mean deleting it.
 deactivate_design_skill() {
   local dir="$1"
   # `if`, NOT `[ -d X ] && rm -rf X`. As the LAST command of the function, that idiom
@@ -3454,9 +3914,7 @@ deactivate_component() {
     component-gallery) deactivate_design_skill component-gallery-reference ;;
     fontshare)         deactivate_design_skill fontshare-reference ;;
     motion)            deactivate_design_skill motion-reference ;;
-    design-build)      deactivate_design_skill design-build ;;
     curate)            deactivate_design_skill curate ;;
-    design-references) deactivate_design_skill design-references ;;
     social-media)      deactivate_design_skill social-media ;;
     design-team)       deactivate_design_skill design-team ;;
     visual-effects)    deactivate_design_skill visual-effects ;;
@@ -3770,6 +4228,33 @@ _br_display_name() {
   printf '%s' "$label"
 }
 
+# THE MULTIBYTE GLYPHS IN THIS FILE ARE DELIBERATE AND STAY. Recording that here because
+# they were reported as a defect - "a multibyte bullet inside a printf" said to have
+# aborted an analysis tool's per-character awk until it forced LC_ALL=C - and the next
+# person to trip over one should find the reasoning rather than re-open the question.
+#
+# WHAT IS ACTUALLY IN THE FILE. Three sites, all load-bearing UI: these three status
+# glyphs, the update row's arrow and check, and the box-drawing frame in the final
+# "one more step" panel. 483 non-ASCII bytes in total, and the whole file decodes as
+# valid UTF-8 end to end. Normalising them to ASCII is not a cleanup, it is a visible
+# product change to the installer's browser and its closing panel.
+#
+# THE REPORT'S LOCATION WAS WRONG, which matters: it named install.sh:3055, and that line
+# is pure ASCII (a comment about ensure_real_settings). Anyone verifying the claim at the
+# named line finds nothing and concludes it was already fixed. The glyphs are here.
+#
+# THE ABORT DOES NOT REPRODUCE against this file with the system awk (version 20200816,
+# the macOS default): a per-character `substr` walk and a `split($0, a, "")` walk over the
+# whole installer both complete and both count 367442 characters, with LC_ALL unset under
+# en_US.UTF-8 and with LC_ALL=C, byte-identical results either way. That is consistent with
+# the bytes being well-formed - a UTF-8-aware awk decodes them, a byte-oriented one sees
+# more characters but errors on neither.
+#
+# SO THE FIX BELONGS IN THE TOOL, NOT HERE. Any script that walks this file a character at
+# a time should set LC_ALL=C for its own determinism, the way the suites in this repo
+# already do when they sort or compare. A tool that cannot read valid UTF-8 is the thing to
+# change; deleting the product's glyphs to accommodate it would trade a real interface for
+# an imaginary portability win.
 _br_glyph() {
   case "$1" in
     active)  printf '%s' "●" ;;
@@ -5174,6 +5659,29 @@ make_symlink() {
 }
 
 # ============================================================
+# 0. Retirements - take last release's skills OFF this machine
+# ============================================================
+# NOT GATED ON `picked <anything>`, and that is the whole design: the components these
+# skills belonged to no longer exist, so any gate would be a gate on a key nothing can
+# select, which is precisely how a retired skill becomes permanent. It runs before the
+# component sections for the same reason migrate_legacy_markers does - the machine should
+# be in its current shape before anything reads it.
+#
+# WHAT "EVERY RUN" MEANS HERE, stated precisely because the first version of this comment
+# overclaimed it and independent review caught the gap. This is the apply phase. It is
+# reached by every non-interactive run (`--only ...`, `--yes`, a preset) AND by the
+# browser's apply, which re-invokes this script as `bash "$0" --only ... --yes` and so
+# arrives here in the child. It is NOT reached by an interactive browser session the user
+# quits without applying - that path exits above, having changed nothing.
+#
+# That exception is deliberate, not a hole. "Open the installer, look around, quit" must
+# leave the machine exactly as it was; a retirement sweep that fired anyway would make
+# quitting the one action that silently deletes directories.
+#
+# --dry-run never reaches here either; that block exits ~40 lines above.
+remove_retired_skills
+
+# ============================================================
 # 1. Brain (team rules + workflow, appended to CLAUDE.md)
 # ============================================================
 
@@ -5233,9 +5741,29 @@ if picked brain; then
   # self-healing on the next run; this shape never heals, so it has to stop instead.
   # The payload was validated and captured at the top of this section, before the migration
   # and the touch, so by here a refusal has already suppressed everything below it.
+  # RECORDED, NOT MERELY WARNED - and the two are not a stylistic choice, they are
+  # different exit codes for the same outcome. A refused delete suppresses the append, so
+  # the brain block is NOT refreshed and the component did not fully apply. That is the
+  # precise condition the end-of-run ledger exists to report, and warning about it and then
+  # printing "Installation complete." with exit 0 is the "reported success while wrong"
+  # shape it was built to end.
+  #
+  # THIS SITE WAS AN OMISSION, NOT A CONTRACT. Measured against 363458ea on identical
+  # fixtures: `--only memory` on a malformed memory block exited 1 while `--only brain` on
+  # a malformed brain block exited 0 - same cause, same suppression, same warning, same
+  # remedy, different status. The memory section's own comment claimed it was "the last one
+  # still doing it"; three sites in this section still were. Two other failure classes in
+  # THIS section (a payload carrying a reserved marker, a repo symlink that could not be
+  # materialised) already record, so the section was internally inconsistent as well.
+  #
+  # Levelled UP rather than down deliberately. Downgrading memory to a warning would make
+  # the two consistent by destroying the only machine-readable signal that a component did
+  # not land, and would re-open the hole the ledger was written to close. Nothing is
+  # aborted either way: record_component_failure warns and returns 0, so every other
+  # component in the run still installs.
   if [ "$brain_block_ok" = 1 ] && grep -Fq "$BRAIN_BEGIN" "$TARGET_MD" 2>/dev/null; then
     safe_block_delete "$TARGET_MD" "$BRAIN_BEGIN" "$BRAIN_END" \
-      || { warn "brain block in $TARGET_MD is malformed (no closing marker, or two opens) - NOT refreshing it. Fix or remove that block, then re-run."; brain_block_ok=0; }
+      || { record_component_failure brain "brain block in $TARGET_MD is malformed (no closing marker, or two opens) - NOT refreshing it. Fix or remove that block, then re-run."; brain_block_ok=0; }
   fi
 
   # Also handle legacy marker from the old claude component.
@@ -5249,7 +5777,7 @@ if picked brain; then
   # independent review.
   if [ "$brain_block_ok" = 1 ] && grep -Fq "<!-- improv:rules:begin -->" "$TARGET_MD" 2>/dev/null; then
     safe_block_delete "$TARGET_MD" "<!-- improv:rules:begin -->" "<!-- improv:rules:end -->" \
-      || { warn "legacy rules block in $TARGET_MD is malformed - left in place, and NOT appending a fresh block over it. Fix or remove that block, then re-run."; brain_block_ok=0; }
+      || { record_component_failure brain "legacy rules block in $TARGET_MD is malformed - left in place, and NOT appending a fresh block over it. Fix or remove that block, then re-run."; brain_block_ok=0; }
   fi
 
   if [ "$brain_block_ok" = 1 ]; then
@@ -5271,7 +5799,7 @@ if picked brain; then
     fi
     if [ "$local_block_ok" = 1 ] && grep -Fq "$LOCAL_BEGIN" "$TARGET_MD" 2>/dev/null; then
       safe_block_delete "$TARGET_MD" "$LOCAL_BEGIN" "$LOCAL_END" \
-        || { warn "local-overrides block in $TARGET_MD is malformed - NOT refreshing it. Fix or remove that block, then re-run."; local_block_ok=0; }
+        || { record_component_failure brain "local-overrides block in $TARGET_MD is malformed - NOT refreshing it. Fix or remove that block, then re-run."; local_block_ok=0; }
     fi
     if [ "$local_block_ok" = 1 ]; then
       {
@@ -5639,39 +6167,15 @@ if picked skills; then
   # path ended up installing a DIFFERENT set of files than the bundle path for the
   # same skill.
   for _skill in tactical-polish component-gallery-reference fontshare-reference \
-                motion-reference design-build curate design-references \
+                motion-reference curate \
                 social-media design-team visual-effects icon-source voice-output; do
     install_bundled_skill "$_skill"
   done
 
-  # Seed the catalog directory + vocabulary file (only if not already present - preserve user data)
-  if [ ! -d "$CLAUDE_DIR/design-references" ]; then
-    info "Seeding personal design-reference catalog at ~/.claude/design-references/..."
-    mkdir -p "$CLAUDE_DIR/design-references/_vocab"
-    cat > "$CLAUDE_DIR/design-references/_vocab/categories.txt" <<'VOCABEOF'
-# Strict Category vocabulary for the design-references catalog.
-# One per line. Lowercase, hyphenated.
-# Adding a new category requires explicit user approval via the `curate` skill.
-
-list
-navigation
-command-palette
-inline-edit
-page-transition
-loading-state
-empty-state
-detail-reveal
-layout-transition
-notification
-data-display
-gesture
-interactive-element
-overlay
-VOCABEOF
-    ok "design-references catalog seeded (empty - populate via /curate)"
-  else
-    ok "design-references catalog already exists - leaving user data intact"
-  fi
+  # The catalog belongs to `curate`, which this bundle installs. One implementation,
+  # called from here and from the a la carte curate block below.
+  seed_design_reference_catalog || record_component_failure skills \
+    "the design-reference catalog could not be seeded - /curate has nowhere to write"
 
 fi
 
@@ -5698,45 +6202,20 @@ fi
 picked component-gallery && { echo ""; info "--- component-gallery-reference (a la carte) ---"; install_bundled_skill component-gallery-reference; }
 picked fontshare         && { echo ""; info "--- fontshare-reference (a la carte) ---"; install_bundled_skill fontshare-reference; }
 picked motion            && { echo ""; info "--- motion-reference (a la carte) ---"; install_bundled_skill motion-reference; }
-picked design-build      && { echo ""; info "--- design-build (a la carte) ---"; install_bundled_skill design-build; }
-picked curate            && { echo ""; info "--- curate (a la carte) ---"; install_bundled_skill curate; }
+if picked curate; then
+  echo ""
+  info "--- curate (a la carte) ---"
+  install_bundled_skill curate
+  # THE SEEDING LIVES HERE NOW. It used to sit inside the design-references block, which
+  # was retired - so `--only curate` on a fresh machine would have installed a skill whose
+  # catalog directory nothing creates.
+  seed_design_reference_catalog || record_component_failure curate \
+    "the design-reference catalog could not be seeded - /curate has nowhere to write"
+fi
 picked social-media      && { echo ""; info "--- social-media (a la carte) ---"; install_bundled_skill social-media; }
 picked design-team       && { echo ""; info "--- design-team (a la carte) ---"; install_bundled_skill design-team; }
 picked visual-effects    && { echo ""; info "--- visual-effects (a la carte) ---"; install_bundled_skill visual-effects; }
 picked icon-source       && { echo ""; info "--- icon-source (a la carte) ---"; install_bundled_skill icon-source; }
-
-if picked design-references; then
-  echo ""
-  info "--- design-references (a la carte) ---"
-  install_bundled_skill design-references
-  # Seed the personal catalog only if absent (preserve user data).
-  if [ ! -d "$CLAUDE_DIR/design-references" ]; then
-    mkdir -p "$CLAUDE_DIR/design-references/_vocab"
-    cat > "$CLAUDE_DIR/design-references/_vocab/categories.txt" <<'VOCABEOF'
-# Strict Category vocabulary for the design-references catalog.
-# One per line. Lowercase, hyphenated.
-# Adding a new category requires explicit user approval via the `curate` skill.
-
-list
-navigation
-command-palette
-inline-edit
-page-transition
-loading-state
-empty-state
-detail-reveal
-layout-transition
-notification
-data-display
-gesture
-interactive-element
-overlay
-VOCABEOF
-    ok "design-references catalog seeded (empty - populate via /curate)"
-  else
-    ok "design-references catalog already exists - leaving user data intact"
-  fi
-fi
 
 # ============================================================
 # 5. Custom statusline
@@ -6479,6 +6958,9 @@ if picked justify; then
   # turns it into a non-zero exit.
   if bash "$REPO_DIR/justify/install.sh"; then
     ok "Justify installed"
+    # Recorded for the end-of-run read-back. The delegated installer's exit code says what
+    # it BELIEVES it did; the check at the end says what is on disk.
+    DELEGATED_SKILLS_DEPLOYED+=("justify")
   else
     record_component_failure justify "justify/install.sh exited non-zero - see above."
   fi
@@ -6495,6 +6977,7 @@ if picked lotus; then
   # every component queued after it.
   if bash "$REPO_DIR/lotus/install.sh"; then
     ok "Lotus installed"
+    DELEGATED_SKILLS_DEPLOYED+=("lotus")
   else
     record_component_failure lotus "lotus/install.sh exited non-zero - see above."
   fi
@@ -7054,6 +7537,28 @@ if [ "${#SKILLS_DEPLOYED[@]}" -gt 0 ]; then
     record_component_failure skills \
       "deployed skills do not match their repo source - see the verify-skills errors above"
   fi
+fi
+
+# The delegated installers' skills, read back the same way and in the same place.
+# justify and lotus were outside the check above from the day it was written: the array it
+# reads is appended only by install_bundled_skill, which never runs for either of them.
+# So the one component whose skill is generated at install time and the one whose skill is
+# templated at install time - the two most likely to land wrong - were the two nothing
+# looked at. Their own installers exit non-zero on a failed write, and that is already
+# routed through the ledger above; this is the read-back that catches the case where they
+# exited 0 and the bytes on disk are still not what a working install looks like.
+#
+# CHECKED AT THE END, not at the dispatch site, deliberately: every later section of this
+# run has finished by here, so a skill clobbered after it was installed is still caught.
+if [ "${#DELEGATED_SKILLS_DEPLOYED[@]}" -gt 0 ]; then
+  echo ""
+  info "--- verifying delegated skills ---"
+  for _dsd_name in "${DELEGATED_SKILLS_DEPLOYED[@]}"; do
+    if ! verify_delegated_skill "$_dsd_name"; then
+      record_component_failure "$_dsd_name" \
+        "the $_dsd_name skill on disk is not what a completed install looks like - see the verify-delegated-skill errors above"
+    fi
+  done
 fi
 
 # ============================================================

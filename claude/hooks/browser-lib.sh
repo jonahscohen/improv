@@ -731,6 +731,10 @@ EOF
 # Exit codes (fail-loud - pending is cleared ONLY when the whole plan landed):
 #   0             every staged change applied
 #   3             apply_plan invariant violation (an owner in BOTH lists); nothing executed
+#   4             the install log could not be created (unwritable/full TMPDIR); nothing
+#                 executed. Distinct from an installer failure on purpose - the components
+#                 are fine and the environment is not, and reporting the second as the
+#                 first sends the user to debug a component that was never run.
 #   <installer>   the install pass failed; its exit code is propagated, deactivates skipped
 #   <deactivate>  a deactivate_component failed; its exit code is propagated
 # On any non-zero return the pending sets are PRESERVED, so the user can retry.
@@ -767,14 +771,37 @@ EOF
   # (1) ONE install pass for every install owner, carrying the merged off-list. Mirrors
   # the returning flow's recursive-install idiom (install.sh ~line 2021).
   if [ -n "$owners_csv" ]; then
-    logfile="$(mktemp)"
+    # TEMPLATED, not a bare `mktemp`. A bare mktemp ignores TMPDIR on macOS - it uses the
+    # per-user Darwin temp dir - so the log lands somewhere the caller did not choose,
+    # under an anonymous `tmp.XXXXXX` name that names no owner. Building the path from
+    # ${TMPDIR:-/tmp} makes the location the caller's to control and the name attributable,
+    # and keeps mktemp's unpredictable suffix, so this is not a fixed path another user
+    # could pre-create a symlink at. Same shape as install_bundled_skill's walk in install.sh.
+    logfile="$(mktemp "${TMPDIR:-/tmp}/improv-apply-pending-XXXXXX")" || logfile=""
+    # NEVER PROCEED WITH AN EMPTY PATH. Errexit is disabled for this whole body (see the
+    # SET -E NOTE above), so an unchecked mktemp failure would fall through to
+    # `bash "$0" ... >""`, whose redirection error would then be reported as an INSTALLER
+    # failure - a full disk misdiagnosed as a broken component. Nothing has run at this
+    # point, so pending is untouched and a retry is safe.
+    if [ -z "$logfile" ]; then
+      printf 'apply_pending: could not create the install log in %s - nothing was applied (pending preserved)\n' "${TMPDIR:-/tmp}" >&2
+      return 4
+    fi
     if _AMPERSAND_HOOK_OFF="$off_list" _AMPERSAND_NO_SUMMARY=1 bash "$0" --only "$owners_csv" --yes >"$logfile" 2>&1; then
       rm -f "$logfile"
     else
       rc=$?
       printf 'apply_pending: install pass FAILED (exit %s) for --only %s\n' "$rc" "$owners_csv" >&2
-      printf 'apply_pending: last 20 lines of %s:\n' "$logfile" >&2
+      printf 'apply_pending: last 20 lines of the install log:\n' >&2
       tail -20 "$logfile" >&2
+      # REMOVED ON THIS PATH TOO. The success branch cleaned up and the failure branch did
+      # not, so every failed apply left one temp file behind forever - and the message it
+      # printed named that file, which is why the leak read as deliberate. It was not: the
+      # tail above is what the caller actually gets, and retaining the rest would need
+      # either a predictable path (a symlink target another user can pre-create) or
+      # unbounded accumulation. The tail is printed BEFORE the delete, so nothing is lost
+      # that was ever being shown.
+      rm -f "$logfile"
       return "$rc"
     fi
   fi
@@ -931,9 +958,11 @@ EOF
 #      claim to distinguish those from a genuine non-fast-forward, and its message
 #      must not either. The actionable fact they share is "the pull did not happen,
 #      go look at the repo", which is exactly what 2 means.
-#   3  the pull SUCCEEDED but the re-install failed. The repo IS updated; the
-#      deployment is not. Distinct from 2 so the caller does not tell the user to
-#      resolve a repo that is already clean.
+#   3  the pull SUCCEEDED but the re-install failed, or could not be attempted because
+#      the install log could not be created. The repo IS updated; the deployment is not.
+#      Distinct from 2 so the caller does not tell the user to resolve a repo that is
+#      already clean. The two sub-cases share this code because they leave the machine in
+#      the same state and the message names which one happened.
 #
 # SET -E NOTE: as with apply_pending, every failure is checked EXPLICITLY. Both calls
 # are guarded by `if` so neither errexit nor a status-tested caller (which silently
@@ -992,7 +1021,18 @@ update_apply() {
   # DELIBERATE: the pull may have just rewritten install.sh itself, so `bash "$self"`
   # runs the NEW installer code, not the copy this process was started from. That is
   # the point of the whole flow - the user's setup should match the fresher repo.
-  logfile="$(mktemp)"
+  # Templated for the same reasons as apply_pending's - see the comment there.
+  logfile="$(mktemp "${TMPDIR:-/tmp}/improv-update-apply-XXXXXX")" || logfile=""
+  # The pull ALREADY HAPPENED, so this is not the same "nothing was attempted" state
+  # apply_pending's guard reports: the repo is updated and the deployment is not, which is
+  # exactly what 3 means. Falling through with an empty path would instead redirect into
+  # "" and report the resulting shell error as a failed re-install, which is the same
+  # outcome with a wrong cause attached.
+  if [ -z "$logfile" ]; then
+    printf 'update_apply: pull SUCCEEDED but the install log could not be created in %s - the re-install was NOT attempted\n' "${TMPDIR:-/tmp}" >&2
+    printf 'update_apply: the repo is updated; the deployment is NOT. Free space in %s and run the update again.\n' "${TMPDIR:-/tmp}" >&2
+    return 3
+  fi
   # The `else` branch is where the failure code lives: after a plain `fi` with no else,
   # $? is the IF STATEMENT's status (0), not the failed condition's.
   if _AMPERSAND_NO_SUMMARY=1 bash "$self" --only "$active_csv" --yes >"$logfile" 2>&1; then
@@ -1000,8 +1040,10 @@ update_apply() {
   else
     rc=$?
     printf 'update_apply: pull SUCCEEDED but the re-install FAILED (exit %s) for --only %s\n' "$rc" "$active_csv" >&2
-    printf 'update_apply: the repo is updated; the deployment is NOT. Last 20 lines of %s:\n' "$logfile" >&2
+    printf 'update_apply: the repo is updated; the deployment is NOT. Last 20 lines of the install log:\n' >&2
     tail -20 "$logfile" >&2
+    # Removed here too - same leak, same reasoning as apply_pending's failure branch.
+    rm -f "$logfile"
     return 3
   fi
   return 0

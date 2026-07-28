@@ -1659,6 +1659,486 @@ else
 fi
 
 # ============================================================
+# I. The top-level installer READS THE DELEGATED SKILLS BACK
+# ============================================================
+# Every section above proves the two delegated installers write safely. This one proves
+# the caller checks what they wrote.
+#
+# THE GAP. install.sh gained an end-of-run gate that re-reads every skill the run
+# deployed and fails the run if the bytes on disk are not the bytes that were supposed to
+# land. It covered exactly the skills install_bundled_skill deployed, and it appended to
+# its ledger in exactly one place - inside that function. justify and lotus never go
+# through it: they are installed by CHILD PROCESSES, whose appends to a parent array are
+# discarded on exit. So the one skill that is GENERATED at install time (justify's is a
+# heredoc) and the one that is TEMPLATED at install time (lotus's placeholder rewrite) -
+# the two with the most ways to land wrong - were the two nothing read back.
+#
+# THE FIX IS NOT ONE MORE NAME IN THE ARRAY, which is worth stating because that is the
+# obvious shape and it fails in both directions. Measured against the committed tree:
+#   ./install.sh --verify-skills justify  -> exit 2, "unknown skill 'justify'"
+#   ./install.sh --verify-skills lotus    -> exit 0, "0 skill(s), 0 file(s) match"
+# The first would make a successful install record a failure on every run; the second is a
+# green row that examined no bytes. verify_delegated_skill is the check shaped to how each
+# one is actually built, and these rows are what hold it to that.
+echo
+echo "--- I. delegated-skill read-back (install.sh)"
+
+TOP_INSTALLER="$TARGET_REPO/install.sh"
+if [ -f "$TOP_INSTALLER" ]; then
+  ok "I0 the target checkout has a top-level install.sh to read the function out of"
+else
+  bad "I0 the target checkout has a top-level install.sh to read the function out of" "$TOP_INSTALLER"
+fi
+
+# The function is extracted and run directly rather than reached through a whole install:
+# the failure classes below (a zero-byte skill, a dangling link, a stale template) cannot
+# be produced by driving a real installer, because a real installer does not produce them.
+# The extraction is the same idiom the other installer suites use for inline install.sh code.
+#
+# vds <repo> <claude-dir> <name> -> echoes "<exit>|<output>"
+vds() {
+  local repo="$1" cdir="$2" name="$3" out rc
+  out="$(
+    REPO_DIR="$repo" CLAUDE_DIR="$cdir" bash -c '
+      set -u
+      info(){ printf "[info] %s\n" "$1"; }
+      ok(){   printf "[ok] %s\n"   "$1"; }
+      err(){  printf "[error] %s\n" "$1" >&2; }
+      warn(){ printf "[warn] %s\n" "$1" >&2; }
+      eval "$(awk "/^verify_delegated_skill\(\) \{/,/^\}/" "$1")" || exit 90
+      verify_delegated_skill ${2:+"$2"}
+    ' _ "$TOP_INSTALLER" "$name" 2>&1
+  )"
+  rc=$?
+  printf '%s|%s' "$rc" "$(printf '%s' "$out" | tr '\n' ';')"
+}
+
+# EXTRACTION SANITY FIRST. Every row below reads "exit 2" as a usage error; an extraction
+# that produced no function at all would make bash exit 127 and, worse, an extraction that
+# produced a SYNTAX ERROR would exit 2 as well - the same number three of these rows treat
+# as a pass. So the extraction is proved to yield a working function before anything else
+# is believed about it.
+VDS_SANITY="$(vds "$TARGET_REPO" "$TMPROOT/nonexistent-claude-dir" bogus)"
+case "$VDS_SANITY" in
+  2\|*no\ contract\ for\ \'bogus\'*)
+    ok "I1 verify_delegated_skill extracts and runs, and an unknown name is a usage error (2)" ;;
+  *)
+    bad "I1 verify_delegated_skill extracts and runs, and an unknown name is a usage error (2)" \
+        "got $VDS_SANITY - every row below reads exit 2 as usage, so they are all vacuous until this passes" ;;
+esac
+
+VDS_NOARG="$(vds "$TARGET_REPO" "$TMPROOT/nonexistent-claude-dir" "")"
+case "$VDS_NOARG" in
+  2\|*usage:*) ok "I2 no argument is a usage error (2), not a silent pass" ;;
+  *)           bad "I2 no argument is a usage error (2), not a silent pass" "got $VDS_NOARG" ;;
+esac
+
+# --- justify: the structural failure classes -------------------------------
+# A sandbox CLAUDE_DIR per case, so one row's fixture cannot satisfy another's assertion.
+mk_skill_dir() { # $1 = case name -> echoes the CLAUDE_DIR
+  local d="$TMPROOT/vds-$1"
+  mkdir -p "$d/skills/justify" "$d/skills/lotus" || return 1
+  printf '%s' "$d"
+}
+
+CD_MISSING="$(mk_skill_dir missing)" || { echo "HARNESS: mk_skill_dir failed" >&2; exit 2; }
+R="$(vds "$TARGET_REPO" "$CD_MISSING" justify)"
+case "$R" in
+  1\|*is\ MISSING\ from*) ok "I3 justify: a missing SKILL.md is drift (1) and is named as missing" ;;
+  *)                      bad "I3 justify: a missing SKILL.md is drift (1) and is named as missing" "got $R" ;;
+esac
+
+CD_EMPTY="$(mk_skill_dir empty)" || exit 2
+: > "$CD_EMPTY/skills/justify/SKILL.md"
+R="$(vds "$TARGET_REPO" "$CD_EMPTY" justify)"
+case "$R" in
+  1\|*is\ EMPTY*) ok "I4 justify: a zero-byte SKILL.md is drift (1), not 'present therefore installed'" ;;
+  *)              bad "I4 justify: a zero-byte SKILL.md is drift (1), not 'present therefore installed'" "got $R" ;;
+esac
+
+CD_DANGLING="$(mk_skill_dir dangling)" || exit 2
+ln -s "$TMPROOT/there-is-no-such-file" "$CD_DANGLING/skills/justify/SKILL.md"
+R="$(vds "$TARGET_REPO" "$CD_DANGLING" justify)"
+case "$R" in
+  1\|*DANGLING\ symlink*) ok "I5 justify: a dangling symlink is named as dangling, not as missing" ;;
+  *)                      bad "I5 justify: a dangling symlink is named as dangling, not as missing" "got $R" ;;
+esac
+
+CD_DIR="$(mk_skill_dir isdir)" || exit 2
+mkdir -p "$CD_DIR/skills/justify/SKILL.md"
+R="$(vds "$TARGET_REPO" "$CD_DIR" justify)"
+case "$R" in
+  1\|*not\ a\ regular\ file*) ok "I6 justify: a directory where SKILL.md belongs is drift (1)" ;;
+  *)                          bad "I6 justify: a directory where SKILL.md belongs is drift (1)" "got $R" ;;
+esac
+
+# THE FAILURE THIS CHECK EXISTS FOR MOST. A SKILL.md that still says __JUSTIFY_SRC__ is a
+# complete, non-empty, perfectly readable file that points the skill at a path that does
+# not exist. Nothing upstream can see it: the write succeeded, so the installer reports
+# success, and every structural property except this one holds.
+CD_PH="$(mk_skill_dir placeholder)" || exit 2
+printf 'name: justify\nThe source lives at __JUSTIFY_SRC__\n' > "$CD_PH/skills/justify/SKILL.md"
+R="$(vds "$TARGET_REPO" "$CD_PH" justify)"
+case "$R" in
+  1\|*still\ contains\ __JUSTIFY_SRC__*) ok "I7 justify: an un-substituted placeholder is drift (1)" ;;
+  *) bad "I7 justify: an un-substituted placeholder is drift (1)" "got $R" ;;
+esac
+
+# A CORRECT install, built the way the installer builds it: the heredoc out of
+# justify/install.sh with the placeholder substituted. This is what earns the byte compare
+# the right to exist - if it fails, the check fires on every healthy machine.
+#
+# render_justify_expected <repo> <dest> - the bytes a correct justify install produces.
+# Independent of the function under test on purpose: it uses perl rather than the awk
+# pipeline in install.sh, so a bug shared between fixture and subject cannot cancel out and
+# report agreement.
+render_justify_expected() {
+  local repo="$1" dest="$2" baked
+  baked="$(cd "$repo/justify" 2>/dev/null && pwd)" || return 1
+  awk 'index($0, "<< '"'"'SKILLEOF'"'"'") > 0 { b=1; next } b && $0 == "SKILLEOF" { b=0; next } b { print }' \
+    "$repo/justify/install.sh" \
+    | PH='__JUSTIFY_SRC__' VAL="$baked" perl -pe 's/\Q$ENV{PH}\E/$ENV{VAL}/g' > "$dest"
+  [ -s "$dest" ]
+}
+
+CD_OK="$(mk_skill_dir good)" || exit 2
+if render_justify_expected "$TARGET_REPO" "$CD_OK/skills/justify/SKILL.md"; then
+  R="$(vds "$TARGET_REPO" "$CD_OK" justify)"
+  case "$R" in
+    0\|*installed\ and\ current*) ok "I8 justify: a correct install passes (the check is not a blanket refusal)" ;;
+    *) bad "I8 justify: a correct install passes (the check is not a blanket refusal)" \
+           "got $R - the check would fire on every healthy machine" ;;
+  esac
+else
+  bad "I8 justify: a correct install passes (the check is not a blanket refusal)" \
+      "the heredoc could not be extracted from $TARGET_REPO/justify/install.sh"
+fi
+
+# THE DEFECT INDEPENDENT REVIEW CAUGHT. The first version of this check stopped at the
+# structural assertions, so a SKILL.md left over from an older checkout passed: the
+# placeholder is substituted, the file is a non-empty readable regular file, and the
+# content is simply out of date. Structural checks cannot see that. Measured live while
+# fixing it - the justify SKILL.md installed on this machine was exactly that, and the
+# structural-only check called it "installed and current".
+CD_STALE="$(mk_skill_dir justify_stale)" || exit 2
+if render_justify_expected "$TARGET_REPO" "$CD_STALE/skills/justify/SKILL.md"; then
+  printf 'a line an older checkout had and this one does not\n' >> "$CD_STALE/skills/justify/SKILL.md"
+  R="$(vds "$TARGET_REPO" "$CD_STALE" justify)"
+  case "$R" in
+    1\|*is\ STALE*) ok "I8b justify: content drift with the placeholder correctly substituted is CAUGHT" ;;
+    *) bad "I8b justify: content drift with the placeholder correctly substituted is CAUGHT" \
+           "got $R - the check proves only that some path was baked in, not that the skill is current" ;;
+  esac
+else
+  bad "I8b justify: content drift with the placeholder correctly substituted is CAUGHT" "fixture could not be built"
+fi
+
+# A WRONG baked path is drift too, and is the case that motivated the row above: a skill
+# whose substituted path points into a checkout that no longer exists reads as perfectly
+# healthy to every structural assertion.
+CD_WRONGPATH="$(mk_skill_dir justify_wrongpath)" || exit 2
+if render_justify_expected "$TARGET_REPO" "$TMPROOT/justify-expected.md"; then
+  sed "s|$(cd "$TARGET_REPO/justify" && pwd)|/gone/old/checkout/justify|g" \
+    "$TMPROOT/justify-expected.md" > "$CD_WRONGPATH/skills/justify/SKILL.md"
+  R="$(vds "$TARGET_REPO" "$CD_WRONGPATH" justify)"
+  case "$R" in
+    1\|*is\ STALE*) ok "I8c justify: a baked path from a different checkout is CAUGHT" ;;
+    *) bad "I8c justify: a baked path from a different checkout is CAUGHT" "got $R" ;;
+  esac
+else
+  bad "I8c justify: a baked path from a different checkout is CAUGHT" "fixture could not be built"
+fi
+
+# THE EXTRACTION MUST FAIL LOUDLY, not quietly. If justify/install.sh's heredoc markers
+# ever move, an extraction that emitted nothing would be compared against the installed
+# file and - for an empty installed file - would compare EQUAL. The structural empty-file
+# check catches that particular pairing, but the general shape (a dead extraction reporting
+# agreement) is the one this row pins.
+CD_NOHEREDOC="$(mk_skill_dir justify_noheredoc)" || exit 2
+NOHD_REPO="$TMPROOT/repo-heredoc-moved"
+mkdir -p "$NOHD_REPO/justify" || exit 2
+cp "$TOP_INSTALLER" "$NOHD_REPO/install.sh" || exit 2
+# Same installer with the heredoc delimiter renamed - the markers moved, nothing else did.
+sed "s/SKILLEOF/SKILL_BODY_EOF/g" "$TARGET_REPO/justify/install.sh" > "$NOHD_REPO/justify/install.sh"
+printf 'name: justify\nsome content with no placeholder\n' > "$CD_NOHEREDOC/skills/justify/SKILL.md"
+R="$(vds "$NOHD_REPO" "$CD_NOHEREDOC" justify)"
+case "$R" in
+  1\|*no\ *SKILLEOF*block\ found*) ok "I8d justify: a moved heredoc marker FAILS loudly rather than comparing nothing" ;;
+  *) bad "I8d justify: a moved heredoc marker FAILS loudly rather than comparing nothing" "got $R" ;;
+esac
+
+# The source-missing case, for justify's source as well as lotus's below.
+CD_JNOSRC="$(mk_skill_dir justify_nosrc)" || exit 2
+JNOSRC_REPO="$TMPROOT/repo-without-justify-installer"
+mkdir -p "$JNOSRC_REPO/justify" || exit 2
+cp "$TOP_INSTALLER" "$JNOSRC_REPO/install.sh" || exit 2
+printf 'anything at all\n' > "$CD_JNOSRC/skills/justify/SKILL.md"
+R="$(vds "$JNOSRC_REPO" "$CD_JNOSRC" justify)"
+case "$R" in
+  1\|*repo\ source\ is\ missing*) ok "I8e justify: a missing delegated installer FAILS rather than comparing nothing" ;;
+  *) bad "I8e justify: a missing delegated installer FAILS rather than comparing nothing" "got $R" ;;
+esac
+
+# --- lotus: the rendered byte compare --------------------------------------
+# lotus is the one VERIFY_SKILLS_EXEMPT gave up on, so these rows are the whole argument
+# that giving up was unnecessary. The expected content is the repo source with
+# __LOTUS_SRC__ replaced by the path lotus/install.sh bakes in, which is computable.
+LOTUS_SRC_MD="$TARGET_REPO/claude/skills/lotus/SKILL.md"
+if [ -f "$LOTUS_SRC_MD" ]; then
+  ok "I9 the lotus skill source exists to render an expectation from"
+else
+  bad "I9 the lotus skill source exists to render an expectation from" "$LOTUS_SRC_MD"
+fi
+LOTUS_BAKED="$(cd "$TARGET_REPO/lotus" 2>/dev/null && pwd)"
+
+# A CORRECTLY templated install. If this row fails, the check would fire on every healthy
+# machine, which is the failure mode VERIFY_SKILLS_EXEMPT was created to avoid - so it is
+# the row that earns the right to remove the exemption for this path.
+CD_LOK="$(mk_skill_dir lotus_ok)" || exit 2
+if [ -f "$LOTUS_SRC_MD" ] && [ -n "$LOTUS_BAKED" ]; then
+  PH='__LOTUS_SRC__' VAL="$LOTUS_BAKED" perl -pe 's/\Q$ENV{PH}\E/$ENV{VAL}/g' \
+    "$LOTUS_SRC_MD" > "$CD_LOK/skills/lotus/SKILL.md"
+  R="$(vds "$TARGET_REPO" "$CD_LOK" lotus)"
+  case "$R" in
+    0\|*installed\ and\ current*) ok "I10 lotus: a correctly templated install passes the rendered compare" ;;
+    *) bad "I10 lotus: a correctly templated install passes the rendered compare" \
+           "got $R - the check would cry wolf on a healthy machine" ;;
+  esac
+else
+  bad "I10 lotus: a correctly templated install passes the rendered compare" "fixture could not be built"
+fi
+
+# The drift the exemption was hiding: one changed line in a file that is otherwise correct
+# and whose placeholder was substituted properly. Nothing structural can see this.
+CD_LSTALE="$(mk_skill_dir lotus_stale)" || exit 2
+if [ -f "$CD_LOK/skills/lotus/SKILL.md" ]; then
+  { cat "$CD_LOK/skills/lotus/SKILL.md"; printf 'a line the repo source does not have\n'; } \
+    > "$CD_LSTALE/skills/lotus/SKILL.md"
+  R="$(vds "$TARGET_REPO" "$CD_LSTALE" lotus)"
+  case "$R" in
+    1\|*is\ STALE*) ok "I11 lotus: content drift from the rendered source is caught (1)" ;;
+    *) bad "I11 lotus: content drift from the rendered source is caught (1)" \
+           "got $R - the byte compare is not actually comparing bytes" ;;
+  esac
+else
+  bad "I11 lotus: content drift from the rendered source is caught (1)" "fixture could not be built"
+fi
+
+# THE RENDER MUST BE LITERAL. A `sed s|ph|val|` render breaks on a repo path containing
+# `&` (substitutes the match back), `|` (ends the expression) or a backslash - and the
+# breakage direction is the dangerous one: it reports drift on a machine that is fine.
+# This row builds exactly such a checkout so the claim is measured rather than asserted.
+CD_META="$(mk_skill_dir lotus_meta)" || exit 2
+META_REPO="$TMPROOT/re&po|dir"
+if mkdir -p "$META_REPO/claude/skills/lotus" "$META_REPO/lotus" 2>/dev/null \
+   && cp "$TOP_INSTALLER" "$META_REPO/install.sh" 2>/dev/null \
+   && [ -f "$LOTUS_SRC_MD" ] && cp "$LOTUS_SRC_MD" "$META_REPO/claude/skills/lotus/SKILL.md"; then
+  META_BAKED="$(cd "$META_REPO/lotus" && pwd)"
+  PH='__LOTUS_SRC__' VAL="$META_BAKED" perl -pe 's/\Q$ENV{PH}\E/$ENV{VAL}/g' \
+    "$META_REPO/claude/skills/lotus/SKILL.md" > "$CD_META/skills/lotus/SKILL.md"
+  R="$(
+    out="$(REPO_DIR="$META_REPO" CLAUDE_DIR="$CD_META" bash -c '
+        info(){ :; }; ok(){ printf "[ok] %s\n" "$1"; }; err(){ printf "[error] %s\n" "$1" >&2; }
+        eval "$(awk "/^verify_delegated_skill\(\) \{/,/^\}/" "$1")" || exit 90
+        verify_delegated_skill lotus' _ "$META_REPO/install.sh" 2>&1)"
+    printf '%s|%s' "$?" "$(printf '%s' "$out" | tr '\n' ';')"
+  )"
+  case "$R" in
+    0\|*installed\ and\ current*) ok "I12 lotus: a repo path containing & and | still renders and matches" ;;
+    *) bad "I12 lotus: a repo path containing & and | still renders and matches" \
+           "got $R - the render is not literal, so it reports drift on a healthy checkout" ;;
+  esac
+else
+  bad "I12 lotus: a repo path containing & and | still renders and matches" "fixture could not be built"
+fi
+
+# CLEAN HAVING CHECKED NOTHING is the verdict this family of functions exists to prevent,
+# and a missing source is how the rendered compare would produce it: an empty render piped
+# into cmp against an empty file compares equal.
+CD_NOSRC="$(mk_skill_dir lotus_nosrc)" || exit 2
+NOSRC_REPO="$TMPROOT/repo-without-lotus-source"
+mkdir -p "$NOSRC_REPO/lotus" "$NOSRC_REPO/claude/skills" || exit 2
+cp "$TOP_INSTALLER" "$NOSRC_REPO/install.sh" 2>/dev/null || exit 2
+printf 'anything at all\n' > "$CD_NOSRC/skills/lotus/SKILL.md"
+R="$(vds "$NOSRC_REPO" "$CD_NOSRC" lotus)"
+case "$R" in
+  1\|*repo\ source\ is\ missing*) ok "I13 lotus: a missing repo source FAILS rather than comparing nothing" ;;
+  *) bad "I13 lotus: a missing repo source FAILS rather than comparing nothing" "got $R" ;;
+esac
+
+# --- end to end: the gate is wired into the run ----------------------------
+# The unit rows above prove the function is right. These prove install.sh CALLS it, and
+# that its answer reaches the exit code - the half that was actually missing.
+#
+# The delegated installer is stubbed rather than run: a real justify install builds a
+# node toolchain, and the subject here is the caller's read-back, not the build. The stub
+# exits 0 in every case, which is precisely the condition the gate exists for - a
+# delegated installer that believes it succeeded.
+#
+# THE STUB CARRIES A REAL HEREDOC. The check reads its expected bytes out of
+# justify/install.sh, so a stub without a `<< 'SKILLEOF'` block would fail every case with
+# "no SKILLEOF block found" and the rows would stop distinguishing a broken skill from a
+# broken fixture. The block sits after `exit 0`, so it is never executed - it exists purely
+# as the source of truth the verifier extracts, exactly as it is in the real installer.
+stage_top_repo() { # $1 = case name; $2 = body of the stub justify installer -> echoes repo dir
+  local d="$TMPROOT/top-$1"
+  mkdir -p "$d/repo" || return 1
+  cp "$TOP_INSTALLER" "$d/repo/install.sh" || return 1
+  cp -R "$TARGET_REPO/claude" "$d/repo/" 2>/dev/null || return 1
+  mkdir -p "$d/repo/justify" "$d/home/.claude" || return 1
+  : > "$d/home/.zshrc" || return 1
+  { printf '%s\n' '#!/bin/bash' 'mkdir -p "$HOME/.claude/skills/justify"'
+    printf '%s\n' "$2"
+    printf '%s\n' 'exit 0'
+    printf '%s\n' ": << 'SKILLEOF'"
+    printf '%s\n' 'name: justify'
+    printf '%s\n' 'The source lives at __JUSTIFY_SRC__'
+    printf '%s\n' 'SKILLEOF'
+  } > "$d/repo/justify/install.sh" || return 1
+  chmod +x "$d/repo/justify/install.sh" || return 1
+  printf '%s' "$d"
+}
+run_top() { # $1 = staged dir -> echoes "<exit>"
+  local d="$1"
+  HOME="$d/home" bash "$d/repo/install.sh" --only justify --yes > "$d/out.log" 2>&1
+  printf '%s' "$?"
+}
+
+# The two stubs differ by exactly the step the real installer performs last: BAD writes the
+# heredoc body and forgets to substitute the placeholder; GOOD writes it substituted with
+# the same `cd "$(dirname "$0")" && pwd` value the real installer bakes in.
+BAD_WRITE='printf "name: justify\nThe source lives at __JUSTIFY_SRC__\n" > "$HOME/.claude/skills/justify/SKILL.md"'
+GOOD_WRITE='printf "name: justify\nThe source lives at %s\n" "$(cd "$(dirname "$0")" && pwd)" > "$HOME/.claude/skills/justify/SKILL.md"'
+
+D_BAD="$(stage_top_repo bad "$BAD_WRITE")" || { echo "HARNESS: stage_top_repo failed" >&2; exit 2; }
+RC_BAD="$(run_top "$D_BAD")"
+# ANCHORED, not an exit code alone. `--only justify --yes` can exit 1 for reasons that have
+# nothing to do with this gate, so the row requires the gate's own header, the gate's own
+# error, AND the ledger line naming justify. An exit code by itself would go green on an
+# unrelated failure and report a working gate that never ran.
+# THE LEDGER LINE MUST NAME justify, not merely exist. The generic failure header is
+# printed for ANY component that did not fully apply, so header-plus-exit-1 is satisfied by
+# an unrelated component failing while this gate's result was quietly dropped - which is
+# precisely the state mutation I17 creates. Flagged by independent review of this suite.
+if [ "$RC_BAD" = "1" ] \
+   && grep -Fq -- '--- verifying delegated skills ---' "$D_BAD/out.log" \
+   && grep -Fq -- 'still contains __JUSTIFY_SRC__' "$D_BAD/out.log" \
+   && grep -Fq -- 'This run did NOT fully apply every component' "$D_BAD/out.log" \
+   && grep -Fq -- '- justify: the justify skill on disk' "$D_BAD/out.log"; then
+  ok "I14 a delegated installer that exits 0 over a broken skill FAILS the run (exit 1, cause named)"
+else
+  bad "I14 a delegated installer that exits 0 over a broken skill FAILS the run (exit 1, cause named)" \
+      "rc=$RC_BAD; gate header $(grep -cF -- '--- verifying delegated skills ---' "$D_BAD/out.log") time(s); justify ledger line $(grep -cF -- '- justify: the justify skill on disk' "$D_BAD/out.log") time(s)"
+fi
+
+D_GOOD="$(stage_top_repo good "$GOOD_WRITE")" || exit 2
+RC_GOOD="$(run_top "$D_GOOD")"
+if [ "$RC_GOOD" = "0" ] \
+   && grep -Fq -- '--- verifying delegated skills ---' "$D_GOOD/out.log" \
+   && grep -Fq -- 'justify/SKILL.md is installed and current' "$D_GOOD/out.log"; then
+  ok "I15 a correct delegated install still exits 0 and says so (the gate is not a blanket refusal)"
+else
+  bad "I15 a correct delegated install still exits 0 and says so (the gate is not a blanket refusal)" \
+      "rc=$RC_GOOD; $(tail -5 "$D_GOOD/out.log" | tr '\n' ';')"
+fi
+
+# MUTATION CONTROL for the wiring. Removing the dispatch-site append is the exact state
+# the tree was in before this unit: the function exists, and nothing ever calls it for a
+# skill that was actually installed. I14 must go RED.
+D_MUT="$(stage_top_repo mut "$BAD_WRITE")" || exit 2
+M="$(mutate "$D_MUT/repo/install.sh" '    DELEGATED_SKILLS_DEPLOYED+=("justify")' '    :' 1)"
+RC_MUT="$(run_top "$D_MUT")"
+mutation_row "I16 removing the justify dispatch-site append turns I14 RED (the gate stops running)" \
+  "$M" "$( { [ "$RC_MUT" != "1" ] || ! grep -Fq -- '--- verifying delegated skills ---' "$D_MUT/out.log"; } && echo 1 || echo 0 )"
+
+# The OTHER link in the same chain. I16 proves the dispatch-site append is load-bearing;
+# this proves the LEDGER ROUTING is. With the check still running and still printing its
+# error, but its result no longer recorded, the run must go back to exiting 0 - which is
+# the "warned and exited 0" shape this whole unit exists to end, reproduced deliberately.
+#
+# Deliberately NOT a mutation of the placeholder assertion: the check now catches a broken
+# skill two independent ways (the placeholder test and the rendered byte compare), so
+# removing either one alone leaves the outcome correct. That is defence in depth working as
+# intended, and a mutation row demanding it flip would be asserting the opposite.
+D_MUT2="$(stage_top_repo mut2 "$BAD_WRITE")" || exit 2
+M2="$(mutate "$D_MUT2/repo/install.sh" \
+  '    if ! verify_delegated_skill "$_dsd_name"; then' \
+  '    if verify_delegated_skill "$_dsd_name" && false; then' 1)"
+RC_MUT2="$(run_top "$D_MUT2")"
+# The gate must still have RUN and still have complained - otherwise this is just I16 again
+# with a different anchor, and it would pass for the wrong reason.
+mutation_row "I17 not routing the gate's failure into the ledger turns I14 RED (the ledger is load-bearing)" \
+  "$M2" "$( { [ "$RC_MUT2" = "0" ] && grep -Fq -- 'still contains __JUSTIFY_SRC__' "$D_MUT2/out.log"; } && echo 1 || echo 0 )"
+
+# --- the SAME wiring, on the other delegated component ---------------------
+# EVERYTHING ABOVE PROVES THE JUSTIFY DISPATCH. The lotus rows earlier call the function
+# directly, which says the check works and says nothing about whether install.sh ever
+# reaches it for lotus - deleting `DELEGATED_SKILLS_DEPLOYED+=("lotus")` from the product
+# would leave every row so far green. Two dispatch sites were added, so both need this.
+# Flagged by independent review.
+#
+# The stub renders the real claude/skills/lotus/SKILL.md the way lotus/install.sh does,
+# so GOOD is genuinely what a correct templated install produces rather than a fixture
+# tailored to the assertion.
+stage_top_repo_lotus() { # $1 = case name; $2 = good|bad -> echoes repo dir
+  local d="$TMPROOT/toplotus-$1"
+  mkdir -p "$d/repo" || return 1
+  cp "$TOP_INSTALLER" "$d/repo/install.sh" || return 1
+  cp -R "$TARGET_REPO/claude" "$d/repo/" 2>/dev/null || return 1
+  mkdir -p "$d/repo/lotus" "$d/home/.claude" || return 1
+  : > "$d/home/.zshrc" || return 1
+  [ -f "$d/repo/claude/skills/lotus/SKILL.md" ] || return 1
+  { printf '%s\n' '#!/bin/bash' \
+      'DIR="$(cd "$(dirname "$0")" && pwd)"' \
+      'mkdir -p "$HOME/.claude/skills/lotus"' \
+      'SRC="$DIR/../claude/skills/lotus/SKILL.md"'
+    if [ "$2" = good ]; then
+      # The placeholder rewrite, done the way the real installer does it.
+      printf '%s\n' 'sed "s|__LOTUS_SRC__|$DIR|g" "$SRC" > "$HOME/.claude/skills/lotus/SKILL.md"'
+    else
+      # The rewrite skipped - a complete, non-empty, readable skill pointing nowhere.
+      printf '%s\n' 'cat "$SRC" > "$HOME/.claude/skills/lotus/SKILL.md"'
+    fi
+    printf '%s\n' 'exit 0'
+  } > "$d/repo/lotus/install.sh" || return 1
+  chmod +x "$d/repo/lotus/install.sh" || return 1
+  printf '%s' "$d"
+}
+run_top_lotus() { # $1 = staged dir -> echoes "<exit>"
+  local d="$1"
+  HOME="$d/home" bash "$d/repo/install.sh" --only lotus --yes > "$d/out.log" 2>&1
+  printf '%s' "$?"
+}
+
+DL_BAD="$(stage_top_repo_lotus bad bad)" || { echo "HARNESS: stage_top_repo_lotus failed" >&2; exit 2; }
+RCL_BAD="$(run_top_lotus "$DL_BAD")"
+if [ "$RCL_BAD" = "1" ] \
+   && grep -Fq -- '--- verifying delegated skills ---' "$DL_BAD/out.log" \
+   && grep -Fq -- 'still contains __LOTUS_SRC__' "$DL_BAD/out.log" \
+   && grep -Fq -- '- lotus: the lotus skill on disk' "$DL_BAD/out.log"; then
+  ok "I18 lotus: a delegated installer that exits 0 over a broken skill FAILS the run"
+else
+  bad "I18 lotus: a delegated installer that exits 0 over a broken skill FAILS the run" \
+      "rc=$RCL_BAD; $(tail -6 "$DL_BAD/out.log" | tr '\n' ';')"
+fi
+
+DL_GOOD="$(stage_top_repo_lotus good good)" || exit 2
+RCL_GOOD="$(run_top_lotus "$DL_GOOD")"
+if [ "$RCL_GOOD" = "0" ] \
+   && grep -Fq -- 'lotus/SKILL.md is installed and current' "$DL_GOOD/out.log"; then
+  ok "I19 lotus: a correctly templated delegated install still exits 0 and says so"
+else
+  bad "I19 lotus: a correctly templated delegated install still exits 0 and says so" \
+      "rc=$RCL_GOOD; $(tail -6 "$DL_GOOD/out.log" | tr '\n' ';')"
+fi
+
+DL_MUT="$(stage_top_repo_lotus mut bad)" || exit 2
+ML="$(mutate "$DL_MUT/repo/install.sh" '    DELEGATED_SKILLS_DEPLOYED+=("lotus")' '    :' 1)"
+RCL_MUT="$(run_top_lotus "$DL_MUT")"
+mutation_row "I20 removing the lotus dispatch-site append turns I18 RED (the second dispatch is wired too)" \
+  "$ML" "$( { [ "$RCL_MUT" != "1" ] || ! grep -Fq -- '--- verifying delegated skills ---' "$DL_MUT/out.log"; } && echo 1 || echo 0 )"
+
+# ============================================================
 # H. Containment - the suite must not have written to the tree it reports on
 # ============================================================
 echo
