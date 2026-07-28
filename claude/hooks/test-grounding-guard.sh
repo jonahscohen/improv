@@ -55,6 +55,74 @@ rm -f "$ARM" "$COOL"
 out=$(gate "why isn't the watch loop firing")
 [ -f "$ARM" ] && ok "gate arms on 'why isn't the watch loop firing'" || no "gate arms on watch-loop question" "$out"
 
+# ---- GATE: agent/system envelopes must never arm (2026-07-28 live-traffic audit) ----
+# Each string below is a VERBATIM head of a real prompt that fired the gate before
+# the `exempt` list landed. Measured: 121 of 1231 envelopes fired (9.83%) versus 13
+# of 671 genuine prompts (1.94%), an inverted signal. Removing "exempt" from
+# grounding-intent.json turns all three of these red.
+# Each case is a VERBATIM real envelope head followed by BODY. BODY is asserted
+# below to arm on its own, so these three cannot pass vacuously: with `exempt`
+# removed from grounding-intent.json all three go red.
+BODY="why isn't the watch loop firing in the changes panel"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "Another Claude session sent a message: <teammate-message teammate_id=\"coverage\" color=\"green\" summary=\"HALTED\"> $BODY")
+[ -z "$out" ] && [ ! -f "$ARM" ] && ok "gate stays silent on a teammate relay envelope" || no "gate teammate-envelope suppression" "$out"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "<task-notification> <task-id>a409fb8177816426a</task-id> <status>completed</status> $BODY")
+[ -z "$out" ] && [ ! -f "$ARM" ] && ok "gate stays silent on a task-notification envelope" || no "gate task-notification suppression" "$out"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "This session is being continued from a previous conversation that ran out of context. Summary: $BODY")
+[ -z "$out" ] && [ ! -f "$ARM" ] && ok "gate stays silent on a context-continuation summary" || no "gate continuation suppression" "$out"
+
+# The control that makes the three above non-vacuous: the shared BODY arms alone,
+# AND emits the nudge (arm-file-only would not prove the injection still happens).
+rm -f "$ARM" "$COOL"
+out=$(gate "$BODY")
+[ -f "$ARM" ] && echo "$out" | grep -q 'additionalContext' \
+  && ok "control: the envelope BODY arms AND emits the nudge on its own" \
+  || no "control BODY arms and nudges" "$out"
+
+# TIGHTNESS (Codex 2026-07-28): the exemption keys on the STRUCTURAL envelope
+# marker, not on the opening prose. A genuine prompt that merely opens with
+# similar words - no <teammate-message tag, no <task-notification element, no
+# canonical "ran out of context." phrase - must still arm. Loosening any pattern
+# back to a prose-only head turns these three red.
+rm -f "$ARM" "$COOL"
+out=$(gate "Another Claude session sent a message saying the panel broke - $BODY")
+[ -f "$ARM" ] && ok "tightness: prose-only teammate opener still arms" || no "tightness teammate prose" "$out"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "This session is being continued from a previous conversation I pasted below: $BODY")
+[ -f "$ARM" ] && ok "tightness: non-canonical continuation opener still arms" || no "tightness continuation prose" "$out"
+
+rm -f "$ARM" "$COOL"
+out=$(gate "<task-notification-example> $BODY")
+[ -f "$ARM" ] && ok "tightness: a lookalike task-notification tag still arms" || no "tightness tasknotif lookalike" "$out"
+
+# A malformed lexicon must FAIL OPEN, never silently disarm the gate. If "exempt"
+# is a STRING, a char-wise loop would match "^" against every prompt and take
+# recall to zero with no signal.
+rm -f "$ARM" "$COOL"
+BADLEX="$TMP/badlex"; mkdir -p "$BADLEX"
+cp "$HOOK_DIR/grounding-gate.sh" "$BADLEX/grounding-gate.sh"
+python3 - "$HOOK_DIR/grounding-intent.json" "$BADLEX/grounding-intent.json" <<'PYEOF'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["exempt"] = "^\\s*<task-notification"   # a string, not a list
+json.dump(d, open(sys.argv[2], "w"))
+PYEOF
+out=$(jprompt "$BODY" | GROUNDING_ARM_FILE="$ARM" GROUNDING_COOLDOWN_FILE="$COOL" bash "$BADLEX/grounding-gate.sh" 2>/dev/null)
+[ -f "$ARM" ] && ok "malformed exempt (string not list) fails OPEN, gate still arms" || no "malformed exempt fails open" "$out"
+
+# The exemption is HEAD-anchored: a genuine question that merely MENTIONS a
+# teammate must still arm, or the exemption would become a silent kill switch.
+rm -f "$ARM" "$COOL"
+out=$(gate "the teammate relay says it halted - why isn't the watch loop firing on my machine")
+[ -f "$ARM" ] && ok "gate still arms on a genuine question mentioning a teammate" || no "gate head-anchored exemption" "$out"
+
 # ---- GUARD ----
 NOW=$(date +%s)
 

@@ -41,8 +41,19 @@ try:
     # codex calls all start at a command position (codex exec ... / timeout ... codex / ... && codex), so dropping
     # "(" loses nothing real. KNOWN LIMIT (accepted - best-effort nudge): a path-qualified /usr/bin/codex or a
     # backticked `codex ...` is not matched; codex is always on PATH in our usage.
+    # codex must be a WHOLE command token. `\b` ends a word at a hyphen, so it
+    # also matched codex-rescue-guard / codex-failure-watcher / codex-review.py.
+    # Combined with "|" being a separator, this over-fired on real traffic:
+    #   grep -n "codex-rescue-guard\|codex-failure-watcher" claude/settings.json
+    # where the BRE alternation inside a QUOTED argument read as a pipe into a
+    # command named codex-failure-watcher. Measured 2026-07-28 over 4000 real
+    # Bash calls: 3 fires, 1 of them false. Requiring whitespace-or-end after
+    # "codex" fixes it at the root and needs no shell-quote parsing - a naive
+    # quote blanker was tried first and REGRESSED
+    # `OPENAI_API_KEY="$K" codex exec` into a false negative, which is the
+    # dangerous direction (a missed capacity failure silently skips the gate).
     invoke = re.compile(
-        r"(?:^|[\n;&|])\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)*(?:timeout\s+\S+\s+)?codex\b",
+        r"(?:^|[\n;&|])\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)*(?:timeout\s+\S+\s+)?codex(?=\s|$)",
         re.IGNORECASE,
     )
     if tool != "Bash" or not invoke.search(command):

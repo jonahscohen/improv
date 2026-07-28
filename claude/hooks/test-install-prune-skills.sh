@@ -255,6 +255,106 @@ fi
 
 echo ""
 echo "============================================================"
+
+# --- the HOOKS directory is the same class, and was never covered -----------------
+# A hook file RETIRED from the repo leaves its symlink behind in ~/.claude/hooks exactly
+# the way a retired skill does, and nothing removed it. Found live 2026-07-28:
+# ~/.claude/hooks/sidecoach-modes.json still pointed at claude/hooks/sidecoach-modes.json,
+# deleted during the modes/vocab collapse - one dangling link out of 125 repo-owned ones.
+#
+# The instance is a one-off. The GAP IS NOT: the prune existed for ~/.claude/skills only,
+# so every future retirement under hooks/ leaves the same residue.
+#
+# EVERY SAFETY RULE IS RE-PROVEN HERE RATHER THAN ASSUMED TO CARRY OVER. An earlier
+# version of this block asserted only that a dead link was removed and that live entries
+# survived an APPLY, which left dry-run, rc=6 and direct-children-only unproven for this
+# directory - cross-model review showed a hooks-specific mutation that ignored dry-run
+# kept the suite green. A rule that holds in one directory is not evidence about another.
+HOOKS="$TMPHOME/.claude/hooks"
+mkdir -p "$HOOKS" "$FIXREPO/claude/hooks"
+printf 'live\n' > "$FIXREPO/claude/hooks/live-hook.sh"
+ln -s "$FIXREPO/claude/hooks/live-hook.sh" "$HOOKS/live-hook.sh"          # live  -> KEEP
+ln -s "$FIXREPO/claude/hooks/retired.json" "$HOOKS/retired.json"          # dead  -> PRUNE
+ln -s "$OUTSIDE/real.md" "$HOOKS/external-live.sh"                        # live  -> KEEP
+ln -s "$OUTSIDE/gone-forever.sh" "$HOOKS/external-broken.sh"              # dead, NOT ours -> KEEP
+printf 'real\n' > "$HOOKS/real-file.sh"                                   # real  -> KEEP
+# A dead repo-owned link NESTED one level down. Direct-children-only means this must
+# survive: a recursive prune would reach into a subdirectory this installer never
+# deploys into. Asserted here because the parent-dir check alone cannot see it.
+mkdir -p "$HOOKS/__pycache__"
+ln -s "$FIXREPO/claude/hooks/nested-gone.sh" "$HOOKS/__pycache__/nested.sh"
+
+echo "===== hooks: DRY RUN removes nothing ====="
+# Proven BEFORE the apply below. Without this row a hooks-specific bug that ignored mode
+# entirely would pass, because the apply that follows would hide it.
+HOME="$TMPHOME" REPO_DIR="$FIXREPO" prune_broken_skill_symlinks dryrun >/dev/null 2>&1
+HDRY_RC=$?
+if [ "$HDRY_RC" -eq 0 ] && [ -L "$HOOKS/retired.json" ]; then
+  pass "hooks prune: dry run exits 0 and removes nothing"
+else
+  fail "hooks prune: dry run exits 0 and removes nothing" "rc=$HDRY_RC link=$([ -L "$HOOKS/retired.json" ] && echo present || echo GONE)"
+fi
+
+echo "===== dead links under ~/.claude/hooks are pruned too ====="
+HOME="$TMPHOME" REPO_DIR="$FIXREPO" prune_broken_skill_symlinks apply >/dev/null 2>&1
+HOOK_RC=$?
+if [ "$HOOK_RC" -eq 0 ]; then
+  pass "hooks prune: apply exits 0"
+else
+  fail "hooks prune: apply exits 0" "rc=$HOOK_RC"
+fi
+# "not a symlink" is not "gone" - a prune that replaced the link with a regular file
+# would satisfy the weaker check. Assert the path is absent by both tests.
+if [ ! -e "$HOOKS/retired.json" ] && [ ! -L "$HOOKS/retired.json" ]; then
+  pass "hooks prune: a retired repo-owned link is removed"
+else
+  fail "hooks prune: a retired repo-owned link is removed" "sidecoach-modes.json class still survives an apply"
+fi
+HOOK_KEEP=true
+for n in live-hook.sh external-live.sh external-broken.sh real-file.sh __pycache__; do
+  if [ ! -e "$HOOKS/$n" ] && [ ! -L "$HOOKS/$n" ]; then
+    fail "hooks prune: leaves $n alone" "it was removed"; HOOK_KEEP=false
+  fi
+done
+if [ ! -L "$HOOKS/__pycache__/nested.sh" ]; then
+  fail "hooks prune: direct children only" "it reached into a subdirectory"; HOOK_KEEP=false
+fi
+$HOOK_KEEP && pass "hooks prune: live, foreign, real, nested and directory entries all left alone"
+
+echo "===== hooks: an rm failure returns 6, with NO skills dir present ====="
+# The existing rc=6 fixture only exercises skills. This one proves the failure path is
+# reached for the hooks directory specifically, and that a missing FIRST directory does
+# not swallow it.
+H6=$(mktemp -d) || exit 1
+mkdir -p "$H6/.claude/hooks"
+ln -s "$FIXREPO/claude/hooks/ro-gone.sh" "$H6/.claude/hooks/ro-gone.sh"
+chmod -w "$H6/.claude/hooks"
+HOME="$H6" REPO_DIR="$FIXREPO" prune_broken_skill_symlinks apply >/dev/null 2>&1
+H6_RC=$?
+if [ "$H6_RC" -eq 6 ] && [ -L "$H6/.claude/hooks/ro-gone.sh" ]; then
+  pass "hooks prune: rm failure returns 6 and leaves the link"
+else
+  fail "hooks prune: rm failure returns 6 and leaves the link" "rc=$H6_RC"
+fi
+chmod +w "$H6/.claude/hooks" 2>/dev/null; rm -rf "$H6"
+
+echo "===== an UNREADABLE prune dir is an error, not a clean report ====="
+# `-d` is true for a directory we cannot list; the glob then yields nothing and the run
+# would report "no dead links" having examined none. A silent false negative in a tool
+# whose only job is finding things.
+H7=$(mktemp -d) || exit 1
+mkdir -p "$H7/.claude/hooks"
+ln -s "$FIXREPO/claude/hooks/hidden-gone.sh" "$H7/.claude/hooks/hidden-gone.sh"
+chmod 000 "$H7/.claude/hooks"
+HOME="$H7" REPO_DIR="$FIXREPO" prune_broken_skill_symlinks apply >/dev/null 2>&1
+H7_RC=$?
+chmod 755 "$H7/.claude/hooks" 2>/dev/null
+if [ "$H7_RC" -eq 7 ] && [ -L "$H7/.claude/hooks/hidden-gone.sh" ]; then
+  pass "prune: an unreadable directory returns 7 instead of reporting clean"
+else
+  fail "prune: an unreadable directory returns 7 instead of reporting clean" "rc=$H7_RC"
+fi
+rm -rf "$H7"
 echo "RESULTS: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then
   echo ""

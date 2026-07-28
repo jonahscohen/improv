@@ -51,6 +51,28 @@ try:
 except Exception:
     sys.exit(0)
 
+# Agent/system envelopes are not the user asking for a diagnosis. A teammate
+# relay, a task notification and a context-continuation summary all arrive on
+# UserPromptSubmit exactly like a real prompt, and they carry diagnostic prose
+# ("HALTED: second agent is doing...") that matches the lexicon. Measured
+# 2026-07-28: the gate fired on 121 of 1231 envelopes (9.83%) versus 13 of 671
+# genuine prompts (1.94%) - 5x more likely to speak where it must stay silent.
+# Checked against the RAW prompt on purpose: sanitize() strips <...> tags, which
+# would erase the <task-notification> marker before it could ever be matched.
+# The isinstance(list) check is load-bearing, not defensive noise: a JSON typo
+# turning "exempt" into a STRING would make this loop iterate CHARACTERS, and the
+# first one ("^") matches every prompt - silently taking the gate to zero recall.
+_exempt = intent.get("exempt", [])
+if isinstance(_exempt, list):
+    for _pat in _exempt:
+        if not isinstance(_pat, str) or not _pat:
+            continue
+        try:
+            if re.search(_pat, prompt, re.IGNORECASE):
+                sys.exit(0)
+        except re.error:
+            continue
+
 cfg = intent.get("config", {}) if isinstance(intent.get("config"), dict) else {}
 arm_file = os.environ.get("GROUNDING_ARM_FILE") or os.path.expanduser(cfg.get("arm_state_file", "~/.claude/.grounding-armed"))
 cooldown_file = os.environ.get("GROUNDING_COOLDOWN_FILE") or os.path.expanduser(cfg.get("cooldown_state_file", "~/.claude/.grounding-cooldown"))

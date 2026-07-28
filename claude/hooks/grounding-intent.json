@@ -3,7 +3,8 @@
     "purpose": "Lexicon for the grounding gate: detect a build-behavior DIAGNOSTIC question about the current project (why does X render/break, where is Y, what's happening with Z) so the agent is forced to read the code + beats BEFORE probing the running app. Consumed by grounding-gate.sh (UserPromptSubmit, arms + injects) and indirectly by grounding-guard.sh (PreToolUse, denies browser/screenshot probes until grounding happened).",
     "fire_rule": "Arm when (a DIAGNOSTIC_FRAME or a BROKEN_STATE phrase) co-occurs with (a BEHAVIOR_VERB or a BUILD_NOUN). Informational framings (what is X / how to use X / explain X / define X) are suppressed, same as the sidecoach hook. Respect the cooldown after a disarm so an active debugging session is not re-nagged.",
     "why": "2026-06-05: the agent answered 'why aren't my changes showing in the bottom-left panel' by screenshotting/clicking the running app instead of grepping justify/core/changes-panel.ts (which hardcodes bottom:68px;left:20px) and reading the panel beats. The answer was one grep away. This moves the failed CLAUDE.md rule into a mechanical gate (decision_hook_layer_as_enforcement).",
-    "pattern_syntax": "Regex fragments, matched case-insensitively against a sanitized prompt (code fences/URLs stripped) with the same hyphen-aware boundaries the sidecoach hook uses. Tune freely - this file is the single source of truth for grounding-gate triggering."
+    "pattern_syntax": "Regex fragments, matched case-insensitively against a sanitized prompt (code fences/URLs stripped) with the same hyphen-aware boundaries the sidecoach hook uses. Tune freely - this file is the single source of truth for grounding-gate triggering.",
+    "envelope_exemption": "A prompt that IS an agent/system envelope must never arm the grounding gate: a teammate relay, a task notification and a context-continuation summary are not the user asking for a diagnosis, but they carry diagnostic prose that matches this lexicon. Measured 2026-07-28 against 1902 real prompts: 121 of 1231 envelopes fired (9.83%) versus 13 of 671 genuine prompts (1.94%), so the gate was 5x more likely to speak where it must be silent. Each pattern requires the STRUCTURAL envelope marker (the literal <teammate-message tag, the <task-notification element, the canonical 'ran out of context.' phrase), not merely the opening words - Codex review 2026-07-28 showed prose-only heads silenced genuine prompts such as 'Another Claude session sent a message saying ... why is the changes panel not showing?'. The tightened set still covers 1231 of 1231 envelopes in the corpus. Matched against the RAW prompt because sanitize() strips <...> tags, and matched BEFORE the arm and cooldown logic so an envelope can never arm, disarm or burn cooldown."
   },
   "config": {
     "cooldown_seconds": 900,
@@ -11,9 +12,12 @@
     "cooldown_state_file": "~/.claude/.grounding-cooldown"
   },
   "diagnostic_frames": [
-    "why", "why\\s+(is|isn't|are|aren't|won't|wont|doesn't|doesn't|does|did|can't|cant)",
-    "where\\s+(is|are|does|do|did)", "how\\s+(come|does|do|did|is)",
-    "what's\\s+(happening|wrong|going on|up with)", "what\\s+happened",
+    "why",
+    "why\\s+(is|isn't|are|aren't|won't|wont|doesn't|doesn't|does|did|can't|cant)",
+    "where\\s+(is|are|does|do|did)",
+    "how\\s+(come|does|do|did|is)",
+    "what's\\s+(happening|wrong|going on|up with)",
+    "what\\s+happened",
     "how\\s+come"
   ],
   "broken_state": [
@@ -26,16 +30,69 @@
     "supposed to\\s+(show|appear|render|display|be)"
   ],
   "behavior_verbs": [
-    "show", "shows", "showing", "render", "renders", "rendering", "display", "displays",
-    "appear", "appears", "populate", "populates", "update", "updates", "load", "loads",
-    "mount", "mounts", "fire", "fires", "trigger", "triggers", "sync", "syncs", "stream",
-    "connect", "connects", "broadcast"
+    "show",
+    "shows",
+    "showing",
+    "render",
+    "renders",
+    "rendering",
+    "display",
+    "displays",
+    "appear",
+    "appears",
+    "populate",
+    "populates",
+    "update",
+    "updates",
+    "load",
+    "loads",
+    "mount",
+    "mounts",
+    "fire",
+    "fires",
+    "trigger",
+    "triggers",
+    "sync",
+    "syncs",
+    "stream",
+    "connect",
+    "connects",
+    "broadcast"
   ],
   "build_nouns": [
-    "panel", "badge", "button", "toolbar", "sidebar", "component", "modal", "drawer",
-    "overlay", "tray", "pill", "watch loop", "listen loop", "transport", "event",
-    "handler", "endpoint", "server", "hook", "socket", "websocket", "mcp", "core",
-    "bundle", "selector", "store", "state machine", "pipeline"
+    "panel",
+    "badge",
+    "button",
+    "toolbar",
+    "sidebar",
+    "component",
+    "modal",
+    "drawer",
+    "overlay",
+    "tray",
+    "pill",
+    "watch loop",
+    "listen loop",
+    "transport",
+    "event",
+    "handler",
+    "endpoint",
+    "server",
+    "hook",
+    "socket",
+    "websocket",
+    "mcp",
+    "core",
+    "bundle",
+    "selector",
+    "store",
+    "state machine",
+    "pipeline"
   ],
-  "nudge": "This reads as a build-behavior diagnostic question about THIS project. Before you probe the running app (screenshots, clicks, DevTools), GROUND in the source of truth: grep the relevant code path and read the named beats from MEMORY.md. The running app is for VERIFYING an understanding, not forming one - the answer to how the build behaves lives in the code and the beats, usually one grep away. Probing tools (browser/screenshot) are gated until you have read code or beats this turn."
+  "nudge": "This reads as a build-behavior diagnostic question about THIS project. Before you probe the running app (screenshots, clicks, DevTools), GROUND in the source of truth: grep the relevant code path and read the named beats from MEMORY.md. The running app is for VERIFYING an understanding, not forming one - the answer to how the build behaves lives in the code and the beats, usually one grep away. Probing tools (browser/screenshot) are gated until you have read code or beats this turn.",
+  "exempt": [
+    "^\\s*another claude session sent a message:\\s*<teammate-message\\b",
+    "^\\s*<task-notification(?:>|\\s)",
+    "^\\s*this session is being continued from a previous conversation that ran out of context\\."
+  ]
 }
