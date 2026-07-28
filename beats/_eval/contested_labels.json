@@ -1,0 +1,27 @@
+{
+ "_comment": "Labels an independent reviewer (Codex, codex-cli 0.142.5) disputed after the held-out set was scored. Recorded rather than silently resolved, because whether these are 'unanswerable' or 'answerable by recency/aggregation' is a definitional call that moves the headline number, and the reader should see it move. calibrate.py --held-out reports the rates under BOTH readings.",
+ "contested": [
+  {
+   "id": "s03",
+   "q": "where did we leave off?",
+   "labeller_verdict": "NONE",
+   "reviewer_objection": "Not truly unanswerable for a corpus of engineering session notes. It asks for the latest relevant state or handoff. That may require recency sorting and aggregation, but that is still corpus-answerable.",
+   "adjudication": "CONTESTED - held both ways. No single beat answers 'where did we leave off' as of today; the nearest artifact (session_2026-07-13_state-of-the-union.md) is roughly 100 beats behind the corpus head. But the material to answer it does exist if a caller sorts by recency, which similarity retrieval does not do."
+  },
+  {
+   "id": "s06",
+   "q": "I'm getting frustrated. What's our status?",
+   "labeller_verdict": "NONE",
+   "reviewer_objection": "The emotional preface is not answerable, but the actual request is a project-status query. Labeling it NONE rewards abstention for a query a user would reasonably expect this memory system to answer.",
+   "adjudication": "CONTESTED - held both ways. Same recency/aggregation argument as s03. Additionally this case clears the threshold by only 0.0007, so it is the weakest correct abstention on either reading."
+  },
+  {
+   "id": "s24",
+   "q": "what work was performed across all my projects last week?",
+   "labeller_verdict": "NONE",
+   "reviewer_objection": "Literal 'across all my projects' is out-of-corpus if this corpus only covers improv, so abstention is defensible. But the 'last week' portion is an aggregation/recency task, not inherently unanswerable.",
+   "adjudication": "CONTESTED - held both ways. The reviewer concedes the cross-project scope is genuinely out of corpus; the recency half is the disputed part."
+  }
+ ],
+ "uncontested_negatives": ["s37", "s45", "q24", "q27", "q29", "q32"]
+}

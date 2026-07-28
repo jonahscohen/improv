@@ -387,6 +387,57 @@ gsap.registerPlugin(ScrollTrigger, Flip, SplitText);
 
 In React, register inside `useGSAP` or at the module level - just not inside a per-component render path that re-runs.
 
+### CDN ESM: use `esm.sh`, not `cdn.skypack.dev`
+
+When loading these libraries from a CDN rather than a bundler, use `esm.sh`. In the
+2026-05-20 marketing-site build `cdn.skypack.dev` **failed silently on `lenis`** - no console
+error, no thrown exception, just no smooth scroll. A silent CDN failure looks exactly like a
+bug in your own glue code and will cost an hour before you suspect the import.
+
+```html
+<script type="module">
+  import Lenis from "https://esm.sh/lenis";
+</script>
+```
+
+### Reveal-on-scroll must fail VISIBLE, not hidden
+
+The natural way to write a scroll reveal is to hide the element in CSS (`[data-reveal] {
+opacity: 0 }`) and let JS animate it in. **Do not.** If the JS never runs - a bundler error,
+a CDN failure like the one above, a thrown exception earlier on the page, JS disabled - the
+content stays at `opacity: 0` forever and the page renders blank with no error anywhere.
+The failure is invisible precisely when something has already gone wrong.
+
+Invert it: items are visible by default, and are hidden ONLY once JS has confirmed it is
+running, by which point it can also be trusted to reveal them again.
+
+```css
+/* not [data-reveal] { opacity: 0 } */
+.js [data-reveal] { opacity: 0; transform: translateY(1rem); }
+```
+
+```js
+document.documentElement.classList.add("js"); // first line of the entry point
+```
+
+**What this does and does not buy you.** It covers the whole class of "the script never ran
+at all" - a failed import, a dead CDN, a syntax error, JS disabled - because the class is
+added before any of the animation setup. It does NOT cover an exception thrown AFTER the
+class is set but before the reveal is wired, which still leaves content hidden. If the
+reveal setup can realistically throw, wrap it and drop the class again in the `catch` so the
+page degrades to plain visible content rather than a blank one.
+
+Validated in the 2026-05-20 marketing-site build, preserved here from the retired
+`design-build` skill.
+
+### Verifying a page that runs Lenis
+
+Lenis hijacks wheel events at the document level, so a scroll driven by a verification tool
+can do nothing while the page looks perfectly scrollable. Either click nav links (which go
+through `lenis.scrollTo`), or put `data-lenis-prevent` on the scrollable child, or disable
+Lenis behind a feature flag for the verification pass and re-enable it after. A scrollbar
+that does not respond to a wheel event is this, not a broken tool.
+
 ## Naming an effect
 
 When the task is to NAME a motion effect rather than build one ("what's it called when...", a description of an effect by feel), use [VOCABULARY.md](VOCABULARY.md) - the reverse-lookup glossary that maps sensations to precise terms, with disambiguation for close pairs. Lead with the term, keep it tight.
@@ -404,7 +455,7 @@ When the task is to NAME a motion effect rather than build one ("what's it calle
 
 - `sidecoach` provides the brand strategy (what should this feel like? what register?). This skill provides the implementation tools (how do I make it feel that way?).
 - `tactical-polish` overlaps on tactical motion polish (timing, easing, scale-on-press, stagger windows). When both apply, defer to tactical-polish for specific timing values; use this skill for the API calls. For looping-animation pause rules, rAF stop conditions, and the blur budget, see tactical-polish performance.md and motion-review.md.
-- `design-references` may surface captured patterns that use these libraries; consult both when matching feel from a reference.
+- `curate` (Recall mode) may surface captured patterns from the personal catalog that use these libraries; consult both when matching feel from a reference.
 
 ## When NOT to use this stack
 

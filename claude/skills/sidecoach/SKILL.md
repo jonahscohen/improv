@@ -225,6 +225,57 @@ The global Verification Protocol still applies. In addition, any substantive UI 
 
 Trivial edits (one-line copy tweak, named-token swap) can skip the gate. Anything where the aesthetic result is in question must run all five. "I'll skip polish because it probably looks fine" is not a valid judgment.
 
+### Presenting the findings back (the gate checkpoint)
+
+Once the triad has surfaced findings, do not silently decide which to fix. Put it to the
+user through AskUserQuestion, because "which of these do we actually care about" is their
+call, not yours:
+
+> "QA found these issues: <list>. How do you want to proceed?"
+>
+> - Address all findings before reporting done (Recommended)
+> - Address only Critical/High; accept the rest
+> - Accept all - I'll record the known issues in the session beat
+> - Cancel and re-shape
+
+Preserved from the retired `design-build` skill, which is where this checkpoint was written
+down. It is kept because the gate it belongs to survives; the pipeline around it did not.
+
+**If you skip the triad, say so in writing.** Record `QA triad SKIPPED because <reason>` in
+the session beat - the project is not sidecoach-instrumented, no dev server, whatever it
+was. An unrecorded skip is indistinguishable from a gate that passed, and the whole reason
+this section exists is that nobody could tell the difference in the 2026-05-20 build below.
+
+Direction approval before the build is gate 3 of the Mandatory Workflow Gates above
+(`/sidecoach shape <feature>`), not a separate checkpoint.
+
+### Why this gate is written as an instruction and not a mechanism (2026-05-20, reconfirmed 2026-07-28)
+
+Preserved here from the retired `design-build` skill, which was the only carrier of it. The
+2026-05-20 marketing-site build was the first time the design pipeline ran on a real UI
+task, and the retrospective found two things:
+
+- **Description-based skill selection (called "auto-triggering" at the time) did not happen
+  reliably.** Of the pipeline's 9 steps, 2 ran. `component-gallery-reference`,
+  `design-references` (since merged into `/curate`) and `icon-source` were never selected
+  from their frontmatter descriptions during the build; `tactical-polish` only ran because
+  the agent had read it recently.
+- **The QA triad never ran.** The only mechanical coverage is `sidecoach-taste-gate.sh`
+  (PostToolUse): on `.html`/`.css` writes under a directory containing DESIGN.md it runs the
+  anti-pattern ban sweep, and on an edited `.html` (plus the project's `styles.css` when
+  present) it also runs the taste validator. That is a SUBSET of `/sidecoach audit`. Nothing
+  invokes `critique` or `polish`, and audit coverage outside a DESIGN.md project is manual.
+
+`design-build` was built in May to fix exactly this by wrapping the steps in one explicit
+orchestrator. **It was invoked zero times in the two months that followed and was retired on
+2026-07-28.** That is the part worth keeping: wrapping N un-invoked steps inside one
+un-invoked step does not make them run. It moves the dependency from "the model selects six
+skills" to "the model selects one skill", and the model did not select that one either. The
+only coverage that has ever demonstrably fired is the hook, because a hook is the one thing
+here that runs without being chosen. So the five steps above are YOUR obligation to run.
+Do not wait for anything to fire them, and do not propose a new orchestrator skill as the
+fix - that experiment has been run and its result is recorded here.
+
 ## Tactical layer (tactical-polish)
 
 Sits between Sidecoach's strategy (PRODUCT.md, register, anti-references) and DESIGN.md's tokens. It is the tactical reference for UI detail work (border radius, animation, optical alignment, hover state, tabular numbers, etc.) and supplies 16 specific tactical rules with exact values: `scale(0.96)` on press, concentric border radius (`outer = inner + padding`), icon swaps via opacity+scale+blur, image outlines `rgba(0,0,0,0.1)` never tinted, hit areas at least 40x40px, `transition: all` banned, `font-variant-numeric: tabular-nums` on dynamic numbers, `text-wrap: balance` on headings. Full reference at `~/.claude/skills/tactical-polish/`.
@@ -238,11 +289,13 @@ Backend logic, non-UI refactors, build-tool work, infrastructure changes. Do not
 ## Where sidecoach sits in the design stack
 
 ```
-Orchestrator:  /design-build (runs strategy -> research -> type -> motion -> build -> QA as ONE sequence)
+Orchestrator:  /sidecoach - there is no separate pipeline skill (design-build retired 2026-07-28,
+               0 invocations in two months; see the QA gate section above for why)
 Strategy:      /sidecoach (23 commands, PRODUCT.md + DESIGN.md)
 Research:      component-gallery-reference (60 types, 95 systems)
 Typography:    fontshare-reference (fontshare.com catalog, integrates with sidecoach's reflex-reject list)
-References:    design-references (personal catalog, auto-consults) + /curate (capture wizard)
+References:    /curate - one skill, two modes: Capture (save a reference) and Recall
+               (surface matches from ~/.claude/design-references/ on a UI build)
 Motion:        motion-reference (GSAP + Lenis canonical patterns)
 Tactical:      tactical-polish (16 CSS polish rules)
 Social:        /social-media (13 platforms, specs + validation)

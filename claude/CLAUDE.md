@@ -65,6 +65,10 @@ Four independent design skills sit alongside Sidecoach. Their frontmatter descri
 
 The full design stack diagram (orchestrator, strategy, research, typography, motion, tokens, brand, verification layers) lives inside the `sidecoach` skill.
 
+**There is no separate design-pipeline skill.** `design-build` held the orchestrator layer and was retired on 2026-07-28 after 0 invocations in two months; `sidecoach` holds that layer now. The reason it failed is preserved in the sidecoach skill's QA gate section and is worth knowing before anyone proposes rebuilding it: wrapping steps that nothing invokes inside one more step that nothing invokes does not make them run. Do not add a new orchestrator skill as the fix for the QA gate not firing - run the gate.
+
+**`/curate` owns the personal design-reference catalog in both directions** - Capture (save a reference to `~/.claude/design-references/`) and Recall (surface matches from it during a UI build). The read half was a separate `design-references` skill until 2026-07-28 and was merged in; the catalog itself is unchanged and is user data, never deleted by the installer.
+
 ## Reflect (Beats Corpus Analysis)
 
 The `reflect` skill spawns 5 parallel analysis agents against the accumulated beats in `.claude/memory/` to surface patterns, tensions, and gaps. It triggers naturally from conversation - "what patterns are you seeing?", "what are we missing?", "anything feel off?" - or via `/reflect`.

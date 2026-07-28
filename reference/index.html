@@ -92,15 +92,15 @@
 
         <div class="sidebar__group">
           <p class="sidebar__group-h">House 3 - Design</p>
-          <a href="#design" class="sidebar__link">The pipeline (7 layers)</a>
-          <a href="#design-orchestrator" class="sidebar__link">/design-build orchestrator</a>
+          <a href="#design" class="sidebar__link">The stack (7 layers)</a>
+          <a href="#design-orchestration" class="sidebar__link">How it gets orchestrated</a>
           <a href="#design-strategy" class="sidebar__link">1. Strategy (Sidecoach)</a>
           <a href="#design-research" class="sidebar__link">2. Research (component-gallery)</a>
           <a href="#design-typography" class="sidebar__link">3. Typography (fontshare)</a>
           <a href="#design-references" class="sidebar__link">4. References (catalog)</a>
           <a href="#design-motion" class="sidebar__link">5. Motion (GSAP + Lenis)</a>
           <a href="#design-tokens" class="sidebar__link">6. Tokens (DESIGN.md)</a>
-          <a href="#design-tactical" class="sidebar__link">7. Tactical (feel-better)</a>
+          <a href="#design-tactical" class="sidebar__link">7. Tactical (tactical-polish)</a>
           <a href="#design-peer" class="sidebar__link">Peer skills</a>
           <a href="#design-product" class="sidebar__link">PRODUCT.md spec</a>
         </div>
@@ -218,7 +218,7 @@ curl -fsSL .../bootstrap.sh | bash -s -- --dir ~/code/dots             <span cla
             <a class="house-card" href="#design">
               <p class="house-card__num">03</p>
               <h3 class="house-card__h">Design</h3>
-              <p class="house-card__desc">Why does generated UI look right here? Because seven layered skills stack from strategy to tactical, orchestrated by <code>/design-build</code>. Refuses training-data typography defaults. Learns from a personal catalog.</p>
+              <p class="house-card__desc">Why does generated UI look right here? Because seven layers stack from strategy to tactical, with <code>/sidecoach</code> as the front door. Refuses training-data typography defaults. Learns from a personal catalog.</p>
               <p class="house-card__cta">Read the design house
                 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
               </p>
@@ -582,47 +582,42 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
           <p class="eyebrow">House 03</p>
           <h2 class="h2">Design</h2>
           <p class="lede">
-            Most AI-generated UI looks the same because most prompts ask for the same vague thing. This stack routes design work through seven layered skills, each addressing a different question at a different beat. The <code>/design-build</code> orchestrator (added 2026-05-20) runs them as one coordinated sequence with mandatory QA.
+            Most AI-generated UI looks the same because most prompts ask for the same vague thing. This stack routes design work through seven layers, each addressing a different question at a different beat. Sidecoach is the front door; the other layers are references you reach for as the work needs them.
           </p>
 
-          <h3 id="design-orchestrator" class="h3">The /design-build orchestrator</h3>
+          <h3 id="design-orchestration" class="h3">How it actually gets orchestrated</h3>
           <p>
-            Empirically, the design pipeline's individual skills don't auto-trigger reliably on real builds, and the QA triad (sidecoach audit / critique / polish) never fires without explicit invocation. The <code>/design-build</code> skill solves both: one explicit invocation, ten phases, two gate checkpoints (strategy + QA findings), mandatory QA.
+            Operationally: you run it, deliberately. <strong>No hook mechanically invokes a design skill.</strong> Hooks can nudge, route, and validate - Sidecoach in particular is hook-assisted, with hooks starting its daemon and feeding it prompts - but no hook calls the Skill tool, so a skill runs only when you invoke it or the model chooses to load it, and nothing forces that choice. Skills in this harness do get selected (Sidecoach is invoked regularly), but selection is a judgment call every time, not a guarantee you can build a process on.
           </p>
           <p>
-            Trigger only on explicit phrases: <code>/design-build &lt;feature&gt;</code>, "run the design pipeline for X," "kickoff a design build," "use the design stack on X." Do NOT trigger on generic UI keywords like "build a button" - those route to individual skills.
+            This page previously described a <code>/design-build</code> orchestrator that ran the whole stack as one sequence with mandatory QA. That skill was <strong>retired on 2026-07-28</strong>. It was built in May 2026 to solve exactly the problem above, and measurement is what retired it: across 417 transcripts and more than 700 audited real prompts it was invoked <strong>zero times in two months</strong>. It did not solve the problem, because wrapping steps that nothing invokes inside one more step that nothing invokes does not make them run.
+          </p>
+          <p>
+            The finding underneath it survives and is worth stating plainly, because it is the reason this section is written as an obligation instead of a feature. On the first real build the stack ran on (2026-05-20), <strong>2 of 9 steps ran</strong>, and the QA triad never ran at all.
           </p>
 
           <div class="defn-list">
             <div class="defn">
-              <p class="defn__term">Phase 0 - Pre-flight</p>
-              <p class="defn__body">Check <code>PRODUCT.md</code> (required) and <code>DESIGN.md</code> (nudge-once if missing). Capture brand voice words, register, anti-references.</p>
+              <p class="defn__term">What runs mechanically</p>
+              <p class="defn__body">One thing, by default. <code>sidecoach-taste-gate.sh</code> is a PostToolUse hook on <code>Write</code> / <code>Edit</code> / <code>MultiEdit</code>: when the written target is a <code>.html</code> or <code>.css</code> file under a directory containing <code>DESIGN.md</code>, it runs the anti-pattern ban sweep project-wide from that <code>DESIGN.md</code> root, and for an edited <code>.html</code> it also runs the taste validator against that file plus the project's <code>styles.css</code> when present. A CSS-only edit gets the ban sweep alone. It skips vendor and build paths, honors project exceptions in <code>.sidecoach-accept.json</code>, and can be muted for 30 minutes with <code>touch ~/.claude/.suppress-taste-gate</code>. That is a subset of <code>/sidecoach audit</code>. <code>sidecoach-detect.sh</code> is a second scanner on the same event, but it ships default-off, so on a stock install the taste gate is the only design coverage you get without choosing it.</p>
             </div>
             <div class="defn">
-              <p class="defn__term">Phase 1 - Strategy</p>
-              <p class="defn__body">Compose direction. <strong>Gate checkpoint 1</strong> via AskUserQuestion - approve / edit / reframe.</p>
+              <p class="defn__term">What is your obligation</p>
+              <p class="defn__body">Everything else. Before implementing, <code>/sidecoach shape &lt;feature&gt;</code> for the plan. During implementation, apply <code>tactical-polish</code>'s sixteen rules as you build rather than bolting them on later. After implementing, the QA triad: <code>/sidecoach audit</code>, then <code>/sidecoach critique</code>, then <code>/sidecoach polish</code> last, then the <code>/tactical-polish</code> checklist as the final gate item to verify the rules actually landed. None of these start themselves.</p>
             </div>
             <div class="defn">
-              <p class="defn__term">Phases 2-7 - Build</p>
-              <p class="defn__body">Research, references catalog grep, typography (if scope), motion (if scope), icons (if needed), build with feel-better rules applied during construction.</p>
+              <p class="defn__term">The gate checkpoint</p>
+              <p class="defn__body">When the triad returns findings, put them to the user through AskUserQuestion rather than silently deciding which matter: address all, address only Critical and High, accept all and record them, or cancel and re-shape.</p>
             </div>
             <div class="defn">
-              <p class="defn__term">Phase 8 - QA triad (MANDATORY)</p>
-              <p class="defn__body"><code>/sidecoach audit</code> (5-dimension technical scan), <code>/sidecoach critique</code> (design review via sub-agents), <code>/sidecoach polish</code> (final design-system alignment). Cannot be skipped. <strong>Gate checkpoint 2</strong> on findings.</p>
-            </div>
-            <div class="defn">
-              <p class="defn__term">Phase 9 - Verification</p>
-              <p class="defn__body">cmux browser, screenshots, real-input testing (no JS shortcuts).</p>
-            </div>
-            <div class="defn">
-              <p class="defn__term">Phase 10 - Memory</p>
-              <p class="defn__body">Session memory documenting which phases fired, which skipped (with reason), QA findings, friction points.</p>
+              <p class="defn__term">If you skip it, write that down</p>
+              <p class="defn__body">Record "QA triad SKIPPED because &lt;reason&gt;" in the session beat. An unrecorded skip is indistinguishable from a gate that passed, which is precisely the condition that produced the 2026-05-20 finding.</p>
             </div>
           </div>
 
           <h3 id="design-strategy" class="h3">1. Strategy - <code>/sidecoach</code></h3>
           <p>
-            A plugin (<code>sidecoach</code>) auto-installed via your <code>enabledPlugins</code>. Twenty-three commands. Reads <code>PRODUCT.md</code> and <code>DESIGN.md</code> at the project root before every command.
+            A plugin (<code>sidecoach</code>) auto-installed via your <code>enabledPlugins</code>. 26 flows behind a typed surface of 21 verb commands, plus natural-language intent detection, which is the surface to lead with. Reads <code>PRODUCT.md</code> and <code>DESIGN.md</code> at the project root before every command.
           </p>
           <p>
             Key commands across the lifecycle:
@@ -639,12 +634,14 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
             <li><code>/sidecoach harden</code> - production-ready sweep (errors, i18n, edge cases)</li>
             <li><code>/sidecoach onboard</code> - first-run flows, empty states, activation</li>
             <li><code>/sidecoach extract</code> - pull reusable tokens and components</li>
-            <li><code>/sidecoach live</code> - iterate visually in a live browser</li>
           </ul>
+          <p>
+            <code>/sidecoach live</code> was listed here until 2026-07-28 and no longer exists - the live verb and its canvas mode were removed on 2026-07-23. For visual iteration in a real browser, use Justify (House 4).
+          </p>
 
           <h3 id="design-research" class="h3">2. Research - <code>component-gallery-reference</code></h3>
           <p>
-            A bundled skill that has Claude browse <a href="https://component.gallery">component.gallery</a> before building any standard UI component. The site catalogs 60 component types across 95 design systems (Polaris, Carbon, Primer, Spectrum, Material) with 2,672 examples.
+            A bundled skill that has Claude browse <a href="https://component.gallery">component.gallery</a> before building any standard UI component. The site catalogs 60 component types across 95 design systems (Polaris, Carbon, Primer, Spectrum, Material) with roughly 2,700 examples.
           </p>
           <p>
             Workflow: detect tech stack from <code>package.json</code>, browse the component page filtered by stack, exclude examples tagged "Unmaintained" or "Accessibility issues," inventory the project's design system, synthesize a brief mapping gallery patterns onto project tokens. Then build with three layers: function from the gallery, identity from the project, gap-fills derived from gallery patterns styled with project tokens.
@@ -661,15 +658,18 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
             The skill also flags Fontshare's emerging defaults (General Sans, Cabinet Grotesk, Switzer, Satoshi, Clash Display) so the catalog doesn't become the new Inter.
           </p>
 
-          <h3 id="design-references" class="h3">4. References - <code>design-references</code> + <code>/curate</code></h3>
+          <h3 id="design-references" class="h3">4. References - <code>/curate</code></h3>
           <p>
-            The personal catalog system. <code>~/.claude/design-references/</code> holds one folder per reference (markdown + screenshot). The catalog grows from your eye over time.
+            The personal catalog system. <code>~/.claude/design-references/</code> holds one folder per reference (markdown + screenshot). The catalog grows from your eye over time. One skill owns it in both directions.
           </p>
           <p>
-            <code>/curate</code> is the capture wizard. Five-step interactive flow: source -&gt; auto-tag proposal -&gt; why-interesting body -&gt; slug -&gt; save. Hybrid tagging: strict Category from controlled vocab (<code>list</code>, <code>navigation</code>, <code>command-palette</code>, <code>inline-affordance</code>, etc.); free-form Pattern + Feel.
+            <strong>Capture.</strong> Five-step interactive wizard: source -&gt; auto-tag proposal -&gt; why-interesting body -&gt; slug -&gt; save. Hybrid tagging: strict Category from controlled vocab (<code>list</code>, <code>navigation</code>, <code>command-palette</code>, <code>inline-edit</code>, etc. - the vocab file is extensible, and a capture that fits nothing in it asks you before adding a category); free-form Pattern + Feel.
           </p>
           <p>
-            <code>design-references</code> is the retrieval skill. Auto-triggers on UI build keywords, greps the catalog for matching category / pattern / feel against the task context AND against PRODUCT.md voice words. Surfaces 0-5 references with score &gt;= 3. Stays silent if nothing scores - noisy surfacing destroys trust.
+            <strong>Recall.</strong> Greps the catalog for matching category / pattern / feel against the task context and against PRODUCT.md voice words, scores the hits, and surfaces 0-5 references scoring 3 or better. Stays silent if nothing scores - noisy surfacing destroys trust. Recall was a separate <code>design-references</code> skill until 2026-07-28; it was merged in after measuring zero invocations, on the reasoning that splitting read from write gave the catalog two chances to not be selected instead of one.
+          </p>
+          <p>
+            Reach for recall deliberately at the start of a UI build. Like everything else here, it does not fire on its own.
           </p>
           <p>
             What this layer covers that public catalogs don't: one-off patterns. A particular animation. A particular interaction. A specific brand's distinctive treatment. The patterns that don't fit any standard taxonomy but are worth remembering.
@@ -696,7 +696,7 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
 
           <h3 id="design-tactical" class="h3">7. Tactical - <code>tactical-polish</code></h3>
           <p>
-            An Anthropic Skill that auto-triggers on UI keywords. Sixteen specific rules with exact values, applied DURING construction (not as a post-pass).
+            An Anthropic Skill carrying sixteen specific rules with exact values, applied DURING construction (not as a post-pass). Invoke <code>/tactical-polish</code> yourself for substantive detail work - it is the layer most often skipped, because it is the one people most expect to fire on its own. Measured across the same corpus it had 8 genuinely eligible occasions and ran on none of them.
           </p>
 
           <div class="rules-grid">
@@ -718,9 +718,9 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
             <div class="rule"><strong>40x40 hit areas</strong> minimum, no overlap</div>
           </div>
 
-          <h3 id="design-peer" class="h3">Peer skills (siblings, not in the main pipeline)</h3>
+          <h3 id="design-peer" class="h3">Peer skills (siblings, not part of the seven layers)</h3>
           <p>
-            The <code>skills</code> component also bundles four peers that ship alongside but route in independently when needed:
+            The <code>skills</code> component also bundles four peers that ship alongside the stack. Like the seven layers, you invoke them; they do not route themselves in:
           </p>
           <div class="defn-list">
             <div class="defn">
@@ -787,8 +787,8 @@ This applies regardless of whether the developer has Yes&amp;-dotfiles installed
 
             <article class="component-card">
               <p class="component-card__key"><code>skills</code></p>
-              <h3 class="component-card__h">10 Anthropic Skills + catalog seed</h3>
-              <p class="component-card__body">Bundles <code>tactical-polish</code> (tactical polish), <code>component-gallery-reference</code> (research), <code>fontshare-reference</code> (typography), <code>motion-reference</code> (GSAP + Lenis), <code>design-build</code> (pipeline orchestrator), <code>curate</code> + <code>design-references</code> (personal catalog), plus four peer skills (<code>social-media</code>, <code>design-team</code>, <code>visual-effects</code>, <code>icon-source</code>). Seeds the empty <code>~/.claude/design-references/</code> catalog with the 14-category vocab.</p>
+              <h3 class="component-card__h">9 Anthropic Skills + catalog seed</h3>
+              <p class="component-card__body">Bundles <code>tactical-polish</code> (tactical polish), <code>component-gallery-reference</code> (research), <code>fontshare-reference</code> (typography), <code>motion-reference</code> (GSAP + Lenis), <code>curate</code> (personal catalog, capture + recall), plus four peer skills (<code>social-media</code>, <code>design-team</code>, <code>visual-effects</code>, <code>icon-source</code>). Seeds the empty <code>~/.claude/design-references/</code> catalog with the 14-category vocab.</p>
               <p class="component-card__touches">Touches: <code>~/.claude/skills/</code> + <code>~/.claude/design-references/</code></p>
             </article>
 

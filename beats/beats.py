@@ -45,6 +45,17 @@ compiles and searches byte-identically to before). Verify LINTs them WARN-only:
 one line per beat with no provenance and per value outside its enum, to stderr,
 never changing the exit code.
 
+ABSTENTION (search): when the vector half is live and the best cosine anywhere
+in the corpus falls below a calibrated threshold, search prints an explicit
+NO MATCH (stderr always; stdout gets a NO MATCH line, or `[]` under --json)
+instead of returning its five least-unrelated beats. Exit stays 0 - abstaining
+is an outcome, not a failure, and --json stays an array so existing consumers
+and the benchmark scorer are unaffected. The threshold is derived from the
+committed evaluation set by beats/_eval/calibrate.py under the rule in
+beats/_eval/PREREGISTRATION.md, and applies ONLY to the embedding space it was
+calibrated in. BEATS_ABSTAIN=off disables it; BEATS_ABSTAIN_THRESHOLD=<float>
+overrides both the number and the model/width gate.
+
 Search never exits stale (6) and never exits 3: a stale (or even transiently
 unreadable) corpus mid-session still beats retrieving nothing, so search reads
 results from the compiled db, prints a one-line STALE warning to stderr, and
@@ -1072,6 +1083,32 @@ STUB_EMBED_DIM = 64         # deterministic test-only stub dimensionality
 RRF_K = 60
 CAND_K = 100
 
+# --- Abstention ------------------------------------------------------------
+# Below this cosine, search prints an explicit NO MATCH instead of handing back
+# its five least-unrelated beats. Without it a caller cannot tell "here is your
+# answer" from "here is the closest thing in a corpus that does not contain one".
+#
+# The threshold keys on cosine rather than on the RRF score search already prints
+# because RRF is computed from RANKS: its ceiling is 2/(RRF_K+1) for anything
+# ranked first in both lists, so scores compress into a narrow band (a nonsense
+# query measured 0.0259 against a real question's 0.0325). RRF is not a NULL
+# confidence signal - it carries some (AUC 0.679 on the calibration set) - but it
+# is badly compressed next to raw cosine (AUC 0.777), so a cutoff on it would be
+# far less reliable than one on the similarity the vector half already computes.
+#
+# The number is calibrated, not guessed: beats/_eval/calibrate.py derives it
+# from the committed 32-question evaluation set under the rule pre-registered in
+# beats/_eval/PREREGISTRATION.md. Re-run that script to re-derive it or to argue
+# with the rule.
+#
+# A cosine threshold is only meaningful inside the embedding space it was
+# measured in, so it is GATED on the index carrying exactly that model at
+# exactly that width. Any other embedder - including the deterministic test stub
+# at dim 64 - never abstains, because its cosines are not on this scale.
+ABSTAIN_COS_T = 0.5288
+ABSTAIN_MODEL = "qwen3-embedding:0.6b"
+ABSTAIN_DIM = 1024
+
 # Test-only deterministic embedder, gated by BEATS_EMBED_STUB (documented, like
 # --inject-parity-fault). Lets the suites run without ollama. A hashed
 # bag-of-tokens unit vector: same text -> same vector, token overlap -> higher
@@ -1125,6 +1162,57 @@ def embed_text(text):
 
 
 embed_text.last_error = ""
+
+
+def resolve_abstain_threshold(embed_model, index_dim):
+    """Cosine to abstain below, or None to never abstain.
+
+    None (never abstain) is returned when the compiled index is not in the
+    embedding space the threshold was calibrated in - a different model or a
+    different width - because a cosine cutoff carried across embedding spaces is
+    a made-up number wearing a measured one's clothes.
+
+    Two documented env seams:
+      BEATS_ABSTAIN=off              disable abstention outright.
+      BEATS_ABSTAIN_THRESHOLD=<f>    override the calibrated number AND the
+                                     model/width gate. This is how the suites
+                                     exercise the abstention path deterministically
+                                     against the stub embedder.
+    """
+    if (os.environ.get("BEATS_ABSTAIN") or "").strip().lower() == "off":
+        return None
+    raw = os.environ.get("BEATS_ABSTAIN_THRESHOLD")
+    if raw is not None and raw.strip() != "":
+        try:
+            override = float(raw)
+        except ValueError:
+            # Loud, never silent: an unparseable override must not look like it
+            # took effect, and must not silently fall through to the calibrated
+            # default either (the caller asked for something specific).
+            eprint(f"ABSTAIN: unparseable BEATS_ABSTAIN_THRESHOLD={raw!r}; "
+                   "abstention disabled for this query.")
+            return None
+        if not math.isfinite(override):
+            # nan would disable abstention by accident (every comparison false)
+            # and inf would abstain on everything. Neither is a threshold.
+            eprint(f"ABSTAIN: non-finite BEATS_ABSTAIN_THRESHOLD={raw!r}; "
+                   "abstention disabled for this query.")
+            return None
+        return override
+    # Both ENDS of the comparison must be in the calibrated space. index_dim and
+    # the stored model describe the COMPILED vectors; EMBED_MODEL is what will
+    # embed the QUERY. A db compiled with the calibrated model but searched with
+    # a different model of the same width would produce a cross-space cosine that
+    # is numerically well-formed and semantically meaningless - the dimension
+    # check alone cannot see that.
+    if embed_model != ABSTAIN_MODEL or index_dim != ABSTAIN_DIM:
+        return None
+    if EMBED_MODEL != ABSTAIN_MODEL:
+        eprint(f"ABSTAIN: query embedder {EMBED_MODEL!r} is not the calibrated "
+               f"{ABSTAIN_MODEL!r}; abstention disabled (the threshold does not "
+               "transfer across embedding spaces).")
+        return None
+    return ABSTAIN_COS_T
 
 
 def build_embed_text(name, description, body):
@@ -1343,6 +1431,17 @@ def cmd_search(corpus, build, query, top, as_json):
             vec_rows = []
             vectors_present = False
             index_dim = 0
+            embed_model = ""
+            # Read embed_model SEPARATELY from vectors_present/embed_dim. Folding
+            # it into that SELECT would mean a db carrying usable vectors but no
+            # embed_model column loses its whole vector half to one missing
+            # column - abstention metadata must never be able to disable retrieval.
+            try:
+                em_row = con.execute("SELECT embed_model FROM meta").fetchone()
+                if em_row and isinstance(em_row[0], str):
+                    embed_model = em_row[0]
+            except sqlite3.OperationalError:
+                embed_model = ""
             try:
                 vp_row = con.execute(
                     "SELECT vectors_present, embed_dim FROM meta"
@@ -1428,6 +1527,7 @@ def cmd_search(corpus, build, query, top, as_json):
     # 0, distinct from a broken db which already returned 4 above).
     vector_rank = {}
     mode = "lexical"
+    top_cos = None
     if vectors_present:
         qvec = embed_text(query)
         if qvec is None:
@@ -1474,9 +1574,35 @@ def cmd_search(corpus, build, query, top, as_json):
                 for i, (filename, _sim) in enumerate(sims[:CAND_K], start=1):
                     vector_rank[filename] = i
                 mode = "hybrid"
+                # Best semantic match anywhere in the corpus. Max-over-corpus,
+                # not the cosine of whatever the fusion ranked first: the
+                # question abstention answers is "does this corpus contain
+                # anything close to the query", not "did the fusion order come
+                # out well". Measured AUC on the calibration set 0.777 for this
+                # vs 0.732 for the top-ranked result's cosine.
+                if sims:
+                    top_cos = sims[0][1]
     else:
         eprint("VECTORS ABSENT: compiled index has no vectors "
                "(compile with the embedder available); this search is lexical-only.")
+
+    # --- Abstention ---------------------------------------------------------
+    # An explicit "nothing here" beats five confidently-ranked near-misses. Only
+    # reachable in hybrid mode: lexical-only has no cosine to threshold, already
+    # says VECTORS ABSENT, and keeps its previous behaviour exactly. Above the
+    # threshold NOTHING below this block changes - the ranking, expansion, and
+    # output are byte-identical to before.
+    abstain_t = resolve_abstain_threshold(embed_model, index_dim)
+    if mode == "hybrid" and abstain_t is not None and top_cos is not None \
+            and top_cos < abstain_t:
+        eprint(f"NO MATCH: best cosine {top_cos:.4f} is below the abstention "
+               f"threshold {abstain_t:.4f}; the corpus has nothing close to this "
+               "query. Returning no results rather than the closest unrelated beats.")
+        if as_json:
+            print("[]")
+            return 0
+        print(f"NO MATCH  (best cosine {top_cos:.4f} < threshold {abstain_t:.4f})")
+        return 0
 
     # Build the candidate score map (higher = better for the pipeline below).
     if mode == "hybrid":

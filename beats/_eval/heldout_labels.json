@@ -1,0 +1,178 @@
+[
+ {
+  "id": "s01",
+  "answers": [
+   "feedback_hooks_prefer_false_positives.md"
+  ]
+ },
+ {
+  "id": "s03",
+  "answers": []
+ },
+ {
+  "id": "s05",
+  "answers": [
+   "session_2026-07-03_external-skills-recon-round2.md",
+   "reference_shadcn-improve-eval.md",
+   "session_2026-05-25_emil_skill_investigation.md",
+   "session_2026-07-25_three-tool-gap-analysis.md"
+  ]
+ },
+ {
+  "id": "s06",
+  "answers": []
+ },
+ {
+  "id": "s08",
+  "answers": [
+   "session_2026-07-26_sprint3-process-path-resolved.md"
+  ]
+ },
+ {
+  "id": "s09",
+  "answers": [
+   "session_2026-07-26_sprint3-process-path-resolved.md"
+  ]
+ },
+ {
+  "id": "s10",
+  "answers": [
+   "reference_visualizer_token_contract.md"
+  ]
+ },
+ {
+  "id": "s13",
+  "answers": [
+   "session_2026-07-28_beats-search-efficacy.md"
+  ]
+ },
+ {
+  "id": "s14",
+  "answers": [
+   "session_2026-06-25_cmux-hook-command-not-found-fix.md"
+  ]
+ },
+ {
+  "id": "s18",
+  "answers": [
+   "session_2026-05-21_critical_failures.md",
+   "session_2026-06-24_sidecoach-S5-integration-gap-and-plan.md"
+  ]
+ },
+ {
+  "id": "s20",
+  "answers": [
+   "session_2026-06-24_sidecoach-vs-tactical-polish-gap.md",
+   "session_2026-06-24_sidecoach-tactical-polish-gap-implement.md"
+  ]
+ },
+ {
+  "id": "s21",
+  "answers": [
+   "session_2026-07-28_capability-evidence-inventory.md",
+   "session_2026-07-13_state-of-the-union.md"
+  ]
+ },
+ {
+  "id": "s22",
+  "answers": [
+   "session_2026-07-28_capability-evidence-inventory.md",
+   "session_2026-07-13_state-of-the-union.md"
+  ]
+ },
+ {
+  "id": "s24",
+  "answers": []
+ },
+ {
+  "id": "s25",
+  "answers": [
+   "session_2026-07-13_dependency-map-page.md",
+   "session_2026-07-15_u11-dependency-map-correction.md",
+   "reference_component_dependency_map.md"
+  ]
+ },
+ {
+  "id": "s26",
+  "answers": [
+   "session_2026-07-26_cmux-dependency-pinned.md",
+   "reference_cmux_dependency.md"
+  ]
+ },
+ {
+  "id": "s27",
+  "answers": [
+   "session_2026-07-26_cmux-dependency-pinned.md",
+   "reference_cmux_dependency.md"
+  ]
+ },
+ {
+  "id": "s28",
+  "answers": [
+   "session_2026-07-02_beats-backlog-and-cutover-confirmation.md",
+   "feedback_talking_points_brevity.md"
+  ]
+ },
+ {
+  "id": "s33",
+  "answers": [
+   "session_2026-07-24_a5a-CERTIFIED-hardened-ground-truth.md",
+   "session_2026-07-25_stage4bcd-a5a-results-lead.md"
+  ]
+ },
+ {
+  "id": "s34",
+  "answers": [
+   "feedback_self_review_before_codex.md",
+   "session_2026-07-15_plan-consistency-lint-hook.md",
+   "feedback_memory_first_zero_failure_execution.md"
+  ]
+ },
+ {
+  "id": "s36",
+  "answers": [
+   "session_2026-07-28_four-question-audit-lead-verification.md",
+   "session_2026-07-28_sidecoach-live-efficacy.md",
+   "session_2026-07-28_hooks-live-firing-audit.md",
+   "session_2026-07-28_beats-search-efficacy.md",
+   "session_2026-07-28_capability-evidence-inventory.md"
+  ]
+ },
+ {
+  "id": "s37",
+  "answers": []
+ },
+ {
+  "id": "s39",
+  "answers": [
+   "session_2026-07-28_sidecoach-live-efficacy.md",
+   "session_2026-06-17_sidecoach-real-behavior-audit.md",
+   "session_2026-07-28_codex-repairs-sidecoach.md",
+   "feedback_sidecoach_vs_old_pipeline.md"
+  ]
+ },
+ {
+  "id": "s40",
+  "answers": [
+   "session_2026-07-16_node-path-default-hook.md",
+   "reference_codex_broken_node12_path.md"
+  ]
+ },
+ {
+  "id": "s41",
+  "answers": [
+   "session_2026-07-26_sprint3-process-path-resolved.md"
+  ]
+ },
+ {
+  "id": "s44",
+  "answers": [
+   "reference_cmux_dependency.md",
+   "session_2026-06-25_cmux-hook-command-not-found-fix.md"
+  ]
+ },
+ {
+  "id": "s45",
+  "answers": []
+ }
+]

@@ -1,0 +1,260 @@
+[
+ {
+  "id": "q01",
+  "q": "Sidebar, where does tiltlab factor into all of this? It's its own tool",
+  "answers": [
+   "reference_component_dependency_map.md",
+   "session_2026-06-05_sidecoach-intent-tier-and-tilt-dependency.md",
+   "session_2026-06-05_tilt-lab-consolidated.md"
+  ]
+ },
+ {
+  "id": "q02",
+  "q": "Based on that latest work, are you following beats search protocol?",
+  "answers": [
+   "session_2026-07-02_beats-search-protocol-gap.md",
+   "session_2026-07-02_tiny-text-recall-and-log-export.md",
+   "session_2026-07-02_beats-parallel-run-hardening.md"
+  ]
+ },
+ {
+  "id": "q03",
+  "q": "Claude wanted me to cutover to CLAUDE.md from MEMORY.md after two weeks doing a parallel run, is that documented?",
+  "answers": [
+   "session_2026-07-02_beats-backlog-and-cutover-confirmation.md",
+   "feedback_memory_first_zero_failure_execution.md"
+  ]
+ },
+ {
+  "id": "q04",
+  "q": "if my team is wary about using a TUI within CLI, is there an alternative, more visually secure way of installing the improv package",
+  "answers": [
+   "session_2026-07-17_gui-installer-design.md",
+   "session_2026-07-17_installer-gui-launcher.md"
+  ]
+ },
+ {
+  "id": "q05",
+  "q": "didnt we write a /concise skill or plugin? i'd like to know if its active or not",
+  "answers": [
+   "session_2026-07-25_concise-mode-hook.md",
+   "session_2026-07-26_concise-mode-feature-committed.md"
+  ]
+ },
+ {
+  "id": "q06",
+  "q": "Why is Codex repeatedly having problems?",
+  "answers": [
+   "session_2026-06-25_codex-capacity-retry.md",
+   "reference_codex_exec_hang_sigkill.md",
+   "reference_codex_broken_node12_path.md",
+   "reference_codex_rescue_teammate_no_relay.md"
+  ]
+ },
+ {
+  "id": "q07",
+  "q": "What does all this cmux warning stuff mean? Explain like I'm 5.",
+  "answers": [
+   "reference_cmux_dependency.md",
+   "session_2026-07-26_cmux-dependency-pinned.md"
+  ]
+ },
+ {
+  "id": "q08",
+  "q": "what did we decide about tiny-text?",
+  "answers": [
+   "session_2026-07-02_tiny-text-recall-and-log-export.md",
+   "session_2026-06-24_sidecoach-tiny-text-pivot-and-self-correction.md",
+   "reference_honest_final_scorecard.md"
+  ]
+ },
+ {
+  "id": "q09",
+  "q": "So t44, t45 and t46 haven't made it into beats itself?",
+  "answers": [
+   "feedback_surface_backlog_on_completion.md",
+   "session_2026-07-06_beats-backlog-shipped.md",
+   "session_2026-07-02_beats-backlog-and-cutover-confirmation.md"
+  ]
+ },
+ {
+  "id": "q10",
+  "q": "are the \"search\" upgrades to beats working?",
+  "answers": [
+   "session_2026-07-02_beats-stage3b-hybrid-embeddings.md",
+   "session_2026-07-02_beats-stage3-search-impl.md",
+   "session_2026-07-02_tiny-text-recall-and-log-export.md"
+  ]
+ },
+ {
+  "id": "q11",
+  "q": "what's wrong with codexreview? when you run into issues like that, we need a hook to detect this happening and immediately deploy a doctor",
+  "answers": [
+   "reference_codex_rescue_teammate_no_relay.md",
+   "session_2026-06-25_codex-verdict-and-doctor-deployed.md",
+   "session_2026-06-25_codex-rescue-guard-hook.md"
+  ]
+ },
+ {
+  "id": "q12",
+  "q": "Why would I mention sidecoach if I want to trip the natural language detection?",
+  "answers": [
+   "session_2026-06-26_sidecoach-invocation-gap.md",
+   "session_2026-06-26_sidecoach-NL-tier-dead-rootcause.md"
+  ]
+ },
+ {
+  "id": "q13",
+  "q": "Can you detect when Claude Code is using the desktop/browser/mobile version of the app? And not the terminal or cmux?",
+  "answers": [
+   "reference_claude_code_surface_detection.md",
+   "session_2026-06-27_presentation-by-surface.md"
+  ]
+ },
+ {
+  "id": "q14",
+  "q": "when we're working in cmux and we're absolutely done with a subagent (like @compiler), once the agent has been stood down fully, kill the subagent and close the pane.",
+  "answers": [
+   "feedback_cmux_teardown_dead_subagents.md",
+   "session_2026-07-27_teammate-teardown-kill-vs-cooperative.md"
+  ]
+ },
+ {
+  "id": "q15",
+  "q": "So if I say, what was the original name of the Justify tool?",
+  "answers": [
+   "session_2026-05-29_endow_to_justify_rename.md"
+  ]
+ },
+ {
+  "id": "q16",
+  "q": "what hook is that, the one that we keep tripping on with the stop hook error?",
+  "answers": [
+   "session_2026-07-18_verify-flag-session-keyed-reigned-in.md",
+   "session_2026-07-24_visual-gate-override-eval-fixtures.md",
+   "session_2026-06-23_verify-hook-eval-fixtures-carveout.md"
+  ]
+ },
+ {
+  "id": "q17",
+  "q": "Does Justify in browser know you're done? Probably not, right? You tell it you were working?",
+  "answers": [
+   "session_2026-06-15_justify-working-stage-fix.md",
+   "session_2026-06-15_justify-validating-stage-diagnosis.md",
+   "session_2026-06-06_justify-roundtrip-CLOSED.md"
+  ]
+ },
+ {
+  "id": "q18",
+  "q": "Let's talk about details that make interfaces feel better, have we beaten it?",
+  "answers": [
+   "session_2026-06-24_sidecoach-vs-tactical-polish-gap.md",
+   "session_2026-06-24_sidecoach-tactical-polish-gap-implement.md"
+  ]
+ },
+ {
+  "id": "q19",
+  "q": "Is this a \"note\" or is this the definitive, \"always going to happen\" output for Sidecoach and Justify?",
+  "answers": [
+   "feedback_executive_report_output_contract.md"
+  ]
+ },
+ {
+  "id": "q20",
+  "q": "i also asked you to look at a figma file...that anywhere in your beats?",
+  "answers": [
+   "session_2026-06-08_dotfiles-feature-tree-figma.md"
+  ],
+  "low_confidence": true
+ },
+ {
+  "id": "q21",
+  "q": "Do you understand that the objective is to get Justify to reliably accept commands at any given time and for Claude to act at any given time regardless of how long it's been open and waiting",
+  "answers": [
+   "session_2026-06-10_justify-watch-guard-hook.md",
+   "session_2026-06-10_justify-watch-forever-loop.md",
+   "session_2026-06-06_justify-cleared-and-daemon-redesign.md"
+  ]
+ },
+ {
+  "id": "q22",
+  "q": "so now, in the leanest, shortest manner possible, tell me - what is improv, what is sidecoach, and how will they all work together?",
+  "answers": [
+   "session_2026-06-10_mission-opener-three-sentences.md",
+   "session_2026-06-22_justify-sidecoach-hero-copy.md",
+   "session_2026-06-10_homepage-narrative-copy.md"
+  ]
+ },
+ {
+  "id": "q23",
+  "q": "Can we fix the visualize hook we've got going on here?",
+  "answers": [
+   "session_2026-06-30_visualizer-guard-hook.md",
+   "reference_visualizer_token_contract.md"
+  ]
+ },
+ {
+  "id": "q24",
+  "q": "why dont you ssh into it and get it for me, you have access, we've actually been over this many times before. and i shouldn't have to remind you. it should be in a beat somewhere",
+  "answers": [],
+  "hard_negative": true
+ },
+ {
+  "id": "q25",
+  "q": "Is there a reason you're being so messy and Codex is catching all your mistakes?",
+  "answers": [
+   "feedback_self_review_before_codex.md",
+   "feedback_multiagent_verified_implementation_mandate.md"
+  ]
+ },
+ {
+  "id": "q26",
+  "q": "i set you off to look at 3 potential improvement plans. can you call them up for me?",
+  "answers": [
+   "session_2026-07-25_three-tool-gap-analysis.md",
+   "session_2026-07-03_external-skills-recon-round2.md"
+  ],
+  "low_confidence": true
+ },
+ {
+  "id": "q27",
+  "q": "And how is this factored into Sidecoach? Be clear",
+  "answers": [],
+  "unanswerable": true
+ },
+ {
+  "id": "q28",
+  "q": "what's the status of those a5a numbers? i cant see progress",
+  "answers": [
+   "session_2026-07-24_a5a-CERTIFIED-hardened-ground-truth.md",
+   "session_2026-07-25_stage4bcd-a5a-results-lead.md"
+  ]
+ },
+ {
+  "id": "q29",
+  "q": "any branches that arent main -- anything not yet committed?",
+  "answers": [],
+  "unanswerable": true
+ },
+ {
+  "id": "q30",
+  "q": "When I quit, I wanna return to shell and it keeps me stuck there. I also don't want to see all that unformatted messaging at the end.",
+  "answers": [
+   "session_2026-07-16_browser_quit_path_and_legacy_shortcut.md"
+  ]
+ },
+ {
+  "id": "q31",
+  "q": "oh i dont ever want you to make assumptions, haiku. that's not what you're here for. we deal in facts. so based on that, what are you supposed to do?",
+  "answers": [
+   "session_2026-06-05_self-analysis-blackbox-not-reading.md",
+   "session_2026-06-05_grounding-gate-mechanism.md"
+  ]
+ },
+ {
+  "id": "q32",
+  "q": "Why did the justify worker's pane self close?",
+  "answers": [],
+  "hard_negative": true
+ }
+]

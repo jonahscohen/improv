@@ -25,7 +25,7 @@
 
 **The opinion.** Externalize the discipline into files the harness enforces. Rules in CLAUDE.md, loaded every session. Hooks in settings.json that block bad behavior at the tool boundary. Memory in `.claude/memory/` that persists across machines. A personal catalog that grows from your eye. Reflection that audits the whole system for drift.
 
-**The system.** Twelve components, one curl, one shortcut. Four houses of thought: **Discipline** (the refusal layer), **Memory** (the persistence layer), **Design** (the 6-layer pipeline), **Workflow** (how you use it). All additive. All undoable. Pick the houses you want; the rest is a no-op.
+**The system.** Twelve components, one curl, one shortcut. Four houses of thought: **Discipline** (the refusal layer), **Memory** (the persistence layer), **Design** (the 7-layer stack), **Workflow** (how you use it). All additive. All undoable. Pick the houses you want; the rest is a no-op.
 
 **The proof.** Built on itself. The reflection skill exists because the corpus needed it. The personal-catalog system exists because public catalogs missed the patterns worth remembering. The second-fix gate evolved from a real same-file regression that shipped before the underlying root cause was found. Nothing in here is a feature in search of a problem.
 
@@ -157,44 +157,66 @@ For ironclad enforcement on projects where teammates haven't installed the dotfi
 
 ## Design
 
-**Why does generated UI look right here?** Because six skills stack from strategy down to tactical, each firing at the right beat.
+**Why does generated UI look right here?** Because seven layers stack from strategy down to tactical, and you walk them deliberately.
 
-Most AI-generated UI looks the same because most prompts ask for the same vague thing. This repo routes design work through layered skills, each addressing a different question:
+Most AI-generated UI looks the same because most prompts ask for the same vague thing. This repo routes design work through layered references, each addressing a different question:
 
 | Layer | Skill | Question it answers |
 |---|---|---|
 | 1. Strategy | `/sidecoach` skill | Who is this for? What's NOT us? |
 | 2. Research | `component-gallery-reference` | How does the industry build this component? |
 | 3. Typography | `fontshare-reference` | Which typeface? (refuses training-data defaults) |
-| 4. References | `design-references` + `/curate` | What did you see in the wild worth borrowing? |
+| 4. References | `/curate` | What did you see in the wild worth borrowing? |
 | 5. Motion | `motion-reference` | GSAP + Lenis canonical patterns |
-| 6. Tactical | `tactical-polish` | Exact-value polish at implementation time |
+| 6. Tokens | `DESIGN.md` | What are this project's actual values? |
+| 7. Tactical | `tactical-polish` | Exact-value polish at implementation time |
 
-Plus two foundations:
-
-- **Tokens** - `DESIGN.md` at the project root, per the [google-labs-code/design.md](https://github.com/google-labs-code/design.md) spec. Lints clean before UI ships.
-- **Brand** - `PRODUCT.md` at the project root. Register, users, anti-references. Strategy reads it before every command.
+Plus the brand foundation both ends read: **`PRODUCT.md`** at the project root - register, users, anti-references. Strategy reads it before every command, and `DESIGN.md` (layer 6) follows the [google-labs-code/design.md](https://github.com/google-labs-code/design.md) spec and lints clean before UI ships.
 
 ### How the layers stack on a real build
 
-A typical "build me a hero section" task routes the pipeline in roughly this order:
+**The stack is deliberate, not automatic** - and that is the one thing worth knowing before
+you use it. **No hook calls the Skill tool.** A hook can inject context or validate output,
+but it cannot invoke a skill; a skill runs when you invoke it or the model chooses to load
+it. So the layers are a checklist you walk, not a pipeline that runs at you.
 
-1. `/sidecoach shape <feature>` reads PRODUCT.md and proposes a brand direction.
-2. `component-gallery-reference` triggers if the build maps to a standard component (hero, header, navigation).
-3. `design-references` triggers in parallel, surfacing captured references with matching category / pattern / feel.
-4. `fontshare-reference` triggers if type decisions are in scope.
-5. `motion-reference` triggers if the hero has scroll or motion behavior.
-6. `icon-source` (peer skill) triggers if icons are needed.
-7. `tactical-polish` fires during implementation for the tactical polish.
-8. `/sidecoach audit + critique + polish` runs at QA time.
+A "build me a hero section" task walks roughly this order, and every line is something
+**you** do:
 
-Not every layer fires for every task. The pipeline routes by what the task actually needs.
+1. `/sidecoach shape <feature>` - reads PRODUCT.md, proposes a brand direction. Do this before writing code, not after.
+2. `component-gallery-reference` - if the build maps to a standard component (hero, header, navigation).
+3. `/curate` recall - surfaces captured references matching category / pattern / feel.
+4. `fontshare-reference` - if type decisions are in scope.
+5. `motion-reference` - if the hero has scroll or motion behavior.
+6. `icon-source` (peer skill) - if icons are needed.
+7. `tactical-polish`'s sixteen rules - applied *during* implementation, not bolted on after. The most-skipped layer, because it is the one people most expect to happen by itself.
+8. `/sidecoach audit`, then `critique`, then `polish` last, then the `/tactical-polish` checklist as the final gate item - at QA time. (The rules land during the build in step 7; running the checklist here is the verification that they did.) If you skip the triad, write "QA triad SKIPPED because <reason>" in the session beat; an unrecorded skip is indistinguishable from a gate that passed.
+
+Not every layer applies to every task - skip the ones the work does not need, deliberately.
+
+**What actually is mechanical:** one hook. `sidecoach-taste-gate.sh` runs on `Write` /
+`Edit` / `MultiEdit` when the written target is a `.html` or `.css` file under a directory
+containing `DESIGN.md`: it runs the anti-pattern ban sweep project-wide from that `DESIGN.md`
+root, and for an edited `.html` it also runs the taste validator on that file plus the
+project's `styles.css` when present. That is a subset of `/sidecoach audit`.
+`sidecoach-detect.sh` is a second scanner on the same event but ships default-off, so on a
+stock install the taste gate is the only design coverage you get without choosing it.
+
+**Why the README is emphatic about this.** It used to describe the layers as firing on their
+own, and that description was measurably wrong. Across 417 transcripts and a corpus of 700+
+genuine prompts, `tactical-polish` had 8 genuinely eligible occasions and ran on **none**,
+and `motion-reference` had 7 and ran on **none**. A `/design-build` skill existed specifically
+to run the whole stack as one automatic sequence; it was invoked **zero times in two months**
+and was retired on 2026-07-28, because wrapping steps that nothing invokes inside one more
+step that nothing invokes does not make them run. The stack works - it just works when you
+drive it, which is why the list above is written as instructions to you rather than as
+machinery.
 
 ### The personal catalog (Layer 4)
 
-This is the layer that earns its keep over time. `design-references` consults a local catalog at `~/.claude/design-references/` that grows from your eye. `/curate` is the capture wizard - paste a URL or screenshot, walk a 5-step flow (source → auto-tag proposal → why-interesting body → slug → save).
+This is the layer that earns its keep over time. `/curate` owns a local catalog at `~/.claude/design-references/` that grows from your eye, in both directions: **capture** (paste a URL or screenshot, walk a 5-step flow - source -> auto-tag proposal -> why-interesting body -> slug -> save) and **recall** (grep the catalog on a UI build and surface what matches). Recall was a separate `design-references` skill until 2026-07-28; it had zero invocations and was merged in, on the reasoning that splitting read from write gave the catalog two chances to not be selected instead of one.
 
-Tagging is hybrid: strict Category from a controlled vocab (`list`, `navigation`, `command-palette`, `inline-affordance`, etc.); free-form Pattern + Feel for the personality words. Public catalogs (component.gallery, fontshare) have no home for "the way Linear's inbox staggers" or "Vercel's deploy log streaming blur" - that's what this layer covers.
+Tagging is hybrid: strict Category from a controlled vocab (`list`, `navigation`, `command-palette`, `inline-edit`, etc. - extensible, and a capture that fits nothing asks before adding a category); free-form Pattern + Feel for the personality words. Public catalogs (component.gallery, fontshare) have no home for "the way Linear's inbox staggers" or "Vercel's deploy log streaming blur" - that's what this layer covers.
 
 `fontshare-reference` also bakes in sidecoach's **reflex-reject list** so the obvious training-data defaults (Inter, Fraunces, Outfit, Instrument Serif, et al.) get refused at type-selection time. Fontshare's own emerging defaults (General Sans, Cabinet Grotesk, Satoshi, Clash Display) get flagged the same way.
 
@@ -282,7 +304,7 @@ Lookup material. You won't read this end to end - you'll grep it when something 
 | `brain` | Team rules + workflow appended to CLAUDE.md between markers | `~/.claude/CLAUDE.md` (your content preserved) |
 | `config` | Safety hooks + plugins + permissions JSON-merged into settings.json | `~/.claude/settings.json` + `~/.claude/hooks/` |
 | `memory` | Memory discipline rules + 3 lifecycle hooks + startup loader | CLAUDE.md + settings.json + symlinked loader |
-| `skills` | 10 design + peer skills + the personal-catalog seed | `~/.claude/skills/` + `~/.claude/design-references/` |
+| `skills` | 9 design + peer skills + the personal-catalog seed | `~/.claude/skills/` + `~/.claude/design-references/` |
 | `statusline` | Custom prompt-bar render | symlink at `~/.claude/statusline-command.sh` |
 | `cmux` | Split-pane terminal config (in-app browser preview) | symlink at `~/.config/cmux/settings.json` |
 | `nvm` | "claude: command not found" fix for fresh terminals | marker-guarded line in `~/.zshrc` |
@@ -388,7 +410,7 @@ The `memory` component adds a fourth marker block (Memory Discipline rules). All
 1. `/sidecoach audit <target>` - 5-dimension scan (a11y, perf, theming, responsive, anti-patterns)
 2. `/sidecoach critique <target>` - design review via independent sub-agents
 3. `/sidecoach polish <target>` - final design-system alignment pass
-4. `tactical-polish` 14-point checklist - concentric radius, optical alignment, shadows over borders, tabular nums, scale-on-press at 0.96, etc.
+4. `tactical-polish` 16-point checklist - concentric radius, optical alignment, shadows over borders, tabular nums, scale-on-press at 0.96, etc.
 5. `npx @google/design.md lint DESIGN.md` if a DESIGN.md exists
 
 **cmux Browser Pane** - the primary visual verification surface. Commands run via Bash: `cmux browser --surface <id> screenshot --out /tmp/<name>.png` (then Read the PNG), `navigate "<url>"`, `snapshot --interactive`. Each project records its surface in a `reference_cmux_browser.md` memory.
@@ -399,17 +421,17 @@ The `memory` component adds a fourth marker block (Memory Discipline rules). All
 <details>
 <summary><b>The design pipeline tour</b></summary>
 
-Six layered skills + tokens + brand. Each addresses a different question at a different beat. The pipeline doesn't sequence linearly through every build - it routes by what the task actually needs.
+Seven layers, ending in tokens and tactical polish, over a `PRODUCT.md` brand foundation. Each addresses a different question at a different beat. You do not walk all seven on every build - skip what the task does not need, deliberately.
 
 ### 1. Strategy - Sidecoach
 
-A plugin (`sidecoach`) auto-installed via your `enabledPlugins`. Twenty-three commands ranging from `teach` (interactive PRODUCT.md authoring) to `craft` (build from scratch) to `audit/critique/polish` (the QA triad). Reads `PRODUCT.md` and `DESIGN.md` at project root before every command.
+A plugin (`sidecoach`) auto-installed via your `enabledPlugins`. 26 flows behind a typed surface of 21 verb commands, plus natural-language intent detection - which is the surface to lead with. Commands range from `teach` (interactive PRODUCT.md authoring) to `craft` (build from scratch) to `audit/critique/polish` (the QA triad). Reads `PRODUCT.md` and `DESIGN.md` at project root before every command.
 
 The CLAUDE.md hard rule: before any UI work begins, Claude checks for `PRODUCT.md`. Missing or stub triggers `/sidecoach teach`. Missing `DESIGN.md` plus existing code triggers a one-time-per-session nudge to run `/sidecoach document`.
 
 ### 2. Research - component-gallery-reference
 
-A bundled skill that has Claude browse [component.gallery](https://component.gallery) before building any standard UI component. The site catalogs 60 component types across 95 design systems (Polaris, Carbon, Primer, Spectrum, Material) with 2,672 examples.
+A bundled skill that has Claude browse [component.gallery](https://component.gallery) before building any standard UI component. The site catalogs 60 component types across 95 design systems (Polaris, Carbon, Primer, Spectrum, Material) with roughly 2,700 examples.
 
 Workflow: detect tech stack from `package.json`, browse the component page filtered by stack, exclude examples tagged "Unmaintained" or "Accessibility issues", inventory the project's design system, synthesize a brief mapping gallery patterns onto project tokens. Then build with three layers: function from the gallery, identity from the project, gap-fills derived from gallery patterns styled with project tokens.
 
@@ -419,13 +441,13 @@ A bundled skill that researches typefaces via [fontshare.com](https://fontshare.
 
 Critically bakes in sidecoach's **reflex-reject list** - the training-data-default typefaces (Inter, Fraunces, Outfit, Instrument Serif, Newsreader, Plus Jakarta Sans, DM Sans/Serif, IBM Plex, Space Grotesk, et al.) get refused as primaries on greenfield work. Fontshare's own emerging defaults (General Sans, Cabinet Grotesk, Switzer, Satoshi, Clash Display) get flagged the same way.
 
-### 4. References - design-references + /curate
+### 4. References - /curate
 
-The personal-catalog system. `~/.claude/design-references/` holds one folder per reference (markdown + screenshot). The catalog grows from your eye.
+The personal-catalog system. `~/.claude/design-references/` holds one folder per reference (markdown + screenshot). The catalog grows from your eye. One skill owns it in both directions.
 
-`/curate` is the capture wizard. Five-step flow: source → auto-tag proposal → why-interesting body → slug → save. Hybrid tagging: strict Category (controlled vocab), free-form Pattern + Feel.
+**Capture.** Five-step wizard: source -> auto-tag proposal -> why-interesting body -> slug -> save. Hybrid tagging: strict Category (controlled vocab), free-form Pattern + Feel.
 
-`design-references` is the retrieval skill. Auto-triggers on UI build keywords, greps the catalog for matching category/pattern/feel against the task context AND against PRODUCT.md voice words. Surfaces 0-5 references. Stays silent if nothing scores - noisy surfacing destroys trust.
+**Recall.** Greps the catalog for matching category/pattern/feel against the task context and against PRODUCT.md voice words, scores the hits, and surfaces the top 0-5 scoring 3 or better. Stays silent if nothing scores - noisy surfacing destroys trust. Reach for it deliberately at the start of a UI build; like every other layer, it does not fire on its own.
 
 ### 5. Motion - motion-reference (GSAP + Lenis)
 
@@ -441,7 +463,7 @@ CLAUDE.md mandates: conform to the Google spec, run lint after every write, reso
 
 ### 7. Tactical - tactical-polish
 
-An Anthropic Skill that auto-triggers on UI keywords. Sixteen specific rules with exact values:
+An Anthropic Skill carrying sixteen specific rules with exact values. Invoke `/tactical-polish` yourself for substantive detail work - measured across the corpus above it had 8 genuinely eligible occasions and ran on none of them, which makes it the most-skipped layer in the stack:
 
 - Concentric border radius (`outer = inner + padding`)
 - Optical centering (icons need manual nudge past geometric)
@@ -476,7 +498,7 @@ Invoke `/curate <url>` (or just `/curate` for the full interactive flow). The wi
 4. **Slug** - folder name in `<source>-<feature>-<date>` format. Auto-suffixed on collision.
 5. **Save** - writes `~/.claude/design-references/<slug>/ref.md` with frontmatter (title, category, patterns, feel, source, url, screenshot, saved date) and the body. New categories are appended to `_vocab/categories.txt`.
 
-The retrieval side (`design-references` skill) scores matches: Category match +3, each Pattern match +1, each Feel match +1, Source match +3. Top 0-5 references with score ≥ 3 are surfaced. Below threshold = silent.
+The recall side of `/curate` scores matches: Category match +3, each Pattern match +1, each Feel match +1, Source match +3. Top 0-5 references with score ≥ 3 are surfaced. Below threshold = silent.
 
 </details>
 
@@ -549,7 +571,7 @@ People conflate these. Four different mechanisms, four different config surfaces
 
 The `config` component enables ~20 plugins via `settings.json`: `claude-md-management`, `figma`, `firebase`, `hookify`, `skill-creator`, `sentry`, `supabase`, `swift-lsp`, `superpowers`, `agent-sdk-dev`, `typescript-lsp`, `security-guidance`, `discord`, `feature-dev`, `ralph-loop`, `code-review`, `plugin-developer-toolkit`, `chrome-devtools`.
 
-The `skills` component bundles 10 skills:
+The `skills` component bundles 9 skills:
 
 | Skill | Source |
 |---|---|
@@ -558,13 +580,12 @@ The `skills` component bundles 10 skills:
 | `fontshare-reference` | bundled |
 | `motion-reference` | bundled |
 | `curate` | bundled |
-| `design-references` | bundled |
 | `social-media` | bundled |
 | `design-team` | bundled |
 | `visual-effects` | bundled |
 | `icon-source` | bundled |
 
-The `reflect` component adds an 11th skill (`reflect`) plus a SessionStart nudge hook.
+The `reflect` component adds the `reflect` skill on top of those, plus a SessionStart nudge hook.
 
 Connectors (ClickUp, Google Drive, etc.) are NOT in the dotfiles - they're account-bound and authorize at claude.ai. MCP servers (Claude in Chrome, etc.) are NOT in the dotfiles either - they need OAuth or per-machine credentials.
 

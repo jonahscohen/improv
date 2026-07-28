@@ -896,6 +896,207 @@ else
   failcase "case13 expected 2 got $rc :: $out"
 fi
 
+# --- Abstention (explicit no-match below a calibrated cosine) ----------------
+# The threshold is calibrated for qwen3-embedding:0.6b at dim 1024 (see
+# beats/_eval/), so it is GATED on that model+width and can never fire under the
+# dim-64 stub. These cases drive the path through the documented
+# BEATS_ABSTAIN_THRESHOLD seam instead, and every positive assertion is paired
+# with a mutation control proving the abstention is what changed the output.
+
+# caseA1 (THE GATE): with no env override, the stub index must NOT abstain even
+# though its cosines are nowhere near the calibrated scale. A threshold carried
+# into a foreign embedding space is a made-up number; this proves it isn't.
+out="$(python3 "$BEATS_PY" search "zeppelin" --json --corpus "$sf_corpus" --build "$sf_build" 2>/dev/null)"; rc=$?
+if [ "$rc" -eq 0 ] && [ "$out" != "[]" ]; then
+  pass "caseA1 stub index (wrong model/width) never abstains - threshold is gated"
+else
+  failcase "caseA1 stub index abstained or errored, rc=$rc :: $out"
+fi
+
+# caseA2: below the threshold -> explicit NO MATCH on stdout AND a loud stderr
+# line, exit 0 (abstaining is an outcome, not a failure).
+out="$(BEATS_ABSTAIN_THRESHOLD=0.99 python3 "$BEATS_PY" search "zeppelin" \
+  --corpus "$sf_corpus" --build "$sf_build" 2>"$sf/a2.err")"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q "NO MATCH"; then
+  pass "caseA2 below threshold prints NO MATCH on stdout, exit 0"
+else
+  failcase "caseA2 expected NO MATCH exit 0, rc=$rc :: $out"
+fi
+if grep -q "^NO MATCH:" "$sf/a2.err"; then
+  pass "caseA2 abstention is announced loudly on stderr"
+else
+  failcase "caseA2 missing loud stderr line :: $(cat "$sf/a2.err")"
+fi
+# The ranked list must be GONE, not merely annotated - that is the whole feature.
+# STRUCTURAL check: reject ANY result row (a line naming a .md file), not just the
+# one beat this fixture happens to rank first. Naming a single file would let
+# "NO MATCH plus some other result" pass.
+if printf '%s\n' "$out" | grep -qE '\.md([[:space:]]|$)'; then
+  failcase "caseA2 still returned ranked results alongside NO MATCH :: $out"
+else
+  pass "caseA2 no ranked results accompany the abstention (structural check)"
+fi
+
+# caseA3: --json stays a JSON ARRAY (empty) so the benchmark scorer and every
+# existing consumer keep working; the explanation goes to stderr.
+out="$(BEATS_ABSTAIN_THRESHOLD=0.99 python3 "$BEATS_PY" search "zeppelin" --json \
+  --corpus "$sf_corpus" --build "$sf_build" 2>/dev/null)"; rc=$?
+if [ "$rc" -eq 0 ] && [ "$out" = "[]" ]; then
+  pass "caseA3 abstention under --json emits [] and exits 0"
+else
+  failcase "caseA3 expected [] exit 0, rc=$rc :: $out"
+fi
+
+# caseA4 (MUTATION CONTROL for A2/A3): identical query and threshold, abstention
+# switched off -> results come back. Proves caseA2/A3 measured the abstention and
+# not a query that simply has no hits.
+out="$(BEATS_ABSTAIN=off BEATS_ABSTAIN_THRESHOLD=0.99 python3 "$BEATS_PY" search "zeppelin" \
+  --json --corpus "$sf_corpus" --build "$sf_build" 2>/dev/null)"; rc=$?
+if [ "$rc" -eq 0 ] && [ "$out" != "[]" ] && printf '%s' "$out" | grep -q "alpha_head.md"; then
+  pass "caseA4 BEATS_ABSTAIN=off restores results for the same query (mutation control)"
+else
+  failcase "caseA4 expected results with abstention off, rc=$rc :: $out"
+fi
+
+# caseA5: above the threshold, output is BYTE-IDENTICAL to abstention disabled.
+# The unit added an abstention; it must not have retuned retrieval.
+a5_on="$(BEATS_ABSTAIN_THRESHOLD=-1 python3 "$BEATS_PY" search "zeppelin" --json \
+  --corpus "$sf_corpus" --build "$sf_build" 2>/dev/null)"
+a5_off="$(BEATS_ABSTAIN=off python3 "$BEATS_PY" search "zeppelin" --json \
+  --corpus "$sf_corpus" --build "$sf_build" 2>/dev/null)"
+if [ -n "$a5_on" ] && [ "$a5_on" = "$a5_off" ]; then
+  pass "caseA5 above-threshold results byte-identical to abstention-off (ranking untouched)"
+else
+  failcase "caseA5 above-threshold output diverged :: on=$a5_on off=$a5_off"
+fi
+
+# caseA6 (SCOPE): lexical-only has no cosine to threshold, so it must never
+# abstain even with the override set - degraded mode keeps its old behaviour.
+out="$("${LEXONLY[@]}" BEATS_ABSTAIN_THRESHOLD=0.99 python3 "$BEATS_PY" search "zeppelin" \
+  --json --corpus "$sf_corpus" --build "$sf_build" 2>"$sf/a6.err")"; rc=$?
+if [ "$rc" -eq 0 ] && [ "$out" != "[]" ]; then
+  pass "caseA6 lexical-only never abstains (no cosine to threshold)"
+else
+  failcase "caseA6 lexical-only abstained, rc=$rc :: $out :: $(cat "$sf/a6.err")"
+fi
+# Control: that run really WAS degraded, or caseA6 proves nothing.
+if grep -q "VECTORS ABSENT" "$sf/a6.err"; then
+  pass "caseA6 control: the run was genuinely lexical-only"
+else
+  failcase "caseA6 control failed - run was not degraded :: $(cat "$sf/a6.err")"
+fi
+
+# caseA9: a non-finite override is not a threshold. `nan` would disable abstention
+# by accident (every comparison false) and `inf` would abstain on everything, so
+# both are rejected loudly rather than obeyed.
+for bad in nan inf; do
+  out="$(BEATS_ABSTAIN_THRESHOLD="$bad" python3 "$BEATS_PY" search "zeppelin" --json \
+    --corpus "$sf_corpus" --build "$sf_build" 2>"$sf/a9.err")"; rc=$?
+  if [ "$rc" -eq 0 ] && [ "$out" != "[]" ] && grep -q "non-finite BEATS_ABSTAIN_THRESHOLD" "$sf/a9.err"; then
+    pass "caseA9 non-finite threshold '$bad' rejected loudly, results still returned"
+  else
+    failcase "caseA9 '$bad' not rejected, rc=$rc :: $out :: $(cat "$sf/a9.err")"
+  fi
+done
+
+# caseA10 (CROSS-SPACE GUARD): the calibrated threshold is only meaningful when
+# BOTH the stored vectors and the query embedder are the calibrated model. A db
+# compiled with the calibrated model but searched with a DIFFERENT model of the
+# same width yields a numerically fine, semantically meaningless cosine - the
+# dimension check cannot see that, so the model is checked at both ends.
+if [ -n "$SQLITE" ]; then
+  xs="$(newtmp)"; xs_corpus="$xs/corpus"; xs_build="$xs/build"
+  make_search_fixture "$xs_corpus"
+  python3 "$BEATS_PY" compile --corpus "$xs_corpus" --build "$xs_build" >/dev/null 2>&1
+  # Forge the stored metadata into the calibrated space so only the QUERY-side
+  # model differs; the stub keeps the cosines deterministic.
+  "$SQLITE" "$xs_build/beats.db" \
+    "UPDATE meta SET embed_model='qwen3-embedding:0.6b', embed_dim=64;" 2>/dev/null
+  out="$(BEATS_EMBED_MODEL=some-other-model-same-width python3 "$BEATS_PY" search "zeppelin" \
+    --json --corpus "$xs_corpus" --build "$xs_build" 2>"$xs/err")"; rc=$?
+  if [ "$rc" -eq 0 ] && [ "$out" != "[]" ]; then
+    pass "caseA10 mismatched query embedder never abstains (integration)"
+  else
+    failcase "caseA10 abstained across embedding spaces, rc=$rc :: $(cat "$xs/err")"
+  fi
+fi
+# caseA10b: the integration case above is blocked by the DIM gate before the
+# live-model gate is ever consulted, so it cannot prove the same-width case.
+# Drive resolve_abstain_threshold() directly at the CALIBRATED width, where only
+# the query-side model differs - the exact hole the dimension check cannot see.
+a10_probe='
+import importlib.util, sys
+s = importlib.util.spec_from_file_location("b", sys.argv[1])
+b = importlib.util.module_from_spec(s); s.loader.exec_module(b)
+print(b.resolve_abstain_threshold(b.ABSTAIN_MODEL, b.ABSTAIN_DIM))'
+got="$(env -u BEATS_ABSTAIN_THRESHOLD BEATS_EMBED_MODEL=other-model-same-width \
+  python3 -c "$a10_probe" "$BEATS_PY" 2>"$sf/a10b.err")"
+if [ "$got" = "None" ] && grep -q "is not the calibrated" "$sf/a10b.err"; then
+  pass "caseA10b same-width query-model mismatch refuses the calibrated threshold, loudly"
+else
+  failcase "caseA10b expected None + loud refusal, got '$got' :: $(cat "$sf/a10b.err")"
+fi
+# Control: with the calibrated model in place, the SAME call returns the number.
+got="$(env -u BEATS_ABSTAIN_THRESHOLD -u BEATS_EMBED_MODEL \
+  python3 -c "$a10_probe" "$BEATS_PY" 2>/dev/null)"
+if [ "$got" = "0.5288" ]; then
+  pass "caseA10b control: calibrated model+width yields the calibrated threshold"
+else
+  failcase "caseA10b control expected 0.5288, got '$got'"
+fi
+
+# caseA8 (REGRESSION): abstention needs meta.embed_model to decide whether the
+# index is in the calibrated embedding space, but reading it must NEVER be able
+# to disable retrieval. A db carrying usable vectors whose meta lacks the
+# embed_model column must stay HYBRID, not fall back to lexical-only. (Caught
+# during this unit: folding embed_model into the vectors_present/embed_dim SELECT
+# made one missing column take the whole vector half down with it.)
+if [ -n "$SQLITE" ]; then
+  em="$(newtmp)"; em_corpus="$em/corpus"; em_build="$em/build"
+  make_search_fixture "$em_corpus"
+  python3 "$BEATS_PY" compile --corpus "$em_corpus" --build "$em_build" >/dev/null 2>&1
+  "$SQLITE" "$em_build/beats.db" \
+    "CREATE TABLE m2 AS SELECT corpus_hash,compiled_at,file_count,tool_version,embed_dim,vectors_present FROM meta;
+     DROP TABLE meta; ALTER TABLE m2 RENAME TO meta;" 2>/dev/null
+  out="$(python3 "$BEATS_PY" search "zeppelin" --json --corpus "$em_corpus" --build "$em_build" 2>"$em/err")"; rc=$?
+  if [ "$rc" -eq 0 ] && [ "$out" != "[]" ] && ! grep -q "VECTORS ABSENT" "$em/err"; then
+    pass "caseA8 db with vectors but no embed_model column stays hybrid (abstention metadata cannot disable retrieval)"
+  else
+    failcase "caseA8 missing embed_model degraded the vector half, rc=$rc :: $(cat "$em/err")"
+  fi
+  # Control: that db really did lose the column, or the case proves nothing.
+  if "$SQLITE" "$em_build/beats.db" "SELECT embed_model FROM meta;" >/dev/null 2>&1; then
+    failcase "caseA8 control failed - embed_model column still present"
+  else
+    pass "caseA8 control: the embed_model column really was removed"
+  fi
+fi
+
+# caseA11: the calibration script must REFUSE to run under the stub embedder.
+# A stub-derived threshold would be a confident number describing an embedding
+# space nobody searches in - exactly the "no-op setup looks like a real result"
+# failure this suite exists to prevent. Hermetic: the guard fires before any db
+# access, so this case needs neither ollama nor the compiled index.
+CALIBRATE_PY="$HERE/../_eval/calibrate.py"
+if [ -f "$CALIBRATE_PY" ]; then
+  out="$(python3 "$CALIBRATE_PY" 2>&1)"; rc=$?
+  if [ "$rc" -eq 4 ] && printf '%s' "$out" | grep -q "BEATS_EMBED_STUB is set"; then
+    pass "caseA11 calibrate.py refuses to calibrate under the stub embedder (exit 4)"
+  else
+    failcase "caseA11 expected exit 4 + stub refusal, got rc=$rc :: $out"
+  fi
+fi
+
+# caseA7: an unparseable override is announced and disables abstention rather
+# than silently reverting to the calibrated number the caller overrode.
+out="$(BEATS_ABSTAIN_THRESHOLD=banana python3 "$BEATS_PY" search "zeppelin" --json \
+  --corpus "$sf_corpus" --build "$sf_build" 2>"$sf/a7.err")"; rc=$?
+if [ "$rc" -eq 0 ] && [ "$out" != "[]" ] && grep -q "unparseable BEATS_ABSTAIN_THRESHOLD" "$sf/a7.err"; then
+  pass "caseA7 unparseable threshold warns loudly and disables abstention, exit 0"
+else
+  failcase "caseA7 expected loud warning + results, rc=$rc :: $out :: $(cat "$sf/a7.err")"
+fi
+
 # --- Summary -----------------------------------------------------------------
 printf '\n%d passed, %d failed\n' "$passes" "$fails"
 [ "$fails" -eq 0 ] || exit 1

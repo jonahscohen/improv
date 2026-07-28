@@ -1,0 +1,110 @@
+[
+ {
+  "id": "s01",
+  "q": "I don't mind that the hooks create false positives, rather that than some false negatives, know what I mean?"
+ },
+ {
+  "id": "s03",
+  "q": "where did we leave off?"
+ },
+ {
+  "id": "s05",
+  "q": "Anything to be gained from 1) https://github.com/emilkowalski/skills 2) https://github.com/shadcn/improve 3) https://github.com/mattpocock/skills ?"
+ },
+ {
+  "id": "s06",
+  "q": "I'm getting frustrated. What's our status?"
+ },
+ {
+  "id": "s08",
+  "q": "Is the traced root cause accurate (gate -> blocking -> chain break -> flowF never runs -> no citation)?"
+ },
+ {
+  "id": "s09",
+  "q": "Determine: did the citation feature REGRESS (the code no longer emits it though it should), or did the FORMAT/behavior legitimately CHANGE (the test's expectation is stale)?"
+ },
+ {
+  "id": "s10",
+  "q": "In particular: when I want a tinted panel background (success / danger / warning), what's the right pattern so the text inside stays legible in dark mode?"
+ },
+ {
+  "id": "s13",
+  "q": "3) are the \"search\" upgrades to beats working?"
+ },
+ {
+  "id": "s14",
+  "q": "What did the PATH shim actually do (read claude/cmux/cmux + the 2026-06-25 beat)?"
+ },
+ {
+  "id": "s18",
+  "q": "2) why did you lead with /sidecoach as a command, when we spent a really long time working on natural language detection?"
+ },
+ {
+  "id": "s20",
+  "q": "Let's talk about https://jakub.kr/writing/details-that-make-interfaces-feel-better, have we beaten it?"
+ },
+ {
+  "id": "s21",
+  "q": "Be for real, how much have we not actually done and what's left for us to do? I see a suggested task for \"fix flow domain-validation coverage + ordering gaps\" - what else?"
+ },
+ {
+  "id": "s22",
+  "q": "Be for real, how much have we not actually done and what's left for us to do?"
+ },
+ {
+  "id": "s24",
+  "q": "what work was performed across all my projects last week?"
+ },
+ {
+  "id": "s25",
+  "q": "/Users/spare3/Documents/Github/improv/docs/dependency-map/ \u2014 what is in there?"
+ },
+ {
+  "id": "s26",
+  "q": "Does --warn correctly force exit 0 on both the missing and too-old paths?"
+ },
+ {
+  "id": "s27",
+  "q": "Is there ANY version pin or presence check today?"
+ },
+ {
+  "id": "s28",
+  "q": "So what do we have left to do? You talk too much and not in clear talking points."
+ },
+ {
+  "id": "s33",
+  "q": "what's the status of those a5a numbers?"
+ },
+ {
+  "id": "s34",
+  "q": "How do I prevent you from being so messy and lazy?"
+ },
+ {
+  "id": "s36",
+  "q": "Let's have an honest conversation: 1) is Sidecoach working? 2) are our latest hooks working? 3) are the \"search\" upgrades to beats working? 4) does anything we built actually work?"
+ },
+ {
+  "id": "s37",
+  "q": "Does the numeric compare return the correct exit status for all shapes (full N.N.N, and short \"5\"/\"1.2\")?"
+ },
+ {
+  "id": "s39",
+  "q": "what's wrong with sidecoach?"
+ },
+ {
+  "id": "s40",
+  "q": "Can a SessionStart hook modify the environment/PATH of subsequent Bash tool invocations in the same session?"
+ },
+ {
+  "id": "s41",
+  "q": "Is fixing the fixture the correct root-cause layer, versus (a) weakening/altering the test, or (b) changing the gate?"
+ },
+ {
+  "id": "s44",
+  "q": "INVESTIGATE + document: What exactly is cmux here (the browser-pane CLI; where does the binary live; how is it invoked)?"
+ },
+ {
+  "id": "s45",
+  "q": "can I write \"PATH\": \"/my/shim/dir:$PATH\" or \"${PATH}\" and have it expand to the existing PATH), or are values treated as literal strings?"
+ }
+]

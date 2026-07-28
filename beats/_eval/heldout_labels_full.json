@@ -1,0 +1,641 @@
+[
+ {
+  "id": "s01",
+  "q": "I don't mind that the hooks create false positives, rather that than some false negatives, know what I mean?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "feedback_hooks_prefer_false_positives.md",
+    "proof": "Jonah, after the multiple-choice hook false-flagged a completion report: \"I don't mind that the hooks create false positives, rather that than some false negatives.\""
+   }
+  ],
+  "reason": "Well-formed self-contained assertion plus a confirmation tag. The corpus holds a beat that is the canonical record of exactly this calibration, including the rationale (a false positive costs one sentence of wave-off; a false negative repeats the failure the hook exists to prevent) and the standing rule for how to apply it. Not topical adjacency - the beat quotes the utterance verbatim and encodes it as a standing rule.",
+  "searched": []
+ },
+ {
+  "id": "s02",
+  "q": "What remains? Break down simple.",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Fragment plus imperative. \"What remains\" has no stated scope (remains of what workstream, sprint, punchlist, or task set), and \"Break down simple\" is a formatting directive, not a question. Only resolvable against the immediately preceding turn; no corpus lookup could determine the referent.",
+  "searched": []
+ },
+ {
+  "id": "s03",
+  "q": "where did we leave off?",
+  "verdict": "NONE",
+  "answers": [],
+  "reason": "Grammatically a well-formed standalone question, but it is time-indexed live state, not a fact any beat records. Every candidate is a point-in-time snapshot whose correctness depends on when the question was typed, which is unknown. Nearest candidates and why each fails: session_2026-07-13_state-of-the-union.md is a genuine consolidated status beat with a ranked next-step queue, but it is a 2026-07-13 snapshot roughly 100 beats behind the corpus head (2026-07-28); handoff_2026-05-24_sprint1_closed_sprint2_ready.md, session_2026-05-27_checkpoint_before_cmux_teams_relaunch.md, session_2026-07-06_tcc-outage-handoff.md and the session_2026-06-25_sidecoach-convergence-resume-* set are all likewise dated handoffs. The beats that literally contain \"pick up where we left off\" (session_2026-06-24_sidecoach-convergence-resume.md, session_2026-06-25_sidecoach-convergence-resume-verify.md, session_2026-06-25_sidecoach-stage2-findings-folded.md) record what happened after the user asked on a specific day; they do not answer the undated question. Answering it is a recency operation over the whole corpus (or a read of the MEMORY.md index, which is the corpus index rather than a beat that substantively answers), not a retrieval match on any one beat.",
+  "searched": [
+   "left off|leave off|pick up where",
+   "resume point|next session|where we stand|current state",
+   "filename scan: ls | rg -i 'handoff|checkpoint|status|state|resume|current'",
+   "^## Next steps|^## Open threads|^## Where we are|^## State$",
+   "what remains|remaining work|outstanding work|in flight|backlog state",
+   "read of session_2026-07-13_state-of-the-union.md and the MEMORY.md index head"
+  ]
+ },
+ {
+  "id": "s04",
+  "q": "do you just want me to post them in chat?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Deictic with no referent - \"them\" is unresolvable (URLs, findings, keys, screenshots, log lines?). It is a mid-task clarification aimed at the assistant's immediately preceding turn, not a standalone question any corpus could resolve.",
+  "searched": []
+ },
+ {
+  "id": "s05",
+  "q": "Anything to be gained from 1) https://github.com/emilkowalski/skills 2) https://github.com/shadcn/improve 3) https://github.com/mattpocock/skills ?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-03_external-skills-recon-round2.md",
+    "proof": "Drain before filling: implement the existing approved borrow backlog (3 shadcn steals + double-sourced six-skills items) ahead of any new evaluation; absorb Emil's two new skills (proven vein); mattpocock gets a cheap targeted eval only if the workflow lane feels underpowered."
+   },
+   {
+    "file": "reference_shadcn-improve-eval.md",
+    "proof": "**Worth stealing (borrow-selectively):** (1) leverage scoring as an explicit rubric in audit/critique flows; (2) verification-baseline-as-finding-#1 gate into produce-and-verify mandate + sidecoach QA gate; (3) commit-hash drift stamping on docs/superpowers/plans/*.md files."
+   },
+   {
+    "file": "session_2026-05-25_emil_skill_investigation.md",
+    "proof": "Investigated github.com/emilkowalski/skill (single SKILL.md, 27KB, 679 lines) at user request. Goal: identify what Emil's skill enforces that sidecoach (36 flows, 159-rule validator) misses."
+   },
+   {
+    "file": "session_2026-07-25_three-tool-gap-analysis.md",
+    "proof": "- `emilkowalski/skill` (singular) -> `emil-design-eng/SKILL.md`, captured 2026-05-25. Repo has since RENAMED to `emilkowalski/skills` (plural) and grown 1 -> **7 skills**. We hold 1/7, as shelf prose."
+   }
+  ],
+  "reason": "The 2026-07-03 beat is the direct record of this exact three-repo question (its own description reads \"Jonah asked what is gainable from three external skill repos\") and gives a per-repo GAIN verdict. reference_shadcn-improve-eval.md supplies the repo-2 answer (the 3 named steals), session_2026-05-25_emil_skill_investigation.md the original repo-1 investigation, and session_2026-07-25_three-tool-gap-analysis.md the current repo-1 delta (1/7 skills held). No superseded_by on any of the four.",
+  "searched": []
+ },
+ {
+  "id": "s06",
+  "q": "I'm getting frustrated. What's our status?",
+  "verdict": "NONE",
+  "answers": [],
+  "reason": "Two parts, neither answerable from the corpus. The first is the user's emotional state - no beat records this exchange (the only \"frustrat*\" hits are persona-template boilerplate inside session_2026-05-24_sidecoach.md / session_2026-05-25_sidecoach.md / session_2026-06-17_sidecoach.md, i.e. fictional persona \"Frustrations:\" fields, plus a copy rule about not using humor in error messages). The second is undated live state: \"our status\" has no fixed workstream referent and, like s03, would be answered by a recency sweep rather than by any single beat. session_2026-07-13_state-of-the-union.md is the closest artifact but is a 2026-07-13 snapshot, stale against the 2026-07-28 corpus head. feedback_talking_points_brevity.md is about the FORM of status reports, not any status.",
+  "searched": [
+   "frustrat",
+   "what.s our status|status report|current status",
+   "filename scan: ls | rg -i 'handoff|checkpoint|status|state|resume|current'",
+   "left off|leave off|pick up where",
+   "what remains|remaining work|outstanding work|in flight|backlog state"
+  ]
+ },
+ {
+  "id": "s07",
+  "q": "Keep going? I said autonomously",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Elliptical rebuke, not a question seeking information. \"Keep going?\" is a two-word fragment echoing the assistant's prior permission request, and \"I said autonomously\" is a corrective statement; together they function as an imperative (continue without checkpointing). Note for the record: standing-autonomy directive beats do exist (feedback_autonomous_phases_codex_partner.md, feedback_chief_architect_autonomous_dogfood_loop.md, session_2026-06-24_sidecoach-option-B-convergence-mandate.md), but the string is a directive about the immediately preceding turn rather than a question those beats answer.",
+  "searched": []
+ },
+ {
+  "id": "s08",
+  "q": "Is the traced root cause accurate (gate -> blocking -> chain break -> flowF never runs -> no citation)?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-26_sprint3-process-path-resolved.md",
+    "proof": "BUT flowF was SKIPPED with message `\"Validation failed: 1 blocking issue\"`. `DeterministicValidator.validate` Gate 3 (`deterministic-validator.ts` L128-190) shells out `npx @google/design.md lint <projectPath>/DESIGN.md` via execFileSync; on a non-zero exit that is NOT timeout/tool-missing/tool-internal-error it pushes a `severity: 'blocking'` violation. In the orchestrator natural-language chain (`sidecoach-orchestrator.ts` L1379-1415) a blocking validation sets status='skipped' and `break`s the chain BEFORE `handler.execute()` runs -> flowF never emits its citation."
+   }
+  ],
+  "reason": "The beat's \"Root cause (traced, evidence-backed)\" section confirms the exact five-link chain named in the question, at file and line, and independently corroborates it (Codex timed out, so a fresh non-producer Claude reviewer \"confirmed the trace line-for-line\"). Same beat also names the upstream trigger: the lint exited 1 on `rounded.none: \"0\"`.",
+  "searched": []
+ },
+ {
+  "id": "s09",
+  "q": "Determine: did the citation feature REGRESS (the code no longer emits it though it should), or did the FORMAT/behavior legitimately CHANGE (the test's expectation is stale)?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-26_sprint3-process-path-resolved.md",
+    "proof": "The citation SHOULD appear; it stopped because the canonical reference fixture drifted out of lint-compliance and silently tripped an intentional gate. The test's expectation is correct and was NOT weakened. No product code and no test file changed - the fix is a one-line data correction in the fixture."
+   }
+  ],
+  "reason": "Prefixed by the imperative \"Determine:\" but the body is a complete disjunctive question, and the beat resolves the disjunction explicitly under a heading reading \"Determination: FEATURE/DATA-SIDE REGRESSION, not a stale test\". It also states the citation MECHANISM was never broken, so the regression was in the fixture data rather than the emitting code. session_2026-07-26_tail-cleanup.md poses the same \"feature-vs-test call\" but explicitly DEFERS it, so it is not cited as an answer.",
+  "searched": []
+ },
+ {
+  "id": "s10",
+  "q": "In particular: when I want a tinted panel background (success / danger / warning), what's the right pattern so the text inside stays legible in dark mode?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "reference_visualizer_token_contract.md",
+    "proof": "- **Tinted panels MUST pair bg + text from the same role:** `background: var(--bg-danger); color: var(--text-danger);`. Same for accent/success/warning. The pair is colour-matched in both modes."
+   }
+  ],
+  "reason": "Prefixed by \"In particular:\" (a sub-clause marker) but the sentence is a complete standalone question. The beat's \"dark-mode contract\" section states the exact pattern using the same vocabulary (tinted panel, success/danger/warning roles, dark mode) and adds the adjacent rule that makes it work - never put a hex fallback in var(), since a light-mode hex fallback is what produced invisible text on a dark surface.",
+  "searched": []
+ },
+ {
+  "id": "s11",
+  "q": "You know what each of those four belong to. Are you flagging this as a problem?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Doubly deictic - \"those four\" refers to four items enumerated in a prior turn, and \"this\" to an unnamed condition. Both referents live outside the string. No corpus could determine which four items or which condition is meant.",
+  "searched": []
+ },
+ {
+  "id": "s12",
+  "q": "Are you flagging this as a problem?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Pure deixis - \"this\" has no referent in the string. A meta-question about the assistant's own current assessment of an unstated finding; not resolvable from any corpus.",
+  "searched": []
+ },
+ {
+  "id": "s13",
+  "q": "3) are the \"search\" upgrades to beats working?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-28_beats-search-efficacy.md",
+    "proof": "The hybrid is **alive, correct, and the best of the five systems measured**. It is not"
+   }
+  ],
+  "reason": "",
+  "searched": []
+ },
+ {
+  "id": "s14",
+  "q": "What did the PATH shim actually do (read claude/cmux/cmux + the 2026-06-25 beat)?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-06-25_cmux-hook-command-not-found-fix.md",
+    "proof": "A durable `cmux` PATH shim at repo `claude/cmux/cmux`, live via the existing symlink `~/.claude/cmux -> improv/claude/cmux`. `~/.claude/cmux` is already the second entry on PATH and is inherited by hooks, so the bare-name fallback now resolves to the shim, which exec's the real bundled binary (resolved from `CMUX_CLAUDE_HOOK_CMUX_BIN` / `CMUX_BUNDLED_CLI_PATH` / `CMUX_CLAUDE_TEAMS_CMUX_BIN` / `CMUX_AGENT_LAUNCH_EXECUTABLE` / the hardcoded `/Applications/...` path). The shim only ever exec's an absolute path, never the bare name, so it cannot recurse; if no candidate exists it exits 127 (no worse than before)."
+   }
+  ],
+  "reason": "",
+  "searched": []
+ },
+ {
+  "id": "s15",
+  "q": "Which fields are REQUIRED vs optional?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Bare noun 'fields' has no referent - the string is a follow-up sub-question of a longer schema discussion, not a standalone question. The corpus contains at least four distinct and unrelated field schemas any of which it could mean: beat YAML frontmatter (name/description/type + 7 provenance fields), agent-definition frontmatter (session_2026-07-26_agent-tools-frontmatter-rule.md), benchmark.json case fields, and flow-prerequisite required/optional gates (session_2026-06-23_sidecoach-evolution-plan-draft.md). No corpus can resolve which is meant. Separately, even for the most likely referent no beat states a required-vs-optional split: the only relevant statement is that the 7 provenance fields are optional (session_2026-07-06_beats-backlog-shipped.md, '7 optional fields (author_human, author_model, session_id, machine, source enum, verified free-text, confidence enum)').",
+  "searched": [
+   "'REQUIRED vs optional' / 'required vs optional'",
+   "'required' AND 'optional' on the same line",
+   "'frontmatter'",
+   "'provenance fields'",
+   "'name, description, type'",
+   "'mandatory field' / 'required field'"
+  ]
+ },
+ {
+  "id": "s16",
+  "q": "Deliberately leaving it unpackaged?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Elliptical fragment (no subject or auxiliary - '[Are you] deliberately leaving it unpackaged?') whose 'it' has no referent. The corpus has several distinct unpackaged/deliberately-inert artifacts it could mean: claude/hooks/sidecoach-detect.sh (session_2026-07-24_two-stop-gates-visual-and-registry.md), the three hooks task-loop-mandate / justify-queue-mandate / justify-queue-drain-stop (session_2026-07-23_hook-registry-guard-escape-fixed.md), and beats/mcp-server described as 'deliberately inert'. Nothing in the string selects among them.",
+  "searched": [
+   "'unpackaged'",
+   "'not packaged' / 'packaged'",
+   "'hook-registry'",
+   "'deliberately inert'",
+   "'npm publish' / 'publish it as'"
+  ]
+ },
+ {
+  "id": "s17",
+  "q": "Well, I don't want to ignore how you feel about it...what do you suggest we do?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Fully deictic and conversational: 'it' has no referent anywhere in the string, and the operative request ('what do you suggest we do?') asks for a live recommendation about an unnamed decision plus the assistant's stated feelings in that turn. No corpus file can resolve what 'it' is, and no beat records the assistant's in-turn position.",
+  "searched": [
+   "'how you feel' / 'how do you feel'",
+   "'what do you suggest'",
+   "'gut check'",
+   "'recommendation' + 'your call'"
+  ]
+ },
+ {
+  "id": "s18",
+  "q": "2) why did you lead with /sidecoach as a command, when we spent a really long time working on natural language detection?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-05-21_critical_failures.md",
+    "proof": "3. **Claude Wanted Them to Use Slash Commands**\n   - I ended with \"Ready to begin with /shape\" - putting workflow invocation burden on user\n   - This defeats the purpose of Sidecoach\n   - Sidecoach is supposed to detect intent from natural language and chain flows automatically"
+   },
+   {
+    "file": "session_2026-06-24_sidecoach-S5-integration-gap-and-plan.md",
+    "proof": "- Natural-language detection is the **MAIN DRIVER**. Slash commands are a standalone **FAILSAFE**, nothing more."
+   }
+  ],
+  "reason": "",
+  "searched": []
+ },
+ {
+  "id": "s19",
+  "q": "i thought we fixed this already!?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Pure deixis - 'this' has no referent and the string names no system, file, bug or symptom. The corpus contains dozens of independent fix/regression beats (cmux hook fix, NL-tier deploy symlinks, hook-registry escape, buzzword rebuilds, installer parity), and nothing in the string selects among them. It is a reaction to something on screen, not a resolvable question.",
+  "searched": [
+   "'thought we fixed'",
+   "'already fixed' / 'regression'",
+   "'recurrence' / 'recurred'",
+   "'again' + 'broke'"
+  ]
+ },
+ {
+  "id": "s20",
+  "q": "Let's talk about https://jakub.kr/writing/details-that-make-interfaces-feel-better, have we beaten it?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-06-24_sidecoach-vs-tactical-polish-gap.md",
+    "proof": "All three gaps above are CLOSED: checkInterruptibleAnimations exists (gap 1, registered as polish.interruptible-animations), checkSkipLoadAnimation exists alongside checkAnimatePresenceInitial (gap 2, CSS-only mount case), and CLAUDE.md now says \"16-point checklist\" (gap 3). Current coverage: 21 distinct check functions = all 16 tactical-polish principles detected + genericity/state-completeness/typography-rhythm/reduced-motion/shadow-hierarchy beyond the source. 16/16 fully operationalized."
+   },
+   {
+    "file": "session_2026-06-24_sidecoach-tactical-polish-gap-implement.md",
+    "proof": "description: Implemented all 3 gap fixes from the Sidecoach-vs-m-i-f-b analysis - #4 interruptible-animations detector, #13 CSS-only skip-load-animation extension, and the stale \"14-point\" -> \"16-point\" doc label across 3 files"
+   }
+  ],
+  "reason": "",
+  "searched": []
+ },
+ {
+  "id": "s21",
+  "q": "Be for real, how much have we not actually done and what's left for us to do? I see a suggested task for \"fix flow domain-validation coverage + ordering gaps\" - what else?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-28_capability-evidence-inventory.md",
+    "proof": "| PROVEN LIVE | 14 | 27% |\n| SUITE-ONLY | 24 | 47% |\n| CLAIMED ONLY | 6 | 12% |\n| KNOWN DEAD or DEGRADED | 7 | 14% |"
+   },
+   {
+    "file": "session_2026-07-13_state-of-the-union.md",
+    "proof": "2. **Mechanical-fixes batch** (one teammate unit, ~an hour): verify-before-done re-arm filter; memory-nudge redirect misclassification; orchestrator-mode carve-out for .claude/memory beat writes; push-ahead check; install.sh:364 dead path; delete orphan ~/.claude/skills/improv; untrack public/justify-core.js (+map); delete stale .justify marker; consider team-dir lazy-init or reaper fix for the orphan bug."
+   }
+  ],
+  "reason": "",
+  "searched": []
+ },
+ {
+  "id": "s22",
+  "q": "Be for real, how much have we not actually done and what's left for us to do?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-28_capability-evidence-inventory.md",
+    "proof": "| PROVEN LIVE | 14 | 27% |\n| SUITE-ONLY | 24 | 47% |\n| CLAIMED ONLY | 6 | 12% |\n| KNOWN DEAD or DEGRADED | 7 | 14% |"
+   },
+   {
+    "file": "session_2026-07-13_state-of-the-union.md",
+    "proof": "2. **Mechanical-fixes batch** (one teammate unit, ~an hour): verify-before-done re-arm filter; memory-nudge redirect misclassification; orchestrator-mode carve-out for .claude/memory beat writes; push-ahead check; install.sh:364 dead path; delete orphan ~/.claude/skills/improv; untrack public/justify-core.js (+map); delete stale .justify marker; consider team-dir lazy-init or reaper fix for the orphan bug."
+   }
+  ],
+  "reason": "",
+  "searched": []
+ },
+ {
+  "id": "s23",
+  "q": "Task: (a) determine WHY the 90 record hashes drifted (was the corpus edited without re-freezing?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Imperative task brief, not a question to the assistant: it opens with the literal label 'Task:', is enumerated item (a) of a longer list whose remaining items are absent, and is truncated mid-parenthetical (unclosed paren, no terminal clause). Disclosed for honesty in both directions: its subject matter IS covered by the corpus - session_2026-07-24_corpus-freeze-drift.md states 'The 90/90 record-hash drift is legitimate un-re-frozen corpus evolution (motion GT re-labeled by the observe instrument), NOT a hashing bug' - so if a downstream consumer prefers to score truncated directives, that is the target file. The verdict follows the stated structural rule.",
+  "searched": [
+   "'record hashes' / 'hash drift'",
+   "'re-freez' / 'refreez'",
+   "'frozen90' / 'frozen 90'",
+   "'90 record'",
+   "'corpus freeze'"
+  ]
+ },
+ {
+  "id": "s24",
+  "q": "what work was performed across all my projects last week?",
+  "verdict": "NONE",
+  "answers": [],
+  "reason": "Well-formed, but it asks for a live, time-bounded, CROSS-PROJECT roll-up and this corpus is single-project. Every beat under .claude/memory/ records improv work only; the cross-project store the question implies lives at ~/.claude/projects/<project>/memory/ (referenced by several beats as a separate location) and is out of corpus. There is no weekly-digest, week-in-review, or cross-project activity-log beat of any kind - the only periodic artifacts are three reflection_*.md files (2026-05-12, 05-19, 05-20), which analyse the beats corpus for patterns rather than log a week's work, and all three predate any plausible 'last week'. 'Last week' is also relative to an unrecorded ask date, so no fixed file could answer it even if a log existed.",
+  "searched": [
+   "'across all my projects' / 'all my projects'",
+   "'cross-project'",
+   "'last week'",
+   "'weekly digest' / 'week in review' / 'weekly summary' / 'this week we'",
+   "ls for filenames matching reflection|digest|weekly",
+   "'improv-site' / 'ppai' / 'dotfiles repo' (other project names)",
+   "'~/.claude/projects/' + memory"
+  ]
+ },
+ {
+  "id": "s25",
+  "q": "/Users/spare3/Documents/Github/improv/docs/dependency-map/ \u2014 what is in there?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-13_dependency-map-page.md",
+    "proof": "- `docs/dependency-map/index.html` - one file, inline CSS+JS, zero external requests"
+   },
+   {
+    "file": "session_2026-07-15_u11-dependency-map-correction.md",
+    "proof": "`docs/dependency-map/index.html` and `docs/dependency-map/serve.py`. Corrected the"
+   },
+   {
+    "file": "reference_component_dependency_map.md",
+    "proof": "at `docs/dependency-map/index.html` (served on :4832). The data below is the record;"
+   }
+  ],
+  "reason": "The dependency-map-page beat enumerates exactly the two files the directory holds (index.html + serve.py) and describes what each is; the u11 correction beat names the same two files as that unit's owned surface; the reference beat says what the page renders (16 components in 5 classes, runtime edges, 11 open debt findings). Cross-checked against the live directory, which contains only index.html and serve.py."
+ },
+ {
+  "id": "s26",
+  "q": "Does --warn correctly force exit 0 on both the missing and too-old paths?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-26_cmux-dependency-pinned.md",
+    "proof": "exit 2, both with clear messages naming the versions. `--warn` softens both to exit 0."
+   },
+   {
+    "file": "reference_cmux_dependency.md",
+    "proof": "- `--warn`: same checks, but never exits non-zero (prints a warning, exit 0). This is the"
+   }
+  ],
+  "reason": "The cmux preflight guard has exactly a missing path (exit 1) and a too-old path (exit 2); the session beat records the stub-binary verification proving --warn softens BOTH of those to exit 0, and the reference beat states the same contract durably."
+ },
+ {
+  "id": "s27",
+  "q": "Is there ANY version pin or presence check today?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-26_cmux-dependency-pinned.md",
+    "proof": "as a cryptic mid-run failure. Confirmed by grep: **zero** version pin / `--version` check"
+   },
+   {
+    "file": "reference_cmux_dependency.md",
+    "proof": "`claude/cmux/cmux.version` records the **minimum cmux version** the in-repo consumers are"
+   }
+  ],
+  "reason": "The session beat answers the pre-work state directly (a grep confirmed zero version pin and zero --version presence check existed anywhere in claude/ or sidecoach/); the reference beat answers the post-work state (cmux.version is the pin, cmux-preflight.sh is the presence + version check). Both readings of 'today' are covered."
+ },
+ {
+  "id": "s28",
+  "q": "So what do we have left to do? You talk too much and not in clear talking points.",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-02_beats-backlog-and-cutover-confirmation.md",
+    "proof": "session_2026-07-02_beats-stage4-5-hooks.md plan-state paragraph: build phase complete (stages 1-5), remaining = the parallel run then the cutover decision, which is Jonah's, gated on the parallel-run record."
+   },
+   {
+    "file": "feedback_talking_points_brevity.md",
+    "proof": "description: Jonah (2026-07-02) - \"You talk too much and not in clear talking points.\" Status reports must be short bulleted talking points; save prose for when reasoning genuinely needs it."
+   }
+  ],
+  "reason": "The second sentence appears verbatim in feedback_talking_points_brevity.md, which dates it 2026-07-02 and places it 'after a long beats-evolution status report' - that anchors the otherwise-unanchored 'what do we have left to do'. The same-day backlog/cutover beat states the remaining work at that point: the parallel run, then the cutover decision, plus three new TASKS.md items T-0044..46."
+ },
+ {
+  "id": "s29",
+  "q": "Or does the user have to go update the package or the repo themselves?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Not a standalone question - it opens with 'Or' and is the second half of a disjunctive pair (it reads as the alternative branch of s35, 'Will it automatically detect if remote has new changes?'). 'The package' and 'the repo' have no antecedent in the string. Searching surfaced several distinct in-corpus update mechanisms it could belong to (bucket-browser update_status/update_apply, install.sh check_updates/returning_flow, the ampersand self-heal update path, cmux's out-of-band app auto-update) and nothing in the string selects among them."
+ },
+ {
+  "id": "s30",
+  "q": "How do you think they were made in the first place?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Pure deixis - 'they' has no antecedent anywhere in the string, and the sentence carries no domain noun, filename, tool name, or date to anchor retrieval. It is a mid-conversation follow-up; no corpus could determine what 'they' refers to."
+ },
+ {
+  "id": "s31",
+  "q": "So now what? Wanna give me a prompt to stress test Sidecoach on the marketing site?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "An imperative directive in interrogative clothing - 'Wanna give me a prompt...' is a request to AUTHOR new content, not a question about recorded facts, and 'So now what?' is deictic on an unstated in-flight state. Recorded for honesty: even on a generous reading the corpus supplies no such prompt. session_2026-06-29_sidecoach-stress-test.md records a 3-axis stress test that was run and what it found, but contains no reusable stress-test prompt for the marketing site."
+ },
+ {
+  "id": "s32",
+  "q": "Hover states should share the selected theme, ya know?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Not a question - it is a directive/assertion with a conversational tag ('should ... ya know?'), an instruction to change behaviour rather than a request for information. Noted honestly: the corpus does record this exact directive being given and acted on (session_2026-07-04_justify-light-dark-hardening.md: 'Directive before leaving: icons must show in light mode, hover states share the selected theme'), but the string itself is not a well-formed standalone question."
+ },
+ {
+  "id": "s33",
+  "q": "what's the status of those a5a numbers?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-24_a5a-CERTIFIED-hardened-ground-truth.md",
+    "proof": "Collaborator: Jonah. 2026-07-24. The withdrawn ship call is RE-ISSUED. The ground truth is now defensibly independent, and - the decisive fact - hardening it changed NOTHING."
+   },
+   {
+    "file": "session_2026-07-25_stage4bcd-a5a-results-lead.md",
+    "proof": "OURS beats oracle on the CONSTRUCTED idioms (oracle Rc=0.000 on ~every class - it ships near-name rules but doesn't fire them), precision solid on real negatives."
+   }
+  ],
+  "reason": "'a5a' names a specific gate in this corpus (the A5a head-to-head taste-detection gate), so the deixis resolves. The Stage-4a numbers sit at the head of a supersession chain (FINAL-clean-sweep -> SHIP-CALL-WITHDRAWN-filename-leak -> CERTIFIED-hardened-ground-truth, cited), which records that the numbers held through hardening (OURS R=1.000 P=1.000 FP=0/18) and the ship call was re-issued. The Stage-4b/4c/4d numbers' status is the 2026-07-25 results-lead beat with per-class ship calls in 3 tiers."
+ },
+ {
+  "id": "s34",
+  "q": "How do I prevent you from being so messy and lazy?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "feedback_self_review_before_codex.md",
+    "proof": "Collaborator: Jonah Cohen. 2026-07-14. Jonah, frustrated: \"Is there a reason you're being so messy and Codex is catching all your mistakes? ... Should I switch to Codex and never use Claude for code? How do I prevent you from being so messy and lazy?\""
+   },
+   {
+    "file": "session_2026-07-15_plan-consistency-lint-hook.md",
+    "proof": "Built the plan-doc consistency linter that feedback_self_review_before_codex.md proposed as the mechanization of the dumb-consistency catches (so Codex is spent only on hard problems)."
+   },
+   {
+    "file": "feedback_memory_first_zero_failure_execution.md",
+    "proof": "Jonah's trust calibration is explicit: assume the executor will falter, and build the system so faltering is caught mechanically."
+   }
+  ],
+  "reason": "The question appears verbatim in feedback_self_review_before_codex.md, which root-causes the behaviour (Codex used as first-line QA instead of second-line verification) and prescribes the fix as a mechanism rather than a promise. The lint-hook beat is that mechanism actually built. The zero-failure beat generalises the answer: mechanical gates at every stage, never model diligence."
+ },
+ {
+  "id": "s35",
+  "q": "Will it automatically detect if remote has new changes?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "'It' has no antecedent and the sentence names no tool, file, or component. Several distinct in-corpus mechanisms are each a plausible referent (bucket-browser update_status wrapping install.sh check_updates via git fetch; install.sh returning_flow; the ampersand self-heal update path; cmux's out-of-band app auto-update), and nothing in the string selects among them, so the referent is unrecoverable. Paired with s29, its disjunctive continuation."
+ },
+ {
+  "id": "s36",
+  "q": "Let's have an honest conversation: 1) is Sidecoach working? 2) are our latest hooks working? 3) are the \"search\" upgrades to beats working? 4) does anything we built actually work?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-28_four-question-audit-lead-verification.md",
+    "proof": "# \"Does anything we built actually work?\" - measured (2026-07-28)"
+   },
+   {
+    "file": "session_2026-07-28_sidecoach-live-efficacy.md",
+    "proof": "**The detection engine works. The flow surface wrapped around it does not.**"
+   },
+   {
+    "file": "session_2026-07-28_hooks-live-firing-audit.md",
+    "proof": "Drove all 71 wired hook scripts with real payloads and 1902 real prompts / 386 real stop points mined from transcripts. Found and fixed an inverted signal in grounding-gate"
+   },
+   {
+    "file": "session_2026-07-28_beats-search-efficacy.md",
+    "proof": "The hybrid is **alive, correct, and the best of the five systems measured**. It is not"
+   },
+   {
+    "file": "session_2026-07-28_capability-evidence-inventory.md",
+    "proof": "Yes, a real amount of it works - and it is not the part the beats corpus talks about most."
+   }
+  ],
+  "reason": "This exact four-part question was measured and answered. The lead-verification beat states the framing ('Jonah asked whether sidecoach, the hooks, beats search, and anything else actually works') and carries the verdict table for all five units; the four unit beats answer sub-questions 1, 2, 3 and 4 respectively with measured numbers."
+ },
+ {
+  "id": "s37",
+  "q": "Does the numeric compare return the correct exit status for all shapes (full N.N.N, and short \"5\"/\"1.2\")?",
+  "verdict": "NONE",
+  "answers": [],
+  "reason": "The only version-comparison routine the corpus documents is cmux-preflight.sh (reference_cmux_dependency.md, session_2026-07-26_cmux-dependency-pinned.md). Those beats record WHAT the guard exits with (1 = not found, 2 = older than the pin, 0 = OK, unparseable --version = non-blocking warn) and that it 'parses the semver, compares', but nothing anywhere states whether the compare handles SHORT version shapes such as bare '5' or '1.2' versus a full N.N.N, and nothing records a per-shape exit-status result. The 15/16 hermetic preflight test cases are counted but their per-shape content is not recorded. No other numeric/semver compare is described in the corpus (grep for sort -V, version_lt/version_gte/version_at_least, zero-pad, major.minor returned nothing).",
+  "searched": [
+   "version.?compare|vercmp|numeric compare|version_ge|semver",
+   "sort -V|printf.*%03d|version_lt|version_gte|version_at_least|compare version",
+   "N\\.N\\.N",
+   "short version|two-component|major\\.minor|zero-pad",
+   "exit status|exit code (then filtered for version/compare)",
+   "preflight|0\\.64\\.19|hermetic|--version",
+   "arithmetic|integer expression|-lt |-ge |-gt (filtered for version/compare/major/minor)"
+  ]
+ },
+ {
+  "id": "s38",
+  "q": "Are there screenshots stored?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Bare plural with no referent: screenshots of what, produced by which tool, stored where. The string carries no antecedent and the corpus holds at least four unrelated, mutually exclusive 'screenshots are stored' facts, so nothing in the question selects among them: chrome MCP writes to ~/.claude/image-cache/<uuid>/N.png (session_2026-07-07_justify-change-highlight-pill.md); cmux captures go to ad-hoc /tmp/*.png paths (session_2026-05-18_screenshot-open-mandate.md and many verification beats); the design-references catalog stores one optional PNG per reference folder (session_2026-05-20_design-references-catalog.md); the a5a labeling corpus stores Playwright captures as shot-<sha256(id)[0:12]>.png (session_2026-07-24_a5a-ground-truth-integrity-fixes.md). It also reads as a live-filesystem-state question. No corpus can resolve which is being asked.",
+  "searched": [
+   "screenshot (213 files hit)",
+   "screenshots (are|were|get) (saved|stored|written)|screenshot storage|screenshot dir",
+   "\\.png (excluding /tmp/)",
+   "image-cache|design-references screenshot|shot-<sha256"
+  ]
+ },
+ {
+  "id": "s39",
+  "q": "what's wrong with sidecoach?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-28_sidecoach-live-efficacy.md",
+    "proof": "**The detection engine works. The flow surface wrapped around it does not.**"
+   },
+   {
+    "file": "session_2026-06-17_sidecoach-real-behavior-audit.md",
+    "proof": "**Honest verdict:** sidecoach is an intent-router + prompt-scaffold generator, NOT an auditing engine. The actual audit work is entirely on Claude to perform by following the guidance. The BuildReport/verdict layer is misleading: it stamps \"clean / Grade A / ship\" before (and independent of) any real inspection."
+   },
+   {
+    "file": "session_2026-07-28_codex-repairs-sidecoach.md",
+    "proof": "to `assemblePanelModel`, which copies `report.verdict` and `report.overallGrade`, and"
+   },
+   {
+    "file": "feedback_sidecoach_vs_old_pipeline.md",
+    "proof": "**Why:** Sidecoach's elaborate validator framework (159 rules, 36 flows, extended domain validation) did not translate to better actual design output. The old, simpler approach was more effective."
+   }
+  ],
+  "reason": "Broad diagnostic question; several beats substantively enumerate concrete sidecoach defects (canned flow layer returning byte-identical output for all 20 verbs, a verdict/grade layer that stamps clean-Grade-A without inspecting the target, the panel still printing verdict clean / grade A for an unscanned target, and validator complexity not translating into better output). Cited the four that state defects, not the ones that are merely about sidecoach."
+ },
+ {
+  "id": "s40",
+  "q": "Can a SessionStart hook modify the environment/PATH of subsequent Bash tool invocations in the same session?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-16_node-path-default-hook.md",
+    "proof": "**How:** SessionStart hooks may append `export` lines to `$CLAUDE_ENV_FILE`, which Claude Code applies to every subsequent Bash tool call (documented; verified against the hooks doc rather than trusting the subagent that surfaced it)."
+   },
+   {
+    "file": "reference_codex_broken_node12_path.md",
+    "proof": "A SessionStart hook can write `export PATH=...` to `$CLAUDE_ENV_FILE`, which Claude Code applies to every subsequent Bash tool call."
+   }
+  ],
+  "reason": "Yes - both beats state the mechanism ($CLAUDE_ENV_FILE) explicitly, and the first records the live end-to-end result (node v12.22.12 -> v20.19.6) plus the caveat that it requires a session restart to take effect."
+ },
+ {
+  "id": "s41",
+  "q": "Is fixing the fixture the correct root-cause layer, versus (a) weakening/altering the test, or (b) changing the gate?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "session_2026-07-26_sprint3-process-path-resolved.md",
+    "proof": "The citation SHOULD appear; it stopped because the canonical reference fixture drifted out of lint-compliance and silently tripped an intentional gate. The test's expectation is correct and was NOT weakened. No product code and no test file changed - the fix is a one-line data correction in the fixture."
+   }
+  ],
+  "reason": "This beat poses and answers exactly the three-way choice, under a heading that names all three options verbatim - '**Why the fixture, not the test or the gate:**' - and rules for the fixture, with the reasoning that the lint gate's blocking severity is deliberate ('Weakening it would defeat its purpose') and that the canonical reference failing its own lint IS the defect. An independent reviewer 'confirmed fixing the fixture is the correct layer'."
+ },
+ {
+  "id": "s42",
+  "q": "What else didn't you do?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Conversational challenge with no standalone content - 'else' and 'you' refer to a prior assistant turn that is not in the string. No corpus can resolve what was or was not done in that unnamed turn."
+ },
+ {
+  "id": "s43",
+  "q": "When you say \"closes loop,\" and then mention two more tasks...is that really closing a loop?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "A rhetorical challenge to a specific prior assistant message (the quoted phrase 'closes loop' and 'two more tasks' both live only in that turn). Not a standalone question any corpus could resolve; the corpus has no beat about the phrase 'closes loop' as a term of art."
+ },
+ {
+  "id": "s44",
+  "q": "INVESTIGATE + document: What exactly is cmux here (the browser-pane CLI; where does the binary live; how is it invoked)?",
+  "verdict": "ANSWERABLE",
+  "answers": [
+   {
+    "file": "reference_cmux_dependency.md",
+    "proof": "- `/Applications/cmux.app/Contents/Resources/bin/cmux` (universal Mach-O, ~40MB)"
+   },
+   {
+    "file": "session_2026-06-25_cmux-hook-command-not-found-fix.md",
+    "proof": "The failing hooks were the cmux-injected ones: `\"${CMUX_CLAUDE_HOOK_CMUX_BIN:-cmux}\" hooks claude stop` and `... hooks feed --source claude`."
+   }
+  ],
+  "reason": "Has a directive prefix but the underlying information need is a real question, and reference_cmux_dependency.md is the managed record answering all three parts: what cmux is (an external, unvendored macOS app at /Applications/cmux.app serving as the terminal + browser-pane + Teams surface, with no in-repo binary), where the binary lives (the bundle path quoted), and how it is invoked (not on PATH by default; resolved through the ~/.claude/cmux shim, the CMUX_* env chain, and the cmux-injected hook command form quoted from the second beat)."
+ },
+ {
+  "id": "s45",
+  "q": "can I write \"PATH\": \"/my/shim/dir:$PATH\" or \"${PATH}\" and have it expand to the existing PATH), or are values treated as literal strings?",
+  "verdict": "NONE",
+  "answers": [],
+  "reason": "The question is about the expansion semantics of values in the settings.json `env` block. The corpus documents settings.json extensively (hook wiring, mcpServers, permissions, the dotfiles symlink, defaultMode) and documents the ADJACENT mechanism in detail - a SessionStart hook appending `export PATH=...` to $CLAUDE_ENV_FILE - but no beat states whether settings.json env values undergo shell/variable expansion or are treated as literal strings. The one nearby quoting lesson (session_2026-05-23_hook_fixes.md, `<<EOF` vs `<<'EOF'`) is about heredocs in a hook script, not settings.json values, so it does not answer the question.",
+  "searched": [
+   "\\benv\\b.*settings|settings\\.json.*\\benv\\b|env block|\"env\":",
+   "\\$PATH|\\$\\{PATH\\}",
+   "CLAUDE_ENV_FILE|additionalContext|hook.*environment variable",
+   "literal string|does not expand|no shell expansion|variable expansion",
+   "interpolat|expand(s|ed|ing)? (to|the)|shell expansion|not expanded",
+   "environment variable"
+  ]
+ },
+ {
+  "id": "s46",
+  "q": "Did you fix the hook?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "'the hook' has no referent. The corpus describes 71+ wired hooks and dozens of separate hook fixes (node-path-default, codex-failure-watcher, route-intent, grounding-gate, cmux shim, verify-before-done, multiple-choice, screenshot-open-mandate, ...). Nothing in the string selects one, and 'did you' points at a prior turn not present."
+ },
+ {
+  "id": "s47",
+  "q": "Wanna give me a prompt to stress test Sidecoach on the marketing site?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "An imperative directive in interrogative clothing ('give me a prompt') - it asks the assistant to AUTHOR a new artifact, not for information that could live in a beat. Even read generously, the closest beat (session_2026-06-29_sidecoach-stress-test.md) records the RESULT of a 3-axis stress test that was run, not a prompt to hand back, so there is no answer to retrieve either way."
+ },
+ {
+  "id": "s48",
+  "q": "How many entries, what shape?",
+  "verdict": "MALFORMED",
+  "answers": [],
+  "reason": "Sentence fragment with no subject - entries in what, shape of what. A sub-clause of a longer task brief; no corpus can resolve which data structure is meant."
+ }
+]
