@@ -215,12 +215,27 @@ link_or_copy_data() {
 }
 
 # ------------------------------------------------------------
-# prune_broken_skill_symlinks: remove DEAD skill symlinks under ~/.claude/skills.
+# prune_broken_skill_symlinks: remove DEAD repo-owned symlinks from the directories this
+# installer deploys links into - ~/.claude/skills AND ~/.claude/hooks.
 #
-# A skill deployed as a symlink into this repo dangles the moment the repo stops
-# shipping that skill (renamed, retired, path changed). Those broken links pile up
-# in ~/.claude/skills and Claude Code still tries to load them. This clears them -
-# but only the ones THIS repo is responsible for, and only once the target is gone.
+# THE NAME IS NARROWER THAN THE JOB, and is kept because
+# claude/hooks/test-install-prune-skills.sh sources install.sh and calls this symbol by
+# name with this signature. Renaming would break that suite for no behavioural gain.
+#
+# A file deployed as a symlink into this repo dangles the moment the repo stops shipping
+# it (renamed, retired, path changed). Those broken links pile up and Claude Code still
+# tries to load them. This clears them - but only the ones THIS repo is responsible for,
+# and only once the target is gone.
+#
+# WHY HOOKS WERE ADDED (2026-07-28). ~/.claude/hooks/sidecoach-modes.json was found still
+# pointing at claude/hooks/sidecoach-modes.json, a registry deleted in the modes/vocab
+# collapse - one dangling link among 125 repo-owned ones. The instance was a one-off; the
+# GAP WAS NOT. The prune covered skills only, so every retirement under hooks/ left the
+# same residue and nothing anywhere would ever remove it. Fixing the single link would
+# have left the mechanism that produced it in place, so the directory list is the fix.
+# If a future component deploys links into a THIRD directory, add it to PRUNE_DIRS below
+# and give it fixtures in the suite - the safety rules are re-proven per directory there,
+# not assumed to carry over.
 #
 # HARD SAFETY RULES (all enforced, none optional):
 #   - Symlinks only. A real file or real directory is never touched.
@@ -237,10 +252,14 @@ link_or_copy_data() {
 # Args:  $1 = mode: "dryrun" (default) or "apply".
 # Reads: $HOME (-> ~/.claude/skills) and $REPO_DIR (the footprint boundary).
 # Returns: 0 on success; 5 if $REPO_DIR cannot be resolved (footprint unknown -
-#          refuse to prune rather than guess); 6 if an apply-mode removal fails.
+#          refuse to prune rather than guess); 6 if an apply-mode removal fails;
+#          7 if a prune directory exists but cannot be listed (reporting a directory
+#          clean when it was never examined is the one answer worse than an error).
 prune_broken_skill_symlinks() {
   local mode="${1:-dryrun}"
-  local skills_dir="$HOME/.claude/skills"
+  # Every directory this installer deploys repo symlinks into. Skills stays FIRST so the
+  # suite's read-only-home case still hits it and still returns 6.
+  local prune_dirs=("$HOME/.claude/skills" "$HOME/.claude/hooks")
 
   # The footprint boundary. If the repo path cannot be canonicalized we cannot
   # PROVE a target lives inside it, so we prune nothing and say so. Guessing the
@@ -251,14 +270,21 @@ prune_broken_skill_symlinks() {
     return 5
   fi
 
-  if [ ! -d "$skills_dir" ]; then
-    info "prune: no skills directory at $skills_dir - nothing to prune"
-    return 0
-  fi
-
-  local found=0 removed=0
-  local link tgt tgt_abs tgt_dir tgt_base canon_dir canon inside
-  for link in "$skills_dir"/*; do
+  local found=0 removed=0 scanned=0
+  local dir link tgt tgt_abs tgt_dir tgt_base canon_dir canon inside
+  for dir in "${prune_dirs[@]}"; do
+   if [ ! -d "$dir" ]; then continue; fi
+   # AN UNREADABLE DIRECTORY MUST NOT LOOK CLEAN. `-d` is true for a directory we cannot
+   # list, the glob then fails to enumerate, the literal "dir/*" is skipped as a
+   # non-symlink, and the run reports "no dead links" having examined nothing. That is a
+   # silent false negative in a tool whose entire job is to find things. Both bits are
+   # needed: read to list the names, execute to stat them.
+   if [ ! -r "$dir" ] || [ ! -x "$dir" ]; then
+     err "prune: cannot read $dir - refusing to report it clean"
+     return 7
+   fi
+   scanned=$((scanned + 1))
+   for link in "$dir"/*; do
     # Symlinks only. Skips real dirs/files AND the un-expanded glob when the dir is
     # empty (that literal is neither a symlink nor extant).
     if [ ! -L "$link" ]; then continue; fi
@@ -298,22 +324,25 @@ prune_broken_skill_symlinks() {
     if [ "$mode" = "apply" ]; then
       if rm -f "$link"; then
         removed=$((removed + 1))
-        ok "prune: removed dead skill link $link -> $tgt"
+        ok "prune: removed dead link $link -> $tgt"
       else
         err "prune: failed to remove $link"
         return 6
       fi
     else
-      warn "prune: would remove dead skill link $link -> $tgt"
+      warn "prune: would remove dead link $link -> $tgt"
     fi
+   done
   done
 
-  if [ "$found" -eq 0 ]; then
-    info "prune: no dead repo-sourced skill links under $skills_dir"
+  if [ "$scanned" -eq 0 ]; then
+    info "prune: none of ${prune_dirs[*]} exist - nothing to prune"
+  elif [ "$found" -eq 0 ]; then
+    info "prune: no dead repo-sourced links under ${prune_dirs[*]}"
   elif [ "$mode" = "apply" ]; then
-    ok "prune: removed $removed dead skill link(s)"
+    ok "prune: removed $removed dead link(s)"
   else
-    info "prune: $found dead skill link(s) would be removed (dry run) - re-run with --prune-skills-apply to remove"
+    info "prune: $found dead link(s) would be removed (dry run) - re-run with --prune-skills-apply to remove"
   fi
   return 0
 }
@@ -1116,7 +1145,7 @@ Usage:
   ./install.sh --manifest       Print the GUI manifest as JSON and exit
   ./install.sh --apply-plan     Apply a GUI plan JSON from stdin, then exit
   ./install.sh --gui            Open the browser-based GUI installer (localhost only)
-  ./install.sh --prune-skills   List dead repo skill symlinks (dry run), then exit
+  ./install.sh --prune-skills   List dead repo symlinks under ~/.claude/{skills,hooks} (dry run), then exit
   ./install.sh --prune-skills-apply
                                 Remove those dead skill symlinks (explicit approval)
   ./install.sh --help           Show this help
@@ -1310,51 +1339,226 @@ zshrc_block_delete() {
   # set. That direction is the whole point, and it is asserted by test rather than
   # assumed: an earlier change here claimed a safety invariant that turned out to be
   # false in exactly this spot.
-  local b="$1" e="$2" maxspan="${3:-0}" plan snap out
-  [ -f "$ZSHRC" ] || return 0
+  # ---- options ----------------------------------------------------------------------
+  # THE NAME IS A MISNOMER AND CANNOT BE FIXED HERE. This is the general safe-edit
+  # primitive for any user-owned file, but claude/hooks/test-ampersand-shim.sh builds its
+  # harness by awk-extracting `/^zshrc_block_delete\(\) \{/,/^\}/` and asserts `declare -f`
+  # on that exact symbol. That file belongs to another workstream. Renaming would break a
+  # green suite from outside its own repo half, so the name stays and this comment carries
+  # the truth. Call it through safe_block_delete / safe_sed_apply below, which read right.
+  #
+  #   --file PATH   edit PATH instead of $ZSHRC
+  #   --script SED  apply a literal sed script instead of pairing markers
+  # ${ZSHRC:-} rather than $ZSHRC: this is now a general primitive, and a caller that
+  # passes --file has no reason to have ZSHRC set at all. Under `set -u` the bare
+  # expansion killed the caller before the option parser ever ran, which turned every
+  # --file caller into an unexplained failure. Refused explicitly below rather than
+  # defaulted to something, so an unset ZSHRC with no --file is an error, not a silent
+  # no-op against the empty path.
+  local path="${ZSHRC:-}" script="" have_script="" b="" e="" maxspan=0 plan snap out
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --file)   [ $# -ge 2 ] || return 1; path="$2"; shift 2 ;;
+      --script) [ $# -ge 2 ] || return 1; script="$2"; have_script=1; shift 2 ;;
+      # An option-shaped argument that is not a known flag is a caller bug, and the
+      # dangerous reading of it is that the NEXT argument gets treated as a begin marker
+      # while the one after runs as a sed script against the user's file. Refuse instead.
+      -*)       return 1 ;;
+      *)        break ;;
+    esac
+  done
+
+  if [ -z "$have_script" ]; then
+    b="${1:-}"; e="${2:-}"; maxspan="${3:-0}"
+    # Same reasoning as above, for the positional form: a marker that looks like an
+    # option, or an empty one, is refused rather than half-understood. Every real marker
+    # in this file begins with "#" or "<!--", so this can only fire on a caller bug.
+    #
+    # THE END MARKER CHECK IS NOT SYMMETRY, IT IS A REAL DEFECT. The awk planner pairs
+    # with `line == e` after trimming trailing whitespace, so an EMPTY end marker matches
+    # the first BLANK LINE in the file - and the delete then runs from the begin marker to
+    # there, takes whatever the user had in between, and returns 0 as if it worked.
+    # Reproduced: `keep A / <!-- b --> / junk1 / <blank> / keep B` came back as
+    # `keep A / keep B` with rc=0. safe_block_delete forwards "$@", so dropping an
+    # argument at a call site is a one-character mistake away. Refuse instead.
+    case "$b" in ""|-*) return 1 ;; esac
+    case "$e" in ""|-*) return 1 ;; esac
+  fi
+
+  [ -n "$path" ] || return 1
+  [ -f "$path" ] || return 0
 
   # WORK FROM A SNAPSHOT, AND WRITE BACK THROUGH THE PATH.
   #
-  # Three defects are closed by this shape, all found by cross-model review:
-  #  1. `sed -i.bak` names its backup "$ZSHRC.bak" - a path this function does not own.
+  # Three defects are closed by this shape, all found by cross-model review, and all three
+  # were still live against ~/.claude/CLAUDE.md months after being closed here - because
+  # the fix and this write-up were attached to a primitive named for ~/.zshrc. Naming a
+  # hazard after one of its victims is how the rest stay uncovered.
+  #  1. `sed -i.bak` names its backup "$path.bak" - a path this function does not own.
   #     On success it deleted whatever was there, which for anyone who keeps a hand-made
-  #     ~/.zshrc.bak means the installer silently destroyed their backup; on failure it
-  #     could "restore" from that stale unrelated file.
+  #     ~/.zshrc.bak or ~/.claude/CLAUDE.md.bak means the installer silently destroyed
+  #     their backup; on failure it could "restore" from that stale unrelated file.
   #  2. The delete plan is a list of LINE NUMBERS computed by awk. Reading the file a
   #     second time for sed meant those numbers could be applied to different content.
   #     Planning and applying against one snapshot makes that impossible.
-  #  3. `sed -i` refuses a non-regular file, so a symlinked ~/.zshrc - one of the most
-  #     common dotfiles setups - could never be repaired. Redirecting onto "$ZSHRC"
-  #     follows the link, keeps the user's symlink and the original inode, and needs no
+  #  3. `sed -i` refuses a non-regular file, so a symlinked target - one of the most
+  #     common dotfiles setups - could never be edited. Redirecting onto "$path" follows
+  #     the link, keeps the user's symlink and the original inode, and needs no
   #     link-resolution loop (which had its own hop-limit fallthrough bug).
-  snap="$(mktemp "${TMPDIR:-/tmp}/improv-zshrc-snap.XXXXXX")" || return 1
-  out="$(mktemp "${TMPDIR:-/tmp}/improv-zshrc-out.XXXXXX")" || { rm -f "$snap"; return 1; }
-  if ! cat "$ZSHRC" > "$snap"; then rm -f "$snap" "$out"; return 1; fi
+  #
+  # WHETHER FOLLOWING THE LINK IS RIGHT IS THE CALLER'S DECISION, NOT THIS FUNCTION'S.
+  # For ~/.zshrc it always is. For ~/.claude/CLAUDE.md it is not: on a machine where that
+  # path is symlinked INTO this repo, following it would rewrite our own tracked
+  # claude/CLAUDE.md from a deactivate. deactivate_brain and deactivate_memory therefore
+  # keep their `[ ! -L ]` guards and never call in with a link. Do not "simplify" those
+  # guards away for consistency with the zshrc sites - they are load-bearing, and
+  # test-userfile-safe-edit.sh pins them.
+  snap="$(mktemp "${TMPDIR:-/tmp}/improv-safe-snap.XXXXXX")" || return 1
+  out="$(mktemp "${TMPDIR:-/tmp}/improv-safe-out.XXXXXX")" || { rm -f "$snap"; return 1; }
+  if ! cat "$path" > "$snap"; then rm -f "$snap" "$out"; return 1; fi
 
-  plan="$(awk -v b="$b" -v e="$e" -v maxspan="$maxspan" '
-    { line = $0; sub(/[ \t\r]+$/, "", line) }
-    # Checked FIRST, and before the begin rule can set open on this same line, so an
-    # over-long block is refused rather than closed by a distant stranger.
-    open && maxspan > 0 && NR - start > maxspan { bad = 1; exit }
-    line == b {
-      if (open) { bad = 1; exit }
-      open = 1; start = NR; next
-    }
-    line == e {
-      if (open) { printf "%d,%dd;", start, NR; open = 0 }
-      next
-    }
-    END { if (open || bad) exit 1 }
-  ' "$snap")" || { rm -f "$snap" "$out"; return 1; }
+  if [ -n "$have_script" ]; then
+    # SCRIPT MODE. The caller hands over a literal sed script instead of a marker pair,
+    # so there is nothing to pair up: the script IS the plan, and there is no
+    # malformed-block refusal to make. Used for line deletes and for substitutions.
+    #
+    # It shares this function's body for exactly one reason - the snapshot-and-write-back
+    # underneath is the ONE implementation of "edit a user-owned file safely" in this
+    # file, and the alternative was another copy of it. Do not add one.
+    plan="$script"
+  else
+    plan="$(awk -v b="$b" -v e="$e" -v maxspan="$maxspan" '
+      { line = $0; sub(/[ \t\r]+$/, "", line) }
+      # Checked FIRST, and before the begin rule can set open on this same line, so an
+      # over-long block is refused rather than closed by a distant stranger.
+      open && maxspan > 0 && NR - start > maxspan { bad = 1; exit }
+      line == b {
+        if (open) { bad = 1; exit }
+        open = 1; start = NR; next
+      }
+      line == e {
+        if (open) { printf "%d,%dd;", start, NR; open = 0 }
+        next
+      }
+      END { if (open || bad) exit 1 }
+    ' "$snap")" || { rm -f "$snap" "$out"; return 1; }
+  fi
 
   if [ -z "$plan" ]; then rm -f "$snap" "$out"; return 0; fi
 
   # sed line addresses refer to INPUT lines, so several ranges in one script are safe
   # and need no renumbering - and the input here is the same snapshot awk planned from.
   if ! sed "$plan" "$snap" > "$out"; then rm -f "$snap" "$out"; return 1; fi
-  if ! cat "$out" > "$ZSHRC"; then rm -f "$snap" "$out"; return 1; fi
+
+  # THE WRITE-BACK IS NOT ATOMIC, AND THAT IS A DELIBERATE TRADE. `>` truncates "$path"
+  # before cat writes a byte, so a failure part-way through (full disk, quota, a
+  # filesystem limit) leaves the user with a truncated file. The atomic alternative -
+  # write a sibling temp and mv it over the path - would REPLACE a symlinked target with
+  # a regular file and change the inode, which is the entire property this shape exists
+  # to preserve (defect 3 above).
+  #
+  # WHAT THIS ACTUALLY TRADES, stated plainly because the previous wording oversold it.
+  # `sed -i` was ATOMIC: BSD and GNU both write a temp and rename, so none of the sites
+  # this primitive replaced had a truncation window at all. Verified by independent
+  # review (the inode changes across a `sed -i`). This shape gives that up on purpose,
+  # because rename REPLACES a symlinked target with a regular file and the symlink is the
+  # property that has to survive - see defect 3 above. The window is the cost.
+  #
+  # The mitigation below is BEST-EFFORT and its first branch is deliberately untested,
+  # because it is not reachable by any failure a test can induce: `cat > "$path"` fails
+  # for the same reason twice, so a permission or read-only failure fails the restore too.
+  # It only helps a TRANSIENT failure (a disk that frees up), which is exactly the case
+  # worth a free retry and exactly the case a test cannot stage.
+  #
+  # THE GUARANTEE THAT IS TESTED is the last branch: on any write failure the snapshot is
+  # KEPT and its path is printed, so the user's exact prior contents are recoverable by
+  # hand. Every earlier return path deletes the snapshot; this is the one that must not.
+  # test-zshrc-safe-edit.sh asserts the printed path resolves to a file holding the
+  # original bytes - a recovery hint that does not resolve is not a recovery.
+  if ! cat "$out" > "$path"; then
+    if cat "$snap" > "$path" 2>/dev/null; then
+      rm -f "$snap" "$out"; return 1
+    fi
+    printf 'improv: FAILED to write %s and FAILED to restore it. Your original contents are at %s - copy them back by hand.\n' \
+      "$path" "$snap" >&2
+    rm -f "$out"; return 1
+  fi
   rm -f "$snap" "$out"
   return 0
+}
+
+# safe_block_delete <path> <begin-marker> <end-marker> [maxspan]
+# safe_sed_apply    <path> <sed-script>
+#
+# THESE ARE NAMES, NOT IMPLEMENTATIONS. Both delegate straight into zshrc_block_delete so
+# that the snapshot / filter / `cat > "$path"` sequence exists exactly ONCE in this file.
+# They exist because that function's name is locked by an awk extraction in a test file
+# this repo half does not own (see the note in its body), and "zshrc_block_delete --file
+# ~/.claude/CLAUDE.md" reads like a bug at every call site. Use these everywhere except
+# inside functions that test-ampersand-shim.sh extracts - those must keep calling
+# zshrc_block_delete directly, because a symbol the extraction does not carry degrades
+# into "command not found", which the `|| warn` idiom then converts into a SILENT
+# no-delete rather than an error. That failure mode has already cost one investigation
+# and one green-to-red suite regression.
+#
+# Contract, both: 0 on success including "nothing matched"; 1 without touching the file if
+# the edit could not complete or (block form) the markers are malformed. The one exception
+# is the non-atomic write-back window documented in the primitive, where it restores from
+# its snapshot and, failing that, prints the snapshot path.
+#
+# THE HAZARDS THEY CLOSE, all three reproduced against committed code before this landed:
+#   1. `sed -i.bak` writes "$path.bak" - a path the installer does not own - and every
+#      site rm'd it on the next line. A hand-made ~/.zshrc.bak or ~/.claude/CLAUDE.md.bak
+#      was destroyed, silently, with no way back. sed writes that backup whether or not
+#      anything matched, so even a no-op delete destroyed it.
+#   2. `sed '/begin/,/end/d'` with no end marker deletes to END OF FILE. Reproduced on
+#      ~/.claude/CLAUDE.md: a 4-line file came back as 1 line, the user's own trailing
+#      content gone. The block form refuses instead - a delete that cannot find its
+#      boundary does not get to guess where it is.
+#   3. `sed -i` refuses a non-regular file. On ~/.zshrc that aborted the installer; in
+#      migrate_legacy_markers the failure was SWALLOWED (the `sed ... && rm` idiom eats
+#      it), leaving a symlinked ~/.zshrc permanently unmigrated with no diagnostic at all.
+#
+# Defects 1 and 3 were found and fixed on the primitive on 2026-07-27, and its write-up
+# has said so ever since - while deactivate_discord, deactivate_nvm, deactivate_brain,
+# deactivate_memory, section 11 and migrate_legacy_markers all went on running the
+# condemned pattern. A hazard is closed at its CALL SITES or it is not closed. Coverage:
+# test-zshrc-safe-edit.sh and test-userfile-safe-edit.sh, whose structural rows fail on
+# ANY surviving `sed -i` in this file.
+safe_block_delete() {
+  local p="$1"; shift
+  zshrc_block_delete --file "$p" "$@"
+}
+
+safe_sed_apply() {
+  zshrc_block_delete --file "$1" --script "$2"
+}
+
+# strip_block_markers - filter stdin, dropping any line that is one of the marker lines
+# section 11 uses to delimit its own blocks.
+#
+# A BLOCK'S PAYLOAD MUST NEVER CONTAIN THE BLOCK'S OWN DELIMITERS. Without this the
+# installer writes a file it cannot then parse: `claude/CLAUDE.md` in this repo carries a
+# COMMITTED `<!-- improv:brain:begin -->` pair at lines 134/443 (an earlier install wrote
+# its block into the repo's own source through the ~/.claude/CLAUDE.md symlink, and it was
+# committed), so appending that file verbatim produced a target with TWO begin markers
+# after a single install.
+#
+# That used to "work" by accident: `sed '/begin/,/end/d'` deletes first-begin through
+# LAST-end, which happened to span the nested pair exactly. Once the delete correctly
+# REFUSES two-opens-before-a-close, the same input made the brain block impossible to
+# refresh or to uninstall, on every machine, forever. Found by driving the real installer
+# twice in a row - the mirror-based test that preceded it could not see this at all.
+#
+# Stripping is lossless for a reader: these are installer bookkeeping comments, not
+# content. It also fixes the source contamination's symptom without editing the source,
+# which matters because that path is the user's live ~/.claude/CLAUDE.md on this machine.
+strip_block_markers() {
+  grep -vxF \
+    -e '<!-- improv:brain:begin -->' -e '<!-- improv:brain:end -->' \
+    -e '<!-- improv:rules:begin -->' -e '<!-- improv:rules:end -->' \
+    -e '<!-- improv:local:begin -->' -e '<!-- improv:local:end -->' \
+    || true
 }
 
 # is_current_format - does $ZSHRC carry EXACTLY ONE shortcut block, and does that
@@ -1662,13 +1866,19 @@ apply_update() {
 
 deactivate_brain() {
   if [ -f "$CLAUDE_DIR/CLAUDE.md" ] && [ ! -L "$CLAUDE_DIR/CLAUDE.md" ]; then
+    # The `[ ! -L ]` guard above is LOAD-BEARING, not tidiness. On this machine
+    # ~/.claude/CLAUDE.md is a symlink into this repo, and the primitive writes back
+    # THROUGH the path - so without that guard a deactivate would rewrite our own tracked
+    # claude/CLAUDE.md. A repo symlink is handled by removing the link, below. Pinned by
+    # test-userfile-safe-edit.sh so a later "make this consistent with the zshrc sites"
+    # cannot quietly drop it.
     if grep -Fq "<!-- improv:brain:begin -->" "$CLAUDE_DIR/CLAUDE.md"; then
-      sed -i.bak '/<!-- improv:brain:begin -->/,/<!-- improv:brain:end -->/d' "$CLAUDE_DIR/CLAUDE.md"
-      rm -f "$CLAUDE_DIR/CLAUDE.md.bak"
+      safe_block_delete "$CLAUDE_DIR/CLAUDE.md" "<!-- improv:brain:begin -->" "<!-- improv:brain:end -->" \
+        || warn "brain block in $CLAUDE_DIR/CLAUDE.md is malformed (no closing marker, or two opens) - left in place."
     fi
     if grep -Fq "<!-- improv:local:begin -->" "$CLAUDE_DIR/CLAUDE.md"; then
-      sed -i.bak '/<!-- improv:local:begin -->/,/<!-- improv:local:end -->/d' "$CLAUDE_DIR/CLAUDE.md"
-      rm -f "$CLAUDE_DIR/CLAUDE.md.bak"
+      safe_block_delete "$CLAUDE_DIR/CLAUDE.md" "<!-- improv:local:begin -->" "<!-- improv:local:end -->" \
+        || warn "local-overrides block in $CLAUDE_DIR/CLAUDE.md is malformed - left in place."
     fi
     if [ ! -s "$CLAUDE_DIR/CLAUDE.md" ] || ! grep -q '[^[:space:]]' "$CLAUDE_DIR/CLAUDE.md" 2>/dev/null; then
       rm -f "$CLAUDE_DIR/CLAUDE.md"
@@ -1794,8 +2004,9 @@ deactivate_memory() {
   rm -rf "$CLAUDE_DIR/skills/consolidate"
   if [ -f "$CLAUDE_DIR/CLAUDE.md" ] && [ ! -L "$CLAUDE_DIR/CLAUDE.md" ] \
       && grep -Fq "<!-- improv:memory-discipline:begin -->" "$CLAUDE_DIR/CLAUDE.md"; then
-    sed -i.bak '/<!-- improv:memory-discipline:begin -->/,/<!-- improv:memory-discipline:end -->/d' "$CLAUDE_DIR/CLAUDE.md"
-    rm -f "$CLAUDE_DIR/CLAUDE.md.bak"
+    safe_block_delete "$CLAUDE_DIR/CLAUDE.md" \
+      "<!-- improv:memory-discipline:begin -->" "<!-- improv:memory-discipline:end -->" \
+      || warn "memory-discipline block in $CLAUDE_DIR/CLAUDE.md is malformed - left in place."
   fi
   if [ -f "$CLAUDE_DIR/settings.json" ] && [ ! -L "$CLAUDE_DIR/settings.json" ]; then
     python3 - <<'PY'
@@ -1853,8 +2064,35 @@ deactivate_voice() {
 
 deactivate_discord() {
   if [ -f "$ZSHRC" ] && grep -Fq "discord-chat-launcher.sh" "$ZSHRC"; then
-    sed -i.bak '/# Discord Chat Agent launcher/d; /discord-chat-launcher\.sh.*improv/d' "$ZSHRC"
-    rm -f "$ZSHRC.bak"
+    # BOTH patterns are anchored WHOLE-LINE against the exact shapes section 9 writes,
+    # with only the tag word left loose so the pre-rename spelling is covered too:
+    #   # Discord Chat Agent launcher (from Improv)          / (from claude-dotfiles)
+    #   source <dir>/discord-chat-launcher.sh  # Improv: ... / # claude-dotfiles: ...
+    # migrate_legacy_markers does not fold the old spelling in for us - that rewrite
+    # only fires on "=== claude-dotfiles:" and "<!-- claude-dotfiles:", never on a bare
+    # "# " prefix - so the delete has to know both.
+    #
+    # Two things this replaced, both real:
+    #   - the old clause was `discord-chat-launcher\.sh.*improv`, lower-case, matching
+    #     NEITHER shape. This deactivate never removed the source line in any install
+    #     ever shipped, and detect_component kept reporting discord active forever
+    #     because it greps the same basename the surviving line contains.
+    #   - the obvious repair, an unanchored `...\.sh.*[Ii]mprov`, deletes a user's own
+    #     `alias explain='echo discord-chat-launcher.sh came from Improv'`. Flagged by
+    #     cross-model review before it shipped. Substring matching against a user's
+    #     shell config is the hazard this whole file has been fixing all week.
+    # Trailing whitespace is tolerated because hand edits and CRLF add it; nothing else
+    # is. A line that does not match is presumed to be the user's and is left alone.
+    if ! safe_sed_apply "$ZSHRC" '/^# Discord Chat Agent launcher (from .*)[[:space:]]*$/d; /^source .*\/discord-chat-launcher\.sh  # .*: discord-chat-launcher[[:space:]]*$/d'; then
+      # STOP HERE. The symlink removal below would delete the very file the surviving
+      # `source` line points at, so every new shell would open with a "no such file or
+      # directory" error - a worse state than not having deactivated at all. Leave both
+      # halves in place and say so; a failed deactivate that changed nothing is the only
+      # coherent outcome. Returns 0 because callers reach here through a `case` arm under
+      # `set -e` and a component's undo must not abort the whole installer.
+      warn "Could not edit $ZSHRC - leaving the discord-chat-launcher lines AND the scripts they source in place."
+      return 0
+    fi
   fi
   local f
   for f in discord-chat-launcher.sh discord-onboard.sh discord-setup.sh; do
@@ -1983,8 +2221,18 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 
 deactivate_nvm() {
   if [ -f "$ZSHRC" ] && grep -Fq "nvm use default --silent" "$ZSHRC"; then
-    sed -i.bak '/# Auto-activate nvm default so claude\/node\/npm are on PATH in new shells/d; /^nvm use default --silent 2>\/dev\/null$/d' "$ZSHRC"
-    rm -f "$ZSHRC.bak"
+    # BOTH lines stay WHOLE-LINE anchored on purpose. Section 10 writes exactly these two
+    # lines at column 0; anything else is the user's, and leaving a hand-edited variant in
+    # place is the correct answer to an ambiguous match. The comment clause used to be an
+    # unanchored substring, which would have taken a user's `echo "# Auto-activate nvm
+    # default ..."` with it - the same hazard cross-model review found in the discord
+    # patterns above, so both were anchored together.
+    #
+    # The cost is that detect_component's looser grep then keeps reporting active - a
+    # visible wrong state, which is the better failure than deleting a line we did not
+    # write. Trailing whitespace is tolerated; nothing else is.
+    safe_sed_apply "$ZSHRC" '/^# Auto-activate nvm default so claude\/node\/npm are on PATH in new shells[[:space:]]*$/d; /^nvm use default --silent 2>\/dev\/null[[:space:]]*$/d' \
+      || warn "Could not remove the nvm activation lines from $ZSHRC - left in place."
   fi
 }
 
@@ -2143,8 +2391,42 @@ migrate_legacy_markers() {
   local f
   for f in "$ZSHRC" "$CLAUDE_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.local.md"; do
     [ -f "$f" ] || continue
+    # NEVER WRITE THROUGH A LINK INTO OUR OWN REPO. This function runs at the top of
+    # deactivate_component and again in the main install path, which means it runs BEFORE
+    # deactivate_brain's `[ ! -L ]` guard and BEFORE section 11 converts a repo symlink to
+    # a real file - so it is the one place those two protections do not cover.
+    #
+    # This mattered only after the switch to the safe primitive. `sed -i` REFUSED a
+    # symlink, so the repo's tracked claude/CLAUDE.md was protected here by accident;
+    # `cat > "$f"` follows the link, so without this guard an install or a deactivate
+    # would rewrite our own source file in place, same inode, rc=0, silently. Reproduced
+    # by independent review on the exact shape this machine has
+    # (~/.claude/CLAUDE.md -> <repo>/claude/CLAUDE.md).
+    #
+    # A link to the user's OWN dotfiles is followed, as everywhere else: they chose it,
+    # and it is their file. Only links into $REPO_DIR are skipped. The target is resolved
+    # rather than string-matched on `readlink` output so a relative link cannot slip past.
+    if [ -L "$f" ]; then
+      local _t _d _repo
+      _t="$(readlink "$f")"
+      case "$_t" in /*) : ;; *) _t="$(dirname "$f")/$_t" ;; esac
+      _d="$(cd "$(dirname "$_t")" 2>/dev/null && pwd -P)" || _d=""
+      _repo="$(cd "${REPO_DIR:-/nonexistent}" 2>/dev/null && pwd -P)" || _repo=""
+      if [ -n "$_d" ] && [ -n "$_repo" ] && { [ "$_d" = "$_repo" ] || case "$_d/" in "$_repo"/*) true ;; *) false ;; esac; }; then
+        continue
+      fi
+    fi
     if grep -q "claude-dotfiles:" "$f" 2>/dev/null; then
-      sed -i.bak -E 's/(=== |<!-- )claude-dotfiles:/\1improv:/g' "$f" && rm -f "$f.bak"
+      # Two BRE substitutions rather than one ERE alternation: the primitive runs the
+      # script through plain `sed`, and BSD sed has no `\|` in a basic regex. These are
+      # exactly equivalent to the old `s/(=== |<!-- )claude-dotfiles:/\1improv:/g`.
+      #
+      # The old form did NOT merely destroy "$f.bak" (it did). On a symlinked ~/.zshrc it
+      # failed with "in-place editing only works for regular files" and the `sed ... && rm`
+      # idiom SWALLOWED the failure - exit 0, no warning, markers never migrated. Those
+      # machines stayed permanently unmigrated with no diagnostic. Reproduced 2026-07-28.
+      safe_sed_apply "$f" 's/=== claude-dotfiles:/=== improv:/g; s/<!-- claude-dotfiles:/<!-- improv:/g' \
+        || warn "Could not migrate legacy markers in $f - left as they were."
     fi
   done
 }
@@ -3924,38 +4206,55 @@ if picked brain; then
   [ -f "$TARGET_MD" ] || touch "$TARGET_MD"
 
   # Remove old block if present (so re-runs pick up content changes)
+  # Unlike the deactivate sites there is deliberately NO `[ ! -L ]` guard here. The
+  # migration just above converts a link into THIS repo to a real file, so anything still
+  # a symlink at this point points at the user's own dotfiles - a link they chose, and one
+  # the append at the end of this section already writes through. Following it is correct.
+  # Before this change `sed -i` refused it outright with "in-place editing only works for
+  # regular files", which under `set -euo pipefail` aborted the whole install.
+  #
+  # A REFUSED DELETE MUST SUPPRESS THE APPEND. Warning and appending anyway looks
+  # conservative and is the worse failure: each run adds another full copy of RULES.md +
+  # CLAUDE.md (~66 KB), unbounded, and once there are two begin markers deactivate_brain
+  # refuses too - so the user cannot uninstall ANY copy. Measured by independent review at
+  # 1 -> 4 begin markers over three runs. The old delete-to-EOF was destructive but
+  # self-healing on the next run; this shape never heals, so it has to stop instead.
+  brain_block_ok=1
   if grep -Fq "$BRAIN_BEGIN" "$TARGET_MD" 2>/dev/null; then
-    sed -i.bak "/$BRAIN_BEGIN/,/$BRAIN_END/d" "$TARGET_MD"
-    rm -f "$TARGET_MD.bak"
+    safe_block_delete "$TARGET_MD" "$BRAIN_BEGIN" "$BRAIN_END" \
+      || { warn "brain block in $TARGET_MD is malformed (no closing marker, or two opens) - NOT refreshing it. Fix or remove that block, then re-run."; brain_block_ok=0; }
   fi
 
   # Also handle legacy marker from the old claude component
   if grep -Fq "<!-- improv:rules:begin -->" "$TARGET_MD" 2>/dev/null; then
-    sed -i.bak '/<!-- improv:rules:begin -->/,/<!-- improv:rules:end -->/d' "$TARGET_MD"
-    rm -f "$TARGET_MD.bak"
+    safe_block_delete "$TARGET_MD" "<!-- improv:rules:begin -->" "<!-- improv:rules:end -->" \
+      || warn "legacy rules block in $TARGET_MD is malformed - left in place."
   fi
 
-  {
-    printf '\n%s\n' "$BRAIN_BEGIN"
-    cat "$REPO_DIR/claude/RULES.md"
-    printf '\n'
-    cat "$REPO_DIR/claude/CLAUDE.md"
-    printf '\n%s\n' "$BRAIN_END"
-  } >> "$TARGET_MD"
-  ok "Team rules + workflow appended to $TARGET_MD (marker-guarded)"
+  if [ "$brain_block_ok" = 1 ]; then
+    {
+      printf '\n%s\n' "$BRAIN_BEGIN"
+      { cat "$REPO_DIR/claude/RULES.md"; printf '\n'; cat "$REPO_DIR/claude/CLAUDE.md"; } | strip_block_markers
+      printf '\n%s\n' "$BRAIN_END"
+    } >> "$TARGET_MD"
+    ok "Team rules + workflow appended to $TARGET_MD (marker-guarded)"
+  fi
 
   # CLAUDE.local.md personal overrides in their own marker block
   if [ -f "$REPO_DIR/claude/CLAUDE.local.md" ]; then
+    local_block_ok=1
     if grep -Fq "$LOCAL_BEGIN" "$TARGET_MD" 2>/dev/null; then
-      sed -i.bak "/$LOCAL_BEGIN/,/$LOCAL_END/d" "$TARGET_MD"
-      rm -f "$TARGET_MD.bak"
+      safe_block_delete "$TARGET_MD" "$LOCAL_BEGIN" "$LOCAL_END" \
+        || { warn "local-overrides block in $TARGET_MD is malformed - NOT refreshing it. Fix or remove that block, then re-run."; local_block_ok=0; }
     fi
-    {
-      printf '\n%s\n' "$LOCAL_BEGIN"
-      cat "$REPO_DIR/claude/CLAUDE.local.md"
-      printf '\n%s\n' "$LOCAL_END"
-    } >> "$TARGET_MD"
-    info "Appended CLAUDE.local.md (personal overrides, marker-guarded)"
+    if [ "$local_block_ok" = 1 ]; then
+      {
+        printf '\n%s\n' "$LOCAL_BEGIN"
+        strip_block_markers < "$REPO_DIR/claude/CLAUDE.local.md"
+        printf '\n%s\n' "$LOCAL_END"
+      } >> "$TARGET_MD"
+      info "Appended CLAUDE.local.md (personal overrides, marker-guarded)"
+    fi
   fi
 fi
 
