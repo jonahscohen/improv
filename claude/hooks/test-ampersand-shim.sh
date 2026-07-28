@@ -214,14 +214,64 @@ run_install() { # <home> <repo> [extra args...]
 # Run `ampersand ...` through zsh against a seeded .zshrc, echo combined output.
 # --dry-run is the probe: it is the installer's own documented no-op, so reaching
 # it proves the launcher worked without letting the installer write anything.
+# ARGUMENTS GO THROUGH zsh's OWN POSITIONAL PARAMETERS, never spliced into the -c string.
+#
+# The previous form was:
+#     zsh -c "source '$home/.zshrc' ...; ampersand $* --dry-run --only ampersand"
+# `$*` unquoted inside a double-quoted script that zsh then PARSES means the caller's
+# words are re-lexed by the shell before `ampersand` is ever called: quoting is lost, a
+# space splits one argument into two, a `;` starts a second command, and a glob is
+# expanded against the current directory. So the suite could not certify the shim's
+# documented "any other flag is forwarded to install.sh verbatim" property - it was
+# reformatting the arguments itself, and a shim that mangled them looked exactly like a
+# shim that did not. Every existing caller passed flags robust to re-splitting
+# (`--pull`, `--preset minimal`), which is why it read as working.
 run_ampersand() { # <home> [args...]
   local home="$1"; shift
-  HOME="$home" zsh -c "source '$home/.zshrc' >/dev/null 2>&1; ampersand $* --dry-run --only ampersand" 2>&1
+  HOME="$home" zsh -c '
+    zshrc="$1"; shift
+    source "$zshrc" >/dev/null 2>&1
+    ampersand "$@" --dry-run --only ampersand
+  ' zsh "$home/.zshrc" "$@" 2>&1
 }
 reached() { case "$1" in *"no files were touched"*) return 0 ;; *) return 1 ;; esac; }
 
 newcase() { # <name> -> echoes a fresh sandbox HOME
   local h="$TMPROOT/$1"; mkdir -p "$h"; : > "$h/.zshrc"; printf '%s' "$h"
+}
+
+# assert_forwards <label> <arg>... - the args must reach the repo entry point unchanged.
+#
+# Builds a sandbox, installs the real shim into its .zshrc, then REPLACES bin/ampersand
+# with a probe that echoes its argv one record per line. What the shim hands over is
+# therefore observable exactly - argument boundaries and empty arguments included, neither
+# of which a substring check against a log can see.
+#
+# The call runs from a dedicated EMPTY directory. A glob argument only proves something if
+# the answer does not depend on what happens to be in the current working directory, and
+# cd'ing to a known-empty one makes the unmatched-glob case deterministic wherever the
+# suite is invoked from.
+FWD_N=0
+assert_forwards() {
+  local label="$1"; shift
+  local h repo probe expected actual a
+  FWD_N=$((FWD_N+1))
+  h="$(newcase "fwd_$FWD_N")"; repo="$TMPROOT/repo_fwd_$FWD_N"
+  mkrepo "$repo" --with-bin
+  run_install "$h" "$repo"
+  probe="$repo/bin/ampersand"
+  mkdir -p "$repo/bin"
+  printf '%s\n' '#!/bin/bash' 'for a in "$@"; do printf "ARG<%s>\n" "$a"; done' > "$probe"
+  chmod +x "$probe"
+  # run_ampersand appends the two probe flags, so they belong in the expectation too.
+  expected="$(for a in "$@" --dry-run --only ampersand; do printf 'ARG<%s>\n' "$a"; done)"
+  mkdir -p "$TMPROOT/fwd_cwd"
+  actual="$(cd "$TMPROOT/fwd_cwd" && run_ampersand "$h" "$@")"
+  if [ "$actual" = "$expected" ]; then
+    ok "$label"
+  else
+    bad "$label" "argv did not survive the hop; expected [$(printf '%s' "$expected" | tr '\n' ' ')] got [$(printf '%s' "$actual" | tr '\n' ' ')]"
+  fi
 }
 
 # ============================================================
@@ -301,7 +351,7 @@ part1() {
 # ============================================================
 part2() {
   echo "-- launcher behaviour under the conditions that used to kill it --"
-  local h repo out
+  local h repo out rc
 
   # Baseline.
   h="$(newcase run_ok)"; repo="$TMPROOT/repo_run_ok"; mkrepo "$repo" --with-bin
@@ -382,13 +432,46 @@ part2() {
   esac
 
   # No repo anywhere: fail LOUDLY and actionably, never silently.
+  #
+  # `rc` is DECLARED in this function's `local` line and captured with a bare `rc=$?` on
+  # its own. It used to read `out="$(run_ampersand "$h")"; local rc=$?`, which does happen
+  # to work - `$?` is expanded before `local` runs - but it works by an ordering nobody
+  # should have to re-derive, and the one-character-away spelling `local rc; rc=$?` records
+  # the status of `local` instead (measured: 7 vs 0). A status assertion is the last thing
+  # that should turn on that distinction, so the declaration and the capture are separated.
+  # Liveness is not assumed either: proven by pointing IMPROV_TEST_INSTALLER at a copy of
+  # install.sh whose shim returns 0 on the not-found path, which takes this row red.
   h="$(newcase run_norepo)"; repo="$TMPROOT/repo_run_norepo"; mkrepo "$repo" --with-bin
   run_install "$h" "$repo"; rm -rf "$repo"
-  out="$(run_ampersand "$h")"; local rc=$?
+  out="$(run_ampersand "$h")"
+  rc=$?
   assert_in "$out" "cannot find the improv repo"  "no repo anywhere -> says so plainly"
   assert_in "$out" "IMPROV_DIR="                  "no repo anywhere -> names the env override"
   assert_in "$out" "bootstrap.sh"                 "no repo anywhere -> names the re-install command"
   [ "$rc" -ne 0 ] && ok "no repo anywhere -> non-zero exit" || bad "no repo anywhere -> non-zero exit" "rc=$rc"
+
+  # ----------------------------------------------------------
+  # VERBATIM FORWARDING - the shim's documented contract, previously untested
+  # ----------------------------------------------------------
+  # The generated shim promises "any other flag is forwarded to install.sh verbatim" and
+  # implements it as `/bin/bash "$repo/bin/ampersand" "$@"`. Nothing asserted it. The rows
+  # above pass `--pull` and `--preset minimal`, which survive any amount of re-splitting,
+  # so they are consistent with a shim that word-splits everything it touches.
+  #
+  # These arguments are the ones a careless hop mangles: an embedded space, an embedded
+  # quote, a `;` that a re-parsing shell turns into a second command, a `$` a shell would
+  # expand, and a glob. bin/ampersand is replaced with a probe that prints its argv one
+  # record per line, so the assertion is an exact word-list comparison, not a substring of
+  # a log that could match for the wrong reason.
+  assert_forwards "forwarded verbatim: an argument containing a space"      'two words'
+  assert_forwards "forwarded verbatim: an argument containing quotes"       "it's \"quoted\""
+  assert_forwards "forwarded verbatim: an argument containing a semicolon"  'a;echo INJECTED'
+  assert_forwards "forwarded verbatim: an unexpanded \$ reference"          '$HOME/literal'
+  assert_forwards "forwarded verbatim: an unmatched glob"                   '*.improv-no-such-glob'
+  assert_forwards "forwarded verbatim: a flag whose value has a space"      '--preset=my value'
+  assert_forwards "forwarded verbatim: an empty argument"                   ''
+  assert_forwards "forwarded verbatim: all of them at once" \
+    'two words' 'a;echo INJECTED' '*.improv-no-such-glob' '$HOME/literal'
 }
 
 # ============================================================

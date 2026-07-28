@@ -30,12 +30,63 @@ FAIL_LABELS=()
 pass() { echo "PASS: $1"; PASS=$((PASS + 1)); }
 fail() { echo "FAIL: $1  ($2)"; FAIL_LABELS+=("$1"); FAIL=$((FAIL + 1)); }
 
-# Snapshot the real skills dir up front. Nothing here may change it. A sorted listing
-# of the top-level entry names is enough: the prune only ever removes top-level links,
-# so a changed entry set is the only way it could have touched the real dir.
+# Snapshot the real skills dir up front. Nothing here may change it.
+#
+# THE OLD SNAPSHOT WAS `ls -1a | sort` AND IT COULD NOT SEE THE DAMAGE IT WAS WATCHING FOR.
+# Its comment claimed a changed entry set was the only way the prune could touch the real
+# dir. Three ways it could, all of them invisible to a list of top-level NAMES:
+#
+#   1. absent -> present-and-empty. REAL_BEFORE is the empty string when the directory
+#      does not exist, and `ls` of a newly created empty directory also yields the empty
+#      string. A bad run that CREATES a real ~/.claude/skills compared equal to never
+#      having had one.
+#   2. a swapped symlink target. The prune's whole subject is symlinks and where they
+#      point; replacing every entry's target while keeping the names is the most likely
+#      shape of a real bug here, and names alone are blind to it.
+#   3. an entry changing type - a link replaced by a regular file or a directory of the
+#      same name.
+#
+# The snapshot records existence, then per entry: type, path, symlink target, and for
+# regular files size and mtime.
+#
+# IT IS RECURSIVE, not direct-children-only. Scoping it to what the prune is SUPPOSED to
+# walk begs the question - a prune that rewrote ~/.claude/skills/foo/SKILL.md would leave a
+# direct-children listing reading `dir foo` and pass. The tree is small (under a hundred
+# entries), so there is no reason to measure less.
+#
+# WHAT IT MEASURES, stated exactly, because the row is named after what it can prove:
+# existence, every path in the subtree, each entry's type, each symlink's unresolved target,
+# and each regular file's size and mtime (anything that is not a dir, symlink or regular
+# file is recorded as `other`). It does NOT measure modes, ownership, xattrs, or
+# content at a fixed size and mtime. That covers the prune's entire failure class - entries
+# removed, entries repointed, entries retyped - and it is deliberately not called proof that
+# nothing whatsoever about the tree changed, which it is not.
+#
+# REAL_SKILLS IS NOT OVERRIDABLE. An earlier version took the path from
+# IMPROV_TEST_REAL_SKILLS so the row could be proven against a fixture, which handed anyone
+# with that variable set a way to point the safety check at a harmless directory while the
+# user's actual skills tree went unguarded - the check would still print PASS. The override
+# now adds a SECOND, additional watch path; it can never replace the real one.
 REAL_SKILLS="$HOME/.claude/skills"
-REAL_BEFORE=""
-[ -d "$REAL_SKILLS" ] && REAL_BEFORE=$(ls -1a "$REAL_SKILLS" 2>/dev/null | sort)
+PROBE_SKILLS="${IMPROV_TEST_REAL_SKILLS:-}"
+
+snapshot_dir() { # <dir> -> a stable, diffable description of the whole subtree
+  local d="$1" e rel
+  if [ ! -d "$d" ]; then printf 'ABSENT\n'; return 0; fi
+  printf 'PRESENT\n'
+  find "$d" -mindepth 1 2>/dev/null | LC_ALL=C sort | while IFS= read -r e; do
+    rel="${e#"$d"/}"
+    if [ -L "$e" ]; then printf 'link %s -> %s\n' "$rel" "$(readlink "$e" 2>/dev/null)"
+    elif [ -d "$e" ]; then printf 'dir  %s\n' "$rel"
+    elif [ -f "$e" ]; then printf 'file %s %s\n' "$rel" "$(stat -f '%z %m' "$e" 2>/dev/null || stat -c '%s %Y' "$e" 2>/dev/null)"
+    else printf 'other %s\n' "$rel"   # socket, fifo, device: not a regular file, and not labelled as one
+    fi
+  done
+}
+
+REAL_BEFORE=$(snapshot_dir "$REAL_SKILLS")
+PROBE_BEFORE=""
+[ -n "$PROBE_SKILLS" ] && PROBE_BEFORE=$(snapshot_dir "$PROBE_SKILLS")
 
 # Pull in prune_broken_skill_symlinks WITHOUT running the installer.
 IMPROV_INSTALL_LIB_ONLY=1
@@ -242,15 +293,34 @@ rm -rf "$DR_HOME"
 
 echo ""
 echo "===== SAFETY: the real ~/.claude/skills was never touched ====="
-if [ -d "$REAL_SKILLS" ]; then
-  REAL_AFTER=$(ls -1a "$REAL_SKILLS" 2>/dev/null | sort)
-  if [ "$REAL_BEFORE" = "$REAL_AFTER" ]; then
-    pass "real skills dir unchanged"
-  else
-    fail "real skills dir unchanged" "entry set changed"
-  fi
+# No `if [ -d ... ]` wrapper any more. The old form skipped the check entirely when the
+# directory did not exist, which is precisely the absent -> created case it most needed to
+# catch: a run that conjured a real ~/.claude/skills reported "nothing to protect" and
+# passed. snapshot_dir encodes absence as a value, so both states are compared the same way.
+snap_delta() { # <before> <after> -> the changed lines, truncated for a one-line hint
+  diff <(printf '%s\n' "$1") <(printf '%s\n' "$2") 2>/dev/null \
+    | grep -E '^[<>]' | tr '\n' ' ' | cut -c1-400
+}
+
+REAL_AFTER=$(snapshot_dir "$REAL_SKILLS")
+if [ "$REAL_BEFORE" = "$REAL_AFTER" ]; then
+  pass "real skills dir: no entry added, removed, retyped or repointed ($(printf '%s' "$REAL_BEFORE" | head -1))"
 else
-  pass "real skills dir absent - nothing to protect"
+  # The delta is printed, not just asserted. "entry set changed" sent the reader back to
+  # re-derive what moved; a symlink whose TARGET was rewritten is invisible without it.
+  fail "real skills dir: no entry added, removed, retyped or repointed" "delta: $(snap_delta "$REAL_BEFORE" "$REAL_AFTER")"
+fi
+
+# The additional fixture watch, present only when IMPROV_TEST_REAL_SKILLS is set. This is
+# what makes the row above provable - a mutation harness points this at a directory it can
+# safely mutate mid-run - without ever letting the env var take the real tree out of scope.
+if [ -n "$PROBE_SKILLS" ]; then
+  PROBE_AFTER=$(snapshot_dir "$PROBE_SKILLS")
+  if [ "$PROBE_BEFORE" = "$PROBE_AFTER" ]; then
+    pass "probe skills dir unchanged ($(printf '%s' "$PROBE_BEFORE" | head -1))"
+  else
+    fail "probe skills dir unchanged" "delta: $(snap_delta "$PROBE_BEFORE" "$PROBE_AFTER")"
+  fi
 fi
 
 echo ""

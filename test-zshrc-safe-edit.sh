@@ -61,11 +61,40 @@ LIB="$TMPROOT/extracted.sh"
   awk '/^safe_sed_apply\(\) \{/,/^\}/' "$INSTALLER"
   awk '/^deactivate_discord\(\) \{/,/^\}/' "$INSTALLER"
   awk '/^deactivate_nvm\(\) \{/,/^\}/' "$INSTALLER"
+  # SUPPORT HELPERS, extracted only if this revision defines them. deactivate_discord has
+  # delegated to file-scope helpers (repo_symlink_points_into_repo for "does this launcher
+  # symlink belong to our checkout", record_component_failure on the failed-edit path) and
+  # has also had them refactored back out again, both within one session. They are NOT
+  # asserted by name below: pinning a support helper by name turns an installer refactor
+  # into a spurious red, and the generic dependency row further down is what actually
+  # enforces that whatever the subjects call ends up in this extract.
+  #
+  # The degradation being guarded against is real and silent in both directions: in an `if`
+  # condition a command-not-found reads as FALSE, so the branch is skipped and rows report
+  # on code that never ran; in BARE COMMAND POSITION under `set -euo pipefail` it aborts
+  # the function with 127 before its own `return`, so a row about a return value reports on
+  # the harness rather than on the installer.
+  for _h in repo_symlink_points_into_repo record_component_failure; do
+    awk -v fn="$_h" '$0 ~ "^" fn "\\(\\) \\{", /^\}/' "$INSTALLER"
+  done
+  # PARTIAL_FAILURES is the ledger's storage. It lives at install.sh FILE SCOPE, so it
+  # falls outside every function extract, and the failed-edit rows read it to prove the
+  # failure was recorded. Taken verbatim from the installer rather than declared here: if
+  # its initial value ever changes, this follows instead of silently diverging from it.
+  grep -m1 -E '^(declare -g |typeset -g )?PARTIAL_FAILURES=' "$INSTALLER"
   # install.sh's real logger, which the failure paths call.
   printf 'warn() { printf "warn: %%s\\n" "$1" >&2; }\n'
 } > "$LIB"
 
 bash -n "$LIB" 2>/dev/null && ok "extract parses" || bad "extract parses" "awk ranges are mismatched"
+
+# The ledger rows read $PARTIAL_FAILURES under `set -u`, so its absence would kill the driver
+# on an unbound variable and the failure would read as an installer defect instead of as this
+# file needing an update. That is a HARNESS failure and it says so plainly.
+# `declare -g` and `typeset -g` are accepted alongside the bare assignment, so an equivalent
+# refactor of the ledger's storage is not a false alarm; only the variable disappearing is.
+grep -qE '^(declare -g |typeset -g )?PARTIAL_FAILURES=' "$LIB" \
+  || { echo "HARNESS: install.sh no longer defines PARTIAL_FAILURES at file scope - the failed-edit ledger rows below cannot run" >&2; exit 2; }
 
 for fn in zshrc_block_delete safe_block_delete safe_sed_apply deactivate_discord deactivate_nvm; do
   if bash -c "source '$LIB'; declare -f $fn >/dev/null" 2>/dev/null; then
@@ -74,6 +103,38 @@ for fn in zshrc_block_delete safe_block_delete safe_sed_apply deactivate_discord
     bad "extract carries $fn" "add it to the awk extraction above"
   fi
 done
+
+# THE NAMED LIST ABOVE ONLY CATCHES DEPENDENCIES SOMEONE ALREADY THOUGHT OF. Both helpers
+# added just above arrived in install.sh without this list being updated, and the suite did
+# not say so - it reported an installer failure instead, which is the wrong file to go
+# looking in. This row is the general form: any top-level function install.sh defines,
+# called from executable code inside the extract but not defined there, is a harness gap
+# and goes red the first time it appears.
+undefined_deps=""
+lib_defined="$(bash -c "source '$LIB' 2>/dev/null; declare -F" 2>/dev/null | awk '{print $3}' | LC_ALL=C sort -u)"
+# Comments stripped first: these primitives carry long write-ups that NAME other functions,
+# and a mention is not a call.
+lib_code="$(sed -e 's/[[:space:]]#.*$//' -e '/^[[:space:]]*#/d' "$LIB")"
+# Both definition spellings become candidates, or a `function name {` definition could
+# never be reported missing.
+inst_fns="$( { grep -oE '^[a-z_][a-z0-9_]*[[:space:]]*\(\)' "$INSTALLER" | sed 's/[[:space:]]*()//'
+               grep -oE '^function[[:space:]]+[a-z_][a-z0-9_]*' "$INSTALLER" | awk '{print $2}'
+             } | LC_ALL=C sort -u )"
+# COMMAND POSITION. The trailing boundary matters as much as the leading one: requiring
+# whitespace-or-EOL after the name let `if fn; then`, `while fn; do`, `{ fn; }` and a case
+# arm `pat) fn ;;` all evade the guard - the ordinary shapes shell is written in.
+for fn in $inst_fns; do
+  printf '%s\n' "$lib_defined" | grep -qx "$fn" && continue
+  printf '%s\n' "$lib_code" \
+    | grep -qE "(^|[;&|(){}!]|\b(if|then|else|elif|do|while|until)\b)[[:space:]]*$fn([[:space:]]|[;&|)}]|$)" \
+    && undefined_deps="$undefined_deps $fn"
+done
+if [ -z "$undefined_deps" ]; then
+  ok "extract has no undefined function dependencies"
+else
+  bad "extract has no undefined function dependencies" \
+      "called but never defined:$undefined_deps - in an \`if\` that is a silent FALSE, in command position it is a 127 abort"
+fi
 
 # ============================================================
 # Structural: no `sed -i` may target "$ZSHRC" directly anywhere in install.sh.
@@ -87,14 +148,85 @@ done
 # $ZSHRC, because a single-line grep for one spelling is exactly the kind of check that
 # reports clean while the defect walks past it. Both evasions were named by cross-model
 # review of this suite.
-n_sedi="$(awk '
+#
+# A THIRD EVASION, found later and live in this row until now: the matcher was
+# `sed[[:space:]]+-i`, which requires `-i` to be the FIRST token after `sed`. Anything with
+# an option in between - `sed -E -i.bak ... "$ZSHRC"`, `sed -n -i.bak ...`, GNU's
+# `sed --in-place ...`, the combined cluster `sed -Ei.bak ...`, or `sed -e SCRIPT -i FILE`
+# where the option follows the script - scored ZERO and the row stayed green. Confirmed by
+# running the awk against each spelling directly.
+#
+# A pure regex kept losing this race, so the matcher is now a TOKEN SCAN shared with
+# test-userfile-safe-edit.sh: split the logical line on pipeline and list separators, keep
+# the segments whose command really is sed (or gsed, or a path ending in /sed - a word
+# merely ENDING in "sed" does not count), and ask whether any argument token of that
+# segment is an in-place option. Segment scoping is what keeps a `grep -i` on the far side
+# of a pipe from being counted as an in-place edit.
+# LC_ALL=C IS LOAD-BEARING, not decoration. mask_quotes walks the line one character at a
+# time, and install.sh contains multibyte characters (a bullet in a printf around line 3055).
+# In a UTF-8 locale that walk aborts the whole awk with "towc: multibyte conversion failure",
+# n_sedi comes back EMPTY, and the comparison below is then empty-vs-"0" - a row that fails
+# for a reason that has nothing to do with sed. Byte semantics are also what this scan wants:
+# it is looking for ASCII option tokens, not text.
+sedi_awk_rc=0
+n_sedi="$(LC_ALL=C awk '
+  function mask_quotes(s,   out, i, c, q, sq) {
+    # Separators INSIDE a quoted string are not command separators. Without this, a sed
+    # SCRIPT containing one - a sed -e s/a;b/c/ script followed by -i - was split
+    # mid-script and the
+    # trailing -i landed in a segment whose command was no longer sed. Named by review.
+    sq = sprintf("%c", 39); out = ""; q = ""
+    for (i = 1; i <= length(s); i++) {
+      c = substr(s, i, 1)
+      if (q == "") { if (c == sq || c == "\"") q = c; out = out c }
+      else { if (c == q) { q = ""; out = out c } else out = out (c ~ /[|;&#]/ ? "X" : c) }
+    }
+    # a trailing comment is not code. Masked first, so a # inside a quoted string is not
+    # mistaken for one: `sed s/a/b/ FILE # the old sed -i bug` was counted as a live edit.
+    sub(/[[:space:]]#.*$/, "", out)
+    return out
+  }
+  function has_inplace_sed(line,   masked, n, parts, i, m, toks, j, k, tok, cmd) {
+    masked = mask_quotes(line)
+    n = split(masked, parts, /[|;&]/)
+    for (i = 1; i <= n; i++) {
+      m = split(parts[i], toks, /[[:space:]]+/)
+      # sed must be the COMMAND of the segment, not merely a word in it: `echo sed -i` is
+      # not an in-place edit. VAR=val assignment prefixes are skipped, so
+      # `LC_ALL=C sed -i.bak ...` is still seen.
+      k = 1
+      while (k <= m && (toks[k] == "" \
+                        || toks[k] ~ /^[A-Za-z_][A-Za-z0-9_]*=/ \
+                        || toks[k] ~ /^(command|exec|env|time|nohup|nice|sudo|builtin)$/)) k++
+      if (k > m) continue
+      cmd = toks[k]
+      if (cmd !~ /^([^[:space:]]*\/)?g?sed$/) continue
+      for (j = k + 1; j <= m; j++) {
+        tok = toks[j]
+        if (tok == "") continue
+        # `--` ends the options; everything after it is an operand, so a literal -i there
+        # is a FILENAME, not in-place mode.
+        if (tok == "--") break
+        if (tok ~ /^--in-place/) return 1
+        if (tok ~ /^-[A-Za-z]*i/) return 1
+      }
+    }
+    return 0
+  }
   { line = $0 }
   # join continuations into one logical statement before deciding anything
   { while (line ~ /\\$/ && (getline nxt) > 0) { sub(/\\$/, "", line); line = line nxt } }
   line ~ /^[[:space:]]*#/ { next }
-  line ~ /sed[[:space:]]+-i/ && line ~ /\$\{?ZSHRC\}?/ { n++ }
+  has_inplace_sed(line) && line ~ /\$\{?ZSHRC\}?/ { n++ }
   END { print n+0 }
-' "$INSTALLER")"
+' "$INSTALLER")" || sedi_awk_rc=$?
+# BOTH failure signals, because they are different failures. A non-numeric result catches
+# the observed one (awk aborts mid-stream and prints nothing); the exit status catches an
+# awk that fails AFTER printing digits, which the value check alone would wave through.
+case "${n_sedi:-}" in
+  ''|*[!0-9]*) echo "HARNESS: the sed -i scan produced '${n_sedi:-}' instead of a count - awk failed" >&2; exit 2 ;;
+esac
+[ "${sedi_awk_rc:-0}" = 0 ] || { echo "HARNESS: the sed -i scan's awk exited ${sedi_awk_rc}" >&2; exit 2; }
 if [ "$n_sedi" = "0" ]; then
   ok "install.sh has zero \`sed -i\` against \"\$ZSHRC\""
 else
@@ -310,13 +442,114 @@ for site in discord nvm; do
     mkdir -p "$TMPROOT/repo/claude"
     printf '#!/usr/bin/env bash\n' > "$TMPROOT/repo/claude/discord-chat-launcher.sh"
     ln -sf "$TMPROOT/repo/claude/discord-chat-launcher.sh" "$h/.claude/discord-chat-launcher.sh"
-    if HOME="$h" ZSHRC="$h/.zshrc" CLAUDE_DIR="$h/.claude" REPO_DIR="$TMPROOT/repo" \
+    # THIS ROW USED TO ASSERT `return 0`, AND THAT WAS THE OLD MECHANISM, NOT THE PROPERTY.
+    #
+    # The property is "a component's undo must not abort the installer under set -e", and
+    # returning 0 was only one way to get it. It cost more than it bought: rc=0 made
+    # "I changed nothing" indistinguishable from "I removed the component", so the user was
+    # told discord came out while the launcher still sourced in every new shell.
+    #
+    # install.sh now uses a LEDGER instead, and the property survives by a different route:
+    # the site RECORDS the failure and the function returns non-zero, apply_pending calls it
+    # as `if deactivate_component ...; then` - and bash disables errexit for the entire body
+    # of a function whose status is being tested - so nothing aborts, the component is NOT
+    # marked inactive, and the end of the run turns the recorded failure into a non-zero
+    # exit. Two independent consumers, both needed: apply_pending only sees the return
+    # value, and a plain `--only <x> --yes` never reaches apply_pending and only has the
+    # end-of-run ledger check.
+    #
+    # So the row is now FOUR assertions, one per link in that chain, deliberately separate.
+    # A single row that only checked the return value would go green again the day the
+    # ledger stopped recording, which is the failure this file exists to refuse.
+    #
+    # WHAT THE DRIVER MIRRORS, stated precisely: the ERREXIT CONTEXT, not the full call stack.
+    # Production is `if deactivate_component "$owner"; then` in browser-lib.sh, which
+    # dispatches to deactivate_discord through a case arm. The test calls deactivate_discord
+    # inside the same `if` shape, because bash disables errexit through the whole body of a
+    # function whose status is being tested AND through the calls it makes - which is the
+    # entire mechanism under test. It deliberately does NOT go through deactivate_component:
+    # that wrapper also runs migrate_legacy_markers, which has nothing to do with this
+    # contract and would drag an unrelated subject into the row.
+    #
+    # THE LEDGER QUESTION IS ANSWERED INSIDE THE DRIVER, not by parsing it out afterwards.
+    # PARTIAL_FAILURES is newline-JOINED (one `  - <component>: <msg>` line per failure), so
+    # a `LEDGER=%s` key/value line only ever tags the FIRST entry: an earlier unrelated
+    # failure would push the discord record onto an untagged line and fail this row for the
+    # wrong reason, and a first line that merely mentioned discord would pass it for the
+    # wrong reason. The driver matches the RECORD SHAPE anchored to line start, so the
+    # message text - which itself contains "discord-chat-launcher" - cannot satisfy it.
+    fe_driver_rc=0
+    fe_out="$(HOME="$h" ZSHRC="$h/.zshrc" CLAUDE_DIR="$h/.claude" REPO_DIR="$TMPROOT/repo" \
        TMPDIR="$TMPROOT/does-not-exist/" \
-       bash -c "set -euo pipefail; source '$LIB'; deactivate_discord" >/dev/null 2>&1; then
-      ok "$site: failed edit still returns 0 (a case arm under set -e must not abort)"
+       bash -c "
+         set -euo pipefail
+         source '$LIB'
+         printf 'DRIVER_STARTED=yes\n'
+         if deactivate_discord; then
+           printf 'RC=0\n'
+           printf 'MARKED=inactive\n'   # apply_pending's success arm: state_set <owner> inactive
+         else
+           printf 'RC=%s\n' \"\$?\"
+           printf 'MARKED=failed\n'     # apply_pending's failure arm: pending preserved, no state_set
+         fi
+         printf 'CALLER_CONTINUED=yes\n'
+         if printf '%s\n' \"\$PARTIAL_FAILURES\" | grep -q '^  - discord: '; then
+           printf 'LEDGER_HAS_DISCORD_RECORD=yes\n'
+         else
+           printf 'LEDGER_HAS_DISCORD_RECORD=no\n'
+         fi
+       " 2>/dev/null)" || fe_driver_rc=$?
+    # NO `|| true` - that would let CALLER_CONTINUED and MARKED print, a later line die, and
+    # three rows report a pass on a run that fell over. But a non-zero driver is TWO
+    # different events and they belong in different places:
+    #
+    #   the driver never started            -> HARNESS failure. The extract would not source;
+    #                                          nothing below is measuring the installer.
+    #   started, then died before finishing -> a PRODUCT defect, and specifically the one the
+    #                                          "does not abort the caller" row exists to
+    #                                          catch. It must be reported as that row going
+    #                                          RED, not as a harness abort - an installer
+    #                                          that exits mid-undo is exactly the regression
+    #                                          under test, and swallowing it into exit 2
+    #                                          would make that row impossible to fail.
+    #   finished, but exited non-zero       -> HARNESS failure: something broke AFTER the
+    #                                          assertions were emitted.
+    if ! printf '%s\n' "$fe_out" | grep -qx 'DRIVER_STARTED=yes'; then
+      echo "HARNESS: the failed-edit driver never started (exit $fe_driver_rc) - the extract did not source" >&2
+      exit 2
+    fi
+    if [ "$fe_driver_rc" != 0 ] && printf '%s\n' "$fe_out" | grep -qx 'CALLER_CONTINUED=yes'; then
+      echo "HARNESS: the failed-edit driver exited $fe_driver_rc AFTER completing its assertions" >&2
+      exit 2
+    fi
+
+    fe_rc="$(printf '%s\n' "$fe_out" | sed -n 's/^RC=//p')"
+    if [ -n "$fe_rc" ] && [ "$fe_rc" != 0 ]; then
+      ok "$site: a failed edit returns NON-ZERO (rc=$fe_rc)"
     else
-      bad "$site: failed edit still returns 0 (a case arm under set -e must not abort)" \
-          "the installer would die mid-uninstall"
+      bad "$site: a failed edit returns NON-ZERO (rc=${fe_rc:-<none>})" \
+          "rc=0 reports a component as removed while its lines are still in the user's shell config"
+    fi
+
+    if printf '%s\n' "$fe_out" | grep -qx 'CALLER_CONTINUED=yes'; then
+      ok "$site: a failed edit does not abort the caller (set -e safety preserved)"
+    else
+      bad "$site: a failed edit does not abort the caller (set -e safety preserved)" \
+          "the installer died mid-undo - this is the property the old \`return 0\` was protecting"
+    fi
+
+    if printf '%s\n' "$fe_out" | grep -qx 'LEDGER_HAS_DISCORD_RECORD=yes'; then
+      ok "$site: a failed edit is RECORDED in the partial-failure ledger"
+    else
+      bad "$site: a failed edit is RECORDED in the partial-failure ledger" \
+          "no '  - discord: ' record, so a plain --only run (which never reaches apply_pending) would still exit 0"
+    fi
+
+    if printf '%s\n' "$fe_out" | grep -qx 'MARKED=failed'; then
+      ok "$site: a failed edit leaves the component FAILED, not marked inactive"
+    else
+      bad "$site: a failed edit leaves the component FAILED, not marked inactive" \
+          "apply_pending would take its success arm and record a component inactive that never came out"
     fi
     if grep -Eq "$(gone_re "$site")" "$h/.zshrc"; then
       ok "$site: failed edit leaves the source line in place"
