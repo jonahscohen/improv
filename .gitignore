@@ -24,3 +24,6 @@ __pycache__/
 
 # Derived labeling screenshots - regenerated deterministically by the harness
 .shots/
+
+# sidecoach image cache: generated assets, never source
+.sidecoach-cache/

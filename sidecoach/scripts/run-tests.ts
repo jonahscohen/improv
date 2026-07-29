@@ -64,6 +64,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/classifier-parity.test.ts', required: true },                     // engine classifier copy guard (Task 7/8)
   { rel: 'src/__tests__/slash-phrase.test.ts', required: true },                          // /sidecoach phrase union + near-miss (Task 8)
   { rel: 'src/__tests__/executive-report.test.ts', required: true },                      // executive-report renderer contract (Jonah 2026-07-04)
+  { rel: 'src/__tests__/polish-craft.test.ts', required: true },                          // polish TEACH half: craft coverage, selection, no templated After (Jonah 2026-07-29)
   { rel: 'src/__tests__/lane-derivation.test.ts', required: true },                       // verbSteps derivation (Task 2)
   { rel: 'src/__tests__/lane-types.test.ts', required: true },
   { rel: 'src/__tests__/lane-checkpoint-store.test.ts', required: true },
@@ -140,6 +141,11 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/direction-roll.test.ts', required: true },                     // Stage 2c bin/sidecoach-roll.js: outside-ranking deck roll - determinism, unsigned-seed domain, exclusion re-roll, full-sweep no-repeat + exhaustion
   { rel: 'src/__tests__/pre-authorship.test.ts', required: true },                     // Stage 2b bin/sidecoach-preauthor.js: author board+mock, render both, fail-closed gate (proceed/blocked/inconclusive) + e2e render/halt
   { rel: 'src/__tests__/direction-deck-present.test.ts', required: true },             // Stage 2d bin/sidecoach-deck.js: dual-surface deck (markdown table + static artifact), exclusion self-scan, roll-json ids + e2e
+  { rel: 'src/__tests__/image-png-codec.test.ts', required: true },                    // image codec: round trip, deterministic encode, all five scanline filters, five color types, ten NAMED refusals
+  { rel: 'src/__tests__/image-asset-verify.test.ts', required: true },                 // generated-asset verification: blank/flat caught, geometry+format from bytes, placement contrast on real pixels, three-value rule (unverified never folds to verified)
+  { rel: 'src/__tests__/image-generation.test.ts', required: true },                    // provider-agnostic core: cache key, deterministic offline render, legacy-model refusal, projected vs measured cost, both caps, openai + nanobanana adapters and six failure classes
+  { rel: 'src/__tests__/image-cli.test.ts', required: true },                          // bin/sidecoach-image.js e2e: every exit code, nothing written on failure, cache hit proven by a throwing transport, ledger + cumulative cap
+  { rel: 'src/__tests__/image-flow-lens.test.ts', required: true },                    // flowD concept-sketch lens (reached by `sidecoach craft`): real plate through the real bin at zero cost, verified-only artifact, fail-closed memory validation
   { rel: 'src/__tests__/reference-update-service.test.ts', required: true },           // reference-update-service + bin/sidecoach-refs.js: capture-preserving upstream merge, fail-closed apply
   { rel: 'src/__tests__/project-drift-detector.test.ts', required: true },             // token drift: pure detector, all 5 categories + value-based/var rules (was ungated)
   { rel: 'src/__tests__/drift-cli.test.ts', required: true },                          // bin/sidecoach-drift.js: fail-closed verdict matrix + exit classes + e2e

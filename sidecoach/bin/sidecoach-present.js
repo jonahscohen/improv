@@ -335,11 +335,57 @@ function cap(s) { s = String(s == null ? '' : s); return s ? s.charAt(0).toUpper
 // "flowJ_tactical_polish" / "low-contrast" -> "tactical polish" / "low contrast"
 function humRule(rule) { return String(rule == null ? '' : rule).replace(/^flow[A-Z0-9]+_/, '').replace(/[_-]+/g, ' ').trim(); }
 function titleRule(rule) { const h = humRule(rule); return h ? cap(h) : 'Finding'; }
+// POLISH CRAFT, wired in 2026-07-29.
+//
+// RULE_FIX / RULE_WHY above cover the eight AUDIT rules. Every POLISH rule fell through to the two
+// templates below, so a real target produced twelve rows of
+// "resolve the <rule name> issue on the affected element" in the column whose entire job is to say
+// what to DO, each closed by "it undercuts the finished result". The craft for those rules was
+// already written (claude/skills/tactical-polish, src/design-laws.ts) and nothing referenced it.
+//
+// This module states it has no engine deps, so the corpus is required LAZILY and DEFENSIVELY: with
+// no build present, or a corpus that does not know the rule, both templates still apply and the
+// renderer keeps working standalone. Resolution order is finding.fix (measured) > craft corpus >
+// audit map > template, so a validator's own remediation always wins.
+//
+// DEGRADATION IS LOUD, NOT SILENT. Cross-model review 2026-07-29 (High): with no `dist/` build the
+// require fails, the catch swallows it, and every polish row goes back to the template - recreating
+// the exact defect this wiring fixes, invisibly. The corpus is still optional (a guidance build must
+// never crash because a renderer could not find a reference file), but an unavailable corpus now
+// announces itself ONCE on stderr with the underlying error, so a stale or missing build is
+// diagnosable instead of looking like a product regression.
+let _craft = null;
+let _craftWarned = false;
+function craftUnavailable(why) {
+  if (_craftWarned) return null;
+  _craftWarned = true;
+  process.stderr.write(
+    `sidecoach-present: polish craft corpus unavailable (${why}). Polish findings will fall back to the ` +
+    'generic remediation template. Run `npm run build` in sidecoach/ to restore it.\n');
+  return null;
+}
+function craft() {
+  if (_craft === null) {
+    try { _craft = require('../dist/polish-craft'); }
+    catch (e) { _craft = false; craftUnavailable(`cannot load dist/polish-craft: ${e && e.message}`); }
+  }
+  return _craft || null;
+}
+function craftLookup(fn, rule) {
+  const m = craft();
+  if (!m) return undefined;
+  if (typeof m[fn] !== 'function') return craftUnavailable(`dist/polish-craft exports no ${fn}()`);
+  try { const v = m[fn](rule); return v && String(v).trim() ? String(v).trim() : undefined; }
+  catch (e) { return craftUnavailable(`${fn}() threw: ${e && e.message}`); }
+}
 function ruleFix(rule, fix) {
   if (fix && String(fix).trim()) return String(fix).trim();
-  return RULE_FIX[rule] || ('resolve the ' + (humRule(rule) || 'flagged') + ' issue on the affected element');
+  return craftLookup('craftRemediation', rule) || RULE_FIX[rule] ||
+    ('resolve the ' + (humRule(rule) || 'flagged') + ' issue on the affected element');
 }
-function ruleWhy(rule) { return RULE_WHY[rule] || 'it undercuts the finished result'; }
+function ruleWhy(rule) {
+  return RULE_WHY[rule] || craftLookup('craftReason', rule) || 'it undercuts the finished result';
+}
 // Markdown table-cell safety: collapse whitespace, drop newlines, escape pipes.
 function cell(s) { return String(s == null ? '' : s).replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim().replace(/\|/g, '\\|'); }
 function countWord(n, singular, plural) { return n + ' ' + (n === 1 ? singular : (plural || singular + 's')); }

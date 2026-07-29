@@ -47,6 +47,7 @@ const polish_standard_validator_1 = require("./polish-standard-validator");
 const linguistic_ban_validator_1 = require("./linguistic-ban-validator");
 const absolute_ban_detector_1 = require("./absolute-ban-detector");
 const model_routing_1 = require("./model-routing");
+const polish_craft_1 = require("./polish-craft");
 const retry_control_1 = require("./retry-control");
 /**
  * Read CSS files in a project directory and return each rule as a string.
@@ -318,6 +319,46 @@ class FlowJTacticalPolishHandler extends flow_handler_1.BaseFlowHandler {
                     }
                 }
             }
+            // ---------------------------------------------------------------------------------------
+            // TEACH, THEN CHECK.
+            //
+            // What stood here was a fixed 40-line block of imperatives ("SCALE & PRESS (Required): Add
+            // scale(0.96)...") appended identically to every run, whether the page broke one rule or
+            // twenty. It named rules and never said what good looks like or why, and the efficacy trial
+            // measured the consequence: a producer handed a list of rule names satisfies the rule names
+            // and improves nothing the list does not name.
+            //
+            // It is replaced by a brief SELECTED from the rules that actually failed on THIS page,
+            // hardest-first, each note carrying what good looks like, why it matters, the concrete fix
+            // with real values, and an example for the most severe. A page that passes gets no brief,
+            // which is the point: the payload now varies with the page.
+            //
+            // The findings are NOT replaced. Everything the detector half produced still ships below the
+            // brief, and the per-rule polish messages below are NEW - previously the payload reported
+            // "17/24 pass" and never said WHICH seven failed.
+            // ---------------------------------------------------------------------------------------
+            const failedPolishRules = polishReport.results.filter((r) => !r.passed);
+            const craftSubjects = failedPolishRules.map((r) => r.ruleId);
+            if (linguisticP0 > 0)
+                craftSubjects.push('linguistic-p0-templates');
+            if (linguisticP1 > 0)
+                craftSubjects.push('linguistic-p1-slop-words');
+            if (banP0 > 0)
+                craftSubjects.push('absolute-ban-p0');
+            if (banP1 > 0)
+                craftSubjects.push('absolute-ban-p1');
+            const craftBrief = (0, polish_craft_1.craftBriefLines)(craftSubjects);
+            // Name every failed polish rule with the validator's own measured message and remediation.
+            const polishFindingLines = failedPolishRules.map((r) => {
+                const key = (0, polish_craft_1.polishRuleKeyForNumber)(r.ruleId);
+                const note = (0, polish_craft_1.craftNote)(r.ruleId);
+                const label = key || `rule-${r.ruleId}`;
+                // Cross-model review 2026-07-29 (Medium): when neither the validator's own remediation nor a
+                // craft note resolves, the old form emitted a bare line and the payload silently stopped
+                // keeping its promise that every failing rule arrives with a fix. Say so instead.
+                const fix = r.remediation || note?.fix || 'no remediation recorded for this rule';
+                return `- [${label}] ${r.message} -> ${fix}`;
+            });
             const guidance = [
                 `Validation Matrix: ${totalRules}-Rule Framework (${totalPassed}/${totalRules} rules pass - ${combinedPassRate}%)`,
                 `= ${polishReport.totalRules}-point Polish Standard`,
@@ -325,56 +366,22 @@ class FlowJTacticalPolishHandler extends flow_handler_1.BaseFlowHandler {
                 '+ Linguistic Ban Scan (slop words + rhetorical templates)',
                 `+ Absolute Ban Detector (${(0, absolute_ban_detector_1.scannedBanCount)()} named anti-patterns)`,
                 '',
+                ...(craftBrief.length ? craftBrief : ['CRAFT BRIEF: nothing to teach - every checked rule passed on this page.', '']),
+                'FINDINGS - what was actually measured on this page.',
+                '',
                 ...absoluteBanGuidance,
                 '',
                 ...linguisticGuidance,
                 '',
                 `POLISH STANDARD (${polishReport.totalRules} rules):`,
                 `- Polish: ${polishReport.passed}/${polishReport.totalRules} pass`,
+                ...(polishFindingLines.length
+                    ? [`- ${polishFindingLines.length} failing, each with the measured message and its fix:`, ...polishFindingLines]
+                    : ['- No failing polish rules.']),
                 '',
                 `EXTENDED DOMAINS (${extendedReport.totalRules} rules):`,
                 `- Extended: ${extendedReport.passed}/${extendedReport.totalRules} pass`,
                 `- Domains: ${extendedDomainBreakdown}`,
-                '',
-                'SCALE & PRESS (Required):',
-                '- Add scale(0.96) on active/press state to all buttons, links, interactive components',
-                '- Gives tactile, pressable feeling without changing layout',
-                '',
-                'RADIUS & SPACING (Required):',
-                '- Use concentric radius: outer container = inner element radius + padding',
-                '- Example: button 8px + 4px padding = 12px container outer radius',
-                '',
-                'SHADOWS (Required):',
-                '- All shadows use rgba(0,0,0,0.1) or surface tint, never rgb/hsl',
-                '- Preserves theme colors in light/dark modes',
-                '',
-                'TRANSITIONS (Required):',
-                '- Never use transition: all',
-                '- Specify: transition: background-color 200ms, transform 300ms',
-                '- Separate timing for different properties (transform faster than color)',
-                '',
-                'HIT AREAS (Required):',
-                '- All interactive targets minimum 40x40px (mobile-friendly)',
-                '- Padding around icons to reach 40px, not icon size itself',
-                '',
-                'TEXT & TYPOGRAPHY (Optional):',
-                '- text-wrap: balance on headings (prevents widow lines)',
-                '- font-smoothing: antialiased on light text over dark bg',
-                '- font-variant-numeric: tabular-nums on any dynamic numbers',
-                '',
-                'ICONS & IMAGES (Optional):',
-                '- Icon state changes via opacity+scale+blur (e.g., opacity 0→1, scale 0.25→1, blur 4px→0)',
-                '- Image borders: rgba(0,0,0,0.1) or subtle tint overlay, never bright colors',
-                '',
-                'ANIMATION OPTIMIZATION (Optional):',
-                '- will-change on max 2-3 elements per page (not on every :hover)',
-                '- Exit animations 2-3x faster than entrance (feels snappier)',
-                '- Initial={false} on AnimatePresence children to prevent layout shift',
-                '- Stagger entrance and exit differently (not symmetric)',
-                '',
-                'OPTICAL ALIGNMENT (Optional):',
-                '- Visual center differs from geometric center (especially circles, icons)',
-                '- Adjust baseline alignment on text near icons',
             ];
             const memoryBuilder = new flow_memory_schema_1.FlowMemoryBuilder(this.flowId, this.getFlowName())
                 .setSummary(`${totalRules}-rule validation matrix applied: ${totalPassed}/${totalRules} rules pass (${combinedPassRate}%)`)

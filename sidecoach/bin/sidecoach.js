@@ -102,6 +102,7 @@ const STANDALONE_BINS = {
       ['sidecoach-roll', 'Draw a design direction from the deck (seeded = reproducible)', 'node bin/sidecoach-roll.js [--seed <uint32>]'],
       ['sidecoach-preauthor', 'Render-before-build gate: board + mock from a brief, fail-closed proceed/block', 'node bin/sidecoach-preauthor.js --brief <brief.json>'],
       ['sidecoach-deck', 'Present drawn directions as a Markdown or rich-HTML pick list', 'node bin/sidecoach-roll.js | node bin/sidecoach-deck.js'],
+      ['sidecoach-image', 'Generate a raster asset AND verify the bytes (offline by default; live spend is opt-in)', 'node bin/sidecoach-image.js generate --prompt "<brief>" --out hero.png'],
     ],
   },
   governance: {
@@ -266,6 +267,12 @@ function helpForTarget(target) {
     console.log(`Run \`node bin/${bin}.js --help\` for its full options and exit-code contract.`);
     if (bin === 'sidecoach-drift') {
       console.log('Also invoked by the audit flow (flowK) as its Theming token-drift lens.');
+    }
+    if (bin === 'sidecoach-image') {
+      console.log('Also invoked by the design-references flow (flowD, reached by `sidecoach craft` and `sidecoach colorize`)');
+      console.log('as its concept-sketch lens, in offline mode, which never spends.');
+      console.log('A generated asset is only reported as verified when its own bytes pass the contract:');
+      console.log('geometry, format, a real rendered image rather than a blank, and contrast where text will sit.');
     }
     return 0;
   }
