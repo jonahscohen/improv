@@ -18,9 +18,8 @@ import { collect, CollectionAbortedError } from './project-collector';
 import type { Collected } from './project-collector';
 import { stampResult, inconclusive } from './check-context';
 import type { ProductCheckContext, CollectedFile } from './check-context';
-import { collectBrowserEvidence, renderUrlFromContext } from './browser-evidence-collector';
+import { renderUrlFromContext } from '../render-target';
 import type { BrowserEvidenceCollection } from './browser-evidence-collector';
-import { scanRenderedLive } from './rendered-live-scan';
 import type { RenderedScanCollection, LiveScanOptions } from './rendered-live-scan';
 import { loadCommittedFontFamilies } from '../project-context';
 
@@ -57,6 +56,58 @@ export interface ValidatorRuntimeDeps {
 function committedFamiliesForContext(context: unknown): string[] {
   const c = context as { projectPath?: unknown };
   return typeof c?.projectPath === 'string' ? loadCommittedFontFamilies(c.projectPath) : [];
+}
+
+/**
+ * The two browser-backed collectors, loaded ONLY when a render is actually going to happen.
+ *
+ * WHY (measured 2026-07-29): browser-evidence-collector and rendered-live-scan both
+ * `import { chromium } from 'playwright'` at module scope, and run-validator imported both
+ * eagerly. So EVERY static scan paid 134ms to load a browser driver it never used - the single
+ * largest cost in a 200ms static run of bin/sidecoach-detect.js.
+ *
+ * FAIL-CLOSED IS PRESERVED EXACTLY, and this is the part that had to be got right rather than
+ * assumed. Both real functions begin by returning a hard-coded unavailable-with-reason result
+ * when renderUrl is falsy (browser-evidence-collector.ts:55, rendered-live-scan.ts:119-122).
+ * The short-circuits below return those SAME literals verbatim, so a caller with no renderUrl
+ * observes a byte-identical result - `available: false` with the same reason string, which is
+ * what makes the dependent rules report inconclusive instead of clean. Nothing here can turn an
+ * unavailable lens into a passing one; the ONLY change is that the unavailable answer no longer
+ * requires a browser driver in memory to produce it.
+ *
+ * The `deps` injection seams are checked FIRST, so a test-injected fake still wins and is still
+ * called for a falsy renderUrl exactly as before.
+ */
+const NO_RENDER_URL_REASON = 'no render URL in validation context';
+
+async function runBrowserEvidence(
+  deps: ValidatorRuntimeDeps,
+  renderUrl: string | undefined,
+  signal?: AbortSignal,
+): Promise<BrowserEvidenceCollection> {
+  if (deps.collectBrowserEvidence) return deps.collectBrowserEvidence(renderUrl, signal);
+  if (!renderUrl) return { available: false, reason: NO_RENDER_URL_REASON };
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { collectBrowserEvidence } = require('./browser-evidence-collector') as typeof import('./browser-evidence-collector');
+  return collectBrowserEvidence(renderUrl, signal);
+}
+
+async function runLiveScan(
+  deps: ValidatorRuntimeDeps,
+  renderUrl: string | undefined,
+  signal?: AbortSignal,
+  opts?: LiveScanOptions,
+): Promise<RenderedScanCollection> {
+  if (deps.scanRenderedLive) return deps.scanRenderedLive(renderUrl, signal, opts);
+  if (!renderUrl) {
+    return {
+      objective: { available: false, reason: NO_RENDER_URL_REASON },
+      subjective: { available: false, reason: NO_RENDER_URL_REASON },
+    };
+  }
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { scanRenderedLive } = require('./rendered-live-scan') as typeof import('./rendered-live-scan');
+  return scanRenderedLive(renderUrl, signal, opts);
 }
 
 // Promote ONLY the generated browserRuleIds whose evidence requirements are ALL
@@ -235,6 +286,12 @@ async function executeRule(
         : status === 'pass' ? p.result.status === 'pass'
           : true);
   const evidenceLocations = [...new Set(contributing.flatMap((p) => p.result.evidenceLocations))];
+  // A rule aggregated across files can mix a real defect location with an anchor. 'defect'
+  // wins: it is the stronger claim and the reader needs the offending line first. Only when
+  // EVERY contributing location is an anchor is the aggregate reported as an anchor.
+  const locationKind = evidenceLocations.length === 0 ? undefined
+    : contributing.some((p) => p.result.evidenceLocations.length && p.result.locationKind !== 'anchor') ? 'defect' as const
+      : 'anchor' as const;
   const message = contributing.map((p) => p.result.message).find(Boolean)
     ?? (status === 'inconclusive' ? `unread ${reqKind} evidence for ${def.canonicalRuleKey}` : `${def.canonicalRuleKey}: ${status}`);
   const remediation = contributing.map((p) => p.result.remediation).find((m): m is string => !!m);
@@ -243,7 +300,7 @@ async function executeRule(
     ruleId: def.ruleId, canonicalRuleKey: def.canonicalRuleKey, status,
     normalizedErrorCategory: status === 'inconclusive' ? category : undefined,
     severity: def.severity, findingClass: def.findingClass,
-    evidenceKind: def.evidenceRequirements[0], evidenceLocations, message, remediation,
+    evidenceKind: def.evidenceRequirements[0], evidenceLocations, locationKind, message, remediation,
   };
 
   const exec: RuleExecution = { result, discoveredApplicableFiles, inspectedApplicableFiles, sufficientlyCovered: false };
@@ -311,14 +368,14 @@ async function runDetailed(
   // policy: successful collection promotes the browser rules whose evidence is present;
   // failed/absent collection promotes none (static cleanPolicy stays the baseline).
   const renderUrl = renderUrlFromContext(context);
-  const browser = await (deps.collectBrowserEvidence ?? collectBrowserEvidence)(renderUrl, signal);
+  const browser = await runBrowserEvidence(deps, renderUrl, signal);
   if (signal?.aborted) return abortedDetail(validatorId, policy);
   // ONE live rendered scan per target (objective + subjective), resolved BEFORE any rendered-scan rule runs so
   // checkProduct reads it synchronously and never launches its own browser (Codex P0-4). Fail-closed inside.
   // Ground B of default-typeface receives the project's committed families here; [] leaves it inert (Stage 4b).
   const brandFamilies = committedFamiliesForContext(context);
-  const rendered = await (deps.scanRenderedLive ?? scanRenderedLive)(
-    renderUrl, signal, brandFamilies.length ? { typeface: { brandFamilies } } : undefined);
+  const rendered = await runLiveScan(
+    deps, renderUrl, signal, brandFamilies.length ? { typeface: { brandFamilies } } : undefined);
   if (signal?.aborted) return abortedDetail(validatorId, policy);
   const activePolicy = activateRenderedPolicy(
     activateBrowserPolicy(policy, gen, browser.available ? browser.evidence.browserEvidence.kinds : []),

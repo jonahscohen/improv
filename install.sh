@@ -725,7 +725,18 @@ harness_home_is_inside_home() {
 # clean-mirror row go red for the wrong reason; the mutation earned its keep.
 harness_skill_targets() {
   local _hst_rows _hst_row _hst_label _hst_home _hst_root _hst_abs_home _hst_abs_root
+  local _hst_seen=""
   _hst_rows="${IMPROV_HARNESS_ROOTS:-$HARNESS_SKILL_ROOTS_DEFAULT}"
+  # A $HOME carrying a TAB or a NEWLINE would corrupt every row this function emits, because the
+  # output format is one tab-separated record per line and both callers split on exactly those
+  # two characters. Refusing once here beats emitting rows that parse into paths nobody meant.
+  case "$HOME" in
+    *"	"*|*"
+"*)
+      warn "harness-skills: \$HOME contains a tab or newline - refusing to compute harness targets" >&2
+      return 0
+      ;;
+  esac
   while IFS= read -r _hst_row; do
     [ -n "$_hst_row" ] || continue
     case "$_hst_row" in \#*) continue ;; esac
@@ -755,6 +766,17 @@ harness_skill_targets() {
       warn "harness-skills: $_hst_label root does not resolve inside \$HOME - refusing to write $_hst_abs_root" >&2
       continue
     fi
+    # A DUPLICATE LABEL is refused rather than emitted twice. verify_harness_skills resolves a
+    # label back to a root by scanning this output, so two rows sharing a label would make one of
+    # them unverifiable while the ledger still claimed both were checked - a verifier reporting
+    # clean over a path it never looked at.
+    case "$_hst_seen" in
+      *" $_hst_label "*)
+        warn "harness-skills: ignoring duplicate harness label '$_hst_label'" >&2
+        continue
+        ;;
+    esac
+    _hst_seen="$_hst_seen $_hst_label "
     printf '%s\t%s\n' "$_hst_label" "$_hst_abs_root"
   done <<EOF
 $_hst_rows
@@ -818,6 +840,17 @@ install_skill_to_harnesses() {
     err "install_skill_to_harnesses: usage: install_skill_to_harnesses <skill-name>"
     return 2
   fi
+  # THE SKILL NAME IS A PATH COMPONENT on both sides - it is appended to $REPO_DIR/claude/skills
+  # and to every harness root - so a name carrying a slash or `..` would read from and write to
+  # somewhere nobody named, and `..` in particular would escape $HOME after the containment
+  # assertion had already passed on the root. Every call site today is a hardcoded literal; this
+  # is here so that stays true when the next one is a variable.
+  case "$_ish_name" in
+    */*|*..*|.|..|-*)
+      err "install_skill_to_harnesses: refusing skill name '$_ish_name' - must be a plain directory name"
+      return 2
+      ;;
+  esac
   if [ "${IMPROV_HARNESS_MIRROR:-1}" = "0" ]; then
     info "harness-skills: mirroring disabled (IMPROV_HARNESS_MIRROR=0) - $_ish_name stays Claude-only"
     return 0

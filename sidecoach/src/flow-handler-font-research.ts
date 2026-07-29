@@ -10,6 +10,7 @@ import { FlowMemoryBuilder } from './flow-memory-schema';
 import { EnhancedFlowExecutionContext } from './flow-execution-context-enhanced';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 export interface FontResearchContext {
   brandPersonality?: string;
   typographyApproach?: string;
@@ -80,7 +81,20 @@ export class FlowCFontResearchHandler extends BaseFlowHandler {
       ]);
 
       // Build guidance
+      // TEACH, THEN CHECK. The line below prints the typography law strings and calls them principles.
+      // They are rule statements, and a reader handed them still does not know how to choose a face.
+      // The brief adds the selection craft with its real gate - separate Il1, O0, rn/m, a/o and cl/d at
+      // body size, require five or more weights, pair across classification not within it - and the
+      // reason each matters, so the decision is defensible rather than a preference.
+      const craft = await flowCraft(context.projectPath, {
+        shape: 'produce',
+        ruleKeys: ['polish/default-typeface', 'polish/typography-rhythm', 'polish/tiny-text'],
+        lawDomains: ['research', 'typography'],
+        domainLabel: 'typeface selection',
+      });
+
       const guidance = [
+        ...craftGuidanceBlock(craft, 'no typeface rules were measurable on this project.'),
         `Brand personality: ${brandPersonality || 'Not defined'}`,
         '',
         `Typography Domain Rules (${typographyRules.length} principles):`,

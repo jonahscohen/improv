@@ -14,8 +14,10 @@ import { DesignReferencesSystemImpl } from './design-references-reference';
 import { SHARED_DESIGN_LAWS, CATEGORY_REFLEX } from './design-laws';
 import { FlowMemoryBuilder } from './flow-memory-schema';
 import { EnhancedFlowExecutionContext } from './flow-execution-context-enhanced';
+import { compileImageBrief } from './image-brief-compiler';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 export interface DesignReferenceContext {
   referencesFound: number;
   colorDomainRules: string[];
@@ -69,6 +71,20 @@ export interface ConceptSketchOutcome {
  * produce the same prompt, so the same brief always produces the same plate (and the same cache key).
  */
 export function buildSketchPrompt(register: string, approach: string, utterance: string): string {
+  // Routed through the brief compiler rather than assembled here.
+  //
+  // WHAT THIS REPLACED, and why it mattered: three sentences naming a register, an approach, and the raw
+  // utterance. That is a weak prompt built from a weak brief, which is the one thing this layer exists to stop.
+  // The compiler supplies the staging, the frame, the focal, the depth, the negative constraints, and the text
+  // policy, so the same brief now yields a structured specification. The plate role is forced because a flow D
+  // reference plate is always a plate, whatever nouns the utterance happens to contain.
+  const compiled = compileImageBrief(
+    { text: utterance.trim().replace(/\s+/g, ' ').slice(0, 220) || 'the surface described in the brief', role: 'plate' },
+    { register, approach, sizePolicy: { allowed: ['1024x1024'] } },
+  );
+  if (compiled) return compiled.prompt;
+  // Unreachable while the plate role is forced (a forced role always compiles), and kept as a floor rather than a
+  // throw so a reference search can never crash on its sketch step.
   const subject = utterance.trim().replace(/\s+/g, ' ').slice(0, 220) || 'the surface described in the brief';
   return [
     `A reference plate for a ${register} interface in a ${approach} visual direction.`,
@@ -298,7 +314,20 @@ export class FlowDReferenceSearchHandler extends BaseFlowHandler {
       ]);
 
       // Build guidance
+      // TEACH, THEN CHECK. The colour and reference lines below list the domain LAWS as statements.
+      // The brief adds what a law list cannot: what good looks like, the reason, and the concrete
+      // values - the 8-10 grey ramp, saturation rising at both ends, flipping contrast rather than
+      // darkening, grayscale before colour - each citing the file it came from so a reader can go
+      // read the long form instead of taking the line on trust.
+      const craft = await flowCraft(context.projectPath, {
+        shape: 'produce',
+        findingClasses: ['anti-pattern', 'theming'],
+        lawDomains: ['research', 'color'],
+        domainLabel: 'reference direction and colour',
+      });
+
       const guidance = [
+        ...craftGuidanceBlock(craft, 'no colour or anti-pattern rules were measurable on this project.'),
         `Register: ${register}`,
         `Design approach: ${designApproach}`,
         '',

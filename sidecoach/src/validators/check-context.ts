@@ -70,13 +70,27 @@ export interface RuleVerdict {
   status: RuleStatus;
   message: string;
   evidenceLocations?: string[];
+  /** See ProductRuleResult.locationKind. Defaults to 'defect' when locations are supplied
+   *  by a check directly; the applicability wrapper stamps 'anchor' when it fills them in. */
+  locationKind?: 'defect' | 'anchor';
   remediation?: string;
   normalizedErrorCategory?: NormalizedErrorCategory;
   evidenceKind?: EvidenceKind;
 }
 
 export const pass = (message: string, evidenceLocations: string[] = []): RuleVerdict => ({ status: 'pass', message, evidenceLocations });
-export const fail = (message: string, evidenceLocations: string[] = [], remediation?: string): RuleVerdict => ({ status: 'fail', message, evidenceLocations, remediation });
+/** A check calling fail() with locations is pointing at the DEFECT itself. Absence findings
+ *  leave locations empty and let withRuleApplicability fill in the anchor. */
+export const fail = (message: string, evidenceLocations: string[] = [], remediation?: string): RuleVerdict => ({
+  status: 'fail', message, evidenceLocations, remediation,
+  locationKind: evidenceLocations.length ? 'defect' : undefined,
+});
+/** fail() for an ABSENCE finding whose locations are the FIX SITE, not the defect. Use this
+ *  whenever nothing at the reported line is itself wrong. */
+export const failAnchor = (message: string, evidenceLocations: string[] = [], remediation?: string): RuleVerdict => ({
+  status: 'fail', message, evidenceLocations, remediation,
+  locationKind: evidenceLocations.length ? 'anchor' : undefined,
+});
 export const notApplicable = (message: string): RuleVerdict => ({ status: 'not_applicable', message });
 export const inconclusive = (message: string, category: NormalizedErrorCategory = 'unreadable_input'): RuleVerdict => ({ status: 'inconclusive', message, normalizedErrorCategory: category });
 
@@ -104,6 +118,7 @@ export function stampResult(def: ProductRuleDefinition, v: RuleVerdict): Product
     findingClass: def.findingClass,
     evidenceKind: v.evidenceKind ?? def.evidenceRequirements[0],
     evidenceLocations: v.evidenceLocations ?? [],
+    locationKind: (v.evidenceLocations && v.evidenceLocations.length) ? (v.locationKind ?? 'defect') : undefined,
     message: v.message,
     remediation: v.remediation,
   };
@@ -118,18 +133,28 @@ export function stampResult(def: ProductRuleDefinition, v: RuleVerdict): Product
 export type Applicability = true | false | 'unknown';
 
 const textOf = (ctx: ProductCheckContext): string => `${ctx.cssText || ''}\n${ctx.markup || ''}`;
-const INTERACTIVE_RE = /:hover|:active|:focus|<button\b|<a\b|<input\b|<select\b|<textarea\b|role\s*=\s*["']?(?:button|link|tab|menuitem|switch|checkbox)\b|\b(?:btn|button|link|nav|menu|tabs?|toggle|input|select|textarea|chip|switch|control|interactive)\b/i;
-const ICON_RE = /\bicon\b|<svg\b|lucide|heroicon|tabler|\bphosphor\b|material-symbols/i;
-const IMAGE_RE = /img\s*\{|\.image\b|<img\b/i;
-const HEADING_RE = /<h[1-6]\b|(?:^|[\s,}])h[1-6]\s*[,{:]|\.(?:title|heading|headline|hero-title|display|headline)\b/i;
-const MOTION_RE = /transition\s*:|@keyframes\b|animation\s*:|animation-delay|framer-motion|<AnimatePresence|\bmotion\./i;
-const ROOT_TARGET_RE = /(?:^|[\s,}])(?:\*|:root|html|body)\s*[,{]/i;
-const SHADOW_TARGET_RE = /box-shadow\s*:|--shadow|\.(?:card|panel|dialog|modal|popover|surface|elevated|sheet|menu|dropdown|tooltip|tile)\b/i;
+// EXPORTED so the source locator can report the line where the probe found the target.
+// An ABSENCE finding ("no :active press feedback") has no defect line of its own, so its
+// location is the ANCHOR: the site this probe matched, which is exactly where the missing
+// rule has to be written. Both the applicability probe and the locator read these SAME
+// consts, so a regex edit can never leave the reported line pointing somewhere the probe
+// did not actually look.
+export const INTERACTIVE_RE = /:hover|:active|:focus|<button\b|<a\b|<input\b|<select\b|<textarea\b|role\s*=\s*["']?(?:button|link|tab|menuitem|switch|checkbox)\b|\b(?:btn|button|link|nav|menu|tabs?|toggle|input|select|textarea|chip|switch|control|interactive)\b/i;
+export const ICON_RE = /\bicon\b|<svg\b|lucide|heroicon|tabler|\bphosphor\b|material-symbols/i;
+export const IMAGE_RE = /img\s*\{|\.image\b|<img\b/i;
+export const HEADING_RE = /<h[1-6]\b|(?:^|[\s,}])h[1-6]\s*[,{:]|\.(?:title|heading|headline|hero-title|display|headline)\b/i;
+export const MOTION_RE = /transition\s*:|@keyframes\b|animation\s*:|animation-delay|framer-motion|<AnimatePresence|\bmotion\./i;
+export const ROOT_TARGET_RE = /(?:^|[\s,}])(?:\*|:root|html|body)\s*[,{]/i;
+export const SHADOW_TARGET_RE = /box-shadow\s*:|--shadow|\.(?:card|panel|dialog|modal|popover|surface|elevated|sheet|menu|dropdown|tooltip|tile)\b/i;
 // A real optical-alignment target is an icon-text control / badge / labelled control -
 // NOT plain `padding:` (that is the FEATURE the check then evaluates; treating it as the
 // target made ordinary layout padding a false pass, Codex P2#3).
-const OPTICAL_TARGET_RE = /\bbadge\b|\bicon\b|\bchip\b|\bbtn\b|\bbutton\b|\blabel\b|icon-text|\bpill\b|\btag\b/i;
-const FOCUSABLE_RE = /:focus|:hover|:active|<button\b|<a\b|<input\b|<select\b|<textarea\b|role\s*=\s*["']?(?:button|link|tab|menuitem)\b|\b(?:btn|button|link|input|nav|tabs?|focusable|interactive|control)\b/i;
+export const OPTICAL_TARGET_RE = /\bbadge\b|\bicon\b|\bchip\b|\bbtn\b|\bbutton\b|\blabel\b|icon-text|\bpill\b|\btag\b/i;
+export const FOCUSABLE_RE = /:focus|:hover|:active|<button\b|<a\b|<input\b|<select\b|<textarea\b|role\s*=\s*["']?(?:button|link|tab|menuitem)\b|\b(?:btn|button|link|input|nav|tabs?|focusable|interactive|control)\b/i;
+export const TABULAR_TARGET_RE = /\.(?:counter|timer|stat|price|count|metric|number|kpi|tabular)\b/i;
+export const TRANSITION_TARGET_RE = /transition\s*:/i;
+export const FRAMER_TARGET_RE = /framer-motion|<AnimatePresence/i;
+export const WILL_CHANGE_TARGET_RE = /will-change\s*:/i;
 
 const presence = (ctx: ProductCheckContext, target: RegExp, scope: 'css' | 'markup' | 'both'): Applicability => {
   const haveCss = hasCss(ctx);
@@ -149,13 +174,13 @@ export const iconTargetApplicability = (ctx: ProductCheckContext): Applicability
   return presence(ctx, INTERACTIVE_RE, 'both'); // an interactive control can bear an icon swap
 };
 export const imageTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, IMAGE_RE, 'both');
-export const transitionTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, /transition\s*:/i, 'css');
-export const tabularTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, /\.(?:counter|timer|stat|price|count|metric|number|kpi|tabular)\b/i, 'css');
+export const transitionTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, TRANSITION_TARGET_RE, 'css');
+export const tabularTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, TABULAR_TARGET_RE, 'css');
 export const headingTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, HEADING_RE, 'both');
 export const motionTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, MOTION_RE, 'both');
 export const rootStyleApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, ROOT_TARGET_RE, 'css');
-export const framerApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, /framer-motion|<AnimatePresence/i, 'markup');
-export const willChangeApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, /will-change\s*:/i, 'css');
+export const framerApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, FRAMER_TARGET_RE, 'markup');
+export const willChangeApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, WILL_CHANGE_TARGET_RE, 'css');
 export const shadowTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, SHADOW_TARGET_RE, 'css');
 export const opticalTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, OPTICAL_TARGET_RE, 'css');
 export const focusableTargetApplicability = (ctx: ProductCheckContext): Applicability => presence(ctx, FOCUSABLE_RE, 'both');
@@ -184,16 +209,40 @@ const PROBES: Record<string, (ctx: ProductCheckContext) => Applicability> = {
 
 // Wrap a faithful raw feature check with its applicability probe. unknown ->
 // inconclusive, false -> not_applicable, true -> the raw check runs.
+//
+// It also fills in the ANCHOR location for an absence finding. This is the right place and
+// the only place: the probe has just proven a target EXISTS in the collected source, so the
+// wrapper is the one layer that knows both the rule key and that a target was found. A
+// check body cannot report where the missing rule belongs without re-deriving what the
+// probe already established - and a rule whose fix site is unstated is a chore, not a fix.
+//
+// Lazy require: source-locator imports this module for the target regexes, so a top-level
+// import here would be a cycle.
 export function withRuleApplicability(
   canonicalRuleKey: string,
   rawCheck: (ctx: ProductCheckContext) => RuleVerdict,
 ): (ctx: ProductCheckContext) => RuleVerdict {
   const probe = PROBES[canonicalRuleKey];
   return (ctx: ProductCheckContext): RuleVerdict => {
-    if (!probe) return rawCheck(ctx);
+    if (!probe) return withAnchor(canonicalRuleKey, ctx, rawCheck(ctx));
     const a = probe(ctx);
     if (a === 'unknown') return inconclusive(`cannot establish applicability for ${canonicalRuleKey} from collected evidence`, 'unreadable_input');
     if (a === false) return notApplicable(`no applicable target for ${canonicalRuleKey} in collected evidence`);
-    return rawCheck(ctx);
+    return withAnchor(canonicalRuleKey, ctx, rawCheck(ctx));
   };
+}
+
+/**
+ * Fill an ABSENCE finding's location with its anchor. Only ever ADDS to an empty
+ * evidenceLocations - a check that already pointed at a real defect keeps its own
+ * 'defect' locations untouched. Finding nothing leaves the list empty, because no
+ * location at all beats a made-up one.
+ */
+function withAnchor(canonicalRuleKey: string, ctx: ProductCheckContext, v: RuleVerdict): RuleVerdict {
+  if (v.status !== 'fail' || (v.evidenceLocations && v.evidenceLocations.length)) return v;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { locateRuleAnchor } = require('./source-locator') as typeof import('./source-locator');
+  const anchor = locateRuleAnchor(ctx, canonicalRuleKey);
+  if (!anchor.length) return v;
+  return { ...v, evidenceLocations: anchor, locationKind: 'anchor' };
 }

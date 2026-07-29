@@ -12,6 +12,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 interface DesignTokenContext {
   tokenSections: string[];
   domainValidationResults: {
@@ -228,7 +229,20 @@ export class FlowFDesignTokensHandler extends BaseFlowHandler {
       const typographyDisplay = designTokens.typography?.display?.family || '(undefined in DESIGN.md)';
 
       // Build guidance
+      // TEACH, THEN CHECK. This flow has a real detector already (the typography validator), so its
+      // findings half was never the problem - the missing half was any statement of what a good token
+      // system IS. The brief supplies it: role-based naming over value-based, interactive states
+      // resolved from tokens so a theme switch does not leave seams, one radius scale, and dark mode
+      // measured rather than inverted. Its theming failures are enumerated below.
+      const craft = await flowCraft(context.projectPath, {
+        shape: 'produce',
+        findingClasses: ['theming'],
+        lawDomains: ['tokens', 'color'],
+        domainLabel: 'design tokens',
+      });
+
       const guidance = [
+        ...craftGuidanceBlock(craft, 'no theming rules were measurable on this project.'),
         `DESIGN.md Status: ${hasDesignMd ? 'Found' : 'Missing at ' + designMdPath}`,
         `Token Sections: ${tokenSections.length > 0 ? tokenSections.join(', ') : 'None found'}`,
         '',

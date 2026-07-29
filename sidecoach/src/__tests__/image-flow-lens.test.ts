@@ -51,10 +51,35 @@ function testPrompt(): void {
   const a = buildSketchPrompt('product', 'restrained editorial', 'a pricing page');
   const b = buildSketchPrompt('product', 'restrained editorial', '  a   pricing    page  ');
   assert(a === b, 'the prompt normalizes whitespace, so the same brief is the same request');
-  assert(a !== buildSketchPrompt('brand', 'restrained editorial', 'a pricing page'), 'the register changes the prompt');
   assert(a !== buildSketchPrompt('product', 'brutalist', 'a pricing page'), 'the visual approach changes the prompt');
-  assert(/no text, no lettering, no logos/.test(a), 'the prompt forbids text, which is what makes a plate usable under a headline');
-  assert(/negative space/.test(a), 'the prompt asks for space to place content in');
+
+  // REVISED 2026-07-29 when the sketch prompt began routing through the brief compiler. Two assertions changed
+  // and neither was weakened; both were made true.
+  //
+  // 1. "the register changes the prompt" was asserted against a brief that names its own surface. Under the
+  //    compiler the register only supplies a surface DEFAULT, so a brief containing "pricing" resolves to the
+  //    persuade surface for both registers, and it is correct that the register makes no difference there: the
+  //    brief's own signal is the stronger one. The real invariant is that the register matters when the brief is
+  //    silent, and that is what is asserted now.
+  assert(
+    buildSketchPrompt('product', 'restrained editorial', 'something for the site')
+      !== buildSketchPrompt('brand', 'restrained editorial', 'something for the site'),
+    'the register changes the prompt when the brief names no surface of its own',
+  );
+  assert(
+    a === buildSketchPrompt('brand', 'restrained editorial', 'a pricing page'),
+    'a brief that names its own surface outranks the register default, so the register does not change it',
+  );
+
+  // 2. The old prompt was checked for the literal phrases "no text, no lettering, no logos" and "negative space".
+  //    The compiled prompt forbids text more thoroughly and in more places, so the check is on the PROPERTIES a
+  //    reference plate needs rather than on one phrasing of them.
+  assert(/No legible lettering anywhere/.test(a), 'the prompt forbids legible lettering, which is what makes a plate usable under a headline');
+  assert(/greeked/.test(a), 'the prompt says what to do instead of lettering rather than only what not to do');
+  assert(/no logos, wordmarks, or brand marks/.test(a), 'the prompt forbids marks a plate must never invent');
+  assert(/^STRUCTURE:/.test(a), 'the prompt leads with the structure, which is what stops a generator painting a scene');
+  assert(/\nFOCAL:/.test(a) && /\nDEPTH:/.test(a) && /\nDO NOT:/.test(a), 'the compiled prompt carries the staging grammar and the negative constraints');
+  assert(/quiet and low-detail/.test(a), 'the prompt reserves a region for the content that will sit on the plate');
   const long = buildSketchPrompt('product', 'modern', 'x'.repeat(500));
   assert(!long.includes('x'.repeat(221)), 'an absurdly long brief is truncated rather than sent whole');
   assert(long.includes('x'.repeat(220)), 'the truncation keeps the leading 220 characters of the brief');

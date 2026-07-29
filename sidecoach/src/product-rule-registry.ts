@@ -780,6 +780,71 @@ const RAW_RULES: ProductRuleDefinition[] = [
     narrowTargetBehavior: 'evaluate_expanded_context',
     applicability: 'not_applicable',
   },
+  // ---------------------------------------------------------------------------------------
+  // Three STATIC AI-slop tells added 2026-07-29 after a head-to-head on the identical canary
+  // showed a competing tool catching all three while our static lane was blind to them
+  // (benchmark/fixtures/canary/canary.html). All three read CSS text, so they belong in the
+  // static lane rather than behind a render.
+  //
+  // Severity `minor` (non-blocking) on all three, deliberately. Each is a TASTE judgment with
+  // a legitimate counter-example - a deliberate Inter, a single-family page whose hierarchy is
+  // carried by weight, a spring curve chosen on purpose - so shipping them as blockers would
+  // gate a build on a matter of opinion. They inform; they do not veto. Checks and their
+  // reasoning live in validators/checks/typography-motion-tells.ts; mutation controls (a
+  // fixture proven to trip each rule and a clean fixture proven not to) live in
+  // benchmark/fixtures/mutation/.
+  // ---------------------------------------------------------------------------------------
+  {
+    ruleId: 'anti-pattern.overused-font',
+    sourceRuleAliases: ['overused-font'],
+    canonicalRuleKey: 'anti-pattern/overused-font',
+    ownerValidatorId: 'anti-pattern',
+    sourceVocabulary: 'p012',
+    sourceSeverity: 'P2',
+    severity: 'minor',
+    findingClass: 'anti-pattern',
+    registryScope: 'named-ban-compliance',
+    evidenceRequirements: ['css-rule'],
+    supportedSourceKinds: supportedKindsFor('css-rule'),
+    scope: 'file',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'not_applicable',
+  },
+  {
+    ruleId: 'anti-pattern.single-font',
+    sourceRuleAliases: ['single-font'],
+    canonicalRuleKey: 'anti-pattern/single-font',
+    ownerValidatorId: 'anti-pattern',
+    sourceVocabulary: 'p012',
+    sourceSeverity: 'P2',
+    severity: 'minor',
+    findingClass: 'anti-pattern',
+    registryScope: 'named-ban-compliance',
+    evidenceRequirements: ['css-rule'],
+    supportedSourceKinds: supportedKindsFor('css-rule'),
+    // PAGE scope, unlike its two neighbours: "only one typeface for the whole page" is a
+    // judgment over the assembled source, and evaluating it per-file would fire on every
+    // single-purpose stylesheet in a project that pairs two faces across files.
+    scope: 'page',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'not_applicable',
+  },
+  {
+    ruleId: 'anti-pattern.bounce-easing',
+    sourceRuleAliases: ['bounce-easing'],
+    canonicalRuleKey: 'anti-pattern/bounce-easing',
+    ownerValidatorId: 'anti-pattern',
+    sourceVocabulary: 'p012',
+    sourceSeverity: 'P2',
+    severity: 'minor',
+    findingClass: 'anti-pattern',
+    registryScope: 'named-ban-compliance',
+    evidenceRequirements: ['css-rule'],
+    supportedSourceKinds: supportedKindsFor('css-rule'),
+    scope: 'file',
+    narrowTargetBehavior: 'evaluate_expanded_context',
+    applicability: 'not_applicable',
+  },
 ];
 
 // Attach the four-status checkProduct to every definition. The wrapper looks up the

@@ -13,6 +13,7 @@ import {
 import { FlowMemoryBuilder } from './flow-memory-schema';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 export class FlowWLandingCompositionHandler extends BaseFlowHandler {
   constructor() {
     super('flowW_landing_composition');
@@ -32,7 +33,19 @@ export class FlowWLandingCompositionHandler extends BaseFlowHandler {
     const rhythm = getRhythmRules(register);
     const antiPatterns = getAntiPatternCallouts(register);
 
+    // TEACH, THEN CHECK. This flow hands back a section taxonomy and a vertical gap in pixels, which
+    // tells a producer what sections EXIST and nothing about how to compose them. The brief adds the
+    // composition craft: build one real feature before the shell, vary the rhythm so a reader can feel
+    // where they are on the page, and stop pouring unequal content into an equal card grid.
+    const craft = await flowCraft(context.projectPath, {
+      shape: 'produce',
+      findingClasses: ['anti-pattern'],
+      lawDomains: ['composition', 'spatial'],
+      domainLabel: 'landing composition',
+    });
+
     const guidance: string[] = [
+      ...craftGuidanceBlock(craft, 'no anti-pattern rules were measurable on this project.'),
       `Register: ${register}`,
       `Section taxonomy (${taxonomy.length} sections):`,
       ...taxonomy.map((s: SectionDescriptor) => `- ${s.name} (${s.id}): ${s.purpose}`),

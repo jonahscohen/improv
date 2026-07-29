@@ -6,7 +6,14 @@
 // absent, so a page without the relevant element is never failed. DOM-visible evidence only (img attrs, CSS
 // properties, aria/structural fallbacks, visible button text) - reliable regardless of framework.
 import type { ProductCheckContext, RuleVerdict } from '../check-context';
-import { pass, fail, notApplicable } from '../check-context';
+import { pass, fail, failAnchor, notApplicable } from '../check-context';
+import { locate, locateWhere } from '../source-locator';
+
+// The <img> tag pattern the checks below both count and locate. ONE source so the located
+// lines cannot describe a different set of tags than the count in the message.
+const IMG_TAG_RE = /<img\b[^>]*>/gi;
+const hasExplicitDims = (tag: string): boolean =>
+  ((/\bwidth\s*=/i.test(tag) && /\bheight\s*=/i.test(tag)) || /aspect-ratio/i.test(tag));
 
 // Comment-stripped lowercased haystack (HTML + JS/CSS block + JS line comments; line strip guarded against ':'
 // so https:// survives) - same registry-quality posture as forms-checks.
@@ -21,10 +28,14 @@ const hay = (ctx: ProductCheckContext): string =>
 export const checkImageDimensions = (ctx: ProductCheckContext): RuleVerdict => {
   const imgs = hay(ctx).match(/<img\b[^>]*>/g);
   if (!imgs || imgs.length === 0) return notApplicable('no <img> elements');
-  const missing = imgs.filter((t) => !(((/\bwidth\s*=/.test(t)) && (/\bheight\s*=/.test(t))) || /aspect-ratio/.test(t)));
+  const missing = imgs.filter((t) => !hasExplicitDims(t));
   return missing.length === 0
     ? pass('images declare explicit dimensions (or aspect-ratio)')
-    : fail(`${missing.length} image(s) lack width+height/aspect-ratio (causes layout shift)`, [], 'Set width and height (or aspect-ratio) on <img> so the browser reserves space before load');
+    : fail(
+      `${missing.length} image(s) lack width+height/aspect-ratio (causes layout shift)`,
+      locateWhere(ctx, IMG_TAG_RE, (tag) => !hasExplicitDims(tag), 'markup'),
+      'Set width and height (or aspect-ratio) on <img> so the browser reserves space before load',
+    );
 };
 
 // IMGPERF_002: below-the-fold images should lazy-load.
@@ -42,9 +53,18 @@ export const checkImageLazyLoad = (ctx: ProductCheckContext): RuleVerdict => {
     if (/fetchpriority\s*=\s*["']?high/.test(tag)) return false; // intentionally eager
     return i > 0;                                                // first image exempt
   });
+  const isEager = (tag: string, i: number): boolean => {
+    if (/loading\s*=\s*["']?lazy/i.test(tag)) return false;
+    if (/fetchpriority\s*=\s*["']?high/i.test(tag)) return false;
+    return i > 0;
+  };
   return eager.length === 0
     ? pass('below-the-fold images use loading="lazy" (the first/hero image may load eagerly)')
-    : fail(`${eager.length} below-the-fold image(s) not lazy-loaded`, [], 'Add loading="lazy" to images past the first/hero (or fetchpriority="high" if intentionally eager) so below-the-fold images defer their fetch');
+    : fail(
+      `${eager.length} below-the-fold image(s) not lazy-loaded`,
+      locateWhere(ctx, IMG_TAG_RE, isEager, 'markup'),
+      'Add loading="lazy" to images past the first/hero (or fetchpriority="high" if intentionally eager) so below-the-fold images defer their fetch',
+    );
 };
 
 // CONTENT_002: overflow-prone text containers need a wrap/clamp strategy.
@@ -53,7 +73,13 @@ export const checkTextOverflowStrategy = (ctx: ProductCheckContext): RuleVerdict
   if (!/text-overflow:\s*ellipsis|\btruncate\b|line-clamp/.test(h)) return notApplicable('no overflow-prone text container');
   return /overflow-wrap|word-break|break-words|line-clamp|-webkit-line-clamp|text-wrap/.test(h)
     ? pass('long text has a wrap/clamp strategy')
-    : fail('text container can overflow without a wrap/clamp strategy', [], 'Add overflow-wrap/word-break or a line-clamp so long strings (URLs, emails) do not break the layout');
+    // ANCHOR: the overflow-prone container that needs the strategy. Nothing at this line is
+    // itself wrong, so it must not be reported as a defect site.
+    : failAnchor(
+      'text container can overflow without a wrap/clamp strategy',
+      locate(ctx, /text-overflow\s*:\s*ellipsis|\btruncate\b|line-clamp/i, 'both', 3),
+      'Add overflow-wrap/word-break or a line-clamp so long strings (URLs, emails) do not break the layout',
+    );
 };
 
 // DARKMODE_001: when the page expresses dark-mode intent, declare the color-scheme: dark CSS property (NOT the
@@ -63,7 +89,11 @@ export const checkColorSchemeDark = (ctx: ProductCheckContext): RuleVerdict => {
   if (!/prefers-color-scheme|dark-mode|darkmode|data-theme|\.dark\b|theme.*dark/.test(h)) return notApplicable('no dark-mode intent');
   return /(?<!prefers-)color-scheme\s*:\s*[^;}]*\bdark\b/.test(h)
     ? pass('color-scheme: dark declared for native control theming')
-    : fail('dark mode without a color-scheme: dark declaration', [], 'Add color-scheme: dark (or light dark) so native controls, scrollbars, and form fields adapt');
+    : failAnchor(
+      'dark mode without a color-scheme: dark declaration',
+      locate(ctx, /prefers-color-scheme|dark-mode|darkmode|data-theme|\.dark\b/i, 'both', 3),
+      'Add color-scheme: dark (or light dark) so native controls, scrollbars, and form fields adapt',
+    );
 };
 
 // CHART_003: a chart needs a text or table fallback for assistive tech.
@@ -77,7 +107,11 @@ export const checkChartA11yFallback = (ctx: ProductCheckContext): RuleVerdict =>
   }
   return /<table\b|<figcaption\b|aria-label=|aria-describedby=|sr-only|visually-hidden|role=["']table["']/.test(h)
     ? pass('chart provides a text/table fallback')
-    : fail('chart has no text/table fallback for assistive tech', [], 'Add a <table>, aria-label/aria-describedby, or an sr-only summary so the data is reachable without sight');
+    : failAnchor(
+      'chart has no text/table fallback for assistive tech',
+      locate(ctx, /<canvas\b|recharts|highcharts|echarts|amcharts|class=["'][^"']*\b(?:chart|graph|sparkline|plot)/i, 'both', 3),
+      'Add a <table>, aria-label/aria-describedby, or an sr-only summary so the data is reachable without sight',
+    );
 };
 
 // COPY_003: button labels should be specific, not generic ("submit"/"click here"/"ok").
@@ -90,10 +124,18 @@ export const checkButtonLabelSpecific = (ctx: ProductCheckContext): RuleVerdict 
     if (t) texts.push(t);
   }
   if (!texts.length) return notApplicable('no button text to evaluate');
-  const generic = texts.filter((l) => /^(submit|ok|okay|click here|button|go|next|done|yes|no)$/i.test(l.trim()));
+  const GENERIC_LABEL_RE = /^(submit|ok|okay|click here|button|go|next|done|yes|no)$/i;
+  const generic = texts.filter((l) => GENERIC_LABEL_RE.test(l.trim()));
   return generic.length === 0
     ? pass('button labels are specific')
-    : fail(`generic button label(s): ${generic.slice(0, 3).join(', ')}`, [], 'Use action-specific labels ("Save changes", "Send invite") so the purpose is clear out of context');
+    : fail(
+      `generic button label(s): ${generic.slice(0, 3).join(', ')}`,
+      // DEFECT: the offending <button> itself. Same normalization the count uses, so the
+      // located tags are exactly the counted ones.
+      locateWhere(ctx, /<button\b[^>]*>([\s\S]*?)<\/button>/gi,
+        (tag) => GENERIC_LABEL_RE.test(tag.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()), 'markup'),
+      'Use action-specific labels ("Save changes", "Send invite") so the purpose is clear out of context',
+    );
 };
 
 export const PAGE_QUALITY_CHECKS: Record<string, (ctx: ProductCheckContext) => RuleVerdict> = {

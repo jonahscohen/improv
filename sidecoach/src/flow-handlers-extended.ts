@@ -1,6 +1,7 @@
 import { BaseFlowHandler, FlowExecutionContext, FlowExecutionResult, ChecklistItem } from './flow-handler';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 
 // T-0015 (2026-05-28): legacy Flow1/Flow3/Flow6/Flow8/Flow9/Flow11/Flow12/Flow13/Flow14
 // handlers removed as duplicates of their lettered canonicals
@@ -23,12 +24,24 @@ export class FlowYExploreHandler extends BaseFlowHandler {
     // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
     applyModelSelection(this.flowId, context);
 
+    // TEACH, THEN CHECK. Exploration is deliberately unjudged, so the brief here is narrow on purpose:
+    // it teaches only the reflex checks, because open-ended generation with no reflex check is the
+    // single most reliable way to produce the category default while believing you explored. Everything
+    // else about this flow stays unconstrained, which is the point of it.
+    const craft = await flowCraft(context.projectPath, {
+      shape: 'produce',
+      findingClasses: ['anti-pattern'],
+      lawDomains: ['reflex', 'research'],
+      domainLabel: 'exploration',
+    });
+
     return {
       flowId: this.flowId,
       flowName: this.getFlowName(),
       status: 'success',
       message: 'Entering Exploration/Discovery Mode - Open-Ended Brainstorming',
       guidance: [
+        ...craftGuidanceBlock(craft, 'no anti-pattern rules were measurable on this project.'),
         'This is an open-ended exploration with no success criteria',
         'Goal: generate ideas and variations without judgment',
         'Try multiple directions, not just one "best" answer',

@@ -15,6 +15,7 @@ import { getMotionIdiom } from './motion-stack-idioms';
 import { loadPrescribedEasings, loadBannedEasings } from './reference-loader';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 interface MotionIntegrationContext {
   motionDomainRules: string[];
   motionIntensity: 'restrained' | 'playful' | 'ambitious';
@@ -210,7 +211,23 @@ export class FlowHMotionIntegrationHandler extends BaseFlowHandler {
       const durationMedium = designTokens.motion?.duration?.medium || '(undefined in DESIGN.md)';
 
       // Build guidance
+      // TEACH, THEN CHECK. Integration is where motion stops being a spec and starts being code, so
+      // the failures this brief prevents are the lifecycle ones: a keyframe on an interactive state
+      // that cannot be interrupted, an entrance that replays on every load, a loop that keeps
+      // compositing off-screen. Those are not taste calls and they are not visible in a screenshot.
+      const craft = await flowCraft(context.projectPath, {
+        shape: 'produce',
+        ruleKeys: [
+          'polish/reduced-motion-respect', 'polish/interruptible-animations', 'polish/skip-load-animation',
+          'polish/no-transition-all', 'polish/sparse-will-change', 'polish/animatepresence-initial',
+          'polish/staggered-enter', 'polish/subtle-exit',
+        ],
+        lawDomains: ['motion'],
+        domainLabel: 'motion integration',
+      });
+
       const guidance = [
+        ...craftGuidanceBlock(craft, 'no motion rules were measurable on this project.'),
         `Brand Personality: ${brandPersonality || 'Not defined'}`,
         `Register: ${register}`,
         `Motion Intensity: ${intensity} (${register === 'brand' ? 'brand encourages ambitious motion' : 'product prefers restrained'})`,

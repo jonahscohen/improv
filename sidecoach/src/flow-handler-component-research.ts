@@ -10,6 +10,7 @@ import { FlowMemoryBuilder } from './flow-memory-schema';
 import { EnhancedFlowExecutionContext } from './flow-execution-context-enhanced';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 export interface ComponentResearchContext {
   componentPatterns: string[];
   interactionRules: string[];
@@ -127,7 +128,20 @@ export class FlowBComponentResearchHandler extends BaseFlowHandler {
       ]);
 
       // Build guidance
+      // TEACH, THEN CHECK. Research flows are where the brief matters most and was missing entirely:
+      // this runs BEFORE a component exists, so there is nothing to grade and a findings-only payload
+      // would be empty. What it needs is the standard - check the validated pattern before deriving
+      // one, because every standard component carries keyboard and aria requirements nobody gets right
+      // from first principles - plus the interaction craft the component will be judged against later.
+      const craft = await flowCraft(context.projectPath, {
+        shape: 'produce',
+        findingClasses: ['a11y'],
+        lawDomains: ['research', 'interaction'],
+        domainLabel: 'component patterns',
+      });
+
       const guidance = [
+        ...craftGuidanceBlock(craft, 'no accessibility rules were measurable on this project.'),
         `Brand personality: ${brandPersonality || 'Not defined'}`,
         `Design approach: ${designApproach}`,
         '',

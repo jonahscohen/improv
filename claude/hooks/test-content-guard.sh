@@ -54,6 +54,48 @@ cg_allows "chevron U+203A"                "'a '+chr(0x203A)+' b'"
 cg_allows "six-point star U+2736"         "chr(0x2736)"
 cg_allows "box-drawing U+2500"            "chr(0x2500)*10"
 
+# ---------- masked-credential tails (2026-07-29 adversary precedent) ----------
+# Four characters of a live key were committed inside the very test written to prove tails
+# do not leak, because a fixture copied a provider 401 echo verbatim and the mask left the
+# tail intact. The sweep that missed it judged the hit on its SHAPE and never asked whether
+# the visible part was real. This gate cannot know either - it never reads a credential - so
+# it requires the write to STATE where the tail came from.
+#
+# Every masked key below is assembled at runtime, so no contiguous masked-key literal ever
+# sits in this file. That keeps the suite passing its own gate, and it is the same reason
+# the fixtures upstream use an invented tail.
+MASK="'*'*20"
+cg_blocks "masked key, no provenance statement"      "'const e = \"Incorrect API key provided: sk-proj-'+$MASK+'Qx7T.\"'"
+cg_blocks "masked google key, no statement"          "'AIza'+$MASK+'9xQ2'"
+cg_blocks "masked slack token, no statement"         "'xoxb-'+$MASK+'ab12'"
+cg_blocks "mask written with bullets"                "'sk-proj-'+chr(0x2022)*10+'Qx7T'"
+cg_allows "masked key WITH a synthetic attestation"  "'the tail is SYNTHETIC and must stay that way'+chr(10)+'sk-proj-'+$MASK+'Qx7T'"
+cg_allows "incident record saying the tail was real" "'that fragment is not invented, it is the real tail'+chr(10)+'sk-proj-'+$MASK+'ZZZZ'"
+cg_allows "CSS comment banner is not a key"          "'/* '+$MASK+'regular code'+$MASK+' */'"
+cg_allows "a fully redacted key"                     "'sk-[REDACTED] is how we redact'"
+cg_allows "mask with no key prefix at all"           "$MASK+'abcd'"
+cg_allows "a key prefix with no mask"                "'sk-proj-notmaskedatall'"
+
+# The attestation may already be in the FILE rather than in the edited span: an Edit hands
+# the hook only new_string. Without the on-disk read, a one-line tweak to the upstream
+# fixture would be denied for a comment sitting ten lines above it.
+FIXTURE="$(cd "$HOOK_DIR/../.." 2>/dev/null && pwd)/sidecoach/src/__tests__/image-generation.test.ts"
+run_edit() {  # $1 = python expr for new_string, $2 = file_path
+  local s; s=$(python3 -c "import sys; sys.stdout.write($1)")
+  python3 -c 'import json,sys; print(json.dumps({"tool_name":"Edit","tool_input":{"new_string":sys.argv[1],"file_path":sys.argv[2]}}))' "$s" "$2" | bash "$CG" 2>/dev/null
+}
+edit_case() {  # $1 label, $2 expr, $3 path, $4 blocks|allows
+  local out; out=$(run_edit "$2" "$3")
+  local got=allows; echo "$out" | grep -q '"permissionDecision": *"deny"' && got=blocks
+  if [ "$got" = "$4" ]; then echo "PASS [cg]: $1"; ((PASS++)); else echo "FAIL [cg]: $1 (got $got)"; FAILS+=("cg:$1"); ((FAIL++)); fi
+}
+if [ -f "$FIXTURE" ]; then
+  edit_case "edit to an ALREADY-attested fixture passes" "'sk-proj-'+$MASK+'Qx7T'" "$FIXTURE" allows
+  edit_case "same literal into an unattested new file is denied" "'sk-proj-'+$MASK+'Qx7T'" "/tmp/cg-probe-new.ts" blocks
+else
+  echo "SKIP [cg]: upstream fixture absent, on-disk attestation case not exercised"
+fi
+
 # ---------- content-guard-stop.sh (prose via fake transcript) ----------
 mk_transcript() {  # $1 = python expr for assistant text -> echoes path
   local text path

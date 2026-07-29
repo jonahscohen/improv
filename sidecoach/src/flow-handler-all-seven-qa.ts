@@ -6,6 +6,7 @@ import { FlowMemoryBuilder } from './flow-memory-schema';
 import { EnhancedFlowExecutionContext } from './flow-execution-context-enhanced';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 export class FlowVAllSevenQAHandler extends BaseFlowHandler {
   constructor() {
     super('flowV_all_seven_qa' as any);
@@ -35,9 +36,20 @@ export class FlowVAllSevenQAHandler extends BaseFlowHandler {
         { label: 'Sign-off from design and product', required: true },
       ]);
 
+      // TEACH, THEN CHECK - and this is a CHECK flow, so it teaches only what failed. `harden` is the
+      // sign-off gate: its whole value is that a clean result means something, which is exactly why a
+      // constant block would be worse here than anywhere else. Scope is every finding class, because
+      // this flow is the one that legitimately owns all of them.
+      const craft = await flowCraft(context.projectPath, {
+        shape: 'check',
+        lawDomains: ['critique'],
+        domainLabel: 'the full QA sweep',
+      });
+
       const guidance = [
         'All-Seven QA: End-to-end quality assurance across all 7 design domains.',
         '',
+        ...craftGuidanceBlock(craft, 'nothing on disk could be checked, so this is not a clean result.'),
         'QA CHECKLIST:',
         '1. Automated checks: build, lint, and design.md token validation pass',
         '2. Manual QA: Test on actual devices and browsers',

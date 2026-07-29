@@ -6,6 +6,7 @@
 // the REAL originating file path/line and ALL rewrite options (Codex P2#4).
 import type { ProductCheckContext, RuleVerdict } from '../check-context';
 import { pass, fail, inconclusive, hasCss, hasMarkup } from '../check-context';
+import { cssRegionsOf } from '../source-locator';
 import {
   scanGradientText, scanGlassmorphism, scanSideStripeBorders,
   scanHeroMetricTemplate, scanModalAsFirstThought,
@@ -26,10 +27,35 @@ function verdictFromBanFindings(findings: AbsoluteBanFinding[], cleanMessage: st
   );
 }
 
-// CSS detectors run per-file (executeRule passes a one-file context for scope:file);
-// use the REAL collected file path so a finding points at the actual source.
-function cssFile(ctx: ProductCheckContext): string {
-  return ctx.files[0]?.path ?? '<collected-css>';
+/**
+ * Run a CSS ban scanner over every collected file's CSS REGIONS, remapping each finding's
+ * line back to the line in the REAL FILE.
+ *
+ * This replaces `scanner(ctx.cssText, ctx.files[0].path)`, which was wrong twice over.
+ * ctx.cssText is project-collector's concatenation of `<style>` bodies with the file
+ * positions discarded, so a line computed in it is a line in an anonymous slice - yet it
+ * was printed as `${file}:${line}` under a real filename. Measured 2026-07-29 on the
+ * canary: the gradient-text rule lives on file line 6 and this path reported line 3. It
+ * also labelled EVERY file's findings with files[0].path, so in a multi-file project a
+ * finding in the second file named the first.
+ *
+ * cssRegionsOf re-derives the regions from the markup WITH their file start lines, so the
+ * remap is exact. Evidence is untouched (cssText is still what the predicates read), so no
+ * pass/fail verdict can move - only the reported location changes.
+ */
+function scanCssPerRegion(ctx: ProductCheckContext, scanner: Scanner): AbsoluteBanFinding[] {
+  const out: AbsoluteBanFinding[] = [];
+  for (const f of ctx.files || []) {
+    for (const region of cssRegionsOf(f)) {
+      if (!region.text.trim()) continue;
+      for (const finding of scanner(region.text, region.path)) {
+        // Scanner lines are 1-based within region.text, which begins at region.startLine.
+        const line = finding.line === undefined ? undefined : region.startLine + finding.line - 1;
+        out.push({ ...finding, line });
+      }
+    }
+  }
+  return out;
 }
 
 // Markup heuristics are scope:project, so the assembled context carries every markup
@@ -46,17 +72,17 @@ function scanMarkupPerFile(ctx: ProductCheckContext, scanner: Scanner): Absolute
 
 export const checkGradientText = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
-  return verdictFromBanFindings(scanGradientText(ctx.cssText, cssFile(ctx)), 'no gradient-text ban');
+  return verdictFromBanFindings(scanCssPerRegion(ctx, scanGradientText), 'no gradient-text ban');
 };
 
 export const checkGlassmorphism = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
-  return verdictFromBanFindings(scanGlassmorphism(ctx.cssText, cssFile(ctx)), 'no glassmorphism-default ban');
+  return verdictFromBanFindings(scanCssPerRegion(ctx, scanGlassmorphism), 'no glassmorphism-default ban');
 };
 
 export const checkSideStripeBorders = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
-  return verdictFromBanFindings(scanSideStripeBorders(ctx.cssText, cssFile(ctx)), 'no side-stripe-borders ban');
+  return verdictFromBanFindings(scanCssPerRegion(ctx, scanSideStripeBorders), 'no side-stripe-borders ban');
 };
 
 // --- HTML-structural heuristics (declared minor; still emit fail when matched) ---

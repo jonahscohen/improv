@@ -29,9 +29,16 @@
  *
  *   static-ban and static-check OVERLAP by design: the anti-pattern validator adapts the
  *   same 5 ban scanners over the collector's extracted css/markup slices, while static-ban
- *   runs them over raw file text and carries each ban's rewrite options. A defect both
- *   engines see is reported once per lens, tagged with its lens, never silently merged -
- *   a hidden dedupe would make a two-engine agreement indistinguishable from a single read.
+ *   runs them over raw file text and carries each ban's rewrite options.
+ *
+ *   A defect BOTH engines see at the SAME location is reported ONCE, carrying
+ *   `corroboratedBy: ['<other lens>']`. This is not a hidden dedupe - the older behaviour
+ *   emitted two findings for one defect, which double-counted our own numbers and asked the
+ *   reader to notice that two lines were the same bug. The reason a silent merge was refused
+ *   still holds (two-engine agreement must stay distinguishable from a single read), and
+ *   corroboratedBy is what preserves it: the agreement is now an explicit field on one
+ *   finding instead of a coincidence between two. Findings at DIFFERENT locations are never
+ *   merged - those are different sites, not one defect seen twice.
  *
  * FAIL-CLOSED (the whole point of this tool)
  *   A lens that did not run is NEVER counted as clean. `clean` is the strongest claim and
@@ -65,7 +72,7 @@ const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 
-let looksLikeUrl, normalizeRenderUrl, runRenderedAudit;
+let looksLikeUrl, normalizeRenderUrl;
 let scanContentForAbsoluteBans, scannedBanLabel;
 let collectFromPath, collectFromSingleFile;
 let VALIDATOR_REGISTRATIONS;
@@ -74,8 +81,29 @@ let SEVERITY_TABLE;
 let getRuleById;
 let RULES;
 let listRenderedManifest;
+
+/**
+ * runRenderedAudit, loaded ONLY when a render is actually going to happen.
+ *
+ * ../dist/audit-rendered reaches playwright through rendered-live-scan, and requiring it cost
+ * 146ms of a 188ms static scan (measured 2026-07-29) - 78% of the run spent loading a browser
+ * driver that --no-render never touches. The two helpers this file needs at ARG-PARSE time
+ * (looksLikeUrl / normalizeRenderUrl) are pure string logic and now live in the zero-dependency
+ * ../dist/render-target, so classifying a target no longer implies loading a browser.
+ *
+ * FAIL-CLOSED IS PRESERVED. A require that throws here propagates out of runRenderedLenses,
+ * whose catch marks BOTH rendered lenses unavailable-with-a-reason - which makes the verdict
+ * inconclusive (exit 3), never clean. The one behaviour change is the exit code for a tree
+ * where ONLY audit-rendered is broken: exit 3 (a scan started, one lens could not run) instead
+ * of the old exit 2 (nothing was ever scanned). Both are non-zero and neither certifies clean,
+ * so no fail-closed guarantee moves; exit 3 is the more accurate class for it.
+ */
+function loadRenderedAudit() {
+  return require('../dist/audit-rendered').runRenderedAudit;
+}
+
 try {
-  ({ looksLikeUrl, normalizeRenderUrl, runRenderedAudit } = require('../dist/audit-rendered'));
+  ({ looksLikeUrl, normalizeRenderUrl } = require('../dist/render-target'));
   ({ scanContentForAbsoluteBans, scannedBanLabel } = require('../dist/absolute-ban-detector'));
   ({ collectFromPath, collectFromSingleFile } = require('../dist/validators/project-collector'));
   ({ VALIDATOR_REGISTRATIONS } = require('../dist/flow-validation-capabilities'));
@@ -255,6 +283,8 @@ function runStaticBanLens(collected, readRaw) {
         severity: banSeverity(b.banName, b.severity),
         lens: 'static-ban',
         location: `${b.file}:${b.line ?? '?'}`,
+        // A named ban is always a PRESENCE finding: the banned construct is at this line.
+        locationKind: b.line === undefined ? undefined : 'defect',
         detail: b.rewriteOptions.length ? `${b.reason} Rewrites: ${b.rewriteOptions.join('; ')}` : b.reason,
       });
     }
@@ -300,11 +330,16 @@ async function runStaticCheckLens(context) {
     }
     const blocking = blockingSeveritiesFor(reg.validatorId);
     for (const f of result.findings) {
+      const located = f.evidenceLocations && f.evidenceLocations.length;
       findings.push({
         rule: f.ruleId,
         severity: blocking.has(f.severity) ? 'blocking' : 'warning',
         lens: 'static-check',
-        location: f.evidenceLocations && f.evidenceLocations.length ? f.evidenceLocations.join(', ') : undefined,
+        location: located ? f.evidenceLocations.join(', ') : undefined,
+        // 'defect' = the offending source is AT this line. 'anchor' = nothing at this line is
+        // wrong; it is where the missing rule has to go (an absence finding has no defect
+        // line). Carried through so a consumer is never told a fix site is a defect site.
+        locationKind: located ? (f.locationKind || 'defect') : undefined,
         detail: f.remediation ? `${f.message} Fix: ${f.remediation}` : f.message,
       });
     }
@@ -321,7 +356,7 @@ async function runStaticCheckLens(context) {
 async function runRenderedLenses(renderUrl) {
   let audit;
   try {
-    audit = await runRenderedAudit(renderUrl);
+    audit = await loadRenderedAudit()(renderUrl);
   } catch (err) {
     // runRenderedAudit is fail-closed internally, but a throw escaping it must still land
     // as "these lenses did not run" - never as a lens silently missing from the report.
@@ -377,6 +412,69 @@ function exitCodeFor(verdict) {
 // human-readable summary is collapsed.
 const PAGE_LEVEL_DISPLAY_RULES = new Set(['low-contrast', 'gray-on-color']);
 
+/**
+ * The shared identity of a named absolute ban across the two static lenses.
+ *
+ * static-ban emits `ban.gradient-text`; the registry rule the anti-pattern validator owns
+ * for the same scanner emits `anti-pattern.gradient-text`. Both come from the SAME scanner
+ * function in absolute-ban-detector.ts, so at one location they are one defect. Returns null
+ * for every other rule, so nothing outside this deliberate overlap can ever be merged.
+ */
+function banIdentityOf(finding) {
+  const m = /^(?:ban|anti-pattern)\.(.+)$/.exec(finding.rule || '');
+  if (!m) return null;
+  if (finding.lens !== 'static-ban' && finding.lens !== 'static-check') return null;
+  return m[1];
+}
+
+/**
+ * Collapse the static-ban / static-check double report of ONE named ban at ONE location into
+ * a single finding that names both lenses.
+ *
+ * Keeps the static-check finding when present, because that is the registry-owned decision
+ * rule whose severity the shipped clean policy actually reads; the static-ban twin's lens is
+ * recorded in corroboratedBy. Requires an EXACT location match, so a ban found at two
+ * different lines stays two findings, and a finding with NO location is never merged (an
+ * unlocated pair cannot be shown to be the same site).
+ */
+function mergeCorroborated(findings) {
+  const keyOf = (f) => {
+    const ban = banIdentityOf(f);
+    if (!ban || !f.location) return null;
+    return `${ban}@${f.location}`;
+  };
+  const groups = new Map();
+  for (const f of findings) {
+    const k = keyOf(f);
+    if (k === null) continue;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(f);
+  }
+  const dropped = new Set();
+  const extra = new Map();
+  const escalated = new Map();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const keep = group.find((f) => f.lens === 'static-check') || group[0];
+    const others = group.filter((f) => f !== keep);
+    extra.set(keep, [...new Set(others.map((f) => `${f.lens}/${f.rule}`))].sort());
+    // The survivor inherits the group's HIGHEST severity. Without this, merging a blocking
+    // twin into a warning survivor would drop the blocking count and could flip the verdict
+    // from `blocked` to `warnings-only` - a dedupe silently weakening a gate. De-duplication
+    // may only ever remove a REPEAT, never a severity.
+    if (others.some((f) => f.severity === 'blocking')) escalated.set(keep, 'blocking');
+    for (const f of others) dropped.add(f);
+  }
+  return findings
+    .filter((f) => !dropped.has(f))
+    .map((f) => {
+      if (!extra.has(f)) return f;
+      const merged = { ...f, corroboratedBy: extra.get(f) };
+      if (escalated.get(f) === 'blocking') merged.severity = 'blocking';
+      return merged;
+    });
+}
+
 function collapseForDisplay(findings) {
   const out = [];
   const groups = new Map();
@@ -418,7 +516,12 @@ function printSummary(result) {
   }
   for (const f of collapseForDisplay(result.findings)) {
     const where = f.selector || f.location || '(no location)';
-    lines.push(`  [${f.severity}] ${f.lens}/${f.rule} @ ${where}${f.detail ? ` - ${f.detail}` : ''}`);
+    // An anchor is labelled in the human summary. A reader who jumps to an anchor line and
+    // finds nothing wrong there has been misled unless the line says so.
+    const kind = f.location && f.locationKind === 'anchor' ? ' (fix site)' : '';
+    const corroborated = f.corroboratedBy && f.corroboratedBy.length
+      ? ` [also seen by: ${f.corroboratedBy.join(', ')}]` : '';
+    lines.push(`  [${f.severity}] ${f.lens}/${f.rule} @ ${where}${kind}${corroborated}${f.detail ? ` - ${f.detail}` : ''}`);
   }
   lines.push(`  verdict: ${result.verdict} (blocking ${result.severityCounts.blocking}, warning ${result.severityCounts.warning})`);
   if (result.verdict === 'inconclusive') {
@@ -508,8 +611,13 @@ async function main() {
   }
 
   const reported = recordSkippedLenses(lenses, skipReason);
-  const blocking = findings.filter((f) => f.severity === 'blocking').length;
-  const warning = findings.filter((f) => f.severity === 'warning').length;
+  // Merge the deliberate static-ban/static-check overlap BEFORE counting, so the severity
+  // counts describe DEFECTS rather than reports. The per-lens `findings` counts above stay
+  // raw on purpose - they answer "what did this lens see", which is the question that makes
+  // an INCOMPLETE lens meaningful; the merged list answers "what is wrong with this target".
+  const merged = mergeCorroborated(findings);
+  const blocking = merged.filter((f) => f.severity === 'blocking').length;
+  const warning = merged.filter((f) => f.severity === 'warning').length;
   const verdict = decideVerdict(reported, blocking, warning);
   const result = {
     target: args.target,
@@ -517,7 +625,7 @@ async function main() {
     renderUrl,
     verdict,
     scanned: Object.values(reported).some((l) => l.available),
-    findings,
+    findings: merged,
     severityCounts: { blocking, warning, info: 0 },
     lenses: reported,
     unavailableReasons: Object.entries(reported)

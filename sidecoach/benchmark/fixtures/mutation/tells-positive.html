@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Tells positive</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700">
+<style>
+  /* Mutation control POSITIVE for anti-pattern/overused-font, single-font, bounce-easing.
+     One overused family and nothing else (single-font), and two flavours of bounce. */
+  body { font-family: "Space Grotesk", sans-serif; }
+  h1 { font-family: "Space Grotesk", sans-serif; font-weight: 700; }
+  .panel { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .chip { animation: bounceIn 0.4s ease; }
+  @keyframes bounceIn { from { transform: scale(0.9); } to { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .panel, .chip { animation: none; transition: none; } }
+</style></head>
+<body>
+  <main>
+    <h1>Type and motion tells</h1>
+    <p>This page exists to trip three rules. It carries one overused family, no pairing,
+    and an overshoot curve alongside a bounce-named animation.</p>
+    <div class="panel"><span class="chip">Tag</span></div>
+  </main>
+</body>
+</html>

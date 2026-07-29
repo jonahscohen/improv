@@ -26,7 +26,23 @@
  * classification (S1-S4) is added incrementally. With no rules implemented yet, scanObjectiveRendered renders
  * and returns []. Each subsequent step fills one class and turns its calibration fixtures green.
  */
-import { chromium } from 'playwright';
+import type { chromium } from 'playwright';
+/**
+ * The playwright chromium driver, resolved AT LAUNCH TIME instead of at module load.
+ *
+ * `import { chromium } from 'playwright'` at module scope cost every consumer 134ms even when
+ * no browser was ever launched (measured 2026-07-29: it was the single largest cost in a static
+ * scan of bin/sidecoach-detect.js, which never renders). The `import type` above keeps every
+ * `typeof chromium.launch` annotation in this file working and is erased at runtime.
+ *
+ * FAIL-CLOSED: a missing or broken playwright now throws from inside the launch path, where the
+ * existing try/catch turns it into `available: false` with a reason - rather than crashing the
+ * whole module at import. That is strictly safer: an unavailable scan is still never clean.
+ */
+function chromiumDriver(): typeof chromium {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return (require('playwright') as typeof import('playwright')).chromium;
+}
 
 export type ObjectiveRule =
   | 'broken-image'
@@ -340,7 +356,7 @@ export async function analyzeHtmlOnBrowser(browser: Browser, html: string, timeo
  */
 export async function scanObjectiveRendered(html: string, opts: ScanOptions = {}): Promise<ObjectiveScan> {
   const timeoutMs = opts.timeoutMs ?? 30000;
-  const launch = opts.launcher ?? (() => chromium.launch({ headless: true }));
+  const launch = opts.launcher ?? (() => chromiumDriver().launch({ headless: true }));
   let browser: Browser | undefined;
   try {
     browser = await launch();

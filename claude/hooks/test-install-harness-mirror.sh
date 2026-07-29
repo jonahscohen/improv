@@ -421,6 +421,29 @@ install_skill_to_harnesses a b >/dev/null 2>&1
 [ $? -eq 2 ] && pass "mirror: two arguments is a usage error (rc 2)" \
              || fail "mirror: two arguments is a usage error (rc 2)" "wrong rc"
 
+# THE SKILL NAME IS A PATH COMPONENT on both the read and the write side, so a traversing name
+# would escape $HOME AFTER the containment assertion had already passed on the root. Rejected
+# before anything is read or written.
+for bad in '../../etc' 'a/b' '..' '-x'; do
+  install_skill_to_harnesses "$bad" >/dev/null 2>&1
+  if [ $? -eq 2 ]; then
+    pass "mirror: skill name '$bad' is refused as a path component"
+  else
+    fail "mirror: skill name '$bad' is refused as a path component" "it was not rejected with rc 2"
+  fi
+done
+
+# A DUPLICATE LABEL must be refused, not emitted twice - verify resolves a label back to a root
+# by scanning this output, so a duplicate would leave one root unverifiable while the ledger
+# claimed both were checked.
+DUP="$(IMPROV_HARNESS_ROOTS="cursor:.cursor:.cursor/skills
+cursor:.gemini:.gemini/skills" harness_skill_targets 2>/dev/null | grep -c '^cursor	')"
+if [ "$DUP" = "1" ]; then
+  pass "targets: a duplicate harness label is emitted once, not twice"
+else
+  fail "targets: a duplicate harness label is emitted once, not twice" "emitted $DUP rows for one label"
+fi
+
 # ------------------------------------------------------------
 # verify_harness_skills
 # ------------------------------------------------------------

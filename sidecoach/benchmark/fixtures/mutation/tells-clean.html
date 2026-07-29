@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Tells clean</title>
+<style>
+  /* Mutation control NEGATIVE for the same three rules: two non-overused families
+     (a display/body pairing) and a purely decelerating curve. */
+  body { font-family: "Source Serif 4", Georgia, serif; }
+  h1 { font-family: "Bricolage Grotesque", sans-serif; }
+  .panel { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+  .fade { animation: settle 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+  @keyframes settle { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .panel, .fade { animation: none; transition: none; } }
+</style></head>
+<body>
+  <main>
+    <h1>Type and motion, unremarkable</h1>
+    <p>Two families carry the hierarchy and the easing decelerates into place, so none of
+    the three tells should fire on this page. It is long enough to clear the page-level floor.</p>
+    <div class="panel"><span class="fade">Settled</span></div>
+  </main>
+</body>
+</html>

@@ -13,6 +13,7 @@ import { FlowMemoryBuilder } from './flow-memory-schema';
 import { loadCanonical, loadBreakpointTable } from './reference-loader';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 export class FlowMResponsiveValidationHandler extends BaseFlowHandler {
   constructor() {
     super('flowM_responsive_validation');
@@ -55,9 +56,27 @@ export class FlowMResponsiveValidationHandler extends BaseFlowHandler {
         (b) => `- ${b.name} (${b.range}): primary=${b.primaryPattern} | nav=${b.navPattern} | table=${b.tablePattern}`,
       );
 
+      // TEACH, THEN CHECK. Shape is `produce`, not `check`, and the reason is worth stating: the
+      // registry has only a handful of responsive-decidable rules from static source (hit area needs
+      // DOM geometry, most of it needs a render), so a findings-only brief here would teach almost
+      // nothing on a page with real responsive defects. The craft for this domain lives in the law
+      // corpus - the min-width cascade, tier boundaries as device facts, the thumb zone, input-method
+      // detection over width - and `adapt` is invoked to CHANGE the layout, not just grade it. The
+      // rules that ARE statically decidable are still enumerated below.
+      const craft = await flowCraft(context.projectPath, {
+        shape: 'produce',
+        ruleKeys: [
+          'a11y/min-hit-area', 'perf/image-dimensions', 'perf/image-lazy-load',
+          'polish/text-overflow-strategy', 'polish/tiny-text', 'polish/typography-rhythm',
+        ],
+        lawDomains: ['responsive'],
+        domainLabel: 'responsive behaviour',
+      });
+
       const guidance = [
         'Responsive Validation: Bencium 5-tier breakpoint table + WCAG 2.5.5 hit-area floor (44x44) + named anti-patterns + iOS-Safari gotchas.',
         '',
+        ...craftGuidanceBlock(craft, 'no statically decidable responsive rules were measurable on this project.'),
         'BREAKPOINT TABLE (Bencium, prescribed):',
         ...breakpointLines,
         '',

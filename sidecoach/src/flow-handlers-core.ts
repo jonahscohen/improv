@@ -1,6 +1,7 @@
 import { BaseFlowHandler, FlowExecutionContext, FlowExecutionResult, ChecklistItem } from './flow-handler';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 
 // T-0015 (2026-05-28): legacy Flow2/Flow5/Flow10 handlers removed as duplicates of
 // flowJ_tactical_polish / flowK_multi_lens_audit / flowG_component_implementation.
@@ -21,12 +22,24 @@ export class FlowZDesignHandler extends BaseFlowHandler {
     // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
     applyModelSelection(this.flowId, context);
 
+    // TEACH, THEN CHECK. This flow's payload was a description of the QA triad it will run later -
+    // "1. Audit, 2. Critique, 3. Polish" - which tells the producer what will be checked and nothing
+    // about how to make the component good in the first place. Teaching only at the gate is the
+    // expensive order: every defect the brief prevents here is one the triad does not have to find.
+    const craft = await flowCraft(context.projectPath, {
+      shape: 'produce',
+      findingClasses: ['a11y', 'theming'],
+      lawDomains: ['interaction', 'research'],
+      domainLabel: 'a new component',
+    });
+
     return {
       flowId: this.flowId,
       flowName: this.getFlowName(),
       status: 'success',
       message: 'Initiating Design Component workflow with QA Triad',
       guidance: [
+        ...craftGuidanceBlock(craft, 'no accessibility or theming rules were measurable on this project.'),
         'This flow executes a 3-step QA triad after design:',
         '1. Audit: Technical scan (a11y, perf, responsive, etc.)',
         '2. Critique: Design review via independent agents (Nielsen heuristics, cognitive load)',

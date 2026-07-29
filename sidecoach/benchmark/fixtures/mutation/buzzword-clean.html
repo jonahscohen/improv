@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Buzzword clean</title></head>
+<body>
+  <main>
+    <h1>Postgres connection pooling with PgBouncer</h1>
+    <p>PgBouncer holds a pool of server connections and hands them to clients on demand.
+    In transaction mode it returns a server connection to the pool at the end of each
+    transaction, so a thousand idle clients can share sixteen backend processes. Session
+    mode holds the connection until the client disconnects, which is required if your
+    application uses prepared statements or advisory locks.</p>
+    <p>Set default_pool_size to the number of cores on the database host, not on the
+    application host. Watch the cl_waiting column in SHOW POOLS: if it stays above zero
+    under normal load, the pool is too small and requests are queueing behind it.</p>
+  </main>
+</body>
+</html>

@@ -91,6 +91,60 @@ if not reason:
         reason = "Legacy model ID forbidden by CLAUDE.md - use latest model versions only"
 
 if not reason:
+    # A masked credential echo that still shows a tail IS a credential fragment. On
+    # 2026-07-29 exactly four characters of a live key reached a commit that way: a test
+    # fixture copied a provider 401 response verbatim, mask and all, and the mask left the
+    # last four characters intact. The sweep meant to catch it classified the hit on its
+    # SHAPE - masked, sitting in a test file - and never asked whether the visible part was
+    # real. Prose and human judgment did not catch it; a mechanical check on content does.
+    # (Adversary pass, Jonah 2026-07-29; purged in 5fcfdcee.)
+    #
+    # This gate cannot know whether a tail is real without reading live credentials, which
+    # it deliberately never does. So it enforces the QUESTION rather than the answer: a
+    # write carrying a masked key with a surviving tail must also SAY where that tail came
+    # from. Either attestation passes - that the tail is synthetic, or that it was real and
+    # this file is the incident record - because both mean the author engaged with
+    # provenance. Silence is what gets blocked, and silence is what shipped the fragment.
+    #
+    # Anchored on a real key PREFIX, which is what makes it precise rather than noisy.
+    # Measured across every tracked file in this repo: prefix-anchored hits 4 times and all
+    # 4 are genuine masked-key literals; the same pattern without the prefix hits 17 times,
+    # 13 of them CSS comment banners in captured HTML corpus files.
+    #
+    # The attestation is looked for in the edited span AND in the file already on disk,
+    # because an Edit hands this hook only new_string - a one-line change to a fixture
+    # whose comment block sits ten lines above would otherwise be denied for a statement
+    # that is already there.
+    #
+    # The deny message deliberately quotes NOTHING from the match. If the tail were real,
+    # echoing it would put the fragment into the transcript, which is the leak this exists
+    # to prevent. The mask class carries a literal bullet and middle dot alongside the
+    # asterisk forms, because providers mask with all three; both are text-presentation
+    # symbols that this guard permits, so the file still passes its own emoji check.
+    _mask = re.search(
+        r"(sk-[A-Za-z0-9-]*|AIza[A-Za-z0-9]*|AQ\.[A-Za-z0-9]*|ghp_|xox[bap]-|gsk_)"
+        r"[*x•·#]{6,}[A-Za-z0-9]{3,8}", content)
+    if _mask:
+        _ctx = content
+        _fp2 = str(inp.get("file_path") or "")
+        if _fp2 and os.path.isfile(_fp2):
+            try:
+                with open(_fp2, encoding="utf8", errors="ignore") as _fh:
+                    _ctx = _ctx + chr(10) + _fh.read()
+            except OSError:
+                pass
+        if not re.search(r"synthetic|not invented|is not a real|was the real|fake tail|"
+                         r"dummy tail|placeholder|must stay that way", _ctx, re.IGNORECASE):
+            reason = ("A masked credential literal here keeps a visible tail, and nothing in "
+                      "this file says where that tail came from. A mask that preserves a tail "
+                      "preserves a credential fragment - four characters of a live key were "
+                      "committed this way on 2026-07-29, in the very test written to prove "
+                      "tails do not leak. Replace the tail with an obviously invented one and "
+                      "state in the file that it is synthetic. If you are recording the "
+                      "incident rather than writing a fixture, say that the tail was real. "
+                      "Never copy a masked echo out of a provider response verbatim.")
+
+if not reason:
     # Retired names are banned from markdown (docs + beats) per Jonah 2026-07-03:
     # canonical vocabulary is "tactical-polish" and "sidecoach"; the retired
     # names (the old skill name, its shorthand, and the pre-rename orchestrator

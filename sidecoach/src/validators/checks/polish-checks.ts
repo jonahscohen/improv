@@ -6,6 +6,7 @@
 // three browser-evidence rules (computed-style/dom) surface inconclusive until P4b.
 import type { ProductCheckContext, RuleVerdict } from '../check-context';
 import { pass, fail, notApplicable, inconclusive, hasCss, hasMarkup, withRuleApplicability, browserNumber, hasTrustedBrowserEvidence } from '../check-context';
+import { locate } from '../source-locator';
 import {
   hasScaleOnPress, hasCompoundIconTransition, hasImageOutlineRule, hasNoImages,
   hasTransitionAll, hasTabularNums, hasTextWrapBalance, hasStaggerDelay, hasExitOpacity, hasExitScale,
@@ -32,15 +33,16 @@ export const checkIconSwapCompound = (ctx: ProductCheckContext): RuleVerdict =>
 
 export const checkNoTransitionAll = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
+  // DEFECT locations: the `transition: all` declarations themselves.
   return hasTransitionAll(ctx.cssText)
-    ? fail('transition: all found; use explicit properties', [], 'Replace transition: all with specific properties')
+    ? fail('transition: all found; use explicit properties', locate(ctx, /transition\s*:\s*all\b/i, 'css', 5), 'Replace transition: all with specific properties')
     : pass('no transition: all');
 };
 
 export const checkSparseWillChange = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
   return hasWillChangeAll(ctx.cssText)
-    ? fail('will-change: all found', [], 'Use will-change for specific properties only')
+    ? fail('will-change: all found', locate(ctx, /will-change\s*:\s*all\b/i, 'css', 5), 'Use will-change for specific properties only')
     : pass('no will-change: all');
 };
 
@@ -78,7 +80,9 @@ export const checkAnimatePresenceInitial = (ctx: ProductCheckContext): RuleVerdi
 export const checkInterruptibleAnimations = (ctx: ProductCheckContext): RuleVerdict => {
   if (!hasCss(ctx)) return inconclusive('no CSS source collected', 'unreadable_input');
   return hasKeyframeAnimationOnInteractiveState(ctx.cssText)
-    ? fail('interactive state (:hover/:focus/:active) uses a keyframe animation, which cannot be interrupted', [], 'Use a CSS transition for interactive state changes (interruptible); reserve @keyframes/animation for run-once staged sequences')
+    ? fail('interactive state (:hover/:focus/:active) uses a keyframe animation, which cannot be interrupted',
+      locate(ctx, /:(?:hover|focus|active)[^{}]*\{[^}]*animation\s*:/i, 'css', 5),
+      'Use a CSS transition for interactive state changes (interruptible); reserve @keyframes/animation for run-once staged sequences')
     : pass('no keyframe animation on interactive states');
 };
 

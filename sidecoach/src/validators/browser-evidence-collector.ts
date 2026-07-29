@@ -1,4 +1,20 @@
-import { chromium } from 'playwright';
+import type { chromium } from 'playwright';
+/**
+ * The playwright chromium driver, resolved AT LAUNCH TIME instead of at module load.
+ *
+ * `import { chromium } from 'playwright'` at module scope cost every consumer 134ms even when
+ * no browser was ever launched (measured 2026-07-29: it was the single largest cost in a static
+ * scan of bin/sidecoach-detect.js, which never renders). The `import type` above keeps every
+ * `typeof chromium.launch` annotation in this file working and is erased at runtime.
+ *
+ * FAIL-CLOSED: a missing or broken playwright now throws from inside the launch path, where the
+ * existing try/catch turns it into `available: false` with a reason - rather than crashing the
+ * whole module at import. That is strictly safer: an unavailable scan is still never clean.
+ */
+function chromiumDriver(): typeof chromium {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return (require('playwright') as typeof import('playwright')).chromium;
+}
 import type { EvidenceKind } from '../product-rule-types';
 import type { BrowserDomEvidence, BrowserEvidenceMeta } from './check-context';
 
@@ -13,17 +29,10 @@ export type BrowserEvidenceCollection =
   | { available: true; evidence: CollectedBrowserEvidence }
   | { available: false; reason: string };
 
-export function renderUrlFromContext(raw: unknown): string | undefined {
-  const r = raw as { renderUrl?: unknown; target?: unknown };
-  const candidate = typeof r?.renderUrl === 'string' ? r.renderUrl : typeof r?.target === 'string' ? r.target : undefined;
-  if (!candidate) return undefined;
-  try {
-    const u = new URL(candidate);
-    return ['http:', 'https:', 'file:', 'data:'].includes(u.protocol) ? u.href : undefined;
-  } catch {
-    return undefined;
-  }
-}
+// renderUrlFromContext moved to ../render-target (zero dependencies) so a caller that only
+// needs to resolve WHICH url to render does not load this file's playwright import. Re-exported
+// here because this was its public home.
+export { renderUrlFromContext } from '../render-target';
 
 // Pure hermeticity policy for a subresource request given the supplied document URL.
 // Inline data: subresources are always allowed; otherwise a data:/file: document may
@@ -51,7 +60,7 @@ class AbortError extends Error {}
 // pass only (renderUrl, signal) - the public 2-arg contract is unchanged. The comment
 // lives ABOVE the signature (not interleaved between params) so tsc does not emit a
 // trailing space in the compiled parameter list.
-export async function collectBrowserEvidence(renderUrl: string | undefined, signal?: AbortSignal, launcher: () => Promise<Awaited<ReturnType<typeof chromium.launch>>> = () => chromium.launch({ headless: true })): Promise<BrowserEvidenceCollection> {
+export async function collectBrowserEvidence(renderUrl: string | undefined, signal?: AbortSignal, launcher: () => Promise<Awaited<ReturnType<typeof chromium.launch>>> = () => chromiumDriver().launch({ headless: true })): Promise<BrowserEvidenceCollection> {
   if (!renderUrl) return { available: false, reason: 'no render URL in validation context' };
   if (signal?.aborted) return { available: false, reason: 'browser evidence collection aborted before launch' };
 

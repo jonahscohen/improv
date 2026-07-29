@@ -74,7 +74,17 @@ export function parseSlashCommand(utterance: string): CommandMatch {
 
   // Check if starts with /sidecoach or just /
   // Supports both /sidecoach command:target and /sidecoach command target
-  const match = trimmed.match(/^\/(?:sidecoach\s+)?(\w+)(?::([\w-]+)|\s+(.*))?$/i);
+  //
+  // THE COMMAND CHARACTER CLASS ACCEPTS A HYPHEN, and it did not until 2026-07-29. `\w+` does
+  // not match `-`, so `/sidecoach new-work a pricing page` matched `new` and then failed the
+  // anchored optional group, returning isCommand:false - a verb with a hyphen in its name was
+  // structurally unroutable no matter what the registry said. Widened to [\w-]+ rather than
+  // renaming the verb, because `newwork` is not a word anyone types. This cannot capture a
+  // command that was previously routing: a hyphenated word reached the old regex only to be
+  // rejected, and an unhyphenated one is unaffected by adding `-` to the class. Anything
+  // hyphenated that is not in the registry or the alias table still falls through to
+  // isCommand:false exactly as before.
+  const match = trimmed.match(/^\/(?:sidecoach\s+)?([\w-]+)(?::([\w-]+)|\s+(.*))?$/i);
 
   if (!match) {
     return {
@@ -107,6 +117,20 @@ export function parseSlashCommand(utterance: string): CommandMatch {
       flowIds: [],
       target,
       reason: target ? `Routed to composite flow: ${target}` : 'Composite flow command (no target specified)',
+    };
+  }
+
+  // MAINTENANCE COMMAND, not a flow. `doctor` reports which sidecoach capabilities are
+  // discoverable, reachable and verified; it has no flow chain because it does not design
+  // anything, so it is matched here beside `help` rather than given a fabricated chain in
+  // VERB_REGISTRY. Handled by bin/sidecoach-doctor.js and the reference/doctor.md playbook.
+  if (command === 'doctor') {
+    return {
+      isCommand: true,
+      command: 'doctor',
+      flowIds: [],
+      target,
+      reason: 'Self-diagnosis: report which capabilities are discoverable, reachable and verified',
     };
   }
 

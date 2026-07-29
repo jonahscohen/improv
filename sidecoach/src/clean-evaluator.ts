@@ -63,7 +63,8 @@ function toFinding(validatorId: string, r: ProductRuleResult): ProductFinding {
   return {
     validatorId, ruleId: r.ruleId, canonicalRuleKey: r.canonicalRuleKey,
     severity: r.severity, findingClass: r.findingClass,
-    evidenceLocations: r.evidenceLocations, message: r.message, remediation: r.remediation,
+    evidenceLocations: r.evidenceLocations, locationKind: r.locationKind,
+    message: r.message, remediation: r.remediation,
   };
 }
 

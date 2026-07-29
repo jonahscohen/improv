@@ -7,6 +7,7 @@ import { EnhancedFlowExecutionContext } from './flow-execution-context-enhanced'
 import { findTokenLine } from './design-md-parser';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 export class FlowSTypographyExcellenceHandler extends BaseFlowHandler {
   constructor() {
     super('flowS_typography_excellence' as any);
@@ -53,9 +54,26 @@ export class FlowSTypographyExcellenceHandler extends BaseFlowHandler {
       const baseSize = designTokens.typography?.scale?.base || '(undefined in DESIGN.md)';
       const lineHeight = designTokens.typography?.scale?.line_height || '(undefined in DESIGN.md)';
 
+      // TEACH, THEN CHECK. The block below states this project's token values and a fixed ladder
+      // (`- Heading: 32px, semibold (h2)`) with no ratio, no measure, no reason and no source - and
+      // those hard-coded sizes are not even derived from the project's own scale. The brief carries
+      // the real typographic craft (one modular ratio, line-height inverse to size, the 65ch measure,
+      // heading size by role rather than by tag) and any type rule failing here is named below it.
+      const craft = await flowCraft(context.projectPath, {
+        shape: 'produce',
+        ruleKeys: [
+          'polish/typography-rhythm', 'polish/default-typeface', 'polish/tiny-text',
+          'polish/text-wrap-balance', 'polish/tabular-nums', 'polish/font-smoothing',
+          'a11y/justified-text', 'a11y/heading-order', 'polish/text-overflow-strategy',
+        ],
+        lawDomains: ['typography'],
+        domainLabel: 'typography',
+      });
+
       const guidance = [
         'Typography Excellence: Master type scales, kerning, variable fonts, and reading comfort.',
         '',
+        ...craftGuidanceBlock(craft, 'no typography rules were measurable on this project.'),
         'TYPE SCALE:',
         `- Display family: ${displayFamily}${cite('typography.display.family')}`,
         `- Body family: ${bodyFamily}${cite('typography.body.family')}`,

@@ -7,6 +7,7 @@ import { FlowMemoryBuilder } from './flow-memory-schema';
 import { EnhancedFlowExecutionContext } from './flow-execution-context-enhanced';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 interface AccessibilityContext {
   wcagLevel: 'AA' | 'AAA';
   domainAuditResults: {
@@ -235,9 +236,22 @@ export class FlowIAccessibilityHandler extends BaseFlowHandler {
       ]);
 
       // Build guidance
+      // TEACH, THEN CHECK - and this is a CHECK flow, so a clean project gets no brief. That is not a
+      // gap: `audit` exists so that a clean result means something, and a constant block appended to a
+      // passing run is the exact defect this wiring removes. When rules DO fail, all 25 a11y rules in
+      // the registry now have craft notes, so the brief teaches the failing ones - focus rings, per-
+      // control labels, error association, heading order - rather than restating their names.
+      const craft = await flowCraft(context.projectPath, {
+        shape: 'check',
+        findingClasses: ['a11y'],
+        lawDomains: ['interaction'],
+        domainLabel: 'accessibility',
+      });
+
       const guidance = [
         'Accessibility Target: WCAG 2.1 Level AA (required standard)',
         '',
+        ...craftGuidanceBlock(craft, 'nothing on disk could be checked, so this is not a clean result.'),
         'Domain-by-Domain Accessibility Audit:',
         '',
         ...domainAuditResults.flatMap((domain) => [

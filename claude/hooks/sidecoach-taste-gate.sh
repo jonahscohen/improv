@@ -2,10 +2,28 @@
 # PostToolUse hook for Write|Edit|MultiEdit on a project's HTML/CSS.
 #
 # The taste gate: the moment a UI file is written in a sidecoach design project
-# (a directory carrying a DESIGN.md), run sidecoach's FULL evaluation against it -
-# the 6 absolute-ban anti-pattern scan (side-stripe borders, gradient text,
-# glassmorphism, identical card grids, hero-metric template, modal-first) plus the
-# taste validator - and inject any findings back as a must-fix directive.
+# (a directory carrying a DESIGN.md), run the STATIC half of sidecoach's evaluation
+# against it - the 5 absolute-ban anti-pattern scan (side-stripe-borders,
+# gradient-text, glassmorphism-default, hero-metric-template, modal-as-first-thought)
+# plus the taste validator - and inject any findings back as a must-fix directive.
+#
+# COUNT CORRECTED 2026-07-29 (Jonah). This header said "6" and listed
+# `identical card grids`, whose scanner was DELETED 2026-06-24 for a ReDoS-class
+# regex. The authoritative list is BAN_SCANNERS in
+# sidecoach/src/absolute-ban-detector.ts, which has five entries and throws on drift,
+# so it cannot silently disagree with the shipped ban list. Do not re-hardcode a
+# count here without reading that table.
+#
+# WHAT THIS GATE DOES NOT COVER - read before claiming it enforces something.
+# It is a SUBSET of `/sidecoach audit`, not an equivalent: it runs only the two
+# STATIC engines above. Every RENDERED rule is out of scope, because no write-time
+# hook can render a page - that includes marketing-buzzword, tiny-text, nested-cards,
+# default-typeface, low-contrast, skipped-heading, broken-image and justified-text.
+# marketing-buzzword in particular is a real, calibrated sidecoach rule
+# (polish.marketing-buzzword, held-out precision 1.000) that lives ONLY in the
+# rendered subjective lane. It has never been one of the absolute bans and this hook
+# has never checked it. A rule documented as enforced that no path can reach buys
+# false confidence, which is worse than a missing rule.
 #
 # Origin (2026-06-15): repeatedly shipped AI-slop tells (side-tab accent borders,
 # hero-metric template, low-contrast accent text) because I declared UI "done"

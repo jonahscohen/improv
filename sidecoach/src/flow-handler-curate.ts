@@ -6,6 +6,7 @@ import { FlowMemoryBuilder } from './flow-memory-schema';
 import { EnhancedFlowExecutionContext } from './flow-execution-context-enhanced';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 export class FlowUCurateHandler extends BaseFlowHandler {
   constructor() {
     super('flowU_curate' as any);
@@ -32,9 +33,22 @@ export class FlowUCurateHandler extends BaseFlowHandler {
         { label: 'Share reference library with team', required: true },
       ]);
 
+      // TEACH, THEN CHECK. Curation is the one flow whose output is a judgment about OTHER work, so
+      // what it needs taught is the standard for what makes a reference worth keeping and how to
+      // record it - reference before invention, and gating a candidate on concrete criteria rather
+      // than a name. The project's own anti-pattern failures are enumerated below because a library
+      // curated by someone shipping those patterns will inherit them.
+      const craft = await flowCraft(context.projectPath, {
+        shape: 'produce',
+        findingClasses: ['anti-pattern'],
+        lawDomains: ['research', 'reflex'],
+        domainLabel: 'reference capture',
+      });
+
       const guidance = [
         'Curate: Build an ongoing reference library of design patterns and anti-patterns.',
         '',
+        ...craftGuidanceBlock(craft, 'no anti-pattern rules were measurable on this project.'),
         'CURATION STRATEGY:',
         '1. Define criteria: What makes a reference worth capturing? (novelty, quality, applicability)',
         '2. Sources: Design inspiration sites, competitor products, open-source projects, small interactions',

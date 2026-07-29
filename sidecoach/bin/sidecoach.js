@@ -91,28 +91,63 @@ const SETUP_COMMANDS = {
 // Standalone sibling bins that ship alongside this resolver. They are NOT verbs
 // or flows - each is its own self-contained CLI with its own exit-code contract -
 // but they are part of the sidecoach surface, so `list` and `help` enumerate them
-// here to make them discoverable and reachable (grouped by role). Each entry is
-// [bin, one-line purpose, primary invocation]. `drift` is additionally wired into
-// the audit flow (flowK): its verdict feeds the Theming/token-consistency lens.
+// here to make them discoverable and reachable (grouped by role).
+//
+// Each entry is [bin, one-line purpose, primary invocation, flowWiring]. The
+// fourth element is the load-bearing one and it is why this table is the single
+// source of truth rather than one of two: a bin with a non-null `flowWiring` is
+// AUTO-RUN by the named flows, and the skill document must say so.
+//
+// WHY THE FOURTH FIELD EXISTS (2026-07-29). The skill text carried two statements
+// that were not merely stale but actively false: it counted six of these tools
+// when there were seven, and it said drift was the only flow-wired one and "the
+// other five are invoked directly, not auto-run by a flow" - while sidecoach-image
+// was already auto-run by flow D. An omission leaves a reader with a gap; that
+// sentence filled the gap with a wrong answer, so a model reading it concluded it
+// had to do all image work by hand. Both facts are derivable from this table, and
+// `src/__tests__/skill-surface-parity.test.ts` now asserts the skill document
+// agrees with `sidecoach list --json`. Nothing checked that before, which is
+// exactly how they drifted apart.
 const STANDALONE_BINS = {
   generative: {
     label: 'Generative (authoring aids)',
     bins: [
-      ['sidecoach-palette', 'Emit a WCAG-verified DESIGN.md palette from brand OKLCH anchors', 'node bin/sidecoach-palette.js --brand <brand.json>'],
-      ['sidecoach-roll', 'Draw a design direction from the deck (seeded = reproducible)', 'node bin/sidecoach-roll.js [--seed <uint32>]'],
-      ['sidecoach-preauthor', 'Render-before-build gate: board + mock from a brief, fail-closed proceed/block', 'node bin/sidecoach-preauthor.js --brief <brief.json>'],
-      ['sidecoach-deck', 'Present drawn directions as a Markdown or rich-HTML pick list', 'node bin/sidecoach-roll.js | node bin/sidecoach-deck.js'],
-      ['sidecoach-image', 'Generate a raster asset AND verify the bytes (offline by default; live spend is opt-in)', 'node bin/sidecoach-image.js generate --prompt "<brief>" --out hero.png'],
+      ['sidecoach-palette', 'Emit a WCAG-verified DESIGN.md palette from brand OKLCH anchors', 'node bin/sidecoach-palette.js --brand <brand.json>', null],
+      ['sidecoach-roll', 'Draw a design direction from the deck (seeded = reproducible)', 'node bin/sidecoach-roll.js [--seed <uint32>]', null],
+      ['sidecoach-preauthor', 'Render-before-build gate: board + mock from a brief, fail-closed proceed/block', 'node bin/sidecoach-preauthor.js --brief <brief.json>', null],
+      ['sidecoach-deck', 'Present drawn directions as a Markdown or rich-HTML pick list', 'node bin/sidecoach-roll.js | node bin/sidecoach-deck.js', null],
+      [
+        'sidecoach-image',
+        'Generate a raster asset AND verify the bytes (offline by default; live spend is opt-in)',
+        'node bin/sidecoach-image.js generate --prompt "<brief>" --out hero.png',
+        'flowD (design references) as the concept-sketch lens, and flowG (component implementation) as the asset-production lens',
+      ],
     ],
   },
   governance: {
     label: 'Governance (checks / maintenance)',
     bins: [
-      ['sidecoach-refs', 'Refresh the bundled reference systems on demand, preserving your captures', 'node bin/sidecoach-refs.js [--check | --apply]'],
-      ['sidecoach-drift', 'Report custom-property tokens drifted from DESIGN.md (also feeds the audit flow)', 'node bin/sidecoach-drift.js <project-dir>'],
+      ['sidecoach-refs', 'Refresh the bundled reference systems on demand, preserving your captures', 'node bin/sidecoach-refs.js [--check | --apply]', null],
+      [
+        'sidecoach-drift',
+        'Report custom-property tokens drifted from DESIGN.md (also feeds the audit flow)',
+        'node bin/sidecoach-drift.js <project-dir>',
+        'flowK (multi-lens audit) as the Theming token-drift lens',
+      ],
     ],
   },
 };
+
+/** Every standalone bin as flat records. The machine-readable surface `list --json` and the parity test read. */
+function standaloneBinRecords() {
+  const out = [];
+  for (const [group, { label, bins }] of Object.entries(STANDALONE_BINS)) {
+    for (const [bin, purpose, invocation, flowWiring] of bins) {
+      out.push({ bin, group, groupLabel: label, purpose, invocation, flowWiring: flowWiring || null, flowWired: Boolean(flowWiring) });
+    }
+  }
+  return out;
+}
 
 /** Look up a standalone bin by name (accepts `sidecoach-drift` or bare `drift`). */
 function findStandaloneBin(name) {
@@ -127,13 +162,16 @@ function findStandaloneBin(name) {
 function printStandaloneBins(detailed) {
   for (const group of Object.values(STANDALONE_BINS)) {
     console.log(`  ${group.label}`);
-    for (const [bin, purpose, invocation] of group.bins) {
+    for (const [bin, purpose, invocation, flowWiring] of group.bins) {
       if (detailed) {
         console.log(`    ${bin}`);
         console.log(`      ${purpose}`);
         console.log(`      $ ${invocation}`);
+        // A flow-wired tool runs whether or not anyone invokes it by hand. That is the single most useful thing
+        // to know about one of these, so `list` says it rather than leaving it to a paragraph elsewhere.
+        if (flowWiring) console.log(`      auto-run by: ${flowWiring}`);
       } else {
-        console.log(`    ${bin.padEnd(20)} ${purpose}`);
+        console.log(`    ${bin.padEnd(20)} ${purpose}${flowWiring ? ' [auto-run by a flow]' : ''}`);
       }
     }
   }
@@ -431,6 +469,13 @@ function main() {
   }
 
   if (cmd === 'list' || cmd === '--list') {
+    // `--json` is the machine-readable surface. It exists so a checker (and a caller that wants to branch on
+    // availability rather than parse prose) reads the same table `list` prints, instead of a second copy that can
+    // disagree with it.
+    if (argv.includes('--json')) {
+      console.log(JSON.stringify({ tool: 'sidecoach', command: 'list', standaloneBins: standaloneBinRecords() }, null, 2));
+      process.exit(0);
+    }
     listAll();
     process.exit(0);
   }

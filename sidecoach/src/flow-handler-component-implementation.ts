@@ -8,8 +8,17 @@ import { ExtendedDomainValidator, DomainCheckContext } from './extended-domain-v
 import { EnhancedFlowExecutionContext } from './flow-execution-context-enhanced';
 import { createIconSourceReference, buildIconSourceArtifactContent } from './icon-source-reference';
 import { findTokenLine } from './design-md-parser';
+import {
+  runAssetProductionLens,
+  assetProductionGuidance,
+  assetProductionChecklistItem,
+  isOfferableAsset,
+  type AssetProductionOutcome,
+} from './image-asset-production';
+import { briefWantsRaster } from './image-brief-compiler';
 
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 interface ComponentImplementationContext {
   interactionDomainRules: string[];
   writingDomainRules: string[];
@@ -103,6 +112,17 @@ export class FlowGComponentImplementationHandler extends BaseFlowHandler {
 
       const formsPassed = Math.round((parseFloat(formsPassRate) / 100) * formsDomainRules.length);
 
+      // ASSET PRODUCTION LENS. This is the step that makes image generation part of building rather than a
+      // side CLI: `/sidecoach craft <feature>` runs this flow, so a request naming a backdrop, texture, plate,
+      // portrait, object, thumbnail, or social card produces the asset here, with the contrast contract compiled
+      // from the same resolution that wrote the prompt. Fully contained and offline by default; it cannot spend
+      // and it cannot fail the build. A component that needs no raster is told so rather than handed a plate.
+      const assetOutcome: AssetProductionOutcome | null = runAssetProductionLens(context, {
+        // A caller that knows where the page keeps its assets says so; otherwise the cache directory holds them.
+        outDirRel: typeof context.metadata?.imageOutDir === 'string' ? context.metadata.imageOutDir : undefined,
+        brief: typeof context.metadata?.imageBrief === 'object' ? context.metadata.imageBrief : undefined,
+      });
+
       // Build checklist
       const checklist = this.createChecklist([
         { label: 'Component name identified', required: true, description: componentName },
@@ -116,6 +136,12 @@ export class FlowGComponentImplementationHandler extends BaseFlowHandler {
         { label: 'Verify side-by-side with design source', required: true, description: 'Visual match confirmed' },
         { label: 'Document component API and props', required: false, description: 'Usage examples included' },
       ]);
+      // Appended with its own stable id rather than an index-derived one, because a downstream reader keys on
+      // `asset-production` to find this verdict. Required whenever a raster was asked for, and completed only on
+      // `verified`, so a failed or unchecked asset is a blocker rather than a warning.
+      // The second argument matters only when the lens did not run at all: a raster request that never reached the
+      // step must not read as done. See assetProductionChecklistItem.
+      checklist.push(assetProductionChecklistItem(assetOutcome, briefWantsRaster(context.utterance || '')));
 
       // Citation helper for DESIGN.md token references
       const designContent = (context.metadata?.designContent as string) || '';
@@ -130,8 +156,21 @@ export class FlowGComponentImplementationHandler extends BaseFlowHandler {
       const buttonRadius = designTokens.rounded?.md || '(undefined in DESIGN.md)';
       const cardShadow = designTokens.shadow?.md || '(undefined in DESIGN.md)';
 
+      // TEACH, THEN CHECK. This is the flow that actually WRITES a component, so it is the highest-
+      // leverage place in the whole surface for the brief to land: the difference between a control
+      // that has every reachable state and one that is missing focus, disabled and loading is decided
+      // here, once, rather than being found later by the audit verb. The a11y and theming rules already
+      // failing on the project are enumerated below, because a new component inherits its surroundings.
+      const craft = await flowCraft(context.projectPath, {
+        shape: 'produce',
+        findingClasses: ['a11y', 'theming'],
+        lawDomains: ['interaction', 'research'],
+        domainLabel: 'component implementation',
+      });
+
       // Build guidance
       const guidance = [
+        ...craftGuidanceBlock(craft, 'no accessibility or theming rules were measurable on this project.'),
         `Component: ${componentName}`,
         `Register: ${register}`,
         '',
@@ -176,6 +215,8 @@ export class FlowGComponentImplementationHandler extends BaseFlowHandler {
         '- Copy matches writing domain rules',
         '- Responsive: no overflow or misalignment on mobile/tablet',
         '- Side-by-side comparison with design source confirms visual match',
+        '',
+        ...assetProductionGuidance(assetOutcome),
       ];
 
       const ariaLabelCount = validationResults.filter((r) => r.hasAriaLabels).length;
@@ -195,6 +236,18 @@ export class FlowGComponentImplementationHandler extends BaseFlowHandler {
         .addValidation('ARIA labels implemented', ariaLabelCount === componentStates.length ? 'pass' : 'warning', `${ariaLabelCount}/${componentStates.length}`)
         .addValidation('Keyboard navigation enabled', keyboardNavCount >= componentStates.length - 1 ? 'pass' : 'warning', `${keyboardNavCount}/${componentStates.length - 1} navigable`)
         .addValidation('Semantic copy appropriate', semanticCopyCount === 3 ? 'pass' : 'warning', `${semanticCopyCount}/3 states with copy`)
+        // Fail-closed in memory too. `verified` passes, `not-needed` and a lens that never ran are recorded as
+        // warnings with their reason, and every other state is a FAIL, so a later reader of this record cannot
+        // mistake an unchecked or missing asset for a passing one.
+        .addValidation(
+          'Raster asset produced and verified',
+          !assetOutcome || assetOutcome.status === 'not-needed'
+            ? 'warning'
+            : assetOutcome.status === 'verified'
+              ? 'pass'
+              : 'fail',
+          assetOutcome ? assetOutcome.detail : 'asset lens did not run (no project path)',
+        )
         .addArtifact('component-implementation', componentStates.length, ['flowH_motion_integration', 'flowI_motion_polish']);
 
       const memory = memoryBuilder.build();
@@ -207,6 +260,34 @@ export class FlowGComponentImplementationHandler extends BaseFlowHandler {
         guidance,
         checklist,
         artifacts: [
+          // Only a VERIFIED asset becomes an artifact. A failed or unchecked one is named in the guidance and the
+          // checklist and withheld here, because an artifact is what a build composes with and composing with an
+          // unchecked asset is the defect the verifier exists to prevent.
+          ...(isOfferableAsset(assetOutcome)
+            ? [
+                this.createArtifact(
+                  'reference',
+                  assetOutcome!.synthetic ? 'Generated raster asset (verified placeholder)' : 'Generated raster asset (verified)',
+                  [
+                    assetOutcome!.synthetic
+                      ? 'PROVENANCE: this is the deterministic offline placeholder, marked inside its own bytes. Layout stand-in only, never shipped as art.'
+                      : 'PROVENANCE: a live provider render, verified against its own decoded pixels.',
+                    `path: ${assetOutcome!.path}`,
+                    `provider: ${assetOutcome!.provider}${assetOutcome!.model ? ` (${assetOutcome!.model})` : ''}`,
+                    `size: ${assetOutcome!.compiled!.contract.size}`,
+                    assetOutcome!.compiled!.contract.ink
+                      ? `overlay contrast: ${assetOutcome!.compiled!.contract.ink} (${assetOutcome!.compiled!.contract.inkSource}) measured over ${assetOutcome!.compiled!.contract.inkRegion!.w}x${assetOutcome!.compiled!.contract.inkRegion!.h} at ${assetOutcome!.compiled!.contract.inkRegion!.x},${assetOutcome!.compiled!.contract.inkRegion!.y}, floor ${assetOutcome!.compiled!.contract.minContrast}:1`
+                      : 'overlay contrast: NOT contracted (DESIGN.md names no text colour)',
+                    `staging: ${assetOutcome!.compiled!.composition.id} (${assetOutcome!.compiled!.composition.label})`,
+                    `world: ${assetOutcome!.compiled!.concept.id} (${assetOutcome!.compiled!.concept.name})`,
+                    '',
+                    'prompt used:',
+                    assetOutcome!.compiled!.prompt,
+                  ].join('\n'),
+                  'A raster asset generated for this component and verified against its decoded pixels. The prompt travels with it so the build knows what it is composing.',
+                ),
+              ]
+            : []),
           this.createArtifact(
             'reference',
             'icon-source',

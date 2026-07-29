@@ -7,6 +7,7 @@ import { SHARED_DESIGN_LAWS, REGISTER_SPECIFIC_LAWS } from './design-laws';
 import { FlowMemoryBuilder } from './flow-memory-schema';
 import { EnhancedFlowExecutionContext } from './flow-execution-context-enhanced';
 import { applyModelSelection } from './model-routing';
+import { flowCraft, craftGuidanceBlock } from './craft-flow';
 
 export interface BrandVerificationContext {
   projectContext: ProjectContext;
@@ -118,7 +119,21 @@ export class FlowABrandVerifyHandler extends BaseFlowHandler {
         { label: 'Pre-flight checks passed', required: true, description: preflightIssues.length === 0 ? 'All checks passed' : `${preflightIssues.length} issues found` },
       ]);
 
+      // TEACH, THEN CHECK. This handler already imported `design-laws.ts` - and what it pulled out
+      // were the law STRINGS, printed as a bulleted list below. A list of rule statements is not
+      // instruction: it says what the rules ARE and never what good looks like, why it matters, or
+      // what to change. That is the defect measured across ten handlers on 2026-07-29. The brief now
+      // carries the reflex and register craft, which is most valuable here because a category reflex
+      // caught at brand-verify is caught before anything gets built on top of it.
+      const craft = await flowCraft(context.projectPath, {
+        shape: 'produce',
+        findingClasses: ['anti-pattern'],
+        lawDomains: ['reflex', 'critique'],
+        domainLabel: 'brand direction and category reflex',
+      });
+
       const guidance = [
+        ...craftGuidanceBlock(craft, 'no anti-pattern rules were measurable on this project.'),
         `Register: ${registerDetected === 'brand' ? 'Design IS the product (marketing, landing, campaigns)' : 'Design SERVES the product (app UI, dashboard, tool)'}`,
         `Design laws loaded for ${registerDetected} register:`,
         ...designLawsCached.map((law) => `  - ${law}`),

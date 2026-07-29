@@ -8,6 +8,7 @@ import { ANTI_PATTERN_CHECKS } from './anti-pattern-checks';
 import { RENDERED_CHECKS } from './rendered-checks';
 import { FORMS_CHECKS } from './forms-checks';
 import { PAGE_QUALITY_CHECKS } from './page-quality-checks';
+import { TYPOGRAPHY_MOTION_TELL_CHECKS } from './typography-motion-tells';
 
 export type CheckFn = (ctx: ProductCheckContext) => RuleVerdict;
 
@@ -16,6 +17,7 @@ export type CheckFn = (ctx: ProductCheckContext) => RuleVerdict;
 // A11Y_CHECKS (collector-backed) until its rendered migration in a later stage.
 export const CHECKS: Record<string, CheckFn> = {
   ...POLISH_CHECKS, ...A11Y_CHECKS, ...THEMING_CHECKS, ...ANTI_PATTERN_CHECKS, ...RENDERED_CHECKS, ...FORMS_CHECKS, ...PAGE_QUALITY_CHECKS,
+  ...TYPOGRAPHY_MOTION_TELL_CHECKS,
 };
 
 // A rule whose check is not yet attached surfaces inconclusive, NEVER a false pass.

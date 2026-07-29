@@ -52,37 +52,12 @@ export interface RenderedAuditResult {
 
 // An http(s) URL, localhost[:port][/path], or an ipv4[:port][/path]. Deliberately
 // conservative - a non-URL target (a file path, a component name) is left to the flow chain.
-const URL_RE = /^(https?:\/\/\S+|localhost(:\d+)?(\/\S*)?|(\d{1,3}\.){3}\d{1,3}(:\d+)?(\/\S*)?)$/i;
-// A bare host.tld[:port][/path]. Only treated as a URL with a STRONG signal (explicit port,
-// a path, or a recognized public TLD), and NEVER when the host itself is a source/asset file -
-// so 'example.com' and 'example.com/path' work without mistaking 'Card.tsx' or 'styles.css'
-// for a URL (Codex P2).
-const BARE_DOMAIN_RE = /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?(\/\S*)?$/i;
-const SOURCE_OR_ASSET_EXT_RE = /\.(tsx?|jsx?|mjs|cjs|css|s[ca]ss|less|json|ya?ml|toml|md|markdown|html?|xml|vue|svelte|astro|py|go|rs|rb|java|kt|c|cc|cpp|h|hpp|sh|sql|txt|png|jpe?g|gif|svg|webp|avif|ico|pdf)$/i;
-const COMMON_TLD_RE = /\.(com|org|net|io|dev|app|co|ai|xyz|sh|me|gg|info|biz|us|uk|ca|de|fr|jp|au|nl|so|tv|page|site|tech)$/i;
-
-export function looksLikeUrl(target: string | undefined | null): boolean {
-  if (!target) return false;
-  const t = target.trim();
-  if (URL_RE.test(t)) return true;
-  if (!BARE_DOMAIN_RE.test(t)) return false;
-  const host = t.split(/[/:]/)[0]; // strip any :port and /path
-  if (SOURCE_OR_ASSET_EXT_RE.test(host)) return false; // 'Card.tsx' / 'styles.css' are files, not URLs
-  return /:\d+/.test(t) || t.includes('/') || COMMON_TLD_RE.test(host);
-}
-
-// An ALREADY-ABSOLUTE document URL keeps its scheme; a bare host/host:port gets http://.
-// file: is included because a LOCAL .html target is rendered by navigating to its file URL
-// (the `detect` CLI's local-file path) and the rendered scan's hermeticity policy already
-// models a file: document explicitly (isSubresourceAllowed: a file: document may load
-// same-protocol subresources only). Without file: here, `file:///x.html` was rewritten to
-// `http://file:///x.html` and every local-file render failed with ERR_NAME_NOT_RESOLVED.
-const ABSOLUTE_DOC_URL_RE = /^(https?|file):\/\//i;
-
-export function normalizeRenderUrl(target: string): string {
-  const t = target.trim();
-  return ABSOLUTE_DOC_URL_RE.test(t) ? t : `http://${t}`;
-}
+// looksLikeUrl / normalizeRenderUrl moved to ./render-target (a zero-dependency module) so a
+// caller that only needs to CLASSIFY a target does not pull this file's playwright-bearing
+// import graph. Re-exported here because this was their public home and several modules plus
+// bin/ import them from it.
+export { looksLikeUrl, normalizeRenderUrl } from './render-target';
+import { looksLikeUrl, normalizeRenderUrl } from './render-target';
 
 // ---------------------------------------------------------------------------
 // Audit target resolution: URL *or* local file/directory -> a render URL.

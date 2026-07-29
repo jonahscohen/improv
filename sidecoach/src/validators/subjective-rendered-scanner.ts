@@ -19,7 +19,23 @@
  *
  * INDEPENDENCE: PRODUCT scanner; MUST NOT import anything under eval/. Distinct artifact from the eval referee.
  */
-import { chromium } from 'playwright';
+import type { chromium } from 'playwright';
+/**
+ * The playwright chromium driver, resolved AT LAUNCH TIME instead of at module load.
+ *
+ * `import { chromium } from 'playwright'` at module scope cost every consumer 134ms even when
+ * no browser was ever launched (measured 2026-07-29: it was the single largest cost in a static
+ * scan of bin/sidecoach-detect.js, which never renders). The `import type` above keeps every
+ * `typeof chromium.launch` annotation in this file working and is erased at runtime.
+ *
+ * FAIL-CLOSED: a missing or broken playwright now throws from inside the launch path, where the
+ * existing try/catch turns it into `available: false` with a reason - rather than crashing the
+ * whole module at import. That is strictly safer: an unavailable scan is still never clean.
+ */
+function chromiumDriver(): typeof chromium {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return (require('playwright') as typeof import('playwright')).chromium;
+}
 import type { Browser } from 'playwright';
 
 export type SubjectiveRule =
@@ -1707,7 +1723,7 @@ export interface ScanOptions { timeoutMs?: number; launcher?: () => Promise<Brow
  * timeout returns { available:false } - never a false "clean". */
 export async function scanSubjectiveRendered(html: string, opts: ScanOptions = {}): Promise<SubjectiveScan> {
   const timeoutMs = opts.timeoutMs ?? 30000;
-  const launch = opts.launcher ?? (() => chromium.launch({ headless: true }));
+  const launch = opts.launcher ?? (() => chromiumDriver().launch({ headless: true }));
   let browser: Browser | null = null;
   try {
     browser = await launch();

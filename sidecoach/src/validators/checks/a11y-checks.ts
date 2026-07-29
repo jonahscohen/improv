@@ -7,7 +7,8 @@
 // color-contrast (id 20) was MIGRATED to the rendered scan in Stage 6 convergence
 // (checkLowContrast in rendered-checks.ts) - it no longer lives here.
 import type { ProductCheckContext, RuleVerdict } from '../check-context';
-import { pass, fail, notApplicable, inconclusive, hasCss, focusableTargetApplicability, hasTrustedBrowserEvidence } from '../check-context';
+import { pass, fail, failAnchor, notApplicable, inconclusive, hasCss, focusableTargetApplicability, hasTrustedBrowserEvidence } from '../check-context';
+import { locateAnchor, FOCUSABLE_ANCHOR } from '../source-locator';
 import { hasFocusVisible } from '../../polish-standard-validator';
 
 export const checkFocusVisible = (ctx: ProductCheckContext): RuleVerdict => {
@@ -21,7 +22,14 @@ export const checkFocusVisible = (ctx: ProductCheckContext): RuleVerdict => {
   if (applicable === 'unknown') return inconclusive('cannot establish focusable targets from collected evidence', 'unreadable_input');
   return hasFocusVisible(ctx.cssText)
     ? pass(':focus-visible present')
-    : fail('implement :focus-visible for keyboard navigation', [], 'Add :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }');
+    // ANCHOR: the focusable target the probe just found - the element whose focus styling is
+    // missing. focus-visible has no PROBES entry (its applicability is checked inline above),
+    // so it resolves its anchor from the same FOCUSABLE_RE that gated it.
+    : failAnchor(
+      'implement :focus-visible for keyboard navigation',
+      locateAnchor(ctx, FOCUSABLE_ANCHOR),
+      'Add :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }',
+    );
 };
 
 export const checkMinHitArea = (ctx: ProductCheckContext): RuleVerdict => {

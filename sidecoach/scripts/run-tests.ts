@@ -65,6 +65,8 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/slash-phrase.test.ts', required: true },                          // /sidecoach phrase union + near-miss (Task 8)
   { rel: 'src/__tests__/executive-report.test.ts', required: true },                      // executive-report renderer contract (Jonah 2026-07-04)
   { rel: 'src/__tests__/polish-craft.test.ts', required: true },                          // polish TEACH half: craft coverage, selection, no templated After (Jonah 2026-07-29)
+  { rel: 'src/__tests__/craft-corpus.test.ts', required: true },                           // TEACH half across ALL verbs: registry coverage, probe honesty, live handler wiring (Jonah 2026-07-29)
+  { rel: 'src/__tests__/craft-floor.test.ts', required: true },                            // the craft FLOOR: unconditional, self-identifying, never blended with findings (Jonah 2026-07-29)
   { rel: 'src/__tests__/lane-derivation.test.ts', required: true },                       // verbSteps derivation (Task 2)
   { rel: 'src/__tests__/lane-types.test.ts', required: true },
   { rel: 'src/__tests__/lane-checkpoint-store.test.ts', required: true },
@@ -146,6 +148,8 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/image-generation.test.ts', required: true },                    // provider-agnostic core: cache key, deterministic offline render, legacy-model refusal, projected vs measured cost, both caps, openai + nanobanana adapters and six failure classes
   { rel: 'src/__tests__/image-cli.test.ts', required: true },                          // bin/sidecoach-image.js e2e: every exit code, nothing written on failure, cache hit proven by a throwing transport, ledger + cumulative cap
   { rel: 'src/__tests__/image-flow-lens.test.ts', required: true },                    // flowD concept-sketch lens (reached by `sidecoach craft`): real plate through the real bin at zero cost, verified-only artifact, fail-closed memory validation
+  { rel: 'src/__tests__/image-brief-compiler.test.ts', required: true },                // concept + composition layer: staging catalog separation enforced, weak brief compiles with real palette, contract DERIVED from the staging ink zone, provider-aware size, real asset through flowG
+  { rel: 'src/__tests__/skill-surface-parity.test.ts', required: true },                // the loadable skill document must agree with `sidecoach list --json` on the CLI count and on WHICH tools a flow auto-runs; both statements were false once and nothing checked them
   { rel: 'src/__tests__/reference-update-service.test.ts', required: true },           // reference-update-service + bin/sidecoach-refs.js: capture-preserving upstream merge, fail-closed apply
   { rel: 'src/__tests__/project-drift-detector.test.ts', required: true },             // token drift: pure detector, all 5 categories + value-based/var rules (was ungated)
   { rel: 'src/__tests__/drift-cli.test.ts', required: true },                          // bin/sidecoach-drift.js: fail-closed verdict matrix + exit classes + e2e
