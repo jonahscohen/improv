@@ -2,7 +2,7 @@
 name: Craft instruction extended from one verb to all 26, plus an unconditional craft floor
 description: Generalized the polish-craft teaching corpus across every live flow handler and added a PreToolUse craft floor that loads before any UI edit with no verb required
 type: project
-relates_to: [session_2026-07-28_installed-live.md]
+relates_to: [session_2026-07-28_installed-live.md, session_2026-07-29_craft-review-folded.md]
 author_human: Jonah
 author_model: claude-opus-4.6
 machine: spare3

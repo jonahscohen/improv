@@ -154,9 +154,14 @@ mode    = os.environ.get("SLICE_MODE", "slices")
 
 NAME_RE = re.compile(r"^(?:%s)$" % names)
 # Words that can sit in front of the real command without changing what it is.
+# `!` is bash's pipeline-negation reserved word, never a command. Without it here,
+# head_name read `!` AS the command and every slice-based gate went silent behind a
+# negation: `if ! pkill -f justify; then ...` returned {} while the bare `pkill -f
+# justify` denied. Measured 2026-07-29 while building the credential keyguard, which
+# would have inherited the same hole (`if ! security find-generic-password ...`).
 PREFIX = {"sudo", "env", "command", "exec", "time", "nice", "nohup", "xargs",
           "then", "do", "else", "elif", "if", "while", "until",
-          "timeout", "setsid", "stdbuf"}
+          "timeout", "setsid", "stdbuf", "!"}
 # A bare number after a wrapper is that wrapper's argument, not the command:
 # `timeout 10 pkill -f justify`, `nice -n 5 rm -rf .claude/memory`.
 NUMARG = re.compile(r"^\d+(\.\d+)?[smhd]?$")
@@ -1819,6 +1824,328 @@ fi
 _KILL_SLICES=$(command_slices 'kill|pkill|killall')
 if [ -z "$REASON" ] && [ -n "$_KILL_SLICES" ] && printf '%s' "$_KILL_SLICES" | grep -qi 'justify'; then
   REASON="BLOCKED: do not kill Justify daemon or worker processes. A killed worker abandons the user's queued Send-All batch. If a worker looks stuck, wait for its watchdog (JUSTIFY_WORKER_TIMEOUT_SECS, default 1800s) or tell the user. The dispatcher retries on its own and NEVER disarms."
+fi
+
+# ---------------------------------------------------------------------------
+# Voice-credential keyguard (2026-07-29, Jonah).
+#
+# `openai-tts-api-key` (Keychain account `claude-voice`) is provisioned for ONE
+# thing: the voice/TTS pipeline. On 2026-07-29 two agents spent it on large
+# language-model calls in a single day - `wire-the-coach` (4 calls) and `imagegen`
+# (3 calls, 0.01261 USD). Same trigger both times: `codex-review.py` returned exit
+# 4 ("usage limit ... try again Aug 3rd"), so each held the reviewer identity and
+# swapped TRANSPORT, and the only OpenAI credential on the machine is the voice
+# one. The instinct was right; the wallet was wrong.
+#
+# Prose in a brief did not stop it. The second agent HAD the constraint, named the
+# key as a blocking question, and then did not wait for the answer - "a question
+# asked and not waited on is worse than no question, because it leaves a record
+# that looks like consent was sought." Two agents on one credential in one day is
+# a harness gap, not two coincidences, so the gate is mechanical.
+#
+# TWO reader shapes, because the two spends used two different ones:
+#
+#   1. DIRECT - the agent pulls the secret out of the Keychain in its own command
+#      and hands it to something (`export OPENAI_API_KEY=$(security
+#      find-generic-password ... -w)`, a curl -H, a pipe). `sidecoach`'s image
+#      generator reads OPENAI_API_KEY / SIDECOACH_OPENAI_API_KEY from the
+#      environment, which is the shape that needs the export.
+#   2. TRANSITIVE - the agent runs a script that reads the Keychain ITSELF, so the
+#      credential never appears in the command text at all. That is exactly what
+#      `sidecoach/efficacy-trial/polish/gpt-call.mjs` does: execFileSync of
+#      `security ... -w`, then POST to /v1/chat/completions pinned at gpt-5.4. A
+#      gate that only reads command text is blind to the mechanism one of the two
+#      spends actually used.
+#
+# Slice-based, not raw, for both: the credential name is an ARGUMENT, so CMD_CODE
+# would delete it the moment it is quoted (`-s 'openai-tts-api-key'` - which is how
+# every real caller writes it) and leave a gate that blocks nothing. Reading real
+# invocations instead also means PROSE passes: a beat documenting this rule, a grep
+# for the key name, an echo of the provisioning instruction are all inert.
+_KG_CRED='openai-tts-api-key'
+# The credential answers to TWO names. `security find-generic-password -a claude-voice
+# -w` returns it without ever naming the service, so a service-only gate is a gate
+# with a documented hole in it. Matching either identifier closes it, and costs
+# nothing: no other credential on this machine uses the `claude-voice` account.
+#
+# Bounded on both sides, because a substring match denied `-s openai-tts-api-key-backup`
+# and `-s not-openai-tts-api-key` - different Keychain items that this gate has no
+# business touching. (Codex finding, 2026-07-29.) The boundary class excludes `-` and `_`
+# so a longer identifier does not match, while quotes and spaces still do.
+_KG_IDENT_RE='(^|[^A-Za-z0-9_-])(openai-tts-api-key|claude-voice)([^A-Za-z0-9_-]|$)'
+
+# There is NO inline-TTS allowance, and that is deliberate. An earlier draft allowed an
+# extraction whose only OpenAI endpoint was /v1/audio/speech; an independent Codex
+# review defeated it twice over, because any allowance keyed on the command as a WHOLE
+# is spoofable by a decoy: `curl .../audio/speech -o /tmp/a.mp3; export
+# OPENAI_API_KEY=$(security ... -w); openai api chat.completions.create ...` bought a
+# model call with a throwaway TTS request, and no endpoint blocklist can enumerate every
+# client (an SDK, the `openai` CLI) that spends the key afterwards. The voice path does
+# not need the allowance: tts-generate.sh and voice-output/server.js read the credential
+# IN PROCESS, so a legitimate voice command never carries it. Rule with no exception:
+# no agent command extracts this credential.
+
+# --- shape 1: a real `security` invocation that pulls the secret VALUE out ------
+# `find-*-password -w` (stdout) and `-g` (stderr) both print the password;
+# `dump-keychain -d` prints EVERY password on the machine, this one included, so it
+# needs no key name to be a read of it. A `security` call with neither - a bare
+# find (metadata only) or an `add-generic-password` (provisioning) - is not a read
+# and never reaches this gate.
+#
+# The `grep -q` pre-filters on both shapes are pure cost control: a slice scan is a
+# python3 spawn, and the overwhelming majority of Bash calls name no Keychain verb
+# and no script file at all. They cannot introduce a false NEGATIVE - a token that
+# is absent from the raw command cannot appear in a slice of it.
+# Every extraction is COUNTED, not short-circuited, because the one allowance below is
+# only safe when the whole command is that single discarded probe.
+_KG_EXTRACT=''
+_KG_EXTRACT_N=0
+while IFS= read -r _kg_slice; do
+  [ -n "$_kg_slice" ] || continue
+  if printf '%s' "$_kg_slice" | grep -qE 'find-(generic|internet)-password' \
+     && printf '%s' "$_kg_slice" | grep -qE '(^|[[:space:]])-[A-Za-z]*[wg][A-Za-z]*([[:space:]]|$)'; then
+    # Named outright, or reached through a variable. `svc=openai-tts-api-key; security
+    # ... -s $svc -w` names the credential in the ASSIGNMENT, not in the invocation, and
+    # the scanner does not resolve assignments - so an extraction parameterised by a
+    # variable counts as targeting the credential whenever the command mentions it at
+    # all. (Codex finding, 2026-07-29.)
+    if printf '%s' "$_kg_slice" | grep -qE "$_KG_IDENT_RE" \
+       || { printf '%s' "$_kg_slice" | grep -q '\$' \
+            && printf '%s' "$CMD" | grep -qE "$_KG_IDENT_RE"; }; then
+      _KG_EXTRACT="$_kg_slice"
+      _KG_EXTRACT_N=$((_KG_EXTRACT_N + 1))
+      continue
+    fi
+  fi
+  if printf '%s' "$_kg_slice" | grep -qE 'dump-keychain' \
+     && printf '%s' "$_kg_slice" | grep -qE '(^|[[:space:]])-[A-Za-z]*d[A-Za-z]*([[:space:]]|$)'; then
+    _KG_EXTRACT="$_kg_slice"
+    _KG_EXTRACT_N=$((_KG_EXTRACT_N + 1))
+  fi
+done < <(printf '%s' "$CMD" | grep -qE 'find-(generic|internet)-password|dump-keychain' \
+           && command_slices 'security')
+
+# The service name is what the deny message names, so keep it referenced.
+: "$_KG_CRED"
+
+if [ -z "$REASON" ] && [ -n "$_KG_EXTRACT" ]; then
+  # THE ONLY ALLOWANCE - the provisioning/existence probe. `install.sh` checks the key
+  # is present with `... -w >/dev/null 2>&1`: the secret is discarded, nothing reaches
+  # the transcript and nothing is spent.
+  #
+  # Two independent conditions, both needed, both learned from a Codex round:
+  #
+  #   - exactly ONE extraction in the command. Round 1 broke the first version with
+  #     `security ... -w >/dev/null; security ... -w | pbcopy`: one discarded probe
+  #     buying a second, live read beside it. The per-segment check below now covers that
+  #     decoy too, so what the count still decides on its own is narrower and worth
+  #     stating: the allowance is for ONE probe, not a sequence of them. Two individually
+  #     safe probes in one command are denied; run them separately.
+  #   - and the discard is checked PER SEGMENT of CMD_CODE, not across the whole command.
+  #     Round 2 broke the count-only version with `true -w >/dev/null; security ... -w |
+  #     pbcopy` and with `security ... -w >/tmp/k; true -w >/dev/null` - a decoy redirect
+  #     on a command that is not the extraction. Every segment that runs a Keychain read
+  #     must discard that read's own stdout.
+  #
+  # CMD_CODE, not the raw command, so a decoy inside a comment or a quoted string is
+  # already gone. And `-w` only, never `-g`: `-g` prints the password on STDERR, so
+  # discarding stdout does not contain it (Codex round 2).
+  _KG_PROBE=false
+  if [ "$_KG_EXTRACT_N" -eq 1 ] && printf '%s' "$CMD_CODE" | python3 -c '
+import re, sys
+text = sys.stdin.read()
+segs = re.split(r"[;\n]|&&|\|\||\|", text)
+verb = re.compile(r"find-(generic|internet)-password|dump-keychain")
+safe = re.compile(r"(^|\s)-[A-Za-z]*w[A-Za-z]*\s*1?>\s*/dev/null")
+hits = [s for s in segs if verb.search(s)]
+sys.exit(0 if hits and all(safe.search(s) for s in hits) else 1)
+' 2>/dev/null; then
+    _KG_PROBE=true
+  fi
+
+  if [ "$_KG_PROBE" != true ]; then
+    REASON="BLOCKED: that command reads 'openai-tts-api-key' out of the Keychain, and this credential is provisioned for the voice/TTS pipeline only. On 2026-07-29 two agents billed language-model calls to it in one day after Codex returned its usage limit - the instinct to keep an independent reviewer was right, the credential was not. What to do instead: for TTS, call ~/.claude/tts-generate or the voice-output MCP server - both read the key themselves, so it never belongs in your command, and there is deliberately no allowance for reproducing their curl by hand. For an independent review when Codex is down, spawn a FRESH Claude reviewer with clean context that did not write the code; the standing produce-and-verify rule permits that fallback explicitly. For anything else that needs an OpenAI credential, ask Jonah to provision one and WAIT for the answer - do not treat having asked as having been answered. To check only that the key exists, drop -w/-g, or send that single extraction's stdout to /dev/null."
+  fi
+fi
+
+# --- shape 1b: the same read behind an indirect command WORD -------------------
+# `cmd=security; $cmd find-generic-password ... -w`, `\security ...`, `sec\urity ...` and
+# `$(printf security) ...` all run the real binary while `head_name` resolves to something
+# else, so `command_slices 'security'` emits nothing and shape 1 goes quiet. (Codex round
+# 2, 2026-07-29.)
+#
+# Rather than teach the SHARED scanner to resolve assignments and unescape command words -
+# a change every gate in this file would inherit, on a parser three gates already depend
+# on - this reads CMD_CODE for the VERB, which no indirection can hide: `security` does
+# nothing without a literal `find-generic-password` on the line.
+#
+# Text tools are excluded by head word, because `grep -w -e find-generic-password -e
+# openai-tts-api-key claude/` is a legitimate search. And it only runs when the slice path
+# found nothing, so it adds no second opinion on commands already judged.
+if [ -z "$REASON" ] && [ -z "$_KG_EXTRACT" ] \
+   && printf '%s' "$CMD" | grep -qE "$_KG_IDENT_RE" \
+   && printf '%s' "$CMD_CODE" | python3 -c '
+import re, sys
+TEXT_TOOLS = {"grep", "rg", "ag", "egrep", "fgrep", "cat", "less", "more", "head", "tail",
+              "awk", "sed", "echo", "printf", "comm", "diff", "git", "man", "wc", "sort",
+              "uniq", "tr", "xxd", "strings"}
+segs = re.split(r"[;\n]|&&|\|\||\|", sys.stdin.read())
+verb = re.compile(r"find-(generic|internet)-password")
+flag = re.compile(r"(^|\s)-[A-Za-z]*[wg][A-Za-z]*(\s|$)")
+for s in segs:
+    if not (verb.search(s) and flag.search(s)):
+        continue
+    words = [w for w in s.split() if not w.startswith("-") and "=" not in w]
+    if words and words[0].split("/")[-1].lstrip("\\") in TEXT_TOOLS:
+        continue
+    sys.exit(0)
+sys.exit(1)
+' 2>/dev/null; then
+  REASON="BLOCKED: that command runs a Keychain read for 'openai-tts-api-key' through an indirect command word (a variable, an escape, a substitution), which is the same spend as spelling it out. This credential is provisioned for the voice/TTS pipeline only, and two agents billed language-model calls to it on 2026-07-29. Use ~/.claude/tts-generate or the voice-output MCP server for TTS; spawn a fresh independent Claude reviewer if Codex is down; ask Jonah for a separate credential for anything else, and wait for the answer."
+fi
+
+# --- shape 2: running something that reads the credential for you --------------
+# The transitive path. Only files the shell would EXECUTE are candidates: reading
+# one (cat, grep, less, git show) is not spending it, and a gate that fires on
+# reading a file is a gate people learn to switch off.
+_keyguard_spender() {
+  KG_SLICES="$1" KG_CRED="$_KG_CRED" python3 <<'PYEOF' 2>/dev/null
+import os, re
+
+slices = os.environ.get("KG_SLICES", "")
+cred   = os.environ.get("KG_CRED", "")
+
+SCRIPT_RE = re.compile(r"\.(mjs|cjs|js|ts|py|sh|bash|zsh|rb|pl|php)$")
+
+# The voice pipeline's own readers. These SHOULD read it, and are matched on the
+# RESOLVED realpath so the ~/.claude deploy symlinks land on the repo file.
+ALLOW_PATH = ("/claude/voice-output/", "/.claude/voice-output/", "/.claude/tts-generate")
+ALLOW_BASE = ("install.sh", "tts-generate", "tts-generate.sh", "server.js")
+# This guard and its suite NAME the credential as test data. Exempting them is a
+# known, narrow hole (a spender could hide under a test- name); the threat here is
+# an agent under deadline pressure, not an adversary, and a guard that cannot test
+# itself does not get maintained.
+EXEMPT = lambda real: "/hooks/" in real or os.path.basename(real).startswith("test-")
+
+# Bare-name fallback for the one shape the content read cannot resolve: a
+# `cd`-then-run whose relative path does not exist from the hook's cwd.
+KNOWN_BASENAMES = ("gpt-call.mjs",)
+
+# Wrapper words that can sit in front of the real command without being it. Same
+# role as the scanner's own PREFIX set; kept local because this helper walks the
+# slice TEXT rather than re-running head_name.
+WRAP = {"sudo", "env", "command", "exec", "time", "nice", "nohup", "xargs", "then",
+        "do", "else", "elif", "if", "while", "until", "timeout", "setsid", "stdbuf",
+        "!", "cd", "&&", "||", ";"}
+
+INTERP = {"node", "nodejs", "bun", "deno", "python", "python3", "ruby", "perl",
+          "php", "osascript", "bash", "sh", "zsh", "dash"}
+# Interpreter flags that CONSUME the next token. Without these, the flag's VALUE reads as
+# the script and the real script goes unread: `node --require /dev/null gpt-call.mjs`
+# resolved to /dev/null and sailed through. (Codex round 2, 2026-07-29. Same class of bug
+# the scanner's own WRAPPER_VALUE_FLAGS fixed for `timeout -s TERM`.)
+VALUE_FLAGS = {"-r", "--require", "--import", "--loader", "--experimental-loader",
+               "-m", "--module", "-I", "--include", "-X", "--conf", "--env-file"}
+
+def candidate(line):
+    """The ONE token this segment actually runs: the interpreter's script argument
+    (`node x.mjs`), or the head itself when it is executed directly (`./x.mjs`).
+
+    Exactly one, because every OTHER token is data, and treating data as code is a
+    false block with teeth. The first live use of this gate denied
+    `python3 codex-review.py "<prompt>" < /tmp/diff.txt` - the diff being REVIEWED
+    named the credential, and a `<` redirect source is not a script. `node
+    linter.mjs target.mjs` is the same mistake one argument over: the linter runs,
+    the target is read.
+    """
+    words = []
+    skip_next = False
+    for tok in line.split():
+        t = tok.strip("\"'")
+        if skip_next:
+            skip_next = False          # this token is the previous flag's VALUE
+            continue
+        if t in VALUE_FLAGS:
+            skip_next = True           # `node -r /dev/null app.mjs` runs app.mjs
+            continue
+        if not t or t.startswith("-") or t in WRAP or re.match(r"^[A-Za-z_]\w*=", t):
+            continue
+        if t[0] in "<|" or t in (">", ">>"):
+            break                      # a redirect/pipe ends the argument list
+                                       # (`< file` and `</tmp/file` both land here)
+        words.append(os.path.expanduser(os.path.expandvars(t)))
+        if len(words) == 2:
+            break
+    if not words:
+        return None
+    if os.path.basename(words[0]) in INTERP:
+        return words[1] if len(words) > 1 else None
+    return words[0]
+
+# Inline code payloads. `node --input-type=module -e "const m = await
+# import('./.../gpt-call.mjs'); await m.callGpt(...)"` runs the spender's EXPORT without
+# ever naming it as a script argument - a Codex finding against the first version, and
+# the obvious next move once running the file directly is denied.
+#
+# Scoped to the payload of -e/-c/--eval and nothing else, which is load-bearing rather
+# than fussy: this suite's own harness is `python3 -c '<json encoder>' "<case command>"`,
+# and the case commands name spender paths. Scanning the whole slice would deny the
+# harness that tests the gate.
+#
+# The quoting has to be handled properly rather than with a lazy `(.*?)`: Codex round 2
+# defeated the first pattern with `node -e "import(\"./x/gpt-call.mjs\")..."`, where the
+# ESCAPED inner quote ended the match early, and with the `--eval=...` form.
+INLINE_RE = re.compile(
+    r"""(?:^|\s)(?:-e|-c|-p|--eval|--exec)(?:\s+|=)"""
+    r"""(?:"((?:[^"\\]|\\.)*)"|'([^']*)'|(\S+))""", re.S)
+
+def payload_paths(line):
+    for m in INLINE_RE.finditer(line):
+        body = m.group(1) or m.group(2) or m.group(3) or ""
+        for t in re.split(r"[\s'\"(),;\\]+", body):
+            t = t.strip()
+            if t and (SCRIPT_RE.search(t) or os.path.basename(t) in KNOWN_BASENAMES):
+                yield os.path.expanduser(os.path.expandvars(t))
+
+seen = set()
+for line in slices.splitlines():
+    for p in list(filter(None, [candidate(line)])) + list(payload_paths(line)):
+        # `~/.claude/...` and `$HOME/.claude/...` are how agents actually write these
+        # paths; unexpanded they never resolve, and an unresolved candidate is a
+        # candidate the content read never sees.
+        if p in seen:
+            continue
+        seen.add(p)
+        if os.path.basename(p) in KNOWN_BASENAMES:
+            print(p)
+            raise SystemExit(0)
+        if not SCRIPT_RE.search(p):
+            continue
+        try:
+            if not os.path.isfile(p) or os.path.getsize(p) > 512 * 1024:
+                continue
+            real = os.path.realpath(p)
+            if any(a in real for a in ALLOW_PATH) or os.path.basename(real) in ALLOW_BASE:
+                continue
+            if EXEMPT(real):
+                continue
+            with open(p, "r", errors="ignore") as fh:
+                if cred in fh.read():
+                    print(p)
+                    raise SystemExit(0)
+        except OSError:
+            continue
+PYEOF
+}
+
+if [ -z "$REASON" ] && printf '%s' "$CMD" | grep -qE '\.(mjs|cjs|js|ts|py|sh|bash|zsh|rb|pl|php)([^A-Za-z0-9]|$)'; then
+  _KG_EXEC=$(command_slices 'node|nodejs|bun|deno|python|python3|ruby|perl|php|osascript|bash|sh|zsh|dash|.*\.(?:mjs|cjs|js|py|sh|rb|pl)')
+  if [ -n "$_KG_EXEC" ]; then
+    _KG_SPENDER=$(_keyguard_spender "$_KG_EXEC")
+    if [ -n "$_KG_SPENDER" ]; then
+      REASON="BLOCKED: $_KG_SPENDER reads the voice/TTS credential 'openai-tts-api-key' out of the Keychain itself, so running it spends that credential without the key ever appearing in your command. That is how one of the two 2026-07-29 spends happened: gpt-call.mjs pulls the voice key and posts to /v1/chat/completions. If you need an independent reviewer and Codex is unreachable, spawn a FRESH Claude reviewer with clean context that did not write the code - the standing produce-and-verify rule permits that fallback. If this script genuinely needs a model credential, it needs its OWN provisioned key: ask Jonah and wait for the answer. Reading the file (cat, grep, an editor) is not blocked - only executing it."
+    fi
+  fi
 fi
 
 if [ -n "$REASON" ]; then

@@ -18,7 +18,7 @@ Deliverables, both in `sidecoach/benchmark/`:
 - `SCOREBOARD.md` - generated, never hand-edited.
 - `fixtures/{canary,linked-css,clean}` - written fresh on every run so the harness is self-contained.
 
-Tally at commit 56251cb7: **WIN 8 / LOSS 15 / TIE 1 / UNMEASURED 2**, 26 rows.
+Tally after folding an independent Codex review and two teammate corrections: **WIN 12 / LOSS 12 / TIE 1 / UNMEASURED 5**, 30 rows. Several rows improved DURING measurement because teammates were actively fixing what the board measures (installed surface 2 -> 11 files, verbs 24 -> 26, rules 81 -> 84, missed slop tells 4 -> 1); the board is a snapshot of a moving tree and says so.
 
 Nine metric families covered: capability coverage, reach/distribution, discoverability, reachability, output quality on identical inputs, verification depth, cost per operation, wall-clock speed, failure behavior.
 

@@ -136,23 +136,54 @@ Two of the four Highs were the SAME defect wearing different clothes - an allowa
 the whole command cannot express a per-slice fact - and I wrote both. Worth keeping: when a
 gate needs an exception, check whether the exception can be deleted instead of scoped.
 
+**Round 2 on the folded diff returned 7 more, and 5 were real.** The count alone was not
+enough: `true -w >/dev/null; security ... -w | pbcopy` still passed, because a fake discard
+ANYWHERE bought the allowance. So the discard is now checked PER CMD_CODE SEGMENT - every
+segment running a Keychain read must discard its own stdout - and `-g` never earns it, since
+`-g` prints the password on stderr where a stdout redirect cannot reach it. Also fixed:
+`node --require /dev/null gpt-call.mjs` (an interpreter flag ate the next token and the
+flag's VALUE read as the script, the same bug class the scanner's own
+`WRAPPER_VALUE_FLAGS` fixed for `timeout -s TERM`); `node -e "import(\"...\")"` and
+`--eval=` (escaped inner quotes ended the payload match early); and a substring identifier
+match that denied `-s openai-tts-api-key-backup`, a different Keychain item entirely.
+
+Its 6th finding - `env ! pkill ...` now denied, where `!` is argv rather than bash negation -
+is accepted: that command cannot run anyway (`env` would look for a binary named `!`), so a
+deny on it costs nothing, and distinguishing the two positions is not possible from position
+alone once `if !` has to work.
+
+Its 7th, the indirect command WORD (`cmd=security; $cmd find-generic-password ... -w`,
+`\security`, `sec\urity`, `$(printf security)`), was NOT accepted, on reflection. It defeats
+the slice scanner completely, which made shape 1 depend entirely on head-word resolution. The
+fix is a second, independent read: CMD_CODE is scanned for the VERB, which no indirection can
+hide, since `security` does nothing without a literal `find-generic-password` on the line.
+Text tools are excluded by head word so `grep -w -e find-generic-password -e
+openai-tts-api-key` stays a search. This deliberately does not touch the shared scanner -
+teaching `head_name` to resolve assignments would change every gate in the file.
+
 # Verification
 
-- `claude/hooks/test-keyguard.sh` - new, 56 assertions, 0 failures. 24 BLOCK cases
-  (substitution export, pipe to consumer, Bearer header, absolute path, quoted key name,
-  `-g`, `!` negation, `bash -c` payload, backticks, `dump-keychain -d`, account-only lookup,
-  TTS-decoy, hand-rolled TTS curl, all five Codex shapes, five transitive shapes) paired
-  against 21 PERMIT cases (both TTS entrypoints, the deployed MCP server, metadata-only
-  probe, installer probe shape, provisioning, grep, echo, heredoc, stdin data, linter data,
-  reading a spender, the harness pattern).
-- 10 mutants, all load-bearing. Two worth naming: emptying the voice allowlist flips `node
+- `claude/hooks/test-keyguard.sh` - new, 77 assertions, 0 failures. 38 BLOCK cases and 25
+  PERMIT cases, plus 14 mutants. Every Codex shape from both rounds is a case.
+- 14 mutants, all load-bearing. Two worth naming: emptying the voice allowlist flips `node
   $HOME/.claude/voice-output/server.js` to DENY, proving the allowlist is real rather than
-  decorative; and loosening the extraction count from `-eq 1` to `-ge 1` revives Codex's
-  probe decoy exactly.
-- One mutant caught a bad TEST rather than a bad gate: my first variable-indirection case
-  still spelled out `-a claude-voice`, so the identifier match caught it and the indirection
-  branch was never exercised. The case is now fully indirect (both service and account
-  behind variables), which is a stricter test than the one Codex supplied.
+  decorative; and emptying `TEXT_TOOLS` flips a `grep` for the credential to DENY, proving
+  the false-block guard on the new fallback is real too.
+- **Three mutants caught bad TESTS rather than bad gates, which is the point of having
+  them.** (1) My first variable-indirection case still spelled out `-a claude-voice`, so the
+  identifier match caught it and the indirection branch was never exercised; it is now fully
+  indirect. (2) Once the discard became per-segment, the extraction COUNT could no longer be
+  falsified by a decoy input, so the count mutant is now pointed at the one input where the
+  count alone decides (two individually safe probes in one command). (3) The shape-1b
+  fallback overlaps the slice detector on every `security` shape, so the slice-detector
+  mutant moved to `dump-keychain -d` (which the fallback excludes) and the PREFIX mutant
+  moved to the Justify kill gate (which has no fallback behind it).
+
+  This is the vacuous-assertion failure mode from 2026-07-28, caught three times by
+  mechanism instead of by review: adding defence in depth silently turns existing mutants
+  unfailable, and an unfailable mutant certifies a branch that nothing tests.
+- `test-validation-guards.sh` 70 passed / 0 failed and `test-bash-guard-commit.sh` 156
+  passed / 0 failed against the final code - the shared `PREFIX` change breaks nothing.
 - Negative control, run through the LIVE hook path:
   `export OPENAI_API_KEY=$(security find-generic-password ... -w) && node
   sidecoach/bin/sidecoach-image.js` -> DENY. The four voice-path commands -> ALLOW.
@@ -177,12 +208,16 @@ deliberate-evasion class, not the accidental-shortcut class the gate exists for:
 - an extension-less executable that reads the credential (the transitive pre-filter keys on
   a script extension), and a spender invoked through `npm run`;
 - an inline payload that inlines the Keychain read itself rather than importing a file
-  (`python3 -c "subprocess.check_output(['security', ...])"`) - catching it needs
-  payload-precise parsing, and the version that scanned the whole slice denied this suite's
-  own harness, so the shallower gate was chosen over a fragile one;
+  (`python3 -c "subprocess.check_output(['security', ...])"`). The verb WOULD be caught by
+  the shape-1b fallback if it sat outside quotes, but inside a `-c` payload CMD_CODE blanks
+  it. Catching it needs payload-precise parsing, and the version that scanned the whole slice
+  denied this suite's own harness, so the shallower gate was chosen over a fragile one;
 - a service name assembled from a file or a command substitution rather than a variable;
 - files under a `hooks/` directory or named `test-*` are exempt from the content read so this
-  guard can test itself.
+  guard can test itself;
+- an indirect `\security` PROBE (`\security ... -w >/dev/null`) is denied rather than
+  allowed: the shape-1b fallback does not model the probe allowance. Over-strict on a shape
+  nobody writes, so it stays.
 
 `gpt-call.mjs` still reads the voice credential and should get its own provisioned key. The
 gate stops it from being RUN, which is a fence, not a fix.
